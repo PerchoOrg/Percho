@@ -16,6 +16,42 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 08:06 UTC — walk_up leaves the hero pool
+
+**Objective**: owner, on 2895 Shurburne Drive — "the first hero clip is so
+broken, which type we use for the prompt?" Then: "remove walk_up for now."
+
+**Which type it was**: `walk_up`, from plan `cc878819` (~07:30 UTC, before the
+worker restart). The clip he watched was the NEW pipeline — the newest iOS
+assembly for `03fc78cd` opens on a 560x752 clip (3:4, phase86.1) while every
+other clip in it is 1080x1576, so the enhanced source and the new ratio were
+both live. The breakage was the effect.
+
+**Why walk_up was the worst move in the pool**: it was the only clause asking
+for a "subtle handheld feel" — an instruction nothing in a text fence can
+bound, the same class of failure that removed `slow_rise` on 2026-08-22 — and
+it asked the model to TRAVEL forward along a walkway from a single still
+frame, inventing porch depth and walkway perspective that were never
+photographed.
+
+**Actions**: `hero_prompt.py` — `walk_up` out of `CAMERA` (replaced by the
+comment saying why, as `slow_rise` was), out of `ENTRY_EFFECTS`, out of the
+`_SYSTEM` effect enum, and out of the two rules that named it. Tests: it joins
+the rejected-pool list, and the missing-`full_facade` case now uses
+`entry_push_in`.
+
+**Not a code change, but the thing to know**: the full-facade fence and the
+pool both live at PLAN time. `generate.ts` writes `prompt: s.prompt` from the
+stored plan, so a per-row Regenerate re-submits whatever the plan already
+decided — including a stored `walk_up`. Any listing whose last plan chose
+`walk_up` must be RE-PLANNED before it is regenerated, or the money buys the
+same clip back.
+
+**Resolution**: 118 python tests pass. `tests/test_pick_bgm.py` no longer
+collects at all on clean origin/main — `KeyError: 'NEXT_PUBLIC_SUPABASE_URL'`
+at import time, from something that landed today; not caused by and not fixed
+here, but it means the render-worker suite cannot be run whole without env.
+
 ## 2026-08-23 08:05 UTC — The community is one POI, so a cap of three per POI gave it three clips
 
 **Objective**: owner on Bellmoore Park's cut — "there is no single photo for
