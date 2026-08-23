@@ -68,9 +68,182 @@ export function labelForPath(pageUrl: string): string {
   return words.join(' ').slice(0, 40).trim() || 'Home';
 }
 
+/**
+ * Segments that are a company talking about itself, never a place.
+ *
+ * Matched against ANY path segment, so `/blog/category/johns-creek` and every
+ * post under it go with `/blog`. These are builder-site boilerplate: the crawl
+ * that pulled 53 photos of award trophies, a careers stock photo and a
+ * mortgage-timeline diagram into Bellmoore Park hit all of them (2026-08-23).
+ */
+const BOILERPLATE_SEGMENTS = new Set([
+  'about',
+  'about-us',
+  'accessibility',
+  'account',
+  'agency-policy',
+  'awards',
+  'blog',
+  'building-process',
+  'careers',
+  'cart',
+  'contact',
+  'contact-us',
+  'design-studio',
+  'disclaimer',
+  'faq',
+  'financing',
+  'home-buying-tools',
+  'incentives',
+  'jobs',
+  'legal',
+  'lenders',
+  'login',
+  'news',
+  'our-story',
+  'press',
+  'privacy',
+  'promotions',
+  'resources',
+  'reviews',
+  'search',
+  'sitemap',
+  'specials',
+  'team',
+  'terms',
+  'testimonials',
+  'unsubscribe',
+  'warranty',
+]);
+
+/** …and the prefixes, for the ones that come with a suffix. */
+const BOILERPLATE_PREFIXES = ['about-', 'mortgage', 'buying-', 'home-buying'];
+
+/**
+ * What the ingest step should do with a discovered page.
+ *
+ *   follow  fetch it without being asked — it is the community, or its gallery
+ *   offer   record it UNTICKED, so it is one click away in the panel
+ *   skip    never record it
+ *
+ * The middle one is the point. A community's site and a builder's site are the
+ * same shape to a crawler and completely different to a buyer: Bellmoore
+ * Park's "community site" is one page on The Providence Group's corporate
+ * site, so following every same-origin link fetched two houses' interior photo
+ * sets, someone else's subdivision, and the mortgage timeline. Refusing to
+ * record those would have been the opposite mistake — the owner still wants to
+ * be able to reach a page we guessed wrong about.
+ */
+export type LinkVerdict = 'follow' | 'offer' | 'skip';
+
+/** The community's own slug — the last segment of its site path. */
+export function communitySlugOf(sitePrefix: string): string | null {
+  const segs = sitePrefix.split('/').filter(Boolean);
+  return segs.length > 0 ? segs[segs.length - 1]!.toLowerCase() : null;
+}
+
+/**
+ * How far past the community's slug a path goes, or null if the slug is absent.
+ *
+ * A builder files a community twice: once as marketing (`/bellmoore-park`) and
+ * once inside its sales tree
+ * (`/new-homes/ga/johns-creek/bellmoore-park/6807`). The second is where the
+ * photo gallery lives — owner 2026-08-23, correcting an earlier guess of mine:
+ * "https://theprovidencegroup.com/new-homes/ga/johns-creek/bellmoore-park/6807/#photogallery
+ * - this is gallery i am talking about". A plain prefix rule cannot see it,
+ * because it is not under `/bellmoore-park` at all.
+ */
+export function depthPastSlug(path: string, slug: string): number | null {
+  const segs = path
+    .split('/')
+    .filter(Boolean)
+    .map((x) => x.toLowerCase());
+  const i = segs.indexOf(slug);
+  return i === -1 ? null : segs.length - 1 - i;
+}
+
+/**
+ * One segment past the slug is the community. Two or more is one address.
+ *
+ * The tree, from the real site:
+ *   …/bellmoore-park/6807                        the community    +1  follow
+ *   …/bellmoore-park/6807/3060-labrouste-cove/1763081   one house +3  offer
+ *   …/bellmoore-park/the-calhoun/258676          one floor plan   +2  offer
+ *
+ * This is a heuristic about how builders lay out URLs, not a law, and it is
+ * the reason "deeper" is `offer` rather than `skip`: a page it gets wrong is
+ * still one tick away in the panel.
+ */
+const MAX_DEPTH_PAST_SLUG = 1;
+
+/**
+ * PURE. `sitePrefix` is the community page's own path — `/bellmoore-park` on a
+ * builder's site, `/` when the site IS the community, in which case everything
+ * that is not boilerplate follows and this changes nothing.
+ */
+export function classifyPageLink(pageUrl: string, sitePrefix: string): LinkVerdict {
+  let path: string;
+  try {
+    path = new URL(pageUrl).pathname;
+  } catch {
+    return 'skip';
+  }
+  const segments = path
+    .split('/')
+    .filter(Boolean)
+    .map((s) => s.toLowerCase());
+
+  // Boilerplate wins over everything, so `/blog/gallery` stays out.
+  for (const seg of segments) {
+    if (BOILERPLATE_SEGMENTS.has(seg)) return 'skip';
+    if (BOILERPLATE_PREFIXES.some((pre) => seg.startsWith(pre))) return 'skip';
+  }
+
+  const prefix = sitePrefix.replace(/\/$/, '');
+  // The site IS the community. Everything that is not boilerplate is fair game.
+  if (!prefix || prefix === '/') return 'follow';
+
+  if (path === prefix || path.startsWith(`${prefix}/`)) return 'follow';
+
+  const slug = communitySlugOf(prefix);
+  const depth = slug ? depthPastSlug(path, slug) : null;
+  if (depth !== null && depth <= MAX_DEPTH_PAST_SLUG) return 'follow';
+
+  // Same host, not this community's corner of it: the builder's home page, its
+  // portfolio gallery, somebody else's subdivision, one house for sale.
+  return 'offer';
+}
+
+/**
+ * The community page a too-deep URL hangs off — `null` if there isn't one.
+ *
+ * Bellmoore Park's gallery page was never DISCOVERED: `/bellmoore-park` links
+ * straight to the individual homes, so the crawl saw
+ * `…/bellmoore-park/6807/3060-labrouste-cove/1763081` and never the `…/6807`
+ * that holds the community's own photographs. Deriving the ancestor is how the
+ * page the owner actually asked for gets fetched without him pasting it.
+ */
+export function communityPageAncestor(pageUrl: string, sitePrefix: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(pageUrl);
+  } catch {
+    return null;
+  }
+  const slug = communitySlugOf(sitePrefix.replace(/\/$/, ''));
+  if (!slug) return null;
+  const segs = url.pathname.split('/').filter(Boolean);
+  const i = segs.findIndex((x) => x.toLowerCase() === slug);
+  // Needs to be genuinely deeper, and the slug must not be the last segment.
+  if (i === -1 || segs.length - 1 - i <= MAX_DEPTH_PAST_SLUG) return null;
+  return `${url.protocol}//${url.host}/${segs.slice(0, i + 1 + MAX_DEPTH_PAST_SLUG).join('/')}`;
+}
+
 export interface PageLink {
   url: string;
   label: string;
+  /** Only set when `sameOriginPageLinks` was given a prefix to judge against. */
+  verdict?: LinkVerdict;
 }
 
 /**
@@ -83,7 +256,17 @@ export interface PageLink {
  *   community site seen so far; a nav bar past that is a directory, and a
  *   directory is not what this is for.
  */
-export function sameOriginPageLinks(html: string, pageUrl: string, max = 40): PageLink[] {
+export function sameOriginPageLinks(
+  html: string,
+  pageUrl: string,
+  max = 40,
+  /**
+   * The community page's own path. Given one, every link comes back with a
+   * `verdict` and `skip`ped links are dropped; omitted, the behaviour is what
+   * it was — every same-origin page, unjudged.
+   */
+  sitePrefix?: string,
+): PageLink[] {
   let base: URL;
   try {
     base = new URL(pageUrl);
@@ -110,7 +293,13 @@ export function sameOriginPageLinks(html: string, pageUrl: string, max = 40): Pa
     if (NOT_A_PAGE.test(target.pathname)) continue;
     const key = canonicalise(target);
     if (key === self || found.has(key)) continue;
-    found.set(key, { url: key, label: labelForPath(key) });
+    if (sitePrefix === undefined) {
+      found.set(key, { url: key, label: labelForPath(key) });
+    } else {
+      const verdict = classifyPageLink(key, sitePrefix);
+      if (verdict === 'skip') continue;
+      found.set(key, { url: key, label: labelForPath(key), verdict });
+    }
     if (found.size >= max) break;
   }
   return [...found.values()];

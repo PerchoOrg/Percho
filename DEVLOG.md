@@ -16,6 +16,99 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 06:55 UTC — Bellmoore Park's "community site" is a builder's corporate site, and the crawl behaved accordingly
+
+**Objective**: owner, after running Fetch Sites on Bellmoore Park: "a lot of
+house photos, we only need community level photos like amenities. can you let
+me know what all pages you find there, i can help you filter and build some
+rules".
+
+**Diagnosis**: `theprovidencegroup.com/bellmoore-park` is ONE PAGE on The
+Providence Group's corporate site. The Providence Group builds many
+subdivisions. So depth-1 from it reached the builder's whole nav, and the 41
+pages recorded included `/careers`, `/mortgage-timeline`, `/privacy`,
+`/awards`, the blog, and — the expensive part — individual homes for sale.
+
+Measured on production: **221 photos from the site**, across 15 pages.
+- 92 from two house listings (`/6807/3060-labrouste-cove/1763081` = 44,
+  `.../3070-...` = 48). Interiors and facades of two specific houses.
+- 53 from corporate boilerplate: award trophies, a mortgage-timeline diagram,
+  careers stock, testimonials.
+- 76 from `/bellmoore-park` itself — and of the six that had been tagged, three
+  were single-house exteriors, one an architectural rendering, one a site plan
+  and one a model-home kitchen. **Zero amenities.**
+
+It also left **15 synthetic POIs**, every one `approved`: "Bellmoore Park
+Careers", "Bellmoore Park Warranty", "Bellmoore Park 1763082". That is the
+amenity-POI proliferation flagged in phase101, worse than predicted because the
+site is a builder's.
+
+**Image URLs carry no signal** — `/259/2026/8/13/83dcefb7_gXaxwM0.jpeg` — so
+rules can only be about the PAGE, or about the pixels. Both, in the end.
+
+**Actions** (owner picked the rules from a menu):
+- `site-map.ts`: `classifyPageLink(url, sitePrefix) → 'follow' | 'offer' |
+  'skip'`. Boilerplate segments are skipped outright, matched against ANY
+  segment so `/blog/category/…` goes with `/blog`. Pages under the community's
+  own path follow. **Everything else same-origin is `offer` — recorded
+  UNTICKED**, which is the part worth keeping: a rule that guesses wrong leaves
+  the page one click away in the panel instead of invisible.
+- The slug rule, after the owner corrected my first guess. I had auto-followed
+  any path segment called `gallery`; he replied with the actual URL —
+  `/new-homes/ga/johns-creek/bellmoore-park/6807/#photogallery` — so the
+  gallery he wants is the community's page inside the builder's SALES tree, not
+  the root `/gallery`, which is the builder's portfolio across every
+  subdivision. `depthPastSlug` follows the community slug plus one segment
+  (`…/bellmoore-park/6807`) and offers anything deeper (`…/6807/<address>/<id>`,
+  `…/the-calhoun/258676`).
+- `communityPageAncestor`: that page was **never discovered** — `/bellmoore-park`
+  links straight to individual homes, so the crawl saw the children and not the
+  parent. Every too-deep link now contributes its slug+1 ancestor as a page to
+  fetch. This is what actually gets the owner the gallery he asked for.
+- `vision-tagger.ts`: new `residential_scope` on `ai_tags` —
+  `none | multiple_homes | single_home | home_interior`. Owner's line: "it is
+  ok to have photos for multiple houses to give a vibe but not single one even
+  inside designs". So the distinction is not house/not-house, it is ONE house
+  (a listing photo) versus SEVERAL (a streetscape, which reads as
+  neighbourhood).
+- `initialVerdict` rejects `single_home` and `home_interior` with a reason.
+  Defaults to `none` when the key is absent, so the whole back catalogue keeps
+  the verdict it already had. Community tours only — `initialVerdict` has no
+  callers outside `tour-steps/`, and the home tour tags through a different
+  path entirely.
+- `scripts/admin/prune-community-site-photos.ts`: **dry run by default**.
+  Judges each stored photo by the page it came from, removes POI *links* (not
+  the shared `pois` rows) only when every photo they hold is going, and
+  re-judges the source rows so the next Fetch Sites does not simply re-fetch
+  what it just deleted.
+
+**Dry run, Bellmoore Park**: 145 of 279 photos, 14 of 31 POI links, 21 source
+rows dropped and 18 unticked. 134 photos and 17 POIs remain. **NOT APPLIED** —
+the owner asked to see the list first.
+
+**Verification**: `pnpm typecheck` 0 errors, `pnpm test` 719 web + 520 mobile
+(24 new, written against the real page list), `biome check` 0 errors in
+apps/web. `scripts/` is outside the lint config — no root biome.json, and
+`pnpm lint` is per-package — which every existing admin script is too.
+
+**Learnings**: the assumption underneath phase101 was "a community has a
+website". Half of them do not, and of the two that do, one is a page on
+somebody else's marketing site. "The community's own site" is a category that
+does not survive contact with how new-build housing is actually sold.
+
+**Near-miss, twice in one session**: a scripted replacement whose anchor text
+did not match wrote nothing and reported success, because the `assert` checked
+"the file changed" and a *different* replacement in the same script had
+matched. Caught the first time by biome's `noUnusedImports`, the second by
+grepping for the symbol I had supposedly added. Assert on the specific
+replacement — `s.count(old) == 1` before, symbol present after.
+
+**Next steps**: run the prune with `--apply` once the owner confirms, then
+re-run Fetch Sites so `communityPageAncestor` picks up
+`/new-homes/ga/johns-creek/bellmoore-park/6807`, then Tag & Filter — the 76
+surviving photos are almost all untagged, and `residential_scope` is what will
+sort the house shots from the amenities.
+
 ## 2026-08-23 06:10 UTC — Tag and Filter are one chip again, and a photo that cannot be described no longer jams the gate
 
 **Objective**: owner, four hours after asking for four steps: "tag and

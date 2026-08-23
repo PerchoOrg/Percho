@@ -85,6 +85,25 @@ export function clipsAllowedFor(bucket: string | null | undefined): number {
  * reviews, and `computeFinalShots` can apply the same test after. One function,
  * so the proposal he reviews and the filter that runs later cannot disagree.
  */
+/**
+ * Listing photography, in a film that is not a listing.
+ *
+ * A community film is about the community. One house shot as a portrait is a
+ * listing photo whatever site it came from, and a kitchen is a listing photo
+ * even when nobody lives there yet — Bellmoore Park's builder site handed the
+ * pipeline 92 interior and exterior photos of two specific houses for sale
+ * (2026-08-23). Several houses together are a different thing: a streetscape
+ * reads as a neighbourhood, which is the subject.
+ *
+ * Owner, setting the line: "it is ok to have photos for multiple houses to
+ * give a vibe but not single one even inside designs".
+ *
+ * A rejection, not a deletion: the photo sits in the table with its reason and
+ * the owner can promote it, which is the point of the review.
+ */
+const LISTING_SCOPES = new Set(['single_home', 'home_interior']);
+export const LISTING_PHOTO_DROP_REASON = 'listing photo — one home, not the community';
+
 export function initialVerdict(p: {
   ai_tags?: Record<string, unknown> | null;
   width_px?: number | null;
@@ -93,11 +112,21 @@ export function initialVerdict(p: {
   enhanced_meta?: { width?: number; height?: number } | null;
   storage_path?: string | null;
 }): { ok: true } | { ok: false; reason: string } {
-  const tags = (p.ai_tags ?? {}) as { description?: string; tags?: string[]; usable?: boolean };
+  const tags = (p.ai_tags ?? {}) as {
+    description?: string;
+    tags?: string[];
+    usable?: boolean;
+    residential_scope?: string;
+  };
   if (isReligiousPhoto({ description: tags.description, tags: tags.tags })) {
     return { ok: false, reason: RELIGIOUS_PHOTO_DROP_REASON };
   }
   if (tags.usable === false) return { ok: false, reason: 'tagger-unusable' };
+  // Defaults to 'none' when the tagger did not say, so photos tagged before
+  // `residential_scope` existed keep whatever verdict they already had.
+  if (LISTING_SCOPES.has(String(tags.residential_scope ?? 'none'))) {
+    return { ok: false, reason: LISTING_PHOTO_DROP_REASON };
+  }
   const enhanced = p.enhanced_status === 'approved' ? p.enhanced_meta : null;
   const w = enhanced?.width ?? p.width_px ?? 0;
   const h = enhanced?.height ?? p.height_px ?? 0;
