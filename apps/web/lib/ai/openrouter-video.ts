@@ -83,6 +83,15 @@ export async function submitVideo(opts: {
   durationS: number;
   aspectRatio: string;
   mode?: 'references' | 'frames';
+  /**
+   * Model + resolution overrides, for a one-off A/B probe only
+   * (`scripts/admin/hero-model-probe.ts`). Both default to what the pipeline
+   * bills today, so every production caller is unchanged. A probe must send
+   * the SAME request shape the worker sends or its result is not evidence,
+   * which is why these live here rather than in a second copy of the POST.
+   */
+  model?: string;
+  resolution?: string;
 }): Promise<{ id: string; pollingUrl: string }> {
   const mode = opts.mode ?? 'references';
   const images = opts.frameImageUrls.map((url) => ({
@@ -95,13 +104,13 @@ export async function submitVideo(opts: {
   }
 
   const body: Record<string, unknown> = {
-    model: SEEDANCE_MODEL,
+    model: opts.model ?? SEEDANCE_MODEL,
     prompt: opts.prompt,
     duration: opts.durationS,
     aspect_ratio: opts.aspectRatio,
     // Owner 2026-08-17: 480p — faster + cheaper than the 720p default; the
     // final video gets re-encoded by the worker for streaming anyway.
-    resolution: '480p',
+    resolution: opts.resolution ?? '480p',
     // Music belongs at assemble time, not per-clip — every clip would get a
     // different random track. Also cheaper (audio gen is billed separately).
     generate_audio: false,
