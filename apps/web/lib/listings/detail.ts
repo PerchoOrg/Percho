@@ -132,6 +132,8 @@ type MlsMirrorRow = {
   days_on_market: number | null;
   lot_size_acres: number | null;
   listing_key: string;
+  /** IDX display gate. `false` means the MLS forbids showing this record. */
+  internet_entire_listing_display_yn?: boolean | null;
 };
 
 /** A `listing_videos` row, uid-resolved by `mobileVideoUid`. */
@@ -162,7 +164,9 @@ export function projectDetail(
   extras: { mls?: MlsMirrorRow | null; video?: ListingVideoRow | null } = {},
 ): ListingDetailDTO {
   const video = projectVideo(extras.video ?? null);
-  const mls = extras.mls ?? null;
+  // A mirror row the MLS forbids displaying projects nothing at all.
+  const mls =
+    extras.mls && extras.mls.internet_entire_listing_display_yn !== false ? extras.mls : null;
   return {
     id: listing.id,
     slug: listing.slug,
@@ -300,6 +304,34 @@ function createUncachedAnonClient() {
 }
 
 /**
+ * Service-role client for the ONE read RLS cannot serve: the `mls_listings`
+ * mirror is deliberately policy-less ("Server-role only", migration
+ * 20260704075823), so the anon client's mirror read always came back empty
+ * and daysOnMarket / lot / MLS number silently never shipped (phase119.1).
+ *
+ * Same trust model as the mobile feed route, which already reads
+ * community-video rows with `createServiceClient()` from this unauthenticated
+ * namespace: server-side only, projecting three non-sensitive display fields
+ * for a listing the caller can already see, and only when the mirror row's
+ * `internet_entire_listing_display_yn` does not forbid display. Same
+ * `no-store` wrapper as the anon client — the fetch-cache trap above applies
+ * to any supabase-js client.
+ */
+function createUncachedServiceClient() {
+  return createPlainClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+          fetch(input, { ...init, cache: 'no-store' }),
+      },
+    },
+  );
+}
+
+/**
  * Fetches one listing by id OR slug. Both because the feed carries ids while
  * shared/deep-linked URLs are slugs, and a screen that only accepts one of them
  * dead-ends the other.
@@ -338,11 +370,13 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
       .eq('status', 'active')
       .not('price', 'is', null)
       .limit(COMPS_LIMIT),
-    // The MLS mirror row, when the sync has linked one. `maybeSingle` — a
-    // missing mirror is normal, not an error.
-    supabase
+    // The MLS mirror row, when the sync has linked one. Service-role client —
+    // see `createUncachedServiceClient` for why anon cannot read the mirror.
+    // `maybeSingle`: a missing mirror is normal, not an error. The display
+    // flag is fetched so a row the MLS forbids displaying projects nothing.
+    createUncachedServiceClient()
       .from('mls_listings')
-      .select('days_on_market, lot_size_acres, listing_key')
+      .select('days_on_market, lot_size_acres, listing_key, internet_entire_listing_display_yn')
       .eq('our_listing_id', row.id)
       .limit(1)
       .maybeSingle(),

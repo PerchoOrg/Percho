@@ -16,6 +16,38 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 10:20 UTC — phase119.1: the mirror fields were unreadable — anon can't see mls_listings
+
+**Objective**: post-deploy verification of phase119 against production showed
+`daysOnMarket` / `lotSizeRaw` / `mlsNumber` absent on every listing checked.
+
+**Diagnosis**: `mls_listings` has RLS enabled with ZERO policies — the
+migration (20260704075823) marks it "Server-role only" on purpose. phase119's
+mirror read used the detail endpoint's anon client, so it always returned
+empty and the enrichment silently never shipped (the error-→-absence
+downgrade did exactly what it was told, on every request).
+
+**Actions**: `apps/web/lib/listings/detail.ts` — the mirror read (and only
+it) now uses a service-role client with the same `no-store` fetch wrapper
+(`createUncachedServiceClient`). It also selects
+`internet_entire_listing_display_yn`, and `projectDetail` projects NOTHING
+from a mirror row whose flag is `false` — the IDX display gate belongs in the
+projection, not the caller. Tests added for both.
+
+**Decisions**: this follows the mobile feed route's existing precedent
+(`community_videos` read via `createServiceClient()` from the same
+unauthenticated namespace, with a comment). The alternative — an anon-read
+RLS policy on `mls_listings` — would relax the table's deliberate posture and
+is exactly the §8 "ask first" case; the owner is away (explicit "no input for
+5 hours"), so the narrower server-side read shipped instead. FLAGGED FOR
+OWNER REVIEW: if you'd rather policy the table, this read can go back to anon.
+
+**Resolution**: web typecheck clean, detail tests 24/24, biome clean.
+
+**Next steps**: verify on production that a mirror-linked listing actually
+carries the fields (needs `our_listing_id` populated by the sync — if all are
+null, the sync's linker is the next thing to check).
+
 ## 2026-08-23 09:55 UTC — phase119: the explore page answers "does this home fit me"
 
 **Objective**: owner shipped a full spec + interactive reference
