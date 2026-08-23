@@ -107,6 +107,20 @@ function apiKey(): string {
   return key;
 }
 
+/**
+ * Every call here is made from inside a serial loop — the tour's photos step
+ * walks its POIs one at a time — and none of them had a deadline, so one
+ * connection that never answers stops the whole run with no error, no failed
+ * status and nothing in the log. Apremont - Highcroft sat in `fetching_photos`
+ * for four hours that way, twice (owner 2026-08-23).
+ *
+ * A slow answer is worth waiting for; a dead one is not. 20s for the JSON
+ * calls, 60s for a photo binary — a 2400px JPEG is ~1.7 MB, well inside that
+ * on any working connection.
+ */
+const JSON_TIMEOUT_MS = 20_000;
+const MEDIA_TIMEOUT_MS = 60_000;
+
 const NEARBY_FIELD_MASK = [
   'places.id',
   'places.displayName',
@@ -140,6 +154,7 @@ export async function searchNearby(input: NearbySearchInput): Promise<PlaceResul
       'X-Goog-FieldMask': NEARBY_FIELD_MASK,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(JSON_TIMEOUT_MS),
   });
 
   if (!res.ok) {
@@ -193,6 +208,7 @@ export async function searchText(
           }
         : {}),
     }),
+    signal: AbortSignal.timeout(JSON_TIMEOUT_MS),
   });
 
   if (!res.ok) {
@@ -231,6 +247,7 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceResult | nu
       // Single-place mask: the same fields, without the `places.` prefix.
       'X-Goog-FieldMask': NEARBY_FIELD_MASK.replaceAll('places.', ''),
     },
+    signal: AbortSignal.timeout(JSON_TIMEOUT_MS),
   });
   if (!res.ok) {
     // Loud: a silent null is indistinguishable from a real POI with no photos,
@@ -259,7 +276,10 @@ export async function fetchPhotoBinary(
   if (!opts.maxHeightPx && !opts.maxWidthPx) params.set('maxHeightPx', '2400');
 
   const url = `${PLACES_BASE}/${photoName}/media?${params.toString()}`;
-  const res = await fetch(url, { headers: { 'X-Goog-Api-Key': apiKey() } });
+  const res = await fetch(url, {
+    headers: { 'X-Goog-Api-Key': apiKey() },
+    signal: AbortSignal.timeout(MEDIA_TIMEOUT_MS),
+  });
 
   if (!res.ok) {
     const err = await res.text();
