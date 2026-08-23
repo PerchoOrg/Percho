@@ -75,6 +75,17 @@ CAMERA: dict[str, str] = {
 
 BIRDVIEW_EFFECTS = frozenset({"birdview_descend", "rise_to_birdview"})
 
+# Moves that end on the front door. Legitimate when the photo only ever showed
+# part of the home, disastrous when it showed all of it: on 5122 Lower Creek
+# Street (2026-08-22) the model picked entry_push_in on a complete two-story
+# brick facade, so the hero clip finished filling the frame with a door and the
+# buyer never saw the house. _SYSTEM had said to prefer facade moves there; a
+# preference the model can talk itself out of is not a rule, hence the fence in
+# choose_hero_prompt. establish_push is the substitute because it keeps the
+# entry the model was reaching for — it just shows the whole home first.
+ENTRY_EFFECTS = frozenset({"entry_push_in", "walk_up"})
+FULL_FACADE_EFFECT = "establish_push"
+
 # Mandatory clauses — verbatim, never paraphrased. The signage clause is the
 # home version: what must survive on a house is its number and any yard-sign
 # text, not a storefront.
@@ -123,13 +134,16 @@ Return STRICT JSON only, no prose:
 {
   "effect": "full_frame_hold|pull_back_reveal|lateral_glide|establish_push|entry_push_in|walk_up|birdview_descend|rise_to_birdview",
   "aerial_index": the IMAGE NUMBER of the chosen aerial photo, counting every image in order (the hero photo is image 1, so the first aerial is image 2), or null,
+  "full_facade": true if the hero photo shows the complete front of the home — both side walls or roof ends visible, nothing important cropped away — false if the home is attached (townhouse/row) or the photo shows only part of it,
   "scene": "one factual sentence describing what is in the hero photo",
   "motion": "one sentence naming the few things that may naturally move; end it with '; everything else stays completely still.'",
   "focus": "optional single short sentence naming what the camera should settle on, or null"
 }
 
 Rules:
-- The buyer must come away knowing what the home looks like. A photo showing the complete front of a detached house favors moves that keep or reveal the full facade. An attached home (townhouse/row) or a partial view favors the entry moves (entry_push_in, walk_up) aimed at the FRONT DOOR — never at a garage door.
+- The buyer must come away having seen the WHOLE home. This outranks every other consideration.
+- If full_facade is true, the clip must show the complete front of the home. Pick full_frame_hold, pull_back_reveal, lateral_glide, or establish_push. entry_push_in and walk_up are FORBIDDEN when full_facade is true — they end on a door and the buyer never sees the house. Use establish_push when you want the entry: it shows the whole home first, then moves toward it.
+- entry_push_in and walk_up are only for full_facade false — an attached home (townhouse/row) or a photo showing part of the home. Aim them at the FRONT DOOR, never at a garage door.
 - birdview_descend / rise_to_birdview ONLY if you pick an aerial image via aerial_index, and only when that aerial clearly shows this same home and carries NO highlight rings, arrows, boundary outlines, or overlay text of any kind. Otherwise aerial_index must be null.
 - scene and motion are factual descriptions, no marketing language.
 - Never use the words: fast, cinematic, epic, dramatic, dynamic."""
@@ -212,6 +226,17 @@ def choose_hero_prompt(
         effect = out.get("effect")
         if effect not in CAMERA:
             raise HeroPromptError(f"effect not in pool: {effect!r}")
+
+        # An entry move is unlocked only by an explicit full_facade=false. A
+        # missing or malformed flag substitutes too: establish_push on a
+        # townhouse still opens on its front, while a door-filling clip on a
+        # whole house is the failure the owner rejected.
+        if effect in ENTRY_EFFECTS and out.get("full_facade") is not False:
+            print(
+                f"[hero_prompt] {effect} on a full facade → {FULL_FACADE_EFFECT}",
+                flush=True,
+            )
+            effect = FULL_FACADE_EFFECT
 
         pair_photo_id = None
         pair_role = None

@@ -17,6 +17,8 @@ from hero_prompt import (  # noqa: E402
     BIRDVIEW_EFFECTS,
     CAMERA,
     CLAUSE_GROUND_LEVEL,
+    ENTRY_EFFECTS,
+    FULL_FACADE_EFFECT,
     MANDATORY_CLAUSES,
     choose_hero_prompt,
     compose_prompt,
@@ -94,6 +96,47 @@ def test_birdview_without_valid_aerial_falls_back():
         out = choose_hero_prompt(HERO, aerials, call=fake_call(pick))
         assert out["effect"] == "full_frame_hold"
         assert out["pair_photo_id"] is None
+
+
+def test_entry_move_on_a_full_facade_becomes_establish_push():
+    # 5122 Lower Creek Street, 2026-08-22: entry_push_in on a complete
+    # two-story facade ended the clip on a door. The buyer must see the house.
+    for entry in ENTRY_EFFECTS:
+        pick = {**GOOD, "effect": entry, "full_facade": True}
+        out = choose_hero_prompt(HERO, [], call=fake_call(pick))
+        assert out["effect"] == FULL_FACADE_EFFECT
+        assert CAMERA[FULL_FACADE_EFFECT] in out["prompt"]
+
+
+def test_entry_move_survives_on_a_partial_or_attached_home():
+    # The move is not banned — a townhouse or a cropped photo has no full
+    # facade to show, and the front door is the honest subject there.
+    for entry in ENTRY_EFFECTS:
+        pick = {**GOOD, "effect": entry, "full_facade": False}
+        out = choose_hero_prompt(HERO, [], call=fake_call(pick))
+        assert out["effect"] == entry
+
+
+def test_missing_full_facade_flag_substitutes():
+    # Only an explicit false unlocks an entry move. establish_push on a
+    # townhouse is harmless; a door-filling clip on a whole house is not.
+    for flag in [None, "yes", {}]:
+        pick = {**GOOD, "effect": "entry_push_in", "full_facade": flag}
+        out = choose_hero_prompt(HERO, [], call=fake_call(pick))
+        assert out["effect"] == FULL_FACADE_EFFECT
+
+    bare = {k: v for k, v in GOOD.items()}
+    bare["effect"] = "walk_up"
+    out = choose_hero_prompt(HERO, [], call=fake_call(bare))
+    assert out["effect"] == FULL_FACADE_EFFECT
+
+
+def test_full_facade_fence_leaves_other_effects_alone():
+    for effect in ["full_frame_hold", "pull_back_reveal", "lateral_glide",
+                   "establish_push"]:
+        pick = {**GOOD, "effect": effect, "full_facade": True}
+        out = choose_hero_prompt(HERO, [], call=fake_call(pick))
+        assert out["effect"] == effect
 
 
 def test_banned_words_are_stripped_from_model_text():
