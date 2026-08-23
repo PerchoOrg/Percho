@@ -66,6 +66,24 @@ import type { CardIconName } from "@percho/shared/icons";
  * page"). It now renders on `app/community/[slug]`'s hero. Its four values are
  * still `place-stats.ts` placeholders — see that module's header.
  *
+ * ── 2026-08-23: that hairline is a scrubber ─────────────────────────────────
+ *
+ * The bar is now 3pt, inset on the card's own 24pt gutter, and cut into one
+ * dash per place. It can be dragged or tapped. Three notes, one per day it
+ * cost:
+ *
+ *   · A scrub and a swipe are the same horizontal drag.
+ *     `blocksExternalGesture(deckGesture)` makes the deck wait for this
+ *     gesture; without it, whichever activates first wins and the card the
+ *     buyer was rewinding flies off the stack instead.
+ *   · A TAP is a pan that never travels. It never activates, the deck takes
+ *     the touch, and `onFinalize` never runs — so the seek is asked for in
+ *     `onBegin` and the release comes off `onTouchesUp` (the raw pointer
+ *     lift), with `onFinalize` only as a backstop.
+ *   · The seek itself belongs to `CardVideo` (the `seekTo` channel), and it is
+ *     deliberately TOLERANT rather than frame-accurate — see `applySeek`
+ *     there for why a precise seek on HLS can simply never happen.
+ *
  * ── Data, not sample copy ────────────────────────────────────────────────────
  *
  * Three sources for the chip row, in descending confidence, exactly one of
