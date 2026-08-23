@@ -345,6 +345,28 @@ export function CommunityFace({
 			progress.value = ratio;
 			scrubIndex.value = dashAt(ratio);
 		};
+		/**
+		 * Hand the bar back to playback and ask the film to go where the finger
+		 * left it.
+		 *
+		 * `scrubbing` doubles as the "this touch is still mine" latch, so the
+		 * three callbacks below can all call this and only the first one lands.
+		 * They are three because a TAP does not reliably reach `onFinalize`: a
+		 * pan that never travels far enough to activate is failed by the deck's
+		 * gesture winning the touch, and the release we were waiting for goes to
+		 * the winner. That left `scrubbing` stuck true (the bar frozen and the
+		 * place label stuck on screen) and no seek requested at all — the owner's
+		 * 2026-08-23 report, "if you drag it will move, if you click, it will
+		 * not". `onTouchesUp` is the raw pointer lift and arrives whatever the
+		 * gesture's own state machine decides.
+		 */
+		const commit = () => {
+			"worklet";
+			if (!scrubbing.value) return;
+			seekTo.value = progress.value;
+			scrubbing.value = false;
+			scrubIndex.value = -1;
+		};
 		let gesture = Gesture.Pan()
 			.enabled(isTop && !!card.videoUrl)
 			// A scrub starts where the finger lands, so the bar jumps under it on
@@ -353,16 +375,22 @@ export function CommunityFace({
 			.onBegin((e) => {
 				scrubbing.value = true;
 				track(e.x);
+				// Seek from touch-DOWN, not only from the release. This is the one
+				// callback a tap is guaranteed to reach — it is what draws the fill
+				// and names the place, both of which the owner sees on a tap that
+				// moves nothing. A drag seeks again on release; two tolerant seeks
+				// a few hundred ms apart cost nothing, and jumping the film to
+				// where the finger pressed is what the bar is promising anyway.
+				seekTo.value = progress.value;
 			})
 			.onUpdate((e) => track(e.x))
-			// `onFinalize`, not `onEnd`: a cancelled gesture must also release the
-			// bar and commit, or `scrubbing` stays true and playback never
-			// reconnects to the bar again.
-			.onFinalize(() => {
-				seekTo.value = progress.value;
-				scrubbing.value = false;
-				scrubIndex.value = -1;
-			});
+			// The pointer lift, ahead of any gesture-state decision.
+			.onTouchesUp(commit)
+			// A pointer that stops being tracked for any other reason.
+			.onTouchesCancelled(commit)
+			// And the backstop, for a gesture cancelled without a touch event:
+			// `onFinalize`, not `onEnd`, so a cancel releases the bar too.
+			.onFinalize(commit);
 		if (deckGesture) gesture = gesture.blocksExternalGesture(deckGesture);
 		return gesture;
 	}, [

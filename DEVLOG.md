@@ -16,6 +16,63 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 09:21 UTC — a tap is not a small drag: the release goes to whoever won the touch
+
+**Objective**: owner, third report, and this one names the split — "if you drag
+it will move, if you click, it will not move but still show other effects name
+and white bar".
+
+**That sentence is the diagnosis.** A drag seeks fine, so the whole chain the
+last two entries went through — the `seekTo` channel, the reaction, `seekBy`,
+duration — WORKS. Only the tap fails, and the two paths differ in exactly one
+place: `onFinalize`.
+
+A tap is a pan that never travels. It never satisfies the pan's activation
+criteria, so it is FAILED in favour of the deck's own gesture (which is waiting
+on it via `blocksExternalGesture`), and the release we were waiting for goes to
+the winner. `onBegin` had already run — which is why the fill jumps to the tap
+and the place is named — but the commit in `onFinalize` never happened. Hence
+all three symptoms in his sentence at once: no seek requested; `scrubbing` left
+stuck TRUE, so `CardVideo` stops writing the bar (it "will not move"); and
+`scrubIndex` never cleared, so the place label stays up ("still show ... name").
+
+**Actions**: `apps/mobile/components/cards/CommunityFace.tsx`
+- `onBegin` now asks for the seek as well as drawing the fill. It is the one
+  callback a tap is guaranteed to reach, and the fill it draws is already a
+  promise that the film is going there. A drag seeks again on release; two
+  tolerant seeks a few hundred ms apart cost nothing.
+- The release is a `commit()` worklet wired to `onTouchesUp` (the raw pointer
+  lift, delivered whatever the gesture's state machine decides),
+  `onTouchesCancelled`, and `onFinalize` as the backstop. `scrubbing` doubles as
+  the once-per-touch latch — `if (!scrubbing.value) return` — so the first one
+  to arrive wins and the others are no-ops. Without that latch a second commit
+  would seek again against a `progress` playback had already moved on.
+
+**Tests**: two source-text assertions in `theme/community-panel-fit.test.ts` —
+the seek is asked for inside `onBegin`, and the release is wired to
+`onTouchesUp`, not only to `onFinalize`. That file's assertions have now caught
+their keep twice; this is the invariant a future tidy-up would most plausibly
+undo ("three callbacks doing the same thing, surely one is enough").
+
+**Decisions**: did not reach for `Gesture.Race`/`Exclusive` with a Tap, or for
+`manualActivation`. Either would work and both restructure a gesture relation
+that took a phase to get right (a scrub and a swipe are the same drag). Asking
+for the seek from `onBegin` is two lines and needs no relation to hold.
+
+**Issues / carried over**: `SEEK_DEBUG` (the `__DEV__` readout added at 09:14)
+is still in `CardVideo.tsx`. Left for one more device check — if the tap still
+fails, `s=` says whether the seek was even requested. Delete it once the owner
+confirms.
+
+**Learnings**: a tap is not a small drag. `onFinalize` is documented as the
+catch-all release, and it is — for a gesture that keeps the touch. Under
+`blocksExternalGesture` a failed gesture hands the touch to the winner, and any
+state a handler owns (here: "the finger owns the bar") has to be released off
+the raw pointer events, not off the gesture's own ending.
+
+**Next steps**: device check. If a tap now moves the film, remove `SEEK_DEBUG`
+and its four call sites.
+
 ## 2026-08-23 09:14 UTC — the scrub's seek was frame-accurate, which on HLS means never
 
 **Objective**: owner, on the 09:03 fix — "tested on ios, still the same, after

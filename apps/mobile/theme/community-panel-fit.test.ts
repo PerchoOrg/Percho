@@ -161,4 +161,31 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		expect(feed).toContain("router.push(`/community/${top.slug}`)");
 		expect(feed).toContain("tapSlot={args.tapSlot}");
 	});
+
+	it("commits the scrub on touch-down and on the raw pointer lift", () => {
+		// Both learned on device, 2026-08-23, from "if you drag it will move, if
+		// you click, it will not":
+		//
+		// 1. A TAP is a pan that never travels, so it can be failed in favour of
+		//    the deck's own gesture and never reach `onFinalize`. The seek has to
+		//    be asked for from `onBegin` — the one callback a tap does reach, and
+		//    the one already drawing the fill and naming the place.
+		// 2. The release has to come off `onTouchesUp` (the raw pointer lift) as
+		//    well, or `scrubbing` stays true after a tap: the bar freezes and the
+		//    place label never goes away.
+		const scrub = SRC.slice(SRC.indexOf("Gesture.Pan()"));
+		expect(scrub).toContain(".onTouchesUp(commit)");
+		expect(scrub).toContain(".onFinalize(commit)");
+		const begin = scrub.slice(
+			scrub.indexOf(".onBegin("),
+			scrub.indexOf(".onUpdate("),
+		);
+		expect(begin).toContain("seekTo.value = progress.value");
+	});
+
+	it("releases the bar only once per touch", () => {
+		// Three callbacks call `commit` and the first one wins, or a second seek
+		// fires against a `progress` that playback has already moved on.
+		expect(SRC).toContain("if (!scrubbing.value) return;");
+	});
 });
