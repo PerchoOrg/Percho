@@ -16,6 +16,65 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 06:10 UTC — Tag and Filter are one chip again, and a photo that cannot be described no longer jams the gate
+
+**Objective**: owner, four hours after asking for four steps: "tag and
+filtering can be combined."
+
+**He is right, and the split was the mistake.** Filtering an untagged photo is
+meaningless — `initialVerdict` reads `ai_tags`, and with none it checks only
+that a file exists and passes. So the standalone Filter chip's only honest
+response to a half-tagged pile was to refuse, and a button whose job is to
+refuse until another button has finished is not a step, it is a dependency
+wearing a button.
+
+**The bug the merge exposed**: `tagPoiPhoto` stamps `tagged_at` only on success
+(`vision-tagger.ts:319`); every failure path — dead storage path, Gemini parse
+failure, unsupported format — returns without stamping. `runTag` computed
+`remaining = untagged - tagged`, so ONE permanently-failing photo held
+`remaining` above zero for ever. Split across two chips that was a nuisance:
+Filter refused and at least named the problem. Combined, it would have been a
+review gate that never opened, with nothing on screen to say why.
+
+**Actions**:
+- `tour-steps/tag.ts`: the loop now distinguishes **unreached** (the clock ran
+  out — stop, ask for another click) from **failed** (tried, did not work — do
+  not block). The filter runs when every photo has been ATTEMPTED, not when
+  every photo has succeeded. Photos the tagger could not describe stay
+  `pending` and reach the review as themselves, which is right: a photograph
+  nobody could describe is exactly the kind a person should look at.
+- `tour-steps/filter.ts`: `runFilter(sb, run, { untaggedIsFatal })`. Standalone
+  it still refuses — that guard is what stops a review over a pile nothing has
+  looked at. Called from `runTag`, it is told the difference.
+- `TAG_BUDGET_MS` 240s → 220s: the filter now shares the invocation. It is a
+  handful of DB round trips, but it must not be the thing that overruns.
+- Strip: eight chips to seven, `Tag & Filter`. `AUTOMATABLE_STEPS` is now
+  research → resolve → photos → ingest → tag.
+- `runFilter` stays its own module, its own `step_results.filter` key (the
+  review gate is a fact about the run; reading it off the thing that produced
+  it beats inferring it from `tag`'s phase) and its own route entry.
+
+**Two things typecheck and a test caught, both the same shape as bugs this
+codebase has had before**:
+- Registering `runFilter` bare in `STEP_HANDLERS` would have passed
+  `body.photoIds` — straight from the request — as its new `opts`, letting a
+  client decide whether the untagged guard applied. Same trap `runPhotos`'
+  `actor` parameter set in phase90; the same adapter closes it.
+- `saveStep` writes `{ ...run.step_results, [step]: … }` from the snapshot it
+  is handed. `runFilter` writes its key, then `runTag` saved `tag` through the
+  PRE-filter snapshot — erasing the filter result, and with it the gate, with
+  no error anywhere. Fixed with a `getRun` re-read, and pinned by a test that
+  asserts the object `saveStep` is called with actually carries the `filter`
+  key.
+
+**Verification**: `pnpm typecheck` 0 errors, `pnpm test` 695 web + 520 mobile
+(6 new), `biome check` 0 errors.
+
+**Learnings**: "combine these two steps" was a five-line change and a real bug.
+The bug was already there — phase101 shipped it — but splitting had hidden it
+behind a refusal message that read like normal operation. Merging two things
+back together is a good time to ask what the seam between them was concealing.
+
 ## 2026-08-23 05:35 UTC — The candidate page list appeared only after the fetch you were choosing the input for
 
 **Objective**: owner, on the Fetch Sites step shipped 35 minutes earlier: "can

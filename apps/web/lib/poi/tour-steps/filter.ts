@@ -26,7 +26,23 @@ import { tourPoiIds } from '../tour-poi-set';
 import { type RunRow, type TourDb, mustWrite, saveStep, setRunStatus } from './shared';
 import { initialVerdict } from './shots';
 
-export async function runFilter(sb: TourDb, run: RunRow) {
+export async function runFilter(
+  sb: TourDb,
+  run: RunRow,
+  /**
+   * What to do about photos the tagger never managed to describe.
+   *
+   * Standalone — the owner clicking a Filter button — an untagged photo means
+   * tagging has not finished, and judging early is worse than not judging (see
+   * the guard below). Called from the end of `runTag`, it means something
+   * else: tagging DID reach every photo and some of them failed, and blocking
+   * on those would jam the gate shut for ever, because `tagPoiPhoto` only
+   * stamps `tagged_at` on success (vision-tagger.ts) so a photo with a dead
+   * storage path never stops being untagged.
+   */
+  opts: { untaggedIsFatal?: boolean } = {},
+) {
+  const { untaggedIsFatal = true } = opts;
   const resolve = run.step_results.resolve as
     | { resolved?: Array<{ place_id: string }> }
     | undefined;
@@ -62,12 +78,16 @@ export async function runFilter(sb: TourDb, run: RunRow) {
   // then opens the gate on a pile the owner has to sort by hand. Say so
   // instead.
   const untagged = toJudge.filter((p) => !p.ai_tags).length;
-  if (untagged > 0) {
+  if (untagged > 0 && untaggedIsFatal) {
     return {
       error: 'untagged',
       message: `${untagged} photo(s) are still untagged — run Tag until it reports none left, then filter.`,
     };
   }
+  // Not fatal: the ones tagging gave up on stay `pending` and reach the review
+  // as themselves. A photograph nobody could describe is exactly the kind a
+  // person should look at, and `initialVerdict` still rejects it if the file
+  // or its dimensions are missing.
 
   // Grouped by reason so the verdict is written WITH its justification. A bare
   // 'rejected' made an automated call indistinguishable from the owner's own,
@@ -99,6 +119,7 @@ export async function runFilter(sb: TourDb, run: RunRow) {
     rejected,
     kept: toJudge.length - rejected,
     reasons,
+    ...(untagged > 0 ? { judged_untagged: untagged } : {}),
   });
   await setRunStatus(sb, run.id, 'review');
 
@@ -107,6 +128,7 @@ export async function runFilter(sb: TourDb, run: RunRow) {
     judged: toJudge.length,
     rejected,
     kept: toJudge.length - rejected,
+    ...(untagged > 0 ? { judgedUntagged: untagged } : {}),
     awaitingReview: true,
   };
 }

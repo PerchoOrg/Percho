@@ -35,23 +35,15 @@ export type StepName =
   | 'ingest'
   // Also the HOME tour's first step, where it is the only fetch there is: a
   // community FETCHES photos and then tags them, a home arrives with them
-  // (apps/web/lib/poi/listing-tour-steps/tag.ts).
+  // (apps/web/lib/poi/listing-tour-steps/tag.ts). On the community tour it
+  // also runs the initial filter — see `tour-steps/tag.ts`.
   | 'tag'
-  | 'filter'
   | 'plan'
   | 'generate'
   | 'assemble';
 
 /** `review` is the human gate — it has no server step, so it never runs. */
-export type StripStep =
-  | 'photos'
-  | 'ingest'
-  | 'tag'
-  | 'filter'
-  | 'review'
-  | 'plan'
-  | 'generate'
-  | 'assemble';
+export type StripStep = 'photos' | 'ingest' | 'tag' | 'review' | 'plan' | 'generate' | 'assemble';
 
 export interface StepSpec {
   name: StripStep;
@@ -90,8 +82,16 @@ export const TOUR_STEPS: StepSpec[] = [
     hint: 'the community site + ticked pages',
     waitingHint: 'reading pages…',
   },
-  { name: 'tag', label: 'Tag', hint: 'a description per photo', waitingHint: 'tagging…' },
-  { name: 'filter', label: 'Filter', hint: 'drop what cannot be used' },
+  {
+    name: 'tag',
+    label: 'Tag & Filter',
+    // One chip since 2026-08-23 (owner: "tag and filtering can be combined").
+    // Filtering an untagged photo is meaningless, so a separate Filter button
+    // could only refuse until Tag was done — which is not a step, it is a
+    // dependency wearing a button.
+    hint: 'describe each photo, drop what cannot be used',
+    waitingHint: 'tagging…',
+  },
   { name: 'review', label: 'Review', hint: 'yours — approve/reject in the table' },
   { name: 'plan', label: 'Plan', hint: 'shot list from what survived' },
   { name: 'generate', label: 'Render', hint: 'a clip for every shot' },
@@ -101,23 +101,16 @@ export const TOUR_STEPS: StepSpec[] = [
 /**
  * The steps a machine may run unattended.
  *
- * Everything up to the owner's photo review, and nothing after it — see the
- * review gate in `tour-steps/filter.ts`.
+ * Everything up to the owner's photo review, and nothing after it — the gate
+ * is written by `runFilter`, which `tag` calls once it has attempted every
+ * photo (`tour-steps/tag.ts`).
  *
  * `ingest` and `tag` can both stop short on their time budget and ask to be
- * clicked again, so a chained run does NOT guarantee a full pile by the time
- * it reaches `filter`. `filter` refuses to judge an untagged photo rather than
- * passing it, which is what keeps a half-finished chain from opening the gate
- * on a set nothing has looked at.
+ * clicked again. A `tag` that ran out of clock does NOT filter and does NOT
+ * open the gate, so a half-finished chain leaves the review closed rather than
+ * opening it on a set nothing has looked at.
  */
-export const AUTOMATABLE_STEPS: StepName[] = [
-  'research',
-  'resolve',
-  'photos',
-  'ingest',
-  'tag',
-  'filter',
-];
+export const AUTOMATABLE_STEPS: StepName[] = ['research', 'resolve', 'photos', 'ingest', 'tag'];
 
 /**
  * `running` is the REQUEST in flight. `waiting` is the request finished and the
@@ -139,7 +132,7 @@ export function TourStepStrip({
   awaitingReview,
   onRun,
   onRunAutomated,
-  automatedHint = 'Runs research → resolve → fetch → ingest → tag → filter, then stops for your review',
+  automatedHint = 'Runs research → resolve → fetch → ingest → tag & filter, then stops for your review',
   error,
 }: {
   steps?: StepSpec[];
@@ -147,7 +140,7 @@ export function TourStepStrip({
   /** Live detail for a step — "rendering 12/39", "encoding". Optional. */
   noteOf?: (s: StripStep) => string | undefined;
   running: StepName | null;
-  /** True once `filter` has finished and `plan` has not run. */
+  /** True once filtering has finished and `plan` has not run. */
   awaitingReview: boolean;
   onRun: (s: StepName) => void;
   onRunAutomated: () => void;

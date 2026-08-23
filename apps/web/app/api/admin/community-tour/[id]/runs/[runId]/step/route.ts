@@ -10,8 +10,9 @@
  *   photos     — 3 Places photos per POI the tour has, and the enhance queue.
  *   ingest     — photos from the community's own website and its subpages,
  *                plus any other page the owner ticked.
- *   tag        — a Gemini description for every untagged photo in scope.
- *   filter     — reject what cannot be used. STOPS at phase 'review'.
+ *   tag        — a Gemini description for every untagged photo in scope, then
+ *                the initial filter over what came back. STOPS at 'review'.
+ *   filter     — that filter on its own. Not on the strip; `tag` calls it.
  *   ——— the owner reviews the approved AND rejected photos by hand ———
  *   plan       — the shot list, from whatever survived that review.
  *   generate   — enqueue photo→clip jobs in photo_clips (seedance worker
@@ -21,8 +22,12 @@
  * photos/ingest/tag/filter were ONE step until 2026-08-23 (owner: "we need to
  * split the fetch & tag to 4 steps: fetch from resolved pois, fetch from
  * selected websites, tag selected photos, auto-filtering"). Four jobs sharing
- * one 300s function is why the tag loop needed a clock budget; each has the
- * whole function to itself now.
+ * one 300s function is why the tag loop needed a clock budget.
+ *
+ * Later the same day, tag and filter were folded back into one chip (owner:
+ * "tag and filtering can be combined") — filtering an untagged photo is
+ * meaningless, so a Filter button could only refuse until Tag had finished.
+ * Three steps run before the gate, not four.
  *
  * This file is dispatch only. Each step lives in `lib/poi/tour-steps/`; the
  * steps are independent of one another and share `tour-steps/shared.ts`.
@@ -73,9 +78,17 @@ const STEP_HANDLERS: Record<
   // this adapter is what keeps it caught.
   photos: (sb, run) => runPhotos(sb, run),
   ingest: runIngest,
+  // `tag` runs the filter too (owner 2026-08-23: "tag and filtering can be
+  // combined"), so the strip has no Filter chip. `filter` stays registered
+  // because it is still a real, separately runnable step.
   tag: runTag,
-  filter: runFilter,
-  // The owner's manual photo review sits between `filter` and `plan`.
+  // Wrapped for the same reason `photos` is: this registry's third argument is
+  // `body.photoIds`, straight from the request, and `runFilter`'s is `opts` —
+  // so registering it bare would let a client post `{"photoIds": ...}` and
+  // decide whether the untagged guard applies. Typecheck caught it; the
+  // adapter is what keeps it caught.
+  filter: (sb, run) => runFilter(sb, run),
+  // The owner's manual photo review sits between tagging and `plan`.
   plan: runPlan,
   generate: runGenerate,
   'regenerate-all': runRegenerateAll,

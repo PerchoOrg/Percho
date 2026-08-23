@@ -147,9 +147,10 @@ export function CommunityTourSection({
   // `research` writes under `agent_research`; every other step uses its name.
   const resultKey = (s: StepName) => (s === 'research' ? 'agent_research' : s);
   const photosResult = run?.step_results.photos as { phase?: string } | undefined;
-  // The gate belongs to `filter` now — it is the last automated step and the
-  // one that writes phase 'review' (tour-steps/filter.ts). It used to belong
-  // to `photos`, back when photos WAS fetch + ingest + tag + filter.
+  // The gate is written by `runFilter`, which the `tag` step calls once it has
+  // attempted every photo. Still its own `step_results` key even though it no
+  // longer has its own chip: the gate is a fact about the run, and reading it
+  // off the thing that produced it beats inferring it from `tag`'s phase.
   const filterResult = run?.step_results.filter as { phase?: string } | undefined;
 
   /** Clips the current plan needs, and how many are actually rendered. */
@@ -491,18 +492,28 @@ export function CommunityTourSection({
     }
     if (s === 'tag') {
       const r = run?.step_results.tag as
-        | { tagged?: number; total?: number; remaining?: number }
+        | {
+            tagged?: number;
+            total?: number;
+            unreached?: number;
+            failed?: number;
+            rejected?: number;
+            kept?: number;
+          }
         | undefined;
       if (!r) return undefined;
-      if ((r.remaining ?? 0) > 0) {
+      // Ran out of clock. Say how far it got — the difference between "click
+      // again" and "it did nothing".
+      if ((r.unreached ?? 0) > 0) {
         return `${r.tagged ?? 0}/${r.total ?? 0} tagged — click again`;
       }
-      return r.total ? `${r.total} tagged` : 'nothing left to tag';
-    }
-    if (s === 'filter') {
-      const r = run?.step_results.filter as { rejected?: number; kept?: number } | undefined;
-      if (!r) return undefined;
-      return `${r.rejected ?? 0} dropped · ${r.kept ?? 0} kept`;
+      // Both halves, because both happened in the one step.
+      const filterPart = `${r.rejected ?? 0} dropped · ${r.kept ?? 0} kept`;
+      // Photos the tagger could not describe are not an error to hide: they
+      // are sitting in Pending waiting for a person.
+      return (r.failed ?? 0) > 0
+        ? `${filterPart} · ${r.failed} undescribed`
+        : `${r.tagged ?? 0} tagged · ${filterPart}`;
     }
     if (s === 'generate' && plannedShots.length > 0 && shotsRendered < plannedShots.length) {
       return `rendering ${shotsRendered}/${plannedShots.length} clips`;
