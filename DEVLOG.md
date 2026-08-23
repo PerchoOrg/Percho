@@ -16,6 +16,57 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 07:35 UTC — Seedance eats the enhanced photo now, like every other engine
+
+**Objective**: owner — "lets change that rule, always use enhanced one for all
+rendering including seedance." This reverses the 2026-08-17 ruling that the AI
+model must be fed the ORIGINAL file while Ken Burns / DepthFlow and the final
+cut read the enhanced one.
+
+**Actions**:
+- `scripts/seedance-worker/worker.ts`: new `renderPhotoPath()` — approved
+  enhanced file, else the original — applied at all three frame sources: the
+  community tour's `input_photo_ids`, the per-photo hero, and the birdview
+  pair. The pair's select had to grow `enhanced_path, enhanced_status`; it was
+  reading `storage_path` alone.
+- `scripts/render-worker/worker.py`: `_load_listing_photos` now carries
+  `read_path` (what a render actually reads) on each record, and the hero
+  prompt's vision call downloads THAT instead of `storage_path` for both the
+  hero and the aerial candidates.
+
+**Decisions**:
+- **Approval stays the gate.** `enhanced_status == 'approved'`, not `ready` —
+  `ready` is the enhance worker's output, not a decision. Unapproved falls
+  back to the original, exactly like the local engines.
+- **Seedance does NOT get the outpaint branch.** `approved_enhanced_path()`
+  prefers enhanced → outpainted → original, but the outpaint step is a
+  canvas-fill fallback for a photo too small to travel across. The provider
+  gets a first frame, not a canvas, and reframed pixels are generated ones —
+  the opposite of what the hero fence is for. Seedance is enhanced-or-original.
+- The vision call and the frame submission read the same rule, so the model
+  keeps describing the file the clip will actually animate. That property was
+  the whole reason the 08-17 ruling made the vision call read originals; it is
+  preserved by moving BOTH sides, not one.
+
+**Issues**: none in the change. Two pre-existing failures in
+`tests/test_pick_bgm.py` (`pick_bgm()` returns None) reproduce on unmodified
+origin/main — unrelated, the BGM manifest.
+
+**Resolution**: 113 python tests pass (the 2 BGM ones fail identically before
+and after); `worker.ts` typechecks with only the known dotenv-resolution noise;
+biome reports the same 3 errors / 4 warnings as origin/main, none on the new
+lines.
+
+**Not done, needs the owner's call**:
+- **Existing Seedance clips are unaffected.** Seedance is exempt from
+  automatic requeue, so every hero already on disk keeps pixels generated from
+  the original photo. Bringing them onto enhanced sources means a per-row
+  Regenerate — real money (~$0.05-0.06 a clip).
+- Both worker fleets need a restart to run this.
+
+**Next steps**: restart the render + seedance workers; then decide whether the
+existing heroes get regenerated.
+
 ## 2026-08-23 08:10 UTC — The prompt change was fine; the run that tested it wasn't
 
 **Objective**: owner on Bellmoore Park: "clicked plan, still see many
