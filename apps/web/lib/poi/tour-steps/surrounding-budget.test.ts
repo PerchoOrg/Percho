@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { selectSurroundingPois } from './photos';
+import { enhanceTargets, selectSurroundingPois } from './photos';
 
 /** ids are `bucket:n`, so bucketOf/scoreOf can be derived from the name. */
 const bucketOf = (id: string) => id.split(':')[0] as string;
@@ -135,5 +135,27 @@ describe('hand-picked POIs', () => {
       budget: 2,
     });
     expect(kept).toHaveLength(2);
+  });
+});
+
+describe('enhanceTargets', () => {
+  const p = (id: string, enhanced_status: string) => ({ id, enhanced_status });
+
+  it('queues the two statuses that owe work', () => {
+    expect(enhanceTargets([p('a', 'none'), p('b', 'failed')])).toEqual(['a', 'b']);
+  });
+
+  it('leaves a finished verdict alone', () => {
+    expect(enhanceTargets([p('a', 'ready'), p('b', 'approved'), p('c', 'rejected')])).toEqual([]);
+  });
+
+  it('leaves work the worker already holds alone — re-queueing hands it out twice', () => {
+    expect(enhanceTargets([p('a', 'queued'), p('b', 'processing')])).toEqual([]);
+  });
+
+  it('picks only the unsettled rows out of a mixed set', () => {
+    expect(
+      enhanceTargets([p('a', 'approved'), p('b', 'none'), p('c', 'processing'), p('d', 'failed')]),
+    ).toEqual(['b', 'd']);
   });
 });

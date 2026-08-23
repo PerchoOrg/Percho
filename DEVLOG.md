@@ -16,6 +16,71 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 03:10 UTC — "Fetch & Tag" reported complete having tagged nothing
+
+**Objective**: owner, on the first clean run after the scope fix: "Apremont -
+Highcroft - clicked fetch and tag, it shows complete, but many are untagged".
+
+**Issues**: the run WAS clean — `photos` finished at 01:20:13 with
+`resolved_poi_ids: 16` (not 228) and opened the review gate. It also wrote
+`auto_tag: {}` and tagged zero photos, while 30 of 67 in scope sat untagged
+since 08-16.
+
+`fetchedPhotoIds` is filled only when a fetch returns NEW photos:
+
+```ts
+if ((r as { fetched?: number }).fetched) { … fetchedPhotoIds.push(…) }
+```
+
+Every POI already had its photos, so every fetch came back
+`{ fetched: 0, reused: n }`, the list stayed empty, and both the enhance queue
+and the tag loop — which read that list — did nothing. The step then reported
+success. The 30 untagged photos were downloaded by the three invocations the
+300s cap killed before tagging reached them: the exact state a resumable step
+has to be able to see, and the one thing this step could not.
+
+**Actions** (`tour-steps/photos.ts`):
+- Enhance and tag now work off **the POIs in scope**, read fresh after the
+  fetch loops (`resolvedPoiIds` — resolve's picks plus the approved links),
+  not off what this invocation happened to download. `fetchedPhotoIds` is
+  gone, along with the two per-POI queries that maintained it.
+- Tagging is bounded by a **150s wall clock**, not a count. The route is
+  `maxDuration = 300`, a tag measures ~3.5s, and overrunning means a platform
+  kill with no failure recorded.
+- If anything is still untagged when the budget runs out, the step **stays on
+  `tagging`** and returns "Tagged N. M photo(s) still untagged — run Fetch &
+  Tag again." It no longer opens the review gate over a half-tagged set: an
+  untagged photo is invisible to the Curator, so reviewing one is reviewing
+  the wrong thing.
+- `enhanceTargets` extracted and tested — the settled list
+  (`ready`/`approved`/`rejected`/`queued`/`processing`) is exactly the kind of
+  rule that regresses silently when a status is added.
+
+**Decisions**: *a clock, not a count.* A count has to be re-derived every time
+tag latency or the fetch half changes; the budget adapts on its own and is the
+same shape as the constraint it defends. *Report the remainder rather than
+raising the cap* — the honest ceiling is a step that resumes, which is what the
+idempotency work an hour ago bought.
+
+**Resolution**: simulated against production, what the next click does —
+
+| community | downloads | enhance-queue | tag | est. |
+|---|---|---|---|---|
+| Apremont - Highcroft | 2 POIs | 20 | **30 of 30** | ~119s |
+| Ashley Crossing | 0 | 49 | 43 of 51, then "click again" | ~151s |
+| Bellmoore Park | 1 POI | 14 | **26 of 26** | ~98s |
+| Aberdeen | 0 | 0 | 0 of 0 | ~0s |
+
+`pnpm typecheck` clean, lint clean, 634 tests pass (4 new). Aberdeen's zero
+row is the idempotency check: a click on a finished community does nothing at
+all.
+
+**Learnings**: the enhance queue had the same defect and nobody noticed —
+20/49/14 photos across three communities were never queued for enhancement,
+silently, for the same reason. One list stood for two different ideas ("what I
+downloaded" vs "what needs work"), and every consumer of it inherited the
+wrong one.
+
 ## 2026-08-23 02:45 UTC — The stalled runs were the 300s function cap, not a dead dev server
 
 **Objective**: owner, reading the advice to restart the dev servers: "we talked
