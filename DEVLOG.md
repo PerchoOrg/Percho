@@ -44,9 +44,14 @@ OWNER REVIEW: if you'd rather policy the table, this read can go back to anon.
 
 **Resolution**: web typecheck clean, detail tests 24/24, biome clean.
 
-**Next steps**: verify on production that a mirror-linked listing actually
-carries the fields (needs `our_listing_id` populated by the sync — if all are
-null, the sync's linker is the next thing to check).
+**Next steps**: verified against production 10:35 UTC with the service key:
+`mls_listings` has **zero rows** — the RESO sync (`lib/mls/sync-worker.ts`)
+has never run against this database, and nothing in the repo populates
+`our_listing_id` even when it does. So DOM / lot-acres / MLS number stay
+honestly absent until (1) the sync runs and (2) a linker matches mirror rows
+to `listings` (likely on `source_id` ↔ `listing_key`, to be confirmed).
+Field coverage for the rest of the page, same probe: 260 active listings —
+zip 260, walkthrough videos 16, lot_size 11, hoa 10, neighborhood 2.
 
 ## 2026-08-23 09:55 UTC — phase119: the explore page answers "does this home fit me"
 
