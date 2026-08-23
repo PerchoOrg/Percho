@@ -71,6 +71,7 @@ export type IndexAssembly = {
  * one when picking the run a row is judged by — so it sits below the first.
  */
 export const PROGRESS_RANK: Record<string, number> = {
+  abandoned: 0,
   failed: 0,
   tagging: 1,
   review: 2,
@@ -230,8 +231,12 @@ export function buildTourIndexRows(input: {
     const p = photos.get(l.id) ?? { total: 0, tagged: 0, picked: 0 };
     const a = activity.get(l.id);
     // Only when the newer attempt has NOT got as far: two runs that both
-    // reached the same stage are one story, not a stalled re-run.
-    const rerun = a?.newest && a.newest !== a.best ? a.newest.status : null;
+    // reached the same stage are one story, not a stalled re-run. An abandoned
+    // run says nothing about what is happening now — closing it in the cleanup
+    // panel is precisely how the owner clears this note.
+    const newest = a?.newest;
+    const rerun =
+      newest && newest !== a?.best && newest.status !== 'abandoned' ? newest.status : null;
     return {
       row: {
         id: l.id,

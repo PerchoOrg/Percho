@@ -151,3 +151,48 @@ export async function verifyWebhookSignature(opts: {
   }
   return diff === 0;
 }
+
+/**
+ * Every video in the account. Stream's list endpoint caps at 1000 per call and
+ * pages by `created` — `asc=false` plus `before` walks backwards from newest.
+ */
+export async function listVideos(): Promise<
+  Array<{ uid: string; created: string; duration: number | null; status: { state: string } }>
+> {
+  type Video = { uid: string; created: string; duration: number | null; status: { state: string } };
+  const out: Video[] = [];
+  let before: string | undefined;
+  // 20 pages of 1000 is far beyond anything this account will hold; the bound
+  // exists so a malformed cursor cannot spin forever.
+  for (let page = 0; page < 20; page += 1) {
+    const qs = new URLSearchParams({ limit: '1000', asc: 'false' });
+    if (before) qs.set('before', before);
+    const res = await fetch(`${CF_API_BASE}/accounts/${accountId()}/stream?${qs}`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(`Cloudflare Stream list failed: ${res.status} ${await res.text()}`);
+    }
+    const body = (await res.json()) as { result: Video[] };
+    const batch = body.result ?? [];
+    out.push(...batch);
+    if (batch.length < 1000) break;
+    before = batch[batch.length - 1]?.created;
+    if (!before) break;
+  }
+  return out;
+}
+
+/**
+ * Delete one video. A 404 counts as success — the asset is gone, which is what
+ * the caller asked for, and re-running a cleanup must not error on the work it
+ * already did.
+ */
+export async function deleteVideo(uid: string): Promise<{ ok: boolean; error?: string }> {
+  const res = await fetch(`${CF_API_BASE}/accounts/${accountId()}/stream/${uid}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (res.ok || res.status === 404) return { ok: true };
+  return { ok: false, error: `${res.status} ${(await res.text()).slice(0, 200)}` };
+}

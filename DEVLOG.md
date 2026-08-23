@@ -16,6 +16,89 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 21:15 UTC — 83% of the Cloudflare Stream bill is cuts nobody can reach
+
+**Objective**: owner, after the run-count change: "actually i do care the
+previous runs, and failed one, because they are consuming my resources, can we
+have some way to clean up them?"
+
+**Investigation** (production, 2026-08-23):
+- **Cloudflare Stream: 282 videos, 158.5 min, ~$0.79/mo** at $5/1000 min/mo.
+  Only **49** (22.0 min) are reachable — a `listing_videos` / `community_videos`
+  / `generated_videos` row or a community cover plays them. **97** are held only
+  by a superseded `*_tour_assemblies` row (every re-run uploads a fresh cut per
+  surface and abandons the old one) and **136** are referenced by nothing at
+  all. 233 of 282 assets, ~$0.68/mo, growing: 62 new assets on 08-21, 32 on
+  08-22.
+- **`listing_photo_clips` is NOT waste and must not be cleaned.** 323 rows, all
+  ready, **zero** duplicate (photo, surface, render_key) groups, $0.85 recorded
+  cost. Clips are keyed by render_key and shared across runs — that is the
+  mechanism that makes a re-run reuse paid Seedance renders. Deleting them
+  spends money rather than saving it.
+- `render_jobs` (97) and `listing_tour_runs` (43) cost nothing but screen space.
+
+**Actions**:
+- `supabase/migrations/20260823210000_listing_tour_runs_abandoned.sql`: adds
+  'abandoned' to the status check. The original constraint was declared inline,
+  so the migration looks its name up in `pg_constraint` rather than guessing —
+  dropping the wrong name would leave the old check in place and every write
+  would keep failing. **Pushed**: 69/69 migrations match local and remote,
+  nothing pending; verified by writing 'abandoned' to a real run and restoring
+  it.
+- `lib/cleanup/stream-orphans.ts` (+ 7 tests): pure classification into
+  live / superseded / unreferenced, with the Cloudflare price and a 24h age
+  floor.
+- `lib/cleanup/refs.ts`: reads all six uid-bearing columns and the stalled runs.
+  Throws on a failed read rather than returning a short live-set — a swallowed
+  error there would offer live assets for deletion.
+- `app/api/admin/cleanup/stream` (GET list / POST delete) and
+  `.../cleanup/runs` (GET list / POST abandon), both admin-gated, both zod-
+  validated.
+- `lib/cloudflare/stream.ts`: `listVideos()` (paged, 1000/call) and
+  `deleteVideo()` (404 counts as success, so re-running a cleanup is safe).
+- `CleanupPanel.tsx` on the worker hub: buckets, the full deletable list behind
+  a "show list" toggle, a delete button, and the stalled-run closer.
+- `lib/listings/tour-index.ts`: an abandoned run no longer produces the
+  "rerun in Plan" note — closing one in the panel is how the owner clears it.
+
+**Decisions**:
+- **Button, not cron or script** (owner's pick of three). No cron infra exists
+  (no vercel.json), and the owner asked to see the list before anything goes.
+- **The POST re-reads every reference before deleting.** The panel's list can
+  be minutes old, and an assembly finishing in those minutes can claim a uid
+  that was unreferenced when the page rendered. Anything that has since become
+  live is skipped and reported. Same pre-check phase92 did by hand.
+- **24h age floor.** Assembly uploads, waits for Stream to encode, then patches
+  the video row; a cut minutes old can look unreferenced and not be. 2 of
+  today's 233 are held back by exactly this.
+- **Runs are marked, not deleted** (owner): `step_results` holds the plan, and
+  deleting the row would mean re-running plan to get it back.
+
+**Resolution**: exercised the real code path against production —
+`listVideos()` returns all 282, classification gives 49 live / 97 superseded /
+136 unreferenced, **231 deletable** (135.8 min, $0.68/mo) with 2 held back as
+too young, and 6 runs stalled over 6h. Nothing deleted yet: that is the owner's
+click. `pnpm typecheck`, `pnpm lint` (0 errors), `pnpm test` (657) and
+`pnpm build` clean.
+
+**Issues**: verifying the constraint cost one row a timestamp. Writing
+'abandoned' to run `d45fcbed` and restoring it fired the `touch_updated_at`
+trigger twice, so that run now reads as updated just now — its home (9155
+Nesbit Ferry Road) shows "Last activity: now", and the run drops out of the
+stalled list until 6h pass. The trigger overrides any attempt to write the old
+timestamp back. Cosmetic and self-correcting, but it is a real edit made for a
+test.
+
+**Learnings**: an admin panel that deletes must re-derive its safety condition
+at the moment of deletion, not trust the list it rendered. And a "cleanup"
+feature has to name what it will NOT touch — clips look like the same kind of
+debris and deleting them would re-bill the paid engine.
+
+**Next steps**: nothing prevents the next re-run from orphaning two more cuts.
+If the owner wants it to stop accumulating, the place is the assemble step:
+when a new cut supersedes one for the same (listing, surface), delete the old
+asset there. Offered and not yet chosen.
+
 ## 2026-08-23 20:50 UTC — The run count comes off the Stage column
 
 **Objective**: owner on the row phase96 shipped: "why do i care about how many

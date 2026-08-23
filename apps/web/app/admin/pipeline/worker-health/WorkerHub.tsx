@@ -46,6 +46,7 @@ import type { ProcessSnapshot, SystemSnapshot } from '@/lib/worker-hub/host';
 import type { QueueSnapshot, QueueWorker } from '@/lib/worker-hub/queues';
 import { AlertTriangle, CheckCircle2, Info, Pause, Play, RotateCw, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { CleanupPanel } from './CleanupPanel';
 import { LogViewer } from './LogViewer';
 
 const HOST_POLL_MS = 5_000;
@@ -228,6 +229,8 @@ export function WorkerHub() {
           </tbody>
         </table>
       </div>
+
+      <CleanupPanel />
 
       <LogViewer sources={processes.map((p) => ({ id: p.id, name: p.name, logPath: p.logPath }))} />
     </div>
