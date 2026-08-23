@@ -5,6 +5,7 @@
  */
 import type { PoiActor } from '@/lib/poi/poi-actions-core';
 import type { PlaceFact } from '../tour-orchestrator/insights';
+import { tourPoiIds } from '../tour-poi-set';
 import { type RunRow, type TourDb, asJson, mustWrite, saveStep, setRunStatus } from './shared';
 import { computeFinalShots } from './shots';
 
@@ -587,20 +588,37 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     auto_tag?: unknown;
   };
 
-  // The candidate set comes from `community_pois`, NOT from what the photos
-  // step saved.
+  // The candidate set is the TOUR's POI set — what `resolve` picked for this
+  // run, plus the links a person approved (the amenity ingest and the admin
+  // panel both stamp 'approved'). NOT every non-rejected row in
+  // `community_pois`.
   //
-  // A saved list is stale by construction: it is written before the review and
-  // read after it. Worse, it survives across runs — re-running plan alone
-  // replayed a list an OLDER photos run had already trimmed to ten, so the
-  // POIs behind seven hand-approved photos were absent from the input and no
-  // amount of prioritising could reach them. Three plan runs, each paying for
-  // Curator, each producing the same answer for that reason (owner 2026-08-20:
-  // "i ran 3 time, cost a lot for this test").
+  // That table is two sets wearing one name: the Nearby button writes a
+  // `candidate` row for 20 places per included type, so a single click leaves a
+  // few hundred behind. Reading all of them put TEN POIs into Apremont -
+  // Highcroft's fifteen-place cut that the photos step had never fetched,
+  // enhanced, tagged or judged for — nine of the twenty-nine shots landed on
+  // photos with no ai_tags and no ai_score at all, ordered by `created_at`
+  // alone. One was Cornerstone Christian Academy, whose only TAGGED photo the
+  // fair-housing filter had just dropped; three untagged ones took the slots it
+  // vacated, and nothing had ever looked at them. Owner 2026-08-23: "the scope
+  // of plan is only for photos from previous step, which is resolved photos and
+  // manual fetched ones."
   //
-  // `community_pois` is the durable truth about what this community has, and
-  // it only grows. Reading it here means plan sees every POI, every time,
-  // whatever ran before it.
+  // `tourPoiIds` is that definition, already shared by the photos step, the tag
+  // step and the review page — this was the last caller reading the raw table,
+  // so all four now work on the same places. It is re-derived from
+  // `resolve.resolved` on every call rather than replayed from a list an
+  // earlier plan froze, which is what once left hand-approved photos
+  // unreachable (owner 2026-08-20: "i ran 3 time, cost a lot for this test").
+  //
+  // Render and assembly need no equivalent change: both read the shot list this
+  // step writes, so the scope reaches them through it.
+  const resolveStep = run.step_results.resolve as
+    | { resolved?: Array<{ place_id: string }> }
+    | undefined;
+  const scopePoiIds = await tourPoiIds(sb, run.community_id, resolveStep?.resolved);
+
   const { data: allLinks } = (await sb
     .from('community_pois')
     .select('poi_id, intent_bucket, ai_score')
@@ -608,30 +626,52 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     .neq('status', 'rejected')) as {
     data: Array<{ poi_id: string; intent_bucket: string | null; ai_score: number | null }> | null;
   };
-  // ...but only the POIs that have photos. A place with none contributes no
-  // shots, so leaving it in spends one of the fifteen surrounding slots on
-  // nothing. It never mattered while `photos` fetched for every link; now that
-  // it fetches for the resolved set and the approved links only (see above),
-  // the rest of `community_pois` is hundreds of `candidate` rows with no
-  // photos behind them.
+
+  // Every photo behind every link, once. Three questions need it: which POIs in
+  // scope actually have a photo to offer, which POIs the owner has ruled on by
+  // hand, and which `approved` rows this plan has to stand down at the end.
   //
   // Chunked, because one `.in()` over every link is a URL a few hundred uuids
   // long and PostgREST sits behind an 8 KB header limit — the 1,000-uuid
   // `.in()` that forced the tour-index rewrite was 37 KB (2026-08-22).
   const linkPoiIds = [...new Set((allLinks ?? []).map((l) => l.poi_id))];
-  const hasPhotos = new Set<string>();
+  type LinkedPhoto = {
+    id: string;
+    poi_id: string;
+    status: string | null;
+    reviewed_by: string | null;
+  };
+  const linkedPhotos: LinkedPhoto[] = [];
   for (let i = 0; i < linkPoiIds.length; i += 100) {
     const { data: photoRows } = (await sb
       .from('poi_photos')
-      .select('poi_id')
-      .in('poi_id', linkPoiIds.slice(i, i + 100))
-      .neq('status', 'rejected')) as { data: Array<{ poi_id: string }> | null };
-    for (const r of photoRows ?? []) hasPhotos.add(r.poi_id);
+      .select('id, poi_id, status, reviewed_by')
+      .in('poi_id', linkPoiIds.slice(i, i + 100))) as { data: LinkedPhoto[] | null };
+    linkedPhotos.push(...(photoRows ?? []));
   }
-  const links = (allLinks ?? []).filter((l) => hasPhotos.has(l.poi_id));
+
+  // A POI the owner ruled on by hand is in scope whatever resolve says. The
+  // review page shows him those rows deliberately (`keepPhotoForTour`), and a
+  // photo he can approve but the plan cannot reach is exactly the complaint of
+  // 2026-08-20: "the photos i manually approved are not in the plan".
+  for (const p of linkedPhotos) {
+    if (p.reviewed_by) scopePoiIds.add(p.poi_id);
+  }
+
+  // ...and only the POIs with a photo to offer. A place with none contributes
+  // no shots, so leaving it in spends one of the fifteen surrounding slots on
+  // nothing.
+  const hasPhotos = new Set(
+    linkedPhotos.filter((p) => p.status !== 'rejected').map((p) => p.poi_id),
+  );
+  const links = (allLinks ?? []).filter(
+    (l) => scopePoiIds.has(l.poi_id) && hasPhotos.has(l.poi_id),
+  );
   const resolvedPoiIds = [...new Set(links.map((l) => l.poi_id))];
   if (resolvedPoiIds.length === 0) {
-    throw new Error('no POIs with photos linked to this community — run research and photos first');
+    throw new Error(
+      'no resolved or hand-picked POI has photos yet — run research, resolve and Fetch & Tag first',
+    );
   }
   const bucketByPoiId = new Map<string, string>(
     links.map((l) => [l.poi_id, l.intent_bucket ?? 'other']),
@@ -773,26 +813,32 @@ export async function runPlan(sb: TourDb, run: RunRow) {
   const chosen = new Set(
     (shots as Array<{ photo_id?: string }>).map((sh) => sh.photo_id).filter(Boolean) as string[],
   );
-  const { data: current } = (await sb
-    .from('poi_photos')
-    .select('id, status')
-    .in('poi_id', cutPoiIds)) as { data: Array<{ id: string; status: string | null }> | null };
-  const promote = (current ?? [])
+  //
+  // Read across EVERY link, not only the POIs in this cut. Narrowing the cut to
+  // the tour's own POI set (see the top of this step) strands rows an earlier,
+  // wider plan stamped 'approved' — nine of them on Apremont - Highcroft — and
+  // a photo claiming to be in the cut of a film that has never heard of its POI
+  // is the very lie this stamp exists to prevent.
+  const promote = linkedPhotos
     .filter((r) => chosen.has(r.id) && r.status !== 'approved')
     .map((r) => r.id);
-  const demote = (current ?? [])
+  const demote = linkedPhotos
     .filter((r) => !chosen.has(r.id) && r.status === 'approved')
     .map((r) => r.id);
-  if (promote.length > 0) {
+  // Chunked for the same 8 KB header limit as the read above: `demote` is now
+  // community-wide, so it is no longer bounded by one cut's worth of photos.
+  for (let i = 0; i < promote.length; i += 100) {
+    const batch = promote.slice(i, i + 100);
     await mustWrite(
-      `approve ${promote.length} photo(s) in the cut`,
-      sb.from('poi_photos').update({ status: 'approved' }).in('id', promote),
+      `approve ${batch.length} photo(s) in the cut`,
+      sb.from('poi_photos').update({ status: 'approved' }).in('id', batch),
     );
   }
-  if (demote.length > 0) {
+  for (let i = 0; i < demote.length; i += 100) {
+    const batch = demote.slice(i, i + 100);
     await mustWrite(
-      `un-approve ${demote.length} photo(s) no longer in the cut`,
-      sb.from('poi_photos').update({ status: 'pending' }).in('id', demote),
+      `un-approve ${batch.length} photo(s) no longer in the cut`,
+      sb.from('poi_photos').update({ status: 'pending' }).in('id', batch),
     );
   }
 

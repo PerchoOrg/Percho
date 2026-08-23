@@ -103,6 +103,83 @@ it as "in the video" has to check for the video separately.
 side: `status` has no timeout, so a dead run is indistinguishable from a live
 one until someone reads the timestamps. Worth a reaper or a heartbeat.
 
+## 2026-08-23 03:54 UTC — Plan was drawing from the Nearby dragnet, so nine shots were photos nobody had ever looked at
+
+**Objective**: owner on Apremont - Highcroft: "after planning, I see 27 photos
+are approved, but some approved ones dont even have ai tags, and scores —
+without that, how did you do the planning??" Plus: the step chips must show
+running until the work is done, and survive a reload; and the third photo
+section should be called Pending.
+
+**Actions**:
+- `tour-steps/photos.ts` — `runPlan` now takes its candidate POIs from
+  `tourPoiIds()` (resolve's picks for this run ∪ links a person approved ∪ POIs
+  carrying a photo the owner ruled on) instead of every non-rejected row in
+  `community_pois`. The promote/demote pass at the end of the step now reads
+  every link rather than only the cut's POIs, and is chunked.
+- `tour-steps/shared.ts` — `claimActiveStep` / `clearActiveStep`, writing one
+  `step_results.active = { step, started_at }` record.
+- the step route claims before the handler and clears in `finally`.
+- `CommunityTourSection` polls `/runs` every 10s and derives step state from
+  `active`; `TourStepStrip` shows running for a server-claimed step and
+  disables every Run button while one is in flight.
+- `PhotoTable` — "Other Photos" → "Pending Photos".
+
+**Issues**: measured against the live row first. Apremont - Highcroft has **228
+`community_pois` links, every one of them `candidate`** — Nearby-button output,
+20 places per included type. `resolve` produced 16 POIs; phase94 had already
+narrowed the photos step and the review page to that set via `tourPoiIds`, but
+`runPlan` was still reading the raw table, so **10 of the 15 POIs in the cut had
+never been fetched, enhanced, tagged or judged for**. 9 of the 29 shots sat on
+photos with `tagged_at`, `ai_tags` and `ai_score` all null — ordered by
+`created_at` and nothing else. The worst case is Cornerstone Christian Academy:
+its one TAGGED photo was dropped by the fair-housing filter and two more came
+back tagger-unusable, whereupon three untagged photos of the same place took the
+three school slots. The policy filter cannot see a photo nobody tagged.
+
+**Decisions**: the first fix drafted was a tagged-gate in `computeFinalShots`
+(an untagged photo may never become a shot). The owner rejected the premise —
+"the scope of plan is only for photos from previous step, which is resolved
+photos and manual fetched ones" — and he was right: with the scope corrected the
+new candidate set is 15 POIs / **63 photos, none of them untagged**, so the gate
+would never fire. Fixing the scope fixes the symptom at its cause; a gate would
+have papered over a plan that was reading the wrong table.
+
+Render and assembly needed no change: both read the shot list `plan` writes.
+
+Step status went to its own `step_results.active` key rather than a `phase`
+inside each step's result — several handlers return early without writing a
+result at all, so a marker inside those results is one the handlers have to
+remember to clear. This one the route owns end to end. It carries `started_at`
+because a Vercel kill at `maxDuration` skips the `finally`; past 330s the strip
+reads the claim as "no response — re-run" instead of spinning forever.
+
+**Resolution**: `pnpm typecheck` clean, `pnpm test` 644/644, biome unchanged
+from origin/main on the six touched files. Re-running the new scope against the
+live row: the cut keeps Jones Bridge Park, The Forum, Curiosity Lab, the YMCA,
+the library and the Corners Connector Trail; it loses Carnicería El Sol,
+Cornerstone Christian Academy, H&W Steakhouse, Ingles Market, Norcross High
+School, Pinckneyville Middle School, Pinckneyville Park, Suburban Medical Center
+and Wesleyan School — all Nearby candidates, none of them tagged — and gains
+Peachtree Corners Town Green, Trader Joe's, H Mart Duluth, Publix, Duluth High
+School, Politan Row, Sequel Coffee, The Breakfast Bar and Ace Hardware from the
+resolved set. Still 15 places; a markedly better fifteen.
+
+The nine wrongly-approved rows are not migrated: the next Plan run demotes them,
+now that the demote pass reads every link.
+
+**Learnings**: `community_pois` is genuinely two tables sharing a name — the
+Nearby dragnet that feeds the buyer-facing "33 restaurants nearby" counts, and
+the tour's own place list. Every tour caller must go through `tourPoiIds()`;
+this was the last one that did not. The owner has asked to revisit the link
+definition itself (only agent picks / top-review places / website ones should be
+linked at all) — that is a separate change with consequences for
+`lib/feed/community-reasons.ts`, which counts those rows.
+
+**Next steps**: the home tour pipeline (`HomeTourSection` + the listing step
+route) still has client-only step status — same fix, different table.
+Optionally prune the `candidate` rows, per the paragraph above.
+
 ## 2026-08-23 03:23 UTC — The home tour index gets the community index’s treatment
 
 **Objective**: owner, after the Community Tour index was reworked: "improve
