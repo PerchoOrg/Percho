@@ -27,7 +27,7 @@
  */
 import { router, useLocalSearchParams } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useEffect, useState } from "react";
+import { type MutableRefObject, useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Image,
@@ -56,6 +56,13 @@ interface ReasonDTO {
 	fact?: string;
 }
 
+/** One place the tour's film visits — same rows as the card's dashed bar. */
+interface TourSegmentDTO {
+	name: string;
+	/** 0..1 — where in the film this place's clips END. */
+	endFraction: number;
+}
+
 interface CommunityDetailDTO {
 	id: string;
 	slug: string;
@@ -63,8 +70,10 @@ interface CommunityDetailDTO {
 	city: string;
 	state: string;
 	heroUrl: string;
-	/** AI-generated community tour video (mp4), when the admin has one. */
+	/** The community's film — the SAME one the feed card plays. */
 	videoUrl?: string;
+	/** Present only when `videoUrl` is the assembled tour. */
+	tourSegments?: TourSegmentDTO[];
 	blurb?: string;
 	topReasons: ReasonDTO[];
 	moreReasons: ReasonDTO[];
@@ -94,18 +103,40 @@ function ReasonRow({ reason }: { reason: ReasonDTO }) {
 }
 
 /**
- * AI-generated community tour (Seedance mp4) replacing the static hero when
- * the admin has generated one. Autoplays looped like feed cards; audio follows
- * the global soundOn store, so a buyer on the feed hears the tour here too.
- * `nativeControls` gives a way back if the phone's silent switch is on.
+ * The community's film replacing the static hero — the SAME one the feed card
+ * plays (HLS manifest for an assembled tour, mp4 for a legacy AI video).
+ * Autoplays looped like feed cards; audio follows the global soundOn store, so
+ * a buyer on the feed hears the tour here too. `nativeControls` gives a way
+ * back if the phone's silent switch is on.
+ *
+ * `seekRef` hands the parent a seek-by-fraction without lifting the player:
+ * `useVideoPlayer` ties the player's lifecycle to the component that renders
+ * it, and the only caller is the tour-visits chips below.
  */
-function CommunityTourVideo({ url }: { url: string }) {
+function CommunityTourVideo({
+	url,
+	seekRef,
+}: {
+	url: string;
+	seekRef: MutableRefObject<((fraction: number) => void) | null>;
+}) {
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const player = useVideoPlayer(url, (p) => {
 		p.loop = true;
 		p.muted = !soundOn;
 		p.play();
 	});
+	useEffect(() => {
+		seekRef.current = (fraction) => {
+			// duration is 0 until the source loads; a seek then would be a no-op
+			// anyway, so make it one explicitly.
+			const d = player.duration;
+			if (d > 0) player.currentTime = fraction * d;
+		};
+		return () => {
+			seekRef.current = null;
+		};
+	}, [player, seekRef]);
 	return (
 		<VideoView
 			player={player}
@@ -121,6 +152,8 @@ export default function CommunityWhyScreen() {
 	const insets = useSafeAreaInsets();
 	const [data, setData] = useState<CommunityDetailDTO | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const scrollRef = useRef<ScrollView>(null);
+	const seekRef = useRef<((fraction: number) => void) | null>(null);
 
 	useEffect(() => {
 		if (!slug) return;
@@ -166,12 +199,13 @@ export default function CommunityWhyScreen() {
 	return (
 		<View style={styles.root}>
 			<ScrollView
+				ref={scrollRef}
 				contentContainerStyle={{ paddingBottom: insets.bottom + 28 }}
 				showsVerticalScrollIndicator={false}
 			>
 				<View style={styles.hero}>
 					{data.videoUrl ? (
-						<CommunityTourVideo url={data.videoUrl} />
+						<CommunityTourVideo url={data.videoUrl} seekRef={seekRef} />
 					) : (
 						<Image source={{ uri: data.heroUrl }} style={styles.heroImg} />
 					)}
@@ -216,6 +250,44 @@ export default function CommunityWhyScreen() {
 
 				<View style={styles.body}>
 					{!!data.blurb && <Text style={styles.blurb}>{data.blurb}</Text>}
+
+					{/*
+					 * The film's own table of contents — one chip per place, in film
+					 * order, numbered to match the card's dashed bar. Tapping one
+					 * seeks the hero to where that place's clips START (the previous
+					 * place's endFraction) and scrolls back up so the seek is seen.
+					 *
+					 * No category glyphs: segments carry only a name, and guessing a
+					 * glyph from it would assert a category the film never recorded —
+					 * the same rule that keeps unmapped signals glyphless on the card.
+					 */}
+					{!!data.videoUrl && (data.tourSegments?.length ?? 0) > 0 && (
+						<>
+							<Text style={styles.sectionHead}>THE TOUR VISITS</Text>
+							<View style={styles.chips}>
+								{data.tourSegments?.map((seg, i) => (
+									<Pressable
+										// A film may revisit a place, so the name alone can repeat.
+										key={`${i}-${seg.name}`}
+										accessibilityRole="button"
+										accessibilityLabel={`Play the tour from ${seg.name}`}
+										style={styles.chip}
+										onPress={() => {
+											seekRef.current?.(
+												i === 0
+													? 0
+													: (data.tourSegments?.[i - 1]?.endFraction ?? 0),
+											);
+											scrollRef.current?.scrollTo({ y: 0, animated: true });
+										}}
+									>
+										<Text style={styles.chipRank}>{i + 1}</Text>
+										<Text style={styles.chipTxt}>{seg.name}</Text>
+									</Pressable>
+								))}
+							</View>
+						</>
+					)}
 
 					{/*
 					 * The card's three, in the card's order — `communityReasonsAll` is

@@ -505,7 +505,10 @@ function factFor(label: string, facts: CommunityReasonFacts): FactWithSource | u
   if (poi) {
     const n = facts.poiCounts?.[poi.bucket];
     if (typeof n === 'number' && n > 0) {
-      return { text: `${n} ${poi.noun}`, source: `poi:${poi.bucket}` };
+      // Every noun in POI_EVIDENCE is a simple plural-s ("pet places" included),
+      // so a count of 1 drops the s. A future irregular noun breaks this rule.
+      const noun = n === 1 ? poi.noun.replace(/s$/, '') : poi.noun;
+      return { text: `${n} ${noun}`, source: `poi:${poi.bucket}` };
     }
   }
   if (label === 'Well Maintained' || label === 'Safe') {
