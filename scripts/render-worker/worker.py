@@ -3805,11 +3805,32 @@ def process_listing_assembly(row: dict[str, Any]) -> None:
         if planned_bgm:
             candidate = BGM_DIR / planned_bgm
             bgm = candidate if candidate.exists() else None
+            if bgm is None:
+                print(
+                    f"[lassembly {assembly_id}] planned track {planned_bgm} not synced yet;"
+                    " falling back to a random one",
+                    flush=True,
+                )
         if bgm is None:
             bgm = pick_bgm()
         if bgm:
             print(f"[lassembly {assembly_id}] muxing {bgm.name}", flush=True)
             out_path = mux_audio(out_path, bgm, [], total, workdir)
+            # Record what actually played. Until 2026-08-23 the choice existed
+            # only in this log line, so "which track did this tour ship with"
+            # was unanswerable and the planner had no incumbent to hold on to
+            # across a re-render. Provenance only — never fail a finished film
+            # over it.
+            used = bgm.relative_to(BGM_DIR).as_posix()
+            if used != planned_bgm:
+                try:
+                    sb_patch(
+                        "listing_tour_assemblies",
+                        {"id": f"eq.{assembly_id}"},
+                        {"bgm": {"path": used, "source": "worker_fallback"}},
+                    )
+                except Exception:
+                    traceback.print_exc()
 
         cf_uid = cf_upload(out_path, meta={
             "name": f"home-tour-{listing_id}-{surface}",
