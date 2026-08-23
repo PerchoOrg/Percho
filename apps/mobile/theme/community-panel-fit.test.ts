@@ -95,6 +95,13 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		expect(infoLeft).toContain("flexDirection");
 		expect(infoLeft).not.toContain("flexWrap");
 		expect(SRC).toContain("numberOfLines={2}");
+		// And the glyphs follow the name's TEXT, not the flex box the text was
+		// shrunk into: a wrapped name leaves the box wider than its longest
+		// line, which is what put a third of a card-width of air between
+		// "Apremont -" and its glyphs. The box is handed back its measured
+		// width before the glyphs are laid out beside it.
+		expect(SRC).toContain("onTextLayout={onNameLayout}");
+		expect(SRC).toContain("e.nativeEvent.lines");
 		// And they must still be the name's neighbours in the tree, not the
 		// link's: one container holds the name and the glyphs, `Explore` is
 		// outside it.

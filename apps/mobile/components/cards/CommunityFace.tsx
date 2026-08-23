@@ -86,12 +86,14 @@ import type { CardIconName } from "@percho/shared/icons";
  * its evidence, and that screen is where the CTA goes.
  */
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	type LayoutChangeEvent,
+	type NativeSyntheticEvent,
 	Pressable,
 	StyleSheet,
 	Text,
+	type TextLayoutEventData,
 	View,
 } from "react-native";
 import {
@@ -214,6 +216,55 @@ export function CommunityFace({
 	deckGesture,
 }: CommunityFaceProps) {
 	const icons = signalIcons(card);
+
+	/* ── The name's true width ────────────────────────────────────────────── */
+
+	/**
+	 * A wrapped name's BOX is wider than the text inside it, and the glyphs are
+	 * laid out against the box.
+	 *
+	 * Flexbox shrinks the name to `row - glyphs - Explore` and the text then
+	 * wraps inside that width — so line 1 ends at the box edge only when it
+	 * happens to fill it. "Apremont - Highcroft" breaks after the dash at about
+	 * two thirds of the box, and the glyphs were drawn at the far edge with the
+	 * remaining third of empty space between them and the name, reading as
+	 * `Explore`'s neighbours rather than the name's (owner 2026-08-23, on that
+	 * community and on Ashley Crossing).
+	 *
+	 * `onTextLayout` reports each rendered LINE's width, so the fix is to hand
+	 * the box back its content's width and let the glyphs follow that instead.
+	 * Shrinking a greedily-wrapped paragraph to its widest line re-wraps it the
+	 * same way, so this settles in one pass rather than oscillating — and the
+	 * `< prev` guard makes that structural: the width only ever comes down.
+	 */
+	// Stored WITH the name it belongs to, and read back only for that name. A
+	// card face is reused across cards at the same deck index, so a bare number
+	// here would clamp the next community's name to this one's width for a
+	// frame — the state survives the prop change, and an effect that clears it
+	// runs after the paint that used it.
+	const [measured, setMeasured] = useState<{
+		name: string;
+		width: number;
+	} | null>(null);
+	const nameWidth = measured?.name === card.name ? measured.width : null;
+	const onNameLayout = useCallback(
+		(e: NativeSyntheticEvent<TextLayoutEventData>) => {
+			const lines = e.nativeEvent.lines;
+			// One line is already snug — its box IS its text. Only a wrap opens
+			// the gap this measures away.
+			if (lines.length < 2) return;
+			const widest = Math.ceil(
+				lines.reduce((max, l) => (l.width > max ? l.width : max), 0),
+			);
+			if (widest <= 0) return;
+			setMeasured((prev) =>
+				prev !== null && prev.name === card.name && prev.width <= widest
+					? prev
+					: { name: card.name, width: widest },
+			);
+		},
+		[card.name],
+	);
 
 	/** 0..1 playback position, written by `CardVideo` off the UI thread. */
 	const progress = useSharedValue(0);
@@ -445,7 +496,11 @@ export function CommunityFace({
 					    2026-08-22: "if community name is long, it can be truncated,
 					    fix that"). Wrapping spends card height, which this card has;
 					    truncation spent the name, which it does not. */}
-					<Text style={styles.name} numberOfLines={2}>
+					<Text
+						style={[styles.name, nameWidth !== null && { width: nameWidth }]}
+						numberOfLines={2}
+						onTextLayout={onNameLayout}
+					>
 						{card.name}
 					</Text>
 					{icons.length > 0 && (
@@ -649,11 +704,9 @@ const styles = StyleSheet.create({
 	 *  and wrap to its two lines inside that, so the glyphs keep their place at
 	 *  the name's right on every name length.
 	 *
-	 *  The cost this pays back to the 08-22 note: on a name whose first line
-	 *  cannot fill the shrunken box (one very long word), the glyphs are drawn
-	 *  at the box edge and so read slightly nearer `Explore` than the text.
-	 *  Accepted — the owner has now chosen a fixed position for them over a
-	 *  tight one. */
+	 *  The gap that would otherwise open between a wrapped name and its glyphs
+	 *  — the box being wider than the lines inside it — is measured away by
+	 *  `onNameLayout`; see its doc. */
 	infoLeft: {
 		flex: 1,
 		minWidth: 0,
