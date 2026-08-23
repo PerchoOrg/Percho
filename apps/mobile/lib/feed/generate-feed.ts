@@ -215,6 +215,33 @@ function fillSlot(
  * a real card the user has already seen, preferring the stage's own material.
  * Returns null only when the pool is genuinely empty, in which case the caller
  * shows the terminal card.
+ *
+ * ── 2026-08-23: listings loop too, and the loop walks the whole pool ─────────
+ *
+ * Owner: "why cant i see listing videos multiple times, but community videos i
+ * can see multiple times on ios, they should be same"; then, on what the loop
+ * is FOR — "it is for testing, we should see all ready ones in a loop, later we
+ * will recommendations, and some of them will be filtered".
+ *
+ * Listings were the one kind excluded here, so past the end of the pool every
+ * card was a community. With `videosOnly` the phone's whole inventory is 16
+ * listings and 4 communities, so that end arrives around card 20 of a session
+ * and the deck then showed the same four communities forever.
+ *
+ * Two things had to change, not one:
+ *
+ *   · `listing` joins the candidates, which is the parity the owner asked for.
+ *   · the looped card now comes from the slot the MIX wanted at this rotation,
+ *     not from the stalest kind. Staleness alternates the kinds 1:1, and
+ *     `anyItem` indexes each kind's list by the same `rotate` — so a kind
+ *     picked on every other card steps through its list two at a time and
+ *     reaches only half of it. Following the table instead keeps the 5:2 ratio
+ *     AND makes `rotate` advance by one within each kind often enough to reach
+ *     every row: the mix is 7 long, gcd(7, 16) = gcd(7, 4) = 1, so the cycle
+ *     visits all 16 listings and all 4 communities before repeating.
+ *
+ * Staleness still orders whatever the intended slot could not supply, which is
+ * the case its own note was written for.
  */
 function loopedFallback(
 	ctx: FillContext,
@@ -228,6 +255,9 @@ function loopedFallback(
 	/** Candidates in stage-preference order, each already stage-legal. */
 	const candidates: (FeedCardV3 | null)[] = [];
 
+	if (permitted.has("listing")) {
+		candidates.push(anyItem(ctx.listingRanked, rotate));
+	}
 	if (permitted.has("community")) {
 		const c = anyItem(ctx.communityRanked, rotate);
 		if (c !== null && !isLayerSuppressed(ctx.signals, "community")) {
@@ -248,17 +278,25 @@ function loopedFallback(
 		candidates.push(anyItem(TRADEOFFS, rotate));
 	}
 
-	// Least-recently-seen kind first. A fixed preference order is wrong HERE
-	// specifically: once the finite tables are consumed, looping is the only
-	// remaining source, so a static priority hands every slot to whichever kind
-	// sits highest.
-	const real = byStaleness(
-		emitted,
-		candidates.filter((c): c is FeedCardV3 => c !== null),
-	);
+	const real = candidates.filter((c): c is FeedCardV3 => c !== null);
+	// The table's own choice for this rotation first — see the header. This is
+	// not a fixed preference order (the thing the staleness note rules out);
+	// it is the same rotation that governs every FRESH card, applied to the
+	// looped tail so the tail keeps the deck's shape.
+	const wantedKind = kindForFill(mix[rotate % mix.length]?.fill ?? "");
+	const ordered = [
+		...real.filter((c) => c.kind === wantedKind),
+		// Least-recently-seen kind for the rest: once the finite tables are
+		// consumed, looping is the only remaining source, so a static priority
+		// would hand every leftover slot to whichever kind sits highest.
+		...byStaleness(
+			emitted,
+			real.filter((c) => c.kind !== wantedKind),
+		),
+	];
 	// Prefer a loop that also respects the run limit; fall back to the stalest
 	// real card rather than emitting nothing (a repeat is bad, a blank is worse).
-	const legal = real.find((c) => rhythmAllows(emitted, c, limits));
+	const legal = ordered.find((c) => rhythmAllows(emitted, c, limits));
 	if (legal !== undefined) return legal;
 	return null;
 }

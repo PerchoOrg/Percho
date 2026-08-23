@@ -149,10 +149,19 @@ describe("§1.7 stage 4 mix", () => {
 
 describe("seenIds and exhaustion", () => {
 	it("never re-emits a seen card while fresh content exists", () => {
+		// POOL holds 12 real cards (4 listings + 8 communities), so a 10-card
+		// first page leaves exactly TWO unseen — and two cards is the whole of
+		// "while fresh content exists". A longer second page is the looped tail,
+		// which repeats on purpose; that contract is the next test.
+		//
+		// This asked for ten before 2026-08-23 and passed for the wrong reason:
+		// the tail could only loop communities, and a looped community straight
+		// after the fresh ones broke the run limit, so `loopedFallback` returned
+		// null and the page ended early with nothing to overlap.
 		const first = gen(4, { count: 10 });
 		const firstIds = first.cards.map((c) => c.id);
 		const second = gen(4, {
-			count: 10,
+			count: 2,
 			seenIds: firstIds,
 			rotate: first.nextRotate,
 		});
@@ -160,6 +169,32 @@ describe("seenIds and exhaustion", () => {
 			.map((c) => c.id)
 			.filter((id) => firstIds.includes(id));
 		expect(overlap).toEqual([]);
+		expect(second.loopedIds).toEqual([]);
+	});
+
+	it("loops LISTINGS too, and walks the whole pool doing it", () => {
+		// Owner 2026-08-23: "why cant i see listing videos multiple times, but
+		// community videos i can see multiple times… they should be same", and
+		// on what the loop is for — "it is for testing, we should see all ready
+		// ones in a loop". Listings were the one kind `loopedFallback` refused,
+		// so past the end of the pool every card was a community.
+		const long = generateFeed({
+			stage: 4,
+			signals: EMPTY_SIGNALS,
+			pool: POOL,
+			seenIds: [],
+			count: 120,
+		});
+		expect(long.cards).toHaveLength(120);
+		const looped = new Set(long.loopedIds);
+		// Every ready card comes back round, not just the communities.
+		for (const l of POOL.listings) expect(looped.has(l.id)).toBe(true);
+		for (const c of POOL.communities) expect(looped.has(c.id)).toBe(true);
+		// And the tail still looks like the deck: the 5:2 table governs the
+		// looped cards too, so it does not collapse to alternating kinds.
+		const tail = long.cards.slice(12);
+		const listings = tail.filter((c) => c.kind === "listing").length;
+		expect(listings).toBeGreaterThan(tail.length / 2);
 	});
 
 	it("emits no duplicates within a single page", () => {
