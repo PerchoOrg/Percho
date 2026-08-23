@@ -16,6 +16,62 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 05:35 UTC — The candidate page list appeared only after the fetch you were choosing the input for
+
+**Objective**: owner, on the Fetch Sites step shipped 35 minutes earlier: "can
+you give me the candidate website urls that we got from agent research? so i
+can select".
+
+**Issue**: he could not, and that was a design fault in phase101, not a missing
+feature. `community_photo_sources` was seeded inside `runIngest` — so the list
+of pages you choose between only existed after Fetch Sites had already run.
+Choosing is the thing you want to do BEFORE it runs.
+
+**Actions**:
+- `tour-steps/ingest.ts`: seeding extracted out of `runIngest` into an exported
+  `seedPhotoSources(sb, communityId, research)` (+ 6 tests).
+- Called from three places now: `runResearch` (the natural moment — the URLs
+  have just been discovered), `runIngest` (unchanged behaviour), and the
+  sources route's **GET**.
+- The GET is the one that matters. Every community researched before phase101
+  has its candidates sitting in a run blob with no rows to show for them, and
+  the only other ways to create those rows were to re-run research — a paid
+  Gemini call — or to run the very fetch being chosen for. A GET that writes is
+  impure; paying tokens to populate a checkbox list is worse.
+- `seedPhotoSources` prefers `communities.website` over the run blob for the
+  community-site row. `runResearch` only fills that column when it is blank, so
+  a URL a person entered outranks the model's guess — and this is the one place
+  that difference decides what is fetched by default.
+
+**Measured on production** (read-only apart from the idempotent seed itself,
+which is exactly what opening the panel now does): 52 rows across the four
+communities that have runs. Bellmoore Park 14 (1 ticked), Aberdeen 11 (1),
+Apremont - Highcroft 13 (**0**), Ashley Crossing 14 (**0**).
+
+**Learnings**: two of the four communities have NO community site at all —
+research found none, and `communities.website` is null for 8,678 of 8,680 rows.
+For those, Fetch Sites does nothing until a page is ticked or pasted, and the
+panel is now the only thing that says so. The default that "always selects the
+community's own website" is only a default where one exists.
+
+Also: most of what research cites is not photographable. `kroger.com`,
+`homedepot.com`, `acehardware.com`, `orangetheory.com` are chain corporate
+sites whose imagery is stock and branding, and `roswellgov.com`,
+`gwinnettcounty.com`, `johnscreekga.gov` were cited as bare domains rather than
+the specific park page. That is why `research` sources default to unticked, and
+it is an argument for the research prompt being asked for a page rather than a
+homepage — not addressed here.
+
+**Near-miss worth recording**: the first version of the GET edit silently did
+not apply. The anchor text it searched for included a `biome-ignore` + `any`
+cast that phase101 had already removed, and the `assert s != o` guarding the
+edit passed anyway because a *different* replacement in the same script had
+matched. Biome's `noUnusedImports` on the now-orphaned import is what caught
+it. Assert on the specific replacement, not on "the file changed".
+
+**Verification**: `pnpm typecheck` 0 errors, `pnpm test` 689 web + 520 mobile,
+`biome check` 0 errors.
+
 ## 2026-08-23 05:00 UTC — Fetch & Tag was four jobs in one 300s function; it is four steps now
 
 **Objective**: owner: "we need to split the fetch & tag to 4 steps: fetch from

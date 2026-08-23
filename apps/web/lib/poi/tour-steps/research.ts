@@ -235,5 +235,18 @@ export async function runResearch(
     );
   }
 
+  // List the pages the ingest step could read, NOW — the community's own site
+  // ticked, everyone else's not. Doing it here rather than inside `ingest` is
+  // what lets the owner choose before anything is fetched (2026-08-23: "can
+  // you give me the candidate website urls that we got from agent research? so
+  // i can select"). Best-effort: research succeeded, and a bookkeeping failure
+  // must not turn that into a failed step.
+  try {
+    const { seedPhotoSources } = await import('./ingest');
+    await seedPhotoSources(sb, community.id, parsed);
+  } catch (err) {
+    console.error('[community-tour] seeding photo sources failed:', err);
+  }
+
   return { ok: true, started: true, communitySite: site ?? null };
 }
