@@ -41,7 +41,7 @@
  */
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Image, StyleSheet, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 import {
 	type SharedValue,
 	runOnJS,
@@ -62,6 +62,15 @@ const TIME_UPDATE_INTERVAL_S = 0.25;
 const SEEK_SETTLE_S = TIME_UPDATE_INTERVAL_S + 0.15;
 /** Give up waiting for a seek to land, so a refused one cannot freeze the bar. */
 const SEEK_TIMEOUT_MS = 2000;
+/**
+ * TEMPORARY (2026-08-23). A readout on the top card of what the seek path is
+ * actually doing, because the failure is a device-only timing bug in AVPlayer
+ * and nothing in this repo can exercise it: `s=` counts seeks REQUESTED (so a
+ * zero there means the gesture never reached this component), `d=` the
+ * duration read at request time, `t=` live playback position, `r=` the
+ * fraction last asked for. Delete once the owner confirms the scrub works.
+ */
+const SEEK_DEBUG = __DEV__;
 
 interface CardVideoProps {
 	url: string;
@@ -160,7 +169,18 @@ export function CardVideo({
 	 * in seconds, and the moment we stop waiting for it. `null` when playback
 	 * owns the bar. See `applySeek`.
 	 */
-	const pendingSeek = useRef<{ time: number; until: number } | null>(null);
+	const pendingSeek = useRef<{
+		/** Where we asked playback to go, in seconds. */
+		time: number;
+		/** Where it was when we asked — the reading that means "did not move". */
+		from: number;
+		/** When to stop waiting. */
+		until: number;
+	} | null>(null);
+	/** TEMPORARY, see `SEEK_DEBUG`. */
+	const seekCount = useRef(0);
+	const lastRequest = useRef(-1);
+	const [debugLine, setDebugLine] = useState("");
 	const onNearEndRef = useRef(onNearEnd);
 	onNearEndRef.current = onNearEnd;
 	/**
@@ -190,23 +210,46 @@ export function CardVideo({
 			if (!dur || dur <= 0) return;
 			const clamped = Math.max(0, Math.min(ratio, 0.999));
 			const target = clamped * dur;
-			player.currentTime = target;
+			const from = player.currentTime;
+			/*
+			 * `seekBy`, NOT `player.currentTime = target`.
+			 *
+			 * They are different seeks in expo-video's iOS code. The `currentTime`
+			 * setter calls `AVPlayer.seek(to:toleranceBefore:.zero,
+			 * toleranceAfter:.zero)` — a frame-accurate seek, which on an HLS
+			 * source means fetching the segment and decoding forward from its
+			 * keyframe. On Cloudflare Stream renditions that is slow enough to be
+			 * interrupted (by the loop's own rewind, by `play()`), and an
+			 * interrupted AVPlayer seek is simply abandoned: no error, playback
+			 * carries on where it was. That is the owner's second report — the bar
+			 * fills to the tap and the film keeps playing as if nothing happened.
+			 *
+			 * `seekBy` calls `seek(to:)` with the DEFAULT tolerance, which lands on
+			 * the nearest keyframe and returns promptly. For a scrubber that is the
+			 * right trade and Apple's own advice: a second of imprecision is
+			 * invisible, a seek that never happens is the whole feature.
+			 */
+			player.seekBy(target - from);
 			/*
 			 * Hold the bar where the finger left it until playback gets there.
 			 *
-			 * Setting `currentTime` on an HLS player is a REQUEST, not a jump: the
-			 * next `timeUpdate` ticks still report the position the film was at
-			 * when the finger landed. With nothing holding the bar, releasing it
-			 * clears `scrubbing` and the very next tick (≤0.25s later) yanks the
-			 * fill back to where the buyer just dragged it AWAY from — the owner's
-			 * 2026-08-23 report, where a tap on the bar named the place but left
-			 * the progress sitting exactly where it was.
+			 * A seek is a REQUEST, not a jump: the next `timeUpdate` ticks still
+			 * report the position the film was at when the finger landed. With
+			 * nothing holding the bar, releasing it clears `scrubbing` and the very
+			 * next tick (≤0.25s later) yanks the fill back to where the buyer just
+			 * dragged it AWAY from — the owner's first 2026-08-23 report, where a
+			 * tap on the bar named the place but left the progress where it was.
 			 */
 			pendingSeek.current = {
 				time: target,
+				from,
 				until: Date.now() + SEEK_TIMEOUT_MS,
 			};
 			if (progress) progress.value = clamped;
+			if (SEEK_DEBUG) {
+				seekCount.current += 1;
+				lastRequest.current = clamped;
+			}
 		},
 		[player, progress],
 	);
@@ -255,6 +298,11 @@ export function CardVideo({
 		const sub = player.addListener("timeUpdate", ({ currentTime }) => {
 			if (!isTop) return;
 			const dur = player.duration;
+			if (SEEK_DEBUG) {
+				setDebugLine(
+					`s=${seekCount.current} r=${lastRequest.current.toFixed(2)} d=${dur.toFixed(1)} t=${currentTime.toFixed(1)}`,
+				);
+			}
 			if (!dur || dur <= 0) return;
 			const ratio = currentTime / dur;
 			// The finger owns the bar while it is down. Still fires `onNearEnd`
@@ -263,13 +311,23 @@ export function CardVideo({
 			if (scrubbing?.value) return;
 			const pending = pendingSeek.current;
 			if (pending) {
-				if (
-					Math.abs(currentTime - pending.time) <= SEEK_SETTLE_S ||
-					Date.now() > pending.until
-				) {
+				/*
+				 * "Has the seek landed?" is not "is playback at the target": a
+				 * tolerant seek lands on the nearest KEYFRAME, which can be a second
+				 * or two short of where the finger pointed. So: landed if the
+				 * reading is near the target, or at least nearer to the target than
+				 * to where playback was when we asked. A tick that is still sitting
+				 * next to `from` is the pre-seek position on its way out, and the
+				 * bar has to stay where the buyer put it until it is gone.
+				 */
+				const toTarget = Math.abs(currentTime - pending.time);
+				const landed =
+					toTarget <= SEEK_SETTLE_S ||
+					toTarget < Math.abs(currentTime - pending.from) ||
+					Date.now() > pending.until;
+				if (landed) {
 					pendingSeek.current = null;
 				} else {
-					// Still the pre-seek position. Keep the bar where it was put.
 					if (progress) progress.value = Math.min(pending.time / dur, 1);
 					return;
 				}
@@ -407,6 +465,9 @@ export function CardVideo({
 					<View style={styles.scrim} />
 				</>
 			)}
+			{SEEK_DEBUG && isTop && debugLine !== "" && (
+				<Text style={styles.debug}>{debugLine}</Text>
+			)}
 			<VideoView
 				player={player}
 				style={StyleSheet.absoluteFill}
@@ -428,6 +489,19 @@ const styles = StyleSheet.create({
 		// Behind the blurred poster, so a video with no poster still sits on the
 		// dark card family (§0.3) rather than on white.
 		backgroundColor: colors.cardPlainTo,
+	},
+	/** TEMPORARY, see `SEEK_DEBUG`. Deliberately plain and small. */
+	debug: {
+		position: "absolute",
+		left: 8,
+		top: "45%",
+		color: "#fff",
+		fontSize: 11,
+		fontVariant: ["tabular-nums"],
+		backgroundColor: "rgba(0,0,0,0.55)",
+		paddingHorizontal: 6,
+		paddingVertical: 3,
+		borderRadius: 4,
 	},
 	/** Dims the blurred backdrop so it reads as a frame, not a second image. */
 	scrim: {

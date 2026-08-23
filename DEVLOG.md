@@ -16,6 +16,73 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 09:14 UTC — the scrub's seek was frame-accurate, which on HLS means never
+
+**Objective**: owner, on the 09:03 fix — "tested on ios, still the same, after
+clicking, it will show name and make the bar before this point as white, but it
+doesn't change the progress". So the BAR moves to the tap and the FILM does
+not. The 09:03 entry fixed the bar being yanked back; it did not fix the seek.
+
+**What the JS side proves**: the scrub label appears, which means the pan's
+`onBegin` ran and `runOnJS` out of a worklet works in this tree; the fill jumps
+to the tap, which means `progress` was written. `onFinalize` runs on a cancelled
+gesture too, and `useAnimatedReaction`'s inputs come from `prepare.__closure`
+(read it in `node_modules/react-native-reanimated/lib/module/hook/`), so the
+`seekTo` channel does fire. Everything up to `player` looked sound, which is why
+this went to the native source rather than to another guess.
+
+**Root cause, in expo-video's iOS code**: the two ways to seek are NOT the same
+seek.
+
+- `player.currentTime = t` → `VideoPlayer.swift:55`,
+  `ref.seek(to:toleranceBefore: .zero, toleranceAfter: .zero)` — frame-accurate.
+- `player.seekBy(dt)` → `VideoModule.swift:338`, `ref.seek(to:)` — default
+  tolerance, i.e. nearest keyframe.
+
+A zero-tolerance seek on an HLS source has to fetch the segment and decode
+forward from its keyframe. On a Cloudflare Stream rendition that is slow enough
+to be interrupted — by the loop's own rewind, by `play()`, by the next seek —
+and an interrupted `AVPlayer.seek` is abandoned silently: no error, no event,
+playback simply carries on where it was. Exactly what the owner sees.
+
+**Actions**: `apps/mobile/components/CardVideo.tsx`
+- `applySeek` now calls `player.seekBy(target - player.currentTime)`. For a
+  scrubber the tolerant seek is the right trade anyway (Apple's own advice): a
+  second of imprecision is invisible, a seek that never happens is the feature.
+- The "has it landed" test had to change with it. A keyframe seek can land a
+  second or two short of the target, so requiring arrival within `SEEK_SETTLE_S`
+  would hold the bar for the full 2s deadline every time. It now also counts as
+  landed when the reading is nearer the TARGET than the position playback was at
+  when we asked (`from`, now recorded with the request).
+
+**TEMPORARY, and it must come out**: `SEEK_DEBUG = __DEV__` renders a small
+readout on the top card — `s=` seeks requested, `r=` last fraction asked for,
+`d=` duration at request time, `t=` live position. It exists because this
+failure is a device-only AVPlayer timing bug that no test here can exercise, and
+because guessing twice is enough. It splits the remaining space in one tap:
+`s=0` means the gesture never reached this component; `d=0.0` means the duration
+read is the problem; `s` climbing with `t` not following means the native seek
+is still being refused. Delete the const, the two refs, the `debugLine` state,
+the `Text` and the `debug` style once the owner confirms.
+
+**Decisions**: did NOT replace the `seekTo` shared-value channel with a direct
+`runOnJS` callback, which was the other candidate. The Reanimated source says
+the channel works, the label proves the same machinery works on this card, and
+changing two things at once during a diagnosis means learning nothing from the
+result.
+
+**Issues**: still not verifiable here. One community (Aberdeen) has a video, so
+that card is the entire test surface, and the bug lives in AVPlayer's seek
+scheduling.
+
+**Learnings**: two APIs that read as the same operation in TypeScript
+(`currentTime = t` vs `seekBy(dt)`) can be different native calls with different
+reliability. When a player API "does nothing" with no error, read the platform
+source before adding another layer of JS.
+
+**Next steps**: owner taps the bar and reports the readout if it still fails.
+Then delete `SEEK_DEBUG` either way.
+
 ## 2026-08-23 10:45 UTC — the home tour's music is planned, not rolled
 
 **Objective**: owner — "what is current rule of selecting music for listing
