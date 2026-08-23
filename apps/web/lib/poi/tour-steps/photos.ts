@@ -191,9 +191,22 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     // Same columns the nearby pipeline writes (lib/poi/community-actions.ts),
     // and an upsert so a re-run refreshes rather than fails.
     // Runs resolved before raw_place was carried through have none, and the
-    // photo fetch needs it. One details call per such POI, once — the value is
-    // stored, so this does not repeat.
+    // photo fetch needs it — so it is fetched from Places once. ONCE was the
+    // claim, not the behaviour: the check read `poi.raw_place`, which comes
+    // from the run's frozen `step_results.resolve` and never gains a value, so
+    // every re-run of this step paid for a details call on every such POI
+    // while the answer sat in `pois.raw_place` from the first time (owner
+    // 2026-08-23, asking for the step to be idempotent). The stored row is
+    // consulted first now, and Places is the last resort.
     let rawPlace = poi.raw_place ?? null;
+    if (!rawPlace) {
+      const { data: stored } = (await sb
+        .from('pois')
+        .select('raw_place')
+        .eq('google_place_id', poi.place_id)
+        .maybeSingle()) as { data: { raw_place: unknown } | null };
+      rawPlace = stored?.raw_place ?? null;
+    }
     if (!rawPlace) {
       const { getPlaceDetails } = await import('@/lib/poi/google-places');
       rawPlace = await getPlaceDetails(poi.place_id);
@@ -210,8 +223,10 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
           rating: poi.rating ?? null,
           user_ratings_total: poi.user_ratings_total ?? null,
           // The photo fetch reads its references out of raw_place; a POI
-          // without it resolves and then yields zero photos.
-          raw_place: asJson(rawPlace),
+          // without it resolves and then yields zero photos. Only written when
+          // we HAVE one — an upsert carrying `raw_place: null` would erase a
+          // good stored value on a run where the details call came back empty.
+          ...(rawPlace ? { raw_place: asJson(rawPlace) } : {}),
           location: poi.lng != null && poi.lat != null ? `(${poi.lng},${poi.lat})` : null,
           refreshed_at: new Date().toISOString(),
         },
@@ -376,12 +391,16 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
   // Set to queued unless already enhanced (ready/approved/rejected = keep
   // whatever exists; failed = retry once). Thumbnails + clips then pick up
   // the enhanced file automatically (approved → enhanced_path).
+  //
+  // 'queued' and 'processing' are left alone too. Re-writing 'queued' over a
+  // row the worker has already claimed hands the same photo out twice, and a
+  // re-run of this step is meant to cost nothing (owner 2026-08-23).
   if (fetchedPhotoIds.length > 0) {
     const { data: existing } = await sb
       .from('poi_photos')
       .select('id, enhanced_status')
       .in('id', fetchedPhotoIds)
-      .in('enhanced_status', ['ready', 'approved', 'rejected']);
+      .in('enhanced_status', ['ready', 'approved', 'rejected', 'queued', 'processing']);
     const keep = new Set((existing ?? []).map((r: { id: string }) => r.id));
     const toEnhance = fetchedPhotoIds.filter((id) => !keep.has(id));
     if (toEnhance.length > 0) {

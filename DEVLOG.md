@@ -16,6 +16,69 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 02:20 UTC — Fetch and tag are scoped to the tour, and a second run costs nothing
+
+**Objective**: owner: "make sure that fetch and tag will be only applied to
+resolved pois + manual fetch from websites, not others? and it should be op op
+if i run it twice. More details, for fetch, if poi already exists, we just
+fetch directly instead of calling google api, for tag, if a photo already
+tagged, dont tag."
+
+**Actions**:
+- `lib/poi/tour-poi-set.ts` (new, + 5 tests): `tourPoiIds(sb, communityId,
+  resolved)` — resolve's picks mapped onto `pois.id`, unioned with the
+  `approved` links (amenity ingest + admin panel). One definition, now used by
+  the tag step and the review page.
+- `tour-steps/tag.ts`: **the global fallback is gone.** It read
+  `photos.resolved_poi_ids` and, when that was empty, ran with NO `.in()` at
+  all — tagging the 15 oldest untagged photos in *any* community. Empty is
+  exactly the state a run is left in when the photos step dies, so the fallback
+  fired when the scope was least knowable. It now rebuilds the set from the run
+  and returns `no_poi_scope` rather than widening.
+- `tour-steps/photos.ts`: the `getPlaceDetails` guard reads `pois.raw_place`
+  before calling Places. The old check read `poi.raw_place` off the run's
+  frozen `step_results.resolve`, which never gains a value — so the comment
+  saying "one details call per POI, once" described something the code did not
+  do, and every re-run paid again.
+- `tour-steps/photos.ts`: the `pois` upsert omits `raw_place` when it has none,
+  instead of writing null over a good stored value.
+- `tour-steps/photos.ts`: the enhance re-queue now also leaves `queued` and
+  `processing` rows alone. Re-stamping `queued` over a row the worker has
+  claimed hands the same photo out twice.
+- `admin-nearby-photos.ts`: `narrowToTour` calls the shared helper instead of
+  rebuilding the same set inline.
+
+**Decisions**:
+- *Audited every entry point rather than patching the reported one.* Photo
+  fetching has exactly three callers — the tour's photos step, the admin
+  panel's per-POI button, and the website ingest — and only the first is
+  automatic. Tagging had four; `tag.ts` was the only one with a global reach.
+  `tagPoiPhoto` itself already skipped a tagged photo, and
+  `fetchPhotosForPoi` already returned early (no Google call) when the POI had
+  any photo — so the gaps were in the callers, not the primitives.
+- *Idempotency is measured, not asserted.* What a SECOND run would cost, per
+  community: Aberdeen **0 Places details, 0 downloads, 0 Gemini tags** — a
+  re-run is free. Apremont - Highcroft and Bellmoore Park still owe first-time
+  work (2 and 1 POIs have no photos yet; 30 and 26 photos are untagged), which
+  is work never done, not work repeated.
+- *The `raw_place` fix shows 0 → 0 today.* Every current run's resolve output
+  carries `raw_place`, so no community is paying for details calls right now.
+  It matters for agent-added POIs and older runs, which is where the original
+  claim came from — insurance, not a saving to bank.
+
+**Resolution**: `pnpm typecheck` clean, `apps/web` lint clean, 630 tests pass
+(5 new). Verified against production by replaying the cost of a second run for
+all four live communities.
+
+**Learnings**: a comment that says "this does not repeat" is worth checking
+against what the code reads. Both idempotency bugs here were guards pointed at
+a field that could never change — `poi.raw_place` on frozen step results, and
+`resolved_poi_ids` on a run that died before writing it.
+
+**Next steps**: the website ingest re-downloads image bytes to hash them before
+finding the row already exists. Harmless (no paid API, no duplicate row) but a
+URL-level check before the download would make re-pasting a page nearly free.
+
 ## 2026-08-23 01:50 UTC — The eleven orphaned Stream assets are deleted
 
 **Objective**: owner: "delete the 11 stream videos too" — the Cloudflare Stream

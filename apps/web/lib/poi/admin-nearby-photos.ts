@@ -15,6 +15,7 @@
 
 import { createServiceClient } from '@/lib/supabase/server';
 import { keepPhotoForTour } from './nearby-photo-scope';
+import { tourPoiIds } from './tour-poi-set';
 
 export interface NearbyPhotoRow {
   id: string;
@@ -76,22 +77,9 @@ async function narrowToTour<
     .find((r) => r && r.length > 0);
   if (!resolved) return rows;
 
-  const placeIds = resolved.map((r) => r.place_id).filter(Boolean) as string[];
-  const focusPoiIds = new Set<string>();
-  if (placeIds.length > 0) {
-    const { data: pois } = (await sb.from('pois').select('id').in('google_place_id', placeIds)) as {
-      data: Array<{ id: string }> | null;
-    };
-    for (const p of pois ?? []) focusPoiIds.add(p.id);
-  }
-  // The amenity ingest and the admin panel both stamp 'approved' — the places
-  // a person chose, which resolve never sees.
-  const { data: approved } = (await sb
-    .from('community_pois')
-    .select('poi_id')
-    .eq('community_id', communityId)
-    .eq('status', 'approved')) as { data: Array<{ poi_id: string }> | null };
-  for (const l of approved ?? []) focusPoiIds.add(l.poi_id);
+  // Same set the fetch and tag steps work off — one definition, in
+  // tour-poi-set.ts.
+  const focusPoiIds = await tourPoiIds(sb, communityId, resolved);
 
   return rows.filter((row) => keepPhotoForTour(row, focusPoiIds));
 }

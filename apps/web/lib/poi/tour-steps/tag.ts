@@ -1,7 +1,8 @@
 /**
- * `tag` step — Gemini-tag every photo this run fetched. Scoped to this run's
- * photos, not any globally untagged photo.
+ * `tag` step — Gemini-tag the photos this run fetched, and only those. Scoped
+ * to the tour's POIs (see tour-poi-set.ts), never to whatever is untagged.
  */
+import { tourPoiIds } from '../tour-poi-set';
 import { type RunRow, type TourDb, saveStep, setRunStatus } from './shared';
 
 export async function runTag(sb: TourDb, run: RunRow) {
@@ -14,16 +15,31 @@ export async function runTag(sb: TourDb, run: RunRow) {
   if (!resolve?.resolved?.length)
     return { error: 'no_resolved', message: 'Run the resolve step first.' };
 
-  // Scope to THIS run's photos — not any global untagged photo (cross-community
-  // bug fixed 2026-08-17). Fall back to all untagged for legacy runs.
-  const poiIds = photosStep?.resolved_poi_ids;
-  let query = sb
+  // Scope to THIS run's POIs — not any global untagged photo (cross-community
+  // bug fixed 2026-08-17).
+  //
+  // What this replaces was "no scope → tag whatever is untagged, in ANY
+  // community". `resolved_poi_ids` is empty whenever the photos step died
+  // before saving it — the state both of today's dead runs were left in — so
+  // the fallback fired exactly when the scope was least knowable. The set is
+  // rebuilt from the run instead (resolve's picks + the links a person
+  // approved), and empty now means "nothing to tag", never "tag everything"
+  // (owner 2026-08-23).
+  const poiIds = photosStep?.resolved_poi_ids?.length
+    ? photosStep.resolved_poi_ids
+    : [...(await tourPoiIds(sb, run.community_id, resolve.resolved))];
+  if (poiIds.length === 0) {
+    return { error: 'no_poi_scope', message: 'No resolved or approved POIs to tag — run photos.' };
+  }
+  // Untagged rows only. `tagPoiPhoto` skips a tagged photo by itself, but not
+  // before two queries — asking for them at all is what makes a second run of
+  // this step cost nothing instead of re-walking everything it already did.
+  const { data: photos } = await sb
     .from('poi_photos')
     .select('id, poi_id, ai_tags, ai_score, tagged_at')
+    .in('poi_id', poiIds)
     .is('tagged_at', null) // NOT .eq(null) — PostgREST treats =null as invalid for timestamptz
     .limit(15); // ponytail: batch cap so the loop fits under the 300s function timeout; re-click for more.
-  if (poiIds?.length) query = query.in('poi_id', poiIds);
-  const { data: photos } = await query;
 
   const { tagPoiPhoto } = await import('@/lib/poi/vision-tagger');
   const tagged: string[] = [];
