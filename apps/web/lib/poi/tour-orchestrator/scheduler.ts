@@ -11,6 +11,7 @@
  * canvas has to throw away (pixels).
  */
 
+import { amenityOrder } from './amenity';
 import type {
   DominantSubject,
   Engine,
@@ -451,6 +452,19 @@ export function amenityRank(poiName: string): number {
 }
 
 /**
+ * Where a group of community clips sits in the walk-through.
+ *
+ * `amenityOrder` when the photo carries a classified amenity — it is a verdict
+ * on the pixels, so it beats a regex over a name someone typed into the ingest
+ * panel. `amenityRank` remains for the per-amenity POIs the ingest still
+ * creates ("Aberdeen Tennis Courts"), which carry no amenity of their own.
+ */
+function groupRank(u: Unit): number {
+  const amenity = u.entries[0]!.meta.amenity;
+  return amenity ? amenityOrder(amenity) : amenityRank(u.entries[0]!.meta.poi_name);
+}
+
+/**
  * One amenity at a time, in walk-through order.
  *
  * Owner 2026-08-19: "why do we start with pool, then go back to pool again and
@@ -464,12 +478,19 @@ export function amenityRank(poiName: string): number {
 function orderCommunityAct(units: Unit[]): Unit[] {
   if (units.length === 0) return [];
 
+  // The AMENITY, not the POI. A community whose site has a page per amenity
+  // gets one POI each and the two keys agree; a community whose photos all
+  // arrived from one gallery page has a single POI carrying the pool, the
+  // clubhouse and the courts, and grouping on `poi_id` there collapses the
+  // whole act into one block sorted by nothing in particular. See
+  // `amenity.ts`.
+  const groupKey = (u: Unit) => u.entries[0]!.meta.amenity ?? u.entries[0]!.meta.poi_id;
   const groups = new Map<string, Unit[]>();
   for (const u of units) {
-    const poiId = u.entries[0]!.meta.poi_id;
-    const arr = groups.get(poiId) ?? [];
+    const key = groupKey(u);
+    const arr = groups.get(key) ?? [];
     arr.push(u);
-    groups.set(poiId, arr);
+    groups.set(key, arr);
   }
 
   // Inside one amenity: the widest, most inviting frame introduces it, then
@@ -494,8 +515,8 @@ function orderCommunityAct(units: Unit[]): Unit[] {
   return [...groups.values()]
     .map(orderWithin)
     .sort((a, b) => {
-      const ra = amenityRank(a[0]!.entries[0]!.meta.poi_name);
-      const rb = amenityRank(b[0]!.entries[0]!.meta.poi_name);
+      const ra = groupRank(a[0]!);
+      const rb = groupRank(b[0]!);
       // Emotion breaks a tie between two unrecognised amenities so the order
       // stays deterministic without being arbitrary.
       return ra - rb || b[0]!.emotion - a[0]!.emotion || unitId(a[0]!).localeCompare(unitId(b[0]!));

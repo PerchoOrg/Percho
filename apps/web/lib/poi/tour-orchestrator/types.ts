@@ -15,6 +15,7 @@
  */
 
 import { z } from 'zod';
+import type { Amenity } from './amenity';
 
 export const DOMINANT_SUBJECTS = [
   'nature',
@@ -76,6 +77,13 @@ export interface PhotoMeta {
   poi_name: string;
   /** Tour bucket of the POI (schools / dining / outdoor / …). */
   bucket: string;
+  /**
+   * Which of the community's own amenities this photo shows — set only for
+   * photos on the community's POI, where the subject changes from frame to
+   * frame and `poi_id` therefore cannot be what the act groups on. See
+   * `tour-orchestrator/amenity.ts`.
+   */
+  amenity?: Amenity;
   width_px: number;
   height_px: number;
   /** Vision-tagger description — feeds the Seedance scene clause. */
