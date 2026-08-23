@@ -283,6 +283,7 @@ export type Database = {
           lng: number | null
           median_home_value: string | null
           name: string
+          narration_voice: string | null
           nearby: Json | null
           nextdoor_id: string | null
           nextdoor_slug: string | null
@@ -327,6 +328,7 @@ export type Database = {
           lng?: number | null
           median_home_value?: string | null
           name: string
+          narration_voice?: string | null
           nearby?: Json | null
           nextdoor_id?: string | null
           nextdoor_slug?: string | null
@@ -371,6 +373,7 @@ export type Database = {
           lng?: number | null
           median_home_value?: string | null
           name?: string
+          narration_voice?: string | null
           nearby?: Json | null
           nextdoor_id?: string | null
           nextdoor_slug?: string | null
@@ -3023,6 +3026,7 @@ export type Database = {
           lng: number | null
           median_home_value: string | null
           name: string
+          narration_voice: string | null
           nearby: Json | null
           nextdoor_id: string | null
           nextdoor_slug: string | null

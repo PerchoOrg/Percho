@@ -177,6 +177,11 @@ export interface NarrationContext {
   facts?: Record<string, PlaceFact>;
   /** Which kinds of insight this film leans on. */
   angles?: InsightAngle[];
+  /**
+   * `communities.narration_voice` — the owner's own pick for this community.
+   * Beats the automatic choice, and no re-run overwrites it.
+   */
+  voiceOverride?: string | null;
   sections: NarrationSection[];
 }
 
@@ -378,14 +383,86 @@ export function parseNarration(
 }
 
 /**
- * The voice this community is read in.
+ * Every prebuilt voice the Gemini TTS models offer, with Google's own
+ * one-word descriptor. Thirty of them; the pipeline used five.
  *
- * Owner 2026-08-20: "i dont want to hear the same voice, same format, same
- * opening, same order for every single community." Chosen from the community's
- * own character rather than at random, so the choice means something — and
- * keyed off stable inputs, so the same community is read by the same voice
- * every time it is regenerated. A tour whose narrator changed between takes
- * would read as a different product.
+ * The whole catalogue is exposed so the admin dropdown can offer it — a voice
+ * we would not pick automatically is still a voice the owner may want for one
+ * community. `AUTO_VOICE_POOL` below is the narrower set anything picks FROM.
+ */
+export const VOICE_CATALOGUE: ReadonlyArray<{ id: string; character: string }> = [
+  { id: 'Achernar', character: 'Soft' },
+  { id: 'Achird', character: 'Friendly' },
+  { id: 'Algenib', character: 'Gravelly' },
+  { id: 'Algieba', character: 'Smooth' },
+  { id: 'Alnilam', character: 'Firm' },
+  { id: 'Aoede', character: 'Breezy' },
+  { id: 'Autonoe', character: 'Bright' },
+  { id: 'Callirrhoe', character: 'Easy-going' },
+  { id: 'Charon', character: 'Informative' },
+  { id: 'Despina', character: 'Smooth' },
+  { id: 'Enceladus', character: 'Breathy' },
+  { id: 'Erinome', character: 'Clear' },
+  { id: 'Fenrir', character: 'Excitable' },
+  { id: 'Gacrux', character: 'Mature' },
+  { id: 'Iapetus', character: 'Clear' },
+  { id: 'Kore', character: 'Firm' },
+  { id: 'Laomedeia', character: 'Upbeat' },
+  { id: 'Leda', character: 'Youthful' },
+  { id: 'Orus', character: 'Firm' },
+  { id: 'Puck', character: 'Upbeat' },
+  { id: 'Pulcherrima', character: 'Forward' },
+  { id: 'Rasalgethi', character: 'Informative' },
+  { id: 'Sadachbia', character: 'Lively' },
+  { id: 'Sadaltager', character: 'Knowledgeable' },
+  { id: 'Schedar', character: 'Even' },
+  { id: 'Sulafat', character: 'Warm' },
+  { id: 'Umbriel', character: 'Easy-going' },
+  { id: 'Vindemiatrix', character: 'Gentle' },
+  { id: 'Zephyr', character: 'Bright' },
+  { id: 'Zubenelgenubi', character: 'Casual' },
+];
+
+export const VOICE_IDS: ReadonlySet<string> = new Set(VOICE_CATALOGUE.map((v) => v.id));
+
+/**
+ * The voices automatic selection draws from.
+ *
+ * Not all thirty. A property film is read by someone telling you about a
+ * place, so Excitable, Gravelly, Breathy, Forward, Lively and Youthful are
+ * left out of the automatic pool — they are still selectable by hand, because
+ * "wrong for the format in general" is not the same as "wrong for this one".
+ */
+export const AUTO_VOICE_POOL: readonly string[] = [
+  'Achernar',
+  'Achird',
+  'Algieba',
+  'Alnilam',
+  'Aoede',
+  'Autonoe',
+  'Callirrhoe',
+  'Charon',
+  'Despina',
+  'Erinome',
+  'Gacrux',
+  'Iapetus',
+  'Kore',
+  'Laomedeia',
+  'Orus',
+  'Puck',
+  'Rasalgethi',
+  'Sadaltager',
+  'Schedar',
+  'Sulafat',
+  'Umbriel',
+  'Vindemiatrix',
+  'Zephyr',
+  'Zubenelgenubi',
+];
+
+/**
+ * Kept as an alias so older callers and stored results keep resolving. The
+ * five names it held are all still in the catalogue.
  */
 export const NARRATION_VOICES = {
   warm: 'Kore',
@@ -428,9 +505,12 @@ export async function runNarration(
   ctx: Omit<NarrationContext, 'sections'>,
 ): Promise<NarrationResult> {
   const sections = buildSections(clips);
+  // Seeded on the community's id where we have one — a rename must not change
+  // the narrator. Falls back to the name for callers that pass no seed.
   const voice = voiceForCommunity(
-    ctx.communityName,
+    ctx.seed ?? ctx.communityName,
     sections.map((s) => s.bucket),
+    ctx.voiceOverride,
   );
   // Which insight angles this film leans on, seeded so a community keeps its
   // own emphasis while two communities differ.
@@ -488,16 +568,37 @@ export async function runNarration(
   return { ...base, ok: false, error: lastError };
 }
 
-export function voiceForCommunity(name: string, buckets: string[]): string {
-  const has = (b: string) => buckets.includes(b);
-  // Character first, where the content states one clearly.
-  if (has('waterfront') || has('outdoor')) return NARRATION_VOICES.calm;
-  if (has('schools') && has('kids')) return NARRATION_VOICES.warm;
-  if (has('nightlife') || has('dining')) return NARRATION_VOICES.bright;
-  if (has('fitness') || has('work_hubs')) return NARRATION_VOICES.assured;
-  // Otherwise stable-but-varied: same community, same voice, forever.
-  const pool = Object.values(NARRATION_VOICES);
+/**
+ * The voice this community is read in. PURE.
+ *
+ * Owner 2026-08-20: "i dont want to hear the same voice, same format, same
+ * opening, same order for every single community."
+ *
+ * IT DID EXACTLY THAT for three months. The old version picked on character,
+ * and its first rule was "has an outdoor place → the calm voice". Every
+ * community tour visits a park, so that rule won every single time: Aberdeen,
+ * Bellmoore Park and Apremont - Highcroft were all read by Aoede, and the four
+ * other voices plus the hash fallback beneath them were unreachable code
+ * (owner 2026-08-23: "voice is same for all videos").
+ *
+ * The bucket rules are gone rather than reordered, because the premise was
+ * wrong. Those three communities' bucket sets are nearly identical — outdoor,
+ * dining, schools, fitness, shopping, kids all appear in all three — so
+ * buckets cannot tell communities apart, whatever order they are tested in.
+ * Something that does not discriminate cannot be the basis of a choice.
+ *
+ * So: a stable hash over the pool. Same community, same voice for ever, which
+ * is what makes a re-run sound like the same product; different communities,
+ * different voices, which is what was asked for. `override` is the owner's own
+ * pick from the admin panel and beats all of it.
+ */
+export function voiceForCommunity(
+  seed: string,
+  _buckets: string[] = [],
+  override?: string | null,
+): string {
+  if (override && VOICE_IDS.has(override)) return override;
   let h = 0;
-  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return pool[h % pool.length] as string;
+  for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return AUTO_VOICE_POOL[h % AUTO_VOICE_POOL.length] as string;
 }

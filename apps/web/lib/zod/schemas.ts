@@ -149,6 +149,19 @@ export const CommunityPhotoSourceToggle = z.object({
 });
 export type CommunityPhotoSourceToggle = z.infer<typeof CommunityPhotoSourceToggle>;
 
+/**
+ * Pick the voice a community's tour is narrated in.
+ *
+ * The value is validated against the catalogue at the route, not here: the
+ * list lives in `tour-orchestrator/narration.ts` beside the code that uses it,
+ * and duplicating thirty voice names into the schema layer would give us two
+ * lists to keep in step. Empty string clears the override.
+ */
+export const CommunityNarrationVoice = z.object({
+  voice: z.string().max(40),
+});
+export type CommunityNarrationVoice = z.infer<typeof CommunityNarrationVoice>;
+
 // ─── Events ──────────────────────────────────────────────────────
 export const EventInsert = z.object({
   listing_id: z.string().uuid().optional(),
