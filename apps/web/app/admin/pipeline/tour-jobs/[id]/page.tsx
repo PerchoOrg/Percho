@@ -61,7 +61,7 @@ export default async function AdminTourJobsDetailPage({
   const { data: photoData } = (await supabase
     .from('listing_photos')
     .select(
-      'id, storage_path, sort_order, width, height, ai_tags, ai_score, tagged_at, used_in_video_at, used_clip_index, enhanced_path, enhanced_status, enhanced_preset, enhanced_error, review_status, rejection_reason',
+      'id, storage_path, sort_order, width, height, ai_tags, ai_score, tagged_at, used_in_video_at, used_clip_index, enhanced_path, enhanced_status, enhanced_preset, enhanced_error, review_status, rejection_reason, hero_pick',
     )
     .eq('listing_id', id)
     .order('sort_order', { ascending: true })) as unknown as { data: PhotoRow[] | null };

@@ -3050,7 +3050,7 @@ def _load_listing_photos(
 
     params = {
         "select": "id,storage_path,sort_order,width,height,ai_tags,tagged_at,"
-                  "enhanced_path,enhanced_status,review_status",
+                  "enhanced_path,enhanced_status,review_status,hero_pick",
         "listing_id": f"eq.{listing_id}",
         "order": "sort_order.asc",
     }
@@ -3099,6 +3099,7 @@ def _load_listing_photos(
             "tagged_at": p.get("tagged_at"),
             "review_status": p.get("review_status") or "pending",
             "enhanced_status": p.get("enhanced_status"),
+            "hero_pick": bool(p.get("hero_pick")),
         })
     if skipped_downloads:
         print(
@@ -3303,7 +3304,13 @@ def process_plan_job(job: dict[str, Any]) -> None:
         # The selector fills this in as it goes: one real reason per photo,
         # from the stage that actually dropped it.
         drop_reasons: dict[str, str] = {}
-        plan = build_plan(tagged, style, listing_id, dropped=drop_reasons)
+        # The owner's manual opening shot, when he named one. At most one row
+        # per listing carries it (partial unique index in migration
+        # 20260823235000), so `next` is the whole of the lookup.
+        hero_id = next((r["id"] for r in records if r.get("hero_pick")), None)
+        if hero_id:
+            print(f"[plan {job_id}] manual hero={hero_id}", flush=True)
+        plan = build_plan(tagged, style, listing_id, dropped=drop_reasons, hero_id=hero_id)
 
         # Per-surface engine + move. `plan_moves` resolves the whole cut at
         # once so no two neighbouring clips get the same camera move, which a

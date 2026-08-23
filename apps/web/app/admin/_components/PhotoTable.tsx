@@ -25,9 +25,13 @@ import {
   setEnhancedDecision,
 } from '@/lib/poi/admin-enhance-actions';
 import { rejectOutpaint, requeueOutpaint } from '@/lib/poi/admin-outpaint-actions';
-import { setGlobalPhotoStatus, setListingPhotoReview } from '@/lib/poi/admin-photo-actions';
+import {
+  setGlobalPhotoStatus,
+  setListingPhotoHero,
+  setListingPhotoReview,
+} from '@/lib/poi/admin-photo-actions';
 import { projectTags, resolutionWarning } from '@/lib/poi/photo-tag-view';
-import { Check, Film, Sparkles, X } from 'lucide-react';
+import { Check, Film, Sparkles, Star, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -64,6 +68,9 @@ export interface PhotoRow {
   /** listing_photos: the home-tour review verdict. A SEPARATE column from
    *  `status`, which on this table means the upload succeeded. */
   review_status?: string | null;
+  /** listing_photos: the owner's manual opening shot. At most one row per
+   *  listing has it. Takes effect at the next Plan. */
+  hero_pick?: boolean | null;
   // poi_photos only
   width_px?: number | null;
   height_px?: number | null;
@@ -208,6 +215,23 @@ export function PhotoTable({
    */
   const [verdicts, setVerdicts] = useState<Record<string, string>>({});
 
+  /**
+   * The manual hero, applied locally so the click lands instantly.
+   *
+   * `undefined` = no local override, use whatever the server row says.
+   * `null` = cleared by hand. A string = that photo id. One value rather than
+   * a map because a listing has exactly one hero — the partial unique index on
+   * `listing_photos (listing_id) where hero_pick` makes two an impossible
+   * state, and a map would let this component render one anyway.
+   */
+  const [heroLocal, setHeroLocal] = useState<string | null | undefined>(undefined);
+  /**
+   * Non-error feedback. Picking a hero changes NOTHING on screen until Plan
+   * runs again — the Plan column still shows the old opening shot — so a click
+   * that says nothing looks like a click that did nothing.
+   */
+  const [notice, setNotice] = useState<string | null>(null);
+
   const isListing = table === 'listing_photos';
   const url = (p: string) => `${storageBase}/storage/v1/object/public/${bucket}/${p}`;
 
@@ -249,6 +273,18 @@ export function PhotoTable({
     );
     return new Set(ends);
   }, [isListing, plan]);
+
+  /**
+   * The effective hero: the local pick when there is one, else the stored row.
+   *
+   * Note it is NOT read from the plan. The plan's opening shot is what the
+   * LAST plan decided; `hero_pick` is what the next one will be told to do,
+   * and between the click and the re-plan those two disagree on purpose.
+   */
+  const heroId = useMemo(
+    () => (heroLocal === undefined ? (photos.find((p) => p.hero_pick)?.id ?? null) : heroLocal),
+    [heroLocal, photos],
+  );
 
   /**
    * How many columns the header actually renders. Kept next to the header so
@@ -384,6 +420,29 @@ export function PhotoTable({
     })();
   }
 
+  /** Manual hero: optimistic, no refresh, and it only binds at the next Plan. */
+  function pickHero(id: string, on: boolean) {
+    const previous = heroLocal;
+    setHeroLocal(on ? id : null);
+    setError(null);
+    // The Seedance clause is not a detail. The hero is the one shot that
+    // bills, so moving it means the next Render pays for a generation of the
+    // new opening shot — said before the click is spent, not after.
+    setNotice(
+      on
+        ? 'Hero set — run Plan to rebuild the shot list around it, then Render. The new opening shot is the one Seedance generates, so that Render bills one clip. The old hero keeps its clip in case you switch back.'
+        : 'Hero cleared — run Plan to let the planner choose the opening shot again.',
+    );
+    void (async () => {
+      const res = await setListingPhotoHero(id, on);
+      if (!res.ok) {
+        setHeroLocal(previous);
+        setNotice(null);
+        setError(res.message ?? 'Failed');
+      }
+    })();
+  }
+
   function run(id: string, fn: () => Promise<{ ok: boolean; message?: string }>) {
     setPending(id);
     setError(null);
@@ -476,6 +535,10 @@ export function PhotoTable({
 
       {error && (
         <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-700">{error}</div>
+      )}
+
+      {notice && !error && (
+        <div className="rounded-lg bg-amber-500/10 px-3 py-2 text-amber-700 text-xs">{notice}</div>
       )}
 
       <div className="overflow-x-auto rounded-2xl border border-line">
@@ -583,6 +646,27 @@ export function PhotoTable({
                             active={rowStatus === 'rejected'}
                             onClick={() => decide(p.id, 'rejected')}
                           />
+                          {/* Home tour only. The hero is the cut's opening
+                              shot and the one shot Seedance animates; the
+                              planner picks it well most of the time, and this
+                              is the lever for when it does not (owner
+                              2026-08-23). A rejected photo cannot be one —
+                              the plan step never sees it. */}
+                          {isListing && (
+                            <MiniBtn
+                              label={<Star size={11} />}
+                              title={
+                                rowStatus === 'rejected'
+                                  ? 'A rejected photo cannot open the tour — approve it first'
+                                  : heroId === p.id
+                                    ? 'This is the hero. Click to hand the choice back to the planner, then run Plan.'
+                                    : 'Make this the opening shot — the hero Seedance animates. Takes effect at the next Plan.'
+                              }
+                              active={heroId === p.id}
+                              disabled={rowStatus === 'rejected'}
+                              onClick={() => pickHero(p.id, heroId !== p.id)}
+                            />
+                          )}
                         </div>
                       </>
                     </div>
@@ -867,6 +951,26 @@ export function PhotoTable({
                         —
                       </span>
                     )}
+                    {/* Where the hero actually stands, next to the shot list
+                        rather than in a toast that has already gone. The two
+                        states are genuinely different: the plan OPENS on this
+                        photo, or it has been told to and has not re-run yet. */}
+                    {heroId === p.id &&
+                      (plan?.[p.id]?.sort_order === 0 ? (
+                        <div
+                          className="mt-0.5 flex items-center gap-0.5 font-medium text-[10px] text-emerald-600"
+                          title="Hand-picked opening shot, and the plan opens on it"
+                        >
+                          <Star size={9} /> hero
+                        </div>
+                      ) : (
+                        <div
+                          className="mt-0.5 flex items-center gap-0.5 font-medium text-[10px] text-amber-600"
+                          title="Picked as the opening shot, but this plan was built before the pick — run Plan"
+                        >
+                          <Star size={9} /> hero — run Plan
+                        </div>
+                      ))}
                   </Td>
                   <Td className="tabular-nums">
                     {p.ai_score != null ? (

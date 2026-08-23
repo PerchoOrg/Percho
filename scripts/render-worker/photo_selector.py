@@ -500,6 +500,7 @@ def build_plan(
     listing_id: str,
     max_photos: int | None = None,
     dropped: dict[str, str] | None = None,
+    hero_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """
     Main entry point. Returns list of shot dicts ready for the renderer.
@@ -507,10 +508,28 @@ def build_plan(
     `dropped`, when given, is filled with photo_id -> the reason that photo is
     not in the cut. One reason, the real one, from the stage that actually made
     the call.
+
+    `hero_id` is the owner's manual opening shot (`listing_photos.hero_pick`).
+    It is held OUT of every automated gate below and put back at position 0 in
+    step 5 — an override that a quota, a dHash twin or an `usable: false` tag
+    could still overrule would not be an override. An id that is not in
+    `photos` (untagged, or rejected in review, so it never reached this
+    function) is ignored and the planner chooses as before.
     """
+    hero = None
+    if hero_id:
+        hero = next(
+            (p for p in photos if str(p.get("id") or p.get("_id") or "") == str(hero_id)),
+            None,
+        )
+    # `is not hero` and not an id comparison: the hero must be excluded once,
+    # by identity, so a listing that somehow carries two rows for one id cannot
+    # lose both of them here.
+    candidates = [p for p in photos if p is not hero]
+
     # 1. drop unusable / no-video room types
     usable = []
-    for p in photos:
+    for p in candidates:
         rt = p.get("room_type", "other")
         quota = QUOTAS.get(rt, QUOTAS["other"])
         if not p.get("usable", True):
@@ -539,18 +558,33 @@ def build_plan(
     #    the tier keeps TOTAL_CAP honest when the pacing constants get retuned.
     per_clip = PACE_NORMAL_S if PACE_BIMODAL else MIN_PER_PHOTO
     max_n_by_budget = int((TOTAL_CAP + XFADE) / per_clip)
-    budget = min(max_n_by_budget, max_photos or 9999, len(usable))
+    # The manual hero holds a slot in the cut, so the quota pass is given one
+    # fewer to fill. Without the reservation a hero on a full listing makes the
+    # film one shot longer than the clock allows.
+    reserved = 1 if hero is not None else 0
+    cap = min(max_n_by_budget, max_photos or 9999)
+    budget = max(0, min(cap - reserved, len(usable)))
 
     # 4. quota-based selection
     picked = select_by_quota(usable, budget, dropped)
 
     # 5. narrative sort
     ordered = narrative_sort(picked)
+    # The manual hero opens the cut. Position 0 is not decoration: it is the
+    # shot Seedance animates (worker.py `process_plan_job`), so naming the hero
+    # and choosing the paid clip's subject are the same act.
+    if hero is not None:
+        ordered = [hero] + ordered
 
     # 6. duration plan (hero boost = top-3 hero_score positions)
     by_hero_desc = sorted(range(len(ordered)),
                           key=lambda i: -ordered[i].get("hero_score", 0))
     hero_ranks = by_hero_desc[:HERO_BOOST_COUNT]
+    # A hand-picked opener gets the long beat whatever the tagger scored it.
+    # It was chosen by someone looking at the photograph; hero_score is a guess
+    # at the same question, and the guess does not get to shorten it.
+    if hero is not None and 0 not in hero_ranks:
+        hero_ranks = [0] + hero_ranks[: HERO_BOOST_COUNT - 1]
     # Weakest quarter (excluding heroes) passes quickly — the bimodal curve's
     # short beat. Empty when the tour is too short for a filler tier to matter.
     #
