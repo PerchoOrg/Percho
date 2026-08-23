@@ -604,6 +604,7 @@ export function CommunityTourSection({
       {/* 3 · What the film will say. Written by plan, spoken at assembly —
            reviewable in between. Absent until plan has run. */}
       <NarrationPanel
+        communityId={communityId}
         voice={narration?.voice}
         segments={narration?.segments ?? []}
         bgm={bgm}

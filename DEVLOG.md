@@ -16,6 +16,80 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 07:40 UTC — The voice pool had five voices and used one of them
+
+**Objective**: owner: "and voice is same for all videos - we need to have a
+pool of different voices that we can choose from".
+
+**Diagnosis**: a pool of five HAS existed since 2026-08-20. `voiceForCommunity`
+picked on the film's buckets and its FIRST rule was
+
+```ts
+if (has('waterfront') || has('outdoor')) return NARRATION_VOICES.calm; // Aoede
+```
+
+Every community tour visits a park. So that rule won every time, and the four
+other voices plus the hash fallback beneath them were unreachable code.
+Confirmed on production: Aberdeen, Bellmoore Park and Apremont - Highcroft all
+stored `voice: "Aoede"`.
+
+**The bucket rules are deleted, not reordered.** The premise was wrong. The
+three real communities' bucket sets are near-identical — outdoor, dining,
+schools, fitness, shopping and kids appear in all three — so buckets cannot
+tell communities apart in ANY test order. Something that does not discriminate
+cannot be the basis of a choice.
+
+**Actions**:
+- `narration.ts`: `VOICE_CATALOGUE` — all 30 prebuilt Gemini TTS voices with
+  Google's own descriptors, taken from the current speech-generation docs
+  rather than from memory. `AUTO_VOICE_POOL` is 24 of them; Excitable,
+  Gravelly, Breathy, Forward, Lively and Youthful are left out of AUTOMATIC
+  selection and remain selectable by hand — "wrong for the format in general"
+  is not "wrong for this community".
+- `voiceForCommunity(seed, _buckets, override)` is now a stable hash over the
+  pool. Same community, same narrator for ever, which is what makes a re-run
+  sound like the same product; different communities, different narrators,
+  which is what was asked for. `NARRATION_VOICES` kept as an alias so stored
+  results still resolve.
+- `communities.narration_voice` (migration `20260823230000`, **pushed** — types
+  regenerated, the diff is that one column). NULL = pick for me.
+- `GET/PATCH /api/admin/community-tour/[id]/voice`, and a dropdown in
+  `NarrationPanel` (now a client component; it was already only rendered from
+  one).
+
+**The PATCH writes in two places on purpose.** `communities.narration_voice` is
+durable and read by every future plan. It ALSO patches
+`step_results.photos.narration.voice` on the newest run — because the worker
+synthesises narration at ASSEMBLE time from that field
+(`worker.py:480`), so the flow is: pick a voice, press Assemble, hear it. The
+alternative was re-running plan, paying for Curator and a fresh script to
+change one string. Clearing the override deliberately does NOT patch the run:
+silently swapping the narrator of an already-reviewed script is worse than
+waiting for something to ask for a new one.
+
+**Measured**, on the real community ids:
+
+| community | before | after |
+|---|---|---|
+| Bellmoore Park | Aoede (Breezy) | Achernar (Soft) |
+| Aberdeen | Aoede | Zubenelgenubi (Casual) |
+| Apremont - Highcroft | Aoede | Rasalgethi (Informative) |
+| Ashley Crossing | Aoede | Callirrhoe (Easy-going) |
+
+Across 1,000 real community ids: 24 distinct voices, 30–55 communities each.
+
+**Verification**: `pnpm typecheck` 0 errors, `pnpm test` 729 web + 520 mobile
+(10 new), `biome check` 0 errors.
+
+**Learnings**: the pool was not the missing piece — the selector was, and it
+had been silently returning a constant since the day it shipped. A picker with
+an early catch-all is indistinguishable from a hardcoded value, and nothing in
+the code says so; only the stored `voice` field across three runs did.
+
+**Still open**: the narration PROMPT change proposed earlier this session —
+19 of 30 lines mention miles or drive time (63%), and several lines are nothing
+but a distance. Drafted and shown to the owner, NOT applied, awaiting his go.
+
 ## 2026-08-23 06:55 UTC — Bellmoore Park's "community site" is a builder's corporate site, and the crawl behaved accordingly
 
 **Objective**: owner, after running Fetch Sites on Bellmoore Park: "a lot of

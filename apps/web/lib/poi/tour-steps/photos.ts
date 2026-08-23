@@ -836,7 +836,7 @@ async function writeNarration(sb: TourDb, run: RunRow, shots: unknown[]) {
   const { runNarration } = await import('../tour-orchestrator/narration');
   const { data: community } = await sb
     .from('communities')
-    .select('name, city, state')
+    .select('name, city, state, narration_voice')
     .eq('id', run.community_id)
     .maybeSingle();
 
@@ -897,6 +897,7 @@ async function writeNarration(sb: TourDb, run: RunRow, shots: unknown[]) {
       state: community?.state ?? null,
       narrativeAngle,
       seed: run.community_id,
+      voiceOverride: community?.narration_voice ?? null,
       facts,
     },
   );

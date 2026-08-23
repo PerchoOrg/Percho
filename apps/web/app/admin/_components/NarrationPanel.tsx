@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * What the film will SOUND like, as the plan step decided it: the script and
  * the music under it.
@@ -12,7 +14,13 @@
  * Read-only. Editing a line would put it out of step with the section's word
  * budget, and there is no re-synthesis path from here yet — if a line is wrong,
  * re-running plan rewrites the whole script against the same cut.
+ *
+ * The VOICE is the exception — it is chosen here, because changing it costs
+ * nothing: the worker synthesises narration at assemble time, so a new voice
+ * needs a re-assemble and not a re-plan.
  */
+
+import { useEffect, useState } from 'react';
 
 export interface NarrationSegmentView {
   index: number;
@@ -31,13 +39,22 @@ export interface BgmChoiceView {
   role?: string;
 }
 
+interface VoiceOption {
+  id: string;
+  character: string;
+  /** In the pool automatic selection draws from. */
+  auto: boolean;
+}
+
 export function NarrationPanel({
+  communityId,
   voice,
   segments,
   bgm,
   bgmUrl,
   error,
 }: {
+  communityId: string;
   voice?: string;
   segments: NarrationSegmentView[];
   /** The track `plan` picked, if it picked one. */
@@ -46,9 +63,59 @@ export function NarrationPanel({
   bgmUrl?: string;
   error?: string;
 }) {
+  const [voices, setVoices] = useState<VoiceOption[]>([]);
+  const [selected, setSelected] = useState<string>('');
+  const [saving, setSaving] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      const res = await fetch(`/api/admin/community-tour/${communityId}/voice`);
+      if (!res.ok) return;
+      const body = (await res.json()) as { voices: VoiceOption[]; selected: string | null };
+      setVoices(body.voices);
+      setSelected(body.selected ?? '');
+    })();
+  }, [communityId]);
+
+  async function pick(next: string) {
+    setSelected(next);
+    setSaving(true);
+    setNote(null);
+    try {
+      const res = await fetch(`/api/admin/community-tour/${communityId}/voice`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voice: next }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        appliedToRun?: boolean;
+      };
+      if (!res.ok) {
+        setNote(body.message ?? `HTTP ${res.status}`);
+        return;
+      }
+      // The worker synthesises narration at assemble time, so the script does
+      // not need rewriting — but nothing is re-heard until it does.
+      setNote(
+        next === ''
+          ? 'Back to the automatic pick. It applies the next time Plan runs.'
+          : body.appliedToRun
+            ? 'Saved. Re-run Assemble to hear it — the script is unchanged.'
+            : 'Saved. It applies the next time Plan runs.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (segments.length === 0 && !bgm && !error) return null;
 
   const words = segments.reduce((n, s) => n + s.words, 0);
+  // What is actually being spoken: the owner's pick if he made one, otherwise
+  // whatever `plan` chose and stored on the run.
+  const spoken = selected || voice;
 
   return (
     <section className="rounded-2xl border border-line bg-surface p-4">
@@ -56,11 +123,51 @@ export function NarrationPanel({
         <h2 className="font-semibold text-lg">Soundtrack</h2>
         {segments.length > 0 && (
           <span className="text-muted text-sm">
-            {segments.length} lines · {words} words · voice{' '}
-            <span className="font-medium text-fg">{voice ?? '—'}</span>
+            {segments.length} lines · {words} words
           </span>
         )}
+        <div className="flex items-center gap-2 sm:ml-auto">
+          <label htmlFor="narration-voice" className="text-muted text-xs">
+            Voice
+          </label>
+          <select
+            id="narration-voice"
+            value={selected}
+            onChange={(e) => void pick(e.target.value)}
+            disabled={saving || voices.length === 0}
+            className="rounded-lg border border-line bg-bg px-2 py-1 text-ink text-xs disabled:text-muted"
+          >
+            <option value="">Automatic{voice && !selected ? ` — ${voice}` : ''}</option>
+            {/* The ones automatic selection uses first, then the rest. A voice
+                we would not choose for a property film is still a voice he may
+                want for one community. */}
+            <optgroup label="Suited to narration">
+              {voices
+                .filter((v) => v.auto)
+                .map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.id} — {v.character}
+                  </option>
+                ))}
+            </optgroup>
+            <optgroup label="Also available">
+              {voices
+                .filter((v) => !v.auto)
+                .map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.id} — {v.character}
+                  </option>
+                ))}
+            </optgroup>
+          </select>
+          {spoken && (
+            <span className="text-muted text-xs">
+              reading in <span className="font-medium text-fg">{spoken}</span>
+            </span>
+          )}
+        </div>
       </div>
+      {note && <div className="mb-3 text-muted text-xs">{note}</div>}
 
       {/* The music, above the script — it plays under all of it. */}
       {bgm ? (
