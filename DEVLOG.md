@@ -16,6 +16,43 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 09:55 UTC — iOS release prep: icon, splash, EAS profiles, runbook
+
+**Objective**: owner-approved release plan ("company" account, then TestFlight
+→ App Store), stage 1 — everything that can land before Apple enrollment
+exists. Same "deliver end to end" session as phase116.
+
+**Actions** (`phase118/ios-release-prep`):
+- `apps/mobile/assets/icon.png` + `splash-icon.png` — generated from brand
+  tokens (redline forest green #0E6B57, DM Serif Display "P", warm paper
+  #F7F5F0 splash bg). Deliberately placeholder-quality; the runbook says the
+  owner may replace the art, constraints included.
+- `app.json` — `version: 1.0.0`, `icon`, `expo-splash-screen` plugin config,
+  `ios.buildNumber: "1"`, `ITSAppUsesNonExemptEncryption: false` (HTTPS-only
+  ⇒ export-compliance exempt, skips the per-upload question).
+- `expo install expo-splash-screen` (~31.0.13, SDK-matched; workspace
+  lockfile updated).
+- `eas.json` — development / preview (internal) / production (autoIncrement)
+  profiles. No EAS project is linked yet: `eas build` needs the owner's
+  Apple/Expo credentials, which is Stage 2.
+- `docs/ios-release.md` — the full runbook: D-U-N-S + org enrollment (owner,
+  the critical path, ~1–2 weeks), build/submit commands, App Store metadata
+  table (privacy URL https://www.percho.co/privacy verified 200; App Privacy
+  = "Data Not Collected" while there are no accounts/analytics — owner must
+  re-confirm at submission), screenshot sizes, review risks, and the
+  explicit later-list (push, universal links, accounts).
+
+**Decisions**: no privacy-policy page work — `/privacy`, `/terms`,
+`/fair-housing` already exist and return 200 on production, which removes
+what looked like a Stage-3 blocker.
+
+**Verification**: `expo config --type prebuild` resolves (icon / splash /
+buildNumber / plugin all present), `expo export --platform ios` bundles
+clean after the config change.
+
+**Next steps**: owner starts D-U-N-S / enrollment (nothing in the repo can do
+this); once approved, Stage 2 = `eas build` + TestFlight per the runbook.
+
 ## 2026-08-23 09:40 UTC — Saved and You become real tabs; Search learns to move its map
 
 **Objective**: owner — "Lets also complete the Search, Saved, and You section
