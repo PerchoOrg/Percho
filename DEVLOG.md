@@ -16,6 +16,46 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 16:40 UTC — phase120: the deck now composes when the pool lands, not before
+
+**Objective**: owner, on device — "the card is not rendering in the feed page,
+even in the same network - it worked yesterday". On-screen diagnostics showed
+`hydrated=yes loading=no offline=no` and **deck=0** while the server returned a
+full pool for the exact request the phone makes (`stage=4&videosOnly=1` →
+12 listings + 4 communities).
+
+**Diagnosis**: a bootstrap race that a dev env var had been masking for weeks.
+The feed's compose effect deliberately does not depend on the pool (pagination
+must never rebuild the deck mid-session) and fires when `hydrated` flips true —
+which is always BEFORE the first pool response, because `useFeedPool` is
+`enabled: hydrated`. So it composed an empty deck from `EMPTY_POOL`, and
+nothing ever recomposed it: the append path early-returns on an empty deck.
+Every prior session ran with `EXPO_PUBLIC_DEV_SAMPLER=1` (the owner's Metro,
+up since 2026-08-16), and `samplerPoolSize` — a pool-sized effect dependency —
+recomposed the deck when the pool landed as a side effect. The first
+sampler-off Metro (started fresh today after the expo-splash-screen fix)
+removed the mask: blank feed, permanently. A production build would have hit
+the same blank feed on every first launch.
+
+**Actions**: `apps/mobile/app/(tabs)/feed.tsx` — the compose effect gains one
+pool-shaped dependency, `poolReady` (boolean: pool holds anything at all).
+False → true exactly once per stage, so the bootstrap recomposes once and
+pagination still never rebuilds a mid-session deck.
+
+**Resolution**: typecheck clean, 570 tests pass, biome clean on the file
+(2 pre-existing warnings). Device-verified path: owner's session restored
+first by restarting Metro WITH the sampler env (interim), then this fix makes
+sampler-off behave.
+
+**Learnings**: an env-gated code path that adds an effect dependency can mask
+a liveness bug in the ungated path indefinitely. When "it worked yesterday"
+meets "nothing relevant changed", ask what the RUNTIME ENVIRONMENT of
+yesterday's process was — the regression was in a `pnpm exec expo start`
+invocation, not in any commit.
+
+**Next steps**: none for the feed. The Metro relaunch recipe (port 443, ngrok
+v3, sampler env) is in agent memory.
+
 ## 2026-08-23 10:20 UTC — phase119.1: the mirror fields were unreadable — anon can't see mls_listings
 
 **Objective**: post-deploy verification of phase119 against production showed
