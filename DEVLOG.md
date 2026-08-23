@@ -16,6 +16,33 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 01:50 UTC — The eleven orphaned Stream assets are deleted
+
+**Objective**: owner: "delete the 11 stream videos too" — the Cloudflare Stream
+side of the entry below, which was flagged and left alone at the time.
+
+**Actions**: deleted eleven Stream videos by uid, read from the pre-delete
+snapshot (`suwanee-sectors-backup.json` — after the cascade there was no other
+record of them). 11/11 returned 200, and a follow-up GET on each returns 404.
+
+**Decisions**: pre-checked rather than trusted. Two things had to hold before
+the first DELETE: **no surviving row anywhere references these uids** —
+`tour_assemblies`, `generated_videos`, `communities.cover_video_id`,
+`listings`, `photo_clips` all returned 0 — and **Stream's own record matches
+what we think they are**: all eleven `ready`, created 2026-08-18 (the sector
+seed date), 26-52 s each, which is tour length. A uid from the backup file is
+not by itself proof of what is on the other end of it.
+
+**Resolution**: the four sector areas now leave nothing behind on paid
+infrastructure. What remains is the global POI cache the previous entry
+describes (61 POIs, 174 photos, 121 clips) — deliberately kept, since any
+future Suwanee subdivision resolves into the same places.
+
+**Learnings**: deleting a row that holds the only pointer to a paid asset
+should be a two-step action — snapshot, then delete — or the cleanup becomes
+unreachable the moment the cascade runs. That ordering is what made this
+possible an hour later.
+
 ## 2026-08-23 01:30 UTC — The four Suwanee sector areas are gone
 
 **Objective**: owner: "delete all 4 suwanee test areas, we already decided to
@@ -48,10 +75,9 @@ on all five tables.
   Suwanee subdivision resolves into. Deleting them would re-download and re-tag
   the same places.
 
-**Issues**: eleven Cloudflare Stream videos now have no row pointing at them.
-They keep billing until deleted, and their uids exist only in the backup file
-above. Owner's call — flagged, not acted on (§8: anything touching Stream
-minutes).
+**Issues**: eleven Cloudflare Stream videos were left with no row pointing at
+them, their uids surviving only in the backup file above. RESOLVED the same
+hour — see the 01:50 UTC entry.
 
 **Learnings**: the four sector rows were indistinguishable from real
 subdivisions in every column except `slug` — the test seed used the same
