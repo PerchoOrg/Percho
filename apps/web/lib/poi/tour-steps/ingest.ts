@@ -28,7 +28,7 @@
  * manual box always did, and the owner's review is still the gate.
  */
 import { fetchPageHtml, ingestPagePhotos } from '@/lib/poi/ingest-page-photos';
-import { labelForPath, sameOriginPageLinks } from '@/lib/poi/site-map';
+import { communityPageAncestor, labelForPath, sameOriginPageLinks } from '@/lib/poi/site-map';
 import { type RunRow, type TourDb, asJson, saveStep, setRunStatus } from './shared';
 
 /**
@@ -45,6 +45,15 @@ import { type RunRow, type TourDb, asJson, saveStep, setRunStatus } from './shar
  * this budget exists to avoid, not merely a slow response.
  */
 const INGEST_BUDGET_MS = 180_000;
+
+/** A URL's path, or '/' if it will not parse. */
+function pathnameOf(url: string): string {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return '/';
+  }
+}
 
 /** A row of `community_photo_sources`. */
 interface SourceRow {
@@ -230,7 +239,27 @@ export async function runIngest(sb: TourDb, run: RunRow) {
     // on every click — the manual box is how a person retries it.
     const expandedAt = new Date().toISOString();
     if (html) {
-      const links = sameOriginPageLinks(html, row.url);
+      // The community page's OWN path is the yardstick. On a builder's site
+      // that is `/bellmoore-park` and the rest of the host is somebody else's
+      // marketing; when the site IS the community it is `/` and every
+      // non-boilerplate page still follows, exactly as before.
+      const sitePrefix = pathnameOf(row.url);
+      const links = sameOriginPageLinks(html, row.url, 40, sitePrefix);
+
+      // The page the links hang OFF, which may never be linked itself.
+      // `/bellmoore-park` points straight at individual homes, so the crawl saw
+      // `…/bellmoore-park/6807/3060-labrouste-cove/1763081` and never the
+      // `…/6807` carrying the community's own gallery — the one page the owner
+      // asked for by name (2026-08-23).
+      const ancestors = new Map<string, { url: string; label: string; verdict: 'follow' }>();
+      for (const l of links) {
+        const parent = communityPageAncestor(l.url, sitePrefix);
+        if (parent && !links.some((x) => x.url === parent)) {
+          ancestors.set(parent, { url: parent, label: labelForPath(parent), verdict: 'follow' });
+        }
+      }
+      links.push(...ancestors.values());
+
       if (links.length > 0) {
         await sb.from('community_photo_sources').upsert(
           links.map((l) => ({
@@ -238,7 +267,10 @@ export async function runIngest(sb: TourDb, run: RunRow) {
             url: l.url,
             label: l.label,
             origin: 'community_site',
-            enabled: true,
+            // 'offer' pages are recorded UNTICKED: same origin, outside the
+            // community's own corner of the site, so they are one click away
+            // in the panel rather than either fetched or invisible.
+            enabled: l.verdict !== 'offer',
             // Born expanded. THIS is what holds the crawl at depth 1 — a child
             // that could expand would walk the whole site, and a site is a few
             // hundred pages of floor plans and press releases.

@@ -2,7 +2,8 @@
  * Vision tagger for POI photos —  *
  * Given a poi_photos.id, downloads the JPEG from Supabase Storage, sends it to
  * Gemini 2.5 Flash vision (migrated from Claude Sonnet 4.5, 2026-08-08), and fills:
- *   ai_tags       jsonb   {description, primary_category, tags[], mood, usable, reason}
+ *   ai_tags       jsonb   {description, primary_category, tags[], mood, usable,
+ *                            reason, residential_scope}
  *   ai_score      numeric 0-1 (quality × relevance)
  *   ai_model      text
  *   tagged_at     timestamptz
@@ -37,6 +38,31 @@ export const PHOTO_CATEGORIES = [
 ] as const;
 export type PhotoCategory = (typeof PHOTO_CATEGORIES)[number];
 
+/**
+ * How much of the frame is somebody's house.
+ *
+ * A community film is about the community — the pool, the clubhouse, the
+ * streets, the gate. It is NOT a listing, and a builder's website does not
+ * make that distinction: Bellmoore Park's "community site" is one page on The
+ * Providence Group's corporate site, and the crawl came back with 92 interior
+ * photos of two specific houses for sale (2026-08-23).
+ *
+ * The owner's rule, exactly: "it is ok to have photos for multiple houses to
+ * give a vibe but not single one even inside designs". So the distinction that
+ * matters is not house / not-house — it is ONE house, which is a listing
+ * photo, versus SEVERAL, which is a streetscape and reads as neighbourhood.
+ *
+ * `none` for everything that is not residential, which is most of what this
+ * tagger ever sees.
+ */
+export const RESIDENTIAL_SCOPES = [
+  'none',
+  'single_home',
+  'multiple_homes',
+  'home_interior',
+] as const;
+export type ResidentialScope = (typeof RESIDENTIAL_SCOPES)[number];
+
 export type PhotoAiTags = {
   description: string;
   primary_category: PhotoCategory;
@@ -44,6 +70,7 @@ export type PhotoAiTags = {
   mood: string | null;
   usable: boolean;
   reason: string | null;
+  residential_scope: ResidentialScope;
 };
 
 // ─── prompt ────────────────────────────────────────────────────────────────
@@ -56,6 +83,7 @@ Your job is to decide:
 3. Which buyer-question buckets the photo would strengthen if a buyer asked "what's it like to live here?".
 4. Whether the photo is usable at all (see PEOPLE below; also blurry,
    obstructed, or a readable license plate → usable=false).
+5. residential_scope — how much of the frame is somebody's home. See below.
 
 PEOPLE — read this carefully, it is the rule most often got wrong.
 A community is people. A pool with nobody in it, a park with nobody walking,
@@ -100,6 +128,22 @@ BUCKETS (a photo can strengthen 0, 1, or many):
 
 Set applicable_buckets = [] if the photo doesn't strengthen any bucket (e.g. a menu closeup, a generic wall).
 
+RESIDENTIAL_SCOPE — judge the SUBJECT of the frame, not the background:
+- none          : not about a home. A pool, clubhouse, gym, tennis court, park,
+                  playground, lake, gate or entry monument, shop, school. A
+                  street of trees with houses incidentally behind them is
+                  "none" if the street is the subject. THIS IS THE DEFAULT.
+- multiple_homes: several houses read as a neighbourhood — a streetscape, a row
+                  of facades, an aerial over rooftops, a cul-de-sac. The point
+                  is the place, not any one address.
+- single_home   : ONE house is the subject. An exterior portrait of a single
+                  facade, a driveway-and-garage shot, an architectural
+                  rendering of one home, a floor plan or a site/plot map.
+- home_interior : inside a house — kitchen, bathroom, bedroom, living room,
+                  closet, staircase, a model-home vignette, a finishes or
+                  cabinetry close-up. Whether it is styled or occupied does not
+                  matter.
+
 CATEGORIES:
 - storefront  : exterior facade / signage from outside
 - interior   : inside a business
@@ -127,6 +171,7 @@ Return STRICT JSON only, no prose:
   "mood": "inviting" | null,
   "usable": true,
   "reason": null,
+  "residential_scope": "none",
   "applicable_buckets": ["dining"],
   "score": 0.85
 }`;
@@ -281,6 +326,7 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
     mood?: string | null;
     usable?: boolean;
     reason?: string | null;
+    residential_scope?: string;
     applicable_buckets?: unknown;
     score?: number;
   };
@@ -303,6 +349,12 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
   const tagsList = Array.isArray(parsed.tags)
     ? (parsed.tags as unknown[]).filter((t): t is string => typeof t === 'string').slice(0, 8)
     : [];
+  // Defaults to 'none' — the value that changes nothing. A model that omits the
+  // field, or a photo tagged before it existed, must not start being rejected
+  // as a listing photo on the strength of a missing key.
+  const scope = (RESIDENTIAL_SCOPES as readonly string[]).includes(parsed.residential_scope ?? '')
+    ? (parsed.residential_scope as ResidentialScope)
+    : 'none';
   const scoreRaw = typeof parsed.score === 'number' ? parsed.score : 0.5;
   const score = Math.max(0, Math.min(1, scoreRaw));
 
@@ -313,6 +365,7 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
     mood: typeof parsed.mood === 'string' ? parsed.mood : null,
     usable: parsed.usable !== false,
     reason: typeof parsed.reason === 'string' ? parsed.reason : null,
+    residential_scope: scope,
   };
 
   const { error: updErr } = await admin
