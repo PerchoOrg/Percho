@@ -16,6 +16,57 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 09:52 UTC — the community glyphs follow the name's text, not its box
+
+**Objective**: owner, minutes after the 09:35 change — "still have the icon
+position issues for apremont - highcroft and ashley crossing".
+
+**First, the stale-build trap**: Metro has been running since 2026-08-16 out of
+`/Users/apocalypsee/Workspace/Percho/apps/mobile` — the shared REFERENCE
+worktree, pinned to main and not pulled since `ac59f038`. So the 09:35 fix was
+on `origin/main` and not in the bundle the phone was loading. Pulled it forward
+at the end of this work. Worth remembering: merging to main does NOT put a
+mobile change on the owner's phone; the reference worktree has to be pulled or
+Metro keeps serving whatever it was started on.
+
+**But the two names he named would have failed anyway**, which is why this
+entry exists. The 09:35 fix stopped the glyphs dropping BELOW the name by
+letting the name shrink and wrap instead. The glyphs then sit at the right edge
+of the name's flex BOX — and a wrapped name's box is wider than the lines
+inside it. "Apremont - Highcroft" breaks after the dash at roughly two thirds
+of the box; "Ashley Crossing" breaks in the middle. Both left a third of a card
+width of air between the text and its glyphs, putting them nearer `Explore`
+than the name — the 08-22 complaint again, in its narrow form.
+
+**Actions**: `apps/mobile/components/cards/CommunityFace.tsx` — the name `Text`
+now carries `onTextLayout`, which reports each RENDERED line's width. Take the
+widest and set it as the box's `width`, so the box hugs its content and the
+glyphs are laid out against the text's true right edge.
+
+**Decisions**: the alternative was making the glyphs inline — nested `<Text>`
+runs inside the name, flowing after the last word. Fewer moving parts, but
+`numberOfLines={2}` would then ellipsize the GLYPHS away on any name that
+genuinely fills two lines, and silently losing them is worse than the gap this
+fixes. Measuring keeps them unconditional.
+
+**Issues / why this settles**: setting a width from a measurement re-triggers
+the measurement. It converges because greedy line-breaking at exactly the
+widest line's width reproduces the same breaks, and the update is guarded to
+only ever shrink (`prev.width <= widest ? prev : …`), so there is no
+oscillation even if a font falls back mid-session. The measurement is stored
+WITH the name it belongs to and read back only for that name — a card face is
+reused across cards at the same deck index, and a bare number would clamp the
+next community's name to this one's width for a frame.
+
+**Verification**: `pnpm typecheck` clean, biome clean, `pnpm vitest run` in
+`apps/mobile` 42 files / 520 tests pass. `community-panel-fit.test.ts` now also
+asserts the measurement is wired.
+
+**Next steps**: owner to reload the app (Metro is now on the merged code) and
+re-check Apremont - Highcroft and Ashley Crossing.
+
+---
+
 ## 2026-08-23 08:35 UTC — The narration was budgeted against a timeline the film does not have
 
 **Objective**: owner on Bellmoore Park's new cut — "there is overlap of the tts
