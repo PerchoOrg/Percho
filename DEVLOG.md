@@ -16,6 +16,62 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 09:28 UTC — scrub confirmed on device; debug readout out, one latent bug found
+
+**Objective**: owner confirmed the tap now moves the film ("fixed, great"), then
+asked for wrap-up and cleanup. Three entries of this pass left temporary code
+and comment sediment behind.
+
+**Actions**:
+- `CardVideo.tsx`: `SEEK_DEBUG` and everything it dragged in are gone — the
+  const, `seekCount`, `lastRequest`, the `debugLine` state, the `Text` element,
+  its style and the now-unused `Text` import. Nothing dev-only is left in this
+  component.
+- `applySeek`'s three stacked block comments (one per report) collapsed into one
+  docstring keeping only the load-bearing facts: tolerant vs frame-accurate
+  seek, and why the bar is held afterwards. The narrative lives here, in the
+  log, which is where it belongs.
+- `CommunityFace.tsx` header gained a short "that hairline is a scrubber"
+  section: the deck-gesture relation, why a tap needs `onBegin` +
+  `onTouchesUp`, and that the seek is `CardVideo`'s and is tolerant. Three
+  days of device debugging, in the place the next engineer will actually look.
+
+**One real bug found while tidying, and fixed**: the `timeUpdate` listener's
+`if (scrubbing?.value) return` sat ABOVE the 82% near-end latch, while the
+comment right next to it claimed the nudge still fired during a drag. The
+comment was the intent; the code was a plain early return. So a buyer who
+happened to be dragging as the film crossed 82% got no breathing `Explore`
+link for that viewing, silently. The listener is now split: a `scrubbing` /
+`pendingSeek` block that owns the BAR, then the near-end latch outside it,
+which is about the FILM. One write site for `progress` instead of two, and the
+comment is true again.
+
+**Decisions**: kept the `seekTo` shared-value channel and the reaction that
+serves it. It was on the suspect list for two entries and is now proven — the
+scrub works — so replacing it with a JS callback ref would be churn on working
+code. Also kept the `pendingSeek` hold: the tolerant seek still takes a tick or
+two to arrive, so without it the bar still snaps back.
+
+**Issues**: `pnpm lint` could not run in `Percho-ws3` for this whole pass —
+`@biomejs/biome` was missing from that worktree's `node_modules`, so biome ran
+from ws2's binary against the changed files. Repaired with
+`pnpm install --frozen-lockfile` in `Percho-ws3/apps/mobile` at the end of this
+entry.
+
+**Resolution**: mobile typecheck clean, 523 tests pass (2 added at 09:21),
+biome clean on both touched files. The scrub itself is device-CONFIRMED by the
+owner, which is what the last three entries were missing.
+
+**Learnings**: a comment that describes intent the code does not implement is
+worse than no comment — this one had been sitting next to an early return since
+the scrubber shipped on 08-22, and it took a cleanup pass rather than a bug
+report to notice. Worth remembering that "the comment says why" is only true if
+someone checks that it still does.
+
+**Next steps**: nothing outstanding on the scrubber. Still open from earlier
+entries: the counts lost when the pills became glyphs (icon-plus-number is the
+obvious middle), and the explore screen's four invented stat values.
+
 ## 2026-08-23 09:21 UTC — a tap is not a small drag: the release goes to whoever won the touch
 
 **Objective**: owner, third report, and this one names the split — "if you drag
