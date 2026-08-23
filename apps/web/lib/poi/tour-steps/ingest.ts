@@ -118,42 +118,80 @@ export function sourcesFromResearch(research: unknown): Array<{
   return [...out.values()];
 }
 
+/**
+ * Write the research-found pages into `community_photo_sources`.
+ *
+ * Called from THREE places, and the reason is the ordering problem this step
+ * shipped with (owner 2026-08-23: "can you give me the candidate website urls
+ * that we got from agent research? so i can select"). Seeding used to happen
+ * inside `runIngest`, so the candidate list appeared only AFTER Fetch Sites had
+ * run — and choosing what to fetch is the thing you want to do BEFORE it runs.
+ * So it is seeded when research finishes, and again when the panel is opened,
+ * which is what makes the list appear for the runs that were researched before
+ * any of this existed. Re-running research to populate a list would cost real
+ * tokens for data already sitting in the run blob.
+ *
+ * Idempotent by construction. `ignoreDuplicates` matters more than it looks:
+ * without it, each call would reset `enabled` on every row, so the owner's
+ * ticks would survive exactly until the next time anything called this.
+ */
+export async function seedPhotoSources(
+  sb: TourDb,
+  communityId: string,
+  research: unknown,
+): Promise<number> {
+  const discovered = sourcesFromResearch(research);
+
+  // The community's own site, preferring the COMMUNITY's record over the run
+  // blob. `runResearch` writes `communities.website` and only fills a blank, so
+  // a URL a person entered outranks the model's guess — and this is the one
+  // place that difference decides which page is fetched by default.
+  const { data: community } = (await sb
+    .from('communities')
+    .select('website')
+    .eq('id', communityId)
+    .maybeSingle()) as { data: { website: string | null } | null };
+  const website = community?.website;
+  if (website && /^https?:\/\//.test(website) && !discovered.some((d) => d.url === website)) {
+    discovered.unshift({ url: website, label: labelForPath(website), origin: 'community_site' });
+  }
+
+  if (discovered.length === 0) return 0;
+
+  await sb.from('community_photo_sources').upsert(
+    discovered.map((d) => ({
+      community_id: communityId,
+      url: d.url,
+      label: d.label,
+      origin: d.origin,
+      enabled: d.origin === 'community_site',
+    })),
+    { onConflict: 'community_id,url', ignoreDuplicates: true },
+  );
+
+  // `origin` is a FACT and is corrected on every call; `enabled` is a CHOICE
+  // and is only ever set at insert. The case that needs this: the owner pastes
+  // the community's own URL into the panel's box before any of this runs, which
+  // files it as 'manual' — and the subpage expansion keys on origin, so that
+  // site's pages would never be harvested. Writing `enabled` here too would
+  // undo an untick every time the panel was opened.
+  const siteUrls = discovered.filter((d) => d.origin === 'community_site').map((d) => d.url);
+  if (siteUrls.length > 0) {
+    await sb
+      .from('community_photo_sources')
+      .update({ origin: 'community_site' })
+      .eq('community_id', communityId)
+      .in('url', siteUrls);
+  }
+  return discovered.length;
+}
+
 export async function runIngest(sb: TourDb, run: RunRow) {
   const communityId = run.community_id;
 
-  // ─── 1 + 2. Record what research found. ─────────────────────────────────
-  //
-  // `ignoreDuplicates` matters more than it looks: without it a re-run would
-  // reset `enabled` on every row, so the owner's ticks would survive exactly
-  // until the next time anyone pressed this button.
-  const discovered = sourcesFromResearch(run.step_results.agent_research);
-  if (discovered.length > 0) {
-    await sb.from('community_photo_sources').upsert(
-      discovered.map((d) => ({
-        community_id: communityId,
-        url: d.url,
-        label: d.label,
-        origin: d.origin,
-        enabled: d.origin === 'community_site',
-      })),
-      { onConflict: 'community_id,url', ignoreDuplicates: true },
-    );
-
-    // `origin` is a FACT and is corrected on every run; `enabled` is a CHOICE
-    // and is only ever set at insert. The case that needs this: the owner
-    // pastes the community's own URL into the panel's box before this step has
-    // ever run, which files it as 'manual' — and then the expansion below,
-    // which keys on origin, would never harvest that site's subpages. Writing
-    // `enabled` here too would undo an untick every time the step ran.
-    const siteUrls = discovered.filter((d) => d.origin === 'community_site').map((d) => d.url);
-    if (siteUrls.length > 0) {
-      await sb
-        .from('community_photo_sources')
-        .update({ origin: 'community_site' })
-        .eq('community_id', communityId)
-        .in('url', siteUrls);
-    }
-  }
+  // Seeded here too, not only at research time: a run researched before
+  // 2026-08-23 has candidates in its blob and no rows to show for them.
+  await seedPhotoSources(sb, communityId, run.step_results.agent_research);
 
   const readSources = async (): Promise<SourceRow[]> => {
     const { data } = (await sb
