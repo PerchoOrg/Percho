@@ -3,15 +3,32 @@
 		"name": "Percho",
 		"slug": "percho",
 		"scheme": "percho",
-		"version": "0.1.0",
+		"version": "1.0.0",
 		"orientation": "portrait",
 		"userInterfaceStyle": "light",
 		"newArchEnabled": true,
+		"icon": "./assets/icon.png",
 		"ios": {
 			"supportsTablet": false,
-			"bundleIdentifier": "co.percho.app"
+			"bundleIdentifier": "co.percho.app",
+			"buildNumber": "1",
+			"infoPlist": {
+				"ITSAppUsesNonExemptEncryption": false
+			}
 		},
-		"plugins": ["expo-router", "expo-video"],
+		"plugins": [
+			"expo-router",
+			"expo-video",
+			[
+				"expo-splash-screen",
+				{
+					"image": "./assets/splash-icon.png",
+					"imageWidth": 160,
+					"resizeMode": "contain",
+					"backgroundColor": "#F7F5F0"
+				}
+			]
+		],
 		"experiments": {
 			"typedRoutes": true
 		},
