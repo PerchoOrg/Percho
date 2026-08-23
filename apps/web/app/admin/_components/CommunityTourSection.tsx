@@ -439,7 +439,12 @@ export function CommunityTourSection({
   /** The script and the music `plan` chose, for review before either is heard. */
   const soundtrack = run?.step_results.photos as
     | {
-        narration?: { voice?: string; error?: string; segments?: NarrationSegmentView[] };
+        narration?: {
+          voice?: string;
+          error?: string;
+          warnings?: string[];
+          segments?: NarrationSegmentView[];
+        };
         bgm?: BgmChoiceView | null;
       }
     | undefined;
@@ -607,6 +612,7 @@ export function CommunityTourSection({
         communityId={communityId}
         voice={narration?.voice}
         segments={narration?.segments ?? []}
+        warnings={narration?.warnings ?? []}
         bgm={bgm}
         bgmUrl={bgmUrl}
         error={narration?.error}

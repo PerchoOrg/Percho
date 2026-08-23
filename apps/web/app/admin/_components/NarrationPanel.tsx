@@ -50,6 +50,7 @@ export function NarrationPanel({
   communityId,
   voice,
   segments,
+  warnings = [],
   bgm,
   bgmUrl,
   error,
@@ -57,6 +58,12 @@ export function NarrationPanel({
   communityId: string;
   voice?: string;
   segments: NarrationSegmentView[];
+  /**
+   * What the generator noticed about its own output — a trimmed line, a
+   * script that leans too hard on distances. Not errors: the film is fine,
+   * these are the things worth re-running Plan over if they bother you.
+   */
+  warnings?: string[];
   /** The track `plan` picked, if it picked one. */
   bgm?: BgmChoiceView;
   /** Public stream URL for that track, so it can be heard here. */
@@ -168,6 +175,14 @@ export function NarrationPanel({
         </div>
       </div>
       {note && <div className="mb-3 text-muted text-xs">{note}</div>}
+
+      {warnings.length > 0 && (
+        <ul className="mb-3 space-y-0.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-ink text-xs">
+          {warnings.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
+      )}
 
       {/* The music, above the script — it plays under all of it. */}
       {bgm ? (

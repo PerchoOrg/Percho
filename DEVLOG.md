@@ -16,6 +16,62 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 07:55 UTC — Distance in the narration: a proportion problem, not a value problem
+
+**Objective**: owner: "Soundtrack - too many miles related information, i dont
+like it, you should leverage on that but dont over use". Then, on my first
+draft: "one thing you mentioned is not very true — distance is still important
+so definitely that last one to consider, the issue is narrative should not too
+much focus on it."
+
+**The correction matters and the first draft deserved it.** I had written rules
+that demoted distance as a class of fact — "past about two miles a distance is
+unremarkable", "a rating is other people's verdict, a mileage is a
+measurement", "reach first for the facts a map cannot give you". That is wrong.
+How far the school is, and whether you can walk out for coffee, are among the
+first things a buyer asks; a film that never answers them is worse, not better.
+The defect was DENSITY and SHAPE, not worth.
+
+**Measured before changing anything**: across the three films with narration on
+file, **19 of 30 lines** carried a mileage or a drive time. Several were nothing
+else — "Life Time sits under a mile from home", "Weekly grocery trips to Publix
+are three miles away", "Drive six miles to Newtown Dog Park".
+
+**Why the model reaches for it**: the prompt listed "how far" FIRST among the
+facts worth using and then asked for half the lines to rest on something real —
+and distance is the only fact every place has. `describeDistance` returns a
+value for all of them; ratings and review counts exist for some.
+
+**Actions** (`tour-orchestrator/narration.ts`):
+- The rules now keep distance as a first-class fact and ration it instead: at
+  most a THIRD of lines, never two running, and **never as the whole of a
+  line** — "a distance is the second half of a sentence, not the sentence".
+  Plus: say it the way a person would, not the way a map would.
+- A new rule against the empty line, which is worse than the distance-heavy
+  one: "The library sits nearby", "Nightlife lies further out" are real output
+  and say nothing at all. Omit the section and let the pictures run.
+- `mentionsDistance()` + a `distance-heavy: N of M lines` warning from
+  `parseNarration`. **A prompt is a request; this is the only thing that says
+  whether it was honoured.** Deliberately broad — drive times and "just up the
+  road" count, because a pattern that only caught decimals would report a clean
+  sheet on "Find H Mart just one mile down the road."
+- The warning is surfaced in `NarrationPanel`, which was already receiving
+  `warnings` in the stored result and rendering none of them.
+
+**Verification**: the detector was run over all 30 real production lines and
+agreed with the hand count on every one — 19/30, 30/30 classifications correct.
+Those lines are now the test fixture. `pnpm typecheck` 0 errors, `pnpm test`
+733 web + 520 mobile (4 new), `biome check` 0 errors.
+
+**Not done, deliberately**: I had also proposed reordering `renderFacts` to
+stop leading every place with its mileage, and trimming `filmFacts`'s
+distance-shaped bullets. Both are demotions of the fact itself, which is what
+the owner corrected, so the prompt alone governs usage for now. If the warning
+keeps firing, those are the next lever.
+
+**Next steps**: re-run Plan on one community and read the warning. It costs a
+Curator call and a script generation; it renders nothing.
+
 ## 2026-08-23 07:40 UTC — The voice pool had five voices and used one of them
 
 **Objective**: owner: "and voice is same for all videos - we need to have a
