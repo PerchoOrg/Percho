@@ -16,6 +16,74 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 09:03 UTC — a tap on the progress bar moves the film, and stays moved
+
+**Objective**: owner, on the iOS community card — "click somewhere on the bar,
+not only show the name but also should move the progress accordingly". The
+scrub label (2026-08-22 22:xx) works; the fill does not follow the touch.
+
+**What actually happens**: the fill DOES move — for up to a quarter of a
+second. `CommunityFace`'s pan writes `progress` on touch-down and commits
+`seekTo` on release, and `CardVideo`'s `scrubbing` channel keeps `timeUpdate`
+off the bar while the finger is down. The moment the finger lifts, `scrubbing`
+goes false and the next `timeUpdate` tick writes whatever the player reports —
+and setting `currentTime` on an HLS player is a REQUEST, not a jump. For the
+first tick or two after a seek the player still reports the position the film
+was at when the finger landed, so the bar is yanked back to exactly where the
+buyer just dragged it away from. On a tap that is fast enough to read as "the
+progress did not move at all", which is the report.
+
+**Actions**: `apps/mobile/components/CardVideo.tsx`
+- `applySeek` records a `pendingSeek` (target time + a 2s deadline) and writes
+  the requested fraction into `progress` itself.
+- The `timeUpdate` listener holds the bar at the pending target until a tick
+  lands within `SEEK_SETTLE_S` (one tick interval + 0.15s) of it, then hands
+  the bar back to playback. The deadline is what stops a refused seek from
+  freezing the bar for the rest of the card's life.
+- Cleared in the play-gate effect: that effect rewinds to 0, which is a seek of
+  its own, and a request left over from the previous card would hold the bar
+  against it.
+
+**Second bug, found while in here**: the `useAnimatedReaction` that performs
+the seek listed `[seekTo]` as its deps, so it captured the `applySeek` of the
+render it was created in — and `applySeek` closes over the player. A card face
+is reused at the same deck index with a NEW player, so every scrub after the
+first card at that index was seeking a player nothing is showing: the bar would
+move under the finger and then snap back forever. Deps are now
+`[seekTo, applySeek]`.
+
+**Decisions**: held the bar in `CardVideo` rather than keeping `scrubbing` true
+for a while after release. `scrubbing` means "a finger owns the bar" and lying
+about that would also suppress the 82% nudge's bookkeeping; the seek handshake
+already lives here (`seekTo` is self-disarming for the same reason), so the
+wait for it to land belongs beside it.
+
+**Rejected**: correcting the touch-x → film-fraction mapping for the 3pt gaps
+between dashes. Written and then reverted — the arithmetic says the naive
+`x / width` is right to first order (the gaps crossed grow in proportion to x,
+so they cancel), and the residual is at most one gap, i.e. ≤3pt. A helper plus
+a test file for a 3pt refinement is not worth the code, and the comment
+justifying it would have overstated the error.
+
+**Issues**: mobile `pnpm lint` cannot run in `Percho-ws3` — `@biomejs/biome` is
+missing from that worktree's `node_modules`. Ran `Percho-ws2`'s binary against
+the file instead (clean after one formatting fix). Worth a `pnpm install` in
+ws3 before the next mobile task.
+
+**Resolution**: mobile typecheck clean, 521 tests pass, biome clean. NOT
+verified on device — this is a timing bug in an HLS player and nothing in the
+repo can exercise it. Only one community (Aberdeen) has a video, so that card
+is the whole test surface.
+
+**Learnings**: `useAnimatedReaction`'s dep array has the same staleness hazard
+as `useEffect`'s and it is easier to miss, because the reaction keeps working —
+it just works on the previous render's closure. Any reaction that `runOnJS`es a
+callback must list that callback.
+
+**Next steps**: device check — tap the bar at several points and confirm the
+fill lands and holds. If it still snaps back, the suspect is `player.duration`
+reading 0 on that source, which makes `applySeek` a no-op.
+
 ## 2026-08-23 10:10 UTC — the looped tail recycles listings too, and walks the whole pool
 
 **Objective**: owner — "why cant i see listing videos multiple times. but
