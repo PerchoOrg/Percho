@@ -16,6 +16,62 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 08:52 UTC — A hand-placed hero: seedance-2.0 at 720p on 2895 Shurburne
+
+**Objective**: owner — "the outcome is not very good, i want to see what i can
+get from a more advanced model ... just for this one photo only", then, after
+seeing it, "use the new one to replace the old one, i will do another
+assembly."
+
+**Correction to the 08:06 entry**: the clip he was unhappy with was NOT
+`walk_up`. Clip row `9d2c8840` (photo `3fd332f2`, sort 0) stores an
+`establish_push` prompt and was regenerated at 08:10:48 → ready 08:13:02. The
+07:30 plan did choose `walk_up`, but it never reached the row — a per-row
+Regenerate re-submits the ROW's stored prompt, which can be older than the last
+plan. `walk_up` stays out of the pool, but it did not produce what he watched.
+
+**Model survey** (OpenRouter `/api/v1/videos/models`, 24 models, no auth
+needed): our constraints — `first_frame` control, a 3:4 aspect for the 0.685
+canvas, ideally `last_frame` for the birdview pair — disqualify Veo 3.1 (16:9
+and 9:16 only), Sora 2 Pro (no frame control), Kling v3.0, Runway Gen-4.5 and
+Hailuo 2.3. What survives: `bytedance/seedance-2.0` (to 4K), `seedance-2.5`,
+`minimax/hailuo-3` ($0.13/s), `alibaba/wan-2.7` ($0.10/s),
+`black-forest-labs/flux-3-video`.
+
+**Actions**:
+- `submitVideo()` gains optional `model` / `resolution`, defaulting to today's
+  values, so a probe sends the same request shape the worker sends. Every
+  production caller is byte-identical.
+- `scripts/admin/hero-model-probe.ts` (new, dry-run by default): reads a
+  listing's seedance clip row and renders its EXACT inputs — same photo file
+  (enhanced), same prompt, same pairing — on a chosen model, to a local mp4.
+  Writes nothing anywhere.
+- One probe run: `bytedance/seedance-2.0` at 720p → 834x1112, 4.0s,
+  **$0.6149**.
+- Owner approved the result. The file was uploaded over
+  `listing-clips/3fd332f2-…-ios.mp4` (upsert, `cacheControl: 0`) and the row's
+  `cost_usd` set to the real 0.6149. Readback from storage confirms 834x1112.
+
+**Decisions**:
+- **My cost estimate was wrong by 2.4x** — $0.19-0.26 predicted, $0.6149
+  billed. Seedance's video-token count does not scale linearly with pixels the
+  way I extrapolated. On the corrected slope 1080p is ~$1.50-2.00 a clip, not
+  the $0.46-0.63 quoted earlier. Any future quote here should come from a
+  measured run, not from scaling one.
+- **`flux-video-upscale` was rejected on arithmetic**: 7.5c per megapixel-second
+  over 4s at 1080x1576 is ~$0.51, dearer than generating at 720p outright.
+
+**Risk to flag loudly**: this clip is HAND-PLACED. `SEEDANCE_MODEL` is still
+`seedance-2.0-mini` and the pipeline knows nothing about the swap, so the next
+per-row Regenerate on that hero silently replaces a $0.61 720p clip with a
+$0.06 480p one. The old file is kept at
+`scratchpad/BACKUP-3fd332f2-ios-mini480p.mp4` for this session only. Making
+this durable needs a per-listing (or per-row) model column — not built, not
+asked for yet.
+
+**Next steps**: owner runs Assemble. If he wants this as the standing quality,
+the model needs a home in the schema rather than a manual upload.
+
 ## 2026-08-23 08:35 UTC — The narration was budgeted against a timeline the film does not have
 
 **Objective**: owner on Bellmoore Park's new cut — "there is overlap of the tts
