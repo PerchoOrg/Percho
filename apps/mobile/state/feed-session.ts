@@ -27,6 +27,7 @@ import type {
 import {
 	EMPTY_SIGNALS,
 	type SignalState,
+	applyDimRemoval,
 	applySkipLayer,
 	applySwipe,
 } from "../lib/feed/signals";
@@ -48,6 +49,8 @@ interface FeedSessionState {
 		at: number,
 	) => SignalState;
 	skipLayer: (layer: FunnelLayer) => void;
+	/** You-tab evidence correction: "No, remove" on one preference dim. */
+	removeDim: (dim: string) => void;
 	markSeen: (ids: readonly string[]) => void;
 	/** Called once per app open, after hydration. */
 	beginSession: () => void;
@@ -77,6 +80,9 @@ export const useFeedSession = create<FeedSessionState>()(
 
 			skipLayer: (layer) =>
 				set((s) => ({ signals: applySkipLayer(s.signals, layer) })),
+
+			removeDim: (dim) =>
+				set((s) => ({ signals: applyDimRemoval(s.signals, dim) })),
 
 			markSeen: (ids) =>
 				set((s) => {

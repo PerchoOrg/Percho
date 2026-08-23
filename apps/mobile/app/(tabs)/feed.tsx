@@ -460,8 +460,11 @@ export default function FeedScreen() {
 		(target: string) => {
 			if (target === SAVE_TAP_TARGET) {
 				const top = deckRef.current[activeIndex];
-				if (top && top.kind === "listing") {
-					toggleSaved(top.id);
+				// Listing and area faces both draw the bookmark disc. The area
+				// branch was missing, so the CITY card's bookmark silently did
+				// nothing in the feed (its own onPress is disarmed under tapSlot).
+				if (top && (top.kind === "listing" || top.kind === "area")) {
+					toggleSaved(top.id, top.kind);
 				}
 				return;
 			}

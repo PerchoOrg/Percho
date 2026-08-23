@@ -45,6 +45,7 @@ import {
 } from "../../components/cards/redline/RedlineChrome";
 import { apiBase } from "../../lib/api/base";
 import { placeStats } from "../../lib/feed/place-stats";
+import { useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
@@ -155,6 +156,12 @@ export default function CommunityWhyScreen() {
 	const scrollRef = useRef<ScrollView>(null);
 	const seekRef = useRef<((fraction: number) => void) | null>(null);
 
+	// The community's save entry point lives HERE, not on the card face — the
+	// card's top-right corner belongs to the tour video's place/distance label
+	// (owner 2026-08-20: "remove the save button on the top right for cards").
+	const saved = useSavedStore((s) => (data ? s.isSaved(data.id) : false));
+	const toggleSaved = useSavedStore((s) => s.toggle);
+
 	useEffect(() => {
 		if (!slug) return;
 		let alive = true;
@@ -246,6 +253,16 @@ export default function CommunityWhyScreen() {
 					style={[styles.close, { top: insets.top + 8 }]}
 				>
 					<Text style={styles.closeTxt}>✕</Text>
+				</Pressable>
+
+				<Pressable
+					onPress={() => toggleSaved(data.id, "community")}
+					hitSlop={12}
+					accessibilityRole="button"
+					accessibilityLabel={saved ? "Saved" : "Save"}
+					style={[styles.save, { top: insets.top + 8 }]}
+				>
+					<Text style={styles.saveTxt}>{saved ? "Saved ✓" : "Save"}</Text>
 				</Pressable>
 
 				<View style={styles.body}>
@@ -419,6 +436,18 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.glass,
 	},
 	closeTxt: { fontSize: 15, color: colors.ink },
+	/** The close disc's mirror — same glass, left corner, sized by its label. */
+	save: {
+		position: "absolute",
+		left: 14,
+		height: 34,
+		paddingHorizontal: 14,
+		borderRadius: radii.pill,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: colors.glass,
+	},
+	saveTxt: { ...textStyles.footnote, color: colors.ink },
 
 	body: { paddingHorizontal: 18, paddingTop: 18 },
 	blurb: { ...textStyles.body, color: colors.ink, lineHeight: 22 },

@@ -15,6 +15,7 @@ import type {
 import {
 	EMPTY_SIGNALS,
 	FATIGUE_WINDOW,
+	applyDimRemoval,
 	applySkipLayer,
 	applySwipe,
 	geoSignalFor,
@@ -193,5 +194,40 @@ describe("purity", () => {
 		let s = applySwipe(EMPTY_SIGNALS, city, "right");
 		s = applySwipe(s, tradeoff, "left");
 		expect(s.swipesInStage).toBe(2);
+	});
+});
+
+describe("tradeoffCount", () => {
+	it("counts answered trade-offs regardless of direction", () => {
+		let s = applySwipe(EMPTY_SIGNALS, tradeoff, "right");
+		s = applySwipe(s, tradeoff, "left");
+		expect(s.tradeoffCount).toBe(2);
+	});
+
+	it("survives state persisted before the field existed", () => {
+		const legacy = { ...EMPTY_SIGNALS };
+		// biome-ignore lint/performance/noDelete: simulating a rehydrated pre-field snapshot is the test
+		delete (legacy as Record<string, unknown>).tradeoffCount;
+		expect(applySwipe(legacy, tradeoff, "right").tradeoffCount).toBe(1);
+	});
+
+	it("does not move on non-tradeoff swipes", () => {
+		const s = applySwipe(EMPTY_SIGNALS, listing, "right");
+		expect(s.tradeoffCount ?? 0).toBe(0);
+	});
+});
+
+describe("applyDimRemoval — the You tab's 'No, remove'", () => {
+	it("drops the dim outright", () => {
+		const s = applySwipe(EMPTY_SIGNALS, tradeoff, "right");
+		expect(s.dims.walkable).toBe(1);
+		const corrected = applyDimRemoval(s, "walkable");
+		expect("walkable" in corrected.dims).toBe(false);
+		// The discarded side's downweight is untouched — it is separate evidence.
+		expect(corrected.dims.outdoors).toBe(-0.5);
+	});
+
+	it("is a no-op for a dim with no evidence", () => {
+		expect(applyDimRemoval(EMPTY_SIGNALS, "quiet")).toBe(EMPTY_SIGNALS);
 	});
 });
