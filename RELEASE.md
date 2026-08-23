@@ -18,6 +18,10 @@ Community films now open on the community. Its own amenities lead the film and r
 
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
+### 2026-08-23
+- The home tour list's photo count now says how many photos are actually in the film — a home with 75 photos whose film uses 20 said "75 / 75", which read as though all 75 were used. Before a film exists it says how many the plan picked, or how many have been tagged
+- A home's stage now shows how far it actually got, not how far the latest attempt got. A home with a finished film was showing "Plan" because someone had started a re-run that stopped early; the unfinished re-run is now a note underneath instead of the headline
+
 ### 2026-08-22
 - The admin home tour list now shows where each home's tour actually is — the stage it reached, how many of its photos have been tagged, whether the web and phone cuts of the film are finished, and how long ago anything happened to it
 - Homes are now ordered by when the tour pipeline last worked on them, so whatever was processed most recently is at the top. Homes that have never been through the pipeline follow, newest first
