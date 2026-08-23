@@ -146,10 +146,11 @@ export function CommunityTourSection({
 
   // `research` writes under `agent_research`; every other step uses its name.
   const resultKey = (s: StepName) => (s === 'research' ? 'agent_research' : s);
-  // `plan` writes back into the `photos` result — it is the second half of what
-  // used to be one step — so its doneness is that result reaching phase 'done'.
   const photosResult = run?.step_results.photos as { phase?: string } | undefined;
-  const awaitingReview = photosResult?.phase === 'review';
+  // The gate belongs to `filter` now — it is the last automated step and the
+  // one that writes phase 'review' (tour-steps/filter.ts). It used to belong
+  // to `photos`, back when photos WAS fetch + ingest + tag + filter.
+  const filterResult = run?.step_results.filter as { phase?: string } | undefined;
 
   /** Clips the current plan needs, and how many are actually rendered. */
   const plannedShots = ((run?.step_results.photos as { shots?: PlanShot[] } | undefined)?.shots ??
@@ -163,6 +164,17 @@ export function CommunityTourSection({
       .map((c) => c.photo_id),
   );
   const shotsRendered = plannedShots.filter((sh) => readyPhotoIds.has(sh.photo_id)).length;
+
+  /**
+   * Filtering is finished and nothing has been planned over it yet.
+   *
+   * Planning is the only thing that can follow the review, so a shot list
+   * existing IS the review having happened — which is also why `plan` no
+   * longer reads a phase. `plan` writes its output back into the `photos`
+   * result (it was the second half of that step once), so a phase there
+   * cannot distinguish "fetched" from "planned".
+   */
+  const awaitingReview = filterResult?.phase === 'review' && plannedShots.length === 0;
 
   /** The newest assembly for the run on screen. */
   const latestAssembly = assemblies.find((a) => a.run_id === run?.id) ?? assemblies[0];
@@ -206,15 +218,25 @@ export function CommunityTourSection({
       return 'done';
     }
     // `review` has no server step, and `plan` writes back into the photos
-    // result rather than a key of its own. Both are "done" once planning has
-    // happened — planning is the only thing that can follow the review.
+    // result rather than a key of its own. Both are "done" once a shot list
+    // exists — planning is the only thing that can follow the review.
     if (s === 'review' || s === 'plan') {
-      return photosResult?.phase === 'done' ? 'done' : 'idle';
+      return plannedShots.length > 0 ? 'done' : 'idle';
     }
     // The photos step claims itself with phase 'running' before it fetches
     // anything. A result exists, so the generic branch below would call it
     // done — green for a step that is still working, or dead.
     if (s === 'photos' && photosResult?.phase === 'running') return 'waiting';
+    // Both of these stop on a clock and ask to be clicked again, so a result
+    // is not the same as a finished job. Amber until the step says 'done';
+    // green for a half-tagged pile is the exact lie that let a review happen
+    // over photos nothing had looked at (owner 2026-08-23).
+    if (s === 'ingest' || s === 'tag') {
+      const r = run?.step_results[s] as { phase?: string; error?: string } | undefined;
+      if (!r) return 'idle';
+      if (r.error) return 'failed';
+      return r.phase === 'done' ? 'done' : 'waiting';
+    }
     const r = run?.step_results[resultKey(s as StepName)] as { error?: string } | undefined;
     if (!r) return 'idle';
     return r.error ? 'failed' : 'done';
@@ -246,21 +268,6 @@ export function CommunityTourSection({
         .map((poi) => [poi.name, poi]),
     ).values(),
   ];
-  // Every page the research step named: the community's own site first, then
-  // each POI's. Collected since phase59 and never once used — see the panel.
-  const agents = Object.values(researchRaw?.agents ?? {});
-  const communitySite = agents.map((a) => a?.parsed?.community_site).find(Boolean);
-  const sourceSuggestions = [
-    ...(communitySite ? [{ url: communitySite, label: communityName }] : []),
-    ...[
-      ...new Map(
-        researchPois
-          .filter((p) => p.source?.startsWith('http'))
-          .map((p) => [p.source as string, { url: p.source as string, label: p.name }]),
-      ).values(),
-    ],
-  ];
-
   const resolveRaw = run?.step_results.resolve as
     | {
         resolved?: Array<{
@@ -313,9 +320,20 @@ export function CommunityTourSection({
           error?: string;
           message?: string;
           notReady?: number;
+          result?: { error?: string; message?: string };
         };
         if (!res.ok || !body.ok) {
           setStepError(`${step}: ${body.message ?? body.error ?? `HTTP ${res.status}`}`);
+          return null;
+        }
+        // A REFUSAL, not a failure: every handler returns `{ error, message }`
+        // when its inputs are not ready ("run resolve first", "N photos are
+        // still untagged"), and the route wraps that in a perfectly successful
+        // HTTP 200. Nothing read it, so a refusal looked exactly like a step
+        // that had run and done nothing — and `filter` now refuses on purpose,
+        // to keep a half-tagged pile from reaching the review gate.
+        if (body.result?.error) {
+          setStepError(`${step}: ${body.result.message ?? body.result.error}`);
           return null;
         }
         if (step === 'assemble' && body.notReady) {
@@ -451,6 +469,41 @@ export function CommunityTourSection({
         ? `no response for ${formatAge(activeAgeMs ?? 0)} — re-run`
         : `running… ${formatAge(activeAgeMs ?? 0)}`;
     }
+    if (s === 'ingest') {
+      const r = run?.step_results.ingest as
+        | {
+            note?: string;
+            pages_done?: number;
+            pages_total?: number;
+            pages_left?: number;
+            added?: number;
+          }
+        | undefined;
+      if (!r) return undefined;
+      if (r.note) return r.note;
+      const done = r.pages_done ?? 0;
+      // The batch stopped on its clock. Saying which page it reached is the
+      // difference between "click again" and "it did nothing".
+      if ((r.pages_left ?? 0) > 0) {
+        return `${done}/${r.pages_total ?? 0} pages · ${r.added ?? 0} photos — click again`;
+      }
+      return `${done} page${done === 1 ? '' : 's'} · ${r.added ?? 0} photos`;
+    }
+    if (s === 'tag') {
+      const r = run?.step_results.tag as
+        | { tagged?: number; total?: number; remaining?: number }
+        | undefined;
+      if (!r) return undefined;
+      if ((r.remaining ?? 0) > 0) {
+        return `${r.tagged ?? 0}/${r.total ?? 0} tagged — click again`;
+      }
+      return r.total ? `${r.total} tagged` : 'nothing left to tag';
+    }
+    if (s === 'filter') {
+      const r = run?.step_results.filter as { rejected?: number; kept?: number } | undefined;
+      if (!r) return undefined;
+      return `${r.rejected ?? 0} dropped · ${r.kept ?? 0} kept`;
+    }
     if (s === 'generate' && plannedShots.length > 0 && shotsRendered < plannedShots.length) {
       return `rendering ${shotsRendered}/${plannedShots.length} clips`;
     }
@@ -547,13 +600,11 @@ export function CommunityTourSection({
         error={narration?.error}
       />
 
-      {/* 4 · Hand-picked sources: a page URL in, pending photos out. Sits
-           directly above the table those photos land in. */}
-      <PhotoSourcePanel
-        communityId={communityId}
-        onIngested={() => router.refresh()}
-        suggestions={sourceSuggestions}
-      />
+      {/* 4 · The ingest step's input: which pages it may read. Sits directly
+           above the table those photos land in. The list it shows is built by
+           the step itself (`sourcesFromResearch` plus the community site's own
+           subpages) — this surface no longer derives it from the run blob. */}
+      <PhotoSourcePanel communityId={communityId} onIngested={() => router.refresh()} />
 
       {/* 5 · THE workspace. Open, full width — everything is managed here
            (owner 2026-08-19: "one big table to manage and display

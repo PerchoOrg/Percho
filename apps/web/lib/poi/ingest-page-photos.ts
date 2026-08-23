@@ -152,7 +152,7 @@ export function extractImageUrls(html: string, pageUrl: string): string[] {
       add(url, size?.endsWith('w') ? Number(size.slice(0, -1)) : undefined);
     }
   }
-  for (const m of html.matchAll(/<a\b[^>]*?\bhref\s*=\s*["']([^"']+\.(?:jpe?g|png))["']/gi)) {
+  for (const m of html.matchAll(/<a\b[^>]*?\bhref\s*=\s*["']([^"']+\.(?:jpe?g|png|webp))["']/gi)) {
     add(m[1]);
   }
 
@@ -174,6 +174,25 @@ async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Respon
     });
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/**
+ * A page's HTML, fetched the way this module fetches everything else.
+ *
+ * Exported for the ingest step's link harvest (`tour-steps/ingest.ts`), which
+ * needs the same User-Agent — a community site that 403s an unidentified
+ * client would otherwise appear to have no subpages rather than no access.
+ * Null on any failure: a site that will not answer is a source we skip, not a
+ * run we fail.
+ */
+export async function fetchPageHtml(pageUrl: string): Promise<string | null> {
+  try {
+    const res = await fetchWithTimeout(pageUrl);
+    if (!res.ok) return null;
+    return await res.text();
+  } catch {
+    return null;
   }
 }
 
@@ -301,7 +320,7 @@ export async function ingestPagePhotos(
     }
     const size = imageSizeOf(bytes);
     if (!size) {
-      skipped.push({ url, reason: 'not a JPEG or PNG' });
+      skipped.push({ url, reason: 'not a JPEG, PNG or WebP' });
       continue;
     }
     if (size.width < MIN_EDGE_PX || size.height < MIN_EDGE_PX) {
@@ -321,7 +340,14 @@ export async function ingestPagePhotos(
       continue;
     }
 
-    const ext = contentType.includes('png') ? '.png' : '.jpg';
+    // The stored extension has to match the bytes: the render worker and the
+    // enhancer open the file by path, and a WebP saved as `.jpg` is a decode
+    // error two steps later rather than here.
+    const ext = contentType.includes('png')
+      ? '.png'
+      : contentType.includes('webp')
+        ? '.webp'
+        : '.jpg';
     const storagePath = `poi/${poi.id}/${contentHash.slice(0, 32)}${ext}`;
     const { error: upErr } = await sb.storage
       .from(POI_PHOTO_BUCKET)

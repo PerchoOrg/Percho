@@ -439,6 +439,53 @@ export type Database = {
           },
         ]
       }
+      community_photo_sources: {
+        Row: {
+          community_id: string
+          created_at: string
+          enabled: boolean
+          expanded_at: string | null
+          id: string
+          label: string | null
+          last_ingested_at: string | null
+          last_result: Json | null
+          origin: string
+          url: string
+        }
+        Insert: {
+          community_id: string
+          created_at?: string
+          enabled?: boolean
+          expanded_at?: string | null
+          id?: string
+          label?: string | null
+          last_ingested_at?: string | null
+          last_result?: Json | null
+          origin: string
+          url: string
+        }
+        Update: {
+          community_id?: string
+          created_at?: string
+          enabled?: boolean
+          expanded_at?: string | null
+          id?: string
+          label?: string | null
+          last_ingested_at?: string | null
+          last_result?: Json | null
+          origin?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_photo_sources_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_photos: {
         Row: {
           alt_text: string | null
