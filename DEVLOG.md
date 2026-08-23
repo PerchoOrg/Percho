@@ -16,6 +16,29 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 20:50 UTC — The run count comes off the Stage column
+
+**Objective**: owner on the row phase96 shipped: "why do i care about how many
+total runs, i only care the latest and current outcome".
+
+**Actions**: dropped `runCount` from `TourJobRow`, from the fold in
+`lib/listings/tour-index.ts`, and from the Stage cell. Stage is now the
+furthest stage reached, with the grey "rerun in Plan" line under it when an
+unfinished newer attempt exists — nothing else.
+
+**Decisions**: kept the rerun line. It answers "current", which the owner said
+he does care about; the run count answered neither "latest" nor "current", it
+was a history tally. Removed the field outright rather than just hiding it —
+nothing else reads it, and a row field the UI does not render is dead data.
+
+The community index keeps its own `runCount` (`· 3 runs` on the Stage column,
+`lib/communities/tour-index.ts`). Left alone: the owner's complaint was about
+the home tour row in front of him, and the two tables are separate types. If
+the same is true there, that is a one-line change to make when he says so.
+
+**Resolution**: `pnpm typecheck`, `pnpm lint` (0 errors), `pnpm test` (649)
+clean.
+
 ## 2026-08-23 20:40 UTC — "75 / 75, do we use 75 photos in the video?"
 
 **Objective**: owner, reading the row phase95 shipped —

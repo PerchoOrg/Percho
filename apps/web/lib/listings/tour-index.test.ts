@@ -113,7 +113,7 @@ describe('buildTourIndexRows', () => {
         run('a', '2026-08-21T08:24:00Z', 'failed'),
       ],
     });
-    expect(rows[0]).toMatchObject({ stage: 'ready', rerunStage: 'planning', runCount: 3 });
+    expect(rows[0]).toMatchObject({ stage: 'ready', rerunStage: 'planning' });
   });
 
   it('leaves no rerun note when the newest run is the one that got furthest', () => {
