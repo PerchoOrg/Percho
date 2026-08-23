@@ -250,65 +250,48 @@ If a line still works with the place name swapped out, it is not about this
 place. Rewrite it.
 
 RULES
-- Every section has a word RANGE. Land inside it. Coming in under the minimum
-  is the most common way this goes wrong: a 28-second stretch given one short
-  sentence leaves fifteen seconds of silence over moving pictures, which reads
-  as a fault rather than as restraint. Over the cap is also wrong — the line
-  then runs into the next section's footage.
+- Every section has a word RANGE. Land inside it. Under the minimum leaves
+  silence over moving pictures; over the cap runs into the next section.
 - A long section is several shots of several places. Say something about more
   than one of them.
-- Open from what makes this community specific — but do NOT quote the
-  researcher's sentence back. It is a note to you, not a line to read out. And
-  never open "<Name> sits in <City>": that sentence fits every community,
-  which is why it is wrong for this one.
+- Open from what makes this community specific — but do not quote the
+  researcher's sentence back, it is a note to you. Never "<Name> sits in
+  <City>": it fits every community, which is why it is wrong for this one.
 - Name the community once, early. After that, say "here".
-- Use concrete nouns and real detail from the shot list. "The courts stay busy
-  past dusk" beats "tennis courts are available".
-- DISTANCE IS A REAL SELLING POINT and you should keep using it. How far the
-  school is, whether you can walk out for coffee — those are among the first
-  things a buyer asks, and a film that never answers them is worse, not better.
-  The problem is PROPORTION. Distance is also the easiest fact to reach for,
-  because every place has one while ratings and review counts do not, so it
-  crowds everything else out: across the last three films, nineteen lines out
-  of thirty carried a mileage or a drive time. Ration it.
-    · At most a THIRD of the lines may carry a distance.
+- Concrete nouns, real detail. "The courts stay busy past dusk" beats "tennis
+  courts are available".
+- USE THE FACTS, all of them — what the place is, what it looks like, what it
+  is known for, how many people rate it and how highly. Don't recite them, but
+  let at least half the lines rest on something real. Only the facts given
+  above: never invent a rating, a distance, a count or an amenity.
+- DISTANCE EARNS ITS PLACE — how far the school is, whether you can walk out
+  for coffee. But it is the easiest fact to reach for, because every place has
+  one, and it crowds the others out. Ration it:
+    · At most a QUARTER of the lines may carry a distance.
     · Never two lines running.
-    · Never as the whole of a line. A distance is the second half of a
-      sentence, not the sentence — it qualifies something you have already
+    · Never as the whole of a line — it qualifies something you have already
       said about the place.
-        YES — "Bell-Boles Park is a mile of shaded trail, close enough to walk."
-        NO  — "Life Time sits under a mile from home."
-        NO  — "Weekly grocery trips to Publix are three miles away."
-        NO  — "Drive six miles to Newtown Dog Park."
-    · Say it the way a person would, not the way a map would. "Close enough to
-      walk", "ten minutes out", "the far side of town". A decimal belongs on a
-      datasheet.
-- USE THE FACTS — ALL of them, not only the distances. What the place is, what
-  it looks like, what it is known for, how many people rate it and how highly.
-  A four-point-nine from six thousand people carries a line on its own; so does
-  a park being the one everyone drives to. Do not recite them — a line is not a
-  datasheet — but let at least half the lines rest on something real.
-- Only facts given above. Never invent a rating, a distance, a count, or an
-  amenity.
-- A line that says only that a place exists is worse than no line at all.
-  "The library sits nearby", "Nightlife lies further out", "The Breakfast Bar
-  sits nearby" — if you have nothing to say about a place, omit that section
-  and let the pictures run.
-- SCHOOLS have one rule and it is absolute: describe the PLACE, never anyone
-  going to it. Name the schools, say where they sit, describe the campus.
-  Nothing about attendance, zoning, enrolment, morning routines, the school
-  run, walking or driving to class, or which school follows which — those are
-  all the same claim wearing different clothes, and a line that makes one is
-  deleted rather than reworded, leaving your schools shot silent.
-    YES — "Sharon Elementary, Riverwatch Middle, and Lambert High sit within a
-           few miles, low brick campuses set back behind their ball fields."
-    NO  — "Morning routines flow toward Sharon Elementary."
-    NO  — "Riverwatch Middle leads to Lambert High."
-  No ratings for schools. Google's are not there for them and ours would be
-  invented; a quality claim needs a source that is not us.
+    · Say it the way a person would, not the way a map would.
+    · Under about ten words there is no room for both, and a distance is what
+      fits when nothing else will — which is why those sections keep coming
+      back as "Life Time fitness is under a mile". Say what the place IS:
+      "Crunch Fitness, three thousand reviews deep".
+      YES — "Bell-Boles Park is a mile of shaded trail, close enough to walk."
+      NO  — "Life Time sits under a mile from home."
+      NO  — "Drive six miles to Newtown Dog Park."
+- A line that only says a place exists is worse than no line. If you have
+  nothing to say about somewhere, omit that section and let the pictures run.
+- SCHOOLS: describe the PLACE, never anyone going to it. Name them, say where
+  they sit, describe the campus. Nothing about attendance, zoning, enrolment,
+  morning routines, the school run, or which school leads to which — a line
+  that makes one of those claims is deleted rather than reworded, leaving the
+  shot silent.
+      YES — "Sharon Elementary, Riverwatch Middle and Lambert High sit within a
+             few miles, low brick campuses behind their ball fields."
+      NO  — "Morning routines flow toward Sharon Elementary."
+  No ratings for schools: a quality claim needs a source that is not us.
 - No claims about who lives here, or who would like it.
-- Vary sentence length. Not every line needs a verb phrase at the front.
-- The last line should land, not trail off. It is the one people remember.
+- Vary sentence length. The last line should land, not trail off.
 
 OUTPUT — JSON only, no fences:
 {"lines": [{"index": 0, "text": "..."}, ...]}
@@ -367,20 +350,40 @@ export function parseNarration(
     let text = cleaned.text.trim();
     if (!text) continue;
 
-    // Over budget: drop whole sentences from the end rather than clipping a
-    // word, so what remains is still speakable.
+    // Over budget: drop whole sentences from the end, so what remains is still
+    // speakable.
+    //
+    // And if NOTHING whole fits, drop the line rather than clipping a word.
+    // The fallback used to be `slice(0, wordBudget)`, which guillotines a
+    // single long sentence mid-clause and hands the result to the TTS: "Further
+    // out, H Mart stands as a massive specialty", spoken exactly like that.
+    // A fragment is not a shorter line, it is a broken one, and the section's
+    // clips play under silence perfectly well — the prompt already tells the
+    // model to omit a section rather than pad it, and this is the same
+    // judgement applied to overflow.
+    //
+    // A HAIR over is kept whole. The budget is already 92% of the section
+    // (SECTION_FILL), so a word or two past it eats deliberate air rather than
+    // the next section — and losing "Walk dogs at Caney Creek." from a
+    // two-second shot because it is one word long is the silence this pipeline
+    // spent a fix getting rid of.
+    const slack = section.wordBudget + Math.max(1, Math.round(section.wordBudget * 0.15));
     let trimmed = false;
-    while (countWords(text) > section.wordBudget) {
+    while (countWords(text) > slack) {
       const cut = text.replace(/(^|\s)[^.!?]*[.!?]\s*$/, '').trim();
       if (!cut || cut === text) {
-        text = text.split(/\s+/).slice(0, section.wordBudget).join(' ');
-        trimmed = true;
+        text = '';
         break;
       }
       text = cut;
       trimmed = true;
     }
-    if (!text) continue;
+    if (!text) {
+      warnings.push(
+        `section ${section.index}: dropped — no whole sentence fits ${section.wordBudget} words`,
+      );
+      continue;
+    }
     if (trimmed) warnings.push(`section ${section.index}: trimmed to ${section.wordBudget} words`);
 
     segments.push({
@@ -404,11 +407,17 @@ export function parseNarration(
     if (codes.length > 0) warnings.push(`section ${seg.index}: RESIDUAL school-assignment`);
   }
 
-  // Measured, not hoped for. The prompt asks for at most a third of the lines
-  // to carry a distance; a prompt is a request, and this is the only thing
-  // that says whether it was honoured. Across the three films that prompted
-  // the rule the figure was 19 of 30 (owner 2026-08-23: "too many miles
-  // related information … narrative should not too much focus on it").
+  // Measured, not hoped for. A prompt is a request; this is the only thing that
+  // says whether it was honoured. Across the three films that prompted the rule
+  // the figure was 19 of 30 (owner 2026-08-23: "too many miles related
+  // information … narrative should not too much focus on it").
+  //
+  // The prompt asks for a QUARTER and this fires past a THIRD, deliberately.
+  // The model tracks whatever number the prompt names — measured at 3/10 for
+  // "a third" and 2/10 for "a quarter", three runs each, no variation — so a
+  // warning set at the cap itself would fire on every good script. The gap is
+  // the tolerance band. To make films less distance-forward, lower the number
+  // in the prompt; that is the lever, not more words.
   //
   // A warning, never a rejection: a script that leans on distance is still a
   // script, and dropping it would leave a silent film over a stylistic call.
