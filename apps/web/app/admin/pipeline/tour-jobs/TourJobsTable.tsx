@@ -75,10 +75,7 @@ const columns: AdminColumn<TourJobRow>[] = [
       const s = STAGES[r.stage];
       return (
         <>
-          <div className={s?.tone ?? 'text-ink2'}>
-            {s?.label ?? r.stage}
-            {r.runCount > 1 && <span className="text-ink2"> · {r.runCount} runs</span>}
-          </div>
+          <div className={s?.tone ?? 'text-ink2'}>{s?.label ?? r.stage}</div>
           {/* A re-run that has not got as far as the home already is. Grey and
               secondary on purpose: it is in flight, not the home's state. */}
           {r.rerunStage && (

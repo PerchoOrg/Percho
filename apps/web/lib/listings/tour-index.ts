@@ -94,7 +94,6 @@ export type TourJobRow = {
    * started after the home already got further, and still unfinished.
    */
   rerunStage: string | null;
-  runCount: number;
   photos: number;
   photosTagged: number;
   /**
@@ -138,7 +137,6 @@ function surfaceState(status: string): SurfaceState {
 }
 
 type Activity = {
-  runCount: number;
   /** The furthest run: highest progress rank, newest among equals. */
   best: IndexRun | null;
   /** The most recently touched run, whether or not it got anywhere. */
@@ -150,7 +148,6 @@ type Activity = {
 
 function empty(): Activity {
   return {
-    runCount: 0,
     best: null,
     newest: null,
     web: null,
@@ -185,7 +182,6 @@ export function foldTourActivity(input: {
 
   for (const r of input.runs) {
     const a = at(r.listing_id);
-    a.runCount += 1;
     a.lastActivityAt = newer(a.lastActivityAt, r.updated_at);
     const ts = millis(r.updated_at);
     // Newest among equal ranks, so a home re-run to the same stage reports the
@@ -246,7 +242,6 @@ export function buildTourIndexRows(input: {
         agentName: l.agents?.name ?? null,
         stage: a?.best?.status ?? null,
         rerunStage: rerun,
-        runCount: a?.runCount ?? 0,
         photos: p.total,
         photosTagged: p.tagged,
         photosPicked: p.picked,
