@@ -1,27 +1,30 @@
 'use client';
 
 import { type AdminColumn, AdminTable } from '@/app/admin/_components/AdminTable';
-import type { SurfaceState, TourJobRow } from '@/lib/listings/tour-index';
+import { PROGRESS_RANK, type SurfaceState, type TourJobRow } from '@/lib/listings/tour-index';
 import Link from 'next/link';
 
 /**
- * `listing_tour_runs.status`, in the order the pipeline writes them, with the
- * label and tone the index shows.
+ * `listing_tour_runs.status` → what the index calls it, and in what colour.
+ * The order comes from `PROGRESS_RANK`, so the column sorts by how far the run
+ * got and there is one definition of that order.
  *
  * `review` is amber because it is the only stage waiting on the owner: the
  * photo gate stops the run until he approves or rejects, so a table of green
  * "Ready" rows with one amber "Review" row is a to-do list. Same rule as the
  * community index.
  */
-const STAGES: Record<string, { label: string; rank: number; tone: string }> = {
-  tagging: { label: 'Tagging', rank: 1, tone: 'text-blue-500' },
-  review: { label: 'Review', rank: 2, tone: 'text-amber-500' },
-  planning: { label: 'Plan', rank: 3, tone: 'text-blue-500' },
-  generating: { label: 'Rendering', rank: 4, tone: 'text-blue-500' },
-  assembling: { label: 'Assembling', rank: 5, tone: 'text-blue-500' },
-  ready: { label: 'Ready', rank: 6, tone: 'text-emerald-500' },
-  failed: { label: 'Failed', rank: 7, tone: 'text-red-500' },
+const STAGES: Record<string, { label: string; tone: string }> = {
+  tagging: { label: 'Tagging', tone: 'text-blue-500' },
+  review: { label: 'Review', tone: 'text-amber-500' },
+  planning: { label: 'Plan', tone: 'text-blue-500' },
+  generating: { label: 'Rendering', tone: 'text-blue-500' },
+  assembling: { label: 'Assembling', tone: 'text-blue-500' },
+  ready: { label: 'Ready', tone: 'text-emerald-500' },
+  failed: { label: 'Failed', tone: 'text-red-500' },
 };
+
+const stageLabel = (status: string): string => STAGES[status]?.label ?? status;
 
 const surfaceRank: Record<SurfaceState, number> = { failed: 1, pending: 2, ready: 3 };
 
@@ -66,36 +69,64 @@ const columns: AdminColumn<TourJobRow>[] = [
     // rows sort last.
     key: 'stage',
     header: 'Stage',
-    sortValue: (r) => (r.stage ? (STAGES[r.stage]?.rank ?? 0) : -1),
+    sortValue: (r) => (r.stage ? (PROGRESS_RANK[r.stage] ?? 0) : -1),
     render: (r) => {
       if (!r.stage) return <span className="text-ink2">—</span>;
       const s = STAGES[r.stage];
       return (
-        <span className={s?.tone ?? 'text-ink2'}>
-          {s?.label ?? r.stage}
-          {r.runCount > 1 && <span className="text-ink2"> · {r.runCount} runs</span>}
-        </span>
+        <>
+          <div className={s?.tone ?? 'text-ink2'}>{s?.label ?? r.stage}</div>
+          {/* A re-run that has not got as far as the home already is. Grey and
+              secondary on purpose: it is in flight, not the home's state. */}
+          {r.rerunStage && (
+            <div className="text-ink2 text-xs">rerun in {stageLabel(r.rerunStage)}</div>
+          )}
+        </>
       );
     },
   },
   {
-    // Tagging is the pipeline's first step, so "18 / 22" is both the photo
-    // count and how far that step got.
+    /**
+     * Three questions, one live at a time.
+     *
+     * Once a cut exists the answer that matters is how many photos are IN it —
+     * the plan drops most of them (5122 Lower Creek Street: 75 photos, 20 in
+     * the film). "75 / 75" read as "75 photos in the video", which is what the
+     * owner asked about on 2026-08-23.
+     *
+     * The plan stamps its picks whether or not a film ever gets assembled, so
+     * a picked count with no ready cut says "picked", not "in film" — 3855 Oak
+     * Park Drive planned 9 shots and has no film at all.
+     */
     key: 'photos',
     header: 'Photos',
     align: 'right',
     sortValue: (r) => r.photos,
-    render: (r) =>
-      r.photos === 0 ? (
-        <span className="text-ink2">—</span>
-      ) : (
-        <span title={`${r.photosTagged} of ${r.photos} tagged`}>
-          <span className={r.photosTagged === r.photos ? 'text-emerald-500' : 'text-amber-500'}>
-            {r.photosTagged}
+    render: (r) => {
+      if (r.photos === 0) return <span className="text-ink2">—</span>;
+      if (r.photosPicked > 0) {
+        const inFilm = r.web === 'ready' || r.ios === 'ready';
+        const what = inFilm ? 'in film' : 'picked';
+        return (
+          <span
+            title={`${r.photosPicked} of ${r.photos} photos ${inFilm ? 'are in the film' : 'were picked by the plan'}`}
+          >
+            <div>
+              {r.photosPicked} {what}
+            </div>
+            <div className="text-ink2 text-xs">of {r.photos}</div>
           </span>
-          <span className="text-ink2"> / {r.photos}</span>
+        );
+      }
+      return (
+        <span
+          className={r.photosTagged === r.photos ? 'text-ink2' : 'text-amber-500'}
+          title={`${r.photosTagged} of ${r.photos} tagged`}
+        >
+          {r.photosTagged} / {r.photos} tagged
         </span>
-      ),
+      );
+    },
   },
   {
     // The film exists twice, one cut per surface. The old column read a single

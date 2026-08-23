@@ -22,6 +22,12 @@
  * pipeline. Homes the pipeline has never touched fall to the back in creation
  * order, which is where the old index put everything.
  *
+ * 2026-08-23: the Stage column showed the NEWEST run's status, which a dead
+ * run hijacks — 5122 Lower Creek Street read "Plan" while holding two finished
+ * cuts, because a re-run started 18:03 and stopped after planning (owner: "why
+ * do we have 5 runs?"). Stage is the FURTHEST any run got; an unfinished newer
+ * attempt is a note beside it, not a replacement for it.
+ *
  * Pure — no Supabase import — so the page can be tested without a database.
  */
 
@@ -37,7 +43,12 @@ export type IndexListing = {
   agents: { name: string } | null;
 };
 
-export type IndexPhoto = { listing_id: string; tagged_at: string | null };
+export type IndexPhoto = {
+  listing_id: string;
+  tagged_at: string | null;
+  /** Stamped by the PLAN step on every photo it picked — see `photosPicked`. */
+  used_in_video_at: string | null;
+};
 
 export type IndexRun = {
   listing_id: string;
@@ -54,6 +65,21 @@ export type IndexAssembly = {
   updated_at: string | null;
 };
 
+/**
+ * How far each `listing_tour_runs.status` is through the pipeline. `failed` is
+ * not a rung on that ladder — a failed attempt must never outrank a finished
+ * one when picking the run a row is judged by — so it sits below the first.
+ */
+export const PROGRESS_RANK: Record<string, number> = {
+  failed: 0,
+  tagging: 1,
+  review: 2,
+  planning: 3,
+  generating: 4,
+  assembling: 5,
+  ready: 6,
+};
+
 export type TourJobRow = {
   id: string;
   address: string;
@@ -61,11 +87,23 @@ export type TourJobRow = {
   state: string;
   status: string;
   agentName: string | null;
-  /** Status of the newest run — the pipeline's own stage name. Null = never run. */
+  /** Status of the FURTHEST run — the pipeline's own stage name. Null = never run. */
   stage: string | null;
-  runCount: number;
+  /**
+   * The newest run's status when that run is not the furthest one: an attempt
+   * started after the home already got further, and still unfinished.
+   */
+  rerunStage: string | null;
   photos: number;
   photosTagged: number;
+  /**
+   * Photos the plan picked; it drops the rest (5122 Lower Creek Street: 75
+   * photos, 20 picked). Once a cut exists this is also what is IN it —
+   * assembly uses exactly the planned shots, which held for all 15 listings
+   * with a film on 2026-08-23 — but the plan stamps it, so on its own it does
+   * NOT mean a film exists. 3855 Oak Park Drive has 9 picked and no cut.
+   */
+  photosPicked: number;
   /** Newest cut per surface. Null = that surface has never been assembled. */
   web: SurfaceState | null;
   ios: SurfaceState | null;
@@ -99,9 +137,10 @@ function surfaceState(status: string): SurfaceState {
 }
 
 type Activity = {
-  runCount: number;
-  stage: string | null;
-  stageAt: number;
+  /** The furthest run: highest progress rank, newest among equals. */
+  best: IndexRun | null;
+  /** The most recently touched run, whether or not it got anywhere. */
+  newest: IndexRun | null;
   web: IndexAssembly | null;
   ios: IndexAssembly | null;
   lastActivityAt: string | null;
@@ -109,22 +148,26 @@ type Activity = {
 
 function empty(): Activity {
   return {
-    runCount: 0,
-    stage: null,
-    stageAt: Number.NEGATIVE_INFINITY,
+    best: null,
+    newest: null,
     web: null,
     ios: null,
     lastActivityAt: null,
   };
 }
 
+function progress(run: IndexRun): number {
+  return PROGRESS_RANK[run.status] ?? 0;
+}
+
 /**
  * Fold the pipeline's rows into one record per listing.
  *
- * The stage is the NEWEST run's status, not the last row the query returned:
- * a home is re-run, and an older run's row can sort ahead once `updated_at` is
- * touched out of order. Same for the two cuts — a surface re-rendered after a
- * failure must show the re-render.
+ * The stage is the FURTHEST run's status, not the newest run's: a re-run that
+ * stops after planning would otherwise hide a home's finished film behind
+ * "Plan" forever. The newest run is kept alongside it so an unfinished newer
+ * attempt can be shown as what it is. The two cuts follow the same rule as
+ * before — a surface re-rendered after a failure must show the re-render.
  */
 export function foldTourActivity(input: {
   runs: IndexRun[];
@@ -139,13 +182,18 @@ export function foldTourActivity(input: {
 
   for (const r of input.runs) {
     const a = at(r.listing_id);
-    a.runCount += 1;
     a.lastActivityAt = newer(a.lastActivityAt, r.updated_at);
     const ts = millis(r.updated_at);
-    if (a.stage === null || ts >= a.stageAt) {
-      a.stage = r.status;
-      a.stageAt = ts;
+    // Newest among equal ranks, so a home re-run to the same stage reports the
+    // attempt that is actually current rather than the first one ever made.
+    if (
+      !a.best ||
+      progress(r) > progress(a.best) ||
+      (progress(r) === progress(a.best) && ts >= millis(a.best.updated_at))
+    ) {
+      a.best = r;
     }
+    if (!a.newest || ts >= millis(a.newest.updated_at)) a.newest = r;
   }
 
   for (const asm of input.assemblies) {
@@ -167,19 +215,23 @@ export function buildTourIndexRows(input: {
   /** Renders the relative "3h ago" label; the page passes `formatAge`. */
   formatActivity: (iso: string | null) => string;
 }): TourJobRow[] {
-  const photos = new Map<string, { total: number; tagged: number }>();
+  const photos = new Map<string, { total: number; tagged: number; picked: number }>();
   for (const p of input.photos) {
-    const s = photos.get(p.listing_id) ?? { total: 0, tagged: 0 };
+    const s = photos.get(p.listing_id) ?? { total: 0, tagged: 0, picked: 0 };
     s.total += 1;
     if (p.tagged_at) s.tagged += 1;
+    if (p.used_in_video_at) s.picked += 1;
     photos.set(p.listing_id, s);
   }
 
   const activity = foldTourActivity({ runs: input.runs, assemblies: input.assemblies });
 
   const rows = input.listings.map((l) => {
-    const p = photos.get(l.id) ?? { total: 0, tagged: 0 };
+    const p = photos.get(l.id) ?? { total: 0, tagged: 0, picked: 0 };
     const a = activity.get(l.id);
+    // Only when the newer attempt has NOT got as far: two runs that both
+    // reached the same stage are one story, not a stalled re-run.
+    const rerun = a?.newest && a.newest !== a.best ? a.newest.status : null;
     return {
       row: {
         id: l.id,
@@ -188,10 +240,11 @@ export function buildTourIndexRows(input: {
         state: l.state,
         status: l.status,
         agentName: l.agents?.name ?? null,
-        stage: a?.stage ?? null,
-        runCount: a?.runCount ?? 0,
+        stage: a?.best?.status ?? null,
+        rerunStage: rerun,
         photos: p.total,
         photosTagged: p.tagged,
+        photosPicked: p.picked,
         web: a?.web ? surfaceState(a.web.status) : null,
         ios: a?.ios ? surfaceState(a.ios.status) : null,
         lastActivityAt: a?.lastActivityAt ?? null,

@@ -37,7 +37,11 @@ type ListingRow = {
   agents: { name: string } | null;
 };
 
-type PhotoRow = { listing_id: string; tagged_at: string | null };
+type PhotoRow = {
+  listing_id: string;
+  tagged_at: string | null;
+  used_in_video_at: string | null;
+};
 type RunRow = { listing_id: string; status: string; updated_at: string | null };
 type AssemblyRow = {
   listing_id: string;
@@ -64,7 +68,7 @@ async function loadPhotos(
   for (let from = 0; from < 50_000; ) {
     const { data } = (await supabase
       .from('listing_photos')
-      .select('listing_id, tagged_at')
+      .select('listing_id, tagged_at, used_in_video_at')
       .in('listing_id', ids)
       // Paging without an order is paging over an undefined sequence.
       .order('id')

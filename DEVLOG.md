@@ -16,7 +16,94 @@ Same reverse-chronological format, same content.
 
 ---
 
-## 2026-08-23 04:40 UTC — Plan was drawing from the Nearby dragnet, so nine shots were photos nobody had ever looked at
+## 2026-08-23 20:50 UTC — The run count comes off the Stage column
+
+**Objective**: owner on the row phase96 shipped: "why do i care about how many
+total runs, i only care the latest and current outcome".
+
+**Actions**: dropped `runCount` from `TourJobRow`, from the fold in
+`lib/listings/tour-index.ts`, and from the Stage cell. Stage is now the
+furthest stage reached, with the grey "rerun in Plan" line under it when an
+unfinished newer attempt exists — nothing else.
+
+**Decisions**: kept the rerun line. It answers "current", which the owner said
+he does care about; the run count answered neither "latest" nor "current", it
+was a history tally. Removed the field outright rather than just hiding it —
+nothing else reads it, and a row field the UI does not render is dead data.
+
+The community index keeps its own `runCount` (`· 3 runs` on the Stage column,
+`lib/communities/tour-index.ts`). Left alone: the owner's complaint was about
+the home tour row in front of him, and the two tables are separate types. If
+the same is true there, that is a one-line change to make when he says so.
+
+**Resolution**: `pnpm typecheck`, `pnpm lint` (0 errors), `pnpm test` (649)
+clean.
+
+## 2026-08-23 20:40 UTC — "75 / 75, do we use 75 photos in the video?"
+
+**Objective**: owner, reading the row phase95 shipped —
+`5122 Lower Creek Street · Plan · 5 runs · 75 / 75` — asked three things: what
+does this mean, why are there 5 runs, and are 75 photos in the film. Two of
+the three were the table lying.
+
+**Issues**:
+1. **`75 / 75` was tagging progress in a column headed "Photos".** The film
+   uses 20. Lower Creek has 75 photos, all tagged, all approved; the plan picks
+   20 shots and drops 55, and the assemblies agree (`clips=20, dropped=55` on
+   both surfaces).
+2. **Stage read "Plan" on a home holding two finished cuts.** The column showed
+   the NEWEST run's status, and the newest run (`041b2583`, 18:03) stopped
+   after planning and never continued. The film came from `6787f68d` at 08:29.
+   A dead run hijacked the row — the home-tour twin of the orphaned-run problem
+   phase94 hit on the community side.
+3. The 5 runs are real: 08-21 failed → 08-21 planning (dead) → 08-21 ready →
+   08-22 ready → 08-22 planning (dead). Two of the five are stalled runs, which
+   is worth knowing and is now visible rather than being the headline.
+
+**Actions**:
+- `lib/listings/tour-index.ts`: `PROGRESS_RANK` (exported, `failed` below the
+  first rung so a failed attempt can never outrank a finished one); the fold
+  keeps the FURTHEST run and the NEWEST run, and reports `stage` from the
+  former plus `rerunStage` when they differ. New `photosPicked` off
+  `listing_photos.used_in_video_at`.
+- `TourJobsTable.tsx`: Stage shows the furthest stage with a grey "rerun in
+  Plan" line under it. Photos shows "20 in film / of 75" when a cut is ready,
+  "9 picked / of 10" when the plan has run but nothing is assembled, and
+  "N / M tagged" before that. The stage column's sort now reads `PROGRESS_RANK`
+  so the order has one definition.
+- 5 new tests (15 in the file).
+
+**Decisions**:
+- **Stage = furthest run, not newest** (owner picked this over flagging stalled
+  runs). What the owner wants off a glance is where the home GOT to; an
+  unfinished newer attempt is a footnote, and rendering it as the headline
+  hides a finished film behind "Plan".
+- **`used_in_video_at` is the plan's stamp, not the cut's.** worker.py:3465
+  clears it for the listing and re-stamps the chosen shots at the end of the
+  plan step. So the count means "picked", and only means "in the film" once a
+  cut is ready — 3855 Oak Park Drive planned 9 shots on 08-22 and has no
+  assembly at all, which the first cut of this change would have rendered as
+  "9 in film" next to a Film column reading "—". Hence the two wordings.
+- Kept `photosPicked` as the field name for that reason; the table decides
+  which noun to print.
+
+**Resolution**: verified against production. Across all 15 listings with a
+finished film, `count(used_in_video_at)` equals the assembly's `ordered_clips`
+length — 15/15, so the picked count IS the in-film count once a cut exists.
+Lower Creek now renders `Ready · 5 runs / rerun in Plan / 20 in film of 75 /
+web ios`, Oak Park `Plan · 2 runs / 9 picked of 10 / —`. `pnpm typecheck`,
+`pnpm lint` (0 errors), `pnpm test` (649) and `pnpm build` clean.
+
+**Learnings**: a provenance column named for the artefact it feeds
+(`used_in_video_at`) is not a claim that the artefact exists. Anything reading
+it as "in the video" has to check for the video separately.
+
+**Next steps**: two stalled home-tour runs are sitting in the table
+(`4677d32c`, `041b2583`) and nothing reaps them. Same gap as the community
+side: `status` has no timeout, so a dead run is indistinguishable from a live
+one until someone reads the timestamps. Worth a reaper or a heartbeat.
+
+## 2026-08-23 03:54 UTC — Plan was drawing from the Nearby dragnet, so nine shots were photos nobody had ever looked at
 
 **Objective**: owner on Apremont - Highcroft: "after planning, I see 27 photos
 are approved, but some approved ones dont even have ai tags, and scores —
