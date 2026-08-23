@@ -16,6 +16,111 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 08:10 UTC — The prompt change was fine; the run that tested it wasn't
+
+**Objective**: owner on Bellmoore Park: "clicked plan, still see many
+narratives with miles".
+
+**He clicked 39 seconds after the deploy went live, and lost the race.** The
+phase106 deployment was READY at 06:46:33 UTC and the plan step finished at
+06:47:12 — but a plan runs Curator, then narration, then music selection, so
+that request began well before the new code existed and ran the old bundle end
+to end. Three independent signals confirm it: the `distance-heavy` warning did
+not fire on 7 of 10 lines, the banned empty line ("The Breakfast Bar is
+beloved.") was there, and so were bare-distance lines.
+
+**Verified by running the new prompt against the SAME shot list** rather than
+asking him to click again — one Gemini text call, no Curator, no render:
+7/10 → 1/10, and Autrey Mill went from "sits just over four miles down the
+road" to "Hundreds of local families praise the historic cabins and peaceful
+woodland trails".
+
+**Two real defects surfaced doing that.**
+
+**1. The trim guillotines a single long sentence.** `parseNarration` drops
+whole sentences from the end to fit the word budget, and when NOTHING whole
+fits it fell back to `text.split(/\s+/).slice(0, wordBudget)`. Bellmoore Park
+got "Further out, H Mart stands as a massive specialty" — a fragment, handed to
+the TTS and spoken exactly like that. Now: drop the line and warn. Silence over
+those clips is the better failure, and the prompt already tells the model to
+omit a section rather than pad it.
+
+  A first cut dropped anything over budget, which broke the two-second-section
+  fix ("Walk dogs at Caney Creek." is 5 words against a budget of 4) and would
+  have brought back the silences that fix removed. So there is slack:
+  `budget + max(1, 15%)` is kept whole. The budget is already SECTION_FILL=0.92
+  of the section, so a hair past it eats deliberate air, not the next line.
+
+**2. Short sections FORCE bare-distance lines.** After the fix, two of the
+three remaining distance lines were "Life Time fitness is under a mile" and
+"H Mart is a six-mile trip" — the prompt's own NO examples. Those sections have
+a 6-8 word budget: "content plus a mileage" does not fit in seven words, and a
+distance is the shortest sayable fact, so the model reaches for it. The rule
+was physically impossible to obey there. Added: under about ten words, drop the
+distance and say what the place IS. Result: "Work out at Life Time or popular
+Crunch", "Vibrant H Mart draws shoppers from across town".
+
+**Actions**:
+- `narration.ts`: the trim fix, the slack, and the short-section rule.
+- `narration.test.ts`: the old "trims by whole sentences" test asserted the
+  guillotine and is replaced by three — trims to a whole sentence, DROPS when
+  none fits, keeps a line a word or two over.
+- `scripts/admin/rewrite-narration.ts` (new, dry run by default): regenerates
+  narration against the shot list a run already has and patches
+  `step_results.photos.narration`. Tuning the PROMPT should not cost a Curator
+  pass over every photo in the cut — the shot list is the expensive half and it
+  does not change when the wording does.
+
+**Applied to Bellmoore Park** at the owner's request: 7/10 → **2/10**, no
+warnings, every line a whole sentence. The run's cut, clips and music are
+untouched; the worker does TTS at assemble time, so Assemble will speak it.
+
+**Honest limit**: `mentionsDistance` measures the datasheet form — miles,
+minutes, "down the road". It does NOT count "close enough to walk", "easily
+reached", "across town". Counting those would fight the prompt, which asks for
+exactly that phrasing — but it does mean a script could satisfy the meter while
+still being proximity-forward. Worth knowing before trusting the number.
+
+**Verification**: `pnpm typecheck` 0 errors, `pnpm test` 735 web + 520 mobile,
+`biome check` 0 errors.
+
+**Then the owner, mid-change: "dont over prompt engineering, refactor the
+changes, trim some wording, leave some space."** Fair — the rules block had
+grown to 785 words, a third of it our own reasoning and internal statistics
+that the model has no use for.
+
+**Trimmed it to 428 words and MEASURED, three runs each** (temperature is 1.1,
+so one sample proves nothing):
+
+| rules block | shape | distance lines |
+|---|---|---|
+| 785 words | bullets, 4 counter-examples, rationale | 2, 0, 0 → **7%** |
+| 428 words | prose, semicolons, 1 counter-example | 6, 7, 7 → **67%** |
+| 466 words | same wording, bullets restored | 3, 3, 2 → **27%** |
+| 499 words | + concrete short-section examples | 3, 3, 3, 3 → **30%** |
+
+**Structure, not length.** Collapsing three constraints into one
+semicolon-separated sentence undid nearly the whole change; restoring the
+bullets recovered most of it at 38 words' cost. The remaining verbosity was
+worth about three percentage points.
+
+**And then the actual lever.** At 499 words the model returned 3/10 on four
+consecutive runs — exactly the "at most a THIRD" the prompt names. It was not
+ignoring the rule, it was obeying it precisely. Changing one word to "a
+QUARTER" gave 2/10 on three consecutive runs. **The model tracks whatever
+number you name.** So the way to make films less distance-forward is to lower
+that number, not to write more prose around it.
+
+Shipped: 499-word rules block, cap at a quarter. 63% before any of this →
+**20%**, with 36% fewer words than the version I was about to commit. The
+`distance-heavy` warning still fires past a third, so there is a tolerance band
+between what the prompt asks for and what raises a flag.
+
+**Learnings**: "I clicked and it still does X" is worth a deploy-timestamp check
+before it is worth a code change. And a prompt rule that cannot be obeyed —
+content plus a distance in seven words — is not a rule the model is ignoring,
+it is a rule with no legal move.
+
 ## 2026-08-23 07:55 UTC — Distance in the narration: a proportion problem, not a value problem
 
 **Objective**: owner: "Soundtrack - too many miles related information, i dont

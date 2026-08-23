@@ -103,13 +103,44 @@ describe('parseNarration', () => {
   });
 
   it('trims an over-budget line by whole sentences, so it stays speakable', () => {
-    const long = `${'word '.repeat(30)}. Short tail.`;
+    // Two sentences, the first of which fits: the tail is dropped and what
+    // remains is a whole sentence.
+    const budget = sections[0]?.wordBudget ?? 0;
+    const head = `${'word '.repeat(Math.max(1, budget - 2)).trim()}.`;
     const { segments, warnings } = parseNarration(
-      JSON.stringify({ lines: [{ index: 0, text: long }] }),
+      JSON.stringify({ lines: [{ index: 0, text: `${head} And a tail that pushes it over.` }] }),
       sections,
     );
-    expect(segments[0]?.words).toBeLessThanOrEqual(sections[0]?.wordBudget ?? 0);
+    expect(segments[0]?.text).toBe(head);
     expect(warnings.join()).toContain('trimmed');
+  });
+
+  it('DROPS a line when no whole sentence fits, rather than clipping a word', () => {
+    // The fallback used to be `slice(0, wordBudget)`, which guillotines a
+    // single long sentence and hands the fragment to the TTS — Bellmoore Park
+    // got "Further out, H Mart stands as a massive specialty", spoken exactly
+    // like that (2026-08-23). Silence over those clips is the better failure.
+    const oneLongSentence = `${'word '.repeat(60).trim()}.`;
+    const { segments, warnings } = parseNarration(
+      JSON.stringify({ lines: [{ index: 0, text: oneLongSentence }] }),
+      sections,
+    );
+    expect(segments).toHaveLength(0);
+    expect(warnings.join()).toContain('dropped');
+  });
+
+  it('keeps a line a word or two over budget whole', () => {
+    // The budget is 92% of the section by construction, so a hair past it eats
+    // air rather than the next line. Dropping these is how short sections went
+    // silent in the Aberdeen cut.
+    const budget = sections[0]?.wordBudget ?? 0;
+    const justOver = `${'word '.repeat(budget + 1).trim()}.`;
+    const { segments } = parseNarration(
+      JSON.stringify({ lines: [{ index: 0, text: justOver }] }),
+      sections,
+    );
+    expect(segments).toHaveLength(1);
+    expect(segments[0]?.words).toBe(budget + 1);
   });
 
   it('ignores a line pointing at a section that does not exist', () => {
