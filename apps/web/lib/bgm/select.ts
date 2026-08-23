@@ -98,6 +98,31 @@ export function paletteForListing({
   return { vibe, energy };
 }
 
+/**
+ * The smallest peer group a percentile may be computed from.
+ *
+ * A "top 10% of what sells here" claim drawn from four listings is noise
+ * wearing a statistic's clothes, and `paletteForListing` turns the number into
+ * a real difference in the music. Below this the caller should widen the
+ * comparison (city → state) or pass nothing and take the middle.
+ */
+export const MIN_PRICE_PEERS = 8;
+
+/**
+ * Where `price` sits among `peers`, 0-1. Null when the peer group is too thin
+ * to mean anything.
+ *
+ * Fraction at or below, so the cheapest listing in its market is not 0 (it is
+ * still one of the prices that market contains) and the dearest is 1. `peers`
+ * is expected to INCLUDE the listing itself; it costs nothing if it does not.
+ */
+export function pricePercentile(price: number, peers: readonly number[]): number | null {
+  const usable = peers.filter((p) => Number.isFinite(p) && p > 0);
+  if (usable.length < MIN_PRICE_PEERS) return null;
+  const below = usable.filter((p) => p <= price).length;
+  return below / usable.length;
+}
+
 /** Stable, well-spread index from a string. */
 function hash(seed: string): number {
   let h = 2166136261;

@@ -16,6 +16,89 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 10:45 UTC — the home tour's music is planned, not rolled
+
+**Objective**: owner — "what is current rule of selecting music for listing
+tour? i feel some music are used much more than others". Then, on the two
+options offered: "2+3" — record what shipped, AND move the choice into the
+plan step.
+
+**The answer to the question**: there was no rule. The 2026-08-20 "planner to
+decide" work (`apps/web/lib/bgm/select.ts`) was only ever wired into the
+COMMUNITY film. For a home tour:
+
+  · `runAssemble` inserted `listing_tour_assemblies` with no `bgm`, though the
+    column has existed since `20260821040000_listing_tour_assemblies.sql`;
+  · so `worker.py`'s `planned_bgm` was always null and it fell through to
+    `pick_bgm()` — `random.choice` over `bgm/acoustic/*.mp3`, no memory, vibe
+    hardcoded to the default, re-rolled on every re-render;
+  · `piano` and `electronic` were therefore unreachable for a listing;
+  · `paletteForListing()` had no caller in the repo but its own test;
+  · and the chosen track was never written back — it existed only in a worker
+    log line, so "what did this tour ship with" was unanswerable.
+
+His observation was right and the cause was the absence of a spread rule, not
+a bias: 28 tracks drawn uniformly WITH replacement cover only
+`28 x (1 - (27/28)^20) ~= 14.5` distinct tracks over 20 renders — half the
+library silent, several tracks two or three times.
+
+**Actions**:
+  · `lib/bgm/select.ts` — new pure `pricePercentile(price, peers)` +
+    `MIN_PRICE_PEERS = 8`. A percentile off four listings is noise wearing a
+    statistic's clothes, and this one becomes audible restraint.
+  · `lib/poi/listing-tour-steps/assemble.ts` — `chooseListingBgm()`, mirroring
+    the community film's `chooseBgm`: same library, same review sidecar, same
+    incumbency. Palette from `paletteForListing` (year built -> vibe, price
+    percentile within the listing's own city, widening to state -> energy).
+    The row now carries `bgm`, and the step result reports it.
+  · `worker.py` `process_listing_assembly` — warn when a planned track is not
+    synced yet (the community path already did), and write back what actually
+    played when it had to fall back. Provenance only; wrapped so it can never
+    fail a finished film.
+
+**Decision — role is `lead`, not `bed`**: `storage.ts` states the contract as a
+question about the FILM ("a narrated film needs a bed"), and a home tour has no
+voice. No track is tagged `lead` today and `selectBgm` falls back to the whole
+pool rather than to nothing, so today this WIDENS the choice; the day listings
+gain narration it becomes `bed` and nothing else moves.
+
+**Verification, against the real library and the real book**: pulled the review
+sidecar and simulated the new rule over all 260 active listings.
+
+  · Library: 34 approved tracks, 2 rejected. Every one is tagged `bed`;
+    NONE is tagged `still`. Energies: acoustic gentle 27, acoustic moving 3,
+    piano gentle 3, electronic gentle 2, electronic moving 1.
+  · Buckets the rule produces: acoustic+gentle 124, acoustic+moving 81,
+    acoustic+still 24, piano+gentle 18, piano+moving 7, piano+still 6.
+  · Result: **31 of 34 tracks used**, top three at 30 / 28 / 24 plays.
+
+**Residual, stated plainly**: the top three are the whole of `acoustic+moving`
+carrying all 81 entry-level listings, and the three `piano` tracks carry all 31
+post-2015 ones. 112 of 260 listings share six tracks. No selection rule can fix
+that — the hash already spreads 81 listings over 3 tracks as 30/28/24, which is
+as even as three tracks get. The library is the constraint: it needs more
+`moving` and more `piano`, which `/api/admin/bgm/generate` exists to make.
+What HAS changed is that the concentration is now visible, stable per listing,
+and reviewable before a render instead of re-rolled after it.
+
+**Issues**: `tests/test_pick_bgm.py` had two tests red on main since 2026-08-20
+— their fixtures still built a `warm-acoustic/` folder, which `pick_bgm` stopped
+reading when the palettes were renamed, so both were asserting against `None`.
+Renamed the fixtures. Out of scope strictly, but a red test file in the exact
+function this entry is about would have masked a regression from this work.
+
+**Verification**: `pnpm typecheck` clean in `apps/web`, biome clean on the
+changed files, `pnpm vitest run` 69 files / 766 tests pass, and
+`pytest scripts/render-worker/tests` 133 passed (was 131 passed / 2 failed).
+
+**Next steps**: the community assembly (`process_community_assembly`) has the
+same write-back hole — it falls back to `pick_bgm()` and does not record it —
+but its plan step almost always supplies a track, so it was left alone. If the
+owner wants the entry-level and new-build concentration gone, the answer is
+~6 more `moving` and ~6 more `piano` tracks, not a change here.
+
+---
+
 ## 2026-08-23 09:03 UTC — a tap on the progress bar moves the film, and stays moved
 
 **Objective**: owner, on the iOS community card — "click somewhere on the bar,

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { type BgmCandidate, paletteForCommunity, paletteForListing, selectBgm } from './select';
+import {
+  type BgmCandidate,
+  MIN_PRICE_PEERS,
+  paletteForCommunity,
+  paletteForListing,
+  pricePercentile,
+  selectBgm,
+} from './select';
 import type { BgmEnergy, BgmRole, BgmVibe } from './storage';
 
 const track = (
@@ -233,5 +240,38 @@ describe('paletteForListing', () => {
   it('has a sane answer when both fields are missing', () => {
     // year_built is absent on 11 of 265 listings and price on 4.
     expect(paletteForListing({})).toEqual({ vibe: 'acoustic', energy: 'gentle' });
+  });
+});
+
+describe('pricePercentile', () => {
+  const peers = [200_000, 300_000, 400_000, 500_000, 600_000, 700_000, 800_000, 900_000];
+
+  it('refuses to compute one from a peer group too thin to mean anything', () => {
+    // A "top 10% of what sells here" drawn from four listings is noise wearing
+    // a statistic's clothes, and the caller turns the number into audible
+    // restraint. Null tells it to widen the comparison or take the middle.
+    expect(pricePercentile(500_000, peers.slice(0, MIN_PRICE_PEERS - 1))).toBeNull();
+    expect(pricePercentile(500_000, peers)).not.toBeNull();
+  });
+
+  it('counts at-or-below, so the cheapest listing is not zero', () => {
+    // It is still one of the prices this market contains.
+    expect(pricePercentile(200_000, peers)).toBeCloseTo(1 / 8);
+    expect(pricePercentile(900_000, peers)).toBe(1);
+    expect(pricePercentile(500_000, peers)).toBeCloseTo(4 / 8);
+  });
+
+  it('ignores junk prices rather than letting them shift the answer', () => {
+    const dirty = [...peers, 0, Number.NaN, -1];
+    expect(pricePercentile(500_000, dirty)).toBe(pricePercentile(500_000, peers));
+  });
+
+  it('feeds the palette the restraint the market says it should', () => {
+    // The end-to-end shape of the 2026-08-23 wiring: a top-decile home in its
+    // own market gets the sparse cut, an entry-level one the moving cut.
+    const top = pricePercentile(900_000, peers);
+    const entry = pricePercentile(200_000, peers);
+    expect(paletteForListing({ pricePercentile: top }).energy).toBe('still');
+    expect(paletteForListing({ pricePercentile: entry }).energy).toBe('moving');
   });
 });

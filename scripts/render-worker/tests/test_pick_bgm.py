@@ -23,9 +23,12 @@ def _make_bgm(tmp_path: Path, tracks: dict[str, list[str]]) -> Path:
     return root
 
 
-def test_pick_bgm_picks_from_warm_acoustic(tmp_path, monkeypatch):
+def test_pick_bgm_picks_from_default_bucket(tmp_path, monkeypatch):
+    # `warm-acoustic` became `acoustic` on 2026-08-20 (the folder is the
+    # PALETTE, not a use case). These fixtures kept the old name and had been
+    # asserting on `pick_bgm() is None` ever since — renamed 2026-08-23.
     root = _make_bgm(tmp_path, {
-        "warm-acoustic": ["a.mp3", "b.mp3"],
+        "acoustic": ["a.mp3", "b.mp3"],
     })
     monkeypatch.setattr(worker, "BGM_DIR", root)
     random.seed(0)
@@ -36,7 +39,7 @@ def test_pick_bgm_picks_from_warm_acoustic(tmp_path, monkeypatch):
 def test_pick_bgm_ignores_retired_buckets(tmp_path, monkeypatch):
     """Retired buckets exist on disk but must never be picked."""
     root = _make_bgm(tmp_path, {
-        "warm-acoustic": ["ok.mp3"],
+        "acoustic": ["ok.mp3"],
         "modern-corporate": ["nope.mp3"],
         "luxury-ambient": ["nope2.mp3"],
         "chill-electronic": ["nope3.mp3"],
@@ -56,7 +59,7 @@ def test_pick_bgm_returns_none_when_bucket_missing(tmp_path, monkeypatch):
 
 
 def test_pick_bgm_returns_none_when_bucket_empty(tmp_path, monkeypatch):
-    root = _make_bgm(tmp_path, {"warm-acoustic": []})
+    root = _make_bgm(tmp_path, {"acoustic": []})
     monkeypatch.setattr(worker, "BGM_DIR", root)
     assert worker.pick_bgm() is None
 
