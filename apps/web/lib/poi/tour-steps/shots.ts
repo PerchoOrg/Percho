@@ -6,6 +6,13 @@
  */
 
 import { RELIGIOUS_PHOTO_DROP_REASON, isReligiousPhoto } from '@/lib/poi/religious-content';
+import {
+  AMENITY_LABEL,
+  type Amenity,
+  COMMUNITY_ACT_CLIP_BUDGET,
+  amenityOf,
+  communityActSlots,
+} from '@/lib/poi/tour-orchestrator/amenity';
 import type { TourPlanPhoto } from '@/lib/poi/tour-orchestrator/plan';
 import { CANVAS_H, CANVAS_W } from '@/lib/poi/tour-orchestrator/scheduler';
 import type { PhotoAnnotation } from '@/lib/poi/tour-orchestrator/types';
@@ -228,13 +235,36 @@ export async function computeFinalShots(
   // a 680x497 storefront that needed 4.25x to fill a 1080x1920 frame: the
   // duration rule shortens a soft clip, it cannot rescue one.
   const { upscaleFactor, isTooLowRes } = await import('@/lib/poi/tour-orchestrator/scheduler');
+
+  // The community is a special POI, and that is the whole reason for the split
+  // below. One synthetic row holds every photo its website handed over —
+  // Bellmoore Park's held 49, covering five amenities — so a cap keyed on
+  // `poi_id` gives the pool, the clubhouse and the gate three slots BETWEEN
+  // them, and lets whichever sorted first take all three. It did: the cut of
+  // 2026-08-23 opened on three streetscapes of houses and showed no amenity at
+  // all. Owner: "for website, the rule should be applied on the amenity level,
+  // not poi level, the community itself is a special poi."
+  //
+  // So its photos group by what they SHOW, and the act's allowance is
+  // COMMUNITY_ACT_CLIP_BUDGET across all of them rather than one POI's three.
+  const GROUP_SEP = '\u0000';
+  const amenityOfKey = (key: string): Amenity | null => {
+    const i = key.indexOf(GROUP_SEP);
+    return i < 0 ? null : (key.slice(i + 1) as Amenity);
+  };
+  const amenityByPhoto = new Map<string, Amenity>();
   const byPoi = new Map<string, NonNullable<typeof photosRaw>>();
   for (const p of photosRaw ?? []) {
     // Religious subject matter, checked on the PHOTO — first, because it is a
     // policy gate rather than a quality one. The place-level filter cannot see
     // this: Riverwatch Middle School is a school by every Places signal, and it
     // shipped a garlanded shrine in its gymnasium, tagged "cultural-celebration".
-    const tags = (p.ai_tags ?? {}) as { description?: string; tags?: string[] };
+    const tags = (p.ai_tags ?? {}) as {
+      description?: string;
+      tags?: string[];
+      primary_category?: string;
+      residential_scope?: string;
+    };
     if (isReligiousPhoto({ description: tags.description, tags: tags.tags })) {
       dropped.push({ photo_id: p.id, poi_id: p.poi_id, reason: RELIGIOUS_PHOTO_DROP_REASON });
       continue;
@@ -256,11 +286,34 @@ export async function computeFinalShots(
       });
       continue;
     }
-    const arr = byPoi.get(p.poi_id) ?? [];
+    let key = p.poi_id;
+    if (buckets?.get(p.poi_id) === 'amenities') {
+      const amenity = amenityOf(tags);
+      amenityByPhoto.set(p.id, amenity);
+      key = `${p.poi_id}${GROUP_SEP}${amenity}`;
+    }
+    const arr = byPoi.get(key) ?? [];
     arr.push(p);
-    byPoi.set(p.poi_id, arr);
+    byPoi.set(key, arr);
   }
-  for (const arr of byPoi.values()) {
+
+  // ONE allocation for the whole community act, made before any group is cut,
+  // because the amenities are competing with each other for the same budget
+  // and a per-group decision cannot see that. Counts only photos still in
+  // play — a rejected one is not material the act can spend a slot on.
+  const availableByAmenity = new Map<Amenity, number>();
+  for (const [key, arr] of byPoi) {
+    const amenity = amenityOfKey(key);
+    if (!amenity) continue;
+    const live = arr.filter((r) => r.status !== 'rejected').length;
+    if (live > 0) availableByAmenity.set(amenity, live);
+  }
+  const amenitySlots = communityActSlots(availableByAmenity, {
+    budget: COMMUNITY_ACT_CLIP_BUDGET,
+    ceiling: clipsAllowedFor('amenities'),
+  });
+
+  for (const [groupKey, arr] of byPoi) {
     const ranked = [...arr].sort((a, b) => {
       const aTags = (a.ai_tags ?? {}) as { usable?: boolean };
       const bTags = (b.ai_tags ?? {}) as { usable?: boolean };
@@ -300,7 +353,10 @@ export async function computeFinalShots(
       !!r.reviewed_by && r.status === 'approved';
     const handPicked = (r: (typeof ranked)[number]) =>
       ownerApproved(r) || (r.source === 'community_site' && r.status !== 'rejected');
-    const allowed = clipsAllowedFor(buckets?.get(arr[0]!.poi_id));
+    const groupAmenity = amenityOfKey(groupKey);
+    const allowed = groupAmenity
+      ? (amenitySlots.get(groupAmenity) ?? 0)
+      : clipsAllowedFor(buckets?.get(arr[0]!.poi_id));
     // One ESTABLISHING frame is promoted ahead of the score order.
     //
     // A place has to be recognisable before a detail of it means anything, and
@@ -337,7 +393,11 @@ export async function computeFinalShots(
           ? 'rejected in Review'
           : tags.usable === false
             ? 'tagger-unusable'
-            : `not in the top ${clipsAllowedFor(buckets?.get(row.poi_id))} for this place`;
+            : groupAmenity
+              ? allowed === 0
+                ? `${AMENITY_LABEL[groupAmenity]} got no slot in the community act's ${COMMUNITY_ACT_CLIP_BUDGET} clips`
+                : `not in the top ${allowed} for ${AMENITY_LABEL[groupAmenity]}`
+              : `not in the top ${clipsAllowedFor(buckets?.get(row.poi_id))} for this place`;
       dropped.push({ photo_id: row.id, poi_id: row.poi_id, reason });
     }
   }
@@ -349,6 +409,29 @@ export async function computeFinalShots(
     data: Array<{ id: string; display_name: string | null; primary_type: string | null }> | null;
   };
   const poiName = new Map((poiRows ?? []).map((p) => [p.id, p.display_name ?? '']));
+
+  // The community's POI is named after the PAGE the ingest was pointed at, and
+  // that name is now wrong in two ways at once: it says the same thing for
+  // every clip in the act — Bellmoore Park's read "Bellmoore Park Bellmoore
+  // Park" three times over — and it says nothing about what is on screen. The
+  // amenity does both jobs, so the label, the narration's place list and the
+  // scheduler's grouping all read "Bellmoore Park Pool".
+  let communityName = '';
+  if (amenityByPhoto.size > 0) {
+    const { data: communityRow } = (await sb
+      .from('community_pois')
+      .select('communities(name)')
+      .in('poi_id', poiIds)
+      .limit(1)
+      .maybeSingle()) as { data: { communities: { name: string | null } | null } | null };
+    communityName = communityRow?.communities?.name ?? '';
+  }
+  const displayNameFor = (photoId: string, poiId: string): string => {
+    const amenity = amenityByPhoto.get(photoId);
+    if (!amenity) return poiName.get(poiId) ?? '';
+    const label = AMENITY_LABEL[amenity];
+    return communityName ? `${communityName} ${label}` : label;
+  };
   const { PLACES_TYPE_TO_BUCKET } = await import('@/lib/poi/google-places');
   const poiBucket = new Map(
     (poiRows ?? []).map((p) => [
@@ -420,7 +503,8 @@ export async function computeFinalShots(
     planPhotos.push({
       photo_id: p.id,
       poi_id: p.poi_id,
-      poi_name: poiName.get(p.poi_id) ?? '',
+      poi_name: displayNameFor(p.id, p.poi_id),
+      amenity: amenityByPhoto.get(p.id),
       bucket: poiBucket.get(p.poi_id) ?? 'other',
       width_px: widthPx,
       height_px: heightPx,
@@ -477,7 +561,9 @@ export async function computeFinalShots(
 
   const labelled = plan.shots.map((s) => {
     const { name, distance } = clipLabel({
-      poiName: poiName.get(s.poi_id) ?? s.poi_name ?? '',
+      // The plan's name first: for a community amenity it is the only one that
+      // says which amenity this is.
+      poiName: s.poi_name || (poiName.get(s.poi_id) ?? ''),
       bucket: buckets?.get(s.poi_id) ?? poiBucket.get(s.poi_id) ?? null,
       distanceM: distanceByPoi.get(s.poi_id) ?? null,
     });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Amenity } from './amenity';
 import { GOLDEN_ANNOTATIONS, GOLDEN_PHOTOS } from './fixtures/peachtree-corners';
 import {
   CANVAS_H,
@@ -257,6 +258,35 @@ describe('scheduleClips — golden fixture', () => {
     expect(runs).toEqual([...new Set(runs)]);
     // And they run clubhouse → pool → courts.
     expect(runs).toEqual(['Aberdeen Clubhouse', 'Aberdeen Pool', 'Aberdeen Tennis Courts']);
+  });
+
+  it('splits one community POI by amenity, and walks it in order', () => {
+    // Bellmoore Park's whole gallery landed on a single synthetic POI, so
+    // grouping on `poi_id` collapsed the act into one undifferentiated block —
+    // and the cap that keys on the same field left it three streetscapes of
+    // houses and no amenity at all (owner 2026-08-23). The amenity is the key.
+    const base = GOLDEN_PHOTOS.slice(0, 6);
+    const layout: Amenity[] = ['pool', 'streetscape', 'entrance', 'pool', 'clubhouse', 'entrance'];
+    const photos: PhotoMeta[] = base.map((p, i) => ({
+      ...p,
+      bucket: 'amenities',
+      poi_id: 'one-synthetic-poi',
+      poi_name: 'Bellmoore Park Bellmoore Park',
+      amenity: layout[i]!,
+    }));
+    const ids = new Set(photos.map((p) => p.photo_id));
+    const annotations: PhotoAnnotation[] = GOLDEN_ANNOTATIONS.filter((a) =>
+      ids.has(a.photo_id),
+    ).map((a) => ({ ...a, poi_pair_with: null, pair_role: null }));
+
+    const { clips } = scheduleClips(annotations, photos);
+    const amenityOf = new Map(photos.map((p) => [p.photo_id, p.amenity!]));
+    const sequence = clips.map((c) => amenityOf.get(c.photo_id)!);
+    const runs = sequence.filter((a, i) => a !== sequence[i - 1]);
+
+    // Each amenity is one contiguous run, and the houses come last.
+    expect(runs).toEqual([...new Set(runs)]);
+    expect(runs).toEqual(['entrance', 'clubhouse', 'pool', 'streetscape']);
   });
 
   it('leaves the opener alone on a tour with no amenities bucket', () => {

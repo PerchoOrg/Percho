@@ -16,6 +16,111 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 08:05 UTC — The community is one POI, so a cap of three per POI gave it three clips
+
+**Objective**: owner on Bellmoore Park's cut — "there is no single photo for
+community! and starting with some houses, which i already mentioned to avoid.
+I see all photos from websites are tagged with some poi, and many filtered out
+due to max 3 rule — this rule is NOT applied to website, for website, the rule
+should be applied on the amenity level, not poi level, the community itself is
+a special poi". Branch `phase108/community-amenity-cap` (ws3).
+
+**Diagnosis, on the live run** (`797dfe47`, photos step 06:47Z): 26 clips,
+79.5s, and the community act is **three clips, all streetscapes of houses**,
+all labelled `Bellmoore Park Bellmoore Park`.
+
+The ingest attaches every photo a page hands over to ONE synthetic
+`community_amenity` POI. Bellmoore Park's holds 76 rows, 49 of them still
+usable after `residential_scope` rejected the listing photography. Those 49
+cover five amenities — pool 7, clubhouse 5, courts 4, fitness 4, entrance 3 —
+plus 18 streetscapes and 8 unplaceable. `computeFinalShots` groups by `poi_id`
+and grants `clipsAllowedFor('amenities')` = 3 per group, so all 49 competed for
+three slots. Every candidate is `source = 'community_site'`, so every one of
+them ranks as hand-picked and the tiebreak fell through to `ai_score` (1.0 for
+five of them) and then `created_at` — which three streetscapes won. Nothing was
+wrong with the ranking; the GROUP was wrong.
+
+This is not a defect the Aberdeen design could have shown. There the community
+site had a page per amenity (`/swimming/`, `/tennis/`, `/playground/`), the
+ingest made a POI of each, and grouping by POI *was* grouping by amenity. A
+builder's single gallery page breaks that identity.
+
+**Actions**:
+- New `tour-orchestrator/amenity.ts`, pure: `amenityOf(ai_tags)` classifies a
+  photo as entrance / clubhouse / pool / courts / playground / green_space /
+  fitness / streetscape / other; `communityActSlots()` divides the act's clip
+  budget between the amenities that have photos.
+- `computeFinalShots`: photos on a POI whose bucket is `amenities` group by
+  `poi_id + amenity` instead of `poi_id`, and the allowance for those groups
+  comes from one `communityActSlots` call made before any group is cut —
+  because the amenities compete with each other and a per-group decision cannot
+  see that. Every other POI keeps `clipsAllowedFor` exactly as it was.
+- The drop reason names the cut a photo lost: "not in the top 2 for Pool".
+- `poi_name` for a community photo is now `<community> <amenity>` —
+  "Bellmoore Park Pool". That fixes the doubled label on screen, and it is what
+  `buildSections` puts in the narration's place list, which until now was the
+  same string repeated.
+- `PhotoMeta.amenity`, and `orderCommunityAct` groups and ranks on it
+  (`amenityOrder`) when present, falling back to `amenityRank(poi_name)` for the
+  per-amenity POIs the ingest still creates.
+
+**Decisions**:
+- **Classify from `tags` + `primary_category`, never `description`.** The
+  description is a sentence about this specific community and carries its name;
+  "Bellmoore Park" put every streetscape in the place into `green_space` on the
+  first pass. Test locks it.
+- **Specific facility beats generic.** Every amenity photo is also tagged
+  `amenities` / `community-center`, so a `clubhouse` rule matched first swallows
+  the pool, the courts and the gym — it did, and four amenities came back as
+  "clubhouse". `clubhouse` and `green_space` are the catch-alls and run last.
+- **`multiple_homes` is the fallback, not the first test.** Two of the best
+  clubhouse aerials are scoped `multiple_homes` because houses are visible
+  around the clubhouse.
+- **Budget 8, surroundings untouched** (owner, given the alternative of 12 paid
+  for by cutting `SURROUNDING_POI_BUDGET` 15 → 11). Coverage first — one clip
+  per amenity — then one streetscape, then second and third clips to the
+  amenities with the most material, then `other`. In practice `other` gets
+  nothing, which is the intent: a site plan and two elevation renderings live
+  there, and the review table is where one gets promoted by hand.
+- **One streetscape, and last** (owner). His two rulings are one rule: "it is ok
+  to have photos for multiple houses to give a vibe but not single one", and
+  "starting with some houses… avoid".
+
+**Verification**: `pnpm typecheck` 0 errors; `pnpm test` 760 web (24 new in
+`amenity.test.ts`, 1 new in `scheduler.test.ts`) + 520 mobile; `pnpm lint` 0
+errors. Dry run against the live 49 rows, using the shipped classifier and
+allocator and the ranking `computeFinalShots` applies inside a group — free, no
+Curator calls, no writes:
+
+```
+ 1. Bellmoore Park Entrance        Main entrance gate and stone signage
+ 2. Bellmoore Park Clubhouse       Aerial view of a residential community clubhouse
+ 3. Bellmoore Park Clubhouse       Aerial view of a community clubhouse and lawn
+ 4. Bellmoore Park Pool            Aerial view of a community amenity center … pool
+ 5. Bellmoore Park Pool            Aerial view of a community park and splash pad
+ 6. Bellmoore Park Courts          Aerial view of a community tennis complex
+ 7. Bellmoore Park Fitness Center  A clean, well-lit community fitness room
+ 8. Bellmoore Park Neighborhood    A streetscape … row of modern single-family homes
+```
+
+**Issues / open**:
+- **Four of the eight are aerials**, and the clubhouse gets two of them rather
+  than an aerial plus its ground-level facade (`9e001bdc`). The establishing
+  promotion in `computeFinalShots` is written as
+  `ranked.find(r => establishing(r) && !handPicked(r))`, and every community-site
+  photo is hand-picked, so nothing inside an amenity enforces variety of
+  framing. Left alone — it is a different rule from the one the owner asked
+  for. Worth his call.
+- The eight `other` photos are the back catalogue tagged before
+  `residential_scope` existed: two elevation renderings, a model-home kitchen,
+  a single-house exterior, the site plan. Re-running Tag would reject five of
+  them outright rather than leaving them to sort last.
+
+**Next steps**: owner re-runs Plan on Bellmoore Park. The newly admitted
+amenity photos have no `curator_tags` yet, so that run pays the Curator
+(Gemini annotate) for them once — the cached ones are free, and no paid render
+engine is involved until Generate.
+
 ## 2026-08-23 23:55 UTC — A hand-picked hero for the home tour
 
 **Objective**: owner: "for home tour, have a button to manually set a photo as
