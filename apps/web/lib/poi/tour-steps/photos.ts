@@ -5,7 +5,7 @@
  */
 import type { PoiActor } from '@/lib/poi/poi-actions-core';
 import type { PlaceFact } from '../tour-orchestrator/insights';
-import { tourPoiIds } from '../tour-poi-set';
+import { tourPoiSet } from '../tour-poi-set';
 import { type RunRow, type TourDb, asJson, mustWrite, saveStep, setRunStatus } from './shared';
 import { computeFinalShots } from './shots';
 
@@ -615,16 +615,20 @@ export async function runPlan(sb: TourDb, run: RunRow) {
   // Render and assembly need no equivalent change: both read the shot list this
   // step writes, so the scope reaches them through it.
   const resolveStep = run.step_results.resolve as
-    | { resolved?: Array<{ place_id: string }> }
+    | { resolved?: Array<{ place_id: string; score?: number }> }
     | undefined;
-  const scopePoiIds = await tourPoiIds(sb, run.community_id, resolveStep?.resolved);
+  const { ids: scopePoiIds, scoreByPoiId } = await tourPoiSet(
+    sb,
+    run.community_id,
+    resolveStep?.resolved,
+  );
 
   const { data: allLinks } = (await sb
     .from('community_pois')
-    .select('poi_id, intent_bucket, ai_score')
+    .select('poi_id, intent_bucket')
     .eq('community_id', run.community_id)
     .neq('status', 'rejected')) as {
-    data: Array<{ poi_id: string; intent_bucket: string | null; ai_score: number | null }> | null;
+    data: Array<{ poi_id: string; intent_bucket: string | null }> | null;
   };
 
   // Every photo behind every link, once. Three questions need it: which POIs in
@@ -690,16 +694,15 @@ export async function runPlan(sb: TourDb, run: RunRow) {
       .eq('status', 'approved')) as {
       data: Array<{ poi_id: string; reviewed_by: string | null }> | null;
     };
-    const scoreByPoi = new Map<string, number>();
-    for (const l of links) {
-      if (typeof l.ai_score === 'number') scoreByPoi.set(l.poi_id, l.ai_score);
-    }
+    // `resolve`'s own score, not `community_pois.ai_score` — nothing has ever
+    // written that column, so this ranking was comparing nulls and the winner
+    // was row order. See `tourPoiSet`.
     cutPoiIds = [
       ...amenityIds,
       ...selectSurroundingPois({
         surrounding,
         bucketOf: (id) => bucketByPoiId.get(id) ?? 'other',
-        scoreOf: (id) => scoreByPoi.get(id) ?? 0,
+        scoreOf: (id) => scoreByPoiId.get(id) ?? 0,
         incumbents: new Set((approvedPhotos ?? []).map((r) => r.poi_id)),
         handPicked: new Set(
           (approvedPhotos ?? []).filter((r) => r.reviewed_by).map((r) => r.poi_id),

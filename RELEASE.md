@@ -19,6 +19,7 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-23
+- When a community has more good places than a film has room for, the choice between them is now made on how well each place scored — it was being made on database row order, because the score the research step works out was never being handed to the step that picks. On Apremont - Highcroft that had sent the three school places to the first three schools in the list while the high school the research agent picked missed the film
 - The Worker page can now clean up video storage. Every time a tour is re-run, the previous version of the film stays on the video host forever — 233 of the 282 videos in the account were copies nothing can reach any more. The page lists exactly what it would remove, with dates and lengths, before you delete anything, and never offers a video that is still in use or less than a day old
 - Tours that stopped halfway can now be closed from the same place, so they stop showing up as though something were still running
 - The home tour list no longer counts up how many times a home has been through the pipeline — the row says where it got to and whether something is still running, which is what you act on
