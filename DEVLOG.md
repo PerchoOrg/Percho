@@ -16,6 +16,110 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 08:35 UTC — The narration was budgeted against a timeline the film does not have
+
+**Objective**: owner on Bellmoore Park's new cut — "there is overlap of the tts
+for last two sentences: clip 30 ~84-86s 'Try beloved Breakfast Bar.' / clip 31
+~86-90s 'Newtown Dog Park is well worth the drive.'" Branch
+`phase110/narration-overlap` (ws3).
+
+**Diagnosis** — two bugs, and the seconds in the owner's report are the clue to
+the first. `buildSections` measured every section on `sum(duration_s)`. The film
+is a crossfade chain: 31 clips at 0.5s each of 30 transitions, so **90s of clips
+plays for 75.7s**. Every section was therefore budgeted ~17% more time than its
+footage occupies, and a short one far worse — clip 29 is a 2.0s clip with **1.5s
+of screen time**, and it was written to four words.
+
+Read off the worker's own ffmpeg command line, the real anchors are 70.667 and
+72.167, not 84 and 86: **1.5 seconds apart for a line that takes 2.3 to say.**
+Sections 5-8 are all in this state, each overrunning and pushing the next.
+
+The second bug is what turned that pressure into an audible collision.
+`render_narration` resolved overruns by comparing each line with the one after
+it, and opened with:
+
+```python
+room = limit - cur["start"] - NARRATION_MIN_GAP_S
+if room <= 0 or cur["dur"] <= room:
+    continue
+```
+
+`room <= 0` is not "nothing to do" — it is the case where earlier pushes have
+already carried this line PAST the next anchor, which is the worst collision
+there is. It did nothing: no speed-up, and no push for the line it was about to
+speak over. Traced on this cut, the Breakfast Bar line arrives at 72.44 and the
+dog-park line sits at 72.167. They play on top of each other for their whole
+length. The same function had a quieter version of the hole in
+`min(need, total - dur)`, which could place the next line EARLIER than the
+collision it was resolving and still count it `shifted`.
+
+**Third, a regression from phase108 an hour earlier**: the community-name
+lookup for amenity labels was `community_pois … .in('poi_id', poiIds).limit(1)`,
+and a school or a supermarket is linked to every community near it — so
+Bellmoore Park's film came back labelled **"Apremont - Highcroft Entrance"**.
+
+**Actions**:
+- `narration.ts`: new `TOUR_XFADE_S` (0.5, matching the worker) and a private
+  `timeline()`; `buildSections` now takes each section from the start of its
+  first clip to the start of the NEXT section — the crossfaded timeline the
+  worker places audio against. `MIN_SECTION_SECONDS` then does its job: the
+  1.5s section gets no line at all.
+- New `scripts/render-worker/narration_timing.py` holding
+  `plan_narration_starts` and the three constants, on the `ken-burns/xfade.py`
+  precedent — arithmetic that decides whether the film is right should be
+  testable without a Supabase URL, a Cloudflare token and a TTS call.
+- The placement is a SWEEP with a `cursor`: a line cannot begin before the one
+  before it has finished, so an overlap stops being a case to detect and
+  becomes a state that cannot be reached. Speed-up (≤1.15) first, then a later
+  start; a line that still cannot finish before the film does is dropped.
+- `shots.ts`: the community name is asked of the AMENITY POIs only. Their
+  `google_place_id` embeds the community id, so they are linked to exactly one
+  community and cannot answer for another.
+
+**Decisions**:
+- **Drop rather than truncate**, when a line cannot finish before the video
+  ends. Same judgement `parseNarration` already makes about a sentence that
+  does not fit: "a fragment is not a shorter line, it is a broken one".
+- **Never move a line earlier than its anchor.** Late is a cost this module
+  accepts — "arriving half a second late on the right footage beats arriving on
+  time underneath someone else" — early is talking about footage that has not
+  arrived. The old clamp could do it; a test now forbids it.
+- Fixing the worker alone would have left the tail drifting: replayed on the
+  shipped plan, the sweep resolves every collision but pushes the last lines
+  1.8s late and drops the closing line by a 40ms margin. The section fix is
+  what removes the pressure; the sweep is what guarantees the result.
+
+**Verification**: `pnpm typecheck` 0 errors; `pnpm test` 762 web + 520 mobile;
+`pnpm lint` 0 errors; `pytest scripts/render-worker/tests` 128 passed (9 new).
+`test_pick_bgm.py` needs a `.env.local` to import `worker` and is skipped in a
+worktree — it fails on `origin/main` too, unrelated.
+
+Replayed on this film's real anchors, at the pace two leftover TTS wavs
+measured (0.44 s/word + 0.5s, checked against 48 words at 21.64s and 12 at
+5.68s):
+
+```
+                shipped plan          both fixes
+vo-23   61.667  61.667 .. 65.163      61.667 .. 64.780
+vo-25   64.667  65.513 .. 68.243      65.130 .. 68.243   (+0.46)
+vo-27   67.667  68.976 .. 72.089      68.593 .. 71.817   (+0.93)
+vo-29   70.667  72.439 .. 74.404      — no line, 1.5s section
+vo-30   72.167  DROPPED               72.167 .. 76.187   (on its own clip)
+```
+
+**Learnings**: the module's own docstring said the plan's seconds "happen to
+cancel" the crossfade because rendered clips come back about half a second
+long. They do not any more — this run's inputs ffprobe at exactly their planned
+lengths (4.00, 3.50, 2.00), and only the Seedance clips overshoot, by 0.04s. An
+assumption written as "happens to cancel" was worth distrusting at the time it
+was written.
+
+**Open, not fixed**: `TOUR_TARGET_MAX_S` is 90 and is compared against the same
+un-crossfaded sum, so a film the planner calls 90s **runs for 78s** (75.7 of
+clips plus the end card). Every community film ever cut is short of its target
+by the length of its crossfades. Flagged to the owner; changing it changes what
+the length target means.
+
 ## 2026-08-23 09:35 UTC — community card: glyphs stay on the name's right
 
 **Objective**: owner, on device — "dont put icons below the community name,

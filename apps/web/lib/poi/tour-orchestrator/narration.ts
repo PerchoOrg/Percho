@@ -86,6 +86,44 @@ const MULTI_SENTENCE_SECONDS = 11;
  */
 export const MIN_SECTION_SECONDS = 2.0;
 
+/**
+ * The crossfade between two clips, which the finished film is 15 seconds
+ * shorter than the sum of its parts because of.
+ *
+ * Must match `xfade` in scripts/render-worker/worker.py — that is the timeline
+ * audio is actually placed against, and this file's only job is to be right
+ * about when a line is spoken.
+ *
+ * It was missing here, and the error was systematic rather than occasional: a
+ * 31-clip cut summing to 90s plays for 75.7s, so every section was budgeted
+ * ~17% more time than its footage occupies, and a short one much worse — the
+ * two-second Breakfast Bar shot at the end of Bellmoore Park's film is 1.5
+ * seconds of screen time. Short sections therefore over-ran by design, each
+ * pushing the next later, and the last two lines of that film were spoken on
+ * top of each other (owner 2026-08-23: "there is overlap of the tts for last
+ * two sentences").
+ */
+export const TOUR_XFADE_S = 0.5;
+
+/**
+ * When each clip begins, and when the film ends, on the CROSSFADED timeline.
+ *
+ * Mirrors `clip_start_times` and `crossfade_total` in the render worker. A
+ * crossfade overlaps the outgoing clip, so clip i takes over one transition
+ * after the offset that introduced it — which makes the first step a full
+ * duration and every later one a duration less the fade.
+ */
+function timeline(clips: NarrationClip[], xfade: number): { starts: number[]; end: number } {
+  const starts: number[] = [];
+  let t = 0;
+  for (const [i, c] of clips.entries()) {
+    starts.push(t);
+    t += i === 0 ? c.duration_s : c.duration_s - xfade;
+  }
+  const sum = clips.reduce((a, c) => a + c.duration_s, 0);
+  return { starts, end: sum - xfade * Math.max(0, clips.length - 1) };
+}
+
 export interface NarrationClip {
   poi_name?: string | null;
   poi_id?: string | null;
@@ -130,15 +168,22 @@ export interface NarrationSection {
  * boundaries are therefore the film's own transitions, which is what makes a
  * segment land on the footage it describes.
  */
-export function buildSections(clips: NarrationClip[]): NarrationSection[] {
+export function buildSections(
+  clips: NarrationClip[],
+  xfade: number = TOUR_XFADE_S,
+): NarrationSection[] {
   const sections: NarrationSection[] = [];
-  let t = 0;
+  // A section runs until the NEXT one takes the screen, not until its own last
+  // clip has finished playing — those differ by exactly one crossfade, and the
+  // difference is the room the following line needs.
+  const { starts, end } = timeline(clips, xfade);
   for (const [i, c] of clips.entries()) {
     const bucket = c.bucket ?? 'other';
     const last = sections.at(-1);
+    const endS = starts[i + 1] ?? end;
     if (last && last.bucket === bucket) {
       last.endClip = i;
-      last.endS = t + c.duration_s;
+      last.endS = endS;
       if (c.poi_name && !last.places.includes(c.poi_name)) last.places.push(c.poi_name);
       if (c.poi_id && !last.poiIds.includes(c.poi_id)) last.poiIds.push(c.poi_id);
     } else {
@@ -146,15 +191,14 @@ export function buildSections(clips: NarrationClip[]): NarrationSection[] {
         index: sections.length,
         startClip: i,
         endClip: i,
-        startS: t,
-        endS: t + c.duration_s,
+        startS: starts[i] ?? 0,
+        endS,
         bucket,
         places: c.poi_name ? [c.poi_name] : [],
         poiIds: c.poi_id ? [c.poi_id] : [],
         wordBudget: 0,
       });
     }
-    t += c.duration_s;
   }
   for (const s of sections) {
     s.wordBudget = Math.max(

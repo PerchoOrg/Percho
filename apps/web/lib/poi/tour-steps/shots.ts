@@ -253,6 +253,8 @@ export async function computeFinalShots(
     return i < 0 ? null : (key.slice(i + 1) as Amenity);
   };
   const amenityByPhoto = new Map<string, Amenity>();
+  /** photo id → the POI it hangs from, for the amenity photos only. */
+  const photoPoi = new Map<string, string>();
   const byPoi = new Map<string, NonNullable<typeof photosRaw>>();
   for (const p of photosRaw ?? []) {
     // Religious subject matter, checked on the PHOTO — first, because it is a
@@ -290,6 +292,7 @@ export async function computeFinalShots(
     if (buckets?.get(p.poi_id) === 'amenities') {
       const amenity = amenityOf(tags);
       amenityByPhoto.set(p.id, amenity);
+      photoPoi.set(p.id, p.poi_id);
       key = `${p.poi_id}${GROUP_SEP}${amenity}`;
     }
     const arr = byPoi.get(key) ?? [];
@@ -416,12 +419,23 @@ export async function computeFinalShots(
   // Park" three times over — and it says nothing about what is on screen. The
   // amenity does both jobs, so the label, the narration's place list and the
   // scheduler's grouping all read "Bellmoore Park Pool".
+  //
+  // Asked of the AMENITY POIs only, and that is not a detail. A school or a
+  // supermarket is linked to every community it is near, so the first
+  // `community_pois` row matching any of this tour's POIs belongs to whichever
+  // community sorted first — Bellmoore Park's film came back labelled
+  // "Apremont - Highcroft Entrance" (2026-08-23). The synthetic amenity POIs
+  // carry the community id inside their `google_place_id`, so they are linked
+  // to exactly one community and cannot answer for another.
   let communityName = '';
-  if (amenityByPhoto.size > 0) {
+  const amenityPoiIds = [
+    ...new Set([...amenityByPhoto.keys()].map((id) => photoPoi.get(id) ?? '')),
+  ].filter(Boolean);
+  if (amenityPoiIds.length > 0) {
     const { data: communityRow } = (await sb
       .from('community_pois')
       .select('communities(name)')
-      .in('poi_id', poiIds)
+      .in('poi_id', amenityPoiIds)
       .limit(1)
       .maybeSingle()) as { data: { communities: { name: string | null } | null } | null };
     communityName = communityRow?.communities?.name ?? '';
