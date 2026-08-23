@@ -264,12 +264,36 @@ RULES
 - Name the community once, early. After that, say "here".
 - Use concrete nouns and real detail from the shot list. "The courts stay busy
   past dusk" beats "tennis courts are available".
-- Distances and facts only where they are shown. No invented amenities.
-- USE THE FACTS. A number a viewer could not get from the picture is worth more
-  than another adjective: how far, how well reviewed, by how many people. Do not
-  recite them — a line is not a datasheet — but let at least half the lines rest
-  on something real.
-- Only facts given above. Never invent a rating, a distance, or a count.
+- DISTANCE IS A REAL SELLING POINT and you should keep using it. How far the
+  school is, whether you can walk out for coffee — those are among the first
+  things a buyer asks, and a film that never answers them is worse, not better.
+  The problem is PROPORTION. Distance is also the easiest fact to reach for,
+  because every place has one while ratings and review counts do not, so it
+  crowds everything else out: across the last three films, nineteen lines out
+  of thirty carried a mileage or a drive time. Ration it.
+    · At most a THIRD of the lines may carry a distance.
+    · Never two lines running.
+    · Never as the whole of a line. A distance is the second half of a
+      sentence, not the sentence — it qualifies something you have already
+      said about the place.
+        YES — "Bell-Boles Park is a mile of shaded trail, close enough to walk."
+        NO  — "Life Time sits under a mile from home."
+        NO  — "Weekly grocery trips to Publix are three miles away."
+        NO  — "Drive six miles to Newtown Dog Park."
+    · Say it the way a person would, not the way a map would. "Close enough to
+      walk", "ten minutes out", "the far side of town". A decimal belongs on a
+      datasheet.
+- USE THE FACTS — ALL of them, not only the distances. What the place is, what
+  it looks like, what it is known for, how many people rate it and how highly.
+  A four-point-nine from six thousand people carries a line on its own; so does
+  a park being the one everyone drives to. Do not recite them — a line is not a
+  datasheet — but let at least half the lines rest on something real.
+- Only facts given above. Never invent a rating, a distance, a count, or an
+  amenity.
+- A line that says only that a place exists is worse than no line at all.
+  "The library sits nearby", "Nightlife lies further out", "The Breakfast Bar
+  sits nearby" — if you have nothing to say about a place, omit that section
+  and let the pictures run.
 - SCHOOLS have one rule and it is absolute: describe the PLACE, never anyone
   going to it. Name the schools, say where they sit, describe the campus.
   Nothing about attendance, zoning, enrolment, morning routines, the school
@@ -379,7 +403,41 @@ export function parseNarration(
     const codes = findSchoolAssignment(seg.text);
     if (codes.length > 0) warnings.push(`section ${seg.index}: RESIDUAL school-assignment`);
   }
+
+  // Measured, not hoped for. The prompt asks for at most a third of the lines
+  // to carry a distance; a prompt is a request, and this is the only thing
+  // that says whether it was honoured. Across the three films that prompted
+  // the rule the figure was 19 of 30 (owner 2026-08-23: "too many miles
+  // related information … narrative should not too much focus on it").
+  //
+  // A warning, never a rejection: a script that leans on distance is still a
+  // script, and dropping it would leave a silent film over a stylistic call.
+  const heavy = segments.filter((seg) => mentionsDistance(seg.text)).length;
+  if (segments.length >= 3 && heavy * 3 > segments.length) {
+    warnings.push(
+      `distance-heavy: ${heavy} of ${segments.length} lines mention how far something is`,
+    );
+  }
   return { segments, warnings };
+}
+
+/**
+ * Does this line tell you how far away something is? PURE.
+ *
+ * Deliberately broad — drive times count, and so does "just up the road". The
+ * point is to measure how often the script reaches for the same move, and a
+ * pattern that only caught the decimal form would report a clean sheet on
+ * "Find H Mart just one mile down the road."
+ */
+export function mentionsDistance(text: string): boolean {
+  return (
+    /\b(\d+(\.\d+)?|a|one|two|three|four|five|six|seven|eight|nine|ten|half)[\s-]+(mile|miles|mi|minute|minutes|min)\b/i.test(
+      text,
+    ) ||
+    /\b(miles?|minutes?)\s+(away|out|down|from|east|west|north|south)\b/i.test(text) ||
+    /\b(walk|walking|drive|driving)\s+(to|less than|under|just)\b/i.test(text) ||
+    /\b(down the road|up the road|steps away|within .{0,12}(mile|minute))\b/i.test(text)
+  );
 }
 
 /**
