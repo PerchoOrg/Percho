@@ -3091,6 +3091,10 @@ def _load_listing_photos(
             "sort_order": sort_i,
             "local_path": str(dest),
             "storage_path": p["storage_path"],
+            # What a render actually reads for this photo (approved enhanced
+            # file, else the original). Kept on the record so the hero's
+            # vision call describes the same file the clip will animate.
+            "read_path": read_path,
             "probe_w": probed[0] if probed else None,
             "probe_h": probed[1] if probed else None,
             "width": p.get("width"),
@@ -3349,10 +3353,11 @@ def process_plan_job(job: dict[str, Any]) -> None:
 
         # The hero's Seedance prompt — the model picks the move from the
         # approved pool (hero_prompt.py); code enforces the fence. Downloads
-        # only the hero photo plus up to three aerial candidates, ORIGINALS —
-        # Seedance eats originals (owner 2026-08-17), so the model should
-        # describe the same file the clip will animate. Never fails the plan:
-        # any error falls back to a locked frame on the photo itself.
+        # only the hero photo plus up to three aerial candidates, reading the
+        # ENHANCED file where one is approved (owner 2026-08-23, reversing the
+        # 2026-08-17 originals-only ruling) — the seedance worker submits that
+        # same file, so the model describes what the clip will animate. Never
+        # fails the plan: any error falls back to a locked frame on the photo.
         hero_info: dict[str, Any] | None = None
         if plan and str(plan[0].get("id")) not in rejected_seedance:
             by_id = {r["id"]: r for r in records}
@@ -3361,13 +3366,13 @@ def process_plan_job(job: dict[str, Any]) -> None:
                 if hero_rec is None:
                     raise RuntimeError("hero photo record missing")
                 hero_dest = workdir / "hero_prompt_hero.jpg"
-                storage_download(PHOTO_BUCKET, hero_rec["storage_path"], hero_dest)
+                storage_download(PHOTO_BUCKET, hero_rec["read_path"], hero_dest)
                 aerials: list[dict[str, Any]] = []
                 for r in records:
                     if r["id"] == hero_rec["id"] or not looks_aerial(r.get("cached_ai_tags")):
                         continue
                     dest = workdir / f"hero_prompt_aerial_{len(aerials)}.jpg"
-                    storage_download(PHOTO_BUCKET, r["storage_path"], dest)
+                    storage_download(PHOTO_BUCKET, r["read_path"], dest)
                     aerials.append({"id": r["id"], "bytes": dest.read_bytes()})
                     if len(aerials) >= 3:
                         break

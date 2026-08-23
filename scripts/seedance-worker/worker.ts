@@ -116,6 +116,28 @@ async function fail(id: string, err: unknown): Promise<void> {
     .eq('id', id);
 }
 
+/**
+ * The file a render should read for this photo.
+ *
+ * Owner 2026-08-23, reversing the 2026-08-17 ruling ("seedance always eats the
+ * ORIGINAL"): EVERY render reads the enhanced file when one is approved, the
+ * AI model included. The model now animates the same pixels the local engines
+ * (Ken Burns / DepthFlow) and the final cut use, so a tour cannot mix a
+ * cleaned-up photo with a clip generated from the raw one.
+ *
+ * Approval is still the gate — `ready` is the enhance worker's output, not a
+ * decision — and anything unapproved falls back to the original.
+ */
+function renderPhotoPath(photo: {
+  storage_path: string;
+  enhanced_path: string | null;
+  enhanced_status: string;
+}): string {
+  return photo.enhanced_status === 'approved' && photo.enhanced_path
+    ? photo.enhanced_path
+    : photo.storage_path;
+}
+
 // biome-ignore lint/suspicious/noExplicitAny: stub generated types
 async function submitClip(row: Row): Promise<void> {
   const { data: photos } = (await sb
@@ -138,13 +160,10 @@ async function submitClip(row: Row): Promise<void> {
     '/__probe__',
     '',
   );
-  // Owner 2026-08-17: seedance AI clips always use the ORIGINAL photo —
-  // the enhanced file is for local renders (DA+KB) and the final tour,
-  // not for the AI model input.
   const frameUrls: string[] = [];
   for (const id of row.input_photo_ids ?? []) {
     const photo = photoMap.get(id)!;
-    frameUrls.push(`${publicBase}/${photo.storage_path}`);
+    frameUrls.push(`${publicBase}/${renderPhotoPath(photo)}`);
   }
 
   const job = await submitVideo({
@@ -398,8 +417,6 @@ async function processClipQueue(scope: ClipScope, budget: number): Promise<numbe
         };
         if (!photo) throw new Error(`photo ${photoId} not found`);
 
-        // Original photo for seedance input (owner 2026-08-17) — enhanced
-        // files feed DA+KB local renders, not the AI model.
         const publicBase = sb.storage.from(PHOTO_BUCKET).getPublicUrl('__probe__').data.publicUrl.replace(
           '/__probe__',
           '',
@@ -408,16 +425,22 @@ async function processClipQueue(scope: ClipScope, budget: number): Promise<numbe
         // A birdview hero carries a second REAL photo (the aerial); the pair's
         // role says which end of the clip it anchors. The provider rejects a
         // lone last_frame, so the pair always travels WITH the ground shot.
-        const heroUrl = `${publicBase}/${photo.storage_path}`;
+        const heroUrl = `${publicBase}/${renderPhotoPath(photo)}`;
         let frameUrls = [heroUrl];
         if (row.pair_photo_id && (row.pair_role === 'first' || row.pair_role === 'last')) {
           const { data: pair } = (await sb
             .from(scope.photoTable)
-            .select('storage_path')
+            .select('storage_path, enhanced_path, enhanced_status')
             .eq('id', row.pair_photo_id)
-            .maybeSingle()) as { data: { storage_path: string } | null };
+            .maybeSingle()) as {
+            data: {
+              storage_path: string;
+              enhanced_path: string | null;
+              enhanced_status: string;
+            } | null;
+          };
           if (!pair) throw new Error(`pair photo ${row.pair_photo_id} not found`);
-          const pairUrl = `${publicBase}/${pair.storage_path}`;
+          const pairUrl = `${publicBase}/${renderPhotoPath(pair)}`;
           frameUrls = row.pair_role === 'first' ? [pairUrl, heroUrl] : [heroUrl, pairUrl];
         }
 
