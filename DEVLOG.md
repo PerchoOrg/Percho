@@ -186,6 +186,57 @@ it as "in the video" has to check for the video separately.
 side: `status` has no timeout, so a dead run is indistinguishable from a live
 one until someone reads the timestamps. Worth a reaper or a heartbeat.
 
+## 2026-08-23 04:18 UTC — The budget was ranking a column nobody writes
+
+**Objective**: follow-up to the 03:54 entry. Reconstructing why nine of
+Apremont - Highcroft's fifteen places changed turned up something worse than
+the scope bug it was meant to explain. Owner: "yes fix the ai_score too".
+
+**Actions**:
+- `tour-poi-set.ts` — new `tourPoiSet()` returning `{ ids, scoreByPoiId }`;
+  `tourPoiIds()` is now a one-line wrapper over it, so its two other callers
+  and its five tests are untouched. `ResolvedPlaceRef` gains `score`.
+- `tour-steps/photos.ts` — `runPlan` ranks with `resolve`'s score instead of
+  `community_pois.ai_score`, and no longer selects that column.
+- two tests in `tour-poi-set.test.ts`: the score reaches the poi id, and a POI
+  with no resolve score stays UNSCORED rather than scoring zero.
+
+**Issues**: `community_pois.ai_score` has no writer anywhere in the repo —
+`grep -rn ai_score` over `apps/web`, `scripts` and `supabase` finds reads, type
+declarations and a migration, and not one insert or update. `selectSurroundingPois`
+ranks buckets by their best POI and POIs within a bucket by score; fed all
+nulls it fell back to 0 for every candidate, so both sorts were stable sorts
+over equal keys and the film's fifteen places were whichever fifteen the
+database returned first. Apremont - Highcroft's pool was 124 POIs, 124 nulls:
+the three reserved school slots went to Wesleyan, Cornerstone and Norcross in
+row order while Duluth High School — the school the research agent actually
+picked — missed the cut entirely.
+
+**Decisions**: read the score from `step_results.resolve` rather than
+backfilling the column. `resolve` already computes it per place (bucket weight,
+distance, confidence, photo count) and stores it in the run; the column was a
+second home for a number that never moved into it. One source, and it is the
+one that is written on every run.
+
+`tourPoiSet` returns a Map with holes rather than defaulting to 0, because
+"unscored" and "scored zero" are different: two of this community's sixteen
+resolved schools genuinely score 0, and a link a person approved has no resolve
+score at all. The `?? 0` stays at the call site, where the ranking function
+demands a number.
+
+**Resolution**: `pnpm typecheck` clean, `pnpm test` 659/659. No effect on
+Apremont - Highcroft itself — its corrected pool is 15 surrounding POIs against
+a budget of 15, so nothing competes. It bites the moment a community resolves
+more than fifteen.
+
+**Learnings**: a nullable ranking column with no writer fails silently and
+looks like a policy. The selection code, its tests and its comments were all
+correct; the input was empty. Worth grepping for other columns read by ranking
+code and written by nothing.
+
+**Next steps**: unchanged from 03:54 — the home tour pipeline still has
+client-only step status, and the `candidate` link definition is still open.
+
 ## 2026-08-23 03:54 UTC — Plan was drawing from the Nearby dragnet, so nine shots were photos nobody had ever looked at
 
 **Objective**: owner on Apremont - Highcroft: "after planning, I see 27 photos

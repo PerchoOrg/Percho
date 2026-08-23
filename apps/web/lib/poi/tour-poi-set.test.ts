@@ -8,9 +8,12 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { tourPoiIds } from './tour-poi-set';
+import { tourPoiIds, tourPoiSet } from './tour-poi-set';
 
-function fakeSb(opts: { pois?: Array<{ id: string }>; approved?: Array<{ poi_id: string }> }) {
+function fakeSb(opts: {
+  pois?: Array<{ id: string; google_place_id?: string }>;
+  approved?: Array<{ poi_id: string }>;
+}) {
   const poisIn = vi.fn().mockResolvedValue({ data: opts.pois ?? [] });
   const approvedEq2 = vi.fn().mockResolvedValue({ data: opts.approved ?? [] });
   const from = vi.fn().mockImplementation((table: string) => {
@@ -56,5 +59,35 @@ describe('tourPoiIds', () => {
   it('returns an empty set rather than anything global', async () => {
     const { sb } = fakeSb({});
     expect((await tourPoiIds(sb, CID, [])).size).toBe(0);
+  });
+});
+
+describe('tourPoiSet scores', () => {
+  it("carries resolve's own score across to the poi id", async () => {
+    const { sb } = fakeSb({
+      pois: [
+        { id: 'p1', google_place_id: 'g1' },
+        { id: 'p2', google_place_id: 'g2' },
+      ],
+    });
+    const { scoreByPoiId } = await tourPoiSet(sb, CID, [
+      { place_id: 'g1', score: 0.9 },
+      { place_id: 'g2', score: 0.4 },
+    ]);
+    expect(scoreByPoiId.get('p1')).toBe(0.9);
+    expect(scoreByPoiId.get('p2')).toBe(0.4);
+  });
+
+  it('leaves a POI unscored rather than scoring it zero', async () => {
+    // The distinction matters: `selectSurroundingPois` ranks on the number it
+    // is given, and a link a person approved has no resolve score at all.
+    const { sb } = fakeSb({
+      pois: [{ id: 'p1', google_place_id: 'g1' }],
+      approved: [{ poi_id: 'p-amenity' }],
+    });
+    const { ids, scoreByPoiId } = await tourPoiSet(sb, CID, [{ place_id: 'g1' }]);
+    expect(ids.has('p-amenity')).toBe(true);
+    expect(scoreByPoiId.has('p1')).toBe(false);
+    expect(scoreByPoiId.has('p-amenity')).toBe(false);
   });
 });
