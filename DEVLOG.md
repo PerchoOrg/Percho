@@ -16,6 +16,54 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 02:45 UTC — The stalled runs were the 300s function cap, not a dead dev server
+
+**Objective**: owner, reading the advice to restart the dev servers: "we talked
+about this before, no one is using local dev server right? i am only testing
+the production one using vercel". He is right, it is in this log already
+(2026-08-21, worker-health: "The owner uses production, not local dev"), and I
+diagnosed against the wrong host anyway.
+
+**Issues**: the 00:45 entry's mechanism was wrong. It read four idle local
+`next dev` processes as evidence that "the request died". Those processes are
+abandoned leftovers and had nothing to do with the run — the steps were Vercel
+functions.
+
+**Actions**: measured the writes instead of the processes. Grouping Apremont's
+288 photo rows from today into bursts (>60s idle = a new burst):
+
+| burst | wall time | photos |
+|---|---|---|
+| 20:33:00 → 20:35:24 | 144s | 57 |
+| 21:23:23 → 21:27:56 | 273s | 116 |
+| 00:15:17 → 00:19:36 | 259s | 114 |
+
+`app/api/admin/community-tour/[id]/runs/[runId]/step/route.ts` declares
+`export const maxDuration = 300`. Three separate clicks, each killed by the
+platform at the cap — the last photo write lands before it because the tail of
+each invocation is spent on POIs that already had photos. The two-hour "gap"
+between 21:27 and 00:15 was nobody clicking, not a hang.
+
+**Resolution**: nothing needs restarting. `main` auto-deploys, and all three of
+tonight's merges are live in production — `0c7866da` 00:50, `5055ad2f` 01:02,
+`49a7b2c4` 01:05, `d17085c2` 01:18, every one READY.
+
+**Learnings — the part that still bites**: a platform kill is not a throw. It
+skips the route's `catch`, which is the ONLY writer of `status='failed'`, so
+every timed-out run leaves a row claiming to be in progress forever. That is
+the real "stuck in rendering", and narrowing the scope makes it rarer without
+making it impossible: at the measured rates (~2.3s per photo fetched, ~3.5s per
+Gemini tag) a FIRST run on a fresh 16-POI community is ~48 downloads (~110s)
+plus ~48 tags (~170s) — about 280s against a 300s cap. It fits, barely, and
+only because the step is now idempotent enough that clicking again resumes
+rather than repeats.
+
+**Next steps**: the photos step does fetch, enhance-queue, tag and judge inside
+one request. Splitting the tag half into its own invocation (the `tag` step
+already exists and is capped at 15 photos a click) or moving the whole step to
+the render worker would take it off the cap for good. Worth deciding before a
+community bigger than Bellmoore Park is toured.
+
 ## 2026-08-23 02:20 UTC — Fetch and tag are scoped to the tour, and a second run costs nothing
 
 **Objective**: owner: "make sure that fetch and tag will be only applied to
@@ -223,14 +271,13 @@ long, there are 16 resolved pois, and each we only fetch 3, how come we have
   visits 15 places. The 335 the owner saw was a mid-fetch snapshot; it was 479
   by the time the run died.
 - "Stuck in rendering" was not slowness. The run sat in `fetching_photos` with
-  `photos.phase: 'running'`, last write **00:19:36**, and *nothing was running*:
-  all four local dev servers were at 0% CPU with no outbound sockets, and no
-  `poi_photos` row had been written anywhere in the database for ten minutes.
-  The request executing the step had died, and a death skips the step route's
-  catch — which is the only thing that ever writes `status='failed'`. The same
-  run had already done this once (20:30 start, silent from 21:5x, restarted by
-  hand at 00:14). Ashley Crossing, running concurrently, stopped in the same
-  second.
+  `photos.phase: 'running'`, last write **00:19:36**, and nothing was writing
+  anywhere in the database. The request executing the step had died, and a
+  death skips the step route's catch — which is the only thing that ever writes
+  `status='failed'`. Ashley Crossing, running concurrently, stopped in the same
+  second. **The reason it died is corrected in the 02:45 UTC entry below: the
+  Vercel 300s function cap, not the local dev servers this entry originally
+  blamed.**
 
 **Actions**:
 - `tour-steps/photos.ts`: the union now takes `status='approved'` links only —
