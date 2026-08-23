@@ -16,6 +16,61 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 09:32 UTC — the explore page plays the card's tour, and lists where it goes
+
+**Objective**: owner — "Lets finalize on the community explore page? Can you
+give me a proposal?" Proposal given, owner picked: hero plays the same tour as
+the feed card + a tappable list of the film's places + small fixes; StatBar's
+placeholder numbers stay for now ("暂时保留占位数字"); the place list seeks the
+video on tap. Then: "deliver this end to end".
+
+**The break that motivated it**: the feed card plays `tour_assemblies`'s
+winning film (Cloudflare HLS) but the explore hero read only `ai_tour_videos`.
+Verified on production: `GET /api/mobile/community/aberdeen-2` had NO
+`videoUrl` while the Aberdeen card was playing its 21-place tour. Tapping
+Explore mid-film landed on a static photo.
+
+**Actions**:
+- `apps/web/lib/communities/detail.ts` — the detail DTO picks its video by the
+  SAME rule as the feed: `fetchVerticalVideos()`'s winning uid →
+  `streamManifestUrl`, `ai_tour_videos` only as fallback. Ships
+  `tourSegments` (the dashed bar's rows) when — and only when — the film is the
+  assembly; pinned by new `detail.test.ts` (segments never ship without a
+  video URL, `[]` is omitted).
+- `apps/mobile/app/community/[slug].tsx` — new "THE TOUR VISITS" section right
+  under the blurb: one numbered chip per place, film order, numbers matching
+  the card's dashed bar. Tapping seeks the hero to where that place's clips
+  START (previous `endFraction`) and scrolls back to the top so the seek is
+  seen. `CommunityTourVideo` exposes a seek-by-fraction through a ref rather
+  than lifting the player — `useVideoPlayer` ties the player's lifecycle to
+  the component that renders it.
+- `apps/web/lib/feed/community-reasons.ts` — a POI count of one drops the
+  plural s ("1 pet place", was "1 pet places" on Aberdeen's real page). All
+  five POI_EVIDENCE nouns are simple plural-s; noted at the site.
+
+**Decisions**:
+- No category glyphs on the place chips: segments carry only a name, and
+  guessing a glyph from the name would assert a category the film never
+  recorded — same rule that keeps unmapped signals glyphless on the card.
+- No source-line change: the tour's places come from the film's own shot list
+  (community-supplied photos included), so "from Google Places" would have
+  been partly false. Left as Nextdoor-only, which is what the blocks it
+  covers still are.
+- StatBar untouched by owner decision; its values are STILL invented — the
+  standing 08-21 flag remains open.
+
+**Verification**: web typecheck + 770 tests (3 new in detail.test.ts, 1 new
+pluralization case), mobile typecheck + 523 tests, real biome clean on both
+(ws8's mobile `npx biome` resolves to the fake 0.3.3 package — used
+`~/Workspace/Percho/node_modules/.bin/biome`, same trap as 08-22). NOT yet
+verified on device; production API check comes after merge+deploy.
+
+**Next steps**: after merge — confirm `aberdeen-2` detail returns the HLS
+`videoUrl` + 21 segments on production, then owner's device check: tap
+Explore mid-tour (film should continue as the same film) and tap a place chip
+(hero should jump there). StatBar honest values remain the open item for a
+future phase.
+
 ## 2026-08-23 09:28 UTC — scrub confirmed on device; debug readout out, one latent bug found
 
 **Objective**: owner confirmed the tap now moves the film ("fixed, great"), then

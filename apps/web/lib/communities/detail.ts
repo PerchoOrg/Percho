@@ -39,6 +39,8 @@
 
 import { publicCoverImageUrl } from '@/lib/communities/cover';
 import { fetchPoiCounts } from '@/lib/feed/community-pool';
+import type { TourSegment } from '@/lib/feed/tour-segments';
+import { fetchVerticalVideos, streamManifestUrl } from '@/lib/feed/vertical-videos';
 import { createAnonClient } from '@/lib/supabase/server';
 import {
   type CommunityReason,
@@ -60,11 +62,20 @@ export interface CommunityDetailDTO {
   state: string;
   heroUrl: string;
   /**
-   * The latest READY AI-generated community tour video (Seedance, via the
-   * admin Community Tour page). Omitted when none exists yet. Playable mp4
-   * in the `ai-videos` Supabase Storage bucket.
+   * The community's video, chosen by the SAME priority the feed card uses
+   * (`fetchVerticalVideos`): the assembled tour / bucket video on Cloudflare
+   * Stream (HLS manifest URL) first, else the latest READY `ai_tour_videos`
+   * mp4. The card and this page must play the same film — a buyer who taps
+   * Explore mid-tour and lands on a different video reads it as a bug.
    */
   videoUrl?: string;
+  /**
+   * One entry per PLACE the film visits, in film order — same rows the feed
+   * card's dashed bar is drawn from. Present only when `videoUrl` is the
+   * assembled tour, because only `tour_assemblies` records what the film is
+   * made of.
+   */
+  tourSegments?: TourSegment[];
   /** `communities.description` — authored prose. Omitted when absent. */
   blurb?: string;
   /**
@@ -130,9 +141,17 @@ export async function fetchCommunityDetail(idOrSlug: string): Promise<CommunityD
   const row = data as DetailRow;
   // Counts of real places, fetched here too so this page cannot show WEAKER
   // facts than the tile the user tapped to reach it.
-  const poiCounts = await fetchPoiCounts(supabase, [row.id]);
-  const videoUrl = await fetchLatestAiTourVideo(supabase, row.id);
-  return projectCommunityDetail(row, poiCounts[row.id], videoUrl);
+  const [poiCounts, videos] = await Promise.all([
+    fetchPoiCounts(supabase, [row.id]),
+    fetchVerticalVideos(),
+  ]);
+  // The winning-uid rule lives in `fetchVerticalVideos`; re-deciding it here
+  // would let this page and the feed card disagree about which film is "the"
+  // tour. `ai_tour_videos` stays as the fallback, same as the feed route.
+  const uid = videos.byCommunity.get(row.id);
+  const videoUrl = uid ? streamManifestUrl(uid) : await fetchLatestAiTourVideo(supabase, row.id);
+  const segments = uid ? videos.segmentsByCommunity.get(row.id) : undefined;
+  return projectCommunityDetail(row, poiCounts[row.id], videoUrl, segments);
 }
 
 /** Latest READY AI community-tour video for a community, or null. */
@@ -159,6 +178,7 @@ export function projectCommunityDetail(
   r: DetailRow,
   poiCounts?: Record<string, number>,
   videoUrl?: string | null,
+  tourSegments?: TourSegment[],
 ): CommunityDetailDTO | null {
   if (!r.cover_storage_path || !r.slug || !r.name) return null;
 
@@ -214,6 +234,8 @@ export function projectCommunityDetail(
     state: r.state ?? '',
     heroUrl: publicCoverImageUrl(r.cover_storage_path),
     ...(videoUrl ? { videoUrl } : {}),
+    // Segments without a film to seek make no sense on the wire.
+    ...(videoUrl && tourSegments && tourSegments.length > 0 ? { tourSegments } : {}),
     ...(r.description ? { blurb: r.description } : {}),
     topReasons,
     moreReasons,

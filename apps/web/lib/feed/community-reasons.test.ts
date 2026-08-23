@@ -90,6 +90,16 @@ describe('communityReasons', () => {
     expect(out[0]?.fact).toBe('33 restaurants');
   });
 
+  it('drops the plural s on a count of one', () => {
+    // Aberdeen's real page read "1 pet places" (2026-08-23). Every noun in
+    // POI_EVIDENCE is a simple plural-s, "pet places" included.
+    const out = communityReasons({
+      attributes: ['Dog Friendly'],
+      facts: { poiCounts: { pets: 1 } },
+    });
+    expect(out[0]?.fact).toBe('1 pet place');
+  });
+
   it('ignores a POI bucket that proves nothing on the tile', () => {
     // A `faith` or `healthcare` count backs no label the card shows. Mapping it
     // to an adjacent label would put the wrong figure under a claim.
