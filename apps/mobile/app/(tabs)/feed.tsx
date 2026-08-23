@@ -199,7 +199,27 @@ export default function FeedScreen() {
 		? pool.listings.length + pool.communities.length + pool.geoUnits.length
 		: 0;
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: `samplerPoolSize` is a DEV-ONLY recompose trigger, not a value this effect reads directly (it reads `poolRef`). Biome sees no read and calls it unnecessary; without it the sampler deck never recomposes once the pool lands. It is 0 when the sampler is off, so production behaviour is unchanged.
+	/**
+	 * Whether the pool holds anything at all — the compose effect's ONE
+	 * pool-shaped dependency (phase120).
+	 *
+	 * The effect deliberately does not depend on the pool (pagination must
+	 * never rebuild a deck mid-session), but that left a bootstrap race: it
+	 * fires when `hydrated` flips true, which is always BEFORE the first pool
+	 * response lands (`useFeedPool` is `enabled: hydrated`), so it composed an
+	 * empty deck from `EMPTY_POOL` — and nothing ever recomposed it. The append
+	 * path can't rescue it either (it early-returns on an empty deck). Every
+	 * sampler session masked this for weeks, because `samplerPoolSize` IS a
+	 * pool-sized dependency; the first sampler-off session (2026-08-23) opened
+	 * to a permanently blank feed.
+	 *
+	 * A boolean, not a count: false → true exactly once per stage, so the
+	 * effect re-fires for the bootstrap and never again for a later page.
+	 */
+	const poolReady =
+		pool.listings.length + pool.communities.length + pool.geoUnits.length > 0;
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `samplerPoolSize` (DEV-only) and `poolReady` are recompose TRIGGERS, not values this effect reads directly (it reads `poolRef`). Biome sees no read and calls them unnecessary; without `poolReady` the production deck composes once from the still-empty pool and stays blank forever.
 	useEffect(() => {
 		if (!hydrated) return;
 		const s = useFeedSession.getState();
@@ -238,11 +258,10 @@ export default function FeedScreen() {
 		setEngineExhausted(result.exhausted);
 		setActiveIndex(0);
 		// `samplerPoolSize` is a DEV-ONLY dependency: the sampler composes straight
-		// from the pool, so it must recompose once the pool lands. It is 0 in normal
-		// operation, which keeps the production behaviour (recompose on stage change
-		// only) exactly as it was — the pool is deliberately NOT a dependency there,
-		// because pagination would otherwise rebuild the deck mid-session.
-	}, [hydrated, stage, samplerPoolSize]);
+		// from the pool, so it must recompose once the pool lands. `poolReady` is
+		// the production bootstrap (see its note): one false→true flip per stage,
+		// so pagination still never rebuilds the deck mid-session.
+	}, [hydrated, stage, samplerPoolSize, poolReady]);
 
 	/**
 	 * §1.7 pagination: append from the pool already held, deduped by the deck.
