@@ -53,6 +53,15 @@ import { colors } from "../theme/tokens";
 
 const NEAR_END_RATIO = 0.82;
 const TIME_UPDATE_INTERVAL_S = 0.25;
+/**
+ * How close (in seconds) a `timeUpdate` has to land to the seek we asked for
+ * before the bar goes back to following playback. One tick interval plus a
+ * little: a seek that has landed reports within a tick of the target, and
+ * anything further away is still the OLD position on its way out.
+ */
+const SEEK_SETTLE_S = TIME_UPDATE_INTERVAL_S + 0.15;
+/** Give up waiting for a seek to land, so a refused one cannot freeze the bar. */
+const SEEK_TIMEOUT_MS = 2000;
 
 interface CardVideoProps {
 	url: string;
@@ -146,6 +155,12 @@ export function CardVideo({
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const nearEndFired = useRef(false);
 	const mutedRetried = useRef(false);
+	/**
+	 * The seek we asked for and are still waiting to see land: the target time
+	 * in seconds, and the moment we stop waiting for it. `null` when playback
+	 * owns the bar. See `applySeek`.
+	 */
+	const pendingSeek = useRef<{ time: number; until: number } | null>(null);
 	const onNearEndRef = useRef(onNearEnd);
 	onNearEndRef.current = onNearEnd;
 	/**
@@ -173,9 +188,27 @@ export function CardVideo({
 		(ratio: number) => {
 			const dur = player.duration;
 			if (!dur || dur <= 0) return;
-			player.currentTime = Math.max(0, Math.min(ratio, 0.999)) * dur;
+			const clamped = Math.max(0, Math.min(ratio, 0.999));
+			const target = clamped * dur;
+			player.currentTime = target;
+			/*
+			 * Hold the bar where the finger left it until playback gets there.
+			 *
+			 * Setting `currentTime` on an HLS player is a REQUEST, not a jump: the
+			 * next `timeUpdate` ticks still report the position the film was at
+			 * when the finger landed. With nothing holding the bar, releasing it
+			 * clears `scrubbing` and the very next tick (≤0.25s later) yanks the
+			 * fill back to where the buyer just dragged it AWAY from — the owner's
+			 * 2026-08-23 report, where a tap on the bar named the place but left
+			 * the progress sitting exactly where it was.
+			 */
+			pendingSeek.current = {
+				time: target,
+				until: Date.now() + SEEK_TIMEOUT_MS,
+			};
+			if (progress) progress.value = clamped;
 		},
-		[player],
+		[player, progress],
 	);
 
 	// Play-gate + reset. Reset the 82% latch on every top-change (= card swap).
@@ -185,6 +218,9 @@ export function CardVideo({
 		mutedRetried.current = false;
 		// The play-gate rewinds to 0 below; the bar has to rewind with it, or a
 		// card swapped back to the top shows the previous card's fill for a tick.
+		// That rewind is a seek of its own, so a request left over from the
+		// previous card must not be left holding the bar against it.
+		pendingSeek.current = null;
 		if (progress) progress.value = 0;
 		if (isTop) {
 			player.currentTime = 0;
@@ -225,6 +261,19 @@ export function CardVideo({
 			// below: playback has genuinely reached 82% whether or not anyone is
 			// dragging, and the CTA's nudge is about the film, not the bar.
 			if (scrubbing?.value) return;
+			const pending = pendingSeek.current;
+			if (pending) {
+				if (
+					Math.abs(currentTime - pending.time) <= SEEK_SETTLE_S ||
+					Date.now() > pending.until
+				) {
+					pendingSeek.current = null;
+				} else {
+					// Still the pre-seek position. Keep the bar where it was put.
+					if (progress) progress.value = Math.min(pending.time / dur, 1);
+					return;
+				}
+			}
 			// Raw, not eased. Ticks land every 0.25s, which on a 90s tour is a
 			// 0.28%-of-width step — invisible. `withTiming` between ticks would
 			// buy nothing and would animate the loop's rewind BACKWARDS over a
@@ -253,7 +302,11 @@ export function CardVideo({
 			if (seekTo) seekTo.value = -1;
 			runOnJS(applySeek)(requested);
 		},
-		[seekTo],
+		// `applySeek` belongs in the deps: it closes over the player, and a face
+		// reused for the next card gets a NEW player. Without it this reaction
+		// keeps the first card's `applySeek` and every later scrub seeks a player
+		// nothing is showing.
+		[seekTo, applySeek],
 	);
 
 	/**
