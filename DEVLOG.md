@@ -16,6 +16,44 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 07:45 UTC — The hero clip was cropped twice before anyone saw the house
+
+**Objective**: owner, on a 950 Renaissance Way hero clip — "why there is no
+full view in the clip?" The prompt he was holding was a legal phase85 one
+(`entry_push_in` + a focus sentence), so the question was whether the effect
+explained it. It did not, or not alone.
+
+**The bigger cause is the aspect ratio, and it costs width before any camera
+move happens.** An iOS seedance row asks the provider for `AI_VIDEO_ASPECT` =
+9:16 (0.5625). Every canvas these clips land on is 1080x1576 = **0.685** —
+`TOUR_CANVAS` for the community tour, the `ios` surface for a home tour — and
+the assembler cover-crops (`force_original_aspect_ratio=increase` + `crop`).
+So a landscape facade photo was cropped hard by the provider to reach 9:16,
+and then the assembler discarded **17.9% of the clip's height** to get back to
+0.685. Two crops, in opposite directions, for a frame nobody wanted.
+
+**Actions**: `AI_VIDEO_ASPECT` 9:16 → **3:4**. One constant, three consumers:
+new `ai_tour_videos` rows (the community whole-video route writes it), the
+home tour's iOS hero, and community `photo_clips` (no surface → the same
+branch). The `web` surface keeps 16:9 — 1920x1080 is exactly that.
+
+**Decisions**:
+- **3:4 (0.75), not 2:3 (0.667)**, even though 2:3 lands within 2.7% of the
+  canvas against 3:4's 8.6%. 2:3 is not in Seedance's documented ratio list and
+  a rejected ratio fails at submit time, on a paid call. 3:4 is documented.
+  The last 6% is worth a $0.06 probe, not a guess.
+- Existing clips are untouched: seedance is exempt from automatic requeue, and
+  the ratio is not in `render_key` either. Only new generations get 3:4.
+
+**Also landed in the same pull, from another workspace**: `hero_prompt.py` now
+FORBIDS `entry_push_in` / `walk_up` when the model reports `full_facade: true`,
+substituting `establish_push` — which is the second half of this question. Two
+of the three render workers' last plans before the restart had chosen
+`entry_push_in`, so this was not a one-off.
+
+**Resolution**: web typecheck + lint clean, tests pass. The owner is testing
+the new ratio himself.
+
 ## 2026-08-23 07:35 UTC — Seedance eats the enhanced photo now, like every other engine
 
 **Objective**: owner — "lets change that rule, always use enhanced one for all
@@ -64,8 +102,13 @@ lines.
   Regenerate — real money (~$0.05-0.06 a clip).
 - Both worker fleets need a restart to run this.
 
-**Next steps**: restart the render + seedance workers; then decide whether the
-existing heroes get regenerated.
+**Deployed 07:34 UTC**: the reference worktree the workers run from
+(`~/Workspace/Percho`) was 43 commits behind origin/main — it was fast-forwarded
+to 1d928669 (its two dirty files are untouched upstream, so the FF was clean),
+and all four launchd jobs kickstarted with every queue empty: three render
+workers plus the seedance worker, no in-flight generation to strand.
+
+**Next steps**: decide whether the existing heroes get regenerated (paid).
 
 ## 2026-08-23 08:10 UTC — The prompt change was fine; the run that tested it wasn't
 

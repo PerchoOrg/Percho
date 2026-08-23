@@ -18,8 +18,22 @@ export const MAX_PHOTOS_PER_BATCH = 9;
 export const AI_VIDEO_DURATIONS = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] as const;
 export type AiVideoDuration = (typeof AI_VIDEO_DURATIONS)[number];
 
-/** Every clip renders 9:16 — same as generated_videos, the app is portrait. */
-export const AI_VIDEO_ASPECT = '9:16';
+/**
+ * The aspect a Seedance clip is generated at.
+ *
+ * 3:4 (0.75), not 9:16 (0.5625), since 2026-08-23. Every canvas these clips
+ * land on is 1080x1576 = 0.685 (TOUR_CANVAS in worker.py, and the `ios`
+ * surface of a home tour), and the assembler cover-crops
+ * (`force_original_aspect_ratio=increase` + `crop`). A 9:16 clip was therefore
+ * paying twice: the provider cropped a landscape facade photo into a tall
+ * frame, then the assembler threw away 17.9% of the clip's HEIGHT to get back
+ * to 0.685. At 3:4 the loss is 8.6% of the width and the provider keeps far
+ * more of the house.
+ *
+ * 2:3 (0.667) would land within 2.7% of the canvas, but it is not in Seedance's
+ * documented ratio list; 3:4 is. Worth a $0.06 probe if the last 6% matters.
+ */
+export const AI_VIDEO_ASPECT = '3:4';
 
 export type AiTourVideoStatus = 'pending' | 'submitting' | 'processing' | 'ready' | 'failed';
 
