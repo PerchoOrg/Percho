@@ -30,6 +30,8 @@ import {
   type RunRow,
   type TourDb,
   bestEffortWrite,
+  claimActiveStep,
+  clearActiveStep,
   getRun,
   saveStep,
   setRunStatus,
@@ -118,6 +120,10 @@ export async function POST(
       .eq('id', run.id),
   );
 
+  // Claim the run BEFORE the handler, so "is this working" is answered by the
+  // server and not by the tab that clicked. Cleared in the `finally` below.
+  const startedAt = await claimActiveStep(sb, run, step);
+
   try {
     // Only `generate` and `assemble` read the optional arguments; every other
     // handler ignores them, so one call shape serves the whole registry.
@@ -145,5 +151,10 @@ export async function POST(
       console.error('[community-tour] recording step failure failed:', writeErr);
     }
     return NextResponse.json({ ok: false, step, error: message }, { status: 500 });
+  } finally {
+    // A platform kill at `maxDuration` skips this too — which is why the claim
+    // carries `started_at` and the strip ages it out instead of spinning for
+    // ever.
+    await clearActiveStep(sb, run.id, startedAt);
   }
 }

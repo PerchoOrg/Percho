@@ -18,6 +18,12 @@ Community films now open on the community. Its own amenities lead the film and r
 
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
+### 2026-08-23
+- Planning a community film now only considers the places that community's tour actually works on — the ones the research agent picked, the ones whose photos were fetched from the community's own website, and any place you have ruled on by hand. Adding nearby places to a community used to also hand them to the film: on Apremont - Highcroft, ten of the fifteen places in the cut had never had their photos looked at by anything, and nine shots were photos the pipeline had never examined at all — including three of a place whose only examined photo had just been excluded under fair-housing rules. Those places are out, and the film now visits Peachtree Corners Town Green, Trader Joe's, H Mart, Publix and Duluth High School instead
+- Photos left approved by an earlier, wider plan are now stood down when a new plan does not pick them, so "approved" keeps meaning "in the film"
+- Pipeline step status now comes from the work itself rather than from your browser tab. Clicking Plan and refreshing the page used to show the previous run's green tick while planning was still going; the step now reads "running" with a timer for as long as it is running, whichever tab or device you look from, and says "no response — re-run" instead of spinning forever if a step is cut short. Steps cannot be started on top of one another while one is in flight
+- The third photo section in the review table is now called **Pending Photos** rather than "Other Photos" — that is what those photos are
+
 ### 2026-08-22
 - The admin home tour list now shows where each home's tour actually is — the stage it reached, how many of its photos have been tagged, whether the web and phone cuts of the film are finished, and how long ago anything happened to it
 - Homes are now ordered by when the tour pipeline last worked on them, so whatever was processed most recently is at the top. Homes that have never been through the pipeline follow, newest first

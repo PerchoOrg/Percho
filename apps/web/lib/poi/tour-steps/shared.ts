@@ -84,6 +84,73 @@ export async function setRunStatus(
   );
 }
 
+/**
+ * THE STEP RUNNING RIGHT NOW — one record, written before the handler starts
+ * and cleared when it returns.
+ *
+ * The strip used to derive "running" from a `useState` in the browser, so the
+ * spinner belonged to the tab that clicked rather than to the work: a reload
+ * mid-plan came back showing the PREVIOUS run's green tick while the planner
+ * was still going, and a request the platform killed left no trace at all
+ * (owner 2026-08-23: "the status should not be gone after page refreshing, it
+ * should reflect the backend job status").
+ *
+ * Its own key rather than a `phase` inside each step's result: every handler
+ * owns the shape of its own key and several of them return early without
+ * writing one at all, so a marker living inside those results is a marker the
+ * handlers have to remember to clear. This one the route owns end to end.
+ *
+ * `started_at` is what makes a claim falsifiable. Vercel kills a function at
+ * `maxDuration` without running the catch, so a claim CAN outlive its work —
+ * the UI ages it out rather than spinning forever.
+ */
+export interface ActiveStep {
+  step: string;
+  started_at: string;
+}
+
+/** Claim the run for `step`. Returns the stamp `clearActiveStep` needs. */
+export async function claimActiveStep(sb: TourDb, run: RunRow, step: string): Promise<string> {
+  const startedAt = new Date().toISOString();
+  // Best-effort: losing the claim costs a spinner, and refusing to run the step
+  // over it would be the worse trade.
+  await bestEffortWrite(
+    `claimActiveStep(${step})`,
+    sb
+      .from('community_tour_runs')
+      .update({
+        step_results: asJson({ ...run.step_results, active: { step, started_at: startedAt } }),
+        updated_at: startedAt,
+      })
+      .eq('id', run.id),
+  );
+  return startedAt;
+}
+
+/**
+ * Release the claim — but only our own. A re-read is required: the handler has
+ * been writing `step_results` for minutes and the snapshot this route started
+ * with is stale, so clearing through it would roll back everything the step
+ * just produced. The `started_at` check keeps a slow step from clearing the
+ * claim of a faster one that started after it.
+ */
+export async function clearActiveStep(sb: TourDb, runId: string, startedAt: string) {
+  const fresh = await getRun(sb, runId);
+  if (!fresh) return;
+  const active = fresh.step_results.active as ActiveStep | null | undefined;
+  if (active && active.started_at !== startedAt) return;
+  await bestEffortWrite(
+    'clearActiveStep',
+    sb
+      .from('community_tour_runs')
+      .update({
+        step_results: asJson({ ...fresh.step_results, active: null }),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', runId),
+  );
+}
+
 /** Persist a step's output under step_results.<step> (merge, not replace). */
 export async function saveStep(sb: TourDb, run: RunRow, step: string, result: unknown) {
   // Stamp when this step last produced its result. A panel renders whatever is

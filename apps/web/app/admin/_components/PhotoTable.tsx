@@ -319,7 +319,7 @@ export function PhotoTable({
   }, [photos, sort, filter, verdictOf, plan]);
 
   /**
-   * The table is grouped by review verdict: Approved, Rejected, then Other.
+   * The table is grouped by review verdict: Approved, Rejected, then Pending.
    *
    * Owner 2026-08-19. This is the shape of the review itself — he goes through
    * the approved AND the rejected — and interleaving them by score meant
@@ -350,7 +350,10 @@ export function PhotoTable({
     for (const [label, group] of [
       ['Approved Photos', approved],
       ['Rejected Photos', rejected],
-      ['Other Photos', other],
+      // "Pending", not "Other": the section IS the pending pile — `plan` demotes
+      // every approved photo it did not pick back to 'pending', so the word is
+      // the row's own status rather than a leftovers bin (owner 2026-08-23).
+      ['Pending Photos', other],
     ] as const) {
       if (group.length === 0) continue;
       out.push({ header: label, count: group.length });

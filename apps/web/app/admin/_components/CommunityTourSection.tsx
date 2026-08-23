@@ -119,6 +119,11 @@ export function CommunityTourSection({
 
   useEffect(() => {
     void loadRuns();
+    // Polled, because the run is where step status now lives (see `active`
+    // below). Without this a reload shows the state at mount and never moves,
+    // which is the same blindness the client-only spinner had.
+    const t = setInterval(() => void loadRuns(), 10_000);
+    return () => clearInterval(t);
   }, [loadRuns]);
 
   // Assemblies, because "did the step return" and "does the film exist" are
@@ -162,8 +167,29 @@ export function CommunityTourSection({
   /** The newest assembly for the run on screen. */
   const latestAssembly = assemblies.find((a) => a.run_id === run?.id) ?? assemblies[0];
 
+  /**
+   * The step the SERVER says is running — written by the step route before it
+   * calls the handler (`claimActiveStep`), cleared when the handler returns.
+   *
+   * `running` above is this tab's own in-flight fetch and is gone the moment
+   * the page reloads; the plan step runs for minutes, so a reload mid-plan came
+   * back showing the previous run's green tick (owner 2026-08-23: "the status
+   * should not be gone after page refreshing, it should reflect the backend job
+   * status").
+   *
+   * Aged out rather than trusted forever: Vercel kills a function at its
+   * `maxDuration` without running the route's `finally`, so a claim can outlive
+   * the work that made it. Past the cap plus a margin, the honest reading is
+   * "nothing came back", not "still going".
+   */
+  const active = run?.step_results.active as { step?: string; started_at?: string } | null;
+  const activeAgeMs =
+    active?.started_at != null ? Date.now() - Date.parse(active.started_at) : null;
+  const activeStale = activeAgeMs != null && activeAgeMs > ACTIVE_STALE_MS;
+
   const stateOf = (s: StripStep | StepName): StepState => {
     if (running === s) return 'running';
+    if (active?.step === s) return activeStale ? 'failed' : 'running';
 
     // Both of these hand work to the render worker and return straight away,
     // so their state is the state of what the worker produced — not of the
@@ -420,6 +446,11 @@ export function CommunityTourSection({
 
   /** What a step is actually doing, when the chip alone would not say. */
   const noteOf = (s: StripStep): string | undefined => {
+    if (active?.step === s) {
+      return activeStale
+        ? `no response for ${formatAge(activeAgeMs ?? 0)} — re-run`
+        : `running… ${formatAge(activeAgeMs ?? 0)}`;
+    }
     if (s === 'generate' && plannedShots.length > 0 && shotsRendered < plannedShots.length) {
       return `rendering ${shotsRendered}/${plannedShots.length} clips`;
     }
@@ -491,7 +522,7 @@ export function CommunityTourSection({
         researchPois={researchPois}
         resolvedPlaces={resolveRaw?.resolved ?? []}
         droppedPlaces={resolveRaw?.dropped ?? []}
-        busy={!!running}
+        busy={!!running || (!!active?.step && !activeStale)}
         onRun={(s) => void runStep(s)}
       />
 
@@ -543,4 +574,20 @@ export function CommunityTourSection({
       </section>
     </div>
   );
+}
+
+/**
+ * How long a server-side claim may stand before it reads as a corpse.
+ *
+ * The step route is `maxDuration = 300` on Vercel; past that the function is
+ * gone whether or not it finished, so 330s is the platform's own answer plus a
+ * margin for the clock.
+ */
+const ACTIVE_STALE_MS = 330_000;
+
+/** "42s" / "3m 05s" — long enough runs need the minutes. */
+function formatAge(ms: number): string {
+  const total = Math.max(0, Math.round(ms / 1000));
+  if (total < 60) return `${total}s`;
+  return `${Math.floor(total / 60)}m ${String(total % 60).padStart(2, '0')}s`;
 }

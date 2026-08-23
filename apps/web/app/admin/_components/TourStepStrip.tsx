@@ -138,6 +138,11 @@ export function TourStepStrip({
   }, [running]);
   const elapsedLabel = elapsed > 2 ? ` ${elapsed}s` : '';
 
+  // Nothing may be started while something is running — including a step this
+  // tab did not start. Two steps writing one run's step_results is how a result
+  // gets rolled back to a stale snapshot.
+  const anyRunning = !!running || steps.some((s) => stateOf(s.name) === 'running');
+
   return (
     <section className="rounded-2xl border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -145,7 +150,7 @@ export function TourStepStrip({
         <button
           type="button"
           onClick={onRunAutomated}
-          disabled={!!running}
+          disabled={anyRunning}
           className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-1.5 text-ink text-xs hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
           title={automatedHint}
         >
@@ -157,7 +162,10 @@ export function TourStepStrip({
       <ol className="mt-3 flex flex-wrap items-stretch gap-2">
         {steps.map((s, i) => {
           const state = stateOf(s.name);
-          const isRunning = running === s.name;
+          // Either this tab's click or the SERVER's claim on the run — a reload
+          // keeps the second (owner 2026-08-23: "the status should not be gone
+          // after page refreshing").
+          const isRunning = running === s.name || state === 'running';
           // The Review chip highlights while it is the thing blocking, so the
           // stop reads as a stage of the work rather than an absence of one.
           const gated = s.name === 'review' && awaitingReview;
@@ -190,7 +198,15 @@ export function TourStepStrip({
                       2026-08-20: "while waiting, it should show running
                       status"), so the whole chip says so. */}
                   {isRunning ? (
-                    <span className="font-medium text-ink">running…{elapsedLabel}</span>
+                    // This tab's own ticker while it owns the click — it
+                    // moves every second. For a step found running on load the
+                    // caller times it from the server's `started_at` instead,
+                    // which is the only clock that survives a reload.
+                    <span className="font-medium text-ink">
+                      {running === s.name
+                        ? `running…${elapsedLabel}`
+                        : (noteOf?.(s.name) ?? 'running…')}
+                    </span>
                   ) : state === 'waiting' ? (
                     <span className="font-medium text-amber-700">
                       {noteOf?.(s.name) ?? s.waitingHint ?? 'rendering…'}
@@ -205,7 +221,7 @@ export function TourStepStrip({
                   <button
                     type="button"
                     onClick={() => onRun(s.name as StepName)}
-                    disabled={!!running}
+                    disabled={anyRunning}
                     className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-0.5 text-[11px] text-ink hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
                   >
                     {isRunning ? (
