@@ -57,10 +57,13 @@ CAMERA: dict[str, str] = {
         "Camera pushes in very slowly and smoothly toward the covered front "
         "entry, keeping the front door centered as it slowly fills the frame."
     ),
-    "walk_up": (
-        "Camera moves forward very slowly with a subtle handheld feel, "
-        "following the front walkway to the covered entry, ending close to the front door."
-    ),
+    # walk_up is deliberately ABSENT (owner 2026-08-23, "remove walk_up for
+    # now"). It was the only clause asking for a "subtle handheld feel" — an
+    # instruction no wording can fence, the same class of failure that removed
+    # slow_rise — and it also asked the model to TRAVEL forward along a walkway
+    # from one still frame, inventing porch depth and walkway perspective it
+    # never saw. On 2895 Shurburne Drive (2026-08-23) that produced a visibly
+    # broken hero. establish_push reaches the same entry without either risk.
     # Birdview effects: BOTH endpoints are real photos (first + last frame).
     "birdview_descend": (
         "The camera begins high above the home looking down, then descends "
@@ -83,7 +86,7 @@ BIRDVIEW_EFFECTS = frozenset({"birdview_descend", "rise_to_birdview"})
 # preference the model can talk itself out of is not a rule, hence the fence in
 # choose_hero_prompt. establish_push is the substitute because it keeps the
 # entry the model was reaching for — it just shows the whole home first.
-ENTRY_EFFECTS = frozenset({"entry_push_in", "walk_up"})
+ENTRY_EFFECTS = frozenset({"entry_push_in"})
 FULL_FACADE_EFFECT = "establish_push"
 
 # Mandatory clauses — verbatim, never paraphrased. The signage clause is the
@@ -132,7 +135,7 @@ The first image is the listing's hero photo — the clip's first frame will be e
 
 Return STRICT JSON only, no prose:
 {
-  "effect": "full_frame_hold|pull_back_reveal|lateral_glide|establish_push|entry_push_in|walk_up|birdview_descend|rise_to_birdview",
+  "effect": "full_frame_hold|pull_back_reveal|lateral_glide|establish_push|entry_push_in|birdview_descend|rise_to_birdview",
   "aerial_index": the IMAGE NUMBER of the chosen aerial photo, counting every image in order (the hero photo is image 1, so the first aerial is image 2), or null,
   "full_facade": true if the hero photo shows the complete front of the home — both side walls or roof ends visible, nothing important cropped away — false if the home is attached (townhouse/row) or the photo shows only part of it,
   "scene": "one factual sentence describing what is in the hero photo",
@@ -142,8 +145,8 @@ Return STRICT JSON only, no prose:
 
 Rules:
 - The buyer must come away having seen the WHOLE home. This outranks every other consideration.
-- If full_facade is true, the clip must show the complete front of the home. Pick full_frame_hold, pull_back_reveal, lateral_glide, or establish_push. entry_push_in and walk_up are FORBIDDEN when full_facade is true — they end on a door and the buyer never sees the house. Use establish_push when you want the entry: it shows the whole home first, then moves toward it.
-- entry_push_in and walk_up are only for full_facade false — an attached home (townhouse/row) or a photo showing part of the home. Aim them at the FRONT DOOR, never at a garage door.
+- If full_facade is true, the clip must show the complete front of the home. Pick full_frame_hold, pull_back_reveal, lateral_glide, or establish_push. entry_push_in is FORBIDDEN when full_facade is true — it ends on a door and the buyer never sees the house. Use establish_push when you want the entry: it shows the whole home first, then moves toward it.
+- entry_push_in is only for full_facade false — an attached home (townhouse/row) or a photo showing part of the home. Aim it at the FRONT DOOR, never at a garage door.
 - birdview_descend / rise_to_birdview ONLY if you pick an aerial image via aerial_index, and only when that aerial clearly shows this same home and carries NO highlight rings, arrows, boundary outlines, or overlay text of any kind. Otherwise aerial_index must be null.
 - scene and motion are factual descriptions, no marketing language.
 - Never use the words: fast, cinematic, epic, dramatic, dynamic."""

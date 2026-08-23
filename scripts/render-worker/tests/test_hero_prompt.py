@@ -65,8 +65,10 @@ def test_effect_outside_pool_falls_back():
 def test_rejected_effects_are_not_in_the_pool():
     # The owner's explicit rejections must not merely be discouraged — they
     # must have no camera sentence to render from. slow_rise joined the list
-    # after flying a one-story home into an invented drone shot twice.
-    for rejected in ["aerial_pull_away", "facade_tilt_up", "streetscape_glide", "slow_rise"]:
+    # after flying a one-story home into an invented drone shot twice, and
+    # walk_up after its handheld walk broke 2895 Shurburne Drive.
+    for rejected in ["aerial_pull_away", "facade_tilt_up", "streetscape_glide",
+                     "slow_rise", "walk_up"]:
         assert rejected not in CAMERA
 
 
@@ -126,7 +128,7 @@ def test_missing_full_facade_flag_substitutes():
         assert out["effect"] == FULL_FACADE_EFFECT
 
     bare = {k: v for k, v in GOOD.items()}
-    bare["effect"] = "walk_up"
+    bare["effect"] = "entry_push_in"
     out = choose_hero_prompt(HERO, [], call=fake_call(bare))
     assert out["effect"] == FULL_FACADE_EFFECT
 
