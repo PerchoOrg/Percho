@@ -16,6 +16,12 @@ const listing = (id: string, created_at: string): IndexListing => ({
   agents: null,
 });
 
+const photo = (listing_id: string, tagged = true, inFilm = false) => ({
+  listing_id,
+  tagged_at: tagged ? '2026-08-01T00:00:00Z' : null,
+  used_in_video_at: inFilm ? '2026-08-02T00:00:00Z' : null,
+});
+
 const run = (listing_id: string, updated_at: string | null, status = 'ready'): IndexRun => ({
   listing_id,
   status,
@@ -89,27 +95,71 @@ describe('buildTourIndexRows', () => {
         listing('w', '2026-01-02T00:00:00Z'),
         listing('n', '2026-01-01T00:00:00Z'),
       ],
-      photos: [
-        { listing_id: 'p', tagged_at: '2026-08-01T00:00:00Z' },
-        { listing_id: 'p', tagged_at: null },
-        { listing_id: 'w', tagged_at: '2026-08-01T00:00:00Z' },
-      ],
+      photos: [photo('p'), photo('p', false), photo('w')],
     });
     expect(partial).toMatchObject({ photos: 2, photosTagged: 1 });
     expect(whole).toMatchObject({ photos: 1, photosTagged: 1 });
     expect(none).toMatchObject({ photos: 0, photosTagged: 0 });
   });
 
-  it('takes the stage from the newest run and counts the rest', () => {
+  it('reports the furthest run, with an unfinished newer attempt beside it', () => {
+    // 5122 Lower Creek Street: a re-run started after the film was finished and
+    // stopped at planning. The home is Ready; the re-run is a note.
     const rows = build({
       listings: [listing('a', '2026-01-01T00:00:00Z')],
       runs: [
-        run('a', '2026-08-01T00:00:00Z', 'ready'),
-        run('a', '2026-08-22T00:00:00Z', 'planning'),
-        run('a', '2026-07-01T00:00:00Z', 'failed'),
+        run('a', '2026-08-22T08:29:00Z', 'ready'),
+        run('a', '2026-08-22T18:03:00Z', 'planning'),
+        run('a', '2026-08-21T08:24:00Z', 'failed'),
       ],
     });
-    expect(rows[0]).toMatchObject({ stage: 'planning', runCount: 3 });
+    expect(rows[0]).toMatchObject({ stage: 'ready', rerunStage: 'planning', runCount: 3 });
+  });
+
+  it('leaves no rerun note when the newest run is the one that got furthest', () => {
+    const rows = build({
+      listings: [listing('a', '2026-01-01T00:00:00Z')],
+      runs: [
+        run('a', '2026-08-01T00:00:00Z', 'planning'),
+        run('a', '2026-08-22T00:00:00Z', 'ready'),
+      ],
+    });
+    expect(rows[0]).toMatchObject({ stage: 'ready', rerunStage: null });
+  });
+
+  it('prefers the newest of two runs that got equally far', () => {
+    const rows = build({
+      listings: [listing('a', '2026-01-01T00:00:00Z')],
+      runs: [run('a', '2026-08-01T00:00:00Z', 'ready'), run('a', '2026-08-22T00:00:00Z', 'ready')],
+    });
+    expect(rows[0]).toMatchObject({ stage: 'ready', rerunStage: null });
+  });
+
+  it('never lets a failed attempt outrank a finished one', () => {
+    const rows = build({
+      listings: [listing('a', '2026-01-01T00:00:00Z')],
+      runs: [run('a', '2026-08-01T00:00:00Z', 'ready'), run('a', '2026-08-22T00:00:00Z', 'failed')],
+    });
+    expect(rows[0]).toMatchObject({ stage: 'ready', rerunStage: 'failed' });
+  });
+
+  it('counts the photos the plan picked, which is not the photo count', () => {
+    const rows = build({
+      listings: [listing('a', '2026-01-01T00:00:00Z')],
+      // 4 photos, 2 of them picked — the plan drops the rest.
+      photos: [photo('a', true, true), photo('a', true, true), photo('a'), photo('a')],
+    });
+    expect(rows[0]).toMatchObject({ photos: 4, photosTagged: 4, photosPicked: 2 });
+  });
+
+  it('counts picks with no assembly at all — the plan stamps them, not the cut', () => {
+    // 3855 Oak Park Drive: planned twice, never assembled.
+    const rows = build({
+      listings: [listing('a', '2026-01-01T00:00:00Z')],
+      runs: [run('a', '2026-08-22T18:03:00Z', 'planning')],
+      photos: [photo('a', true, true), photo('a')],
+    });
+    expect(rows[0]).toMatchObject({ photosPicked: 1, web: null, ios: null });
   });
 
   it('keeps a stage when the run carries no timestamp at all', () => {
