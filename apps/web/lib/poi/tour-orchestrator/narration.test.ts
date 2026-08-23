@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { buildSections, parseNarration } from './narration';
+import { MIN_SECTION_SECONDS, buildSections, parseNarration } from './narration';
 import { findSchoolAssignment } from './school-language';
 
 const clip = (bucket: string, poi_name: string, duration_s: number) => ({
@@ -21,11 +21,43 @@ describe('buildSections', () => {
       clip('schools', 'Sharon Elementary', 6),
       clip('outdoor', 'Sims Lake Park', 5),
     ]);
+    // On the CROSSFADED timeline, which is the one audio is placed against:
+    // each transition overlaps the outgoing clip by half a second, so 19s of
+    // clips is a 17.5s film and a section ends when the next takes the screen.
     expect(sections.map((s) => [s.bucket, s.startS, s.endS])).toEqual([
-      ['amenities', 0, 8],
-      ['schools', 8, 14],
-      ['outdoor', 14, 19],
+      ['amenities', 0, 7.5],
+      ['schools', 7.5, 13],
+      ['outdoor', 13, 17.5],
     ]);
+  });
+
+  it('matches the worker, which is what actually places the audio', () => {
+    // These are Bellmoore Park's own clip lengths and the offsets the render
+    // worker's ffmpeg command line was built from (2026-08-23). The sections
+    // used to be measured on the raw sum, which put the last section at
+    // 86-90s when the film only runs to 75.7s.
+    const durations = [
+      4, 3.5, 2, 4, 3.5, 2, 2, 3, 4, 2, 3.5, 3.5, 3.5, 2, 3.5, 4, 3.5, 3.5, 3, 3.5, 3.5, 2, 3, 2, 2,
+      2, 2, 2, 2, 2, 4,
+    ];
+    const sections = buildSections(durations.map((d, i) => clip(`b${i}`, `P${i}`, d)));
+    expect(durations.reduce((a, b) => a + b, 0)).toBe(90);
+    expect(sections.at(-1)?.endS).toBeCloseTo(75, 3);
+    expect(sections[29]?.startS).toBeCloseTo(70, 3);
+    expect(sections[30]?.startS).toBeCloseTo(71.5, 3);
+  });
+
+  it('does not give a two-second clip two seconds of narration', () => {
+    // Clip 29 of that film — "Try beloved Breakfast Bar." was written to a
+    // budget of 2.0s and had 1.5s of screen time, which is how the last two
+    // lines ended up spoken on top of each other.
+    const sections = buildSections([
+      clip('shopping', 'H Mart', 4),
+      clip('other', 'The Breakfast Bar', 2),
+      clip('pets', 'Newtown Dream Dog Park', 4),
+    ]);
+    expect(sections[1]!.endS - sections[1]!.startS).toBeCloseTo(1.5, 6);
+    expect(sections[1]!.endS - sections[1]!.startS).toBeLessThan(MIN_SECTION_SECONDS);
   });
 
   it('anchors to clip indices, which is what the worker places audio from', () => {
@@ -59,7 +91,7 @@ describe('buildSections', () => {
       clip('shopping', 'Publix', 4),
     ]);
     expect(sections).toHaveLength(3);
-    expect(sections[2]?.startS).toBe(12);
+    expect(sections[2]?.startS).toBe(11.5);
   });
 
   it('sizes the word budget from real duration, so a longer cut says more', () => {

@@ -44,6 +44,7 @@ import requests
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ken-burns"))
 from xfade import crossfade_offsets, crossfade_total  # type: ignore  # noqa: E402
+from narration_timing import plan_narration_starts  # type: ignore  # noqa: E402
 from photo_selector import build_plan  # type: ignore  # noqa: E402
 from photo_tagger import MODEL as TAGGER_MODEL, tag_listing_photos  # type: ignore  # noqa: E402
 # The home tour's plan step decides engine and camera move per surface, the
@@ -429,13 +430,6 @@ def tts_line(text: str, voice: str, out_wav: Path) -> bool:
     return out_wav.exists()
 
 
-# A line must finish before the next one starts, with room to breathe.
-NARRATION_MIN_GAP_S = 0.35
-# How much a line may be sped up to make it fit. Beyond this it starts to sound
-# hurried; below it the change is inaudible.
-NARRATION_MAX_TEMPO = 1.15
-
-
 def _wav_seconds(path: Path) -> float:
     out = subprocess.run(
         ["ffprobe", "-v", "error", "-show_entries", "format=duration",
@@ -462,20 +456,9 @@ def _speed_up(src: Path, tempo: float, dest: Path) -> bool:
 def render_narration(
     narration: dict[str, Any], starts: list[float], workdir: Path, total: float
 ) -> list[tuple[Path, float]]:
-    """Synthesise each segment, place it, and make sure the lines do not collide.
-
-    Anchoring each line to its own clip is what keeps narration on the footage
-    it describes, but on its own it guarantees nothing about the line BEFORE it.
-    While the model under-wrote its sections there was slack and no line ever
-    reached the next one's anchor; raising the fill to 92% removed the slack and
-    two lines started talking over each other (owner 2026-08-21: "before the
-    elementary, tts overlaps").
-
-    So overruns are resolved here, where the true durations are finally known —
-    the plan can only estimate them. A line that runs long is sped up, up to
-    NARRATION_MAX_TEMPO, which is inaudible at these ratios; if that is not
-    enough the next line is pushed later instead, because arriving half a second
-    late on the right footage beats arriving on time underneath someone else.
+    """Synthesise each segment and place it. Overruns are resolved in
+    `narration_timing.plan_narration_starts`, where the true durations are
+    finally known — the plan can only estimate them.
     """
     voice = narration.get("voice") or "Kore"
     made: list[dict[str, Any]] = []
@@ -489,31 +472,17 @@ def render_narration(
             made.append({"wav": wav, "start": starts[idx], "dur": _wav_seconds(wav)})
 
     made.sort(key=lambda m: m["start"])
-    shifted = sped = 0
-    for i, cur in enumerate(made):
-        limit = made[i + 1]["start"] if i + 1 < len(made) else total
-        room = limit - cur["start"] - NARRATION_MIN_GAP_S
-        if room <= 0 or cur["dur"] <= room:
-            continue
-        tempo = min(NARRATION_MAX_TEMPO, cur["dur"] / room)
-        fast = cur["wav"].with_name(f"{cur['wav'].stem}-fast.wav")
-        if tempo > 1.001 and _speed_up(cur["wav"], tempo, fast):
-            cur["wav"], cur["dur"] = fast, cur["dur"] / tempo
-            sped += 1
-        # Still over? Move the NEXT line out of the way rather than talk over it.
-        if i + 1 < len(made):
-            need = cur["start"] + cur["dur"] + NARRATION_MIN_GAP_S
-            if need > made[i + 1]["start"]:
-                made[i + 1]["start"] = min(need, total - made[i + 1]["dur"])
-                shifted += 1
+    kept, shifted, sped, dropped = plan_narration_starts(made, total, _speed_up)
 
-    note = f" ({sped} sped up, {shifted} shifted)" if sped or shifted else ""
+    note = ""
+    if sped or shifted or dropped:
+        note = f" ({sped} sped up, {shifted} shifted, {dropped} dropped)"
     print(
-        f"[narration] {len(made)}/{len(narration.get('segments') or [])} line(s) "
+        f"[narration] {len(kept)}/{len(narration.get('segments') or [])} line(s) "
         f"in voice {voice}{note}",
         flush=True,
     )
-    return [(m["wav"], m["start"]) for m in made]
+    return [(m["wav"], m["start"]) for m in kept]
 
 
 def mux_audio(
