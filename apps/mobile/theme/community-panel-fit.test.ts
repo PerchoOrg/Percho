@@ -80,15 +80,21 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		expect(SRC).toContain("out.length >= MAX_COMMUNITY_ICONS");
 	});
 
-	it("keeps the glyphs attached to the name, never to `Explore`", () => {
-		// Owner 2026-08-22: "the icons should be close to community name, not
-		// explore button, sometimes i see the other way". "Sometimes" was the
-		// long names: the glyphs' width was taken out of the name's box, the
-		// name re-wrapped inside the smaller box, and the glyphs were then drawn
-		// after a box edge the wrapped text no longer reached. The name and the
-		// glyphs must therefore share a WRAPPING line — the glyphs drop under
-		// the name instead of squeezing it.
-		expect(SRC).toContain('flexWrap: "wrap"');
+	it("keeps the glyphs on the name's right, never under it", () => {
+		// Owner 2026-08-23: "dont put icons below the community name, put them
+		// on the right side, if overlaps with explore, then use two line for
+		// community name, but still put icons to the right side". The row that
+		// holds the name and the glyphs must therefore NOT wrap — a wrapping
+		// row is exactly what dropped the glyphs onto a line of their own on
+		// long names. The name absorbs the squeeze instead, wrapping to its two
+		// lines inside a narrower box.
+		const infoLeft = SRC.slice(
+			SRC.indexOf("\tinfoLeft: {"),
+			SRC.indexOf("\t},", SRC.indexOf("\tinfoLeft: {")),
+		);
+		expect(infoLeft).toContain("flexDirection");
+		expect(infoLeft).not.toContain("flexWrap");
+		expect(SRC).toContain("numberOfLines={2}");
 		// And they must still be the name's neighbours in the tree, not the
 		// link's: one container holds the name and the glyphs, `Explore` is
 		// outside it.

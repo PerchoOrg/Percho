@@ -16,6 +16,54 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 09:35 UTC — community card: glyphs stay on the name's right
+
+**Objective**: owner, on device — "dont put icons below the community name,
+put them on the right side, if overlaps with explore, then use two line for
+community name, but still put icons to the right side of community name".
+
+**What was there**: `CommunityFace`'s bottom row is `[ name + glyphs ]` and
+`Explore`. The left box (`infoLeft`) was a `flexWrap: "wrap"` row, added
+2026-08-22 to answer a different complaint ("the icons should be close to
+community name, not explore button"). Wrapping bought that closeness by
+letting the glyphs DROP to a line of their own under the name whenever the
+name plus the glyphs plus `Explore` did not fit on one line — which is
+precisely the layout the owner has now ruled out.
+
+**Actions**: `apps/mobile/components/cards/CommunityFace.tsx` — dropped
+`flexWrap: "wrap"` from `infoLeft`. That is the whole change; the name already
+carries `flexShrink: 1` + `minWidth: 0` and `numberOfLines={2}`, so with the
+row no longer wrapping the squeeze lands on the NAME: it shrinks to whatever
+the glyphs leave and wraps to its two lines inside that box, glyphs still to
+its right. Header/style comments that still said "left of the name" (stale
+since the 08-22 revision) corrected in the same pass.
+
+**Decisions**: the alternative was inlining the glyphs into the name's `Text`
+so they always follow the last word — RN can nest a `View` in a `Text`, but
+`RedlineIcon` is an icon-font glyph in a translate-corrected box and its
+vertical fit against a 27/30 serif line is not something a text run would give
+for free. Not worth it for the one case it improves.
+
+**Issues**: `community-panel-fit.test.ts` asserted `flexWrap: "wrap"` as the
+mechanism for the 08-22 fix. Inverted it — but as a plain `SRC` substring
+check it then failed on the word appearing in the new comment explaining its
+own removal, so the assertion now slices the `infoLeft` style block and checks
+that. Scoped assertions were the right shape here regardless.
+
+**Resolution**: the residual cost, stated for the record: on a name whose
+first line cannot fill the shrunken box (one very long unbroken word), the
+glyphs are drawn at the box edge and so sit a little nearer `Explore` than the
+text does. That is the 08-22 complaint in its narrow form, accepted — a fixed
+position for the glyphs was chosen over a tight one.
+
+**Verification**: `pnpm typecheck` clean; biome clean on both changed files;
+`pnpm vitest run` in `apps/mobile` — 42 files / 520 tests pass.
+
+**Next steps**: owner to eyeball a long-name community on device (Hidden Lakes
+at Sugar Creek is the usual test) and confirm the two-line name reads.
+
+---
+
 ## 2026-08-23 08:06 UTC — walk_up leaves the hero pool
 
 **Objective**: owner, on 2895 Shurburne Drive — "the first hero clip is so
