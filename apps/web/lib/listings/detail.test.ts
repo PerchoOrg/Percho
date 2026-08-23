@@ -197,3 +197,23 @@ describe('projectDetail — phase119 enrichments (MLS mirror + walkthrough video
     ).toBeNull();
   });
 });
+
+describe('projectDetail — IDX display gate (phase119.1)', () => {
+  const mls = { days_on_market: 23, lot_size_acres: 0.31, listing_key: '7382914' };
+
+  it('projects nothing from a mirror row the MLS forbids displaying', () => {
+    const d = projectDetail(baseListing, [], [], {
+      mls: { ...mls, internet_entire_listing_display_yn: false },
+    });
+    for (const key of ['daysOnMarket', 'lotSizeAcres', 'mlsNumber']) {
+      expect(key in d, key).toBe(false);
+    }
+  });
+
+  it('treats a null/absent flag as displayable', () => {
+    const d = projectDetail(baseListing, [], [], {
+      mls: { ...mls, internet_entire_listing_display_yn: null },
+    });
+    expect(d.daysOnMarket).toBe(23);
+  });
+});
