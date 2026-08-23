@@ -36,6 +36,13 @@ interface FeedSessionState {
 	signals: SignalState;
 	/** Card ids already shown — dedupes across pages (§1.7 pagination). */
 	seenIds: readonly string[];
+	/**
+	 * LISTING cards actually swiped, lifetime (phase119). Distinct from
+	 * `seenIds`, which mixes every card kind and also counts cards merely
+	 * paged in — this is the honest denominator behind the FitCard's
+	 * "from N homes you've seen".
+	 */
+	seenListingIds: readonly string[];
 	/** Nth session for this install (§1.10 `session_n`). */
 	sessionN: number;
 	/** Epoch ms of the previous swipe, for §1.10 `dt_since_prev_swipe`. */
@@ -63,6 +70,7 @@ export const useFeedSession = create<FeedSessionState>()(
 		(set, get) => ({
 			signals: EMPTY_SIGNALS,
 			seenIds: [],
+			seenListingIds: [],
 			sessionN: 0,
 			hydrated: false,
 
@@ -74,6 +82,9 @@ export const useFeedSession = create<FeedSessionState>()(
 					seenIds: s.seenIds.includes(card.id)
 						? s.seenIds
 						: [...s.seenIds, card.id],
+					...(card.kind === "listing" && !s.seenListingIds.includes(card.id)
+						? { seenListingIds: [...s.seenListingIds, card.id] }
+						: {}),
 				}));
 				return signals;
 			},
@@ -103,6 +114,7 @@ export const useFeedSession = create<FeedSessionState>()(
 				set({
 					signals: EMPTY_SIGNALS,
 					seenIds: [],
+					seenListingIds: [],
 					lastSwipeAt: undefined,
 				}),
 		}),
@@ -114,6 +126,7 @@ export const useFeedSession = create<FeedSessionState>()(
 			partialize: (s) => ({
 				signals: s.signals,
 				seenIds: s.seenIds,
+				seenListingIds: s.seenListingIds,
 				sessionN: s.sessionN,
 			}),
 			onRehydrateStorage: () => () => {
