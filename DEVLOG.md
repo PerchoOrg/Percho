@@ -16,6 +16,83 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 23:55 UTC — A hand-picked hero for the home tour
+
+**Objective**: owner: "for home tour, have a button to manually set a photo as
+a hero — most times the hero is selected correctly, but in case we need to
+manually change."
+
+**What "hero" is here**, since the word carries two meanings in this pipeline
+and only one of them was the ask:
+  - `plan[0]` — the cut's opening shot, and the ONLY shot Seedance animates
+    (`worker.py:process_plan_job`, "Seedance rides the HERO shot by default").
+    This is the one that was unnameable.
+  - `is_hero` on a shot — "top-3 by hero_score, give it the long beat"
+    (`PACE_HERO_S`). Written by the planner, overwritten on every re-plan.
+The button sets the first. The second follows from it (see below).
+
+**The gap**: the opening shot fell entirely out of `narrative_sort` — lowest
+`NARRATIVE_ORDER` room type first, highest `hero_score` inside it. When the
+tagger scored the wrong exterior highest, the only lever was rejecting the
+photo that won, which also removes it from the film. There was no way to say
+"that one" without saying "not this one".
+
+**Actions**:
+- Migration `20260823235000_listing_photos_hero_pick.sql`: `hero_pick boolean
+  not null default false`, plus `listing_photos_hero_pick_idx`, a partial
+  UNIQUE index on `(listing_id) where hero_pick`. **Not pushed** — needs
+  `pnpm db:push` from the owner's Mac. `database.types.ts` updated by hand to
+  match (three lines); `db:types` is `supabase gen types --local` and there is
+  no local Supabase on this host.
+- `photo_selector.build_plan(..., hero_id=None)`: the named photo is held OUT
+  of the candidate list before step 1 and prepended to `ordered` after the
+  narrative sort. It therefore skips the unusable tag, the dHash dedupe and
+  the room quota — all three of which could otherwise silently overrule the
+  pick, and an override that loses to a quota is not an override. Budget
+  reserves its slot (`cap - reserved`) so a hero costs a shot rather than
+  adding one, and index 0 is forced into `hero_ranks` so a hand-picked opener
+  gets `PACE_HERO_S` whatever `hero_score` thought of it.
+- `worker.py`: `_load_listing_photos` selects `hero_pick`; `process_plan_job`
+  resolves it with a `next(...)` over the records and logs
+  `manual hero=<id>`. Records are already filtered by `exclude_rejected`, so a
+  rejected hero simply is not there and the planner chooses as before.
+- `lib/poi/admin-photo-actions.ts`: `setListingPhotoHero(photoId, on)`. Two
+  writes in a fixed order — clear the listing's current pick, then set the new
+  one. Setting first collides with the partial unique index and the click
+  fails.
+- `PhotoTable.tsx`: a star button in the Review cell, listing surface only,
+  disabled on a rejected row. Optimistic like the approve/reject verdicts —
+  `heroLocal` is a single `string | null | undefined`, not a map, because two
+  heroes is a state the index makes impossible and a map would let the
+  component render one anyway. The Plan column shows `hero` on the shot the
+  plan actually opens on, and `hero — run Plan` when the pick is newer than
+  the plan.
+
+**Decisions**:
+- *No auto re-plan on the click.* Re-planning re-decides every shot, and the
+  owner is usually mid-review — picking a hero and rejecting three photos is
+  one action to him, five clicks to the table. The notice bar says to run Plan.
+- *The notice names the bill.* The new opening shot is the shot Seedance
+  generates, so the next Render pays for one clip. Saying that before the
+  click is spent is the whole difference between an override and a surprise.
+  The old hero's clip is left in place, so switching back re-uses it rather
+  than re-billing (`enqueueClips` reuses on an unchanged `render_key`).
+- *A manual pick beats `usable: false`.* The tagger's verdict is a guess at
+  the same question the owner just answered by looking at the photograph.
+
+**Issues**: no pytest, numpy or local Supabase on this host. Worked around:
+the eight new planner tests were run through a minimal pytest stub in the
+scratchpad, along with the rest of `scripts/render-worker/tests` — 118 passed,
+0 failed (`test_pick_bgm` still needs numpy and did not run, unchanged by
+this).
+
+**Resolution**: `pnpm typecheck` clean, `pnpm test` 735/735, biome unchanged
+from origin/main (the 10 warnings on `PhotoTable.tsx` are all pre-existing
+`noNonNullAssertion` on `plan[p.id]!` plus the lightbox `useMediaCaption`).
+
+**Next steps**: owner runs `pnpm db:push`. Until then the column does not
+exist and the star button will fail on click — the action surfaces the
+Postgres error in the table's red bar rather than failing silently.
 ## 2026-08-23 07:35 UTC — Seedance eats the enhanced photo now, like every other engine
 
 **Objective**: owner — "lets change that rule, always use enhanced one for all

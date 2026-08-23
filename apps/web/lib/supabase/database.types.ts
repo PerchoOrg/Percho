@@ -1409,6 +1409,7 @@ export type Database = {
           enhanced_preset: string | null
           enhanced_status: string
           height: number | null
+          hero_pick: boolean
           id: string
           listing_id: string
           rejection_reason: string | null
@@ -1434,6 +1435,7 @@ export type Database = {
           enhanced_preset?: string | null
           enhanced_status?: string
           height?: number | null
+          hero_pick?: boolean
           id?: string
           listing_id: string
           rejection_reason?: string | null
@@ -1459,6 +1461,7 @@ export type Database = {
           enhanced_preset?: string | null
           enhanced_status?: string
           height?: number | null
+          hero_pick?: boolean
           id?: string
           listing_id?: string
           rejection_reason?: string | null
