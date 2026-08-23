@@ -16,6 +16,54 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 01:30 UTC — The four Suwanee sector areas are gone
+
+**Objective**: owner: "delete all 4 suwanee test areas, we already decided to
+use subdivision and city".
+
+**Actions**: deleted four `communities` rows — `suwanee-sector-east-i85-gateway-v01`,
+`suwanee-sector-north-core-v01`, `suwanee-sector-west-lambert-v01`,
+`suwanee-sector-south-peachtree-ridge-v01` (seeded 2026-08-18). Everything else
+went with them by cascade: 90 `community_pois`, 156 `community_poi_photos`,
+12 `community_tour_runs`, 11 `tour_assemblies`. Verified zero rows left behind
+on all five tables.
+
+**Decisions**:
+- *Deleted by id, never by name.* Sixteen communities match `%Suwanee%` and
+  eleven of them are real — the subdivisions (Suwanee Station, Olde Suwanee
+  Park, Landings at Suwanee Creek, …) and the city row `suwanee` itself, which
+  are exactly what the product now uses. The four targets share the
+  `suwanee-sector-` slug prefix; the ids were read once, checked against that
+  prefix, and used literally. `kind` was no help: all four are
+  `kind='neighborhood'`, same as everything else.
+- *Snapshot first.* An irreversible production delete of rows that carry
+  pointers to paid infrastructure: the eleven assemblies were all `ready`, each
+  with a `cf_stream_uid`. Full JSON dump of all six tables taken before the
+  DELETE and kept in the session scratchpad
+  (`suwanee-sectors-backup.json`) — after the delete there is no other record
+  of which Stream assets those were.
+- *The global POI cache is left alone.* `pois` / `poi_photos` are not scoped to
+  a community — 61 POIs and 174 photos (121 clips) stay. Seven of those POI
+  links belong to a community we keep, and the rest are a warm cache any future
+  Suwanee subdivision resolves into. Deleting them would re-download and re-tag
+  the same places.
+
+**Issues**: eleven Cloudflare Stream videos now have no row pointing at them.
+They keep billing until deleted, and their uids exist only in the backup file
+above. Owner's call — flagged, not acted on (§8: anything touching Stream
+minutes).
+
+**Learnings**: the four sector rows were indistinguishable from real
+subdivisions in every column except `slug` — the test seed used the same
+`kind`, city and state. Anything seeded for an experiment wants a marker that
+survives a `select *`.
+
+**Next steps**: decide on the eleven Stream assets. Six older runs on Aberdeen
+and Apremont are still parked in non-terminal statuses (`tagging`,
+`researching`, `resolving`, `fetching_photos`) from Aug 16-19 — they are not
+the newest run for their community, so nothing reads them, but nothing reaps
+them either.
+
 ## 2026-08-23 01:05 UTC — The review page follows the tour's POIs now, and both orphaned runs are stopped
 
 **Objective**: owner, after reading the diagnosis below: "merge to main, and
