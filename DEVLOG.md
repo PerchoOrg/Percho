@@ -16,6 +16,69 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 10:10 UTC — the looped tail recycles listings too, and walks the whole pool
+
+**Objective**: owner — "why cant i see listing videos multiple times. but
+community videos i can see multiple times on ios, they should be same". Then,
+on what the loop is for: "it is for testing, we should see all ready ones in a
+loop, later we will recommendations, and some of them will be filtered". He
+picked "both repeatable" from the two options offered.
+
+**Diagnosis**: `loopedFallback` in `lib/feed/generate-feed.ts` — the last-resort
+path once no slot can be filled with unseen content — built its candidates from
+`community`, `geo` and `tradeoff`. `listing` was never in the list, so a
+listing, once swiped, could not come back. `deck-key.test.ts:81` had this
+written down as settled behaviour.
+
+**Why it bites so early**: the phone asks for `videosOnly=1`. Live check of
+`GET /api/mobile/feed?stage=4&offset=0&limit=40&videosOnly=1` on
+www.percho.co: **16** listings with a vertical video, **4** communities with a
+tour (Apremont - Highcroft, Aberdeen, Ashley Crossing, Bellmoore Park), and
+`done: true` at offset 0 — that is the entire inventory. `STAGE_MIX[4]` is
+`listing x5 · community x2`, so the four communities are consumed by ~card 14
+and all twenty by ~card 20; from card 21 on, every card was one of the same
+four communities.
+
+**Actions**: `loopedFallback` —
+  1. `listing` joins the candidates (the parity asked for), and
+  2. the looped card is now taken from the slot the MIX wants at this rotation,
+     with `byStaleness` ordering only what that slot could not supply.
+
+**Why (2) was not optional**: staleness alternates the loopable kinds 1:1, and
+`anyItem` indexes each kind's list by the same `rotate`. A kind picked on every
+other card steps through its own list two at a time and reaches only half of
+it — 8 of the 16 listings, forever. That directly contradicts "we should see
+all ready ones in a loop". Following the table keeps `rotate` advancing by one
+within each kind often enough to reach every row: the mix is 7 long and
+gcd(7,16) = gcd(7,4) = 1, so the cycle visits all 16 listings and all 4
+communities. Verified against the real pool shape in a throwaway test — the
+first 20 cards are the whole inventory, and the looped tail covers 20 of 20
+distinct ids with none missing, holding the 5:2 ratio.
+
+**Issues**: `generate-feed.test.ts`'s "never re-emits a seen card while fresh
+content exists" broke — and it had been passing for the wrong reason. Its POOL
+holds 12 real cards, its first page takes 10, and it then asked for a second
+page of 10. There was never enough fresh content for that; it passed because a
+community-only loop could not clear the community run limit straight after the
+fresh communities, so `loopedFallback` returned null and the page ended early
+with nothing to overlap. Now that listings can loop, the tail fills and the
+overlap is real. Cut the second page to the 2 cards that are genuinely fresh —
+which is what the test's own name claims to be about — and asserted
+`loopedIds` is empty there. The looping contract gets its own new test.
+
+**Explicitly NOT done**: no ranking, no filtering. Owner: "later we will
+recommendations, and some of them will be filtered". The loop is the testing
+behaviour, not the shipping one.
+
+**Verification**: `pnpm typecheck` clean, biome clean, `pnpm vitest run` in
+`apps/mobile` — 42 files / 521 tests pass.
+
+**Next steps**: when recommendations land, this fallback is where "which of the
+already-seen cards is worth showing again" will have to be answered properly —
+right now it is a rotation, not a judgement.
+
+---
+
 ## 2026-08-23 09:52 UTC — the community glyphs follow the name's text, not its box
 
 **Objective**: owner, minutes after the 09:35 change — "still have the icon
