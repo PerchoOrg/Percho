@@ -119,7 +119,7 @@ import { EXPLORE_TAP_TARGET } from "./ListingFace";
 import { RedlineIcon } from "./redline/RedlineChrome";
 
 /**
- * How many glyphs sit left of the name. TWO, inherited from the pill row that
+ * How many glyphs sit right of the name. TWO, inherited from the pill row that
  * preceded them (owner 2026-08-17, was 3) and now also a width constraint: the
  * icons, the name and `Explore` share ONE line, and every icon is width the
  * name does not get.
@@ -154,8 +154,9 @@ const BREATH_DIM = 0.5;
 const BREATH_CYCLES = 6;
 
 /**
- * The glyphs shown to the LEFT of the community name (owner 2026-08-22: "lets
- * add icons to the left of community name for now").
+ * The glyphs shown to the RIGHT of the community name (owner 2026-08-22: "lets
+ * add icons to the left of community name for now", revised to the right side
+ * later the same day and held there on 2026-08-23).
  *
  * Same descending-confidence order the pill row used, minus the two sources
  * that cannot produce a glyph: `dims` and `pills` are bare strings, and the
@@ -423,18 +424,19 @@ export function CommunityFace({
 				pointerEvents="none"
 			/>
 
-			{/* Bottom info — ONE line: signal glyphs, the community name, and
-			    `Explore` on the right, all on a shared centre line (owner
-			    2026-08-22: "community and explore should be aligned... lets add
-			    icons to the left of community name"). The pill row is gone; the
-			    glyphs are what is left of it.
+			{/* Bottom info — ONE line: the community name, its signal glyphs,
+			    and `Explore` on the right, all on a shared centre line (owner
+			    2026-08-22: "community and explore should be aligned"; the glyphs
+			    moved to the name's right the same day). The pill row is gone;
+			    the glyphs are what is left of it.
 
 			    The name is the only thing that gives when space runs out —
 			    `flexShrink: 0` on both the glyphs and the link, `minWidth: 0` on
-			    the name. A truncated community name is still readable; a
-			    truncated CTA is not, and half a glyph is nothing at all. What
-			    gives against the GLYPHS, though, is the line: they wrap under
-			    the name rather than shrink it (see `infoLeft`). */}
+			    the name. It gives by WRAPPING to a second line, not by pushing
+			    the glyphs off its own line: owner 2026-08-23, "dont put icons
+			    below the community name... if overlaps with explore, then use
+			    two line for community name, but still put icons to the right
+			    side" (see `infoLeft`). */}
 			<View style={styles.info}>
 				<View style={styles.infoLeft}>
 					{/* Two lines, not one. A name that did not fit used to ellipsize
@@ -635,34 +637,35 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		gap: 12,
 	},
-	/** Name + glyphs. `minWidth: 0` is what lets the name WRAP instead of
-	 *  pushing `Explore` off the card — a text child will not shrink below its
-	 *  content without it.
+	/** Name + glyphs, on ONE line, always in that order.
 	 *
-	 *  `flexWrap` is what keeps the glyphs ON the name (owner 2026-08-22: "the
-	 *  icons should be close to community name, not explore button, sometimes i
-	 *  see the other way"). Without it, a name too long for the row was SHRUNK
-	 *  by the glyphs' width and then re-wrapped inside the box it was shrunk
-	 *  to — and a wrapped line rarely fills its box, so the glyphs were laid
-	 *  out after a box edge the text did not reach, drifting up to the width of
-	 *  the short line towards `Explore`. Wrapped, the name is never squeezed by
-	 *  its sibling: the glyphs either fit beside its true width or drop onto
-	 *  their own line under it. Either way they touch the name. */
+	 *  NOT wrapping (owner 2026-08-23: "dont put icons below the community
+	 *  name, put them on the right side, if overlaps with explore, then use two
+	 *  line for community name, but still put icons to the right side"). A
+	 *  `flexWrap: "wrap"` row dropped the glyphs onto their own line under the
+	 *  name whenever the two could not both fit, which is the layout that ask
+	 *  rules out. The width now comes out of the NAME instead: `minWidth: 0` +
+	 *  `flexShrink: 1` on the text let it shrink to whatever the glyphs leave
+	 *  and wrap to its two lines inside that, so the glyphs keep their place at
+	 *  the name's right on every name length.
+	 *
+	 *  The cost this pays back to the 08-22 note: on a name whose first line
+	 *  cannot fill the shrunken box (one very long word), the glyphs are drawn
+	 *  at the box edge and so read slightly nearer `Explore` than the text.
+	 *  Accepted — the owner has now chosen a fixed position for them over a
+	 *  tight one. */
 	infoLeft: {
 		flex: 1,
 		minWidth: 0,
 		flexDirection: "row",
-		flexWrap: "wrap",
 		alignItems: "center",
 		gap: 7,
 	},
 	/**
-	 * The glyph run, RIGHT of the name (owner 2026-08-22: "icons should be on
-	 * the right side of the community name") — or directly UNDER it, on the
-	 * long names where "right of the name" and "on the card" cannot both be
-	 * true. Never squeezed — see the row's doc; the name is what gives. Centred
-	 * against the name block, so on a wrapped two-line name they sit level with
-	 * its middle.
+	 * The glyph run, RIGHT of the name — always, on any name length (owner
+	 * 2026-08-23). Never squeezed: see the row's doc; the name is what gives.
+	 * Centred against the name block, so on a wrapped two-line name they sit
+	 * level with its middle.
 	 */
 	icons: {
 		flexDirection: "row",
