@@ -23,8 +23,24 @@
  * device. A width-derived aspect (what area/community used) does not — it
  * drifts against the stage as the screen gets taller.
  *
+ * 0.83 since 2026-08-23 (owner: the cards read small, with spare room around
+ * them). This number is NOT a free choice — it is paired with the feed's
+ * `GUTTER` of 16 to hold the card's ASPECT where it already was.
+ *
+ * The card plays its tour with `fit="cover"` against a 1080x1576 canvas
+ * (aspect 0.685), so the card's own aspect is what decides how much of the
+ * video gets cropped. At 0.73/37 the card measured 0.682-0.693 across the
+ * fleet; at 0.83/16 it measures 0.672-0.689 — the same frame, so the crop is
+ * unchanged and only the size moved. Widening the card WITHOUT raising this
+ * ratio is the thing to avoid: it would push the aspect toward 0.79 and start
+ * eating the video's height, which is the whole reason the canvas is 0.685 and
+ * not 9:16 in the first place.
+ *
+ * Leaves ~107pt of stage slack on an iPhone 15 (was ~170), i.e. the card still
+ * floats on paper rather than filling the stage.
+ *
  * This module is deliberately react-native-free so `theme/listing-layout.test.ts`
  * can compute the real card height from it (the mobile vitest suite imports no
  * RN runtime — see `vitest.config.ts`).
  */
-export const CARD_FRAME_RATIO = 0.73;
+export const CARD_FRAME_RATIO = 0.83;

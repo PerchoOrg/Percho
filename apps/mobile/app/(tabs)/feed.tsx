@@ -85,9 +85,26 @@ import { textStyles } from "../../theme/typography";
  * so the next card's edge never showed. The wider band makes the card
  * visibly narrower than the screen and the next card peeks beside it (the
  * constant itself is defined above the doc block; `GUTTER` above matches).
+ *
+ * 2026-08-23: 37 → 16 (owner — buyers reported the cards read small with too
+ * much spare paper around them). The card was 44% of the screen's area; it is
+ * now 56–59% on every iPhone from the 13 mini up.
+ *
+ * The 2026-08-16 rationale above is retained for history but no longer
+ * describes the stack: `PEEK_PT` went to 0 on 2026-08-19 and the behind card
+ * rests at `STACK_RESTING` scale 0.94 — SMALLER than the top card — so nothing
+ * peeks beside it at any gutter width. What the band still buys is the
+ * swipeable read (a card that touches both screen edges is a page, not a
+ * card), and 16 keeps a visible band for that.
+ *
+ * The ceiling on this is the VIDEO, not the layout: both tour canvases are
+ * 1080x1576, so on a 3x screen a card wider than 360pt is upsampling its own
+ * source. 16 puts the common phones at exactly 1.00 and the Max phones at
+ * ~1.13, which their 2.7-4.5 Mbps top rendition absorbs without a visible
+ * change. Going wider than this needs a bigger canvas first.
  */
-const CARD_INSET = { horizontal: 37, top: 12, bottom: 10 };
-const GUTTER = 37;
+const CARD_INSET = { horizontal: 16, top: 12, bottom: 10 };
+const GUTTER = 16;
 
 /**
  * The card frame height is NOT decided here any more (owner, 2026-08-17: one
