@@ -2225,14 +2225,26 @@ LABEL_ACCENT = (14, 107, 87)                # redline.accent — the only accent
 #
 # `CommunityFace` puts `badgeSlot` at top 12 / left 12 and the badge itself at
 # 7pt vertical padding around 9.5pt System type. The feed card is
-# `screenWidth - 52` wide, which is 341pt on an iPhone 15 — the reference used
+# `screenWidth - GUTTER*2` wide — 361pt on an iPhone 15, the reference used
 # here, since the video is one fixed size and the card is not.
 #
 # Owner 2026-08-20: "their heights are not the same, can you make sure they are
 # perfectly aligned." Single-line pills are now the same height as the badge
 # and share its top edge; a wrapped name grows downward from that edge rather
 # than shrinking the type.
-CARD_REF_WIDTH_PT = 341.0
+#
+# 2026-08-23: 341 -> 361. This constant is a MIRROR of the feed's `GUTTER`
+# (`apps/mobile/app/(tabs)/feed.tsx`) and it had gone stale: the comment's
+# `screenWidth - 52` was a gutter of 26, but the gutter had been 37 since
+# 2026-08-16, so the pill was being scaled for a 341pt card and drawn on a
+# 319pt one — it rendered ~6.5% SMALLER than the badge it is supposed to be
+# the twin of. The gutter is now 16, so the reference card is 393-32 = 361.
+#
+# A change to `GUTTER` therefore invalidates every rendered community tour's
+# baked-in place card. There is no render_key on this — the label is drawn into
+# the assembled film — so the tours must be re-rendered by hand after a gutter
+# change (scripts/admin/run-community-tour.ts).
+CARD_REF_WIDTH_PT = 361.0
 BADGE_TOP_PT = 12.0
 BADGE_PAD_V_PT = 7.0
 BADGE_FONT_PT = 9.5

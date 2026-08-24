@@ -16,6 +16,101 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 21:45 UTC — phase121: the feed card grows to the video's real ceiling
+
+**Objective**: owner relaying buyer feedback — "the ios cards are small, there
+are some spare room". Evaluate before changing anything: how big is the card,
+how big is the video, and how much bigger can the card get before it is
+upsampling its own source.
+
+**What the card actually was**: `(screenW - GUTTER*2)` x `(stage *
+CARD_FRAME_RATIO)` = 319 x 461pt on an iPhone 15 — **44% of the screen's
+area**, 54% of its height. The spare room was two constants: a 37pt gutter on
+each side and 0.73 of the stage, which left ~170pt of dead paper above and
+below the card.
+
+**What the video actually is** — verified against live HLS manifests, not just
+the constants:
+- Community tour: 1080x1576 (`scheduler.ts` CANVAS_W/H).
+- Home tour iOS: 1080x1576 (`listing-tour-steps/shared.ts` SURFACE_CANVAS.ios);
+  web cut 1920x1080. The old 1080x1080 SQUARE_EDGE path is dead code (phase 83)
+  and all 15 tours were re-rendered onto the new canvas on 2026-08-22.
+- Ladder on both: 1080x1576 / 720x1050 / 480x700 / 360x524 / 240x350. Top
+  rendition averages 2.66 Mbps (home) and 4.55 Mbps (community).
+- Library size today: 16 listing tours + 4 community tours with video.
+
+**The finding that shaped the fix**: the card plays `fit="cover"` and its
+aspect already matched the canvas (0.682-0.693 vs 0.685), so cropping was ~1%
+and quality was purely a sampling question: `cardW * scale` vs 1080px. On a 3x
+screen 1080px is **360pt** of card width. The card was at 0.89 of that on an
+iPhone 15 — but already at **1.02 on a 16 Pro Max**, i.e. the largest phones
+were ALREADY upsampling before this change. There is no uniform free headroom.
+
+**Decisions**: owner picked option B of three — gutter 37 -> 16, ratio 0.73 ->
+0.83, canvas untouched. Card is now 361 x 524pt on an iPhone 15: **56-59% of
+the screen's area, +28% vs before**. Sampling goes to 1.00 on the common
+phones and ~1.13 on the Max phones, which their top rendition absorbs.
+- Rejected A (cap card width at 360pt so nothing ever upsamples): it would
+  have left the Max phones unchanged or slightly smaller, which is not what the
+  feedback asked for.
+- Rejected C (bump the canvas to 1440x2101 and re-render): correct eventually,
+  but not worth a render round before anyone has seen B on a device. Costs $0
+  in API — `generate.ts:225`'s `paidAndAutomatic` never re-bills Seedance — so
+  it stays available as a follow-up if the Max phones look soft.
+- **The two constants had to move together.** Widening the gutter alone would
+  have pushed the aspect to ~0.79 and started eating the video's height, which
+  is the exact failure the 0.685 canvas exists to avoid. 0.83 was chosen to
+  hold the aspect: it lands 0.672-0.689 across the lineup (was 0.679-0.693).
+
+**Also fixed — a stale mirror nobody was watching**: `worker.py`'s
+`CARD_REF_WIDTH_PT` was 341.0, a value whose own comment described a gutter of
+26. The gutter had been 37 since 2026-08-16, so the community tour's baked-in
+place-name pill was being scaled for a 341pt card and drawn on a 319pt one —
+rendering ~6.5% smaller than the COMMUNITY badge it is supposed to be the twin
+of. That is the alignment the owner asked for by name on 2026-08-20 and it had
+been silently off since. Now 361.0, matching the new gutter.
+
+**Actions**:
+- `apps/mobile/app/(tabs)/feed.tsx` — `CARD_INSET.horizontal` and `GUTTER`
+  37 -> 16.
+- `apps/mobile/theme/card-frame.ts` — `CARD_FRAME_RATIO` 0.73 -> 0.83.
+- `scripts/render-worker/worker.py` — `CARD_REF_WIDTH_PT` 341.0 -> 361.0, with
+  a note that a gutter change invalidates every rendered community tour's
+  baked-in label (there is no render_key on it — the pill is drawn into the
+  assembled film).
+- `apps/web/lib/poi/tour-orchestrator/scheduler.ts` — the canvas header quoted
+  the old aspect range; corrected to 0.672-0.689 / SE 0.796.
+- **New**: `apps/mobile/theme/card-aspect.test.ts` (3 tests) — asserts the
+  card's aspect stays within `CardVideo`'s own 5% tolerance of the canvas on
+  six iPhones, records the SE's accepted ~14% crop, and caps how far the card
+  may outrun the 1080px source. Mutation-checked: setting GUTTER to 8 without
+  touching the ratio fails all three.
+
+**Issues**: the gutter's 2026-08-16 doc comment justified 37 as "the next
+card's edge peeks beside it". That has not been true since 2026-08-19 —
+`PEEK_PT` is 0 and the behind card rests at `STACK_RESTING` scale 0.94, i.e.
+SMALLER than the top card and fully hidden. Nothing peeks at any gutter width.
+The comment is kept for history with a correction under it; the real remaining
+job of the band is the swipeable read.
+
+**Resolution**: mobile 573 tests (49 files) pass, web 783 pass, render-worker
+133 pass; both typechecks clean; biome zero errors on the touched files (the 2
+pre-existing `useCallback` dep warnings in feed.tsx remain). Not yet seen on a
+device — the owner's Metro serves `~/Workspace/Percho`, so that needs a pull.
+
+**Learnings**: a constant that MIRRORS another repo's constant with no test
+between them will go stale and nothing will say so — `CARD_REF_WIDTH_PT` was
+wrong for a week across a change the owner had personally asked for. The new
+aspect test exists because the same shape of bug was one careless edit away on
+the layout side too. Also: when a question is "can we make X bigger without
+losing quality", measure the delivered stream, not the source constant — the
+HLS ladder is what the phone actually plays.
+
+**Next steps**: re-render the 4 community tours so their place-name pills pick
+up `CARD_REF_WIDTH_PT = 361` (free, `run-community-tour.ts`). Then owner looks
+at the feed on a device — if the Max phones read soft, option C (1440x2101
+canvas) is the follow-up.
+
 ## 2026-08-23 16:40 UTC — phase120: the deck now composes when the pool lands, not before
 
 **Objective**: owner, on device — "the card is not rendering in the feed page,

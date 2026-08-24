@@ -181,13 +181,15 @@ const SEEDANCE_BLOCKED_SUBJECTS: readonly DominantSubject[] = [
  * 1080x1576 (aspect 0.685), NOT 9:16. The tour's only playback surface is the
  * feed's community card, and that card is 0.685 on every iPhone from the 13
  * mini up — `(screenW - GUTTER*2) / (stage * CARD_FRAME_RATIO)`, which lands
- * between 0.679 and 0.693 across the lineup. `CommunityFace` plays it with
+ * between 0.672 and 0.689 across the lineup (2026-08-23: the card grew — gutter
+ * 37→16, ratio 0.73→0.83 — and the two moved TOGETHER precisely so this number
+ * would not; it was 0.679-0.693 before). `CommunityFace` plays it with
  * `fit="cover"` unconditionally, so any mismatch is cropped away, not
  * letterboxed: a 9:16 render lost 17% of its height on an iPhone 15 and 38% on
  * an SE, and the place label — drawn at 86% height — was cropped or buried
  * under the card's own name/chips/Explore chrome on every device.
  *
- * The SE alone stays off this number (0.794, because its short screen gives the
+ * The SE alone stays off this number (0.796, because its short screen gives the
  * fixed 128pt of chrome a much larger share); it crops 14% instead of ~1%,
  * which the title-safe label position below absorbs.
  *

@@ -8,6 +8,11 @@
 
 ## v1.3 — Opening a home now answers "does this fit me?"
 
+### 2026-08-23
+- Bigger cards in the feed. Homes and communities now fill noticeably more of the screen — about a third more card, with less empty space around the edges — so the video tours are easier to actually see. Video quality is unchanged.
+- The place name shown on community tour videos now matches the size of the labels on the card, instead of sitting slightly small.
+
+
 The home page has been rebuilt from the ground up. Instead of a list of MLS fields, opening a home now walks you through one question — whether this home fits the way you've been searching.
 
 - **One swipeable reel of everything.** The home's video tour plays first, then every photo, in one strip. Room chips (Kitchen · 7, Backyard · 2 …) show where you are and jump you straight to the room you care about. Tap any photo to see it full-screen and uncropped, or open the grid to see every photo grouped by room.
