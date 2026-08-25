@@ -90,6 +90,8 @@ function specsParts(bedBathSqft: string): string[] {
 interface ListingFaceProps {
 	card: ListingCardV3;
 	isTop: boolean;
+	/** The feed screen is not in front (see `CardVideoProps.suspended`). */
+	suspended?: boolean;
 	onExplore?: () => void;
 	/**
 	 * The stack's tap slots (see `lib/gesture/tap-slot.ts`). Interactive
@@ -104,6 +106,7 @@ interface ListingFaceProps {
 export function ListingFace({
 	card,
 	isTop,
+	suspended,
 	onExplore,
 	tapSlot,
 }: ListingFaceProps) {
@@ -137,6 +140,7 @@ export function ListingFace({
 					url={card.videoUrl}
 					poster={card.heroUrl}
 					isTop={isTop}
+					suspended={suspended}
 					fit="cover"
 				/>
 			) : (

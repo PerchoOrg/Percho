@@ -19,6 +19,8 @@ export const CITY_EXPLORE_TAP_TARGET = "city-explore";
 interface AreaFaceProps {
 	card: AreaCardV3;
 	isTop: boolean;
+	/** The feed screen is not in front (see `CardVideoProps.suspended`). */
+	suspended?: boolean;
 	tapSlot?: SharedValue<TapSlot>;
 	onExplore?: () => void;
 }
@@ -37,7 +39,13 @@ function communityLine(card: AreaCardV3): string | undefined {
 	return communityCount === 1 ? "1 community" : `${communityCount} communities`;
 }
 
-export function AreaFace({ card, isTop, tapSlot, onExplore }: AreaFaceProps) {
+export function AreaFace({
+	card,
+	isTop,
+	suspended,
+	tapSlot,
+	onExplore,
+}: AreaFaceProps) {
 	const { unit } = card;
 	const saved = useSavedStore((s) => s.isSaved(card.id));
 	const toggleSaved = useSavedStore((s) => s.toggle);
@@ -54,6 +62,7 @@ export function AreaFace({ card, isTop, tapSlot, onExplore }: AreaFaceProps) {
 					url={unit.videoUrl}
 					poster={unit.heroUrl}
 					isTop={isTop}
+					suspended={suspended}
 					fit="cover"
 				/>
 			) : unit.heroUrl ? (
