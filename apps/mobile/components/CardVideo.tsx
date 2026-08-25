@@ -4,6 +4,8 @@
  *   - mounts muted + looped with a poster behind it,
  *   - only the top card plays; on becoming top it resets to currentTime=0 then
  *     plays, everything else pauses + mutes,
+ *   - `suspended` (the feed screen lost focus) pauses + mutes the top card
+ *     WITHOUT rewinding, and resumes it when the screen comes back,
  *   - audio follows the global soundOn store,
  *   - playback error → mute-and-retry once (§0.7's "play() reject" rule; on
  *     native, `play()` returns void and failures surface via `statusChange`),
@@ -67,6 +69,18 @@ interface CardVideoProps {
 	url: string;
 	poster?: string;
 	isTop: boolean;
+	/**
+	 * The screen this card sits on is not the one the buyer is looking at —
+	 * the feed pushed an explore page (or another tab took over). Pauses and
+	 * mutes WITHOUT rewinding, and resumes where it left off when cleared.
+	 *
+	 * A separate flag from `isTop` on purpose: `isTop` going false-then-true
+	 * is a card swap and restarts the film from 0, which is wrong for a buyer
+	 * coming back from Explore to the card they were watching. Owner,
+	 * 2026-08-25: "the card music does not stop and overlaps with the explore
+	 * page one".
+	 */
+	suspended?: boolean;
 	onNearEnd?: () => void;
 	/**
 	 * 2026-07-28 card redesign: the video lives in a 1:1 inline block and the
@@ -144,6 +158,7 @@ export function CardVideo({
 	url,
 	poster,
 	isTop,
+	suspended = false,
 	onNearEnd,
 	fit = "contain",
 	frameAspect,
@@ -248,10 +263,25 @@ export function CardVideo({
 		}
 	}, [isTop, player]);
 
+	// Screen-focus gate. Declared AFTER the play-gate so that on a top-change
+	// while suspended (deck recomposed under an explore page) the pause here
+	// is the last word. No rewind: the film resumes where the buyer left it.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: soundOn read once here on purpose — the effect below tracks it without restarting playback
+	useEffect(() => {
+		if (!isTop) return;
+		if (suspended) {
+			player.pause();
+			player.muted = true;
+		} else {
+			player.muted = !soundOn;
+			player.play();
+		}
+	}, [suspended, isTop, player]);
+
 	// Live audio follow without disturbing playback position.
 	useEffect(() => {
-		if (isTop) player.muted = !soundOn;
-	}, [soundOn, isTop, player]);
+		if (isTop && !suspended) player.muted = !soundOn;
+	}, [soundOn, isTop, suspended, player]);
 
 	// §0.7 mute-and-retry: an unmuted play can be refused (audio session, silent
 	// switch). Fall back to muted once, then give up so we don't spin.

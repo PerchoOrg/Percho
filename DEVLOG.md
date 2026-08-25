@@ -16,6 +16,40 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-25 07:47 UTC — phase122: the feed card goes quiet when an explore page covers it
+
+**Objective**: owner — "going to the explore page, the card music does not
+stop and overlaps with the explore page one - this issue is same for home
+cards - fix this, push to main for test".
+
+**Cause**: explore pages are PUSHED over the feed tab, so the deck stays
+mounted underneath with its top card still `isTop` — and `CardVideo`'s only
+play gate was `isTop`. Nothing in the app listened for screen focus. The
+community explore hero (since phase117) and the listing `MediaCarousel` each
+start their own film, so two audio tracks played at once.
+
+**Actions** (mobile only):
+- `CardVideo` gains `suspended?: boolean`: pause + mute WITHOUT rewinding,
+  resume on clear. Its effect is declared after the play-gate so on a
+  top-change while covered the pause is the last word; the live audio-follow
+  effect also respects it.
+- `ListingFace` / `CommunityFace` / `AreaFace` thread the prop through.
+- `feed.tsx` tracks focus with expo-router's `useFocusEffect` into a
+  `focused` state and passes `suspended={!focused}` to every face.
+
+**Decisions**: a separate flag rather than `isTop && focused`. `isTop` going
+false-then-true is a card swap and restarts the film from 0; a buyer coming
+back from Explore should land on the card where they left it. Also gates tab
+switches for free, which was the same leak.
+
+**Verification**: mobile typecheck clean, 573 tests pass, real biome: no
+errors (2 warnings, both the pre-existing feed.tsx dep list). NOT verified on
+device — no simulator here; owner asked for push-to-main to test.
+
+**Next steps**: owner device check — open Explore from a playing community
+card and from a home card: only the page's own film should sound; back to the
+feed should resume the card where it was, not from 0.
+
 ## 2026-08-23 21:45 UTC — phase121: the feed card grows to the video's real ceiling
 
 **Objective**: owner relaying buyer feedback — "the ios cards are small, there

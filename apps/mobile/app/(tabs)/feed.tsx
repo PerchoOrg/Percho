@@ -24,7 +24,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
 	type CardRenderArgs,
@@ -148,6 +148,22 @@ export default function FeedScreen() {
 
 	const [activeIndex, setActiveIndex] = useState(0);
 	const [deck, setDeck] = useState<readonly FeedCardV3[]>([]);
+
+	/**
+	 * Whether this screen is the one in front. Explore pages are PUSHED over
+	 * the feed, so the deck stays mounted underneath — and its top card kept
+	 * playing audio under the explore page's own film (owner, 2026-08-25: "the
+	 * card music does not stop and overlaps with the explore page one"). The
+	 * faces get `suspended` while something covers us; that pauses without
+	 * rewinding, so coming back resumes the card where it was.
+	 */
+	const [focused, setFocused] = useState(true);
+	useFocusEffect(
+		useCallback(() => {
+			setFocused(true);
+			return () => setFocused(false);
+		}, []),
+	);
 
 	const [engineExhausted, setEngineExhausted] = useState(false);
 	const rotate = useRef(0);
@@ -386,12 +402,20 @@ export default function FeedScreen() {
 			const isTop = args.role === "top";
 			switch (card.kind) {
 				case "area":
-					return <AreaFace card={card} isTop={isTop} tapSlot={args.tapSlot} />;
+					return (
+						<AreaFace
+							card={card}
+							isTop={isTop}
+							suspended={!focused}
+							tapSlot={args.tapSlot}
+						/>
+					);
 				case "listing":
 					return (
 						<ListingFace
 							card={card}
 							isTop={isTop}
+							suspended={!focused}
 							tapSlot={args.tapSlot}
 							/*
 							 * The owner's 2026-08-13 revision dropped the giant green
@@ -411,6 +435,7 @@ export default function FeedScreen() {
 						<CommunityFace
 							card={card}
 							isTop={isTop}
+							suspended={!focused}
 							tapSlot={args.tapSlot}
 							/* Lets the progress bar's drag block the deck's swipe —
 							   without it the two race for the same gesture. */
@@ -444,7 +469,15 @@ export default function FeedScreen() {
 					);
 			}
 		},
-		[stage, sessionN, signals.swipesInStage, emitGesture, enqueue, takeSeq],
+		[
+			stage,
+			sessionN,
+			signals.swipesInStage,
+			emitGesture,
+			enqueue,
+			takeSeq,
+			focused,
+		],
 	);
 
 	/**

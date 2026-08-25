@@ -8,6 +8,9 @@
 
 ## v1.3 — Opening a home now answers "does this fit me?"
 
+### 2026-08-25
+- **Opening a home or community page no longer plays two soundtracks at once.** The card you tapped kept playing underneath the page, so its music overlapped with the page's own tour. The card now goes quiet the moment a page covers it, and picks up where it left off when you come back
+
 ### 2026-08-23
 - Bigger cards in the feed. Homes and communities now fill noticeably more of the screen — about a third more card, with less empty space around the edges — so the video tours are easier to actually see. Video quality is unchanged.
 - The place name shown on community tour videos now matches the size of the labels on the card, instead of sitting slightly small.

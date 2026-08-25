@@ -207,6 +207,8 @@ function signalIcons(card: CommunityCardV3): CardIconName[] {
 interface CommunityFaceProps {
 	card: CommunityCardV3;
 	isTop: boolean;
+	/** The feed screen is not in front (see `CardVideoProps.suspended`). */
+	suspended?: boolean;
 	onExplore?: () => void;
 	/**
 	 * The stack's tap slots (see `lib/gesture/tap-slot.ts`), same contract as
@@ -229,6 +231,7 @@ interface CommunityFaceProps {
 export function CommunityFace({
 	card,
 	isTop,
+	suspended,
 	onExplore,
 	tapSlot,
 	deckGesture,
@@ -471,6 +474,7 @@ export function CommunityFace({
 					url={card.videoUrl}
 					poster={card.heroUrl}
 					isTop={isTop}
+					suspended={suspended}
 					progress={progress}
 					scrubbing={scrubbing}
 					seekTo={seekTo}
