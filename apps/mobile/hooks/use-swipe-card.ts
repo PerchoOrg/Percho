@@ -44,6 +44,7 @@ import {
 } from "../lib/gesture/decide-swipe";
 import { advanceFromDrag } from "../lib/gesture/stack-layer";
 import {
+	CARD_TAP_TARGET,
 	TAP_MAX_DX,
 	type TapSlot,
 	type TapStatus,
@@ -414,11 +415,17 @@ export function useSwipeCard({
 					// this guard, a swipe that started on the heart would
 					// dispatch the stale armed target and fire the save/explore
 					// action on a card the user was swiping away.
+					// Cleared on EVERY release, successful or not: a face arms the
+					// slot on touch start and nothing else clears it, so a swipe that
+					// began on the heart used to leave "save" armed for the next bare
+					// tap anywhere on the card. (When the pan wins, its own `onEnd`
+					// is a swipe by construction — `isTapEnd` needs ≤6pt and the pan
+					// needs ≥10pt to activate — so it never wanted the slot.)
+					const target = tapSlot.value.target;
+					tapSlot.value = { target: null };
 					if (!success) return;
-					if (tapSlot.value.target) {
-						runOnJS(dispatchTapTarget)(tapSlot.value.target);
-						tapSlot.value = { target: null };
-					}
+					// A bare tap on the face is a tap on the CARD.
+					runOnJS(dispatchTapTarget)(target ?? CARD_TAP_TARGET);
 				})
 		);
 	}, [pannable, tapStatus, tapSlot]);

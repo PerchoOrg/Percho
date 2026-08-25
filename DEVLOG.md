@@ -16,6 +16,51 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-25 07:54 UTC — phase123: a bare tap on the card pauses and resumes its film
+
+**Objective**: owner, straight after phase122 — "also when tapping on the
+card, we should pause and resume".
+
+**How a tap reaches the feed**: the deck's `Gesture.Exclusive(pan, tap)` tap
+only ever dispatched when a face had armed `tapSlot` on touch start (the
+heart, the explore link). A bare tap on the face activated the tap gesture
+and then dispatched nothing — the 08-14 note "tap is no-op on every card
+type" was literal.
+
+**Actions** (mobile only):
+- `lib/gesture/tap-slot.ts` — `CARD_TAP_TARGET`: the target the tap gesture
+  substitutes for an EMPTY slot at a successful release.
+- `hooks/use-swipe-card.ts` — the tap's `onEnd` dispatches `target ??
+  CARD_TAP_TARGET`. It also now clears the slot on EVERY release, not only
+  after a dispatch: a face arms the slot on touch start and nothing else
+  cleared it, so a swipe that began on the heart left "save" armed for the
+  next bare tap anywhere. Safe because when the pan wins, its own `onEnd` is a
+  swipe by construction (`isTapEnd` wants ≤6pt, the pan activates at ≥10pt).
+- `feed.tsx` — `paused` state; `CARD_TAP_TARGET` toggles it, only when the top
+  card has a film (a photo card must not grow a play glyph). Reset by an
+  effect on `activeIndex` — not in the swipe handler, because the deck also
+  recomposes the cursor to 0 on its own and that must not inherit a pause.
+  Faces get `suspended={!focused || paused}`, reusing phase122's no-rewind
+  pause. A 64pt glass disc with a border-drawn triangle sits over the deck
+  while paused (the icon font has no `play`); `pointerEvents="none"` so the
+  next tap reaches the deck. Drawn in the feed, not the faces, so the
+  explore-page suspension never flashes it during the pop-back animation.
+- `CommunityFace.tsx` — the progress bar's pan arms `SCRUB_TAP_TARGET` on
+  `onBegin`. The bar only blocks the deck's PAN; the deck's TAP runs alongside
+  it, so a still tap on the bar would have seeked AND paused. The feed handles
+  no "scrub" target, so the dispatch is a no-op.
+
+**Verification**: mobile typecheck clean, 573 tests pass, real biome clean
+after an import-sort autofix (warnings are the pre-existing feed.tsx dep
+lists plus one deliberate `biome-ignore` on the reset effect). NOT verified
+on device — the tap-vs-scrub interplay in particular is a gesture relation
+nothing in the repo can exercise.
+
+**Next steps**: owner device check — tap the card: film pauses with a play
+glyph, tap again resumes where it stopped; swipe to the next card: it plays;
+tap the community progress bar: it seeks and does NOT pause; a swipe that
+starts on the heart, then a bare tap: pause, not save.
+
 ## 2026-08-25 07:47 UTC — phase122: the feed card goes quiet when an explore page covers it
 
 **Objective**: owner — "going to the explore page, the card music does not

@@ -50,6 +50,15 @@ export const TAP_MAX_DX = 6;
  */
 export const TAP_MAX_VX = 200;
 
+/**
+ * The target the tap gesture dispatches when the touch began on NO
+ * interactive target — a bare tap on the card face. The feed toggles the top
+ * card's playback on it (owner, 2026-08-25: "when tapping on the card, we
+ * should pause and resume"). Never written into `tapSlot` by anyone; the tap
+ * gesture substitutes it for an empty slot at release.
+ */
+export const CARD_TAP_TARGET = "card";
+
 /** The exclusive-tap gesture's slot; never read by the card faces. */
 export interface TapSlot {
 	/** Latest tap-target id, or `null` when the last release was not a tap. */

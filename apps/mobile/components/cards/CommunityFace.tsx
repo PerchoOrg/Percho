@@ -204,6 +204,12 @@ function signalIcons(card: CommunityCardV3): CardIconName[] {
 	return out;
 }
 
+/**
+ * Armed into `tapSlot` by a touch on the progress bar. Handled by nobody: it
+ * exists so the deck's tap gesture does not read a bar tap as a bare card tap.
+ */
+const SCRUB_TAP_TARGET = "scrub";
+
 interface CommunityFaceProps {
 	card: CommunityCardV3;
 	isTop: boolean;
@@ -394,6 +400,11 @@ export function CommunityFace({
 			// touch-down rather than waiting for movement.
 			.minDistance(0)
 			.onBegin((e) => {
+				// The deck's tap gesture runs alongside this pan (only the deck's
+				// PAN is blocked below), so a still tap on the bar would also
+				// dispatch as a bare card tap and pause the film it just sought.
+				// Arm a target the feed does not handle.
+				if (tapSlot) tapSlot.value = { target: SCRUB_TAP_TARGET };
 				scrubbing.value = true;
 				track(e.x);
 				// Seek from touch-DOWN, not only from the release. This is the one
@@ -419,6 +430,7 @@ export function CommunityFace({
 		isTop,
 		card.videoUrl,
 		deckGesture,
+		tapSlot,
 		barWidth,
 		progress,
 		scrubbing,
