@@ -50,6 +50,7 @@ import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
 import { generateFeed } from "../../lib/feed/generate-feed";
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
+import { CARD_TAP_TARGET } from "../../lib/gesture/tap-slot";
 import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
@@ -164,6 +165,20 @@ export default function FeedScreen() {
 			return () => setFocused(false);
 		}, []),
 	);
+
+	/**
+	 * The buyer paused the top card with a bare tap (owner, 2026-08-25: "when
+	 * tapping on the card, we should pause and resume"). Belongs to one
+	 * viewing: the next card always starts playing, so it resets with the
+	 * cursor rather than in the swipe handler — the deck also recomposes
+	 * `activeIndex` to 0 on its own (§ the 2026-08-23 entry), and that must
+	 * not inherit a pause either.
+	 */
+	const [paused, setPaused] = useState(false);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: activeIndex is the trigger, not a read
+	useEffect(() => {
+		setPaused(false);
+	}, [activeIndex]);
 
 	const [engineExhausted, setEngineExhausted] = useState(false);
 	const rotate = useRef(0);
@@ -406,7 +421,7 @@ export default function FeedScreen() {
 						<AreaFace
 							card={card}
 							isTop={isTop}
-							suspended={!focused}
+							suspended={!focused || paused}
 							tapSlot={args.tapSlot}
 						/>
 					);
@@ -415,7 +430,7 @@ export default function FeedScreen() {
 						<ListingFace
 							card={card}
 							isTop={isTop}
-							suspended={!focused}
+							suspended={!focused || paused}
 							tapSlot={args.tapSlot}
 							/*
 							 * The owner's 2026-08-13 revision dropped the giant green
@@ -435,7 +450,7 @@ export default function FeedScreen() {
 						<CommunityFace
 							card={card}
 							isTop={isTop}
-							suspended={!focused}
+							suspended={!focused || paused}
 							tapSlot={args.tapSlot}
 							/* Lets the progress bar's drag block the deck's swipe —
 							   without it the two race for the same gesture. */
@@ -477,6 +492,7 @@ export default function FeedScreen() {
 			enqueue,
 			takeSeq,
 			focused,
+			paused,
 		],
 	);
 
@@ -527,6 +543,19 @@ export default function FeedScreen() {
 
 	const onTapTarget = useCallback(
 		(target: string) => {
+			if (target === CARD_TAP_TARGET) {
+				const top = deckRef.current[activeIndex];
+				// Only a card with a film has anything to pause; a photo card
+				// showing a play glyph would promise a video it does not have.
+				const hasVideo =
+					top?.kind === "area"
+						? !!top.unit.videoUrl
+						: top?.kind === "listing" || top?.kind === "community"
+							? !!top.videoUrl
+							: false;
+				if (hasVideo) setPaused((p) => !p);
+				return;
+			}
 			if (target === SAVE_TAP_TARGET) {
 				const top = deckRef.current[activeIndex];
 				// Listing and area faces both draw the bookmark disc. The area
@@ -606,6 +635,20 @@ export default function FeedScreen() {
 						capability={capability}
 					/>
 				)}
+				{/*
+				 * Paused glyph, centred on the card. Drawn here rather than in the
+				 * faces: `suspended` also covers "an explore page is over us",
+				 * where nobody can see the card, and a glyph that appears for the
+				 * pop-back animation's duration would flash. Only a TAP pause
+				 * shows it. `pointerEvents="none"` so the next tap reaches the deck.
+				 */}
+				{paused && (
+					<View style={styles.pausedWrap} pointerEvents="none">
+						<View style={styles.pausedDisc}>
+							<View style={styles.pausedTriangle} />
+						</View>
+					</View>
+				)}
 			</View>
 		</SafeAreaView>
 	);
@@ -631,6 +674,31 @@ const styles = StyleSheet.create({
 	 * the real card would (flex:1 within the padded container).
 	 */
 	cardContainer: { flex: 1, alignSelf: "stretch" },
+	pausedWrap: {
+		...StyleSheet.absoluteFillObject,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	pausedDisc: {
+		width: 64,
+		height: 64,
+		borderRadius: 32,
+		backgroundColor: colors.glass,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	/** A play triangle from borders — the icon font has no `play` glyph. */
+	pausedTriangle: {
+		width: 0,
+		height: 0,
+		marginLeft: 5,
+		borderTopWidth: 12,
+		borderBottomWidth: 12,
+		borderLeftWidth: 20,
+		borderTopColor: "transparent",
+		borderBottomColor: "transparent",
+		borderLeftColor: colors.ink,
+	},
 	/**
 	 * Status-bar row — the "Percho" wordmark, centred, nothing in either corner
 	 * (owner 2026-08-14). 44pt tall so the row reads as chrome rather than as a

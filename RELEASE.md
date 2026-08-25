@@ -9,6 +9,7 @@
 ## v1.3 — Opening a home now answers "does this fit me?"
 
 ### 2026-08-25
+- **Tap a card to pause its tour; tap again to resume.** A play mark appears while it's paused, and it picks up exactly where you stopped. Swiping on to the next card always starts that one playing. Tapping the community tour's progress bar still just jumps the film — it doesn't pause
 - **Opening a home or community page no longer plays two soundtracks at once.** The card you tapped kept playing underneath the page, so its music overlapped with the page's own tour. The card now goes quiet the moment a page covers it, and picks up where it left off when you come back
 
 ### 2026-08-23
