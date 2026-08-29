@@ -16,6 +16,30 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 14:00 UTC — phase134.6: demo fixes (headline overlap, flash before a transition, sound under a card) and a sharper questionnaire
+
+**Objective**: owner review of the zh/en cuts — 「audio has some overlap, and
+what matters to you more has overlap with below pictures, before section 3
+transition card there is a flash for a tradeoff card」; and on the
+questionnaire — the area-criteria question lacked the builder categories
+(parks, recreation, healthcare, shopping, entertainment), and 「签 offer 那天，
+你有多有把握」 was ambiguous (the area? the price? winning the offer?).
+
+**Actions — video**: the trade-off headline is one line (23pt, no wrap) and the
+plates start at 124pt, so it no longer sits on the top photo. A transition
+card that follows a swipe now fades in DURING the fly-out and the next card's
+film starts only after the card is gone — no revealed frame, no sound under a
+card. The film under the 06 card stays paused. Both cuts re-recorded (100 s);
+`public/research/percho-demo-{zh,en}-720p.mp4` replaced.
+
+**Actions — questionnaire**: Q9 lists the pipeline's 15 intent buckets
+(`apps/web/lib/poi/types.ts` INTENT_BUCKETS) in buyer language plus the
+non-POI criteria, pick up to five and circle one. Q12's confidence is three
+1–5 scales — the area, the price, the deal — because each points at a
+different product. Q13/Q14 blind-spot lists gain parks, healthcare, shopping.
+The hosted copy is now built from the artifact source by a script
+(`~/Desktop/Percho-demo/build_public.py`) so the two cannot drift by hand.
+
 ## 2026-08-29 12:15 UTC — phase134.5: the demo video in Chinese and English, with the tour audio on
 
 **Objective**: owner — 「make two versions, chinese and english, with audio on
