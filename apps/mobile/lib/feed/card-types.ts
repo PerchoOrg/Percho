@@ -151,6 +151,18 @@ export interface ListingCardV3 {
 	 * cannot be computed from a formatted string without re-parsing it.
 	 */
 	price?: number;
+	/**
+	 * The three structured axes the v2 trade-off bank measures against
+	 * (`SideMatch`). Sent alongside the formatted `bedBathSqft` because a
+	 * predicate cannot re-parse a display string, and because the same numbers
+	 * decide the card's homes-count and median.
+	 *
+	 * Every one is optional: a listing with no `sqft` simply falls on neither
+	 * side of a size question rather than defaulting onto one.
+	 */
+	yearBuilt?: number;
+	sqft?: number;
+	beds?: number;
 	dims?: readonly DimKey[];
 	/**
 	 * Photo count for the redline's "⊕ N Photos" hero pill. Server sends it only
@@ -242,15 +254,73 @@ export interface DoorPhoto {
 	caption?: string;
 }
 
-export interface TradeoffSideV3 {
-	label: string;
-	dim: DimKey;
+/**
+ * Which of the eight themes a question belongs to. Used for pacing — the deck
+ * opens with the themes a photograph can settle and saves money and timing for
+ * a buyer who has already answered a couple.
+ */
+export type TradeoffTheme =
+	| "era"
+	| "layout"
+	| "spare-room"
+	| "land"
+	| "location"
+	| "money"
+	| "daily"
+	| "timing";
+
+/**
+ * How to test one pool listing against one side of a question.
+ *
+ * Declared only where the pool can actually decide it today (owner 2026-08-29:
+ * 「if data is ready then use them, if not, just the questions themselves are
+ * fine」). A side with no `match` still asks its question — it simply shows no
+ * count and no median, and its door stays unlit unless a `dim` lights it.
+ *
+ * Deliberately DATA, not a closure: `content.ts` has to stay a plain table that
+ * can be read, diffed and eventually served from the database, and closures
+ * would also break the engine's purity guarantee.
+ */
+export type SideMatch =
+	| { field: "yearBuilt"; op: "gte" | "lte"; value: number }
+	| { field: "beds"; op: "gte" | "lte"; value: number }
+	| {
+			field: "sqft" | "price" | "sqftPerBed";
+			op: "aboveMedian" | "belowMedian";
+	  };
+
+/** One photograph on a trade-off door. */
+export interface DoorPhoto {
+	url: string;
 	/**
-	 * Icon override. `dim` usually picks the glyph, but two real trade-offs
-	 * would collide without it: "Shorter commute" and "Walkable shops" both
-	 * carry `dim: "walkable"` — one should draw a car, the other footprints.
+	 * The vision tagger's factual sentence for THIS frame — "Modern kitchen with
+	 * white cabinetry, stainless appliances, and center island".
+	 *
+	 * Rendered only when the door shows exactly ONE photo. With three on screen
+	 * a single sentence reads as describing all of them, which it does not: it
+	 * is trustworthy precisely because it describes one frame.
 	 */
+	caption?: string;
+}
+
+export interface TradeoffSideV3 {
+	/** What the door says. 2-4 words — it is a headline, not a sentence. */
+	label: string;
+	/** One quiet line under it. Always present: an unlit door needs it. */
+	support: string;
+	/** The glyph for an unlit door. */
 	icon?: CardIconName;
+	/**
+	 * The preference dimension this side boosts on a vote, and the key its
+	 * photographs are looked up under. Optional since the v2 bank: most of the
+	 * 32 questions are about a MEASURABLE property of the house, not one of the
+	 * eleven lifestyle dims, and forcing a dim onto them would record a
+	 * preference the buyer never expressed.
+	 */
+	dim?: DimKey;
+	/** How to test a pool listing against this side. Absent = no data yet. */
+	match?: SideMatch;
+
 	/**
 	 * What this door shows: up to three DETAIL photos, never a listing hero
 	 * (owner, 2026-08-29 — a front-elevation shot cannot say "move-in ready").
@@ -258,15 +328,13 @@ export interface TradeoffSideV3 {
 	 * Three, and from three different homes, because one photograph makes the
 	 * door a claim about that kitchen — its cabinets, its light, its staging —
 	 * while three make it a claim about KITCHENS, which is what a dimension is.
-	 * 「so the tradeoff is high confidence, not based on one specific style」.
 	 *
-	 * Resolved by `lightSide` in `generate-feed.ts`: the server's per-dimension
-	 * room photos first, then a single community hero for the dims that describe
-	 * a PLACE rather than a house. Empty when neither exists, and the door
-	 * renders its unlit field rather than an unrelated picture.
+	 * Resolved by `lightSide` in `generate-feed.ts`. Empty when neither a dim
+	 * photo set nor a community hero exists, and the door renders its unlit
+	 * field rather than an unrelated picture.
 	 */
 	photos?: readonly DoorPhoto[];
-	/** How many homes in the loaded pool claim this dimension. */
+	/** How many homes in the loaded pool fall on this side. */
 	homes?: number;
 	/** Their median price, pre-formatted ("$342,000"). Absent under 3 homes. */
 	medianLabel?: string;
@@ -275,9 +343,22 @@ export interface TradeoffSideV3 {
 export interface TradeoffCardV3 {
 	kind: "tradeoff";
 	id: string;
+	theme: TradeoffTheme;
+	/**
+	 * What the axis is, for the one-question-per-axis rule. Two questions that
+	 * share an axis are never both asked in a session — a buyer who has said
+	 * "another bedroom" learns nothing new from "room to spread out", and being
+	 * asked twice about the same thing reads as an interrogation.
+	 */
+	axis: string;
+	/**
+	 * The card's headline, per question. Replaces the single fixed "What matters
+	 * more to you?" the card carried while there were seven questions: with 32,
+	 * a generic prompt wastes the one line the buyer definitely reads.
+	 */
+	prompt: string;
 	left: TradeoffSideV3;
 	right: TradeoffSideV3;
-	scope: "life" | "property";
 }
 
 export type FeedCardV3 =

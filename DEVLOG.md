@@ -16,6 +16,77 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 11:20 UTC — phase131: the v2 trade-off bank — 32 questions, six rules
+
+**Objective**: owner — 「forget about these questions, lets redesign … some
+questions here do not make any sense, for example, i would like both bigger
+yard and shorter commute, why not? but some questions like new vs old, or quiet
+vs neighbor make more sense」, then 「lets implement all these tradeoff cards, if
+data is ready then use them, if not, just the questions themselves are fine」.
+Bank designed at `claude.ai/code/artifact/978f311c-6828-4e77-8d69-6b1805126192`.
+
+**The critique was right, and measurable.** A question only elicits a
+preference when the buyer CANNOT want both — otherwise the swipe is arbitrary
+and the signal is noise. Computing co-occurrence across all 11 dims on the live
+pool convicted the old bank, including the question this log had twice called
+its best: `space` / `move_in` ("Room to grow / Move-in ready") share **39%** of
+their homes; `move_in` / `outdoors` share **73%**. The 0% pairs were sample-size
+artifacts, not exclusivity — `walkable` has four homes in the entire pool.
+
+**Actions**:
+- `lib/feed/content.ts` — rewritten. 32 questions across eight themes (era,
+  layout, spare-room, land, location, money, daily, timing), each passing six
+  stated rules. The old seven are gone.
+- `card-types.ts` — `TradeoffCardV3` gains `theme`, `axis` and its own `prompt`;
+  `scope` is deleted. `TradeoffSideV3` gains a required `support` line, an
+  optional `icon`, an optional `SideMatch`, and `dim` becomes OPTIONAL.
+- `generate-feed.ts` — `SideMatch` evaluation (`matchesSide`, `poolMedians`),
+  `statsForSide` counting from the matcher first and the dim second, `axesAsked`
+  for the one-question-per-axis rule, and `grounding` so the deck leads with the
+  questions its data can actually answer.
+- `signals.ts` — a vote with no `dim` is COUNTED but bumps nothing.
+- Server: `year_built` threaded through `browse-cards`; `yearBuilt` / `sqft` /
+  `beds` added to the pool DTO so the predicates have numbers to read.
+- `TradeoffFace.tsx` — renders `card.prompt` and `side.support`; the `SUPPORT`
+  and `DIM_ICON` tables are gone.
+
+**Decisions**:
+- *`dim` is optional now.* Most of the 32 questions are about a measurable
+  property of the house — "One level / Two stories" has no lifestyle dim, and
+  inventing one would record a preference the buyer never expressed.
+- *A question is asked once, and one per axis.* A buyer who answered "another
+  bedroom / bigger rooms" learns nothing from "room to spread out"; being asked
+  twice about one axis reads as an interrogation.
+- *Rule 6 — about the house, not the people.* There is no "top-rated schools vs
+  more house", though it is one of the strongest real conflicts: school quality
+  is a close proxy for race in the US and ranking a feed on it carries real
+  fair-housing steering risk. The legitimate substitutes are a buyer-initiated
+  search, or a commute question ("walk to school / drive").
+
+**Issues**: two paths treated the bank as an inexhaustible supply of filler.
+`loopedFallback` offered trade-offs among its recycling candidates, and
+`findAlt` substituted one whenever a listing slot could not fill. Harmless with
+seven questions; with 32 a 120-card session came back with **forty** trade-offs
+and stopped recycling houses at all.
+
+**Resolution**: a trade-off now fills its OWN slot and no other — removed from
+both paths, and `loopedTradeoff` deleted. Measured after: 13 per 120 cards,
+exactly the table's one-in-nine, with listings back to 63. Mobile 587 tests
+(+11), web 808, both typecheck and biome clean.
+
+**Learnings**: a content table's SIZE is a load-bearing property of the engine
+around it. Every fallback that could reach for `TRADEOFFS` was written when the
+table held seven rows and quietly assumed scarcity; multiplying the table by
+4.5 turned each of them into a firehose. Worth checking the same question for
+any other static table the engine can fall back on.
+
+**Next steps**: 15 questions unlock the day `lot_size` / `stories` / `hoa` /
+`basement` / `garage` / `days_on_market` land from MLS — no code change here,
+they simply gain a `match`. Six more want photo tags, six want place data. The
+answer-with-no-echo problem is now the biggest gap: 32 questions ask a lot of a
+buyer who is shown nothing in return.
+
+
 ## 2026-08-29 10:20 UTC — phase129: the placeholder place stats come off the community page and the city card
 
 **Objective**: owner decision, during the customer-study demo review (2026-08-29):

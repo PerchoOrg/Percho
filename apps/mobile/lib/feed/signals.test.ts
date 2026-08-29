@@ -62,10 +62,16 @@ const community: CommunityCardV3 = {
 
 const tradeoff: TradeoffCardV3 = {
 	kind: "tradeoff",
+	theme: "layout",
+	axis: "test",
+	prompt: "Which one?",
 	id: "to-yard-vs-commute",
-	left: { label: "Bigger yard", dim: "outdoors" },
-	right: { label: "Shorter commute", dim: "walkable" },
-	scope: "life",
+	left: { label: "Bigger yard", support: "Bigger yard", dim: "outdoors" },
+	right: {
+		label: "Shorter commute",
+		support: "Shorter commute",
+		dim: "walkable",
+	},
 };
 
 describe("applySwipe — area is a soft signal, never a filter (§1.7)", () => {

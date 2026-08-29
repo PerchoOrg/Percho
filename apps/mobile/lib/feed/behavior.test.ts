@@ -48,9 +48,11 @@ function cardOfKind(kind: CardKindV3): FeedCardV3 {
 			return {
 				kind: "tradeoff",
 				id: "t-1",
-				left: { label: "L", dim: "outdoors" },
-				right: { label: "R", dim: "walkable" },
-				scope: "life",
+				theme: "layout",
+				axis: "test",
+				prompt: "Which one?",
+				left: { label: "L", support: "L", dim: "outdoors" },
+				right: { label: "R", support: "R", dim: "walkable" },
 			};
 	}
 }

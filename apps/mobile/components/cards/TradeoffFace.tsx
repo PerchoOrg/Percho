@@ -101,7 +101,6 @@
  * left), written on the UI thread by Reanimated — the split opening is the
  * whole point of the design, and a `scaleX` would distort the photographs.
  */
-import type { DimKey } from "@percho/shared/types";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image, StyleSheet, Text, View, type ViewStyle } from "react-native";
 import Animated, {
@@ -141,36 +140,16 @@ const OR_NODE = 32;
 /** Past this share of the threshold the choice is committed enough to confirm. */
 const CONFIRM_AT = 0.45;
 
-const DIM_ICON: Partial<Record<DimKey, RedlineIconName>> = {
-	outdoors: "yard",
-	space: "expand",
-	trails: "path",
-	walkable: "walk",
-	schools: "school",
-	family: "family",
-	move_in: "check",
-	quiet: "moon",
-	hip: "shop",
-	nightlife: "cup",
-	entertaining: "cup",
-};
-
-const SUPPORT: Record<DimKey, string> = {
-	outdoors: "More room outside",
-	walkable: "Less time driving",
-	schools: "Better for families",
-	quiet: "Peace and quiet",
-	hip: "A neighborhood scene",
-	entertaining: "Great for hosting",
-	trails: "Nature on your doorstep",
-	nightlife: "Walk to dinner",
-	family: "Made for family life",
-	move_in: "Nothing to fix",
-	space: "Room to grow",
-};
-
+/**
+ * The glyph an unlit door wears.
+ *
+ * The v2 bank (2026-08-29) names its own icon per side, because most of its 32
+ * questions are not about one of the eleven lifestyle dims — "One level / Two
+ * stories" has no dim to derive a glyph from. `walk` is the last resort for a
+ * side that names neither.
+ */
 function glyphFor(side: TradeoffSideV3): RedlineIconName {
-	return side.icon ?? DIM_ICON[side.dim] ?? "walk";
+	return (side.icon as RedlineIconName | undefined) ?? "walk";
 }
 
 interface DoorProps {
@@ -189,7 +168,7 @@ function Door({ side, tone, veilStyle, checkStyle, greenStyle }: DoorProps) {
 	const photos = side.photos ?? [];
 	/** Only a lone plate may carry a sentence — see the header. */
 	const caption =
-		photos.length === 1 ? (photos[0]?.caption ?? SUPPORT[side.dim]) : undefined;
+		photos.length === 1 ? (photos[0]?.caption ?? side.support) : undefined;
 
 	return (
 		<>
@@ -295,11 +274,15 @@ function Door({ side, tone, veilStyle, checkStyle, greenStyle }: DoorProps) {
 				 * "kitchens" and a single caption would be claiming to describe
 				 * all three. No photo → the authored support line.
 				 */}
-				{caption !== undefined && (
-					<Text style={styles.support} numberOfLines={3}>
-						{caption}
-					</Text>
-				)}
+				{/*
+				 * One photo → its own tagger sentence. Three → the plates already
+				 * say "kitchens" and a single caption would claim to describe all
+				 * three. No photo → the authored support line, which is the whole
+				 * of what an ungrounded question has to offer.
+				 */}
+				<Text style={styles.support} numberOfLines={3}>
+					{caption ?? side.support}
+				</Text>
 				{side.homes !== undefined && (
 					<Text style={styles.meta}>
 						{side.homes} {side.homes === 1 ? "home" : "homes"}
@@ -440,7 +423,11 @@ export function TradeoffFace({ card, tx, cardWidth }: TradeoffFaceProps) {
 				</View>
 			</View>
 
-			<Text style={styles.ask}>What matters more to you?</Text>
+			{/* The question's own headline. A single fixed prompt was fine for
+			    seven questions; with 32 it wastes the one line a buyer reads. */}
+			<Text style={styles.ask} numberOfLines={3}>
+				{card.prompt}
+			</Text>
 			<Text style={styles.hint}>swipe either way</Text>
 		</View>
 	);

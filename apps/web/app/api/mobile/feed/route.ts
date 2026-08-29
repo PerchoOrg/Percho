@@ -143,6 +143,11 @@ function projectListing(card: BrowseCard, verticalUid?: string): PoolListingDTO 
     // The real number alongside the label — §1.6's challenge card cannot round.
     ...(card.listing.price != null ? { price: card.listing.price } : {}),
     bedBathSqft: formatBedBathSqft(card.listing),
+    // The numbers behind the display string — the trade-off bank's predicates
+    // cannot re-parse "4 bd · 3 ba · 2,853 sqft".
+    ...(card.listing.year_built != null ? { yearBuilt: card.listing.year_built } : {}),
+    ...(card.listing.sqft != null ? { sqft: card.listing.sqft } : {}),
+    ...(card.listing.beds != null ? { beds: card.listing.beds } : {}),
     heroUrl: heroUrlFor(card),
     // Coordinates for the card's locality map thumbnail. Both or neither.
     ...(card.listing.lat != null && card.listing.lng != null
