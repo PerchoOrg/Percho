@@ -16,6 +16,69 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 07:13 UTC — phase124: the move-in question bank (design doc)
+
+**Objective**: owner asked, for a house he is considering (10404 NE 198th
+St, Bothell WA), "what would I only find out after living there — like
+having to U-turn to get onto the main road?" Two rounds of researched answers
+(traffic-calmed collector at the corner, school zone three blocks south, a
+1967 build that had been an investor rental, I-405 widening through 2028,
+convergence-zone snow on a steep hill, SWIF fault, Fair-Housing-safe
+culture-fit answers via H Mart / temples / language schools) landed as "this
+is the data buyers want to see". He then asked to bring it into the explore
+page, rejected two narrower proposals (a rule-based insight section; three
+decision-shaped sections), and pushed for the wide version: "someone wants
+culture fit, someone wants the vibe — open the mind, ask the right questions
+to yourself". Then: "go ahead".
+
+**Actions**: `docs/design/move-in-questions.md` — a product design note, no
+code. Contents: the principle that the *question* is the primitive (a ranked
+list of questions in the buyer's voice, each opening into an answer about
+this home/street); "answer or absent" carried into prose via a mandatory
+structured basis line; a Fair Housing rule (facts about places and
+behaviour, never characterisations of people — two questions marked `never`
+so the omission is a decision); an entry schema (id, audience tags, cache
+scope, allowed basis types, answer form, verify action, dim, 30-Second-Rule
+goal, fh flag); the bank itself — ~85 questions in 15 themes (vibe, people,
+culture, third places, kids, pets, body, nature, work, money, safety,
+logistics, the house lived-in, sound & smell, identity & future); ranking
+rules (cold-start five, affinity × decisiveness, standing questions);
+events; a generation sketch (offline job on the worker box, Gemini with
+grounding, neighbourhood-scoped caching); non-goals; five open questions.
+
+**Decisions**:
+- No implementation in this phase. The owner asked to review the questions
+  themselves first — "问题对了,后面的 prompt 和 UI 都是执行".
+- Opening a question is the profile signal. This is the reason the surface
+  is a question list and not an insight feed: it satisfies 30-Second-Rule
+  goal 1 by construction and stays inside the silent-learning principle.
+- Neighbourhood-scoped caching (`scope` field) is what makes an
+  LLM-with-search pipeline affordable — most answers are true of the street
+  or the neighbourhood, not the parcel.
+- Existing data emptiness (13/260 listings geocoded, `listing_pois` near
+  empty) is explicitly out of scope per owner: "dont worry about existing
+  data, we can get any data later, or purely rely on llm calls".
+
+**Issues**: none in the doc. Noted for later: five proposed new dims
+(`+culture`, `+commute`, `+value`, `+pets`, `+multigen`) would touch the
+profile, trade-off cards and feed reasons if added to `DimKey`; and
+`work.commute` needs a "Where's work?" prompt in the You tab, which would be
+the first explicit question the app asks a buyer.
+
+**Resolution**: doc committed on `phase124/move-in-question-bank`, pushed for
+owner review. Not merged. RELEASE.md untouched — nothing user-visible.
+
+**Learnings**: the two rejected proposals both failed the same way — they
+decided for the buyer what mattered. The wide question bank came from
+role-playing a dozen different buyers and writing down what each would ask
+before deciding anything about sections. Worth repeating as a method: enumerate
+the questions before designing the surface.
+
+**Next steps**: owner reviews the bank (§8 lists what to decide). Then a
+phase for the generation job + `listing_questions` table + the explore
+section, in that order, with `house.era` (pure rule, no search) as the first
+answer type to ship.
+
 ## 2026-08-25 07:54 UTC — phase123: a bare tap on the card pauses and resumes its film
 
 **Objective**: owner, straight after phase122 — "also when tapping on the
