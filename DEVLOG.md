@@ -48,6 +48,96 @@ agree.
 **Next steps**: none for this phase. The four pillars remain "no data" per
 spec-v3 §3.4 until a source exists.
 
+
+## 2026-08-29 09:14 UTC — phase130: "After you move in" — Codex-researched insight cards replace the question bank
+
+**Objective**: owner, over the course of 2026-08-29, reviewed phase126 on a
+demo page and rejected it in three steps: "these are very specific — remove
+all questions that you designed"; "not Q&A, a lot of reading — make them
+insight cards"; "smaller, horizontal, a carousel"; then "show the detail in
+the card itself — go and implement this on the iOS card, don't ask again
+until it's done". Also: use the local Codex CLI instead of Gemini.
+
+**What replaced what**:
+- The 106-question bank (`packages/shared/src/questions.ts`) → gone. The
+  model researches the address and decides what deserves a card. What is
+  shared now is two closed vocabularies (`packages/shared/src/insights.ts`):
+  `kind` = watch | plus | know, and 14 `theme`s.
+- Gemini grounded generation (`generateGrounded`, `lib/questions/*`,
+  `lib/zod/questions.ts`, `pnpm questions`) → gone. `lib/insights/codex.ts`
+  spawns `codex exec --ephemeral -s read-only -c web_search="live"` with the
+  prompt on stdin and reads the final message from `-o`. Model
+  `gpt-5.6-sol`, reasoning `medium`; both are flags on the script. Bills to
+  the Codex subscription, not an API.
+- `listing_questions` → dropped (never held a row outside dry runs) and
+  `listing_insights` created: headline / detail / kind / theme / verify /
+  basis jsonb (CHECK non-empty) / decisiveness 1–3 / status draft|approved
+  |rejected / model. RLS: anon reads approved. Pushed with `pnpm db:push`.
+- Q&A `QuestionsBlock` and the local `house.era` rule → gone.
+  `components/listing/explore/InsightRail.tsx`: a horizontal FlatList that
+  snaps card by card (284pt cards, one and the edge of the next), each card
+  carrying mark + theme + weight dots + headline + one-sentence detail + a
+  go-and-see chip + "N sources" that expands in place. A summary strip above
+  ("5 to watch · 2 upside · 1 good to know") and a pager below. Mounted in
+  `app/listing/[id].tsx` under `AFTER YOU MOVE IN`, between Cost and Facts,
+  absent when the listing has no approved card.
+- Events: `insight_focus(insightId, index, theme)` on a swipe (never the
+  initial card), `insight_verify_tap`, `insight_source_tap`. Affinity store
+  `state/insight-affinity.ts` counts focus per theme; `rankInsights` =
+  decisiveness × (1 + affinity[theme]), then watch < plus < know, then the
+  model's order. `summarizeKinds` feeds the strip.
+
+**The prompt** (`lib/insights/prompt.ts`): the home's facts; a seven-part
+research list (the street, a short walk, what you'd hear or smell, the
+house's record incl. which city actually governs the parcel, what's
+changing, the money, the town) with primary sources preferred; fourteen
+buyer positions to think from; the card schema (headline ≤ 8 words, detail
+≤ 25 words, kind, verify ≤ 10 words with a time of day, basis with URLs,
+theme, decisiveness with at most three 3s); rules (surprising beats
+obvious, ≥ 3 watch and ≥ 1 plus, ≥ 5 themes, Fair Housing verbatim, no
+praise words). `parse.ts` enforces "a card with no source does not exist"
+per item and prints every rejection with its reason.
+
+**Verification**: shared / web / mobile typecheck clean; web lint 0 errors,
+808 tests; mobile lint 0 errors, 588 tests. Script dry run on 2895
+Shurburne Dr (Alpharetta): 178s, 34 searches, 129k tokens, **8 accepted /
+0 rejected** — the FMLS-vs-public-record 546 sqft gap, utilities-off
+as-is sale, the assigned middle school on Fulton's replacement list, the
+Roswell-governs-an-Alpharetta-address fact from a Roswell annexation
+record, a cul-de-sac (no through traffic) from the city's resurfacing
+scope. Earlier demo runs (2026-08-29 scratch) produced the same shape with
+32–36 searches each.
+
+**Decisions**:
+- Codex over Gemini: on the same address the env's `gemini-3.5-flash-lite`
+  gave one malformed answer, `gemini-3.1-pro-preview` six portal-sourced
+  ones for ~$0.10; Codex `gpt-5.6-sol` medium gave eight with primary
+  sources for $0 marginal. The subprocess cannot run on Vercel and never
+  needs to — research was always an offline job on the Mac mini.
+- Detail on the card, not behind a tap (owner). Sources stay behind a tap
+  because a card with four URLs on its face is unreadable.
+- `insight_focus` is not fired for the first card: it is focused for the
+  buyer, so it says nothing about them.
+- A re-run replaces a listing's rows of the status being written — the job
+  is the unit. `--all` skips listings that already have draft or approved
+  rows, so a batch can be stopped and resumed.
+- The `2026-08-29` RELEASE bullet from phase126 was rewritten rather than
+  appended to: no buyer ever saw a question row, so there is nothing to
+  correct in public, only the description of what shipped.
+
+**Issues**: phase race, twice — phase127 and phase128 landed while this
+was in flight (branch created as 127, renumbered to 129 before the first
+commit), then another agent's phase129 merged during the merge itself, so
+it was renumbered again to 130 and rebased. `generate-move-in-insights.ts` learned the CLI's
+`model_reasoning_effort` config key is what raises search count (10 → 34)
+— `--search` is not an `exec` flag in Codex 0.147, the config override is.
+
+**Next steps**: batch generation is running from the reference worktree
+(`pnpm insights --all --limit N --write`, then a read-through and
+`--approve-drafts`); see the follow-up entry for what was approved. Owner
+looks at any home with cards on the device — Metro serves the pulled
+reference worktree.
+
 ## 2026-08-29 09:40 UTC — phase128: three plates a side, and the enhanced file becomes the default
 
 **Objective**: owner, on device after phase127 — 「it is better, but still not

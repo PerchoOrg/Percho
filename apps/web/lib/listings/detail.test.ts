@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   projectComps,
   projectDetail,
+  projectInsights,
   projectPhotos,
-  projectQuestions,
   projectVideo,
 } from './detail';
 
@@ -224,43 +224,47 @@ describe('projectDetail — IDX display gate (phase119.1)', () => {
   });
 });
 
-describe('projectQuestions — an answer without its basis is not an answer', () => {
+describe('projectInsights — a card with no source is not a card', () => {
   const row = {
-    question_id: 'logistics.turn',
-    answer: 'Left turns will wait at 8am.',
-    basis: [{ type: 'road', note: 'collector at the corner' }],
-    verify: ' Stand at the corner ',
-    form: 'text',
+    id: 'i1',
+    headline: 'Public record is 546 square feet smaller',
+    detail: 'FMLS markets 2,366 sqft; public record lists 1,820 sqft.',
+    kind: 'watch',
+    theme: 'house',
+    verify: ' Count the rooms at midday ',
+    basis: [{ note: 'FMLS vs public record', url: 'https://example.com/r' }],
     decisiveness: 3,
   };
 
   it('projects a good row, trimming verify and keeping decisiveness', () => {
-    expect(projectQuestions([row])).toEqual([
+    expect(projectInsights([row])).toEqual([
       {
-        id: 'logistics.turn',
-        answer: 'Left turns will wait at 8am.',
-        basis: [{ type: 'road', note: 'collector at the corner' }],
-        verify: 'Stand at the corner',
+        id: 'i1',
+        headline: row.headline,
+        detail: row.detail,
+        kind: 'watch',
+        theme: 'house',
+        verify: 'Count the rooms at midday',
+        basis: [{ note: 'FMLS vs public record', url: 'https://example.com/r' }],
         decisiveness: 3,
-        form: 'text',
       },
     ]);
   });
 
   it('drops a row whose basis is empty or malformed', () => {
-    expect(projectQuestions([{ ...row, basis: [] }])).toEqual([]);
-    expect(projectQuestions([{ ...row, basis: 'nope' }])).toEqual([]);
-    expect(projectQuestions([{ ...row, basis: [{ type: 'road' }] }])).toEqual([]);
+    expect(projectInsights([{ ...row, basis: [] }])).toEqual([]);
+    expect(projectInsights([{ ...row, basis: 'nope' }])).toEqual([]);
+    expect(projectInsights([{ ...row, basis: [{ url: 'https://x' }] }])).toEqual([]);
   });
 
   it('omits verify when blank and clamps an out-of-range decisiveness to 2', () => {
-    const [d] = projectQuestions([{ ...row, verify: null, decisiveness: 7 }]);
+    const [d] = projectInsights([{ ...row, verify: null, decisiveness: 7 }]);
     expect(d && 'verify' in d).toBe(false);
     expect(d?.decisiveness).toBe(2);
   });
 
   it('lands on the DTO only when non-empty', () => {
-    expect('questions' in projectDetail(baseListing, [], [])).toBe(false);
-    expect(projectDetail(baseListing, [], [], { questions: [row] }).questions).toHaveLength(1);
+    expect('insights' in projectDetail(baseListing, [], [])).toBe(false);
+    expect(projectDetail(baseListing, [], [], { insights: [row] }).insights).toHaveLength(1);
   });
 });

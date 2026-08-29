@@ -44,24 +44,25 @@ export interface ListingVideoDTO {
 	durationSec?: number;
 }
 
-/** One "Based on" item under a question's answer. */
-export interface QuestionBasisDTO {
-	type: string;
+/** One source under an insight card. */
+export interface InsightBasisDTO {
 	note: string;
 	url?: string;
 }
 
 /**
- * An approved move-in question answer (phase126). The question text is NOT
- * carried — `@percho/shared/questions` owns it, keyed by `id`.
+ * One approved "After you move in" card (phase130). `kind` and `theme` are
+ * passed through as strings so an unknown value degrades to a neutral card.
  */
-export interface QuestionAnswerDTO {
+export interface InsightDTO {
 	id: string;
-	answer: string;
-	basis: QuestionBasisDTO[];
+	headline: string;
+	detail: string;
+	kind: string;
+	theme: string;
 	verify?: string;
+	basis: InsightBasisDTO[];
 	decisiveness: 1 | 2 | 3;
-	form: string;
 }
 
 export interface ListingDetailDTO {
@@ -92,8 +93,8 @@ export interface ListingDetailDTO {
 	/** The FMLS number a buyer can quote. */
 	mlsNumber?: string;
 	video?: ListingVideoDTO;
-	/** Approved move-in question answers. Absent when the listing has none. */
-	questions?: QuestionAnswerDTO[];
+	/** Approved "After you move in" cards. Absent when the listing has none. */
+	insights?: InsightDTO[];
 }
 
 type State =
