@@ -16,6 +16,29 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 10:25 UTC — phase132: the Atlanta remote-buyer study page is hosted on percho.co
+
+**Objective**: the owner shared the customer-study questionnaire (a private
+claude.ai artifact) with a stakeholder and it 404'd — artifacts are private by
+default. Owner asked for a page with public access.
+
+**Actions**: `apps/web/public/research/atlanta-remote-buyer-study.html` — the
+questionnaire as a static file, wrapped in its own `<html>` skeleton with
+`robots: noindex`. Next.js serves `public/` as-is, so it is live at
+`https://www.percho.co/research/atlanta-remote-buyer-study.html` on the next
+deploy. No code, no route, nothing imported anywhere.
+
+**Decisions**: static file under `public/` rather than an `app/internal/` route
+— the page is self-contained HTML (Google Fonts + inline CSS/JS) and an App
+Router page would only add a React wrapper around a document that does not
+need one. `noindex` because it is research material, not product.
+
+**Learnings**: the study's demo video lives on the owner's Desktop
+(`~/Desktop/Percho-demo/`), not in the repo — it is 39 MB and regenerable.
+
+**Next steps**: owner uploads the video and pastes the link into the page's
+Part 4 placeholder; re-copy the file here when the questionnaire changes.
+
 ## 2026-08-29 11:20 UTC — phase131: the v2 trade-off bank — 32 questions, six rules
 
 **Objective**: owner — 「forget about these questions, lets redesign … some
