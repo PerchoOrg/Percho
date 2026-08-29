@@ -24,7 +24,7 @@ import type {
 	ScoreDimension,
 	ScoreDimensionKey,
 } from "./card-types";
-import type { FeedPool } from "./generate-feed";
+import type { DimPhoto, FeedPool } from "./generate-feed";
 import type { GeoLevel, GeoStats, GeoUnit } from "./geo-unit";
 import { GEO_LEVELS } from "./geo-unit";
 
@@ -279,6 +279,9 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 		slug,
 		address,
 		priceLabel,
+		...(num(raw.price) === undefined
+			? {}
+			: { price: num(raw.price) as number }),
 		bedBathSqft: str(raw.bedBathSqft) ?? "",
 		heroUrl,
 		...(videoUrl ? { videoUrl } : {}),
@@ -354,6 +357,29 @@ export interface ParsedPoolPage {
  * body yields an empty pool and `done: true`, which the caller treats as
  * exhaustion (§1.9) rather than as a crash mid-swipe.
  */
+/**
+ * The server's per-dimension detail photos (`apps/web/lib/feed/dim-photos.ts`).
+ *
+ * Strict like every other parser here: an entry with no usable `url` is dropped
+ * rather than defaulted, and an unknown dim key never reaches the engine. A
+ * missing map is not an error — it means no listing in the page had a tagged
+ * photo, and the trade-off card draws its unlit doors.
+ */
+function dimPhotos(v: unknown): Record<string, DimPhoto> {
+	const raw = rec(v);
+	if (raw === null) return {};
+	const out: Record<string, DimPhoto> = {};
+	for (const key of Object.keys(DIMS)) {
+		const entry = rec(raw[key]);
+		if (entry === null) continue;
+		const url = str(entry.url);
+		if (url === undefined) continue;
+		const caption = str(entry.caption);
+		out[key] = { url, ...(caption === undefined ? {} : { caption }) };
+	}
+	return out;
+}
+
 export function parsePoolResponse(body: unknown): ParsedPoolPage {
 	const raw = rec(body);
 	const pool = rec(raw?.pool);
@@ -362,7 +388,7 @@ export function parsePoolResponse(body: unknown): ParsedPoolPage {
 	// it as done so the §1.9 terminal card takes over instead.
 	if (pool === null) {
 		return {
-			pool: { geoUnits: [], listings: [], communities: [] },
+			pool: { geoUnits: [], listings: [], communities: [], dimPhotos: {} },
 			done: true,
 		};
 	}
@@ -383,6 +409,7 @@ export function parsePoolResponse(body: unknown): ParsedPoolPage {
 			communities: communities
 				.map(parseCommunity)
 				.filter((c): c is CommunityCardV3 => c !== null),
+			dimPhotos: dimPhotos(pool.dimPhotos),
 		},
 		done: raw?.done === true,
 	};

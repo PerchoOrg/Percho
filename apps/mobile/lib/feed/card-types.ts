@@ -145,6 +145,12 @@ export interface ListingCardV3 {
 	/** The geo unit this listing sits in — a swipe credits it. */
 	geoUnitId?: string;
 	matchScore?: number;
+	/**
+	 * The price as a NUMBER, alongside `priceLabel`. The server has always sent
+	 * it; the client started reading it for the trade-off card's median, which
+	 * cannot be computed from a formatted string without re-parsing it.
+	 */
+	price?: number;
 	dims?: readonly DimKey[];
 	/**
 	 * Photo count for the redline's "⊕ N Photos" hero pill. Server sends it only
@@ -232,16 +238,30 @@ export interface TradeoffSideV3 {
 	 */
 	icon?: CardIconName;
 	/**
-	 * The photograph behind this door (2026-08-29 Two Doors face).
+	 * The photograph behind this door.
 	 *
-	 * Borrowed at composition time from a pool row that claims this side's
-	 * `dim` — see `heroForDim` in `generate-feed.ts`. NOT authored in
-	 * `content.ts`: the trade-offs are static product copy and the pool is
-	 * whatever the server sent, so the pairing can only be made where the two
-	 * meet. Absent when no pool row claims the dim, and the door renders its
-	 * unlit field instead of an unrelated picture.
+	 * A DETAIL photo, never a listing hero (owner, 2026-08-29: a front-elevation
+	 * shot cannot say "move-in ready"). Resolved at composition time by
+	 * `lightSide` in `generate-feed.ts`: the server's per-dimension room photo
+	 * first, then a community hero for the dims that describe a PLACE rather
+	 * than a house. Absent when neither exists, and the door renders its unlit
+	 * field rather than an unrelated picture.
 	 */
 	photoUrl?: string;
+	/**
+	 * The vision tagger's own factual sentence for `photoUrl` — "Modern kitchen
+	 * with white cabinetry, stainless appliances, and center island".
+	 *
+	 * It is the half of the door that says what the choice MEANS, and it is
+	 * trustworthy in a way the listing prose is not: it describes what is in the
+	 * frame, so it can never drift from the photograph above it. Only interior
+	 * room photos carry one; a community hero has none.
+	 */
+	caption?: string;
+	/** How many homes in the loaded pool claim this dimension. */
+	homes?: number;
+	/** Their median price, pre-formatted ("$342,000"). Absent under 3 homes. */
+	medianLabel?: string;
 }
 
 export interface TradeoffCardV3 {

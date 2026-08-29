@@ -26,20 +26,32 @@
  *   · NO bookmark disc. There is nothing here to save, and leaving that slot
  *     empty is the honest signal that this card is a question, not inventory.
  *
- * ── The photograph is borrowed, never bought ────────────────────────────────
+ * ── The photograph is a DETAIL, never a hero (owner, 2026-08-29) ────────────
  *
- * A trade-off has no media of its own. Rather than ship eleven stock images —
- * one per `DimKey` — each door borrows the hero of a pool row that CLAIMS that
- * dimension (`generate-feed.ts`'s `heroForDim`). Two consequences worth
- * knowing:
+ * The first version borrowed each door's picture from a pool row's `heroUrl`,
+ * and on device that said nothing: a listing hero is a front-elevation shot,
+ * and no front elevation depicts "move-in ready". 「it doesnt make sense to put
+ * some home tour hero pic into one of the trade off … use the actual detailed
+ * photos instead」.
  *
- *   · the picture behind "Best schools" is a real community the buyer could be
- *     shown three cards later, not a stock lawn;
- *   · the card costs no new asset and no new licence — every image it draws is
- *     already rendering elsewhere in the same deck.
+ * So the door now shows an INTERIOR room photo the server matched to the
+ * dimension — a kitchen for `move_in`, a living room for `space` — together
+ * with the vision tagger's own sentence about that frame ("Modern kitchen with
+ * white cabinetry, stainless appliances, and center island"). The photo depicts
+ * the thing and the caption says it, which is the pair a hero could never be.
+ * Place dims (`schools`, `walkable`, `trails`, `hip`, `nightlife`) have no room
+ * inside a house that shows them, so those doors take a community tour poster
+ * instead — a real photograph of the neighbourhood — and carry no caption.
  *
- * A dim that no pool row claims gets NO photo, and the door falls back to the
- * unlit field below rather than borrowing an unrelated picture.
+ * `generate-feed.ts`'s `lightSide` owns all of that. A dim with neither leaves
+ * the door on its unlit field below, which is the honest answer.
+ *
+ * ── The third line ─────────────────────────────────────────────────────────
+ *
+ * Under the caption: how many homes in the loaded pool claim this dimension and
+ * what they cost ("18 homes · median $342,000"). The photo says what the choice
+ * LOOKS like; this says what it COSTS. The median is suppressed under three
+ * homes — below that it is noise, not a fact about the market.
  *
  * ── The unlit field ─────────────────────────────────────────────────────────
  *
@@ -196,8 +208,8 @@ function Door({ side, tone, veilStyle, checkStyle, greenStyle }: DoorProps) {
 			</Animated.View>
 
 			<LinearGradient
-				colors={["transparent", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.88)"]}
-				locations={[0.42, 0.74, 1]}
+				colors={["transparent", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.92)"]}
+				locations={[0.3, 0.66, 1]}
 				start={{ x: 0, y: 0 }}
 				end={{ x: 0, y: 1 }}
 				style={styles.scrim}
@@ -207,12 +219,17 @@ function Door({ side, tone, veilStyle, checkStyle, greenStyle }: DoorProps) {
 			<Animated.View style={[styles.veil, veilStyle]} pointerEvents="none" />
 
 			<View style={styles.foot} pointerEvents="none">
-				<RedlineIcon
-					name={glyph}
-					size={DOOR_ICON}
-					color={redline.onPhoto}
-					weight="outline"
-				/>
+				{/* The glyph is the door's only mark when there is no photograph;
+				    over a real room photo the label carries it, so it is dropped
+				    rather than stamped on someone's kitchen. */}
+				{side.photoUrl === undefined && (
+					<RedlineIcon
+						name={glyph}
+						size={DOOR_ICON}
+						color={redline.onPhoto}
+						weight="outline"
+					/>
+				)}
 				<View style={styles.labelRow}>
 					<Text style={styles.label}>{side.label}</Text>
 					<Animated.View style={[styles.check, checkStyle]}>
@@ -224,7 +241,22 @@ function Door({ side, tone, veilStyle, checkStyle, greenStyle }: DoorProps) {
 						/>
 					</Animated.View>
 				</View>
-				<Text style={styles.support}>{SUPPORT[side.dim]}</Text>
+				{/*
+				 * The tagger's sentence when there is one, else the authored
+				 * support line. Never both: they say the same thing at different
+				 * levels of specificity, and the specific one wins.
+				 */}
+				<Text style={styles.support} numberOfLines={3}>
+					{side.caption ?? SUPPORT[side.dim]}
+				</Text>
+				{side.homes !== undefined && (
+					<Text style={styles.meta}>
+						{side.homes} {side.homes === 1 ? "home" : "homes"}
+						{side.medianLabel === undefined
+							? ""
+							: ` · median ${side.medianLabel}`}
+					</Text>
+				)}
 			</View>
 		</>
 	);
@@ -393,11 +425,11 @@ const styles = StyleSheet.create({
 	/** 18pt gutters, and clear of the `swipe either way` line at the foot. */
 	foot: {
 		position: "absolute",
-		left: 18,
-		right: 18,
-		bottom: 38,
+		left: 16,
+		right: 16,
+		bottom: 36,
 		zIndex: 4,
-		gap: 9,
+		gap: 7,
 	},
 	labelRow: { flexDirection: "row", alignItems: "center", gap: 8 },
 	/**
@@ -425,8 +457,18 @@ const styles = StyleSheet.create({
 	support: {
 		...redlineText.subtext,
 		fontSize: 11.5,
-		lineHeight: 15,
-		color: "rgba(255,255,255,0.72)",
+		lineHeight: 15.5,
+		color: "rgba(255,255,255,0.78)",
+	},
+	/**
+	 * The count/median line. Deliberately quieter than the caption above it —
+	 * it is the footnote to the picture, not a second headline.
+	 */
+	meta: {
+		...redlineText.nano,
+		fontSize: 10.5,
+		lineHeight: 13,
+		color: "rgba(255,255,255,0.5)",
 	},
 
 	seam: {

@@ -1,12 +1,3 @@
-/**
- * §1.7 composition — the single unlocked stage 4 mix.
- *
- * 2026-08-15: the funnel collapsed. There is no listing hard gate (stage 4 is
- * listing-dominant by design), no stage 0-3 mixes, no tease/preview gating, no
- * insight, no milestone. What survives is the composition contract: window
- * length, seenIds dedupe, determinism, exhaustion/looping, and fatigue.
- */
-import type { DimKey } from "@percho/shared/types";
 import { describe, expect, it } from "vitest";
 import type {
 	CommunityCardV3,
@@ -57,6 +48,7 @@ function listing(
 	id: string,
 	communityId?: string,
 	dims: ListingCardV3["dims"] = undefined,
+	price?: number,
 ): ListingCardV3 {
 	return {
 		kind: "listing",
@@ -69,6 +61,7 @@ function listing(
 		matchScore: 88,
 		...(communityId ? { communityId } : {}),
 		...(dims ? { dims } : {}),
+		...(price === undefined ? {} : { price }),
 	};
 }
 
@@ -262,73 +255,125 @@ describe("seenIds and exhaustion", () => {
 
 // ─── Trade-off doors (2026-08-29 Two Doors face) ──────────────────────────────
 
-describe("trade-off doors borrow the pool's photography", () => {
-	/** Every dim a stage-4 (property scope) trade-off can ask about. */
-	const DIM_POOL: FeedPool = {
+describe("trade-off doors show a detail photo, never a hero", () => {
+	const LIVING = "https://img/living.jpg";
+	const KITCHEN = "https://img/kitchen.jpg";
+
+	/** A pool the server has lit: two property dims with real room photos. */
+	const LIT: FeedPool = {
 		geoUnits: CITIES,
 		listings: [
-			listing("l-space", undefined, ["space"]),
-			listing("l-movein", undefined, ["move_in"]),
-			listing("l-entertaining", undefined, ["entertaining"]),
-			listing("l-outdoors", undefined, ["outdoors"]),
+			listing("l-space1", undefined, ["space"], 300_000),
+			listing("l-space2", undefined, ["space"], 342_000),
+			listing("l-space3", undefined, ["space"], 400_000),
+			listing("l-movein", undefined, ["move_in"], 500_000),
 			listing("l-plain"),
 		],
-		communities: [community("c-hip", ["hip"]), community("c-plain")],
+		communities: [community("c-plain")],
+		dimPhotos: {
+			space: { url: LIVING, caption: "Living area with large patio doors" },
+			move_in: {
+				url: KITCHEN,
+				caption: "Modern kitchen with white cabinetry and center island",
+			},
+		},
 	};
 
-	const firstTradeoff = (pool: FeedPool): TradeoffCardV3 | undefined =>
+	const firstTradeoff = (
+		pool: FeedPool,
+		seenIds: string[] = [],
+	): TradeoffCardV3 | undefined =>
 		generateFeed({
 			stage: 4,
 			signals: EMPTY_SIGNALS,
 			pool,
-			seenIds: [],
+			seenIds,
 			count: WINDOW,
 		}).cards.find((c): c is TradeoffCardV3 => c.kind === "tradeoff");
 
-	const herosClaiming = (pool: FeedPool, dim: DimKey): string[] =>
-		[...pool.listings, ...pool.communities]
-			.filter((row) => row.dims?.includes(dim))
-			.map((row) => row.heroUrl);
-
-	it("hands each door the hero of a row that claims its dim", () => {
-		const card = firstTradeoff(DIM_POOL);
-		expect(card).toBeDefined();
-		if (card === undefined) return;
-		expect(herosClaiming(DIM_POOL, card.left.dim)).toContain(
-			card.left.photoUrl,
-		);
-		expect(herosClaiming(DIM_POOL, card.right.dim)).toContain(
-			card.right.photoUrl,
-		);
+	it("lights each door with the server's room photo and quotes its caption", () => {
+		const card = firstTradeoff(LIT);
+		expect(card?.id).toBe("to-space-vs-movein");
+		expect(card?.left.photoUrl).toBe(LIVING);
+		expect(card?.left.caption).toBe("Living area with large patio doors");
+		expect(card?.right.photoUrl).toBe(KITCHEN);
+		expect(card?.right.caption).toContain("Modern kitchen");
 	});
 
-	it("never lets one row light both doors", () => {
-		// One listing claims BOTH sides of "Room to grow / Move-in ready". The
-		// second door has to go unlit rather than repeat the same photograph.
-		const oneRow: FeedPool = {
+	it("NEVER falls back to a listing hero", () => {
+		// The regression this whole rewrite exists for (owner, 2026-08-29): a
+		// front-elevation shot cannot depict "move-in ready". Listings claim both
+		// dims here and every one of them has a heroUrl — the doors must still be
+		// dark, because no ROOM photo and no place photo exists for them.
+		const noPhotos: FeedPool = { ...LIT, dimPhotos: {} };
+		const card = firstTradeoff(noPhotos);
+		expect(card).toBeDefined();
+		const heroes = noPhotos.listings.map((l) => l.heroUrl);
+		expect(heroes).not.toContain(card?.left.photoUrl);
+		expect(heroes).not.toContain(card?.right.photoUrl);
+		expect(card?.left.photoUrl).toBeUndefined();
+		expect(card?.right.photoUrl).toBeUndefined();
+	});
+
+	it("lights a PLACE dim with a community hero, and no caption", () => {
+		// No room inside a house shows "trail access". Seeing every property pair
+		// pushes the engine onto the life-scope bank, where communities are the
+		// only honest source.
+		const places: FeedPool = {
 			geoUnits: CITIES,
-			listings: [listing("l-both", undefined, ["space", "move_in"])],
-			communities: [community("c1")],
+			listings: [listing("l1")],
+			communities: [
+				community("c-trails", ["trails"]),
+				community("c-walkable", ["walkable"]),
+			],
+			dimPhotos: {},
 		};
-		const card = firstTradeoff(oneRow);
-		expect(card).toBeDefined();
-		if (card === undefined) return;
-		expect(card.left.photoUrl).not.toBe(card.right.photoUrl);
+		const card = firstTradeoff(places, [
+			"to-space-vs-movein",
+			"to-kitchen-vs-yard",
+			"to-newbuild-vs-character",
+		]);
+		expect(card?.id).toBe("to-trails-vs-walkable");
+		expect(card?.left.photoUrl).toBe("https://img/c-trails.jpg");
+		expect(card?.right.photoUrl).toBe("https://img/c-walkable.jpg");
+		// A tour poster carries no tagger sentence.
+		expect(card?.left.caption).toBeUndefined();
 	});
 
-	it("leaves a door unlit rather than borrowing an unrelated photo", () => {
-		// The base fixture claims schools / walkable / quiet — no property dim,
-		// which is what a stage-4 trade-off asks about.
-		const card = firstTradeoff(POOL);
-		expect(card).toBeDefined();
-		if (card === undefined) return;
-		expect(card.left.photoUrl).toBeUndefined();
-		expect(card.right.photoUrl).toBeUndefined();
+	it("never lets one photograph light both doors", () => {
+		const shared: FeedPool = {
+			...LIT,
+			dimPhotos: { space: { url: LIVING }, move_in: { url: LIVING } },
+		};
+		// Both other property pairs marked seen, so this one is what comes back
+		// even though `bestLit` cannot fully light it.
+		const card = firstTradeoff(shared, [
+			"to-kitchen-vs-yard",
+			"to-newbuild-vs-character",
+		]);
+		expect(card?.id).toBe("to-space-vs-movein");
+		expect(card?.left.photoUrl).toBe(LIVING);
+		expect(card?.right.photoUrl).not.toBe(LIVING);
+	});
+
+	it("prefers a question both of whose doors can be lit", () => {
+		// `to-space-vs-movein` is lit; the other two property pairs are not. It
+		// must come first even though the engine's rotation would reach another.
+		expect(firstTradeoff(LIT)?.id).toBe("to-space-vs-movein");
+	});
+
+	it("counts the homes behind each side, and medians only above the floor", () => {
+		const card = firstTradeoff(LIT);
+		// 3 homes claim `space` → a median is a fact worth printing.
+		expect(card?.left.homes).toBe(3);
+		expect(card?.left.medianLabel).toBe("$342,000");
+		// 1 home claims `move_in` → the count stands alone.
+		expect(card?.right.homes).toBe(1);
+		expect(card?.right.medianLabel).toBeUndefined();
 	});
 
 	it("asks nothing at all when the pool is bare", () => {
-		// No inventory is the §1.9 terminal card, never an interview — and there
-		// would be nothing behind either door anyway.
+		// No inventory is the §1.9 terminal card, never an interview.
 		expect(
 			firstTradeoff({ geoUnits: CITIES, listings: [], communities: [] }),
 		).toBeUndefined();

@@ -62,6 +62,11 @@ function mergePool(prev: FeedPool, next: FeedPool): FeedPool {
 		geoUnits: next.geoUnits.length > 0 ? next.geoUnits : prev.geoUnits,
 		listings: byId(prev.listings, next.listings),
 		communities: byId(prev.communities, next.communities),
+		// Trade-off door photos ACCUMULATE, newest winning a key it fills. Each
+		// page resolves them over its own listings only, so a dim lit on page 1
+		// must survive a page 2 whose rows happen to have no photo for it —
+		// otherwise a door that was lit goes dark as the buyer pages.
+		dimPhotos: { ...prev.dimPhotos, ...next.dimPhotos },
 	};
 }
 

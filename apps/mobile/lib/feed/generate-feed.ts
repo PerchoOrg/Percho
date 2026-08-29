@@ -23,6 +23,7 @@ import type {
 	FunnelStage,
 	ListingCardV3,
 	TradeoffCardV3,
+	TradeoffSideV3,
 } from "./card-types";
 import { TRADEOFFS } from "./content";
 import type { GeoLevel, GeoUnit } from "./geo-unit";
@@ -39,11 +40,25 @@ import {
 import type { SignalState } from "./signals";
 import { isLayerSuppressed } from "./signals";
 
+/** One detail photograph, as the server resolved it for a dimension. */
+export interface DimPhoto {
+	url: string;
+	/** The vision tagger's factual sentence for this frame, when it wrote one. */
+	caption?: string;
+}
+
 /** Server-supplied inventory. */
 export interface FeedPool {
 	geoUnits: readonly GeoUnit[];
 	listings: readonly ListingCardV3[];
 	communities: readonly CommunityCardV3[];
+	/**
+	 * One interior DETAIL photo per dimension, keyed by `DimKey`
+	 * (`apps/web/lib/feed/dim-photos.ts`). Optional: an older server, or a page
+	 * whose listings have no tagged photos, simply sends none and the trade-off
+	 * card draws unlit doors.
+	 */
+	dimPhotos?: Readonly<Record<string, DimPhoto>>;
 }
 
 export const EMPTY_POOL: FeedPool = {
@@ -167,42 +182,101 @@ interface FillContext {
 /**
  * The photograph behind one trade-off door.
  *
- * A trade-off card owns no media, and the alternative to this function was
- * shipping eleven stock images — one per `DimKey`. Instead the door borrows the
- * hero of a pool row that CLAIMS the dimension, so the picture behind "Best
- * schools" is a real community the buyer could be shown three cards later, and
- * the card costs no new asset and no new licence.
+ * ── Why this is not a hero any more (owner, 2026-08-29) ─────────────────────
  *
- * Scope picks the shelf to search first: a `property` trade-off is about the
- * house, a `life` one is about the place. The other shelf is the fallback.
+ * The first version borrowed the `heroUrl` of a pool row claiming the dim. On
+ * device that reads as nothing at all: a listing hero is a front-elevation
+ * shot, and no front elevation says "move-in ready" — two of them side by side
+ * say nothing about the choice. 「it doesnt make sense to put some home tour
+ * hero pic into one of the trade off」.
  *
- * Returns `undefined` when nothing in the pool claims the dim — `TradeoffFace`
- * draws its unlit field for that door, which is the honest answer. Borrowing an
- * unrelated photo would be the engine authoring content, which it never does.
+ * So the door is lit in two ways, in this order, and never by a listing hero:
+ *
+ *   1. `pool.dimPhotos[dim]` — an INTERIOR detail photo the server picked by
+ *      room type (a kitchen for `move_in`, a living room for `space`), with the
+ *      vision tagger's own sentence describing the frame. This is the one that
+ *      depicts the concept.
+ *   2. a COMMUNITY hero claiming the dim — for the five dims that describe a
+ *      PLACE (`schools`, `walkable`, `trails`, `hip`, `nightlife`), where no
+ *      room inside a house shows the thing but a tour poster genuinely is a
+ *      photograph of the neighbourhood.
+ *
+ * Neither available leaves the door unlit, which is the honest answer.
+ * Borrowing an unrelated picture would be the engine authoring content.
  */
-function heroForDim(
+function placePhotoForDim(
 	ctx: FillContext,
 	dim: DimKey,
-	scope: TradeoffCardV3["scope"],
-	/** The other door's photo, so one pool row can't fill both. */
 	taken: string | undefined,
 ): string | undefined {
-	const shelves: readonly (readonly {
-		heroUrl: string;
-		dims?: readonly DimKey[];
-	}[])[] =
-		scope === "property"
-			? [ctx.listingRanked, ctx.communityRanked]
-			: [ctx.communityRanked, ctx.listingRanked];
-
-	for (const shelf of shelves) {
-		for (const row of shelf) {
-			if (row.dims?.includes(dim) !== true) continue;
-			if (row.heroUrl === "" || row.heroUrl === taken) continue;
-			return row.heroUrl;
-		}
+	for (const row of ctx.communityRanked) {
+		if (row.dims?.includes(dim) !== true) continue;
+		if (row.heroUrl === "" || row.heroUrl === taken) continue;
+		return row.heroUrl;
 	}
 	return undefined;
+}
+
+/** "342000" → "$342,000". Local because this module imports nothing. */
+function priceLabel(value: number): string {
+	return `$${Math.round(value)
+		.toString()
+		.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+}
+
+/**
+ * Fewer than this many homes and the median is noise, not a fact about the
+ * market — the card prints the count alone rather than a number it would have
+ * to caveat.
+ */
+const MEDIAN_FLOOR = 3;
+
+/** What the pool says a dimension is worth: how many homes, and their median. */
+function statsForDim(
+	ctx: FillContext,
+	dim: DimKey,
+): { homes: number; medianLabel?: string } {
+	const prices: number[] = [];
+	let homes = 0;
+	for (const row of ctx.listingRanked) {
+		if (row.dims?.includes(dim) !== true) continue;
+		homes += 1;
+		if (row.price !== undefined) prices.push(row.price);
+	}
+	if (prices.length < MEDIAN_FLOOR) return { homes };
+	prices.sort((a, b) => a - b);
+	const mid = Math.floor(prices.length / 2);
+	const median =
+		prices.length % 2 === 1
+			? (prices[mid] as number)
+			: ((prices[mid - 1] as number) + (prices[mid] as number)) / 2;
+	return { homes, medianLabel: priceLabel(median) };
+}
+
+/** Everything one door shows beyond its label. */
+function lightSide(
+	ctx: FillContext,
+	side: TradeoffSideV3,
+	/** The other door's photo, so one picture can't fill both. */
+	taken: string | undefined,
+): TradeoffSideV3 {
+	const detail = ctx.pool.dimPhotos?.[side.dim];
+	const url =
+		detail !== undefined && detail.url !== taken
+			? detail.url
+			: placePhotoForDim(ctx, side.dim, taken);
+	const caption = url === detail?.url ? detail?.caption : undefined;
+	const stats = statsForDim(ctx, side.dim);
+
+	return {
+		...side,
+		...(url === undefined ? {} : { photoUrl: url }),
+		...(caption === undefined ? {} : { caption }),
+		...(stats.homes === 0 ? {} : { homes: stats.homes }),
+		...(stats.medianLabel === undefined
+			? {}
+			: { medianLabel: stats.medianLabel }),
+	};
 }
 
 /**
@@ -214,42 +288,57 @@ function heroForDim(
  * 39-card single-kind run `rhythm.test.ts` exists to prevent, and since
  * 2026-08-22 it is also the wrong product answer — no inventory means the §1.9
  * terminal card, not an interview.
- *
- * It is the right rule for the Two Doors face besides: both doors borrow their
- * photograph from the pool, so with an empty pool there is nothing to open.
  */
 function poolIsBare(ctx: FillContext): boolean {
 	return ctx.listingRanked.length === 0 && ctx.communityRanked.length === 0;
 }
 
-/** Hands each door the hero it borrows. See `heroForDim`. */
-function withDoorPhotos(
+/** Lights both doors. See `lightSide`. */
+function withLitDoors(ctx: FillContext, card: TradeoffCardV3): TradeoffCardV3 {
+	const left = lightSide(ctx, card.left, undefined);
+	const right = lightSide(ctx, card.right, left.photoUrl);
+	return { ...card, left, right };
+}
+
+/**
+ * Prefer a question both of whose doors can be lit.
+ *
+ * Not a filter — every question stays askable, and a pair with one dark door is
+ * still a real trade-off. But the pool measured on 2026-08-29 lights
+ * `move_in` and `space` and leaves `entertaining` and `hip` dark, so without
+ * this the buyer's FIRST trade-off is as likely to be the empty-looking one as
+ * the good one. Ordering costs nothing and shows the design at its best.
+ */
+function bestLit(
 	ctx: FillContext,
-	card: TradeoffCardV3,
-): TradeoffCardV3 {
-	const left = heroForDim(ctx, card.left.dim, card.scope, undefined);
-	const right = heroForDim(ctx, card.right.dim, card.scope, left);
-	return {
-		...card,
-		left: { ...card.left, ...(left === undefined ? {} : { photoUrl: left }) },
-		right: {
-			...card.right,
-			...(right === undefined ? {} : { photoUrl: right }),
-		},
-	};
+	cards: readonly TradeoffCardV3[],
+): TradeoffCardV3 | null {
+	let fallback: TradeoffCardV3 | null = null;
+	for (const card of cards) {
+		const lit = withLitDoors(ctx, card);
+		if (lit.left.photoUrl !== undefined && lit.right.photoUrl !== undefined) {
+			return lit;
+		}
+		if (fallback === null) fallback = lit;
+	}
+	return fallback;
 }
 
 function pickTradeoff(ctx: FillContext, rotate: number): TradeoffCardV3 | null {
 	if (poolIsBare(ctx)) return null;
 
 	const scope = ctx.stage >= 3 ? "property" : "life";
-	const preferred = TRADEOFFS.filter((t) => t.scope === scope);
-	const card =
-		firstUnseen(preferred, (t) => t.id, ctx.seen, rotate) ??
-		firstUnseen(TRADEOFFS, (t) => t.id, ctx.seen, rotate);
-	if (card === null) return null;
+	const unseen = (pool: readonly TradeoffCardV3[]): TradeoffCardV3[] => {
+		const out: TradeoffCardV3[] = [];
+		for (let i = 0; i < pool.length; i++) {
+			const item = pool[(rotate + i) % pool.length];
+			if (item !== undefined && !ctx.seen.has(item.id)) out.push(item);
+		}
+		return out;
+	};
 
-	return withDoorPhotos(ctx, card);
+	const preferred = unseen(TRADEOFFS.filter((t) => t.scope === scope));
+	return bestLit(ctx, preferred.length > 0 ? preferred : unseen(TRADEOFFS));
 }
 
 /**
@@ -266,7 +355,7 @@ function loopedTradeoff(
 ): TradeoffCardV3 | null {
 	if (poolIsBare(ctx)) return null;
 	const card = anyItem(TRADEOFFS, rotate);
-	return card === null ? null : withDoorPhotos(ctx, card);
+	return card === null ? null : withLitDoors(ctx, card);
 }
 
 function pickGeo(ctx: FillContext, rotate: number): FeedCardV3 | null {
