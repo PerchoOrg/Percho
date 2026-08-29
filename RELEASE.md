@@ -9,6 +9,7 @@
 ## v1.3 — Opening a home now answers "does this fit me?"
 
 ### 2026-08-29
+- **The buyer study can now be answered on the page.** The questionnaire at percho.co/research is a real form: tap the options, rate the four features, leave a WeChat name for the thank-you, and submit — answers are saved for analysis, and a half-finished page survives a refresh
 - **The either/or cards swipe smoothly again, and both sides now show the same number of photos.** They were downloading full-size images for every thumbnail — about seven times more than they needed — which made those cards stutter. One side showing three photos against the other's one was a bug, not a hint about which to pick
 
 - **The four scores on a neighborhood's page (Schools · Safety · Convenience · Growth) are gone, and so are the city card's.** They were placeholder numbers while the tour pipeline was being built, not real ratings, and a made-up score on a page that otherwise cites its sources isn't honest. They'll come back when there's real data behind them
