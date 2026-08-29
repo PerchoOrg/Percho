@@ -363,16 +363,46 @@ function poolIsBare(ctx: FillContext): boolean {
 	return ctx.listingRanked.length === 0 && ctx.communityRanked.length === 0;
 }
 
-/** Lights both doors. See `lightSide`. */
+/**
+ * Both doors show the SAME number of plates.
+ *
+ * Owner, on device 2026-08-29: 「sometimes the only 1 pic on one side, but 3
+ * pics on the other side, is this by design?」 — it was not, it was an artifact.
+ * A side backed by room photos gets up to three; a PLACE side gets exactly one
+ * community poster; and a side can lose one to the other door's dedupe. Three
+ * plates against one reads as a broken card, and worse, it makes the fuller
+ * side look like the recommended answer.
+ *
+ * So the pair is levelled to the thinner side. A door with NO photograph is
+ * left alone — an unlit field is a designed treatment, not a short stack, and
+ * blanking a good side to match it would throw away the only picture the card
+ * has.
+ */
+function evenPlates(
+	left: TradeoffSideV3,
+	right: TradeoffSideV3,
+): [TradeoffSideV3, TradeoffSideV3] {
+	const l = left.photos?.length ?? 0;
+	const r = right.photos?.length ?? 0;
+	if (l === 0 || r === 0 || l === r) return [left, right];
+	const n = Math.min(l, r);
+	return [
+		{ ...left, photos: (left.photos ?? []).slice(0, n) },
+		{ ...right, photos: (right.photos ?? []).slice(0, n) },
+	];
+}
+
+/** Lights both doors. See `lightSide` and `evenPlates`. */
 function withLitDoors(ctx: FillContext, card: TradeoffCardV3): TradeoffCardV3 {
 	const medians = poolMedians(ctx);
-	const left = lightSide(ctx, card.left, new Set(), medians);
-	const right = lightSide(
+	const lit = lightSide(ctx, card.left, new Set(), medians);
+	const other = lightSide(
 		ctx,
 		card.right,
-		new Set((left.photos ?? []).map((photo) => photo.url)),
+		new Set((lit.photos ?? []).map((photo) => photo.url)),
 		medians,
 	);
+	const [left, right] = evenPlates(lit, other);
 	return { ...card, left, right };
 }
 

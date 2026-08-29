@@ -16,6 +16,60 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 12:35 UTC — phase133: even plates, and the card stops downloading 1.9 MB
+
+**Objective**: two findings from the owner on device — 「sometimes the only 1
+pic on one side, but 3 pics on the other side, is this by design?」 and 「the
+page with multiple photos are slower than others when swiping」.
+
+**1. The lopsided doors were an artifact, not a design.** Three sources of
+asymmetry, all mine: a side backed by `dimPhotos` gets up to three room photos
+while a PLACE side gets exactly one community poster; the server returns fewer
+than three when the pool cannot supply three DIFFERENT listings; and the
+cross-door dedupe can take one away. Three plates against one reads as a broken
+card, and worse — it makes the fuller side look like the recommended answer,
+which is a thumb on the scale of the very preference the card is measuring.
+
+**2. The slowness was 1.86 MB per card.** Each plate fetched the full enhanced
+file: `1600x1062`, ~310 KB, six times over — **1.7 megapixels per plate to
+decode** for something drawn at ~152pt. The stack mounts the top card plus one
+behind, so that decode lands right as the buyer starts swiping.
+
+**Actions**:
+- `apps/web/lib/supabase/storage.ts` — `photoRenderUrl()`, Supabase's
+  `/render/image/public/` endpoint at the size the plate is actually drawn.
+- `apps/web/lib/feed/dim-photos.ts` — plates are requested at `640x427`,
+  `resize=cover`, `quality=75`.
+- `apps/mobile/lib/feed/generate-feed.ts` — `evenPlates` levels the pair to the
+  thinner side.
+
+**Decisions**:
+- *640px.* A plate is ~152pt at rest and ~210pt with its door dragged open, so
+  640 covers a 3x screen with room. Measured on the same photo: **42,558 bytes
+  at 640x427 against 309,616 at full size** — 7.3x fewer bytes, 6.2x fewer
+  pixels. Per card: 1.86 MB → 255 KB.
+- *An unlit door is left alone.* Levelling is skipped when one side has NO
+  photograph: the unlit field is a designed treatment rather than a short stack,
+  and blanking a good side to match it would throw away the only picture the
+  card has.
+- *Only Supabase-hosted paths get a render URL.* A community hero can be a
+  Cloudflare Stream thumbnail, which the endpoint would 404. Those keep their
+  plain URL, and they are one image rather than six.
+
+**Resolution**: web 809 tests (+2), mobile 589 (+2), both typecheck and biome
+clean.
+
+**Learnings**: serving the highest-quality file everywhere was the right call
+for the 08-29 sharpness fix and the wrong one for a thumbnail — "use the best
+image" and "use the right image" diverge as soon as the same photo is drawn at
+two sizes. Any surface that draws a stored photo smaller than ~400pt should be
+asking for a render, not the object.
+
+**Next steps**: still unanswered and now the biggest gap — a trade-off vote
+lands in `signals.ts` and produces no visible echo. 32 questions ask a lot of a
+buyer who is shown nothing back.
+
+
 ## 2026-08-29 10:25 UTC — phase132: the Atlanta remote-buyer study page is hosted on percho.co
 
 **Objective**: the owner shared the customer-study questionnaire (a private

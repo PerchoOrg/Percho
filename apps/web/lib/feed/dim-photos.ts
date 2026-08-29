@@ -1,4 +1,4 @@
-import { photoPublicUrl, preferredPhotoPath } from '@/lib/supabase/storage';
+import { photoRenderUrl, preferredPhotoPath } from '@/lib/supabase/storage';
 /**
  * One photograph per preference dimension, for the trade-off card's two doors.
  *
@@ -90,6 +90,14 @@ export interface DimPhoto {
  */
 export const DIM_PICKS = 3;
 
+/**
+ * The size a plate is actually drawn at, so the phone never downloads more.
+ *
+ * ~152pt wide at rest and ~210pt with the door dragged open; 640 covers both on
+ * a 3x screen. See `photoRenderUrl` for what this saved.
+ */
+const PLATE = { width: 640, height: 427, quality: 75 } as const;
+
 /** A photo row as this module needs it — `ai_tags` already narrowed. */
 export interface TaggedPhotoRow {
   listing_id: string;
@@ -168,7 +176,7 @@ export function pickDimPhotos(
       seenListings.add(entry.row.listing_id);
       const caption = usableCaption(entry.tags.caption);
       picks.push({
-        url: photoPublicUrl(preferredPhotoPath(entry.row)),
+        url: photoRenderUrl(preferredPhotoPath(entry.row), PLATE),
         ...(caption === undefined ? {} : { caption }),
       });
     }

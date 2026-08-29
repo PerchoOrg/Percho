@@ -50,6 +50,39 @@ export function preferredPhotoPath(row: EnhanceablePhotoRow): string {
   return row.enhanced_path ?? row.storage_path;
 }
 
+/**
+ * The SAME photo, rendered by Supabase at the size it will actually be drawn.
+ *
+ * ── Why (owner, 2026-08-29) ─────────────────────────────────────────────────
+ *
+ * 「the page with multiple photos are slower than others when swiping」. The
+ * trade-off card draws six plates and each was fetching the full enhanced file:
+ * 1600x1062 and ~310 KB, six times over — **1.86 MB and 1.7 megapixels per
+ * plate to decode**, on a card the buyer may swipe past in a second.
+ *
+ * A plate is ~152pt wide at rest and ~210pt with its door dragged open, so 640px
+ * covers it on a 3x screen with room to spare. Measured on the same photo:
+ * 42,558 bytes at 640x427 against 309,616 at full size — **7.3x fewer bytes and
+ * 6.2x fewer pixels**, for an image that is downsampled either way.
+ *
+ * Only for Supabase-hosted paths. A community hero can be a Cloudflare Stream
+ * thumbnail, which this would silently 404.
+ */
+export function photoRenderUrl(
+  storagePath: string,
+  opts: { width: number; height: number; quality?: number },
+): string {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!base) return photoPublicUrl(storagePath);
+  const params = new URLSearchParams({
+    width: String(opts.width),
+    height: String(opts.height),
+    resize: 'cover',
+    quality: String(opts.quality ?? 75),
+  });
+  return `${base.replace(/\/$/, '')}/storage/v1/render/image/public/${BUCKET}/${storagePath}?${params.toString()}`;
+}
+
 export function photoPublicUrl(storagePath: string): string {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!base) {
