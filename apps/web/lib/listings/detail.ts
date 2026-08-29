@@ -73,6 +73,27 @@ export interface ListingVideoDTO {
   durationSec?: number;
 }
 
+/** One "Based on" item under a question's answer. */
+export interface QuestionBasisDTO {
+  type: string;
+  note: string;
+  url?: string;
+}
+
+/**
+ * An approved answer from `listing_questions` (phase126). The question text
+ * is NOT carried — the bank in `@percho/shared/questions` owns it, keyed by
+ * `id`, and the client looks it up.
+ */
+export interface QuestionAnswerDTO {
+  id: string;
+  answer: string;
+  basis: QuestionBasisDTO[];
+  verify?: string;
+  decisiveness: 1 | 2 | 3;
+  form: string;
+}
+
 export interface ListingDetailDTO {
   id: string;
   slug: string;
@@ -106,6 +127,8 @@ export interface ListingDetailDTO {
   /** `mls_listings.listing_key` — the FMLS number a buyer can quote. */
   mlsNumber?: string;
   video?: ListingVideoDTO;
+  /** Approved move-in question answers. Absent when the listing has none. */
+  questions?: QuestionAnswerDTO[];
 }
 
 type ListingRow = {
@@ -136,6 +159,47 @@ type MlsMirrorRow = {
   internet_entire_listing_display_yn?: boolean | null;
 };
 
+/** The slice of a `listing_questions` row the DTO reads. */
+export type QuestionRow = Pick<
+  Database['public']['Tables']['listing_questions']['Row'],
+  'question_id' | 'answer' | 'basis' | 'verify' | 'form' | 'decisiveness'
+>;
+
+/**
+ * Approved rows → DTO. A row whose `basis` is not a non-empty array of
+ * `{ type, note }` objects is dropped rather than shown without its "Based
+ * on" line — the constraint guarantees the shape on write, but the projection
+ * is the last reader and does not trust a jsonb column blindly.
+ */
+export function projectQuestions(rows: QuestionRow[]): QuestionAnswerDTO[] {
+  const out: QuestionAnswerDTO[] = [];
+  for (const r of rows) {
+    if (!Array.isArray(r.basis)) continue;
+    const basis: QuestionBasisDTO[] = [];
+    for (const b of r.basis) {
+      if (typeof b !== 'object' || b === null || Array.isArray(b)) continue;
+      const o = b as Record<string, unknown>;
+      if (typeof o.type !== 'string' || typeof o.note !== 'string') continue;
+      basis.push({
+        type: o.type,
+        note: o.note,
+        ...(typeof o.url === 'string' && o.url.length > 0 ? { url: o.url } : {}),
+      });
+    }
+    if (basis.length === 0) continue;
+    const d = r.decisiveness;
+    out.push({
+      id: r.question_id,
+      answer: r.answer,
+      basis,
+      ...(r.verify?.trim() ? { verify: r.verify.trim() } : {}),
+      decisiveness: d === 1 || d === 3 ? d : 2,
+      form: r.form,
+    });
+  }
+  return out;
+}
+
 /** A `listing_videos` row, uid-resolved by `mobileVideoUid`. */
 type ListingVideoRow = {
   cf_video_id: string | null;
@@ -161,9 +225,14 @@ export function projectDetail(
   listing: ListingRow,
   photos: PhotoRow[],
   comps: CompRow[],
-  extras: { mls?: MlsMirrorRow | null; video?: ListingVideoRow | null } = {},
+  extras: {
+    mls?: MlsMirrorRow | null;
+    video?: ListingVideoRow | null;
+    questions?: QuestionRow[];
+  } = {},
 ): ListingDetailDTO {
   const video = projectVideo(extras.video ?? null);
+  const questions = projectQuestions(extras.questions ?? []);
   // A mirror row the MLS forbids displaying projects nothing at all.
   const mls =
     extras.mls && extras.mls.internet_entire_listing_display_yn !== false ? extras.mls : null;
@@ -196,6 +265,7 @@ export function projectDetail(
       : {}),
     ...(mls?.listing_key?.trim() ? { mlsNumber: mls.listing_key.trim() } : {}),
     ...(video ? { video } : {}),
+    ...(questions.length > 0 ? { questions } : {}),
     photos: projectPhotos(photos),
     comps: projectComps(comps, listing.city),
   };
@@ -357,7 +427,7 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
 
   // Independent reads — run them together rather than paying four sequential
   // round trips on a screen the buyer is waiting on.
-  const [photoRes, compRes, mlsRes, videoRes] = await Promise.all([
+  const [photoRes, compRes, mlsRes, videoRes, questionRes] = await Promise.all([
     supabase
       .from('listing_photos')
       .select('id, storage_path, ai_tags, sort_order')
@@ -392,6 +462,13 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
       .order('sort_order', { ascending: true })
       .limit(1)
       .maybeSingle(),
+    // Move-in question answers (phase126). RLS already limits anon to
+    // approved rows; the filter is repeated so the intent is in the query.
+    supabase
+      .from('listing_questions')
+      .select('question_id, answer, basis, verify, form, decisiveness')
+      .eq('listing_id', row.id)
+      .eq('status', 'approved'),
   ]);
 
   if (photoRes.error) throw new Error(`listing-detail: photos failed: ${photoRes.error.message}`);
@@ -400,6 +477,9 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
   // rather than 500ing a page whose core content loaded fine.
   const mls = mlsRes.error ? null : (mlsRes.data as MlsMirrorRow | null);
   const video = videoRes.error ? null : (videoRes.data as ListingVideoRow | null);
+  // Same soft failure — and it also covers the table not existing yet on a
+  // database the migration has not reached.
+  const questions = questionRes.error ? [] : ((questionRes.data ?? []) as QuestionRow[]);
 
   return projectDetail(
     row,
@@ -408,6 +488,7 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
     {
       mls,
       video,
+      questions,
     },
   );
 }

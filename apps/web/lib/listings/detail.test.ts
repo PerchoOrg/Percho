@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { projectComps, projectDetail, projectPhotos, projectVideo } from './detail';
+import {
+  projectComps,
+  projectDetail,
+  projectPhotos,
+  projectQuestions,
+  projectVideo,
+} from './detail';
 
 const baseListing = {
   id: 'l1',
@@ -215,5 +221,46 @@ describe('projectDetail — IDX display gate (phase119.1)', () => {
       mls: { ...mls, internet_entire_listing_display_yn: null },
     });
     expect(d.daysOnMarket).toBe(23);
+  });
+});
+
+describe('projectQuestions — an answer without its basis is not an answer', () => {
+  const row = {
+    question_id: 'logistics.turn',
+    answer: 'Left turns will wait at 8am.',
+    basis: [{ type: 'road', note: 'collector at the corner' }],
+    verify: ' Stand at the corner ',
+    form: 'text',
+    decisiveness: 3,
+  };
+
+  it('projects a good row, trimming verify and keeping decisiveness', () => {
+    expect(projectQuestions([row])).toEqual([
+      {
+        id: 'logistics.turn',
+        answer: 'Left turns will wait at 8am.',
+        basis: [{ type: 'road', note: 'collector at the corner' }],
+        verify: 'Stand at the corner',
+        decisiveness: 3,
+        form: 'text',
+      },
+    ]);
+  });
+
+  it('drops a row whose basis is empty or malformed', () => {
+    expect(projectQuestions([{ ...row, basis: [] }])).toEqual([]);
+    expect(projectQuestions([{ ...row, basis: 'nope' }])).toEqual([]);
+    expect(projectQuestions([{ ...row, basis: [{ type: 'road' }] }])).toEqual([]);
+  });
+
+  it('omits verify when blank and clamps an out-of-range decisiveness to 2', () => {
+    const [d] = projectQuestions([{ ...row, verify: null, decisiveness: 7 }]);
+    expect(d && 'verify' in d).toBe(false);
+    expect(d?.decisiveness).toBe(2);
+  });
+
+  it('lands on the DTO only when non-empty', () => {
+    expect('questions' in projectDetail(baseListing, [], [])).toBe(false);
+    expect(projectDetail(baseListing, [], [], { questions: [row] }).questions).toHaveLength(1);
   });
 });

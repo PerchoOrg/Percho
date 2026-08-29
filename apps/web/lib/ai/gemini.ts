@@ -565,3 +565,71 @@ export async function generateCommunityMarketing(
   }
   return out;
 }
+
+// ─── Grounded generation (phase126, move-in questions) ───────────────────────
+
+export interface GroundedSource {
+  url: string;
+  title?: string;
+}
+
+export interface GroundedResult {
+  text: string;
+  /** Web pages the model actually retrieved, from `groundingMetadata`. */
+  sources: GroundedSource[];
+}
+
+/**
+ * One call with Google Search grounding switched on. The move-in question
+ * generator needs facts about a street it has never seen — a road project,
+ * a school rebuild, a transit opening — and those live on city pages, not in
+ * the model's weights. The grounding chunks come back alongside the text so a
+ * caller can cross-check the URLs the model cites against the ones it read.
+ *
+ * `responseMimeType` is deliberately NOT set: the search tool and JSON mode
+ * cannot be combined on this API, so callers extract JSON from prose the same
+ * way every other caller here does.
+ */
+export async function generateGrounded(opts: {
+  system: string;
+  user: string;
+  maxTokens: number;
+  /** Override the env-pinned model — an offline research job may want a bigger one. */
+  model?: string;
+}): Promise<GroundedResult> {
+  const res = await fetch(API_BASE(opts.model ?? model()), {
+    method: 'POST',
+    headers: {
+      'x-goog-api-key': apiKey(),
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: opts.system }] },
+      contents: [{ role: 'user', parts: [{ text: opts.user }] }],
+      tools: [{ google_search: {} }],
+      generationConfig: { maxOutputTokens: opts.maxTokens },
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Gemini API error: ${res.status} ${await res.text()}`);
+  }
+  const data = (await res.json()) as {
+    candidates?: {
+      content?: { parts?: { text?: string }[] };
+      groundingMetadata?: { groundingChunks?: { web?: { uri?: string; title?: string } }[] };
+    }[];
+  };
+  const cand = data.candidates?.[0];
+  // Grounded replies can arrive as several text parts; join rather than take the first.
+  const text = (cand?.content?.parts ?? [])
+    .map((p) => p.text ?? '')
+    .join('')
+    .trim();
+  if (!text) throw new Error('Gemini API returned no text content');
+  const sources: GroundedSource[] = [];
+  for (const c of cand?.groundingMetadata?.groundingChunks ?? []) {
+    if (c.web?.uri)
+      sources.push({ url: c.web.uri, ...(c.web.title ? { title: c.web.title } : {}) });
+  }
+  return { text, sources };
+}

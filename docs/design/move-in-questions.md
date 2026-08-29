@@ -286,7 +286,7 @@ employers" answer.
 
 | id | q | who | scope | basis | form | verify | dim | goal | fh |
 |---|---|---|---|---|---|---|---|---|---|
-| `money.catch` | Why is this house priced where it is — what's the catch? | all | home | market, mls, assessor, road | text | — | — | confidence | n/a |
+| `money.catch` | Why is this house priced where it is — what's the catch? | all | home | market, mls, assessor, road, listing_text | text | — | — | confidence | n/a |
 | `money.tax` | Where are property taxes headed here? | all | city | assessor, civic | timeline | — | — | teach | n/a |
 | `money.rent_out` | Could I rent out part of this house? Is an ADU allowed? | investor, multigen | home | zoning, photo | text | — | +value | teach | n/a |
 | `money.resale` | Will this be easier or harder to sell than the average house here? | all | home | road, school, market | text | — | +value | confidence | n/a |

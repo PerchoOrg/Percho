@@ -16,6 +16,117 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 08:40 UTC — phase126: move-in questions v1 — bank, generator, table, explore section
+
+**Objective**: owner, on the phase124 design doc: "go ahead". Ship the first
+cut of `docs/design/move-in-questions.md`: the bank as data, an offline
+search-grounded generator with the "answer or absent" gate, a table with a
+review status, and the explore-page section that renders ranked questions
+and learns from which ones get opened. The owner did not answer the doc's §8
+questions, so this phase takes the conservative defaults: no new `DimKey`s
+(proposed dims left unmapped), the cold-start five as drafted, no "Where's
+work?" prompt, no standing-question pin.
+
+**Actions**:
+- `packages/shared/src/questions.ts` (+ `./questions` export) — the bank: 106
+  `QuestionDef`s in 16 themes with id / theme / who / scope / basis / form /
+  verify / dim / fh, plus `BASIS_TYPES`, `SOURCED_BASIS_TYPES` (claims that
+  need a URL vs measurements that don't), `ANSWER_FORMS`, `THEME_LABELS`,
+  `THEME_ORDER`, `COLD_START`, `ASKABLE_QUESTIONS` (fh ≠ never),
+  `questionById`.
+- `supabase/migrations/20260829080000_listing_questions.sql` — one row per
+  (listing, question): answer, `basis` jsonb (CHECK non-empty array),
+  verify, form, decisiveness 1–3, scope, `status` draft|approved|rejected,
+  model, generated_at, reviewed_at. RLS: anon reads approved only; writes are
+  service-role (no agent policy — it is not the agent's copy).
+  `database.types.ts` hand-updated to match (the `db:types` path is still
+  the stale-local one, DEVLOG 2026-08-19). **Not pushed** — `pnpm db:push`
+  runs from the owner's Mac.
+- `apps/web/lib/ai/gemini.ts` — `generateGrounded()`: one call with the
+  `google_search` tool, returns text + the grounding chunks' URLs. No JSON
+  mime type (cannot combine with the tool); an optional `model` override.
+- `apps/web/lib/zod/questions.ts` — item + envelope schemas. The envelope
+  validates items as `unknown` so one malformed answer rejects itself, not
+  the batch (found on the first dry run: the lite model dropped an `id`).
+- `apps/web/lib/questions/generate.ts` — `buildPrompt` (Fair Housing rule
+  verbatim, the bank with per-question basis allow-lists, output shape),
+  `parseAnswerBatch` (pure: unknown id / fh=never / duplicate / empty basis /
+  disallowed basis type / sourced basis without URL / wrong form → rejected
+  with a reason; nothing repaired), `generateListingQuestions`. 10 tests.
+- `apps/web/lib/listings/detail.ts` — `QuestionAnswerDTO`, `projectQuestions`
+  (drops a row whose jsonb basis is not a non-empty `{type,note}[]`), an
+  approved-rows read in the detail `Promise.all` that soft-fails to absent —
+  so main is safe before the migration lands. 4 tests.
+- `scripts/admin/generate-move-in-questions.ts` (`pnpm questions <id|slug>`)
+  — dry run by default; `--write` stores draft, `--approve` stores approved,
+  `--approve-drafts` flips without a model call, `--model`, `--raw`. Prints
+  the reply verbatim whenever nothing was accepted.
+- Mobile: `lib/listing/questions.ts` (`houseEraAnswer` decade → inspection
+  checklist from `yearBuilt`, `mergeAnswers` server-wins, `rankQuestions`
+  = decisiveness × (1 + theme affinity) with the cold-start pin; 11 tests),
+  `state/question-affinity.ts` (persisted opens-per-theme; 2 tests),
+  `lib/listing/explore-events.ts` (+`question_open` with dwell-on-close,
+  `question_verify_tap`, `question_source_tap`, `question_theme_browse`),
+  `components/listing/explore/QuestionsBlock.tsx` (first 5, "More questions"
+  → theme chips; expanded row = answer / "Based on" with tappable sources /
+  verify chip), `app/listing/[id].tsx` mounts it between Cost and Facts under
+  `WHAT PEOPLE ASK BEFORE THEY MOVE HERE`, absent when nothing is answerable.
+
+**Decisions**:
+- `house.era` is computed on the phone from `yearBuilt`, no server row. It
+  is the doc's "ships first" answer and it means every home with a year
+  (254/260) shows the section today, with one honest row, before any
+  generation has run.
+- Sourced-vs-measured basis split (`SOURCED_BASIS_TYPES`): a distance the
+  model computed or the listing's own year needs no link; a project, a
+  zoning rule, a school rating, a quoted post does. Without the split the
+  model either fabricates URLs for measurements or drops honest ones.
+- The rejected-with-reason list is printed, not hidden. It is the prompt's
+  feedback loop: the first pro-model run rejected `money.catch` for citing
+  `listing_text` ("motivated seller — potential short sale"), which is a
+  legitimate catch, so that basis type was added to the question's
+  allow-list (bank + doc).
+- Neighbourhood-scoped caching (doc §1.5) is NOT built: v1 generates the
+  whole bank per listing. The `scope` column is stored so the cache can be
+  added without a migration.
+
+**Issues / dry runs** (one listing, 2895 Shurburne Dr, Alpharetta; nothing
+stored):
+- Env `GEMINI_MODEL=gemini-3.5-flash-lite`: 3s, read one page, returned ONE
+  answer with no `id` → whole batch failed schema. After the per-item
+  change it would have been "1 rejected: schema: id Required". Too weak for
+  this job.
+- `gemini-2.5-pro`: 404 "no longer available to new users".
+- `gemini-3.1-pro-preview`: 71s, **6 accepted / 1 rejected**. Real sources:
+  Alpharetta tree-removal permit page for `nature.trees`, Fulton Schools for
+  `kids.walk` (1.6 mi, arterials), Redfin tax history for `money.tax`
+  ($2,708 → $3,372), the Haynes Bridge shopping cluster for
+  `culture.grocery` / `logistics.errands`. One verify was not a go-and-see
+  ("consult an arborist") — prompt calibration for the owner's first-batch
+  read, not a code bug.
+- Three model calls total, well under $1.
+- Phase number race (memory: re-check origin/main before merging): another
+  agent merged its own phase125 at 07:40 UTC while this was in flight, so
+  this phase was renumbered 125 → 126 and rebased before merging.
+
+**Resolution**: web typecheck clean, lint 0 errors, 797 tests; mobile
+typecheck clean, lint 0 errors (the pre-existing warnings only), 585 tests;
+shared typecheck clean. Not seen on a device yet.
+
+**Learnings**: validate a model's list per item, never as one schema — the
+first failure mode was a single missing field hiding six good answers. And
+print the verbatim reply when nothing survives; a "schema: Required" line
+on its own was undebuggable.
+
+**Next steps** (owner):
+1. `pnpm db:push` from the Mac — the table does not exist until then; the
+   app already tolerates its absence.
+2. `pnpm questions <slug> --model gemini-3.1-pro-preview` on ~20 listings,
+   read the output, then `--approve-drafts` (or `--approve` directly once
+   the prompt is trusted). The env's flash-lite model is not adequate; decide
+   whether to pin `GEMINI_MODEL` up or keep passing `--model`.
+3. Pull `~/Workspace/Percho` so Metro serves the section.
+
 ## 2026-08-29 07:40 UTC — phase125: the trade-off card comes back as two doors
 
 **Objective**: owner, 2026-08-25 — "we need to get tradeoff cards back, same

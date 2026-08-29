@@ -9,6 +9,7 @@
 ## v1.3 — Opening a home now answers "does this fit me?"
 
 ### 2026-08-29
+- **"What people ask before they move here."** A home's page now carries the questions you'd only think to ask after living somewhere — can I turn left out of my street at 8am, will I drive through a school zone every day, what does a 1960s build mean for the inspection, what's the catch in the price — each opening into an answer about *this* home with a "Based on" line naming what it rests on, and a go-and-see action when a visit can settle it. Five show first; the rest are browsable by theme (vibe, kids, money, the house, sound…). Answers we can't back with a source simply don't appear. Homes get their answers in batches over the coming days; every home with a year built already has its inspection checklist.
 - **"What matters more to you?" is back in the feed, and it finally looks like the rest of it.** Every ninth card now asks you to choose between two things — a bigger yard or a shorter drive, room to grow or nothing to fix. The card splits in two, and each side shows a real photo pulled from homes and communities in your own feed, so you're choosing between two places you can see rather than two words. Swipe toward the one you want; the side you're picking opens up and the other steps back
 
 ### 2026-08-25
