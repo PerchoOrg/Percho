@@ -16,6 +16,41 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 09:21 UTC — phase130 follow-up: the backfill is stopped; one home has cards
+
+**Objective**: after phase130 merged I started a 12-listing draft batch in
+the background as a "first batch". The owner stopped it: "dont backfill!
+just run it for one house for now".
+
+**Actions**: killed the batch during its first listing (9155 Nesbit Ferry
+Rd) — nothing from it was stored. `listing_insights` holds exactly 8 rows,
+all `approved`, all for 2895 Shurburne Dr (listing `03fc78cd`), from a
+fresh `pnpm insights 2895-shurburne-drive --approve` run (research is
+re-done per run, so these differ in wording from the dry run in the entry
+below). Read through before approval — no card describes residents; every
+card carries at least one URL:
+
+- watch · safety ·3 — Short sale comes dark and as-is
+- watch · house ·3 — Records shave 546 square feet off listing
+- watch · money ·2 — Four sale campaigns since October 2023
+- watch · body ·2 — Garage-to-bedroom living spans three levels
+- watch · work ·2 — Rail commute starts with an 8.7-mile drive
+- know · kids ·2 — Middle school is closest; elementary farthest
+- know · logistics ·2 — Shurburne splits Roswell and Johns Creek (inferred
+  from an annexation record for 2840 and a tax district for 2865; the
+  weakest of the eight, kept for the owner to judge)
+- plus · culture ·1 — Three shopping centers sit within 14 minutes
+
+**Decisions**: no further generation until the owner names it. Recorded as
+a memory: LLM content jobs run for ONE listing unless he names a batch —
+never start `--all` unprompted, even overnight.
+
+**Next steps**: owner opens 2895 Shurburne Dr on the device (Metro serves
+the pulled reference worktree) and judges the rail. If it holds, he names
+the next batch and its size; the script resumes with
+`pnpm insights --all --limit N --write` and a read-through before
+`--approve-drafts`.
+
 ## 2026-08-29 10:20 UTC — phase129: the placeholder place stats come off the community page and the city card
 
 **Objective**: owner decision, during the customer-study demo review (2026-08-29):
