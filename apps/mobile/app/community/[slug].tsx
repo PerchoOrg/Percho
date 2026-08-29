@@ -38,13 +38,11 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { StatBar } from "../../components/cards/StatBar";
 import {
 	RedlineIcon,
 	type RedlineIconName,
 } from "../../components/cards/redline/RedlineChrome";
 import { apiBase } from "../../lib/api/base";
-import { placeStats } from "../../lib/feed/place-stats";
 import { useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
 import { colors, radii } from "../../theme/tokens";
@@ -221,27 +219,6 @@ export default function CommunityWhyScreen() {
 						<Text style={styles.eyebrow}>WHY PEOPLE LOVE IT</Text>
 						<Text style={styles.name}>{data.name}</Text>
 						{!!place && <Text style={styles.place}>{place}</Text>}
-						{/*
-						 * The four-cell bar the feed card used to carry (owner
-						 * 2026-08-22: "remove from front page, but move it to the
-						 * explore page"). It lands on the HERO, not in the body: the
-						 * component is white-on-scrim by construction, and this is the
-						 * only dark surface on the screen — putting it below would
-						 * mean a second, light-theme StatBar for one caller.
-						 *
-						 * ⚠️ The values are still `place-stats.ts` placeholders,
-						 * seeded off the community id. That was worth flagging on the
-						 * card and is worth flagging louder here: this screen's own
-						 * header cites §3.4 (「缺数据显示 "–" 不编造」) as the reason
-						 * it does not attempt the four pillars, THE NEIGHBOURHOOD
-						 * below prints DB columns verbatim, and a source line closes
-						 * the page. Invented numbers borrow that page's credit. Fine
-						 * while the tour pipeline is being tested; not fine in front
-						 * of a buyer.
-						 */}
-						<View style={styles.heroStats}>
-							<StatBar cells={placeStats(data.id, "community")} />
-						</View>
 					</View>
 				</View>
 
@@ -419,12 +396,6 @@ const styles = StyleSheet.create({
 	eyebrow: { ...textStyles.caption, color: colors.onCardDim, marginBottom: 8 },
 	name: { ...textStyles.title1, color: colors.onCard },
 	place: { ...textStyles.footnote, color: colors.onCardDim, marginTop: 6 },
-	/**
-	 * `StatBar` sizes itself with `flex: 2` for the card's bottom row, where it
-	 * shared space with the Explore link. Nothing competes with it here, so the
-	 * row it sits in is what gives it a width.
-	 */
-	heroStats: { flexDirection: "row", marginTop: 14 },
 	close: {
 		position: "absolute",
 		right: 14,

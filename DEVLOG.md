@@ -16,6 +16,38 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 10:20 UTC — phase129: the placeholder place stats come off the community page and the city card
+
+**Objective**: owner decision, during the customer-study demo review (2026-08-29):
+the four-figure bar — Schools 8/10 · Safety 8/10 · Convenience 127 · Growth
++3.6% — on the community explore hero, and Jobs · Cost of Living · Commute ·
+Growth on the city card, were `lib/feed/place-stats.ts` numbers seeded off the
+row id, i.e. invented. The core value being pitched to remote buyers is "see a
+neighbourhood like a local, with the receipts"; an invented number on the same
+screen as the Nextdoor source line borrows that credit. Owner: remove them until
+real data exists.
+
+**Actions**: `app/community/[slug].tsx` — `heroStats` block and style removed
+with the `StatBar` / `placeStats` imports. `components/cards/AreaFace.tsx` —
+the `<StatBar>` in `bottomRow` removed; the row now holds only `Explore →`.
+Deleted the modules the two callers were the only users of:
+`components/cards/StatBar.tsx`, `lib/feed/place-stats.ts`,
+`lib/feed/place-stats.test.ts`. `CommunityFace.tsx` header comment updated.
+`pnpm typecheck` clean, `pnpm lint` unchanged (17 pre-existing `noConsoleLog`
+warnings in `scripts/probe-*.ts`), `pnpm test` 50 files / 587 passed.
+
+**Decisions**: deleted rather than stubbed. `place-stats.ts` documented itself
+as "the module IS the placeholder"; keeping it around invites a third caller.
+When a real source lands (school ratings, crime, commute) it gets a DTO field
+and a component built for it, not this shape resurrected.
+
+**Learnings**: the customer study's demo video (see the questionnaire artifact,
+2026-08-29) omits these figures too; the recorded app and the shipped app now
+agree.
+
+**Next steps**: none for this phase. The four pillars remain "no data" per
+spec-v3 §3.4 until a source exists.
+
 ## 2026-08-29 09:40 UTC — phase128: three plates a side, and the enhanced file becomes the default
 
 **Objective**: owner, on device after phase127 — 「it is better, but still not
