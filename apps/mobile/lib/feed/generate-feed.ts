@@ -16,6 +16,7 @@
  *
  * Pure: no react/react-native/expo/zustand imports.
  */
+import type { DimKey } from "@percho/shared/types";
 import type {
 	CommunityCardV3,
 	FeedCardV3,
@@ -163,13 +164,109 @@ interface FillContext {
 	loopedIds: string[];
 }
 
+/**
+ * The photograph behind one trade-off door.
+ *
+ * A trade-off card owns no media, and the alternative to this function was
+ * shipping eleven stock images — one per `DimKey`. Instead the door borrows the
+ * hero of a pool row that CLAIMS the dimension, so the picture behind "Best
+ * schools" is a real community the buyer could be shown three cards later, and
+ * the card costs no new asset and no new licence.
+ *
+ * Scope picks the shelf to search first: a `property` trade-off is about the
+ * house, a `life` one is about the place. The other shelf is the fallback.
+ *
+ * Returns `undefined` when nothing in the pool claims the dim — `TradeoffFace`
+ * draws its unlit field for that door, which is the honest answer. Borrowing an
+ * unrelated photo would be the engine authoring content, which it never does.
+ */
+function heroForDim(
+	ctx: FillContext,
+	dim: DimKey,
+	scope: TradeoffCardV3["scope"],
+	/** The other door's photo, so one pool row can't fill both. */
+	taken: string | undefined,
+): string | undefined {
+	const shelves: readonly (readonly {
+		heroUrl: string;
+		dims?: readonly DimKey[];
+	}[])[] =
+		scope === "property"
+			? [ctx.listingRanked, ctx.communityRanked]
+			: [ctx.communityRanked, ctx.listingRanked];
+
+	for (const shelf of shelves) {
+		for (const row of shelf) {
+			if (row.dims?.includes(dim) !== true) continue;
+			if (row.heroUrl === "" || row.heroUrl === taken) continue;
+			return row.heroUrl;
+		}
+	}
+	return undefined;
+}
+
+/**
+ * True when the pool has nothing a trade-off could borrow from.
+ *
+ * A trade-off is the one card in the mix that is authored rather than projected
+ * from a pool row, which historically made it the deck's escape hatch: with no
+ * inventory the engine could fill every slot with questions. That is the
+ * 39-card single-kind run `rhythm.test.ts` exists to prevent, and since
+ * 2026-08-22 it is also the wrong product answer — no inventory means the §1.9
+ * terminal card, not an interview.
+ *
+ * It is the right rule for the Two Doors face besides: both doors borrow their
+ * photograph from the pool, so with an empty pool there is nothing to open.
+ */
+function poolIsBare(ctx: FillContext): boolean {
+	return ctx.listingRanked.length === 0 && ctx.communityRanked.length === 0;
+}
+
+/** Hands each door the hero it borrows. See `heroForDim`. */
+function withDoorPhotos(
+	ctx: FillContext,
+	card: TradeoffCardV3,
+): TradeoffCardV3 {
+	const left = heroForDim(ctx, card.left.dim, card.scope, undefined);
+	const right = heroForDim(ctx, card.right.dim, card.scope, left);
+	return {
+		...card,
+		left: { ...card.left, ...(left === undefined ? {} : { photoUrl: left }) },
+		right: {
+			...card.right,
+			...(right === undefined ? {} : { photoUrl: right }),
+		},
+	};
+}
+
 function pickTradeoff(ctx: FillContext, rotate: number): TradeoffCardV3 | null {
+	if (poolIsBare(ctx)) return null;
+
 	const scope = ctx.stage >= 3 ? "property" : "life";
 	const preferred = TRADEOFFS.filter((t) => t.scope === scope);
-	return (
+	const card =
 		firstUnseen(preferred, (t) => t.id, ctx.seen, rotate) ??
-		firstUnseen(TRADEOFFS, (t) => t.id, ctx.seen, rotate)
-	);
+		firstUnseen(TRADEOFFS, (t) => t.id, ctx.seen, rotate);
+	if (card === null) return null;
+
+	return withDoorPhotos(ctx, card);
+}
+
+/**
+ * The looped trade-off — same card, same doors, same guard.
+ *
+ * `loopedFallback` used to push `anyItem(TRADEOFFS, rotate)` straight into its
+ * candidate list, which bypassed both: a looped question could arrive with two
+ * unlit doors while the pool had photos for them, and an empty pool could loop
+ * questions forever behind the terminal card.
+ */
+function loopedTradeoff(
+	ctx: FillContext,
+	rotate: number,
+): TradeoffCardV3 | null {
+	if (poolIsBare(ctx)) return null;
+	const card = anyItem(TRADEOFFS, rotate);
+	return card === null ? null : withDoorPhotos(ctx, card);
 }
 
 function pickGeo(ctx: FillContext, rotate: number): FeedCardV3 | null {
@@ -275,7 +372,7 @@ function loopedFallback(
 		}
 	}
 	if (permitted.has("tradeoff")) {
-		candidates.push(anyItem(TRADEOFFS, rotate));
+		candidates.push(loopedTradeoff(ctx, rotate));
 	}
 
 	const real = candidates.filter((c): c is FeedCardV3 => c !== null);

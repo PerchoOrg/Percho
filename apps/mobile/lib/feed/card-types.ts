@@ -231,6 +231,17 @@ export interface TradeoffSideV3 {
 	 * carry `dim: "walkable"` — one should draw a car, the other footprints.
 	 */
 	icon?: CardIconName;
+	/**
+	 * The photograph behind this door (2026-08-29 Two Doors face).
+	 *
+	 * Borrowed at composition time from a pool row that claims this side's
+	 * `dim` — see `heroForDim` in `generate-feed.ts`. NOT authored in
+	 * `content.ts`: the trade-offs are static product copy and the pool is
+	 * whatever the server sent, so the pairing can only be made where the two
+	 * meet. Absent when no pool row claims the dim, and the door renders its
+	 * unlit field instead of an unrelated picture.
+	 */
+	photoUrl?: string;
 }
 
 export interface TradeoffCardV3 {
