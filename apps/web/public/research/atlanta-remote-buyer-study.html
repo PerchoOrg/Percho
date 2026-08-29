@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>亚特兰大异地购房小问卷</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #F5F7F6;
+    --surface: #FFFFFF;
+    --surface-2: #EDF1EF;
+    --ink: #17211E;
+    --ink-2: #4A5753;
+    --ink-3: #7B8884;
+    --line: #D7DEDB;
+    --accent: #1E6B5C;
+    --accent-ink: #FFFFFF;
+    --why: #9A6410;
+    --why-soft: #FBF1DC;
+    --why-line: #E7C98A;
+    --shadow: 0 1px 2px rgba(23,33,30,.06), 0 8px 24px -16px rgba(23,33,30,.18);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #121816; --surface: #1A2320; --surface-2: #212C28;
+      --ink: #E6ECE9; --ink-2: #AEBBB6; --ink-3: #7F8D88; --line: #2E3B36;
+      --accent: #5FBFA8; --accent-ink: #0F1A16;
+      --why: #E2B25E; --why-soft: #2C2415; --why-line: #5A4620;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #121816; --surface: #1A2320; --surface-2: #212C28;
+    --ink: #E6ECE9; --ink-2: #AEBBB6; --ink-3: #7F8D88; --line: #2E3B36;
+    --accent: #5FBFA8; --accent-ink: #0F1A16;
+    --why: #E2B25E; --why-soft: #2C2415; --why-line: #5A4620;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 16px; line-height: 1.75; -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { margin: 0; line-height: 1.25; text-wrap: balance; font-weight: 700; }
+  h1 { font-size: clamp(1.9rem, 4.5vw, 2.6rem); letter-spacing: 0.01em; }
+  h2 { font-size: 1.35rem; }
+  h3 { font-size: 1.05rem; }
+  p { margin: 0; }
+  .mono, .id { font-family: "IBM Plex Mono", Menlo, monospace; }
+  .eyebrow { font-family: "IBM Plex Mono", Menlo, monospace; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 22px 80px; }
+
+  header { padding: 56px 0 28px; border-bottom: 1px solid var(--line); }
+  header .lede { margin-top: 14px; color: var(--ink-2); max-width: 40em; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 18px; font-size: 0.9rem; color: var(--ink-2); }
+  .meta b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  .bar { position: sticky; top: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--ground) 92%, transparent); backdrop-filter: blur(8px); }
+  nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  nav a { text-decoration: none; color: var(--ink-2); font-size: 0.88rem; padding: 4px 10px; border-radius: 4px; }
+  nav a:hover, nav a:focus-visible { background: var(--surface-2); color: var(--ink); outline: none; }
+  button.toggle {
+    font: inherit; font-size: 0.84rem; font-weight: 500; cursor: pointer;
+    border: 1px solid var(--why-line); background: var(--why-soft); color: var(--why);
+    border-radius: 999px; padding: 4px 14px;
+  }
+  button.toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  body.clean .why { display: none; }
+  body.clean button.toggle { background: var(--surface-2); color: var(--ink-2); border-color: var(--line); }
+
+  section { padding: 44px 0 4px; scroll-margin-top: 60px; }
+  section > .eyebrow { margin-bottom: 6px; }
+  section > h2 { margin-bottom: 6px; }
+  section > .intro { color: var(--ink-2); margin-bottom: 18px; max-width: 40em; }
+
+  .sheet { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; box-shadow: var(--shadow); padding: 4px 22px; }
+  .sheet .part { padding: 16px 0 4px; }
+  .sheet .part + .part { border-top: 2px solid var(--ink); }
+  .sheet .part-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+  .sheet .part-head .cnt { font-family: "IBM Plex Mono", Menlo, monospace; font-size: 0.78rem; color: var(--ink-3); white-space: nowrap; }
+
+  .q { display: grid; grid-template-columns: 34px 1fr; gap: 0 10px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .q:last-child { border-bottom: 0; }
+  .q .id { font-size: 0.82rem; color: var(--accent); font-weight: 500; padding-top: 4px; }
+  .q .ask { font-weight: 500; }
+  .q .ask small { font-weight: 400; color: var(--ink-3); font-size: 0.82rem; margin-left: 6px; }
+  .q .opts { margin-top: 6px; }
+  .q .opts span { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 1px 11px; margin: 4px 6px 0 0; font-size: 0.9rem; color: var(--ink-2); background: var(--surface-2); }
+  .q .opts span.blank { border-style: dashed; color: var(--ink-3); }
+  .q .sub { margin-top: 8px; font-size: 0.92rem; color: var(--ink-2); }
+  .q .line { margin-top: 8px; height: 26px; border-bottom: 1px dashed var(--line); }
+  .scale { display: flex; gap: 6px; margin-top: 8px; }
+  .scale span { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 6px; display: grid; place-items: center; font-family: "IBM Plex Mono", Menlo, monospace; font-size: 0.85rem; color: var(--ink-2); background: var(--surface-2); }
+
+  .why { margin-top: 10px; background: var(--why-soft); border-left: 3px solid var(--why-line); border-radius: 0 4px 4px 0; padding: 8px 12px; font-size: 0.86rem; color: var(--ink-2); line-height: 1.6; }
+  .why b { color: var(--why); font-weight: 500; font-family: "IBM Plex Mono", Menlo, monospace; font-size: 0.72rem; letter-spacing: 0.06em; margin-right: 6px; }
+  .why .h { color: var(--ink-3); font-family: "IBM Plex Mono", Menlo, monospace; font-size: 0.72rem; margin-left: 6px; }
+
+  .demo-box { background: var(--accent); color: var(--accent-ink); border-radius: 6px; padding: 18px 22px; margin: 16px 0; }
+  .demo-box .eyebrow { color: color-mix(in srgb, var(--accent-ink) 70%, transparent); }
+  .demo-box h3 { margin: 4px 0 6px; }
+  .demo-box p { font-size: 0.95rem; }
+  .demo-box .link { font-family: "IBM Plex Mono", Menlo, monospace; font-size: 0.9rem; margin-top: 8px; opacity: .85; }
+
+  .note { background: var(--why-soft); border: 1px solid var(--why-line); border-radius: 6px; padding: 14px 18px; margin-top: 18px; font-size: 0.94rem; }
+  .note .lbl { display: block; font-family: "IBM Plex Mono", Menlo, monospace; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--why); margin-bottom: 4px; }
+  .note ul, .note ol { margin: 4px 0 0; padding-left: 20px; }
+  .note li + li { margin-top: 4px; }
+
+  .rounds { display: grid; gap: 14px; }
+  .round { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px 20px; box-shadow: var(--shadow); }
+  .round .rh { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+  .round .rh .when { font-family: "IBM Plex Mono", Menlo, monospace; font-size: 0.76rem; color: var(--ink-3); }
+  .round p.msg { background: var(--surface-2); border-radius: 12px 12px 12px 3px; padding: 10px 14px; font-size: 0.95rem; margin-top: 8px; max-width: 36em; white-space: pre-wrap; }
+  .round .follow { margin-top: 10px; font-size: 0.9rem; color: var(--ink-2); }
+  .round .follow b { color: var(--ink-3); font-weight: 500; font-size: 0.78rem; letter-spacing: 0.06em; margin-right: 6px; }
+
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px 20px; box-shadow: var(--shadow); }
+  .card h3 { margin-bottom: 6px; }
+  .card ul, .card ol { margin: 0; padding-left: 20px; font-size: 0.95rem; }
+  .card li + li { margin-top: 4px; }
+
+  footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 0.85rem; }
+
+  @media print {
+    .bar, #host { display: none; }
+    .sheet, .card, .round { box-shadow: none; }
+    .q { break-inside: avoid; }
+    body { font-size: 13px; }
+  }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Percho · 用户小调研 · 2026-08-29 · v3</p>
+    <h1 style="margin-top:8px">亚特兰大异地购房小问卷</h1>
+    <p class="lede">找 7–12 位「人在外地、在亚特兰大买了房」的朋友：当时怎么找、怎么定的。自住和投资都要。绝大多数题是选择题，勾一下就行；每题下面的黄色注释是写给我们自己看的，发问卷前一键隐藏。</p>
+    <div class="meta">
+      <span>填写约 <b>8 分钟</b></span>
+      <span>题目 <b>20</b> 道，其中 <b>17</b> 道选择题</span>
+      <span>末尾看 <b>2 分钟</b> 视频</span>
+      <span>答谢 <b>100 元</b>红包</span>
+    </div>
+  </header>
+
+  <div class="bar">
+    <nav>
+      <a href="#sheet">问卷</a>
+      <a href="#chat">聊天模式</a>
+      <a href="#host">备忘</a>
+    </nav>
+    <button class="toggle" type="button" id="toggle" aria-pressed="false">隐藏注释 · 出参与者版</button>
+  </div>
+
+  <!-- ================================================== -->
+  <section id="sheet">
+    <p class="eyebrow">A · 问卷</p>
+    <h2>发给参与者的版本</h2>
+    <p class="intro">点上面「隐藏注释」之后，这一整块复制出去就能用。开头几句是写给参与者看的。</p>
+
+    <div class="sheet">
+      <div class="part">
+        <p style="color:var(--ink-2);font-size:.95rem">你好！我在做一个给异地在亚特兰大买房的人用的 app，想听听你当时真实的经历。<strong>大部分是选择题，勾一下就行，有几道要写一两句。</strong>答完看一段 2 分钟视频，再答最后 5 题。你的回答只用于产品改进，不会带名字对外分享。答完发你 100 元红包。</p>
+      </div>
+
+      <!-- 一 -->
+      <div class="part">
+        <div class="part-head"><h3>一、基本情况</h3><span class="cnt">5 题 · 1 分钟</span></div>
+
+        <div class="q"><span class="id">1</span><div>
+          <p class="ask">你买的房在亚特兰大哪一片？</p>
+          <p class="opts"><span>北边（Johns Creek · Alpharetta · Suwanee · Duluth · Cumming）</span><span>东北（Lawrenceville · Buford）</span><span>城里（Midtown · Buckhead · Decatur）</span><span class="blank">其他：____</span></p>
+          <p class="sub">大概什么时候成交的？</p>
+          <p class="opts"><span>半年内</span><span>半年到一年</span><span>一到两年</span><span>两年以上</span></p>
+          <div class="why"><b>为什么问</b>知道他买在哪、多久之前，后面所有答案才有背景。北边华人聚集区和城里的买家逻辑完全不同。<b>想拿到</b>区域分布；两年内的记忆才可靠，两年以上的答案权重放低。</div>
+        </div></div>
+
+        <div class="q"><span class="id">2</span><div>
+          <p class="ask">开始看房的时候，你人在哪里？</p>
+          <p class="opts"><span>美国其他州</span><span>中国</span><span>其他国家</span></p>
+          <div class="why"><b>为什么问</b>在美国外州和在国内看房，能用的工具、时差、能不能飞一趟，差别很大。<b>想拿到</b>两类人各有几个，后面按这个分开看。</div>
+        </div></div>
+
+        <div class="q"><span class="id">3</span><div>
+          <p class="ask">这套房主要是：</p>
+          <p class="opts"><span>自己住</span><span>出租投资</span><span>给家人住</span><span>先买着，以后搬过去</span></p>
+          <div class="why"><b>为什么问</b>自住和投资是这次调研最重要的分组。投资的人看数字，自住的人看感觉——这是我们要验证的。<b>想拿到</b>自住 5、投资 4 左右的配比；每个后面的答案都要标上这个标签。</div>
+        </div></div>
+
+        <div class="q"><span class="id">4</span><div>
+          <p class="ask">从开始看到下 offer，你去了几次亚特兰大？</p>
+          <p class="opts"><span>0 次</span><span>1 次</span><span>2 次以上</span></p>
+          <p class="sub">下 offer 之前，你本人进过这套房子吗？</p>
+          <p class="opts"><span>本人看过</span><span>别人替我看的</span><span>没人看过</span></p>
+          <div class="why"><b>为什么问</b>「一次没去就买」的人是最纯的远程买家，他们怎么补信息缺口，直接对应我们产品要解决的问题。<b>想拿到</b>至少 3 位 0 次的；「别人替我看」的人后面第 13 题要重点看。</div>
+        </div></div>
+
+        <div class="q"><span class="id">5</span><div>
+          <p class="ask">从开始看到下 offer，大概花了多久？</p>
+          <p class="opts"><span>不到 1 个月</span><span>1–3 个月</span><span>3–6 个月</span><span>半年以上</span></p>
+          <div class="why"><b>为什么问</b>时间越短，越是被 deadline 推着走（开学、租约、签证），决策方式和慢慢挑的人不一样。<b>想拿到</b>搜索时长的分布，用来解释第 12 题的「把握度」。</div>
+        </div></div>
+      </div>
+
+      <!-- 二 -->
+      <div class="part">
+        <div class="part-head"><h3>二、当时怎么找的</h3><span class="cnt">6 题 · 3 分钟</span></div>
+
+        <div class="q"><span class="id">6</span><div>
+          <p class="ask">为什么是亚特兰大？<small>可多选</small></p>
+          <p class="opts"><span>工作在这</span><span>家人或朋友在这</span><span>房价便宜</span><span>学区好</span><span>华人多，生活方便</span><span>投资回报好</span><span>气候</span><span>看了视频或帖子被种草</span><span class="blank">其他：____</span></p>
+          <div class="why"><b>为什么问</b>知道触发点在哪。如果「看了视频被种草」有人选，说明内容获客这条路是通的。<b>想拿到</b>触发原因的分布；投资和自住的原因应该不一样。</div>
+        </div></div>
+
+        <div class="q"><span class="id">7</span><div>
+          <p class="ask">回想最开始那一两周，你每天打开最多的是哪几个？<small>最多选 3 个</small></p>
+          <p class="opts"><span>Zillow / Redfin</span><span>谷歌地图 · 街景</span><span>YouTube</span><span>小红书</span><span>微信群</span><span>中介发的东西</span><span>问朋友</span><span>学区网站（Niche / GreatSchools）</span><span class="blank">其他：____</span></p>
+          <div class="why"><b>为什么问</b>这是「他们现在用什么」——我们的 app 要挤进去的位置。限选 3 个是逼他排优先级。<b>想拿到</b>每个工具被选的次数。如果街景和 YouTube 高，说明「看画面」的需求已经存在，只是没人好好做。</div>
+        </div></div>
+
+        <div class="q"><span class="id">8</span><div>
+          <p class="ask">你主要是靠什么从「亚特兰大」缩到具体几个区的？<small>选最主要的一个</small></p>
+          <p class="opts"><span>中介推荐</span><span>朋友或家人推荐</span><span>学区排名</span><span>离公司近</span><span>华人多的地方</span><span>预算能买到什么</span><span>自己在地图上一片片翻</span><span class="blank">其他：____</span></p>
+          <p class="sub">有没有哪个区，是看到了什么之后直接排除的？是什么？</p>
+          <div class="line"></div>
+          <div class="why"><b>为什么问</b>「缩范围」是远程买家最花时间、最没工具帮忙的一步，也是 Percho 社区视频想切的点。追问「排除」是因为人对「不要什么」记得比「要什么」清楚。<b>想拿到</b>缩范围的主要依据；排除的具体例子（原话摘下来）。<span class="h">→ 验证 H6</span></div>
+        </div></div>
+
+        <div class="q"><span class="id">9</span><div>
+          <p class="ask">一个你没去过的区，你最看重哪两点？<small>选 2 个</small></p>
+          <p class="opts"><span>学区</span><span>通勤时间</span><span>治安</span><span>中超和吃饭方不方便</span><span>新房还是老房</span><span>小区 / HOA 好不好</span><span>房价走势</span><span>街上看起来什么样</span><span>邻居是什么人</span></p>
+          <div class="why"><b>为什么问</b>这是「远程判断一个区」的标准。「小区 / HOA」这一项专门用来验证「没人在乎有名字的小区」这条老反馈；「街上看起来什么样」「邻居是什么人」是「感觉类」需求。<b>想拿到</b>每项的票数，投资和自住分开数。<span class="h">→ 验证 H1 · H3</span></div>
+        </div></div>
+
+        <div class="q"><span class="id">10</span><div>
+          <p class="ask">整个过程里，你最信的信息来源是：<small>选一个</small></p>
+          <p class="opts"><span>中介</span><span>已经住在那的朋友</span><span>微信群里的人</span><span>Zillow / Redfin 的数据</span><span>小红书 / YouTube 上的博主</span><span>自己看街景</span><span>学区网站</span><span class="blank">其他：____</span></p>
+          <p class="sub">有没有哪个来源后来发现不靠谱？</p>
+          <p class="opts"><span>没有</span><span class="blank">有，是____，事情是____</span></p>
+          <div class="why"><b>为什么问</b>信任是这类产品的命门——我们的旁白和「适不适合你」是 AI 生成的，得知道他们现在信谁、为什么。「被打脸」的故事是最好的素材。<b>想拿到</b>信任来源的分布；被打脸的具体事例。</div>
+        </div></div>
+
+        <div class="q"><span class="id">11</span><div>
+          <p class="ask">看房过程中你看过哪些视频？<small>可多选</small></p>
+          <p class="opts"><span>中介录的房子走一圈</span><span>YouTube 上的街区介绍</span><span>航拍</span><span>3D 看房</span><span>小红书上的探房视频</span><span>没看过视频</span></p>
+          <p class="sub">有没有哪一段视频，让你对某个地方改了主意（想要了或不想要了）？</p>
+          <p class="opts"><span>有</span><span>没有</span></p>
+          <div class="why"><b>为什么问</b>Percho 的核心赌注是「动态画面比照片和街景更能建立信心」。这题在看 demo 之前问，避免被我们的视频带偏。<b>想拿到</b>看视频的比例；「改了主意」选「有」的人数——这是最硬的证据。<span class="h">→ 验证 H2</span></div>
+        </div></div>
+      </div>
+
+      <!-- 三 -->
+      <div class="part">
+        <div class="part-head"><h3>三、最后怎么定的</h3><span class="cnt">4 题 · 2 分钟</span></div>
+
+        <div class="q"><span class="id">12</span><div>
+          <p class="ask">最后让你下决心选这一套的，是哪一件事？<small>选最主要的一个</small></p>
+          <p class="opts"><span>价格谈到位了</span><span>中介说这套好</span><span>朋友或家人看了说好</span><span>亲自飞过去看了一眼</span><span>视频里看着就对</span><span>学区</span><span>怕再不买就没了</span><span class="blank">其他：____</span></p>
+          <p class="sub">签 offer 那天，你有多有把握？<small>1 = 很没底 · 5 = 很笃定</small></p>
+          <div class="scale"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+          <div class="why"><b>为什么问</b>「临门一脚」是什么，决定了产品该在哪里发力：如果多数人是「人看了」「亲自去了」，说明远程信息永远只能做到七八分，剩下靠人；把握度低的人是最需要我们的人。<b>想拿到</b>决定因素的分布；把握度平均分，按 0 次去和去过的分开看。</div>
+        </div></div>
+
+        <div class="q"><span class="id">13</span><div>
+          <p class="ask">如果下 offer 前你没亲自进过这套房——你用什么替代的？<small>可多选</small></p>
+          <p class="opts"><span>中介开视频通话带我看</span><span>朋友或家人替我去看</span><span>看中介录的视频</span><span>3D 看房</span><span>什么都没有，直接下了</span><span>我亲自看过，跳过</span></p>
+          <p class="sub">签的时候，下面哪些你是「完全不知道」的？<small>可多选</small></p>
+          <p class="opts"><span>周围噪音</span><span>下班时间的车流</span><span>邻居是什么人</span><span>去超市、公司实际多远</span><span>HOA 有什么规矩</span><span>房子本身的状况</span><span>学校真实情况</span><span>都知道</span></p>
+          <div class="why"><b>为什么问</b>第一问是「现在的替代方案」，第二问是「远程信息的缺口清单」。缺口里哪几项票数高，就是产品最该补的。<b>想拿到</b>每种替代方式的使用率；缺口排名。噪音、车流、邻居、街景是「感觉类」，HOA、房况、学校是「数据类」——两类哪个多。<span class="h">→ 验证 H1</span></div>
+        </div></div>
+
+        <div class="q"><span class="id">14</span><div>
+          <p class="ask">成交或住进去之后，有什么是你远程时完全没想到的？<small>可多选</small></p>
+          <p class="opts"><span>噪音</span><span>车流 / 通勤比想的久</span><span>邻居</span><span>实际距离</span><span>HOA</span><span>房子的毛病</span><span>学校</span><span>小区氛围和想的不一样</span><span>没有意外</span><span class="blank">其他：____</span></p>
+          <p class="sub">其中有没有哪一件，你当时愿意花钱提前知道？</p>
+          <p class="opts"><span>有</span><span>没有</span></p>
+          <div class="why"><b>为什么问</b>第 13 题问的是「签的时候不知道」，这题问的是「后来真的出了问题」——两者的交集就是最痛的点。「愿意花钱」是付费意愿的第一次试探。<b>想拿到</b>意外的分布；「愿意花钱」的人数和他们选的是哪一项。</div>
+        </div></div>
+
+        <div class="q"><span class="id">15</span><div>
+          <p class="ask">如果当时有一个「神奇的 app」帮你，你最希望它能做什么？<small>写一两句就行</small></p>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="why"><b>为什么问</b>全卷唯一一道必须写字的题，而且必须放在看视频<strong>之前</strong>——这是他们没被我们影响时的原话。看完视频后拿第 18 题跟它对照：许的愿，我们实现了没有。<b>想拿到</b>原话，一字不改摘出来。</div>
+        </div></div>
+      </div>
+
+      <!-- 四 -->
+      <div class="part">
+        <div class="demo-box">
+          <p class="eyebrow">看一段视频</p>
+          <h3>Percho 是什么样的 · 2 分钟</h3>
+          <p>这是我们做的 app 的早期版本，视频里是它现在的样子：像刷短视频一样刷房子和社区，点进去看社区介绍、和这套房「适不适合你」。视频没有声音，看完再答最后 5 题。</p>
+          <p class="link">▶ [视频链接 — 上传 percho-demo-720p.mp4 后贴这里]　　想自己上手的话：[TestFlight 链接]</p>
+        </div>
+        <div class="part-head"><h3>四、看完视频</h3><span class="cnt">5 题 · 2 分钟</span></div>
+
+        <div class="q"><span class="id">16</span><div>
+          <p class="ask">你觉得这是个什么东西？<small>选最接近的</small></p>
+          <p class="opts"><span>找房子的 app</span><span>了解社区的 app</span><span>看着玩的短视频</span><span>中介用来推销的工具</span><span>说不清</span></p>
+          <p class="sub">它是给谁用的？</p>
+          <p class="opts"><span>像我当时那样的人</span><span>本地买家</span><span>中介</span><span>不知道</span></p>
+          <div class="why"><b>为什么问</b>2 分钟不解释，看他们自己能不能读懂这是什么、给谁的。如果多数人选「看着玩的短视频」或「说不清」，定位没传达出来。<b>想拿到</b>两问的分布；「像我当时那样的人」选的比例是核心指标。</div>
+        </div></div>
+
+        <div class="q"><span class="id">17</span><div>
+          <p class="ask">回到你自己当时的过程，你会在哪一步打开它？<small>选一个</small></p>
+          <p class="opts"><span>还没定城市的时候</span><span>在选区的时候</span><span>对比几套房的时候</span><span>下了 offer 之后</span><span>不会用</span></p>
+          <div class="why"><b>为什么问</b>全卷最重要的一题。我们赌的是「选区的时候」——在他还没有中介、还在刷地图的阶段。如果多数人选「对比几套房」，产品要往房源那头偏；选「不会用」的人一定要追问一句为什么。<b>想拿到</b>每个阶段的人数。<span class="h">→ 验证 H6</span></div>
+        </div></div>
+
+        <div class="q"><span class="id">18</span><div>
+          <p class="ask">视频里哪一个画面，对你当时最有用？<small>选一个</small></p>
+          <p class="opts"><span>先选城市、再刷社区的顺序</span><span>社区影片（大门、泳池、学校、超市）</span><span>点进度条直接跳到社区里的某个地方</span><span>「这个更重要还是那个」二选一卡，每边三张真实照片和几套房、中位价</span><span>房子的 tour 视频和收藏</span><span>「After you move in」：这套房住进去之后要注意的事，每条带来源</span><span>Percho 总结出的我的偏好和人设</span><span>我对每个区有多熟</span><span>都没什么用</span></p>
+          <p class="sub">哪一个你觉得最没用、或者不对？<small>选一个，选项同上</small></p>
+          <div class="line"></div>
+          <div class="why"><b>为什么问</b>给每个画面投票，正反各一票。前三项是 A（感受一个区），第四、七、八项是 B（帮你收敛），第五、六项是 C（落到一套房）。「最有用」告诉我们主打什么，「最没用」告诉我们砍什么。跟第 15 题对照：他许的愿在这里有没有出现。<b>想拿到</b>正负两张榜单，自住和投资分开数——投资的人大概率不选「适不适合你」而选「每月还多少」或「四个数」。<span class="h">→ 验证 H2 · H4 · H5 · A vs B</span></div>
+        </div></div>
+
+        <div class="q"><span class="id">19</span><div>
+          <p class="ask">社区介绍的旁白、和「这套房适不适合你」的判断——你信吗？</p>
+          <p class="opts"><span>信</span><span>半信半疑</span><span>不信</span></p>
+          <p class="sub">什么情况下你会不信？<small>可多选</small></p>
+          <p class="opts"><span>知道是 AI 写的</span><span>说得太好、没说缺点</span><span>跟我知道的事实对不上</span><span>不知道数据从哪来的</span><span>没有理由不信</span></p>
+          <div class="why"><b>为什么问</b>旁白和「适不适合你」都是生成的，信任是能不能用的前提。选项把「不信的原因」拆开，每一项对应一个可以做的改动：标注来源、明说缺点、说明数据出处。<b>想拿到</b>信任度分布；不信的原因排序。<span class="h">→ 验证 H4</span></div>
+        </div></div>
+
+        <div class="q"><span class="id">20</span><div>
+          <p class="ask">如果当时它存在、然后突然没了，你会：</p>
+          <p class="opts"><span>很失望</span><span>有点失望</span><span>无所谓</span></p>
+          <p class="sub">还差什么，你才会真的靠它做决定？<small>可多选</small></p>
+          <p class="opts"><span>覆盖更多区域</span><span>更多在售房源</span><span>真实价格和挂牌信息</span><span>能直接问问题</span><span>能联系到中介</span><span>能发给家人一起看</span><span>能看实际街景和周边</span><span class="blank">其他：____</span></p>
+          <div class="why"><b>为什么问</b>第一问是经典的「Sean Ellis 测试」：10 人里有 4 个「很失望」才算有信号，1 个不算。第二问是下一步的功能清单，让他们替我们排序。<b>想拿到</b>「很失望」的人数；缺的功能票数排名。</div>
+        </div></div>
+      </div>
+
+      <div class="part">
+        <p style="color:var(--ink-2);font-size:.95rem">谢谢！红包马上发你。另外——你认识的朋友里还有谁也是这样远程买的？方便的话帮我引荐一下。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== -->
+  <section id="chat">
+    <p class="eyebrow">B · 聊天模式</p>
+    <h2>同一套题，在微信上分三轮发</h2>
+    <p class="intro">愿意在微信上聊的人，把每一部分的题连同选项按题号发过去，让对方直接回「1-A、2-B」这样的字母就行；选了「其他」的追问一句。第三轮聊完再发视频。前后跨一两天没关系。</p>
+
+    <div class="rounds">
+      <div class="round">
+        <div class="rh"><h3>第一轮 · 基本情况 + 为什么亚特兰大</h3><span class="when">题 1–6</span></div>
+        <p class="msg">先来几道简单的，回我字母就行 👇
+[粘贴题 1–6 及选项]</p>
+        <p class="follow"><b>追问</b>「当时有没有 deadline 在催（开学、租约、签证、利率锁）？」</p>
+      </div>
+      <div class="round">
+        <div class="rh"><h3>第二轮 · 当时怎么找的</h3><span class="when">题 7–11</span></div>
+        <p class="msg">接着聊你当时怎么找的 👇
+[粘贴题 7–11 及选项]</p>
+        <p class="follow"><b>追问</b>「能举一个被你划掉的区吗，当时看到了什么？」「手机上还留着当时的截图或群聊吗，发我看看？」——截图比记忆诚实。</p>
+      </div>
+      <div class="round">
+        <div class="rh"><h3>第三轮 · 怎么定的，再看视频</h3><span class="when">题 12–15 → 视频 → 题 16–20</span></div>
+        <p class="msg">最后几道，答完给你看个东西 👇
+[粘贴题 12–15 及选项]
+
+—— 等对方答完再发 ——
+
+这是我们在做的 app，不到 2 分钟，没有声音：[链接]
+看完回我这 5 题 👇
+[粘贴题 16–20 及选项]</p>
+        <p class="follow"><b>追问</b>「你刚才说希望 app 能 ___，视频里有做到吗？」「选『不会用』是因为什么？」「哪一个画面你会转给家里人看？」</p>
+      </div>
+    </div>
+
+    <div class="note"><span class="lbl">聊天时的三条规矩</span>
+      <ul>
+        <li>问「你当时做了什么」，不问「你会怎么做」。</li>
+        <li>对方说「大家都看学区」就拉回来：「那你自己呢，打开的是哪个？」</li>
+        <li>发视频之前不要提「视频」「短视频」「刷」这些词，第 11 题要让对方自己选。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================================================== -->
+  <section id="host">
+    <p class="eyebrow">C · 备忘</p>
+    <h2>给自己的备忘</h2>
+    <p class="intro">这一部分不发给参与者。</p>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>找谁 · 目标 10 人</h3>
+        <ul>
+          <li>自住 5、投资 4、给家人或先买着 1</li>
+          <li>美国外州 6、国内或其他国家 4</li>
+          <li>至少 3 位是<strong>一次没去</strong>就下 offer 的</li>
+          <li>成交两年内为佳，三年封顶</li>
+          <li>不要中介、贷款经纪和他们的家属；最近看过 demo 的熟人只做试填</li>
+          <li>答谢：100 元微信红包，答完当场发</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>视频已经录好（v3 · 无声）</h3>
+        <ul>
+          <li><strong>~/Desktop/Percho-demo/percho-demo.mp4</strong>（约 80 秒，1080×2340，无音轨）和 <strong>percho-demo-720p.mp4</strong>（微信直接发）</li>
+          <li>顺序：2 秒开场卡 → 城市卡 Suwanee（喜欢）· Duluth（跳过）· Johns Creek（喜欢）→ Aberdeen 社区影片，点进度条跳到「Aberdeen Tennis Courts」→ Bellmoore Park 影片 → 两张二选一卡（Room to grow / Move-in ready；Updated kitchen / Private yard），每边三张真实房源照片 + 「6 homes · median $523,000」这类真实统计 → 2229 Saint Kennedy Lane 房源卡，点书签收藏，右滑 → 2895 Shurburne Drive 房源卡，点 Explore 直接落在「After you move in」：5 to watch · 1 upside · 2 good to know，滑两张卡，点开「2 sources」→ 返回 → You tab：persona「Quiet-Street Planner」、各区熟悉度、Percho 记下的偏好（Still true?）→ Saved tab：4 套房</li>
+          <li>不进社区 Explore 页，不看房源页的其它部分（这两块还没准备好）；insights 目前只有 Shurburne Drive 一套房生成了，所以那一段用它</li>
+          <li>persona、熟悉度、二选一的统计都按 app 里的真实规则算；demo 账号预设为「之前答过 4 张二选一、收藏过 3 套房」</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>要验证的六个假设</h3>
+        <ol>
+          <li><b>H1</b> 远程买家最缺的是「感觉」不是「数据」 → 题 9、13、14</li>
+          <li><b>H2</b> 动态视频比照片和街景更能建立信心 → 题 11、18</li>
+          <li><b>H3</b> 有名字的小区 / HOA 不重要，自住和投资都一样 → 题 9</li>
+          <li><b>H4</b> 「适不适合你」比 MLS 数据有用、而且被相信 → 题 18、19</li>
+          <li><b>H5</b> 买家想的是月供不是总价（投资的人除外）→ 题 18</li>
+          <li><b>H6</b> 产品该出现在选区阶段，不是比房阶段 → 题 8、17</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>收回来之后</h3>
+        <ul>
+          <li>一张表，一行一个人，列是题号；自住 / 投资、去过 0 次 / 去过，两个标签打在最前面</li>
+          <li>选择题直接数票；题 8、15、18 的手写原话单独摘一列，不改写</li>
+          <li>题 15 和题 18 对着看：许的愿，视频里有没有</li>
+          <li>题 17「选区的时候」和题 20「很失望」各几人——这两个数决定方向</li>
+          <li>收满 6 份先看一次，题目要不要调；收满 10 份和 designer 过一遍</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="note"><span class="lbl">需要你定的</span>
+      <ul>
+        <li>视频放哪个平台、要不要给 TestFlight 链接</li>
+        <li>问卷载体：微信长消息最省事；腾讯文档 / 问卷星能自动收表；Google Form 对国内的人不友好</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Percho · 亚特兰大异地购房小问卷 · v3 · 2026-08-29。题号 1–20 固定，整理时直接引用。</footer>
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('toggle');
+    var body = document.body;
+    var KEY = 'percho-survey-clean';
+    function apply(clean) {
+      body.classList.toggle('clean', clean);
+      btn.setAttribute('aria-pressed', clean ? 'true' : 'false');
+      btn.textContent = clean ? '显示注释 · 回到内部版' : '隐藏注释 · 出参与者版';
+    }
+    var saved = false;
+    try { saved = localStorage.getItem(KEY) === '1'; } catch (e) {}
+    apply(saved);
+    btn.addEventListener('click', function () {
+      var next = !body.classList.contains('clean');
+      apply(next);
+      try { localStorage.setItem(KEY, next ? '1' : '0'); } catch (e) {}
+    });
+  })();
+</script>
+
+</body>
+</html>
