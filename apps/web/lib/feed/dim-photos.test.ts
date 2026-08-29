@@ -6,7 +6,7 @@ import type { DimKey } from '@percho/shared/types';
  * never acceptable (owner 2026-08-29), a claiming listing is a preference and
  * not a requirement, and a dim with no honest room comes back absent.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { type TaggedPhotoRow, pickDimPhotos } from './dim-photos';
 
 function photo(
@@ -25,6 +25,12 @@ function photo(
 const claims = (m: Record<string, DimKey[]>) => new Map(Object.entries(m));
 
 describe('pickDimPhotos', () => {
+  // `photoRenderUrl` falls back to the plain public URL without a project base,
+  // which is correct but is not what these tests are checking.
+  beforeAll(() => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://project.supabase.co';
+  });
+
   it('matches a room that depicts the dimension', () => {
     const out = pickDimPhotos(
       [photo('a', 'x/kitchen.jpg', 'kitchen', { caption: 'Modern kitchen with an island' })],
@@ -114,7 +120,12 @@ describe('pickDimPhotos', () => {
     const picks = out.move_in ?? [];
     expect(picks).toHaveLength(3);
     // `a` contributed its best frame only — a2 is skipped for b1.
-    expect(picks.map((p) => p.url.split('/').pop())).toEqual(['a1.jpg', 'b1.jpg', 'c1.jpg']);
+    // The url now carries the plate-size render query — compare the file only.
+    expect(picks.map((p) => p.url.split('?')[0]?.split('/').pop())).toEqual([
+      'a1.jpg',
+      'b1.jpg',
+      'c1.jpg',
+    ]);
   });
 
   it('returns what it has when three homes do not exist', () => {
@@ -125,6 +136,16 @@ describe('pickDimPhotos', () => {
     // Two frames, one listing → one pick. Fewer is correct; padding it with a
     // second frame of the same house would defeat the point.
     expect(out.outdoors).toHaveLength(1);
+  });
+
+  it('asks Supabase for the plate size, not the full file', () => {
+    // The full enhanced file is 1600x1062 / ~310KB and a plate draws it at
+    // ~152pt. Six of those per card is what made the card slow to swipe.
+    const out = pickDimPhotos([photo('a', 'x/k.jpg', 'kitchen')], claims({}));
+    const url = out.move_in?.[0]?.url ?? '';
+    expect(url).toContain('/render/image/public/');
+    expect(url).toContain('width=640');
+    expect(url).toContain('resize=cover');
   });
 
   it('ignores untagged rows without throwing', () => {

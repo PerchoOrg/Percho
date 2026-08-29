@@ -408,6 +408,43 @@ describe("the v2 trade-off bank", () => {
 		expect(card?.right.photos).toBeUndefined();
 	});
 
+	it("shows the same number of plates on both doors", () => {
+		// Owner on device: 1 plate against 3 read as a broken card, and made the
+		// fuller side look like the recommended answer.
+		const lopsided: FeedPool = {
+			...ERA_POOL,
+			communities: [community("c-quiet", ["quiet"])],
+			dimPhotos: {
+				walkable: [
+					{ url: "https://img/w1.jpg" },
+					{ url: "https://img/w2.jpg" },
+					{ url: "https://img/w3.jpg" },
+				],
+			},
+		};
+		const card = firstTradeoff(lopsided, EXCEPT_DENSITY);
+		expect(card?.id).toBe("to-quiet-vs-walkable");
+		// `quiet` has one community poster; `walkable` has three room photos.
+		expect(card?.left.photos).toHaveLength(1);
+		expect(card?.right.photos).toHaveLength(1);
+	});
+
+	it("leaves an unlit door alone rather than blanking a good one", () => {
+		// An unlit field is a designed treatment, not a short stack — levelling
+		// to it would throw away the only picture the card has.
+		const oneSided: FeedPool = {
+			...ERA_POOL,
+			communities: [community("c1")],
+			dimPhotos: {
+				space: [{ url: "https://img/s1.jpg" }, { url: "https://img/s2.jpg" }],
+			},
+		};
+		const card = firstTradeoff(oneSided, EXCEPT_SPREAD);
+		expect(card?.id).toBe("to-spread-vs-upkeep");
+		expect(card?.left.photos).toHaveLength(2);
+		expect(card?.right.photos).toBeUndefined();
+	});
+
 	it("asks at most one question per axis in a session", () => {
 		const asked = allTradeoffs(ERA_POOL, 120);
 		const axes = asked.map((c) => c.axis);
