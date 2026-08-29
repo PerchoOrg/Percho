@@ -107,7 +107,7 @@
     <h1>亚特兰大异地购房与选区体验调研</h1>
     <div class="intro">
       <p>您好！为了帮异地在亚特兰大安家 / 投资的朋友更直观地「看懂社区、精准选房」，我们开发了 <b>Percho</b>。想请教您当年的真实经历，并看看这款工具是否真正切中了您的痛点。</p>
-      <p style="margin-top:8px">全卷预计用时 <b>6–8 分钟</b>（含 1 分多钟产品演示视频）。回答仅供产品优化，感谢您的真诚反馈！答完即送 <b>100 元红包</b>。</p>
+      <p style="margin-top:8px">全卷预计用时 <b>8–10 分钟</b>（含 1 分多钟产品演示视频）。回答仅供产品优化，感谢您的真诚反馈！答完即送 <b>100 元红包</b>。</p>
     </div>
   </header>
 
@@ -116,7 +116,7 @@
 
     <!-- ── 一 ── -->
     <section class="part">
-      <div class="part-head"><h2>一、购房背景与决策痛点</h2><span class="n">1–4</span></div>
+      <div class="part-head"><h2>一、购房背景与决策痛点</h2><span class="n">1–10</span></div>
 
       <fieldset data-q="q1_area" data-req="one">
         <legend><span class="qn">1</span>您购置的房产位于亚特兰大哪个区域？成交时间大概在什么时候？</legend>
@@ -156,36 +156,137 @@
         <p class="errmsg">请选择目的和当时所在地。</p>
       </fieldset>
 
-      <fieldset data-q="q3_visits" data-req="one">
-        <legend><span class="qn">3</span>下 Offer 前，您本人实地看过几次？信息主要靠什么补足？</legend>
+      <fieldset data-q="q3_why" data-req="many">
+        <legend><span class="qn">3</span>为什么是亚特兰大？<small>可多选</small></legend>
+        <div class="opts">
+          <label class="opt"><input type="checkbox" name="q3_why" value="job"><span>工作在这</span></label>
+          <label class="opt"><input type="checkbox" name="q3_why" value="family_friends"><span>家人或朋友在这</span></label>
+          <label class="opt"><input type="checkbox" name="q3_why" value="price"><span>房价便宜</span></label>
+          <label class="opt"><input type="checkbox" name="q3_why" value="schools"><span>学区好</span></label>
+          <label class="opt"><input type="checkbox" name="q3_why" value="asian_community"><span>华人多，生活方便</span></label>
+          <label class="opt"><input type="checkbox" name="q3_why" value="roi"><span>投资回报好</span></label>
+          <label class="opt"><input type="checkbox" name="q3_why" value="climate"><span>气候</span></label>
+          <label class="opt"><input type="checkbox" name="q3_why" value="content"><span>看了视频或帖子被种草</span></label>
+          <label class="opt"><input type="checkbox" name="q3_why" value="other"><span>其他</span></label>
+        </div>
+        <div class="other"><input type="text" name="q3_why_other" maxlength="80" placeholder="其他原因请写在这里"></div>
+        <p class="errmsg">请至少选一项。</p>
+      </fieldset>
+
+      <fieldset data-q="q4_visits" data-req="one">
+        <legend><span class="qn">4</span>下 Offer 前，您本人实地看过几次？信息主要靠什么补足？</legend>
         <p class="sub">实地去亚特兰大次数</p>
         <div class="opts">
-          <label class="opt"><input type="radio" name="q3_visits" value="0"><span>0 次（全远程）</span></label>
-          <label class="opt"><input type="radio" name="q3_visits" value="1"><span>1 次</span></label>
-          <label class="opt"><input type="radio" name="q3_visits" value="2plus"><span>2 次及以上</span></label>
+          <label class="opt"><input type="radio" name="q4_visits" value="0"><span>0 次（全远程）</span></label>
+          <label class="opt"><input type="radio" name="q4_visits" value="1"><span>1 次</span></label>
+          <label class="opt"><input type="radio" name="q4_visits" value="2plus"><span>2 次及以上</span></label>
         </div>
         <p class="sub">远程信息主要依赖 <small>可多选</small></p>
-        <div class="opts" data-q="q3_sources" data-req="many">
-          <label class="opt"><input type="checkbox" name="q3_sources" value="agent_video"><span>中介实拍视频 / FaceTime 连线</span></label>
-          <label class="opt"><input type="checkbox" name="q3_sources" value="street_view"><span>Google 街景 / 地图漫游</span></label>
-          <label class="opt"><input type="checkbox" name="q3_sources" value="community"><span>华人社群 / 朋友打听</span></label>
-          <label class="opt"><input type="checkbox" name="q3_sources" value="creators"><span>YouTube / 小红书博主探店或探区</span></label>
-          <label class="opt"><input type="checkbox" name="q3_sources" value="portals"><span>Zillow / Redfin 数据及学区网</span></label>
+        <div class="opts" data-q="q4_sources" data-req="many">
+          <label class="opt"><input type="checkbox" name="q4_sources" value="agent_video"><span>中介实拍视频 / FaceTime 连线</span></label>
+          <label class="opt"><input type="checkbox" name="q4_sources" value="street_view"><span>Google 街景 / 地图漫游</span></label>
+          <label class="opt"><input type="checkbox" name="q4_sources" value="community"><span>华人社群 / 朋友打听</span></label>
+          <label class="opt"><input type="checkbox" name="q4_sources" value="creators"><span>YouTube / 小红书博主探店或探区</span></label>
+          <label class="opt"><input type="checkbox" name="q4_sources" value="portals"><span>Zillow / Redfin 数据及学区网</span></label>
         </div>
         <p class="errmsg">请选择实地次数，并至少选一个信息来源。</p>
       </fieldset>
 
-      <fieldset data-q="q4_gaps" data-req="many" data-max="3">
-        <legend><span class="qn">4</span>远程看房 / 选区时，让您最「心里没底」或实际入住后「落差最大」的是什么？<small>最多选 3 项</small></legend>
+      <fieldset data-q="q5_narrow" data-req="one">
+        <legend><span class="qn">5</span>您主要是靠什么从「亚特兰大」缩到具体几个区的？<small>选最主要的一个</small></legend>
         <div class="opts">
-          <label class="opt wide"><input type="checkbox" name="q4_gaps" value="vibe"><span>社区真实氛围与邻里画像（白天 / 晚上街区感觉、邻居群体）</span></label>
-          <label class="opt wide"><input type="checkbox" name="q4_gaps" value="commute"><span>高峰期实际通勤与周边车流、噪音</span></label>
-          <label class="opt wide"><input type="checkbox" name="q4_gaps" value="convenience"><span>真实生活便利度（华人超市、常去餐饮、跑腿距离）</span></label>
-          <label class="opt wide"><input type="checkbox" name="q4_gaps" value="amenities"><span>小区公共设施现状（泳池 / 会所维护度、真实门禁与绿化）</span></label>
-          <label class="opt wide"><input type="checkbox" name="q4_gaps" value="hidden_costs"><span>隐性规则与成本（HOA 限制、出租门槛、地税）</span></label>
-          <label class="opt wide"><input type="checkbox" name="q4_gaps" value="house_condition"><span>房屋本身暗病与维护成本</span></label>
+          <label class="opt"><input type="radio" name="q5_narrow" value="agent"><span>中介推荐</span></label>
+          <label class="opt"><input type="radio" name="q5_narrow" value="friends"><span>朋友或家人推荐</span></label>
+          <label class="opt"><input type="radio" name="q5_narrow" value="school_rank"><span>学区排名</span></label>
+          <label class="opt"><input type="radio" name="q5_narrow" value="commute"><span>离公司近</span></label>
+          <label class="opt"><input type="radio" name="q5_narrow" value="asian_community"><span>华人多的地方</span></label>
+          <label class="opt"><input type="radio" name="q5_narrow" value="budget"><span>预算能买到什么</span></label>
+          <label class="opt"><input type="radio" name="q5_narrow" value="map_browsing"><span>自己在地图上一片片翻</span></label>
+          <label class="opt"><input type="radio" name="q5_narrow" value="other"><span>其他</span></label>
+        </div>
+        <div class="other"><input type="text" name="q5_narrow_other" maxlength="80" placeholder="其他请写在这里"></div>
+        <p class="errmsg">请选一项。</p>
+      </fieldset>
+
+      <fieldset data-q="q6_check" data-req="many" data-max="5">
+        <legend><span class="qn">6</span>一个您没去过的区，您会先查哪几样？<small>最多选 5 个</small></legend>
+        <div class="opts">
+          <label class="opt"><input type="checkbox" name="q6_check" value="schools"><span>学区（小学到高中）</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="amenities"><span>小区自己的设施（泳池、会所、网球场、门禁）</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="outdoor"><span>公园、步道、湖</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="dining"><span>吃饭（餐馆、咖啡）</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="nightlife"><span>夜生活、酒吧</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="shopping"><span>购物（商场、大超市）</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="errands"><span>日常跑腿（超市、药房、银行）</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="asian"><span>华人超市和餐馆</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="fitness"><span>健身房、运动场馆</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="kids"><span>小孩的去处（playground、兴趣班、日托）</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="healthcare"><span>医疗（医院、诊所、儿科）</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="pets"><span>宠物（狗公园、宠物医院）</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="faith"><span>教会 / 寺庙</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="commute"><span>通勤（公司、机场）</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="transit"><span>公共交通</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="safety"><span>治安</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="price_trend"><span>房价走势 / 投资回报</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="age"><span>新房还是老房</span></label>
+          <label class="opt"><input type="checkbox" name="q6_check" value="street_feel"><span>街上看起来什么样、邻居是什么人</span></label>
+        </div>
+        <p class="sub" id="q6topLabel" style="display:none">其中最看重的一个</p>
+        <div class="opts" id="q6top"></div>
+        <p class="errmsg">请选 1–5 项。</p>
+      </fieldset>
+
+      <fieldset data-q="q7_video_seen" data-req="many">
+        <legend><span class="qn">7</span>看房过程中您看过哪些视频？<small>可多选</small></legend>
+        <div class="opts">
+          <label class="opt"><input type="checkbox" name="q7_video_seen" value="agent_walkthrough"><span>中介录的房子走一圈</span></label>
+          <label class="opt"><input type="checkbox" name="q7_video_seen" value="youtube_area"><span>YouTube 上的街区介绍</span></label>
+          <label class="opt"><input type="checkbox" name="q7_video_seen" value="drone"><span>航拍</span></label>
+          <label class="opt"><input type="checkbox" name="q7_video_seen" value="tour3d"><span>3D 看房</span></label>
+          <label class="opt"><input type="checkbox" name="q7_video_seen" value="rednote"><span>小红书上的探房视频</span></label>
+          <label class="opt"><input type="checkbox" name="q7_video_seen" value="builder"><span>Builder / 开发商的样板房视频</span></label>
+          <label class="opt"><input type="checkbox" name="q7_video_seen" value="none"><span>没看过视频</span></label>
+        </div>
+        <p class="sub">有没有哪一段视频，让您对某个地方改了主意（想要了或不想要了）？</p>
+        <div class="opts" data-q="q7_video_changed" data-req="one">
+          <label class="opt"><input type="radio" name="q7_video_changed" value="yes"><span>有</span></label>
+          <label class="opt"><input type="radio" name="q7_video_changed" value="no"><span>没有</span></label>
+        </div>
+        <p class="errmsg">请选看过的视频类型，并回答有没有改过主意。</p>
+      </fieldset>
+
+      <fieldset data-q="q8_decider" data-req="one">
+        <legend><span class="qn">8</span>最后让您下决心选这一套的，是哪一件事？<small>选最主要的一个</small></legend>
+        <div class="opts">
+          <label class="opt"><input type="radio" name="q8_decider" value="price"><span>价格谈到位了</span></label>
+          <label class="opt"><input type="radio" name="q8_decider" value="agent_said"><span>中介说这套好</span></label>
+          <label class="opt"><input type="radio" name="q8_decider" value="proxy_saw"><span>朋友或家人看了说好</span></label>
+          <label class="opt"><input type="radio" name="q8_decider" value="visited"><span>亲自飞过去看了一眼</span></label>
+          <label class="opt"><input type="radio" name="q8_decider" value="video"><span>视频里看着就对</span></label>
+          <label class="opt"><input type="radio" name="q8_decider" value="schools"><span>学区</span></label>
+          <label class="opt"><input type="radio" name="q8_decider" value="fomo"><span>怕再不买就没了</span></label>
+          <label class="opt"><input type="radio" name="q8_decider" value="other"><span>其他</span></label>
+        </div>
+        <div class="other"><input type="text" name="q8_decider_other" maxlength="80" placeholder="其他请写在这里"></div>
+        <p class="errmsg">请选一项。</p>
+      </fieldset>
+
+      <fieldset data-q="q9_gaps" data-req="many" data-max="3">
+        <legend><span class="qn">9</span>远程看房 / 选区时，让您最「心里没底」或实际入住后「落差最大」的是什么？<small>最多选 3 项</small></legend>
+        <div class="opts">
+          <label class="opt wide"><input type="checkbox" name="q9_gaps" value="vibe"><span>社区真实氛围与邻里画像（白天 / 晚上街区感觉、邻居群体）</span></label>
+          <label class="opt wide"><input type="checkbox" name="q9_gaps" value="commute"><span>高峰期实际通勤与周边车流、噪音</span></label>
+          <label class="opt wide"><input type="checkbox" name="q9_gaps" value="convenience"><span>真实生活便利度（华人超市、常去餐饮、跑腿距离）</span></label>
+          <label class="opt wide"><input type="checkbox" name="q9_gaps" value="amenities"><span>小区公共设施现状（泳池 / 会所维护度、真实门禁与绿化）</span></label>
+          <label class="opt wide"><input type="checkbox" name="q9_gaps" value="hidden_costs"><span>隐性规则与成本（HOA 限制、出租门槛、地税）</span></label>
+          <label class="opt wide"><input type="checkbox" name="q9_gaps" value="house_condition"><span>房屋本身暗病与维护成本</span></label>
         </div>
         <p class="errmsg">请选 1–3 项。</p>
+      </fieldset>
+
+      <fieldset>
+        <legend><span class="qn">10</span>如果当时有一个「神奇的 app」帮您，您最希望它能做什么？<small>选填 · 写一两句就行</small></legend>
+        <div class="other"><input type="text" name="q10_wish" maxlength="200" placeholder="一两句话"></div>
       </fieldset>
     </section>
 
@@ -202,60 +303,60 @@
 
     <!-- ── 三 ── -->
     <section class="part">
-      <div class="part-head"><h2>三、产品接受度与价值验证</h2><span class="n">5–8</span></div>
+      <div class="part-head"><h2>三、产品接受度与价值验证</h2><span class="n">11–14</span></div>
 
-      <fieldset data-q="q5_value" data-req="one">
-        <legend><span class="qn">5</span>看完视频后，您直观认为 Percho 最核心的价值是什么？<small>单选</small></legend>
+      <fieldset data-q="q11_value" data-req="one">
+        <legend><span class="qn">11</span>看完视频后，您直观认为 Percho 最核心的价值是什么？<small>单选</small></legend>
         <div class="opts">
-          <label class="opt wide"><input type="radio" name="q5_value" value="immersive_tour"><span>沉浸式「云逛社区」，省去逐个查街景和碎视频的时间</span></label>
-          <label class="opt wide"><input type="radio" name="q5_value" value="narrow_down"><span>帮我把模糊的选房需求快速收敛到具体 1–2 个适合的社区</span></label>
-          <label class="opt wide"><input type="radio" name="q5_value" value="flag_issues"><span>真实指出社区 / 房源的潜在硬伤与入住注意事项</span></label>
-          <label class="opt wide"><input type="radio" name="q5_value" value="just_fun"><span>只是一个看着好玩的房产短视频流，对实际做决定帮助有限</span></label>
-          <label class="opt"><input type="radio" name="q5_value" value="other"><span>其他</span></label>
+          <label class="opt wide"><input type="radio" name="q11_value" value="immersive_tour"><span>沉浸式「云逛社区」，省去逐个查街景和碎视频的时间</span></label>
+          <label class="opt wide"><input type="radio" name="q11_value" value="narrow_down"><span>帮我把模糊的选房需求快速收敛到具体 1–2 个适合的社区</span></label>
+          <label class="opt wide"><input type="radio" name="q11_value" value="flag_issues"><span>真实指出社区 / 房源的潜在硬伤与入住注意事项</span></label>
+          <label class="opt wide"><input type="radio" name="q11_value" value="just_fun"><span>只是一个看着好玩的房产短视频流，对实际做决定帮助有限</span></label>
+          <label class="opt"><input type="radio" name="q11_value" value="other"><span>其他</span></label>
         </div>
-        <div class="other"><input type="text" name="q5_value_other" maxlength="120" placeholder="其他请写在这里"></div>
+        <div class="other"><input type="text" name="q11_value_other" maxlength="120" placeholder="其他请写在这里"></div>
         <p class="errmsg">请选一项。</p>
       </fieldset>
 
-      <fieldset data-q="q6_stage" data-req="one">
-        <legend><span class="qn">6</span>如果当时您正在选房，您最可能在哪个阶段高频使用它？<small>单选</small></legend>
+      <fieldset data-q="q12_stage" data-req="one">
+        <legend><span class="qn">12</span>如果当时您正在选房，您最可能在哪个阶段高频使用它？<small>单选</small></legend>
         <div class="opts">
-          <label class="opt wide"><input type="radio" name="q6_stage" value="a_no_area"><span><b>阶段 A：</b>刚确定亚特兰大，完全不知道选哪个 Zipcode / 区域时</span></label>
-          <label class="opt wide"><input type="radio" name="q6_stage" value="b_compare_areas"><span><b>阶段 B：</b>锁定了 2–3 个大区，需要横向对比具体 Neighborhood 时</span></label>
-          <label class="opt wide"><input type="radio" name="q6_stage" value="c_check_homes"><span><b>阶段 C：</b>已经看到具体几套房子，用来确认周边配套和硬伤时</span></label>
-          <label class="opt wide"><input type="radio" name="q6_stage" value="d_wont_use"><span><b>阶段 D：</b>基本不会用，因为更习惯直接找中介或刷 Zillow</span></label>
+          <label class="opt wide"><input type="radio" name="q12_stage" value="a_no_area"><span><b>阶段 A：</b>刚确定亚特兰大，完全不知道选哪个 Zipcode / 区域时</span></label>
+          <label class="opt wide"><input type="radio" name="q12_stage" value="b_compare_areas"><span><b>阶段 B：</b>锁定了 2–3 个大区，需要横向对比具体 Neighborhood 时</span></label>
+          <label class="opt wide"><input type="radio" name="q12_stage" value="c_check_homes"><span><b>阶段 C：</b>已经看到具体几套房子，用来确认周边配套和硬伤时</span></label>
+          <label class="opt wide"><input type="radio" name="q12_stage" value="d_wont_use"><span><b>阶段 D：</b>基本不会用，因为更习惯直接找中介或刷 Zillow</span></label>
         </div>
         <p class="errmsg">请选一项。</p>
       </fieldset>
 
-      <fieldset data-q="q7" data-req="rates">
-        <legend><span class="qn">7</span>核心功能打分：视频中的哪些模块让您觉得「切中刚需」？<small>1 分 = 鸡肋，5 分 = 极有价值</small></legend>
+      <fieldset data-q="q13" data-req="rates">
+        <legend><span class="qn">13</span>核心功能打分：视频中的哪些模块让您觉得「切中刚需」？<small>1 分 = 鸡肋，5 分 = 极有价值</small></legend>
         <div class="rate">
           <div class="lab"><b>社区动态视频与设施进度条</b><i>大门、学校、超市、公园直达</i></div>
-          <div class="scale" data-name="q7_community"></div>
+          <div class="scale" data-name="q13_community"></div>
           <div class="lab"><b>「二选一」视觉偏好卡片</b><i>帮你快速明确预算与社区取向</i></div>
-          <div class="scale" data-name="q7_tradeoff"></div>
+          <div class="scale" data-name="q13_tradeoff"></div>
           <div class="lab"><b>「After You Move In」入住注意事项</b><i>避坑、噪音、硬伤预警</i></div>
-          <div class="scale" data-name="q7_movein"></div>
+          <div class="scale" data-name="q13_movein"></div>
           <div class="lab"><b>个性化偏好与匹配画像</b><i>基于偏好推荐适合的社区标签</i></div>
-          <div class="scale" data-name="q7_persona"></div>
+          <div class="scale" data-name="q13_persona"></div>
         </div>
         <div class="scale-key"><span>1 = 鸡肋</span><span>5 = 极有价值</span></div>
         <p class="errmsg">四个模块都请打分。</p>
       </fieldset>
 
-      <fieldset data-q="q8_trust" data-req="one">
-        <legend><span class="qn">8</span>针对 AI 生成的社区解析和优缺点判断，您的信任度如何？<small>单选</small></legend>
+      <fieldset data-q="q14_trust" data-req="one">
+        <legend><span class="qn">14</span>针对这些基于公开信息汇总出来的社区解析和优缺点判断，您的信任度如何？<small>单选</small></legend>
         <div class="opts">
-          <label class="opt wide"><input type="radio" name="q8_trust" value="trust"><span><b>非常信任：</b>只要画面真实、客观呈现优缺点就会参考</span></label>
-          <label class="opt wide"><input type="radio" name="q8_trust" value="verify"><span><b>半信半疑：</b>会参考，但必须核对数据来源（如标注来源于 MLS / 学区局 / 官方数据）</span></label>
-          <label class="opt wide"><input type="radio" name="q8_trust" value="need_human"><span><b>不太相信：</b>除非有本地真人（中介 / 当地住户）背书或答疑</span></label>
+          <label class="opt wide"><input type="radio" name="q14_trust" value="trust"><span><b>非常信任：</b>只要画面真实、客观呈现优缺点就会参考</span></label>
+          <label class="opt wide"><input type="radio" name="q14_trust" value="verify"><span><b>半信半疑：</b>会参考，但必须核对数据来源（如标注来源于 MLS / 学区局 / 官方数据）</span></label>
+          <label class="opt wide"><input type="radio" name="q14_trust" value="need_human"><span><b>不太相信：</b>除非有本地真人（中介 / 当地住户）背书或答疑</span></label>
         </div>
         <p class="sub">关键疑虑点 <small>可多选，可不选</small></p>
         <div class="opts">
-          <label class="opt"><input type="checkbox" name="q8_concerns" value="only_praise"><span>怕只吹不贬</span></label>
-          <label class="opt"><input type="checkbox" name="q8_concerns" value="wrong_data"><span>怕数据不准</span></label>
-          <label class="opt"><input type="checkbox" name="q8_concerns" value="paid_bias"><span>怕推荐带有商业推广倾向</span></label>
+          <label class="opt"><input type="checkbox" name="q14_concerns" value="only_praise"><span>怕只吹不贬</span></label>
+          <label class="opt"><input type="checkbox" name="q14_concerns" value="wrong_data"><span>怕数据不准</span></label>
+          <label class="opt"><input type="checkbox" name="q14_concerns" value="paid_bias"><span>怕推荐带有商业推广倾向</span></label>
         </div>
         <p class="errmsg">请选一个信任度。</p>
       </fieldset>
@@ -263,29 +364,29 @@
 
     <!-- ── 四 ── -->
     <section class="part">
-      <div class="part-head"><h2>四、留存与行动意愿</h2><span class="n">9–10</span></div>
+      <div class="part-head"><h2>四、留存与行动意愿</h2><span class="n">15–16</span></div>
 
-      <fieldset data-q="q9_pmf" data-req="one">
-        <legend><span class="qn">9</span>如果这款 App 现已上线但突然无法使用，您的感受是：<small>单选</small></legend>
+      <fieldset data-q="q15_pmf" data-req="one">
+        <legend><span class="qn">15</span>如果这款 App 现已上线但突然无法使用，您的感受是：<small>单选</small></legend>
         <div class="opts">
-          <label class="opt wide"><input type="radio" name="q9_pmf" value="very"><span>非常失望（它极大简化了我的远程决策）</span></label>
-          <label class="opt wide"><input type="radio" name="q9_pmf" value="somewhat"><span>有点失望（有它挺好，但没有也能用传统方式看）</span></label>
-          <label class="opt wide"><input type="radio" name="q9_pmf" value="not"><span>无所谓（对我影响不大）</span></label>
+          <label class="opt wide"><input type="radio" name="q15_pmf" value="very"><span>非常失望（它极大简化了我的远程决策）</span></label>
+          <label class="opt wide"><input type="radio" name="q15_pmf" value="somewhat"><span>有点失望（有它挺好，但没有也能用传统方式看）</span></label>
+          <label class="opt wide"><input type="radio" name="q15_pmf" value="not"><span>无所谓（对我影响不大）</span></label>
         </div>
         <p class="errmsg">请选一项。</p>
       </fieldset>
 
-      <fieldset data-q="q10_needs" data-req="many">
-        <legend><span class="qn">10</span>要让您完全信任并拿它作为选区 / 下 Offer 的主力辅助工具，还必须补充什么？<small>可多选</small></legend>
+      <fieldset data-q="q16_needs" data-req="many">
+        <legend><span class="qn">16</span>要让您完全信任并拿它作为选区 / 下 Offer 的主力辅助工具，还必须补充什么？<small>可多选</small></legend>
         <div class="opts">
-          <label class="opt wide"><input type="checkbox" name="q10_needs" value="mls_live"><span>实时 MLS 挂牌房源与历史成交底价</span></label>
-          <label class="opt wide"><input type="checkbox" name="q10_needs" value="resident_reviews"><span>本地华人真实居住体验评论区 / 业主 Q&amp;A</span></label>
-          <label class="opt wide"><input type="checkbox" name="q10_needs" value="local_agent"><span>一键连线对该片区极度熟悉的本地中介咨询</span></label>
-          <label class="opt wide"><input type="checkbox" name="q10_needs" value="roi_calc"><span>房屋投资回报测算器（租金估算、现金流与升值走势）</span></label>
-          <label class="opt wide"><input type="checkbox" name="q10_needs" value="family_share"><span>跨设备分享与家庭成员协同点赞 / 打分功能</span></label>
-          <label class="opt"><input type="checkbox" name="q10_needs" value="other"><span>其他</span></label>
+          <label class="opt wide"><input type="checkbox" name="q16_needs" value="mls_live"><span>实时 MLS 挂牌房源与历史成交底价</span></label>
+          <label class="opt wide"><input type="checkbox" name="q16_needs" value="resident_reviews"><span>本地华人真实居住体验评论区 / 业主 Q&amp;A</span></label>
+          <label class="opt wide"><input type="checkbox" name="q16_needs" value="local_agent"><span>一键连线对该片区极度熟悉的本地中介咨询</span></label>
+          <label class="opt wide"><input type="checkbox" name="q16_needs" value="roi_calc"><span>房屋投资回报测算器（租金估算、现金流与升值走势）</span></label>
+          <label class="opt wide"><input type="checkbox" name="q16_needs" value="family_share"><span>跨设备分享与家庭成员协同点赞 / 打分功能</span></label>
+          <label class="opt"><input type="checkbox" name="q16_needs" value="other"><span>其他</span></label>
         </div>
-        <div class="other"><input type="text" name="q10_needs_other" maxlength="120" placeholder="其他请写在这里"></div>
+        <div class="other"><input type="text" name="q16_needs_other" maxlength="120" placeholder="其他请写在这里"></div>
         <p class="errmsg">请至少选一项。</p>
       </fieldset>
 
@@ -329,14 +430,33 @@
     }
   });
 
-  // Q4: at most three
-  var q4 = form.querySelector('[data-q="q4_gaps"]');
-  function capQ4() {
-    var boxes = q4.querySelectorAll('input[type=checkbox]');
-    var n = q4.querySelectorAll('input[type=checkbox]:checked').length;
-    boxes.forEach(function (b) { b.disabled = !b.checked && n >= 3; });
+  // capped multi-choice questions (data-max)
+  function capAll() {
+    form.querySelectorAll('fieldset[data-max]').forEach(function (fs) {
+      var max = Number(fs.getAttribute('data-max'));
+      var boxes = fs.querySelectorAll('input[type=checkbox]');
+      var n = fs.querySelectorAll('input[type=checkbox]:checked').length;
+      boxes.forEach(function (b) { b.disabled = !b.checked && n >= max; });
+    });
   }
-  q4.addEventListener('change', capQ4);
+  function capQ4() { capAll(); }
+  form.addEventListener('change', capAll);
+  // Q6: "the one you care about most" — radios built from what is checked
+  var q6 = form.querySelector('[data-q="q6_check"]');
+  function buildQ6Top() {
+    var checked = [].slice.call(q6.querySelectorAll('input[name=q6_check]:checked'));
+    var box = document.getElementById('q6top');
+    var prev = (form.querySelector('input[name=q6_top]:checked') || {}).value;
+    box.innerHTML = '';
+    document.getElementById('q6topLabel').style.display = checked.length > 1 ? '' : 'none';
+    if (checked.length <= 1) return;
+    checked.forEach(function (c) {
+      var lab = document.createElement('label'); lab.className = 'opt';
+      lab.innerHTML = '<input type="radio" name="q6_top" value="' + c.value + '"' + (prev === c.value ? ' checked' : '') + '><span>' + c.nextElementSibling.textContent + '</span>';
+      box.appendChild(lab);
+    });
+  }
+  q6.addEventListener('change', function (ev) { if (ev.target.name === 'q6_check') buildQ6Top(); });
 
   // draft: survive a refresh
   function collect() {
@@ -346,7 +466,7 @@
       if (k === 'website' || k === 'contact') return;
       v = String(v).trim();
       if (!v) return;
-      if (/^q7_/.test(k)) { answers[k] = Number(v); return; }
+      if (/^q13_/.test(k)) { answers[k] = Number(v); return; }
       var multi = form.querySelector('input[name="' + k + '"][type=checkbox]');
       if (multi) { (answers[k] = answers[k] || []).push(v); } else { answers[k] = v; }
     });
@@ -369,7 +489,8 @@
       });
     });
     if (d.contact) form.contact.value = d.contact;
-    capQ4();
+    capAll(); buildQ6Top();
+    if (d.answers.q6_top) { var t = form.querySelector('input[name=q6_top][value="' + d.answers.q6_top + '"]'); if (t) t.checked = true; }
   }
   form.addEventListener('change', function (ev) { var fs = ev.target.closest('fieldset'); if (fs) fs.classList.remove('err'); });
   form.addEventListener('change', saveDraft);
@@ -386,7 +507,7 @@
       var q = fs.getAttribute('data-q');
       if (req === 'one') ok = checkedCount(q) === 1;
       if (req === 'many') { var n = checkedCount(q); var max = Number(fs.getAttribute('data-max') || 99); ok = n >= 1 && n <= max; }
-      if (req === 'rates') ok = ['q7_community', 'q7_tradeoff', 'q7_movein', 'q7_persona'].every(function (n) { return checkedCount(n) === 1; });
+      if (req === 'rates') ok = ['q13_community', 'q13_tradeoff', 'q13_movein', 'q13_persona'].every(function (n) { return checkedCount(n) === 1; });
       // nested second choice inside the same fieldset
       fs.querySelectorAll('.opts[data-q]').forEach(function (grp) {
         var gq = grp.getAttribute('data-q'); var greq = grp.getAttribute('data-req');

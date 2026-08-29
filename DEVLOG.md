@@ -16,6 +16,27 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 17:00 UTC — phase135.2: the questionnaire grows to 16 questions — the V3 questions V4 had dropped
+
+**Objective**: walkthrough with the owner. Decisions so far: add every V3
+question V4 did not cover; on Q8 (now Q14) stop saying "AI-generated" — it
+is aggregated public information; Q9 (now Q15, the Sean Ellis question) is
+doubted but left as is pending a call.
+
+**Actions**: six questions added — why Atlanta (q3_why), how they narrowed to
+areas (q5_narrow), what they check first about an unseen area (q6_check,
+≤5 from the pipeline's intent buckets, plus q6_top: the one that matters
+most, offered as radios built from the checked items), which videos they
+watched and whether one changed their mind (q7_video_seen / q7_video_changed),
+the one thing that decided the purchase (q8_decider), and an optional
+"magic app" line before the video (q10_wish). Everything renumbered 1–16;
+answer keys follow the new numbers (q9_gaps, q11_value, q12_stage, q13_*,
+q14_trust/concerns, q15_pmf, q16_needs). Same study id — the only rows
+under the old keys are the two smoke rows.
+
+**Next steps**: owner's answers to the walkthrough points (area buckets,
+"still looking" respondents, Q15 replacement, Q13 rows for the home tour).
+
 ## 2026-08-29 16:10 UTC — phase135.1: the submit route stops asking for its row back
 
 **Issues**: first live submission returned 500. `insert(...).select('id')` is a
