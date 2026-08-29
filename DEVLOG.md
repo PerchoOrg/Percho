@@ -16,6 +16,22 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 10:45 UTC — phase134.4: the demo video gets transition cards between segments
+
+**Objective**: owner — 「add some transition in between videos, for example from
+city to community, from community to city, you can add some descriptions」.
+
+**Actions**: the demo generator (`~/Desktop/Percho-demo/demo3.html`, outside
+the repo) now shows seven interstitial cards — 01 Cities · 02 Communities ·
+03 Trade-offs · 04 Homes · 05 After you move in · 06 You · a closing "Find
+your perch." — each an English headline with a Chinese line under it (the
+study group reads Chinese), ~2.5 s, fading over the app. Re-recorded silent:
+100 s. `apps/web/public/research/percho-demo-720p.mp4` replaced (12.7 MB).
+
+**Decisions**: bilingual cards rather than English-only — the video's only
+audience is the questionnaire's Chinese-speaking participants, and a silent
+video needs its narration on screen.
+
 ## 2026-08-29 10:35 UTC — phase134: the study page carries the demo video and is trimmed to the questionnaire
 
 **Objective**: owner — 「upload the video link to this page as well, and only
