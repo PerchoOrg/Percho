@@ -32,6 +32,11 @@ Supabase storage or Cloudflare Stream — no secrets, no bucket, one deploy.
 The cost is 11 MB in git history; the 1080p master (39 MB) stays out of the
 repo on the owner's Desktop.
 
+**Issues**: the first deploy served the page and the poster but 404'd the
+video — the root `.gitignore` ignores `*.mp4` globally, so the file never
+entered the commit. phase134.1 adds a `!` exception for this one path and
+commits the file (11.3 MB).
+
 **Next steps**: none. Re-copy the file when the questionnaire changes.
 
 ## 2026-08-29 12:35 UTC — phase133: even plates, and the card stops downloading 1.9 MB
