@@ -34,24 +34,49 @@
  * some home tour hero pic into one of the trade off … use the actual detailed
  * photos instead」.
  *
- * So the door now shows an INTERIOR room photo the server matched to the
- * dimension — a kitchen for `move_in`, a living room for `space` — together
- * with the vision tagger's own sentence about that frame ("Modern kitchen with
- * white cabinetry, stainless appliances, and center island"). The photo depicts
- * the thing and the caption says it, which is the pair a hero could never be.
- * Place dims (`schools`, `walkable`, `trails`, `hip`, `nightlife`) have no room
- * inside a house that shows them, so those doors take a community tour poster
- * instead — a real photograph of the neighbourhood — and carry no caption.
+ * So the door shows INTERIOR room photos the server matched to the dimension —
+ * kitchens for `move_in`, living rooms for `space`. Place dims (`schools`,
+ * `walkable`, `trails`, `hip`, `nightlife`) have no room inside a house that
+ * shows them, so those doors take a single community tour poster instead — a
+ * real photograph of the neighbourhood.
  *
- * `generate-feed.ts`'s `lightSide` owns all of that. A dim with neither leaves
+ * ── Three plates, not one photograph ────────────────────────────────────────
+ *
+ * Owner, 2026-08-29: 「can we put multiple similar photos on each side? so the
+ * tradeoff is high confidence, not based on one specific style」. One kitchen
+ * makes the door a question about THAT kitchen's cabinets; three kitchens, from
+ * three different homes, make it a question about kitchens. The server picks
+ * them (`dim-photos.ts`); this file stacks them.
+ *
+ * ── Why a plate and not a full-bleed fill ───────────────────────────────────
+ *
+ * Owner, same day: 「half pic only show very narrow part, and quality is bad」.
+ * Both were one geometry problem. A door is 180.5 × 531pt — aspect 0.34 — and a
+ * listing photo is 1.51. Filling it with `cover` kept the height and threw away
+ * 77% of the WIDTH (the white cabinetry, the island, the appliances the caption
+ * named), then upscaled the remaining strip 3× to reach a 3x screen's 1593
+ * device pixels.
+ *
+ * A plate is the photo at its own aspect inside the door, so nothing is cropped
+ * and — at ~152pt wide against a 1600px enhanced source — it is a 0.29×
+ * DOWNSAMPLE. Downsampling is always sharp. The plates are `flex: 1` rather
+ * than a fixed aspect so three of them fit an iPhone SE's shorter card as well
+ * as a Pro Max's; on a short card they crop a little off the top and bottom,
+ * which costs nothing a room needs.
+ *
+ * `generate-feed.ts`'s `lightSide` owns which photos. A dim with none leaves
  * the door on its unlit field below, which is the honest answer.
  *
- * ── The third line ─────────────────────────────────────────────────────────
+ * ── The last line ──────────────────────────────────────────────────────────
  *
- * Under the caption: how many homes in the loaded pool claim this dimension and
- * what they cost ("18 homes · median $342,000"). The photo says what the choice
- * LOOKS like; this says what it COSTS. The median is suppressed under three
- * homes — below that it is noise, not a fact about the market.
+ * How many homes in the loaded pool claim this dimension and what they cost
+ * ("18 homes · median $342,000"). The plates say what the choice LOOKS like;
+ * this says what it COSTS. The median is suppressed under three homes — below
+ * that it is noise, not a fact about the market.
+ *
+ * The tagger's sentence renders only when the door shows exactly ONE photo. Set
+ * under three plates it reads as describing all of them, and it does not: it is
+ * trustworthy precisely because it describes one frame.
  *
  * ── The unlit field ─────────────────────────────────────────────────────────
  *
@@ -78,7 +103,7 @@
  */
 import type { DimKey } from "@percho/shared/types";
 import { LinearGradient } from "expo-linear-gradient";
-import { StyleSheet, Text, View, type ViewStyle } from "react-native";
+import { Image, StyleSheet, Text, View, type ViewStyle } from "react-native";
 import Animated, {
 	type AnimatedStyle,
 	type SharedValue,
@@ -95,7 +120,6 @@ import {
 	redlineRadii,
 } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
-import { CardPhoto } from "../CardPhoto";
 import { RedlineIcon, type RedlineIconName } from "./redline/RedlineChrome";
 
 /**
@@ -162,12 +186,19 @@ interface DoorProps {
 function Door({ side, tone, veilStyle, checkStyle, greenStyle }: DoorProps) {
 	const surface = cardSurfaces[tone];
 	const glyph = glyphFor(side);
+	const photos = side.photos ?? [];
+	/** Only a lone plate may carry a sentence — see the header. */
+	const caption =
+		photos.length === 1 ? (photos[0]?.caption ?? SUPPORT[side.dim]) : undefined;
 
 	return (
 		<>
-			{side.photoUrl ? (
-				<CardPhoto url={side.photoUrl} fit="cover" />
-			) : (
+			{/*
+			 * The FIELD, always — the plates sit on it rather than replacing it.
+			 * Before 2026-08-29 a photo filled the whole door; see the header for
+			 * why that had to stop.
+			 */}
+			{
 				<>
 					<LinearGradient
 						colors={[surface.from, surface.to]}
@@ -182,16 +213,18 @@ function Door({ side, tone, veilStyle, checkStyle, greenStyle }: DoorProps) {
 						end={{ x: 0.85, y: 0.85 }}
 						style={StyleSheet.absoluteFill}
 					/>
-					<View style={styles.watermark} pointerEvents="none">
-						<RedlineIcon
-							name={glyph}
-							size={WATERMARK}
-							color={redline.onPhoto}
-							weight="outline"
-						/>
-					</View>
+					{photos.length === 0 && (
+						<View style={styles.watermark} pointerEvents="none">
+							<RedlineIcon
+								name={glyph}
+								size={WATERMARK}
+								color={redline.onPhoto}
+								weight="outline"
+							/>
+						</View>
+					)}
 				</>
-			)}
+			}
 
 			{/* The chosen door's green wash. Sits UNDER the scrim so the label
 			    keeps the contrast it was checked at. */}
@@ -208,8 +241,8 @@ function Door({ side, tone, veilStyle, checkStyle, greenStyle }: DoorProps) {
 			</Animated.View>
 
 			<LinearGradient
-				colors={["transparent", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.92)"]}
-				locations={[0.3, 0.66, 1]}
+				colors={["transparent", "rgba(0,0,0,0.35)", "rgba(0,0,0,0.72)"]}
+				locations={[0.45, 0.78, 1]}
 				start={{ x: 0, y: 0 }}
 				end={{ x: 0, y: 1 }}
 				style={styles.scrim}
@@ -219,10 +252,24 @@ function Door({ side, tone, veilStyle, checkStyle, greenStyle }: DoorProps) {
 			<Animated.View style={[styles.veil, veilStyle]} pointerEvents="none" />
 
 			<View style={styles.foot} pointerEvents="none">
+				{photos.length > 0 && (
+					<View style={styles.plates}>
+						{photos.map((photo) => (
+							<View key={photo.url} style={styles.plate}>
+								<Image
+									source={{ uri: photo.url }}
+									style={StyleSheet.absoluteFill}
+									resizeMode="cover"
+								/>
+							</View>
+						))}
+					</View>
+				)}
+
 				{/* The glyph is the door's only mark when there is no photograph;
-				    over a real room photo the label carries it, so it is dropped
+				    over real room photos the plates carry it, so it is dropped
 				    rather than stamped on someone's kitchen. */}
-				{side.photoUrl === undefined && (
+				{photos.length === 0 && (
 					<RedlineIcon
 						name={glyph}
 						size={DOOR_ICON}
@@ -230,6 +277,7 @@ function Door({ side, tone, veilStyle, checkStyle, greenStyle }: DoorProps) {
 						weight="outline"
 					/>
 				)}
+
 				<View style={styles.labelRow}>
 					<Text style={styles.label}>{side.label}</Text>
 					<Animated.View style={[styles.check, checkStyle]}>
@@ -241,14 +289,17 @@ function Door({ side, tone, veilStyle, checkStyle, greenStyle }: DoorProps) {
 						/>
 					</Animated.View>
 				</View>
+
 				{/*
-				 * The tagger's sentence when there is one, else the authored
-				 * support line. Never both: they say the same thing at different
-				 * levels of specificity, and the specific one wins.
+				 * One photo → its own sentence. Three → the plates already say
+				 * "kitchens" and a single caption would be claiming to describe
+				 * all three. No photo → the authored support line.
 				 */}
-				<Text style={styles.support} numberOfLines={3}>
-					{side.caption ?? SUPPORT[side.dim]}
-				</Text>
+				{caption !== undefined && (
+					<Text style={styles.support} numberOfLines={3}>
+						{caption}
+					</Text>
+				)}
 				{side.homes !== undefined && (
 					<Text style={styles.meta}>
 						{side.homes} {side.homes === 1 ? "home" : "homes"}
@@ -422,14 +473,40 @@ const styles = StyleSheet.create({
 		opacity: 0.085,
 	},
 
-	/** 18pt gutters, and clear of the `swipe either way` line at the foot. */
+	/**
+	 * The door's whole content column, not just a caption block: it starts under
+	 * the question and runs to just above the `swipe either way` line, so the
+	 * plates can take every point of height that is left.
+	 *
+	 * `top` clears the badge (12+~26) and the two-line question below it.
+	 */
 	foot: {
 		position: "absolute",
-		left: 16,
-		right: 16,
-		bottom: 36,
+		top: 118,
+		left: 14,
+		right: 14,
+		bottom: 34,
 		zIndex: 4,
 		gap: 7,
+		justifyContent: "flex-end",
+	},
+	/**
+	 * `flex: 1` on the stack AND on each plate: the three split whatever height
+	 * the label and meta rows leave, so the same code fits an SE's shorter card
+	 * and a Pro Max's taller one. A fixed 3:2 would overflow the SE.
+	 */
+	plates: {
+		flex: 1,
+		gap: 6,
+		marginBottom: 3,
+	},
+	plate: {
+		flex: 1,
+		borderRadius: 12,
+		overflow: "hidden",
+		backgroundColor: "rgba(0,0,0,0.35)",
+		borderWidth: StyleSheet.hairlineWidth * 2,
+		borderColor: "rgba(255,255,255,0.18)",
 	},
 	labelRow: { flexDirection: "row", alignItems: "center", gap: 8 },
 	/**

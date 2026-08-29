@@ -89,6 +89,9 @@ type ListingVideoRow = {
 type ListingPhotoRow = {
   listing_id: string;
   storage_path: string;
+  /** Real-ESRGAN ×2 file, preferred over the original — see `preferredPhotoPath`. */
+  enhanced_path: string | null;
+  enhanced_status: string | null;
   sort_order: number;
 };
 
@@ -176,7 +179,7 @@ async function assembleCards(
     // client revisions that throw.
     supabase
       .from('listing_photos')
-      .select('listing_id, storage_path, sort_order')
+      .select('listing_id, storage_path, enhanced_path, enhanced_status, sort_order')
       .in('listing_id', listingIds)
       .eq('status', 'ready')
       .order('sort_order', { ascending: true })
@@ -299,7 +302,7 @@ async function assembleCards(
     bucketVidsByListing.set(r.listing_id, arr);
   }
 
-  const { photoPublicUrl } = await import('@/lib/supabase/storage');
+  const { photoPublicUrl, preferredPhotoPath } = await import('@/lib/supabase/storage');
 
   const cards: BrowseCard[] = [];
   for (const l of listings) {
@@ -403,7 +406,9 @@ async function assembleCards(
         cfVideoIdLandscape: hero?.cf_video_id_landscape ?? null,
         externalUrl: hero?.external_url ?? null,
       },
-      heroPhotoUrl: hero ? undefined : photoPublicUrl((heroPhoto as ListingPhotoRow).storage_path),
+      heroPhotoUrl: hero
+        ? undefined
+        : photoPublicUrl(preferredPhotoPath(heroPhoto as ListingPhotoRow)),
       // fill full photo carousel for photo-only
       // listings so PhotoCard's swipe indicator shows N/N and horizontal
       // swipe cycles through every photo. Prior to this the grid loader
@@ -413,7 +418,7 @@ async function assembleCards(
       // matches `listing_photos.sort_order` (query above).
       photos: hero
         ? undefined
-        : (photosByListing.get(l.id) ?? []).map((p) => photoPublicUrl(p.storage_path)),
+        : (photosByListing.get(l.id) ?? []).map((p) => photoPublicUrl(preferredPhotoPath(p))),
       // Count is set even for video-led listings (unlike `photos` above), because
       // the redline's hero pill shows "N Photos" on every listing card.
       ...(photosByListing.has(l.id)

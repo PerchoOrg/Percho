@@ -75,7 +75,7 @@ interface FeedPoolResponse {
      *
      * Omitted entirely when no listing in the page has a tagged photo.
      */
-    dimPhotos?: Partial<Record<DimKey, DimPhoto>>;
+    dimPhotos?: Partial<Record<DimKey, DimPhoto[]>>;
   };
 }
 
@@ -351,7 +351,7 @@ export async function GET(request: Request) {
    * web app too, and its photo query is shaped for the carousel. This concern is
    * the mobile feed's alone.
    */
-  let dimPhotos: Partial<Record<DimKey, DimPhoto>> = {};
+  let dimPhotos: Partial<Record<DimKey, DimPhoto[]>> = {};
   if (listings.length > 0) {
     // Anon + RLS, the same way `browse-cards.ts` reads this table. Wrapped for
     // the same reason the scores block above is: the trade-off card's doors are
@@ -361,7 +361,7 @@ export async function GET(request: Request) {
       const supabase = await createClient();
       const { data: taggedPhotos } = await supabase
         .from('listing_photos')
-        .select('listing_id, storage_path, ai_tags')
+        .select('listing_id, storage_path, enhanced_path, enhanced_status, ai_tags')
         .in(
           'listing_id',
           listings.map((l) => l.id),

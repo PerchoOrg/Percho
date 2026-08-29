@@ -228,6 +228,20 @@ export interface CommunityCardV3 {
 
 // ─── Trade-off (§1.6) ───────────────────────────────────────────────
 
+/** One photograph on a trade-off door. */
+export interface DoorPhoto {
+	url: string;
+	/**
+	 * The vision tagger's factual sentence for THIS frame — "Modern kitchen with
+	 * white cabinetry, stainless appliances, and center island".
+	 *
+	 * Rendered only when the door shows exactly ONE photo. With three on screen
+	 * a single sentence reads as describing all of them, which it does not: it
+	 * is trustworthy precisely because it describes one frame.
+	 */
+	caption?: string;
+}
+
 export interface TradeoffSideV3 {
 	label: string;
 	dim: DimKey;
@@ -238,26 +252,20 @@ export interface TradeoffSideV3 {
 	 */
 	icon?: CardIconName;
 	/**
-	 * The photograph behind this door.
+	 * What this door shows: up to three DETAIL photos, never a listing hero
+	 * (owner, 2026-08-29 — a front-elevation shot cannot say "move-in ready").
 	 *
-	 * A DETAIL photo, never a listing hero (owner, 2026-08-29: a front-elevation
-	 * shot cannot say "move-in ready"). Resolved at composition time by
-	 * `lightSide` in `generate-feed.ts`: the server's per-dimension room photo
-	 * first, then a community hero for the dims that describe a PLACE rather
-	 * than a house. Absent when neither exists, and the door renders its unlit
-	 * field rather than an unrelated picture.
-	 */
-	photoUrl?: string;
-	/**
-	 * The vision tagger's own factual sentence for `photoUrl` — "Modern kitchen
-	 * with white cabinetry, stainless appliances, and center island".
+	 * Three, and from three different homes, because one photograph makes the
+	 * door a claim about that kitchen — its cabinets, its light, its staging —
+	 * while three make it a claim about KITCHENS, which is what a dimension is.
+	 * 「so the tradeoff is high confidence, not based on one specific style」.
 	 *
-	 * It is the half of the door that says what the choice MEANS, and it is
-	 * trustworthy in a way the listing prose is not: it describes what is in the
-	 * frame, so it can never drift from the photograph above it. Only interior
-	 * room photos carry one; a community hero has none.
+	 * Resolved by `lightSide` in `generate-feed.ts`: the server's per-dimension
+	 * room photos first, then a single community hero for the dims that describe
+	 * a PLACE rather than a house. Empty when neither exists, and the door
+	 * renders its unlit field rather than an unrelated picture.
 	 */
-	caption?: string;
+	photos?: readonly DoorPhoto[];
 	/** How many homes in the loaded pool claim this dimension. */
 	homes?: number;
 	/** Their median price, pre-formatted ("$342,000"). Absent under 3 homes. */

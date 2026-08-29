@@ -16,6 +16,79 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 09:40 UTC — phase128: three plates a side, and the enhanced file becomes the default
+
+**Objective**: owner, on device after phase127 — 「it is better, but still not
+good because half pic only show very narrow part, and quality is bad」, then
+「can we put multiple similar photos on each side? so the tradeoff is high
+confidence, not based on one specific style, also use the original pic so it is
+high quality」, then 「no you dont need approve the enhanced one, they should be
+the default options for any photos we are using」.
+
+**Diagnosis — "narrow" and "blurry" were ONE geometry bug**, measured not
+argued. A door is `180.5 × 531pt`, aspect **0.34**; a listing photo is
+`800 × 531`, aspect **1.51**. `cover` matches the height and throws away
+**77.4% of the width** — the white cabinetry, the island and the appliances the
+caption named were all in the discarded part. What survives is then upscaled
+**3.0×** to fill a 3x screen's 1593 device pixels. No cropping strategy fixes
+this: a sharp fill needs ≥541px of width AFTER the crop, and a portrait crop of
+an 800px-wide source leaves ~350.
+
+**The other half of the answer was already in the bucket.** `enhance.py` runs
+Real-ESRGAN ×2 on any source under 2400px, and `enhanced_path` files are
+`1600 × 1062` against the original's `800 × 531`. An 80-photo sample of the live
+feed pool had one for **every single photo**. The worker's own 2026-08-21 note
+("866 of 1,000 never enhanced") is stale — the pipeline has since run.
+
+**Actions**:
+- `apps/web/lib/supabase/storage.ts` — `preferredPhotoPath()`. The 2026-08-03
+  migration said the enhanced file "is NEVER used implicitly" and required
+  `enhanced_status = 'approved'` clicked by hand in /admin. Owner removed that
+  gate: presence of the FILE is the gate now, and only `rejected` / `failed`
+  fall back to the original.
+- Applied to every display path the app reads: `dim-photos.ts`,
+  `browse-cards.ts` (feed hero + photo carousel) and `listings/detail.ts` (the
+  gallery). Each query gained `enhanced_path, enhanced_status`.
+- `apps/web/lib/feed/dim-photos.ts` — returns `DimPhoto[]` (up to `DIM_PICKS`
+  = 3) instead of one, **deduped by `listing_id`**: three frames of one house is
+  the same anchoring the owner asked to remove, with more pixels.
+- `apps/mobile/components/cards/TradeoffFace.tsx` — the photo is no longer the
+  door's background. Up to three PLATES stack inside it, each `flex: 1` so the
+  three split whatever height the label and meta leave.
+- `card-types.ts` / `pool-dto.ts` / `generate-feed.ts` — `TradeoffSideV3.photos`
+  replaces `photoUrl` + `caption`; `lightSide` dedupes against a `Set` of the
+  other door's urls rather than one string.
+
+**Decisions**:
+- *Plates, not a better crop.* At ~152pt wide against a 1600px enhanced source a
+  plate is a **0.29× downsample** — downsampling is always sharp — and nothing
+  is cropped. The alternatives were measured and rejected on the page: a
+  horizontal split still upsamples 1.35×, and Supabase's transform endpoint
+  (verified live, HTTP 200) improves resampling but cannot invent the width the
+  crop threw away.
+- *`flex: 1` plates rather than a fixed 3:2.* Three fixed-aspect plates overflow
+  an iPhone SE's shorter card. Flexed, a short card trims a little off the top
+  and bottom of each frame, which costs nothing a room needs.
+- *The caption renders only for a LONE plate.* Under three photos one sentence
+  reads as describing all three; it is trustworthy precisely because it
+  describes one frame.
+- *The render worker keeps its own `approved_enhanced_path`.* Changing what a
+  PAID pipeline reads would invalidate finished clips — a separate decision.
+
+**Resolution**: web 808 + mobile 593 tests pass, both typecheck clean, biome
+clean on every changed file (the 11 remaining warnings are pre-existing
+`noNonNullAssertion` in `place-stats.test.ts`, untouched).
+
+**Learnings**: two rounds were spent on WHAT the door shows before anyone
+measured the box it shows it in. The aspect ratio of the container against the
+aspect ratio of the source is the first thing to compute when a photo "looks
+bad" — it explained both complaints at once, and it is arithmetic, not taste.
+
+**Next steps**: unchanged and still unanswered — `nightlife` has zero homes and
+zero communities, `hip` zero homes. Two of the seven questions ask about
+inventory that does not exist.
+
+
 ## 2026-08-29 08:25 UTC — phase127: the trade-off doors show a detail photo, not a hero
 
 **Objective**: owner on device, after phase125 shipped Two Doors — 「it doesnt
