@@ -38,6 +38,7 @@ import {
   fetchCommunityPool,
   fetchCommunityPoolByIds,
 } from '@/lib/feed/community-pool';
+import { type DimPhoto, type TaggedPhotoRow, pickDimPhotos } from '@/lib/feed/dim-photos';
 import { fetchNeighborhoodScores } from '@/lib/feed/fetch-neighborhood-scores';
 import { type GeoUnitDTO, fetchCityGeoUnits } from '@/lib/feed/geo-units';
 import { type LikedCommunityRef, type PoolListingDTO, gateListings } from '@/lib/feed/listing-gate';
@@ -48,8 +49,9 @@ import {
   fetchVerticalVideos,
   streamManifestUrl,
 } from '@/lib/feed/vertical-videos';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { parseFeedPoolQuery } from '@/lib/zod/feed-pool';
+import type { DimKey } from '@percho/shared/types';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -65,6 +67,15 @@ interface FeedPoolResponse {
     geoUnits: GeoUnitDTO[];
     listings: PoolListingDTO[];
     communities: PoolCommunityDTO[];
+    /**
+     * One detail photograph per preference dimension, for the trade-off card's
+     * doors (`lib/feed/dim-photos.ts`). Pool-level rather than per-listing
+     * because the card asks about a DIMENSION, not about one home — and eleven
+     * entries cost less than tagging every listing's photo set.
+     *
+     * Omitted entirely when no listing in the page has a tagged photo.
+     */
+    dimPhotos?: Partial<Record<DimKey, DimPhoto>>;
   };
 }
 
@@ -332,6 +343,45 @@ export async function GET(request: Request) {
       // honour the filter too, or `videosOnly` would only work with `videoFirst`.
       videoBearing;
 
+  /**
+   * The trade-off card's doors. One extra query on ids we already hold, run
+   * only when the page actually carries listings.
+   *
+   * Deliberately NOT threaded through `browse-cards.ts`: that module serves the
+   * web app too, and its photo query is shaped for the carousel. This concern is
+   * the mobile feed's alone.
+   */
+  let dimPhotos: Partial<Record<DimKey, DimPhoto>> = {};
+  if (listings.length > 0) {
+    // Anon + RLS, the same way `browse-cards.ts` reads this table. Wrapped for
+    // the same reason the scores block above is: the trade-off card's doors are
+    // a decoration on one card kind, and a failed photo query must degrade to an
+    // unlit door, never to a blank feed.
+    try {
+      const supabase = await createClient();
+      const { data: taggedPhotos } = await supabase
+        .from('listing_photos')
+        .select('listing_id, storage_path, ai_tags')
+        .in(
+          'listing_id',
+          listings.map((l) => l.id),
+        )
+        // `ai_tags` is filtered in `pickDimPhotos`, not here: a `.not(... is
+        // null)` on a Json column makes supabase-js widen the row type to
+        // `never`, and the untagged rows are cheap to skip in JS.
+        .eq('status', 'ready');
+
+      if (taggedPhotos && taggedPhotos.length > 0) {
+        const dimsByListing = new Map<string, readonly DimKey[]>(
+          listings.filter((l) => l.dims !== undefined).map((l) => [l.id, l.dims as DimKey[]]),
+        );
+        dimPhotos = pickDimPhotos(taggedPhotos as TaggedPhotoRow[], dimsByListing);
+      }
+    } catch (err) {
+      console.warn('[feed] dim photos unavailable', err);
+    }
+  }
+
   const body: FeedPoolResponse = {
     stage,
     offset,
@@ -344,6 +394,7 @@ export async function GET(request: Request) {
       geoUnits,
       listings,
       communities: orderedCommunities,
+      ...(Object.keys(dimPhotos).length > 0 ? { dimPhotos } : {}),
     },
   };
 

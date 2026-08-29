@@ -16,6 +16,84 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 08:25 UTC — phase127: the trade-off doors show a detail photo, not a hero
+
+**Objective**: owner on device, after phase125 shipped Two Doors — 「it doesnt
+make sense to put some home tour hero pic into one of the trade off, can you
+design how to show the two sides so it is more meaningful … for property, you
+should consider using the actual detailed photos instead hero ones」. Proposals:
+`claude.ai/code/artifact/aa445177-25f6-4fd0-be94-33db79df0a62` (in Chinese, at
+his request).
+
+**Diagnosis, measured against the live pool (40 listings / 40 communities)**
+rather than argued:
+- A listing hero is a front-elevation shot. Nothing photographs "move-in
+  ready" except a house, which every hero already is — so the two doors were
+  showing the same non-information twice.
+- The asymmetry that made it worse: PLACE dims (`walkable`, `trails`,
+  `schools`, `hip`, `nightlife`) genuinely photograph; PROPERTY dims do not.
+  Stage is pinned at 4, which sets scope to `property` — so the half where
+  photography is meaningless was the only half ever reaching the phone.
+- `listing_photos.ai_tags` already carries `room_type` (the same twelve-word
+  vocabulary as `HOTSPOT_ROOMS`) AND a factual `caption` per frame. 44% of
+  dim-carrying listings have at least one tagged photo.
+
+**Actions**:
+- `apps/web/lib/feed/dim-photos.ts` (new, + 9 tests) — `pickDimPhotos` maps six
+  property dims to the rooms that depict them (`move_in` → kitchen/bathroom,
+  `space` → living/basement/office, …) and picks one photo per dim, ranked:
+  the listing claims the dim (1000) → room fit → the tagger's `hero_score`.
+- `apps/web/app/api/mobile/feed/route.ts` — one extra anon query on ids already
+  held, in a try/catch; `pool.dimPhotos` added to the response.
+- `apps/mobile/lib/feed/generate-feed.ts` — `heroForDim` DELETED. `lightSide`
+  resolves a door: server detail photo + caption → community hero for place
+  dims → dark. Adds `statsForDim` (homes + median, floored at 3 homes) and
+  `bestLit`, which prefers a question both of whose doors light.
+- `apps/mobile/components/cards/TradeoffFace.tsx` — renders the caption in
+  place of the authored support line when there is one, plus the count/median
+  row; the glyph is dropped when a photo is present (it was stamping an icon on
+  someone's kitchen); scrim deepened 0.88→0.92 and started higher for three
+  lines of white text.
+- `card-types.ts` / `pool-dto.ts` / `use-feed-pool.ts` — `caption`, `homes`,
+  `medianLabel`, `price`, and `dimPhotos` (which ACCUMULATE across pages: each
+  page resolves them over its own listings, so a door lit on page 1 must not go
+  dark on page 2).
+
+**Decisions**:
+- *The photo depicts the CONCEPT, not one home's claim.* Requiring the photo to
+  come from a listing that asserts the dim was measured and fails —
+  `entertaining` is claimed by ONE listing while the pool holds 30 kitchen
+  photos. A kitchen under "Updated kitchen" is honest either way, because the
+  door labels a dimension. Claiming is a preference, not a gate.
+- *No room is mapped to a place dim.* Mapping `hip` → `exterior` because a
+  house was available is exactly the arbitrary picture this work removes. Those
+  doors take a community tour poster (a real photograph of the neighbourhood)
+  or stay dark.
+- *`bestLit` orders, never filters.* Every question stays askable, but the
+  first trade-off a buyer sees is one whose doors light.
+
+**Issues**: `.not('ai_tags', 'is', null)` on a Json column makes supabase-js
+widen the row type to `never` — filtered in JS instead. Separately, the
+regex-block replacement that rewrote the trade-off section silently swallowed
+`pickGeo` / `pickCommunity` / `pickListing`; typecheck caught it immediately.
+
+**Resolution**: web 806 tests + mobile 593 tests pass, both typecheck clean,
+biome clean. The mobile suite gained a named regression guard — "NEVER falls
+back to a listing hero" — that fails if a future change reaches for `heroUrl`.
+
+**Learnings**: the coverage number that decides this feature is `backyard`,
+tagged on TWO photos across the whole scanned pool against 47 living / 30
+kitchen / 29 exterior. So `outdoors` — the most photogenic dim on the card —
+is the one that comes back dark. Owner declined a tagger re-run for now; this
+module gets better with no code change when one happens.
+
+**Next steps**: still open, both raised twice and not yet answered —
+`nightlife` has zero homes AND zero communities and `hip` zero homes, so two of
+the seven questions ask about inventory that does not exist; and `space` →
+`living` is a weak mapping (the matched photo can be a small sitting room under
+"Room to grow").
+
+
 ## 2026-08-29 08:40 UTC — phase126: move-in questions v1 — bank, generator, table, explore section
 
 **Objective**: owner, on the phase124 design doc: "go ahead". Ship the first
