@@ -19,12 +19,13 @@ import type {
 	CommunityCardV3,
 	CommunityReasonV3,
 	CommunitySignalV3,
+	DoorPhoto,
 	ListingCardV3,
 	NeighborhoodScores,
 	ScoreDimension,
 	ScoreDimensionKey,
 } from "./card-types";
-import type { DimPhoto, FeedPool } from "./generate-feed";
+import type { FeedPool } from "./generate-feed";
 import type { GeoLevel, GeoStats, GeoUnit } from "./geo-unit";
 import { GEO_LEVELS } from "./geo-unit";
 
@@ -365,17 +366,23 @@ export interface ParsedPoolPage {
  * missing map is not an error — it means no listing in the page had a tagged
  * photo, and the trade-off card draws its unlit doors.
  */
-function dimPhotos(v: unknown): Record<string, DimPhoto> {
+function dimPhotos(v: unknown): Record<string, DoorPhoto[]> {
 	const raw = rec(v);
 	if (raw === null) return {};
-	const out: Record<string, DimPhoto> = {};
+	const out: Record<string, DoorPhoto[]> = {};
 	for (const key of Object.keys(DIMS)) {
-		const entry = rec(raw[key]);
-		if (entry === null) continue;
-		const url = str(entry.url);
-		if (url === undefined) continue;
-		const caption = str(entry.caption);
-		out[key] = { url, ...(caption === undefined ? {} : { caption }) };
+		const entries = raw[key];
+		if (!Array.isArray(entries)) continue;
+		const photos: DoorPhoto[] = [];
+		for (const entry of entries) {
+			const row = rec(entry);
+			if (row === null) continue;
+			const url = str(row.url);
+			if (url === undefined) continue;
+			const caption = str(row.caption);
+			photos.push({ url, ...(caption === undefined ? {} : { caption }) });
+		}
+		if (photos.length > 0) out[key] = photos;
 	}
 	return out;
 }

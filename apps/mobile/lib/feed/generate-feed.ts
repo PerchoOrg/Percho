@@ -19,6 +19,7 @@
 import type { DimKey } from "@percho/shared/types";
 import type {
 	CommunityCardV3,
+	DoorPhoto,
 	FeedCardV3,
 	FunnelStage,
 	ListingCardV3,
@@ -40,25 +41,18 @@ import {
 import type { SignalState } from "./signals";
 import { isLayerSuppressed } from "./signals";
 
-/** One detail photograph, as the server resolved it for a dimension. */
-export interface DimPhoto {
-	url: string;
-	/** The vision tagger's factual sentence for this frame, when it wrote one. */
-	caption?: string;
-}
-
 /** Server-supplied inventory. */
 export interface FeedPool {
 	geoUnits: readonly GeoUnit[];
 	listings: readonly ListingCardV3[];
 	communities: readonly CommunityCardV3[];
 	/**
-	 * One interior DETAIL photo per dimension, keyed by `DimKey`
+	 * Up to three interior DETAIL photos per dimension, keyed by `DimKey`
 	 * (`apps/web/lib/feed/dim-photos.ts`). Optional: an older server, or a page
 	 * whose listings have no tagged photos, simply sends none and the trade-off
 	 * card draws unlit doors.
 	 */
-	dimPhotos?: Readonly<Record<string, DimPhoto>>;
+	dimPhotos?: Readonly<Record<string, readonly DoorPhoto[]>>;
 }
 
 export const EMPTY_POOL: FeedPool = {
@@ -207,11 +201,11 @@ interface FillContext {
 function placePhotoForDim(
 	ctx: FillContext,
 	dim: DimKey,
-	taken: string | undefined,
+	taken: ReadonlySet<string>,
 ): string | undefined {
 	for (const row of ctx.communityRanked) {
 		if (row.dims?.includes(dim) !== true) continue;
-		if (row.heroUrl === "" || row.heroUrl === taken) continue;
+		if (row.heroUrl === "" || taken.has(row.heroUrl)) continue;
 		return row.heroUrl;
 	}
 	return undefined;
@@ -257,21 +251,25 @@ function statsForDim(
 function lightSide(
 	ctx: FillContext,
 	side: TradeoffSideV3,
-	/** The other door's photo, so one picture can't fill both. */
-	taken: string | undefined,
+	/** Photos the other door already took, so no picture appears twice. */
+	taken: ReadonlySet<string>,
 ): TradeoffSideV3 {
-	const detail = ctx.pool.dimPhotos?.[side.dim];
-	const url =
-		detail !== undefined && detail.url !== taken
-			? detail.url
-			: placePhotoForDim(ctx, side.dim, taken);
-	const caption = url === detail?.url ? detail?.caption : undefined;
-	const stats = statsForDim(ctx, side.dim);
+	const detail = (ctx.pool.dimPhotos?.[side.dim] ?? []).filter(
+		(photo) => !taken.has(photo.url),
+	);
 
+	let photos: readonly DoorPhoto[] = detail;
+	if (photos.length === 0) {
+		// No room depicts this dimension — it is about the PLACE. One community
+		// tour poster, which carries no tagger sentence.
+		const place = placePhotoForDim(ctx, side.dim, taken);
+		photos = place === undefined ? [] : [{ url: place }];
+	}
+
+	const stats = statsForDim(ctx, side.dim);
 	return {
 		...side,
-		...(url === undefined ? {} : { photoUrl: url }),
-		...(caption === undefined ? {} : { caption }),
+		...(photos.length === 0 ? {} : { photos }),
 		...(stats.homes === 0 ? {} : { homes: stats.homes }),
 		...(stats.medianLabel === undefined
 			? {}
@@ -295,8 +293,12 @@ function poolIsBare(ctx: FillContext): boolean {
 
 /** Lights both doors. See `lightSide`. */
 function withLitDoors(ctx: FillContext, card: TradeoffCardV3): TradeoffCardV3 {
-	const left = lightSide(ctx, card.left, undefined);
-	const right = lightSide(ctx, card.right, left.photoUrl);
+	const left = lightSide(ctx, card.left, new Set());
+	const right = lightSide(
+		ctx,
+		card.right,
+		new Set((left.photos ?? []).map((photo) => photo.url)),
+	);
 	return { ...card, left, right };
 }
 
@@ -316,7 +318,10 @@ function bestLit(
 	let fallback: TradeoffCardV3 | null = null;
 	for (const card of cards) {
 		const lit = withLitDoors(ctx, card);
-		if (lit.left.photoUrl !== undefined && lit.right.photoUrl !== undefined) {
+		if (
+			(lit.left.photos?.length ?? 0) > 0 &&
+			(lit.right.photos?.length ?? 0) > 0
+		) {
 			return lit;
 		}
 		if (fallback === null) fallback = lit;

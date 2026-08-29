@@ -271,11 +271,18 @@ describe("trade-off doors show a detail photo, never a hero", () => {
 		],
 		communities: [community("c-plain")],
 		dimPhotos: {
-			space: { url: LIVING, caption: "Living area with large patio doors" },
-			move_in: {
-				url: KITCHEN,
-				caption: "Modern kitchen with white cabinetry and center island",
-			},
+			space: [
+				{ url: LIVING, caption: "Living area with large patio doors" },
+				{ url: `${LIVING}?2` },
+				{ url: `${LIVING}?3` },
+			],
+			move_in: [
+				{
+					url: KITCHEN,
+					caption: "Modern kitchen with white cabinetry and center island",
+				},
+				{ url: `${KITCHEN}?2` },
+			],
 		},
 	};
 
@@ -291,13 +298,21 @@ describe("trade-off doors show a detail photo, never a hero", () => {
 			count: WINDOW,
 		}).cards.find((c): c is TradeoffCardV3 => c.kind === "tradeoff");
 
-	it("lights each door with the server's room photo and quotes its caption", () => {
+	it("lights each door with every room photo the server sent", () => {
 		const card = firstTradeoff(LIT);
 		expect(card?.id).toBe("to-space-vs-movein");
-		expect(card?.left.photoUrl).toBe(LIVING);
-		expect(card?.left.caption).toBe("Living area with large patio doors");
-		expect(card?.right.photoUrl).toBe(KITCHEN);
-		expect(card?.right.caption).toContain("Modern kitchen");
+		// Three plates on one side, two on the other — fewer is correct when the
+		// pool cannot supply three DIFFERENT homes.
+		expect(card?.left.photos?.map((p) => p.url)).toEqual([
+			LIVING,
+			`${LIVING}?2`,
+			`${LIVING}?3`,
+		]);
+		expect(card?.right.photos).toHaveLength(2);
+		// The tagger sentence rides its own frame, not the side.
+		expect(card?.left.photos?.[0]?.caption).toBe(
+			"Living area with large patio doors",
+		);
 	});
 
 	it("NEVER falls back to a listing hero", () => {
@@ -309,10 +324,14 @@ describe("trade-off doors show a detail photo, never a hero", () => {
 		const card = firstTradeoff(noPhotos);
 		expect(card).toBeDefined();
 		const heroes = noPhotos.listings.map((l) => l.heroUrl);
-		expect(heroes).not.toContain(card?.left.photoUrl);
-		expect(heroes).not.toContain(card?.right.photoUrl);
-		expect(card?.left.photoUrl).toBeUndefined();
-		expect(card?.right.photoUrl).toBeUndefined();
+		for (const photo of [
+			...(card?.left.photos ?? []),
+			...(card?.right.photos ?? []),
+		]) {
+			expect(heroes).not.toContain(photo.url);
+		}
+		expect(card?.left.photos).toBeUndefined();
+		expect(card?.right.photos).toBeUndefined();
 	});
 
 	it("lights a PLACE dim with a community hero, and no caption", () => {
@@ -334,16 +353,21 @@ describe("trade-off doors show a detail photo, never a hero", () => {
 			"to-newbuild-vs-character",
 		]);
 		expect(card?.id).toBe("to-trails-vs-walkable");
-		expect(card?.left.photoUrl).toBe("https://img/c-trails.jpg");
-		expect(card?.right.photoUrl).toBe("https://img/c-walkable.jpg");
+		// One poster per door — a place has no three-room set to show.
+		expect(card?.left.photos?.map((p) => p.url)).toEqual([
+			"https://img/c-trails.jpg",
+		]);
+		expect(card?.right.photos?.map((p) => p.url)).toEqual([
+			"https://img/c-walkable.jpg",
+		]);
 		// A tour poster carries no tagger sentence.
-		expect(card?.left.caption).toBeUndefined();
+		expect(card?.left.photos?.[0]?.caption).toBeUndefined();
 	});
 
 	it("never lets one photograph light both doors", () => {
 		const shared: FeedPool = {
 			...LIT,
-			dimPhotos: { space: { url: LIVING }, move_in: { url: LIVING } },
+			dimPhotos: { space: [{ url: LIVING }], move_in: [{ url: LIVING }] },
 		};
 		// Both other property pairs marked seen, so this one is what comes back
 		// even though `bestLit` cannot fully light it.
@@ -352,8 +376,8 @@ describe("trade-off doors show a detail photo, never a hero", () => {
 			"to-newbuild-vs-character",
 		]);
 		expect(card?.id).toBe("to-space-vs-movein");
-		expect(card?.left.photoUrl).toBe(LIVING);
-		expect(card?.right.photoUrl).not.toBe(LIVING);
+		expect(card?.left.photos?.map((p) => p.url)).toEqual([LIVING]);
+		expect(card?.right.photos).toBeUndefined();
 	});
 
 	it("prefers a question both of whose doors can be lit", () => {

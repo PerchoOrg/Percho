@@ -34,7 +34,7 @@
 import { streamManifestUrl, streamPosterUrl } from '@/lib/feed/vertical-videos';
 import { mobileVideoUid } from '@/lib/feed/video-uid';
 import type { Database } from '@/lib/supabase/database.types';
-import { photoPublicUrl } from '@/lib/supabase/storage';
+import { photoPublicUrl, preferredPhotoPath } from '@/lib/supabase/storage';
 import { createClient as createPlainClient } from '@supabase/supabase-js';
 
 /** Mirrors the tagger's output (`scripts/render-worker/photo_tagger.py`). */
@@ -302,7 +302,7 @@ export function projectPhotos(rows: PhotoRow[]): DetailPhotoDTO[] {
     })
     .map((r) => ({
       id: r.id,
-      url: photoPublicUrl(r.storage_path),
+      url: photoPublicUrl(preferredPhotoPath(r)),
       // Omitted entirely when untagged. `tags: {}` would make a hotspot builder
       // think it had data and produce a titleless pin.
       ...(r.ai_tags ? { tags: r.ai_tags } : {}),
@@ -430,7 +430,7 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
   const [photoRes, compRes, mlsRes, videoRes, questionRes] = await Promise.all([
     supabase
       .from('listing_photos')
-      .select('id, storage_path, ai_tags, sort_order')
+      .select('id, storage_path, enhanced_path, enhanced_status, ai_tags, sort_order')
       .eq('listing_id', row.id)
       .eq('status', 'ready'),
     supabase

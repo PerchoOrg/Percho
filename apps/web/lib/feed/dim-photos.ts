@@ -1,4 +1,4 @@
-import { photoPublicUrl } from '@/lib/supabase/storage';
+import { photoPublicUrl, preferredPhotoPath } from '@/lib/supabase/storage';
 /**
  * One photograph per preference dimension, for the trade-off card's two doors.
  *
@@ -15,6 +15,21 @@ import { photoPublicUrl } from '@/lib/supabase/storage';
  * in the frame. A kitchen photo under "Move-in ready" depicts the thing; the
  * tagger's own sentence ("Modern kitchen with white cabinetry, stainless
  * appliances, and center island") says it in words.
+ *
+ * ── Three photos, from three different homes ────────────────────────────────
+ *
+ * Owner, 2026-08-29: "can we put multiple similar photos on each side? so the
+ * tradeoff is high confidence, not based on one specific style".
+ *
+ * One photograph makes the door a claim about that kitchen — its cabinets, its
+ * light, its staging. Three kitchens make it a claim about KITCHENS, which is
+ * what a dimension actually is: the buyer stops answering "do I like this white
+ * kitchen" and starts answering the question on the card.
+ *
+ * `DIM_PICKS` of them, and they must come from DIFFERENT listings — three
+ * frames of one house is the same anchoring problem with more pixels. Measured
+ * against the live pool every property dim clears three; the thinnest,
+ * `outdoors`, has eight (backyard 2 + pool 2 + balcony 4).
  *
  * ── The photo depicts the CONCEPT, not one home's claim ─────────────────────
  *
@@ -69,10 +84,19 @@ export interface DimPhoto {
   caption?: string;
 }
 
+/**
+ * How many photos a door shows. Three reads as a set at plate size; four starts
+ * shrinking each plate past the point where a room is legible.
+ */
+export const DIM_PICKS = 3;
+
 /** A photo row as this module needs it — `ai_tags` already narrowed. */
 export interface TaggedPhotoRow {
   listing_id: string;
   storage_path: string;
+  /** The Real-ESRGAN ×2 file, served in preference to the original. */
+  enhanced_path?: string | null;
+  enhanced_status?: string | null;
   ai_tags: unknown;
 }
 
@@ -105,11 +129,11 @@ function usableCaption(caption: string | null | undefined): string | undefined {
 export function pickDimPhotos(
   photos: readonly TaggedPhotoRow[],
   dimsByListing: ReadonlyMap<string, readonly DimKey[]>,
-): Partial<Record<DimKey, DimPhoto>> {
-  const out: Partial<Record<DimKey, DimPhoto>> = {};
+): Partial<Record<DimKey, DimPhoto[]>> {
+  const out: Partial<Record<DimKey, DimPhoto[]>> = {};
 
   for (const [dim, rooms] of Object.entries(DIM_ROOMS) as [DimKey, readonly string[]][]) {
-    let best: { score: number; row: TaggedPhotoRow; tags: Tags } | null = null;
+    const ranked: { score: number; row: TaggedPhotoRow; tags: Tags }[] = [];
 
     for (const row of photos) {
       const tags = readTags(row.ai_tags);
@@ -129,16 +153,27 @@ export function pickDimPhotos(
         (rooms.length - roomRank) * 100 +
         (tags.hero_score ?? tags.quality ?? 0);
 
-      if (best === null || score > best.score) best = { score, row, tags };
+      ranked.push({ score, row, tags });
     }
 
-    if (best !== null) {
-      const caption = usableCaption(best.tags.caption);
-      out[dim] = {
-        url: photoPublicUrl(best.row.storage_path),
+    ranked.sort((a, b) => b.score - a.score);
+
+    // One listing contributes at most ONE frame: three photos of the same house
+    // is the anchoring this was written to remove.
+    const seenListings = new Set<string>();
+    const picks: DimPhoto[] = [];
+    for (const entry of ranked) {
+      if (picks.length === DIM_PICKS) break;
+      if (seenListings.has(entry.row.listing_id)) continue;
+      seenListings.add(entry.row.listing_id);
+      const caption = usableCaption(entry.tags.caption);
+      picks.push({
+        url: photoPublicUrl(preferredPhotoPath(entry.row)),
         ...(caption === undefined ? {} : { caption }),
-      };
+      });
     }
+
+    if (picks.length > 0) out[dim] = picks;
   }
 
   return out;
