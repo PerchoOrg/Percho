@@ -6,8 +6,14 @@
  * insight, no milestone. What survives is the composition contract: window
  * length, seenIds dedupe, determinism, exhaustion/looping, and fatigue.
  */
+import type { DimKey } from "@percho/shared/types";
 import { describe, expect, it } from "vitest";
-import type { CommunityCardV3, FeedCardV3, ListingCardV3 } from "./card-types";
+import type {
+	CommunityCardV3,
+	FeedCardV3,
+	ListingCardV3,
+	TradeoffCardV3,
+} from "./card-types";
 import type { FeedPool } from "./generate-feed";
 import { generateFeed, mixFor } from "./generate-feed";
 import type { GeoUnit } from "./geo-unit";
@@ -47,7 +53,11 @@ function community(
 	};
 }
 
-function listing(id: string, communityId?: string): ListingCardV3 {
+function listing(
+	id: string,
+	communityId?: string,
+	dims: ListingCardV3["dims"] = undefined,
+): ListingCardV3 {
 	return {
 		kind: "listing",
 		id,
@@ -58,6 +68,7 @@ function listing(id: string, communityId?: string): ListingCardV3 {
 		heroUrl: `https://img/${id}.jpg`,
 		matchScore: 88,
 		...(communityId ? { communityId } : {}),
+		...(dims ? { dims } : {}),
 	};
 }
 
@@ -107,13 +118,22 @@ const countKind = (cards: readonly FeedCardV3[], kind: string) =>
 // ─── §1.7 the stage-4 mix ─────────────────────────────────────────────────────
 
 describe("§1.7 stage 4 mix", () => {
-	it("the mix table holds listing and community slots only", () => {
-		// 2026-08-22: the geo and trade-off slots were removed, so the table is
-		// shorter than a window — the engine walks it cyclically either way.
+	it("the mix table holds listing, community and trade-off slots", () => {
+		// 2026-08-22 removed the geo AND trade-off slots; 2026-08-29 put the
+		// trade-off back with the Two Doors face. Geo is still out.
 		expect(new Set(STAGE_MIX[4].map((s) => s.fill))).toEqual(
-			new Set(["listing", "community"]),
+			new Set(["listing", "community", "tradeoff"]),
 		);
 		expect(STAGE_MIX[4].length).toBeLessThanOrEqual(WINDOW);
+	});
+
+	it("asks exactly one trade-off per cycle, and the cycle is odd", () => {
+		// The length is load-bearing, not cosmetic: `loopedFallback` reaches every
+		// pool row only when the table length and the pool size are coprime, and
+		// the live video-only inventory is 16 listings / 4 communities. An even
+		// table loops a subset forever — see the note in `ratios.ts`.
+		expect(STAGE_MIX[4].filter((s) => s.fill === "tradeoff")).toHaveLength(1);
+		expect(STAGE_MIX[4].length % 2).toBe(1);
 	});
 
 	it("stage 4 is listing-dominant", () => {
@@ -121,12 +141,12 @@ describe("§1.7 stage 4 mix", () => {
 		expect(countKind(cards, "listing")).toBeGreaterThanOrEqual(4);
 	});
 
-	it("emits both surviving kinds and nothing else", () => {
+	it("emits the three surviving kinds and nothing else", () => {
 		const { cards } = gen(4);
 		expect(countKind(cards, "listing")).toBeGreaterThan(0);
 		expect(countKind(cards, "community")).toBeGreaterThan(0);
+		expect(countKind(cards, "tradeoff")).toBeGreaterThan(0);
 		expect(countKind(cards, "area")).toBe(0);
-		expect(countKind(cards, "tradeoff")).toBe(0);
 	});
 
 	it("mixFor returns the stage-4 table", () => {
@@ -237,6 +257,81 @@ describe("seenIds and exhaustion", () => {
 		// table out of the mix there is nothing left to fall back on, so an
 		// empty pool means an empty deck and the §1.9 terminal card.
 		expect(res.cards).toEqual([]);
+	});
+});
+
+// ─── Trade-off doors (2026-08-29 Two Doors face) ──────────────────────────────
+
+describe("trade-off doors borrow the pool's photography", () => {
+	/** Every dim a stage-4 (property scope) trade-off can ask about. */
+	const DIM_POOL: FeedPool = {
+		geoUnits: CITIES,
+		listings: [
+			listing("l-space", undefined, ["space"]),
+			listing("l-movein", undefined, ["move_in"]),
+			listing("l-entertaining", undefined, ["entertaining"]),
+			listing("l-outdoors", undefined, ["outdoors"]),
+			listing("l-plain"),
+		],
+		communities: [community("c-hip", ["hip"]), community("c-plain")],
+	};
+
+	const firstTradeoff = (pool: FeedPool): TradeoffCardV3 | undefined =>
+		generateFeed({
+			stage: 4,
+			signals: EMPTY_SIGNALS,
+			pool,
+			seenIds: [],
+			count: WINDOW,
+		}).cards.find((c): c is TradeoffCardV3 => c.kind === "tradeoff");
+
+	const herosClaiming = (pool: FeedPool, dim: DimKey): string[] =>
+		[...pool.listings, ...pool.communities]
+			.filter((row) => row.dims?.includes(dim))
+			.map((row) => row.heroUrl);
+
+	it("hands each door the hero of a row that claims its dim", () => {
+		const card = firstTradeoff(DIM_POOL);
+		expect(card).toBeDefined();
+		if (card === undefined) return;
+		expect(herosClaiming(DIM_POOL, card.left.dim)).toContain(
+			card.left.photoUrl,
+		);
+		expect(herosClaiming(DIM_POOL, card.right.dim)).toContain(
+			card.right.photoUrl,
+		);
+	});
+
+	it("never lets one row light both doors", () => {
+		// One listing claims BOTH sides of "Room to grow / Move-in ready". The
+		// second door has to go unlit rather than repeat the same photograph.
+		const oneRow: FeedPool = {
+			geoUnits: CITIES,
+			listings: [listing("l-both", undefined, ["space", "move_in"])],
+			communities: [community("c1")],
+		};
+		const card = firstTradeoff(oneRow);
+		expect(card).toBeDefined();
+		if (card === undefined) return;
+		expect(card.left.photoUrl).not.toBe(card.right.photoUrl);
+	});
+
+	it("leaves a door unlit rather than borrowing an unrelated photo", () => {
+		// The base fixture claims schools / walkable / quiet — no property dim,
+		// which is what a stage-4 trade-off asks about.
+		const card = firstTradeoff(POOL);
+		expect(card).toBeDefined();
+		if (card === undefined) return;
+		expect(card.left.photoUrl).toBeUndefined();
+		expect(card.right.photoUrl).toBeUndefined();
+	});
+
+	it("asks nothing at all when the pool is bare", () => {
+		// No inventory is the §1.9 terminal card, never an interview — and there
+		// would be nothing behind either door anyway.
+		expect(
+			firstTradeoff({ geoUnits: CITIES, listings: [], communities: [] }),
+		).toBeUndefined();
 	});
 });
 

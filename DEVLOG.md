@@ -16,6 +16,90 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 07:40 UTC — phase125: the trade-off card comes back as two doors
+
+**Objective**: owner, 2026-08-25 — "we need to get tradeoff cards back, same
+card size with home and community ones… the previous one doesnt look
+appealing to me". Three directions were mocked at true size
+(`claude.ai/code/artifact/382fdcf4-359b-4a10-a1fa-d8954f75151e`); he picked
+**A, Two Doors**.
+
+**Diagnosis (why the old face failed, not just "looked dated")**: two causes,
+both structural.
+1. On 2026-08-18 listing / community / city collapsed into ONE immersive face.
+   The trade-off card never made that trip, so it was the deck's last white
+   card — a form arriving between two playing tours.
+2. It was composed for its own `0.62` frame. The deck has run one
+   `CARD_FRAME_RATIO` 0.83 frame for every kind since 2026-08-17: the same
+   ~230pt of content in a 531pt box, two 58pt discs floating in white.
+
+**Actions** (mobile only):
+- `components/cards/TradeoffFace.tsx` — rewritten. The card splits down the
+  middle; each choice is a photograph with the label on its own bottom scrim.
+  Frosted `TRADE-OFF` pill at 12/12 (the LISTING/COMMUNITY badge, relabelled),
+  question on a top scrim at serif 27/29, no bookmark disc — nothing here is
+  saveable, and the empty slot is the honest signal that this card is a
+  question. On drag the chosen door widens 50% → 66%, the discarded one goes
+  behind a 0.62 veil, and a green check lands beside the winning label.
+- `lib/feed/generate-feed.ts` — `heroForDim` / `withDoorPhotos` /
+  `loopedTradeoff` / `poolIsBare`. Each door borrows the `heroUrl` of a POOL
+  ROW that claims that side's `dim`, preferring listings for a `property`
+  trade-off and communities for a `life` one.
+- `lib/feed/card-types.ts` — `TradeoffSideV3.photoUrl?`.
+- `lib/feed/ratios.ts` — the trade-off slot is back in `STAGE_MIX[4]`.
+
+**Decisions**:
+- *Where the photography comes from.* Direction A's only real cost was eleven
+  images, one per `DimKey`. Rejected buying/licensing them, and rejected the
+  stills under `out/` — those are Google Places / Street View frames from the
+  POI pipeline, fine as tour source material, not as bundled decorative art.
+  Both card types already carry `dims` AND `heroUrl`, so the door borrows from
+  the deck's own inventory instead: zero new assets, zero licence question, and
+  the picture behind "Move-in ready" is a house the buyer could be shown three
+  cards later. Coverage is real — `listing-highlights.ts` matches ≥1 dim on
+  96.9% of 260 listings.
+- *A door with no match stays unlit.* `cardSurfaces.tradeoff` /
+  `tradeoffAlt` were written for exactly this split ("the right half of the
+  trade-off split only") and had never rendered once. They are the no-photo
+  door, with the choice's glyph at 190pt bled off the edge. Borrowing an
+  unrelated photo would be the engine authoring content, which it never does.
+- *Green stays a state.* Neither field is green at rest; green floods only the
+  door being chosen. Keeps the redline's one accent rule.
+- *Mix length 9, not 8.* Inserting one slot into the 7-entry table gives 8,
+  and that is a silent regression: `loopedFallback` walks the whole pool only
+  when the table length and the pool size are coprime, and the live video-only
+  inventory is 16 listings / 4 communities — both powers of two. An even table
+  loops a subset forever (`rhythm.test.ts` and the "loops LISTINGS too" test
+  both caught it). Nine is the shortest odd length that keeps the deck
+  listing-dominant; the ninth slot is a listing, so the mix goes 5:2 → 6:2
+  rather than dropping a community. Runs checked across the wrap: 3, inside
+  the wall of 4.
+
+**Issues**: `loopedFallback` pushed `anyItem(TRADEOFFS, rotate)` straight into
+its candidates, bypassing the pool entirely. With the slot back in the mix
+that resurrected the pathology the rhythm suite exists for — a geo-only pool
+produced a run of 15 trade-offs — and would also have looped questions with
+two unlit doors while the pool held photos for them.
+
+**Resolution**: one pool-backed path for both. `poolIsBare` returns null for
+the slot and for the loop when there is no inventory, so an empty pool is the
+§1.9 terminal card and never an interview. 578 tests pass (5 new), typecheck
+and biome clean.
+
+**Learnings**: the mix table's LENGTH is load-bearing and was documented only
+inside `loopedFallback`'s header, where nobody editing `ratios.ts` would read
+it. The invariant is now asserted (`STAGE_MIX[4].length % 2 === 1`) and stated
+where the table is.
+
+**Next steps** (all owner calls, raised in the proposal, none blocking):
+1. Rate — one in nine. Watch whether it costs session length.
+2. A vote lands in `signals.ts` and vanishes. A one-line confirmation on the
+   next card is what turns the ask into an exchange.
+3. `TRADEOFFS` holds seven pairs; a long session repeats them. Worth another
+   eight.
+4. Only two of the eleven dims (`hip`, `nightlife`) have no listing-side
+   pattern, so a `hip` door falls to communities or goes unlit — visible on
+   "Brand new / Older with character".
 ## 2026-08-29 07:13 UTC — phase124: the move-in question bank (design doc)
 
 **Objective**: owner asked, for a house he is considering (10404 NE 198th
