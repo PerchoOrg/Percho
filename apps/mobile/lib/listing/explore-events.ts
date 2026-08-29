@@ -164,38 +164,31 @@ export interface DockActionEvent extends ExploreEventBase {
 	action: "pass" | "save" | "unsave" | "tour";
 }
 
-// ─── Phase125 move-in question events (move-in-questions.md §5) ─────────────
+// ─── Phase129 "After you move in" events ────────────────────────────────────
 
 /**
- * `question_open(question_id, rank_shown, dwell_ms)` — the core signal. Dwell
- * is carried on CLOSE, same reasoning as `hotspot_open`: an open-only event
- * has no duration. `rankShown` is the 0-based position the row held, so a
- * question opened from slot 5 can be told from one opened from slot 0.
+ * `insight_focus(insight_id, index, theme)` — the buyer swiped a card into
+ * focus. Never fired for the first card, which is focused for them; the
+ * swipe is the intent. This is the section's profile signal.
  */
-export interface QuestionOpenEvent extends ExploreEventBase {
-	type: "question_open";
-	questionId: string;
-	rankShown: number;
-	dwellMs: number;
-}
-
-/** `question_verify_tap` — the buyer plans to go and see. Strongest intent we have. */
-export interface QuestionVerifyTapEvent extends ExploreEventBase {
-	type: "question_verify_tap";
-	questionId: string;
-}
-
-/** `question_source_tap(basis_index)` — which basis types buyers actually check. */
-export interface QuestionSourceTapEvent extends ExploreEventBase {
-	type: "question_source_tap";
-	questionId: string;
-	basisIndex: number;
-}
-
-/** `question_theme_browse(theme)` — weaker affinity than an open. */
-export interface QuestionThemeBrowseEvent extends ExploreEventBase {
-	type: "question_theme_browse";
+export interface InsightFocusEvent extends ExploreEventBase {
+	type: "insight_focus";
+	insightId: string;
+	index: number;
 	theme: string;
+}
+
+/** `insight_verify_tap` — the buyer plans to go and see. Strongest intent we have. */
+export interface InsightVerifyTapEvent extends ExploreEventBase {
+	type: "insight_verify_tap";
+	insightId: string;
+}
+
+/** `insight_source_tap(basis_index)` — which cards buyers actually check. */
+export interface InsightSourceTapEvent extends ExploreEventBase {
+	type: "insight_source_tap";
+	insightId: string;
+	basisIndex: number;
 }
 
 export type ExploreEvent =
@@ -213,10 +206,9 @@ export type ExploreEvent =
 	| TradeoffVoteEvent
 	| CostAdjustEvent
 	| DockActionEvent
-	| QuestionOpenEvent
-	| QuestionVerifyTapEvent
-	| QuestionSourceTapEvent
-	| QuestionThemeBrowseEvent;
+	| InsightFocusEvent
+	| InsightVerifyTapEvent
+	| InsightSourceTapEvent;
 
 export type ExploreEventType = ExploreEvent["type"];
 
@@ -369,39 +361,25 @@ export function buildDockActionEvent(
 	return { ...ctx, type: "dock_action", action: input.action };
 }
 
-// ─── Phase125 constructors ───────────────────────────────────────────────────
+// ─── Phase129 constructors ───────────────────────────────────────────────────
 
-export function buildQuestionOpenEvent(
+export function buildInsightFocusEvent(
 	ctx: Ctx,
-	input: { questionId: string; rankShown: number; dwellMs: number },
-): QuestionOpenEvent {
-	return {
-		...ctx,
-		type: "question_open",
-		questionId: input.questionId,
-		rankShown: input.rankShown,
-		// Same clamp as hotspot_open: a clock change must not poison ranking.
-		dwellMs: Math.max(0, Math.round(input.dwellMs)),
-	};
+	input: { insightId: string; index: number; theme: string },
+): InsightFocusEvent {
+	return { ...ctx, type: "insight_focus", ...input };
 }
 
-export function buildQuestionVerifyTapEvent(
+export function buildInsightVerifyTapEvent(
 	ctx: Ctx,
-	input: { questionId: string },
-): QuestionVerifyTapEvent {
-	return { ...ctx, type: "question_verify_tap", questionId: input.questionId };
+	input: { insightId: string },
+): InsightVerifyTapEvent {
+	return { ...ctx, type: "insight_verify_tap", insightId: input.insightId };
 }
 
-export function buildQuestionSourceTapEvent(
+export function buildInsightSourceTapEvent(
 	ctx: Ctx,
-	input: { questionId: string; basisIndex: number },
-): QuestionSourceTapEvent {
-	return { ...ctx, type: "question_source_tap", ...input };
-}
-
-export function buildQuestionThemeBrowseEvent(
-	ctx: Ctx,
-	input: { theme: string },
-): QuestionThemeBrowseEvent {
-	return { ...ctx, type: "question_theme_browse", theme: input.theme };
+	input: { insightId: string; basisIndex: number },
+): InsightSourceTapEvent {
+	return { ...ctx, type: "insight_source_tap", ...input };
 }

@@ -19,7 +19,7 @@
     "db:reset": "supabase db reset",
     "test": "vitest run",
     "test:watch": "vitest",
-    "questions": "tsx ../../scripts/admin/generate-move-in-questions.ts",
+    "insights": "tsx ../../scripts/admin/generate-move-in-insights.ts",
     "tour": "tsx ../../scripts/admin/run-community-tour.ts"
   },
   "dependencies": {

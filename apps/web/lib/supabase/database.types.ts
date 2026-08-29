@@ -1568,55 +1568,55 @@ export type Database = {
           },
         ]
       }
-      listing_questions: {
+      listing_insights: {
         Row: {
-          answer: string
           basis: Json
           decisiveness: number
-          form: string
+          detail: string
           generated_at: string
+          headline: string
           id: string
+          kind: string
           listing_id: string
           model: string | null
-          question_id: string
           reviewed_at: string | null
-          scope: string
           status: string
+          theme: string
           verify: string | null
         }
         Insert: {
-          answer: string
           basis?: Json
           decisiveness?: number
-          form?: string
+          detail: string
           generated_at?: string
+          headline: string
           id?: string
+          kind: string
           listing_id: string
           model?: string | null
-          question_id: string
           reviewed_at?: string | null
-          scope?: string
           status?: string
+          theme: string
           verify?: string | null
         }
         Update: {
-          answer?: string
           basis?: Json
           decisiveness?: number
-          form?: string
+          detail?: string
           generated_at?: string
+          headline?: string
           id?: string
+          kind?: string
           listing_id?: string
           model?: string | null
-          question_id?: string
           reviewed_at?: string | null
-          scope?: string
           status?: string
+          theme?: string
           verify?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "listing_questions_listing_id_fkey"
+            foreignKeyName: "listing_insights_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "listings"
