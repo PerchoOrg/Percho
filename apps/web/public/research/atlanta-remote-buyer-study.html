@@ -148,7 +148,7 @@
   <header>
     <p class="eyebrow">Percho · 用户小调研 · 2026-08-29 · v3</p>
     <h1 style="margin-top:8px">亚特兰大异地购房小问卷</h1>
-    <p class="lede">找 7–12 位「人在外地、在亚特兰大买了房」的朋友：当时怎么找、怎么定的。自住和投资都要。绝大多数题是选择题，勾一下就行；每题下面的黄色注释是写给我们自己看的，发问卷前一键隐藏。</p>
+    <p class="lede">找 7–12 位「人在外地、在亚特兰大买了房」的朋友：当时怎么找、怎么定的。自住和投资都要。绝大多数题是选择题，勾一下就行；每题下面的黄色注释是写给我们自己看的，点右上角可以隐藏。</p>
     <div class="meta">
       <span>填写约 <b>8 分钟</b></span>
       <span>题目 <b>20</b> 道，其中 <b>17</b> 道选择题</span>
@@ -160,8 +160,6 @@
   <div class="bar">
     <nav>
       <a href="#sheet">问卷</a>
-      <a href="#chat">聊天模式</a>
-      <a href="#host">备忘</a>
     </nav>
     <button class="toggle" type="button" id="toggle" aria-pressed="false">隐藏注释 · 出参与者版</button>
   </div>
@@ -170,7 +168,7 @@
   <section id="sheet">
     <p class="eyebrow">A · 问卷</p>
     <h2>发给参与者的版本</h2>
-    <p class="intro">点上面「隐藏注释」之后，这一整块复制出去就能用。开头几句是写给参与者看的。</p>
+    <p class="intro">点上面「隐藏注释」就是参与者看到的版本。开头几句是写给参与者看的。</p>
 
     <div class="sheet">
       <div class="part">
@@ -305,7 +303,8 @@
           <p class="eyebrow">看一段视频</p>
           <h3>Percho 是什么样的 · 2 分钟</h3>
           <p>这是我们做的 app 的早期版本，视频里是它现在的样子：像刷短视频一样刷房子和社区，点进去看社区介绍、和这套房「适不适合你」。视频没有声音，看完再答最后 5 题。</p>
-          <p class="link">▶ [视频链接 — 上传 percho-demo-720p.mp4 后贴这里]　　想自己上手的话：[TestFlight 链接]</p>
+          <video controls playsinline preload="metadata" poster="/research/percho-demo-poster.jpg" src="/research/percho-demo-720p.mp4" style="display:block;width:100%;max-width:300px;aspect-ratio:9/19.5;margin:14px auto 0;border-radius:14px;background:#000"></video>
+          <p class="link" style="text-align:center">看不了的话直接打开：<a href="/research/percho-demo-720p.mp4" style="color:inherit">percho.co/research/percho-demo-720p.mp4</a></p>
         </div>
         <div class="part-head"><h3>四、看完视频</h3><span class="cnt">5 题 · 2 分钟</span></div>
 
@@ -351,106 +350,6 @@
       <div class="part">
         <p style="color:var(--ink-2);font-size:.95rem">谢谢！红包马上发你。另外——你认识的朋友里还有谁也是这样远程买的？方便的话帮我引荐一下。</p>
       </div>
-    </div>
-  </section>
-
-  <!-- ================================================== -->
-  <section id="chat">
-    <p class="eyebrow">B · 聊天模式</p>
-    <h2>同一套题，在微信上分三轮发</h2>
-    <p class="intro">愿意在微信上聊的人，把每一部分的题连同选项按题号发过去，让对方直接回「1-A、2-B」这样的字母就行；选了「其他」的追问一句。第三轮聊完再发视频。前后跨一两天没关系。</p>
-
-    <div class="rounds">
-      <div class="round">
-        <div class="rh"><h3>第一轮 · 基本情况 + 为什么亚特兰大</h3><span class="when">题 1–6</span></div>
-        <p class="msg">先来几道简单的，回我字母就行 👇
-[粘贴题 1–6 及选项]</p>
-        <p class="follow"><b>追问</b>「当时有没有 deadline 在催（开学、租约、签证、利率锁）？」</p>
-      </div>
-      <div class="round">
-        <div class="rh"><h3>第二轮 · 当时怎么找的</h3><span class="when">题 7–11</span></div>
-        <p class="msg">接着聊你当时怎么找的 👇
-[粘贴题 7–11 及选项]</p>
-        <p class="follow"><b>追问</b>「能举一个被你划掉的区吗，当时看到了什么？」「手机上还留着当时的截图或群聊吗，发我看看？」——截图比记忆诚实。</p>
-      </div>
-      <div class="round">
-        <div class="rh"><h3>第三轮 · 怎么定的，再看视频</h3><span class="when">题 12–15 → 视频 → 题 16–20</span></div>
-        <p class="msg">最后几道，答完给你看个东西 👇
-[粘贴题 12–15 及选项]
-
-—— 等对方答完再发 ——
-
-这是我们在做的 app，不到 2 分钟，没有声音：[链接]
-看完回我这 5 题 👇
-[粘贴题 16–20 及选项]</p>
-        <p class="follow"><b>追问</b>「你刚才说希望 app 能 ___，视频里有做到吗？」「选『不会用』是因为什么？」「哪一个画面你会转给家里人看？」</p>
-      </div>
-    </div>
-
-    <div class="note"><span class="lbl">聊天时的三条规矩</span>
-      <ul>
-        <li>问「你当时做了什么」，不问「你会怎么做」。</li>
-        <li>对方说「大家都看学区」就拉回来：「那你自己呢，打开的是哪个？」</li>
-        <li>发视频之前不要提「视频」「短视频」「刷」这些词，第 11 题要让对方自己选。</li>
-      </ul>
-    </div>
-  </section>
-
-  <!-- ================================================== -->
-  <section id="host">
-    <p class="eyebrow">C · 备忘</p>
-    <h2>给自己的备忘</h2>
-    <p class="intro">这一部分不发给参与者。</p>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>找谁 · 目标 10 人</h3>
-        <ul>
-          <li>自住 5、投资 4、给家人或先买着 1</li>
-          <li>美国外州 6、国内或其他国家 4</li>
-          <li>至少 3 位是<strong>一次没去</strong>就下 offer 的</li>
-          <li>成交两年内为佳，三年封顶</li>
-          <li>不要中介、贷款经纪和他们的家属；最近看过 demo 的熟人只做试填</li>
-          <li>答谢：100 元微信红包，答完当场发</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h3>视频已经录好（v3 · 无声）</h3>
-        <ul>
-          <li><strong>~/Desktop/Percho-demo/percho-demo.mp4</strong>（约 80 秒，1080×2340，无音轨）和 <strong>percho-demo-720p.mp4</strong>（微信直接发）</li>
-          <li>顺序：2 秒开场卡 → 城市卡 Suwanee（喜欢）· Duluth（跳过）· Johns Creek（喜欢）→ Aberdeen 社区影片，点进度条跳到「Aberdeen Tennis Courts」→ Bellmoore Park 影片 → 两张二选一卡（Room to grow / Move-in ready；Updated kitchen / Private yard），每边三张真实房源照片 + 「6 homes · median $523,000」这类真实统计 → 2229 Saint Kennedy Lane 房源卡，点书签收藏，右滑 → 2895 Shurburne Drive 房源卡，点 Explore 直接落在「After you move in」：5 to watch · 1 upside · 2 good to know，滑两张卡，点开「2 sources」→ 返回 → You tab：persona「Quiet-Street Planner」、各区熟悉度、Percho 记下的偏好（Still true?）→ Saved tab：4 套房</li>
-          <li>不进社区 Explore 页，不看房源页的其它部分（这两块还没准备好）；insights 目前只有 Shurburne Drive 一套房生成了，所以那一段用它</li>
-          <li>persona、熟悉度、二选一的统计都按 app 里的真实规则算；demo 账号预设为「之前答过 4 张二选一、收藏过 3 套房」</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h3>要验证的六个假设</h3>
-        <ol>
-          <li><b>H1</b> 远程买家最缺的是「感觉」不是「数据」 → 题 9、13、14</li>
-          <li><b>H2</b> 动态视频比照片和街景更能建立信心 → 题 11、18</li>
-          <li><b>H3</b> 有名字的小区 / HOA 不重要，自住和投资都一样 → 题 9</li>
-          <li><b>H4</b> 「适不适合你」比 MLS 数据有用、而且被相信 → 题 18、19</li>
-          <li><b>H5</b> 买家想的是月供不是总价（投资的人除外）→ 题 18</li>
-          <li><b>H6</b> 产品该出现在选区阶段，不是比房阶段 → 题 8、17</li>
-        </ol>
-      </div>
-      <div class="card">
-        <h3>收回来之后</h3>
-        <ul>
-          <li>一张表，一行一个人，列是题号；自住 / 投资、去过 0 次 / 去过，两个标签打在最前面</li>
-          <li>选择题直接数票；题 8、15、18 的手写原话单独摘一列，不改写</li>
-          <li>题 15 和题 18 对着看：许的愿，视频里有没有</li>
-          <li>题 17「选区的时候」和题 20「很失望」各几人——这两个数决定方向</li>
-          <li>收满 6 份先看一次，题目要不要调；收满 10 份和 designer 过一遍</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="note"><span class="lbl">需要你定的</span>
-      <ul>
-        <li>视频放哪个平台、要不要给 TestFlight 链接</li>
-        <li>问卷载体：微信长消息最省事；腾讯文档 / 问卷星能自动收表；Google Form 对国内的人不友好</li>
-      </ul>
     </div>
   </section>
 

@@ -16,6 +16,24 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 10:35 UTC — phase134: the study page carries the demo video and is trimmed to the questionnaire
+
+**Objective**: owner — 「upload the video link to this page as well, and only
+keep section A for simplicity」.
+
+**Actions**: `apps/web/public/research/percho-demo-720p.mp4` (11.3 MB, silent,
+76 s) and `percho-demo-poster.jpg` added; the page's Part 4 box now embeds it
+with `<video controls>` plus a plain link fallback. Sections B (chat mode) and
+C (host memo) removed from the hosted page; the nav keeps only 问卷 and the
+annotation toggle. The full version stays in the owner's private artifact.
+
+**Decisions**: the video is committed to `public/` rather than uploaded to
+Supabase storage or Cloudflare Stream — no secrets, no bucket, one deploy.
+The cost is 11 MB in git history; the 1080p master (39 MB) stays out of the
+repo on the owner's Desktop.
+
+**Next steps**: none. Re-copy the file when the questionnaire changes.
+
 ## 2026-08-29 12:35 UTC — phase133: even plates, and the card stops downloading 1.9 MB
 
 **Objective**: two findings from the owner on device — 「sometimes the only 1
