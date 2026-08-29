@@ -47,6 +47,8 @@ package-lock.json
 # Videos — never commit to git, host on Supabase Storage / CF Stream
 *.mp4
 *.mov
+# The hosted customer-study demo is a deliberate static asset (phase134).
+!apps/web/public/research/percho-demo-720p.mp4
 *.webm
 *.mkv
 
