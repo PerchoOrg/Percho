@@ -45,21 +45,27 @@ export async function POST(req: Request) {
     );
   }
   const { study, lang, answers, contact, durationMs } = parsed.data;
+  // The table has no SELECT policy (reads are admin-only), so an insert must
+  // not ask for its row back — `returning` is a read and RLS refuses it. The
+  // id is minted here instead and handed to the client.
+  const id = crypto.randomUUID();
   const supabase = createAnonClient();
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('research_responses')
     .insert({
+      id,
       study,
       lang,
       answers,
       contact: contact && contact.length > 0 ? contact : null,
       duration_ms: durationMs ?? null,
       user_agent: req.headers.get('user-agent')?.slice(0, 300) ?? null,
-    })
-    .select('id')
-    .single();
+    });
   if (error) {
-    return NextResponse.json({ error: 'could not save' }, { status: 500, headers: cors });
+    return NextResponse.json(
+      { error: 'could not save', code: error.code },
+      { status: 500, headers: cors },
+    );
   }
-  return NextResponse.json({ ok: true, id: data.id }, { status: 201, headers: cors });
+  return NextResponse.json({ ok: true, id }, { status: 201, headers: cors });
 }
