@@ -16,6 +16,26 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 12:15 UTC — phase134.5: the demo video in Chinese and English, with the tour audio on
+
+**Objective**: owner — 「make two versions, chinese and english, with audio on
+for community and home tours」.
+
+**Actions**: the generator's interstitial and title copy is now keyed by
+`?lang=zh|en`; both cuts recorded (100 s each). Audio is the tours' own
+soundtrack (narration + music) only while a community film or a home tour is
+on screen — city cards, trade-offs, the insight rail, the You/Saved tabs and
+every interstitial are silent. `apps/web/public/research/` now carries
+`percho-demo-zh-720p.mp4` (13.3 MB) and `percho-demo-en-720p.mp4` (13.5 MB);
+the old silent file is removed and the `.gitignore` exception is a glob. The
+study page embeds the Chinese cut and links both.
+
+**Issues**: the first mux put sound under the city cards and silence under a
+home tour — the audio assembler started its timeline at the FIRST audio event
+(14 s in, since city cards have no video) instead of at 0, so the whole track
+ran 14 s early. Fixed by inserting a leading silence piece; re-muxed onto the
+already-captured frames with the video stream copied.
+
 ## 2026-08-29 10:45 UTC — phase134.4: the demo video gets transition cards between segments
 
 **Objective**: owner — 「add some transition in between videos, for example from

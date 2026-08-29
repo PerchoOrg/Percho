@@ -48,7 +48,7 @@ package-lock.json
 *.mp4
 *.mov
 # The hosted customer-study demo is a deliberate static asset (phase134).
-!apps/web/public/research/percho-demo-720p.mp4
+!apps/web/public/research/percho-demo-*-720p.mp4
 *.webm
 *.mkv
 
