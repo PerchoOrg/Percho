@@ -63,8 +63,8 @@ import type { CardIconName } from "@percho/shared/icons";
  *
  * The `StatBar` that used to sit in the bottom row is GONE from this card
  * (owner 2026-08-22: "remove from front page, but move it to the explore
- * page"). It now renders on `app/community/[slug]`'s hero. Its four values are
- * still `place-stats.ts` placeholders — see that module's header.
+ * page"), and gone from the explore page too (phase129): its four values were
+ * `place-stats.ts` placeholders, and the module was deleted with it.
  *
  * ── 2026-08-23: that hairline is a scrubber ─────────────────────────────────
  *

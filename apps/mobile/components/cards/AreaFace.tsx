@@ -2,7 +2,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 import type { AreaCardV3 } from "../../lib/feed/card-types";
-import { placeStats } from "../../lib/feed/place-stats";
 import type { TapSlot } from "../../lib/gesture/tap-slot";
 import { useSavedStore } from "../../state/saved";
 import { redline, redlineRadii } from "../../theme/tokens";
@@ -11,7 +10,6 @@ import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import { CardSurface } from "./CardSurface";
 import { SAVE_TAP_TARGET } from "./ListingFace";
-import { StatBar } from "./StatBar";
 
 /** The circular arrow CTA's tap target id (feed.tsx `onTapTarget`). */
 export const CITY_EXPLORE_TAP_TARGET = "city-explore";
@@ -125,10 +123,10 @@ export function AreaFace({
 						</Text>
 					) : null;
 				})()}
-				{/* Bottom row — city stat bar (left ~2/3) + Explore (right), the
-				    listing card's divided-info layout (owner 2026-08-19). */}
+				{/* Bottom row — Explore on the right. The city stat bar that sat on
+				    the left was `place-stats.ts` placeholder numbers and is gone
+				    (phase129). */}
 				<View style={styles.bottomRow}>
-					<StatBar cells={placeStats(card.id, "city")} />
 					{!!onExplore && (
 						<View style={styles.ctaBottomRow}>
 							<Pressable
@@ -263,10 +261,7 @@ const styles = StyleSheet.create({
 		color: "rgba(255,255,255,0.72)",
 		marginTop: 3,
 	},
-	/**
-	 * Bottom row — city stat bar (left ~2/3) + Explore (right), the listing
-	 * card's divided-info layout (owner 2026-08-19).
-	 */
+	/** Bottom row — Explore, right-aligned. */
 	bottomRow: {
 		flexDirection: "row",
 		alignItems: "center",
