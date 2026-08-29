@@ -2557,6 +2557,39 @@ export type Database = {
           },
         ]
       }
+      research_responses: {
+        Row: {
+          answers: Json
+          contact: string | null
+          created_at: string
+          duration_ms: number | null
+          id: string
+          lang: string
+          study: string
+          user_agent: string | null
+        }
+        Insert: {
+          answers: Json
+          contact?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          lang?: string
+          study: string
+          user_agent?: string | null
+        }
+        Update: {
+          answers?: Json
+          contact?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          lang?: string
+          study?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       review_events: {
         Row: {
           action: string

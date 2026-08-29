@@ -16,6 +16,55 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 15:30 UTC — phase135: the customer-study questionnaire becomes a working form (V4) with answers persisted
+
+**Objective**: owner supplied a rewritten V4 questionnaire — ten questions
+aimed at PMF, the video-vs-static-data value proposition and acceptance —
+and asked that it 「work」: options selectable, answers persisted, statistics
+later. Also: home tours in the demo switch to 3855 Oak Park Drive and 2125
+Melrose Trace (2895 Shurburne only for the insight rail), and the Aberdeen
+film's sound should carry through while the card is still on screen.
+
+**Actions — data**: `supabase/migrations/20260830010000_research_responses.sql`
+— `research_responses(id, study, lang, answers jsonb, contact, duration_ms,
+user_agent, created_at)`, RLS on, ONE policy: insert for `anon`. No select
+policy; reads are admin-only. `database.types.ts` hand-edited (the `db:types`
+path is stale-local on this host).
+
+**Actions — API**: `POST /api/research/responses` validates with
+`lib/zod/research-response.ts` (study enum, `q…` keys, choice / list / 1–5
+rating, 32 KB cap, honeypot) and inserts with the ANON client, so the public
+route never touches the service role (CLAUDE.md §3.7). CORS open because the
+same page is also served as a claude.ai artifact. `GET
+/api/admin/research/responses?study=&format=json|csv` behind `requireAdmin()`
+with the service client; CSV flattens `answers` to a column per question id,
+multi-choice joined with `|`. Tests: `lib/zod/__tests__/research-response.test.ts`.
+
+**Actions — page**: `apps/web/public/research/atlanta-remote-buyer-study.html`
+rewritten as the V4 form. Pill-style radios/checkboxes, Q4 capped at three,
+Q7 as four 1–5 scales, inline validation that scrolls to the first missing
+question, a draft in `localStorage` so a refresh loses nothing, and an
+optional contact field for the red packet (the owner's V4 promises 100 元;
+the form needs somewhere to send it). Answer values are short English codes
+(`north`, `agent_video`, `b_compare_areas` …) so the CSV is analysable
+without re-reading Chinese labels.
+
+**Actions — demo**: `demo4.html` — listing cards are Oak Park (saved + liked)
+and Melrose (liked); Shurburne appears as a poster only long enough to tap
+Explore into "After you move in". A swiped card keeps its sound until it has
+left the screen (was: muted at the start of the fly-out). Piece fades in the
+audio assembler widened to 0.3 / 0.4 s so the scrub seek is a soft cut.
+
+**Decisions**: anon-key insert with an insert-only policy rather than a
+service-role route — it is the pattern CLAUDE.md asks for, and the only
+thing it costs is that nothing can read the table without admin. Codes rather
+than labels as stored values — the labels are the form's, the codes are the
+study's, and the study will be analysed in a spreadsheet.
+
+**Next steps**: run `echo | pnpm db:push` from the reference worktree after
+the merge (the route 500s until the table exists), then submit a test row and
+pull it back through the CSV export.
+
 ## 2026-08-29 14:00 UTC — phase134.6: demo fixes (headline overlap, flash before a transition, sound under a card) and a sharper questionnaire
 
 **Objective**: owner review of the zh/en cuts — 「audio has some overlap, and
