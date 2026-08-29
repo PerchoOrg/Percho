@@ -16,6 +16,20 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 16:10 UTC — phase135.1: the submit route stops asking for its row back
+
+**Issues**: first live submission returned 500. `insert(...).select('id')` is a
+read, and `research_responses` has no SELECT policy on purpose — RLS refused
+the `returning`. Also the migration had not been applied at first: the
+`db:push` ran from a workspace that was still on `origin/main` from before the
+merge and reported "up to date"; re-run from the reference worktree after a
+real `git pull`, it applied `20260830010000_research_responses.sql`.
+
+**Resolution**: the route mints the id (`crypto.randomUUID()`), inserts without
+`returning`, and reports the Postgres error code on failure. Verified live
+with a smoke row (`contact = smoke-test-by-claude`) — delete it before the
+first real analysis.
+
 ## 2026-08-29 15:30 UTC — phase135: the customer-study questionnaire becomes a working form (V4) with answers persisted
 
 **Objective**: owner supplied a rewritten V4 questionnaire — ten questions
