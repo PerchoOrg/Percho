@@ -5,6 +5,7 @@ import type {
 	ListingCardV3,
 	TradeoffCardV3,
 } from "./card-types";
+import { TRADEOFFS } from "./content";
 import type { FeedPool } from "./generate-feed";
 import { generateFeed, mixFor } from "./generate-feed";
 import type { GeoUnit } from "./geo-unit";
@@ -104,6 +105,29 @@ function gen(stage: 4, over: Partial<Parameters<typeof generateFeed>[0]> = {}) {
 		...over,
 	});
 }
+
+/** A listing with the structured axes the v2 bank measures. */
+function built(id: string, yearBuilt: number, price: number): ListingCardV3 {
+	return {
+		...listing(id),
+		yearBuilt,
+		price,
+		sqft: 1600 + price / 1000,
+		beds: 3,
+	};
+}
+
+/**
+ * Every question EXCEPT the one under test, marked seen.
+ *
+ * The engine prefers whichever question its data can ground, so a test that
+ * wants a specific one has to clear the field rather than hope for a rotation.
+ */
+const except = (id: string): string[] =>
+	TRADEOFFS.filter((q) => q.id !== id).map((q) => q.id);
+const EXCEPT_ERA = except("to-era");
+const EXCEPT_SPREAD = except("to-spread-vs-upkeep");
+const EXCEPT_DENSITY = except("to-quiet-vs-walkable");
 
 const countKind = (cards: readonly FeedCardV3[], kind: string) =>
 	cards.filter((c) => c.kind === kind).length;
@@ -255,35 +279,22 @@ describe("seenIds and exhaustion", () => {
 
 // ─── Trade-off doors (2026-08-29 Two Doors face) ──────────────────────────────
 
-describe("trade-off doors show a detail photo, never a hero", () => {
+describe("the v2 trade-off bank", () => {
 	const LIVING = "https://img/living.jpg";
-	const KITCHEN = "https://img/kitchen.jpg";
 
-	/** A pool the server has lit: two property dims with real room photos. */
-	const LIT: FeedPool = {
+	/** Homes with the era axis populated on both sides of 2005/2000. */
+	const ERA_POOL: FeedPool = {
 		geoUnits: CITIES,
 		listings: [
-			listing("l-space1", undefined, ["space"], 300_000),
-			listing("l-space2", undefined, ["space"], 342_000),
-			listing("l-space3", undefined, ["space"], 400_000),
-			listing("l-movein", undefined, ["move_in"], 500_000),
-			listing("l-plain"),
+			built("n1", 2012, 400_000),
+			built("n2", 2008, 420_000),
+			built("n3", 2006, 380_000),
+			built("o1", 1998, 300_000),
+			built("o2", 1985, 280_000),
+			built("o3", 1972, 260_000),
 		],
-		communities: [community("c-plain")],
-		dimPhotos: {
-			space: [
-				{ url: LIVING, caption: "Living area with large patio doors" },
-				{ url: `${LIVING}?2` },
-				{ url: `${LIVING}?3` },
-			],
-			move_in: [
-				{
-					url: KITCHEN,
-					caption: "Modern kitchen with white cabinetry and center island",
-				},
-				{ url: `${KITCHEN}?2` },
-			],
-		},
+		communities: [community("c1")],
+		dimPhotos: {},
 	};
 
 	const firstTradeoff = (
@@ -298,67 +309,86 @@ describe("trade-off doors show a detail photo, never a hero", () => {
 			count: WINDOW,
 		}).cards.find((c): c is TradeoffCardV3 => c.kind === "tradeoff");
 
-	it("lights each door with every room photo the server sent", () => {
-		const card = firstTradeoff(LIT);
-		expect(card?.id).toBe("to-space-vs-movein");
-		// Three plates on one side, two on the other — fewer is correct when the
-		// pool cannot supply three DIFFERENT homes.
-		expect(card?.left.photos?.map((p) => p.url)).toEqual([
-			LIVING,
-			`${LIVING}?2`,
-			`${LIVING}?3`,
-		]);
-		expect(card?.right.photos).toHaveLength(2);
-		// The tagger sentence rides its own frame, not the side.
-		expect(card?.left.photos?.[0]?.caption).toBe(
-			"Living area with large patio doors",
-		);
+	const allTradeoffs = (pool: FeedPool, count: number): TradeoffCardV3[] =>
+		generateFeed({
+			stage: 4,
+			signals: EMPTY_SIGNALS,
+			pool,
+			seenIds: [],
+			count,
+		}).cards.filter((c): c is TradeoffCardV3 => c.kind === "tradeoff");
+
+	it("counts each side from the structured axis, not from prose", () => {
+		// `to-era` splits on `yearBuilt`, which no dim and no agent adjective can
+		// supply. Three homes a side, so both sides earn a median.
+		const card = firstTradeoff(ERA_POOL, EXCEPT_ERA);
+		expect(card?.id).toBe("to-era");
+		expect(card?.left.homes).toBe(3);
+		expect(card?.left.medianLabel).toBe("$400,000");
+		expect(card?.right.homes).toBe(3);
+		expect(card?.right.medianLabel).toBe("$280,000");
+	});
+
+	it("suppresses a median under three homes but keeps the count", () => {
+		const thin: FeedPool = {
+			...ERA_POOL,
+			listings: [built("n1", 2012, 400_000), built("o1", 1998, 300_000)],
+		};
+		const card = firstTradeoff(thin, EXCEPT_ERA);
+		expect(card?.left.homes).toBe(1);
+		expect(card?.left.medianLabel).toBeUndefined();
 	});
 
 	it("NEVER falls back to a listing hero", () => {
-		// The regression this whole rewrite exists for (owner, 2026-08-29): a
-		// front-elevation shot cannot depict "move-in ready". Listings claim both
-		// dims here and every one of them has a heroUrl — the doors must still be
-		// dark, because no ROOM photo and no place photo exists for them.
-		const noPhotos: FeedPool = { ...LIT, dimPhotos: {} };
-		const card = firstTradeoff(noPhotos);
+		// The regression the whole photo rewrite exists for (owner, 2026-08-29):
+		// a front-elevation shot cannot depict "move-in ready".
+		const card = firstTradeoff(ERA_POOL);
 		expect(card).toBeDefined();
-		const heroes = noPhotos.listings.map((l) => l.heroUrl);
+		const heroes = ERA_POOL.listings.map((l) => l.heroUrl);
 		for (const photo of [
 			...(card?.left.photos ?? []),
 			...(card?.right.photos ?? []),
 		]) {
 			expect(heroes).not.toContain(photo.url);
 		}
-		expect(card?.left.photos).toBeUndefined();
-		expect(card?.right.photos).toBeUndefined();
 	});
 
-	it("lights a PLACE dim with a community hero, and no caption", () => {
-		// No room inside a house shows "trail access". Seeing every property pair
-		// pushes the engine onto the life-scope bank, where communities are the
-		// only honest source.
+	it("lights a door that has a dim with the server's room photos", () => {
+		const lit: FeedPool = {
+			...ERA_POOL,
+			dimPhotos: {
+				space: [
+					{ url: LIVING, caption: "Living area with large patio doors" },
+					{ url: `${LIVING}?2` },
+				],
+			},
+		};
+		// `to-spread-vs-upkeep`'s left side carries dim `space`.
+		const card = firstTradeoff(lit, EXCEPT_SPREAD);
+		expect(card?.id).toBe("to-spread-vs-upkeep");
+		expect(card?.left.photos?.map((p) => p.url)).toEqual([
+			LIVING,
+			`${LIVING}?2`,
+		]);
+		// Its right side has no dim at all — copy only, and that is fine.
+		expect(card?.right.photos).toBeUndefined();
+		expect(card?.right.support.length).toBeGreaterThan(0);
+	});
+
+	it("lights a PLACE dim with a community hero and no caption", () => {
 		const places: FeedPool = {
 			geoUnits: CITIES,
 			listings: [listing("l1")],
 			communities: [
-				community("c-trails", ["trails"]),
-				community("c-walkable", ["walkable"]),
+				community("c-quiet", ["quiet"]),
+				community("c-walk", ["walkable"]),
 			],
 			dimPhotos: {},
 		};
-		const card = firstTradeoff(places, [
-			"to-space-vs-movein",
-			"to-kitchen-vs-yard",
-			"to-newbuild-vs-character",
-		]);
-		expect(card?.id).toBe("to-trails-vs-walkable");
-		// One poster per door — a place has no three-room set to show.
+		const card = firstTradeoff(places, EXCEPT_DENSITY);
+		expect(card?.id).toBe("to-quiet-vs-walkable");
 		expect(card?.left.photos?.map((p) => p.url)).toEqual([
-			"https://img/c-trails.jpg",
-		]);
-		expect(card?.right.photos?.map((p) => p.url)).toEqual([
-			"https://img/c-walkable.jpg",
+			"https://img/c-quiet.jpg",
 		]);
 		// A tour poster carries no tagger sentence.
 		expect(card?.left.photos?.[0]?.caption).toBeUndefined();
@@ -366,34 +396,44 @@ describe("trade-off doors show a detail photo, never a hero", () => {
 
 	it("never lets one photograph light both doors", () => {
 		const shared: FeedPool = {
-			...LIT,
-			dimPhotos: { space: [{ url: LIVING }], move_in: [{ url: LIVING }] },
+			geoUnits: CITIES,
+			listings: [listing("l1")],
+			communities: [community("c-both", ["quiet", "walkable"])],
+			dimPhotos: {},
 		};
-		// Both other property pairs marked seen, so this one is what comes back
-		// even though `bestLit` cannot fully light it.
-		const card = firstTradeoff(shared, [
-			"to-kitchen-vs-yard",
-			"to-newbuild-vs-character",
+		const card = firstTradeoff(shared, EXCEPT_DENSITY);
+		expect(card?.left.photos?.map((p) => p.url)).toEqual([
+			"https://img/c-both.jpg",
 		]);
-		expect(card?.id).toBe("to-space-vs-movein");
-		expect(card?.left.photos?.map((p) => p.url)).toEqual([LIVING]);
 		expect(card?.right.photos).toBeUndefined();
 	});
 
-	it("prefers a question both of whose doors can be lit", () => {
-		// `to-space-vs-movein` is lit; the other two property pairs are not. It
-		// must come first even though the engine's rotation would reach another.
-		expect(firstTradeoff(LIT)?.id).toBe("to-space-vs-movein");
+	it("asks at most one question per axis in a session", () => {
+		const asked = allTradeoffs(ERA_POOL, 120);
+		const axes = asked.map((c) => c.axis);
+		expect(new Set(axes).size).toBe(axes.length);
 	});
 
-	it("counts the homes behind each side, and medians only above the floor", () => {
-		const card = firstTradeoff(LIT);
-		// 3 homes claim `space` → a median is a fact worth printing.
-		expect(card?.left.homes).toBe(3);
-		expect(card?.left.medianLabel).toBe("$342,000");
-		// 1 home claims `move_in` → the count stands alone.
-		expect(card?.right.homes).toBe(1);
-		expect(card?.right.medianLabel).toBeUndefined();
+	it("never asks the same question twice", () => {
+		const asked = allTradeoffs(ERA_POOL, 120);
+		const ids = asked.map((c) => c.id);
+		expect(new Set(ids).size).toBe(ids.length);
+	});
+
+	it("holds the mix's one-in-nine rate over a long session", () => {
+		// A trade-off fills its own slot and no other: it is not `findAlt`
+		// filler and not loop material. Before that rule a 120-card session
+		// came back with 32 of them.
+		const { cards } = generateFeed({
+			stage: 4,
+			signals: EMPTY_SIGNALS,
+			pool: ERA_POOL,
+			seenIds: [],
+			count: 120,
+		});
+		const n = cards.filter((c) => c.kind === "tradeoff").length;
+		expect(n).toBeLessThanOrEqual(15);
+		expect(n).toBeGreaterThanOrEqual(10);
 	});
 
 	it("asks nothing at all when the pool is bare", () => {
@@ -401,6 +441,25 @@ describe("trade-off doors show a detail photo, never a hero", () => {
 		expect(
 			firstTradeoff({ geoUnits: CITIES, listings: [], communities: [] }),
 		).toBeUndefined();
+	});
+
+	it("every question in the bank passes the shape contract", () => {
+		for (const q of TRADEOFFS) {
+			expect(q.prompt.length).toBeGreaterThan(0);
+			expect(q.axis.length).toBeGreaterThan(0);
+			for (const side of [q.left, q.right]) {
+				expect(side.label.length).toBeGreaterThan(0);
+				// An unlit door has nothing but its support line — it must exist.
+				expect(side.support.length).toBeGreaterThan(0);
+			}
+			// Rule 1: the two sides must not be the same claim.
+			expect(q.left.label).not.toBe(q.right.label);
+		}
+	});
+
+	it("no two questions share an id", () => {
+		const ids = TRADEOFFS.map((q) => q.id);
+		expect(new Set(ids).size).toBe(ids.length);
 	});
 });
 

@@ -23,6 +23,7 @@ import type {
 	FeedCardV3,
 	FunnelStage,
 	ListingCardV3,
+	SideMatch,
 	TradeoffCardV3,
 	TradeoffSideV3,
 } from "./card-types";
@@ -176,27 +177,18 @@ interface FillContext {
 /**
  * The photograph behind one trade-off door.
  *
- * ── Why this is not a hero any more (owner, 2026-08-29) ─────────────────────
+ * Never a listing hero (owner 2026-08-29 — a front-elevation shot cannot say
+ * "move-in ready"). Two sources, in order:
  *
- * The first version borrowed the `heroUrl` of a pool row claiming the dim. On
- * device that reads as nothing at all: a listing hero is a front-elevation
- * shot, and no front elevation says "move-in ready" — two of them side by side
- * say nothing about the choice. 「it doesnt make sense to put some home tour
- * hero pic into one of the trade off」.
+ *   1. `pool.dimPhotos[dim]` — up to three INTERIOR room photos the server
+ *      matched to the dimension, with the tagger's sentence for each frame.
+ *   2. a COMMUNITY hero, for the dims that describe a PLACE — a tour poster is
+ *      a real photograph of the neighbourhood.
  *
- * So the door is lit in two ways, in this order, and never by a listing hero:
- *
- *   1. `pool.dimPhotos[dim]` — an INTERIOR detail photo the server picked by
- *      room type (a kitchen for `move_in`, a living room for `space`), with the
- *      vision tagger's own sentence describing the frame. This is the one that
- *      depicts the concept.
- *   2. a COMMUNITY hero claiming the dim — for the five dims that describe a
- *      PLACE (`schools`, `walkable`, `trails`, `hip`, `nightlife`), where no
- *      room inside a house shows the thing but a tour poster genuinely is a
- *      photograph of the neighbourhood.
- *
- * Neither available leaves the door unlit, which is the honest answer.
- * Borrowing an unrelated picture would be the engine authoring content.
+ * Most of the v2 bank carries no `dim` at all: "One level / Two stories" is a
+ * measurable property of the house, not one of the eleven lifestyle dims. Those
+ * doors stay unlit and show their label and support line, which is what the
+ * owner asked for — 「if no data it is fine for now」.
  */
 function placePhotoForDim(
 	ctx: FillContext,
@@ -218,55 +210,135 @@ function priceLabel(value: number): string {
 		.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 }
 
+function median(values: readonly number[]): number | undefined {
+	if (values.length === 0) return undefined;
+	const s = [...values].sort((a, b) => a - b);
+	const mid = Math.floor(s.length / 2);
+	return s.length % 2 === 1
+		? (s[mid] as number)
+		: ((s[mid - 1] as number) + (s[mid] as number)) / 2;
+}
+
 /**
- * Fewer than this many homes and the median is noise, not a fact about the
+ * Fewer than this many homes and a median is noise, not a fact about the
  * market — the card prints the count alone rather than a number it would have
  * to caveat.
  */
 const MEDIAN_FLOOR = 3;
 
-/** What the pool says a dimension is worth: how many homes, and their median. */
-function statsForDim(
+interface PoolMedians {
+	sqft?: number;
+	price?: number;
+	sqftPerBed?: number;
+}
+
+/** The thresholds an `aboveMedian` / `belowMedian` match is measured against. */
+function poolMedians(ctx: FillContext): PoolMedians {
+	const sqft: number[] = [];
+	const price: number[] = [];
+	const perBed: number[] = [];
+	for (const row of ctx.listingRanked) {
+		if (row.sqft !== undefined) sqft.push(row.sqft);
+		if (row.price !== undefined) price.push(row.price);
+		if (row.sqft !== undefined && row.beds !== undefined && row.beds > 0) {
+			perBed.push(row.sqft / row.beds);
+		}
+	}
+	const out: PoolMedians = {};
+	const ms = median(sqft);
+	const mp = median(price);
+	const mb = median(perBed);
+	if (ms !== undefined) out.sqft = ms;
+	if (mp !== undefined) out.price = mp;
+	if (mb !== undefined) out.sqftPerBed = mb;
+	return out;
+}
+
+/** Does this listing fall on the side the match describes? */
+function matchesSide(
+	row: ListingCardV3,
+	match: SideMatch,
+	medians: PoolMedians,
+): boolean {
+	if (match.field === "yearBuilt") {
+		if (row.yearBuilt === undefined) return false;
+		return match.op === "gte"
+			? row.yearBuilt >= match.value
+			: row.yearBuilt <= match.value;
+	}
+	if (match.field === "beds") {
+		if (row.beds === undefined) return false;
+		return match.op === "gte"
+			? row.beds >= match.value
+			: row.beds <= match.value;
+	}
+
+	const field: keyof PoolMedians = match.field;
+	const threshold = medians[field];
+	if (threshold === undefined) return false;
+	const value =
+		match.field === "sqft"
+			? row.sqft
+			: match.field === "price"
+				? row.price
+				: row.sqft !== undefined && row.beds !== undefined && row.beds > 0
+					? row.sqft / row.beds
+					: undefined;
+	if (value === undefined) return false;
+	return match.op === "aboveMedian" ? value > threshold : value < threshold;
+}
+
+/**
+ * How many homes are on this side, and what they cost.
+ *
+ * `match` first — it is a measured property of the house. `dim` second, for the
+ * lifestyle questions that still key off the agent's prose. Neither means the
+ * side prints no numbers, which is the honest answer while its field is still
+ * missing from the mirror.
+ */
+function statsForSide(
 	ctx: FillContext,
-	dim: DimKey,
+	side: TradeoffSideV3,
+	medians: PoolMedians,
 ): { homes: number; medianLabel?: string } {
+	const on = (row: ListingCardV3): boolean =>
+		side.match !== undefined
+			? matchesSide(row, side.match, medians)
+			: side.dim !== undefined
+				? row.dims?.includes(side.dim) === true
+				: false;
+
 	const prices: number[] = [];
 	let homes = 0;
 	for (const row of ctx.listingRanked) {
-		if (row.dims?.includes(dim) !== true) continue;
+		if (!on(row)) continue;
 		homes += 1;
 		if (row.price !== undefined) prices.push(row.price);
 	}
 	if (prices.length < MEDIAN_FLOOR) return { homes };
-	prices.sort((a, b) => a - b);
-	const mid = Math.floor(prices.length / 2);
-	const median =
-		prices.length % 2 === 1
-			? (prices[mid] as number)
-			: ((prices[mid - 1] as number) + (prices[mid] as number)) / 2;
-	return { homes, medianLabel: priceLabel(median) };
+	const m = median(prices);
+	return m === undefined ? { homes } : { homes, medianLabel: priceLabel(m) };
 }
 
 /** Everything one door shows beyond its label. */
 function lightSide(
 	ctx: FillContext,
 	side: TradeoffSideV3,
-	/** Photos the other door already took, so no picture appears twice. */
 	taken: ReadonlySet<string>,
+	medians: PoolMedians,
 ): TradeoffSideV3 {
-	const detail = (ctx.pool.dimPhotos?.[side.dim] ?? []).filter(
-		(photo) => !taken.has(photo.url),
-	);
-
-	let photos: readonly DoorPhoto[] = detail;
-	if (photos.length === 0) {
-		// No room depicts this dimension — it is about the PLACE. One community
-		// tour poster, which carries no tagger sentence.
-		const place = placePhotoForDim(ctx, side.dim, taken);
-		photos = place === undefined ? [] : [{ url: place }];
+	let photos: readonly DoorPhoto[] = [];
+	if (side.dim !== undefined) {
+		photos = (ctx.pool.dimPhotos?.[side.dim] ?? []).filter(
+			(photo) => !taken.has(photo.url),
+		);
+		if (photos.length === 0) {
+			const place = placePhotoForDim(ctx, side.dim, taken);
+			photos = place === undefined ? [] : [{ url: place }];
+		}
 	}
 
-	const stats = statsForDim(ctx, side.dim);
+	const stats = statsForSide(ctx, side, medians);
 	return {
 		...side,
 		...(photos.length === 0 ? {} : { photos }),
@@ -278,14 +350,14 @@ function lightSide(
 }
 
 /**
- * True when the pool has nothing a trade-off could borrow from.
+ * True when the pool has nothing a trade-off could stand on.
  *
  * A trade-off is the one card in the mix that is authored rather than projected
  * from a pool row, which historically made it the deck's escape hatch: with no
  * inventory the engine could fill every slot with questions. That is the
- * 39-card single-kind run `rhythm.test.ts` exists to prevent, and since
- * 2026-08-22 it is also the wrong product answer — no inventory means the §1.9
- * terminal card, not an interview.
+ * 39-card single-kind run `rhythm.test.ts` exists to prevent, and it is also
+ * the wrong product answer — no inventory means the §1.9 terminal card, not an
+ * interview.
  */
 function poolIsBare(ctx: FillContext): boolean {
 	return ctx.listingRanked.length === 0 && ctx.communityRanked.length === 0;
@@ -293,74 +365,83 @@ function poolIsBare(ctx: FillContext): boolean {
 
 /** Lights both doors. See `lightSide`. */
 function withLitDoors(ctx: FillContext, card: TradeoffCardV3): TradeoffCardV3 {
-	const left = lightSide(ctx, card.left, new Set());
+	const medians = poolMedians(ctx);
+	const left = lightSide(ctx, card.left, new Set(), medians);
 	const right = lightSide(
 		ctx,
 		card.right,
 		new Set((left.photos ?? []).map((photo) => photo.url)),
+		medians,
 	);
 	return { ...card, left, right };
 }
 
 /**
- * Prefer a question both of whose doors can be lit.
+ * One question per axis, per session.
  *
- * Not a filter — every question stays askable, and a pair with one dark door is
- * still a real trade-off. But the pool measured on 2026-08-29 lights
- * `move_in` and `space` and leaves `entertaining` and `hip` dark, so without
- * this the buyer's FIRST trade-off is as likely to be the empty-looking one as
- * the good one. Ordering costs nothing and shows the design at its best.
+ * A buyer who has answered "another bedroom / bigger rooms" learns nothing from
+ * "room to spread out / less to keep up" — both are the same axis — and being
+ * asked twice about one thing reads as an interrogation rather than a
+ * conversation. Derived from `seen` rather than tracked separately so it
+ * survives a deck rebuild.
  */
-function bestLit(
-	ctx: FillContext,
-	cards: readonly TradeoffCardV3[],
-): TradeoffCardV3 | null {
-	let fallback: TradeoffCardV3 | null = null;
-	for (const card of cards) {
-		const lit = withLitDoors(ctx, card);
-		if (
-			(lit.left.photos?.length ?? 0) > 0 &&
-			(lit.right.photos?.length ?? 0) > 0
-		) {
-			return lit;
-		}
-		if (fallback === null) fallback = lit;
+function axesAsked(seen: ReadonlySet<string>): Set<string> {
+	const out = new Set<string>();
+	for (const card of TRADEOFFS) {
+		if (seen.has(card.id)) out.add(card.axis);
 	}
-	return fallback;
+	return out;
+}
+
+/**
+ * How much a question can say today: 2 when both doors carry real numbers, 1
+ * when one does, 0 when it is copy alone.
+ *
+ * The bank is deliberately larger than the data (owner: 「if no data it is fine
+ * for now」), so this is what keeps the deck showing its best questions first
+ * without ever removing the others.
+ */
+function grounding(card: TradeoffCardV3): number {
+	return (
+		(card.left.homes !== undefined || (card.left.photos?.length ?? 0) > 0
+			? 1
+			: 0) +
+		(card.right.homes !== undefined || (card.right.photos?.length ?? 0) > 0
+			? 1
+			: 0)
+	);
 }
 
 function pickTradeoff(ctx: FillContext, rotate: number): TradeoffCardV3 | null {
 	if (poolIsBare(ctx)) return null;
 
-	const scope = ctx.stage >= 3 ? "property" : "life";
-	const unseen = (pool: readonly TradeoffCardV3[]): TradeoffCardV3[] => {
-		const out: TradeoffCardV3[] = [];
-		for (let i = 0; i < pool.length; i++) {
-			const item = pool[(rotate + i) % pool.length];
-			if (item !== undefined && !ctx.seen.has(item.id)) out.push(item);
+	const asked = axesAsked(ctx.seen);
+	const fresh: TradeoffCardV3[] = [];
+	for (let i = 0; i < TRADEOFFS.length; i++) {
+		const card = TRADEOFFS[(rotate + i) % TRADEOFFS.length];
+		if (card === undefined || ctx.seen.has(card.id)) continue;
+		if (asked.has(card.axis)) continue;
+		fresh.push(card);
+	}
+	// Every axis already covered — allow a repeat axis rather than go silent.
+	const pool =
+		fresh.length > 0
+			? fresh
+			: TRADEOFFS.filter((card) => !ctx.seen.has(card.id));
+	if (pool.length === 0) return null;
+
+	let best: TradeoffCardV3 | null = null;
+	let bestScore = -1;
+	for (const card of pool) {
+		const lit = withLitDoors(ctx, card);
+		const score = grounding(lit);
+		if (score > bestScore) {
+			best = lit;
+			bestScore = score;
 		}
-		return out;
-	};
-
-	const preferred = unseen(TRADEOFFS.filter((t) => t.scope === scope));
-	return bestLit(ctx, preferred.length > 0 ? preferred : unseen(TRADEOFFS));
-}
-
-/**
- * The looped trade-off — same card, same doors, same guard.
- *
- * `loopedFallback` used to push `anyItem(TRADEOFFS, rotate)` straight into its
- * candidate list, which bypassed both: a looped question could arrive with two
- * unlit doors while the pool had photos for them, and an empty pool could loop
- * questions forever behind the terminal card.
- */
-function loopedTradeoff(
-	ctx: FillContext,
-	rotate: number,
-): TradeoffCardV3 | null {
-	if (poolIsBare(ctx)) return null;
-	const card = anyItem(TRADEOFFS, rotate);
-	return card === null ? null : withLitDoors(ctx, card);
+		if (score === 2) break;
+	}
+	return best;
 }
 
 function pickGeo(ctx: FillContext, rotate: number): FeedCardV3 | null {
@@ -465,9 +546,17 @@ function loopedFallback(
 			candidates.push({ kind: "area", id: `area-${u.id}`, unit: u });
 		}
 	}
-	if (permitted.has("tradeoff")) {
-		candidates.push(loopedTradeoff(ctx, rotate));
-	}
+	/*
+	 * Trade-offs are deliberately NOT offered here.
+	 *
+	 * This path recycles content once fresh inventory runs out, and a question
+	 * is not inventory: the mix table's own trade-off slot already schedules
+	 * them at one per nine, and `pickTradeoff` refuses to repeat one. Offering
+	 * them here as well let the loop treat the bank as an inexhaustible supply —
+	 * with the v2 bank's 32 questions a 120-card session came back with FORTY
+	 * trade-offs and stopped recycling houses at all. When the bank is spent the
+	 * slot degrades to a real card, which is the correct answer.
+	 */
 
 	const real = candidates.filter((c): c is FeedCardV3 => c !== null);
 	// The table's own choice for this rotation first — see the header. This is
@@ -513,6 +602,15 @@ function findAlt(
 ): FeedCardV3 | null {
 	for (const alt of mix) {
 		if (alt === intended) continue;
+		/*
+		 * A trade-off fills its OWN slot and no other. The mix asks one question
+		 * per nine cards; letting an unfillable listing slot substitute a
+		 * question turns a thin pool into an interview — with the v2 bank's 32
+		 * questions a 120-card session came back with 32 of them. When a slot
+		 * cannot be filled the honest answers are another real card or the loop,
+		 * never an extra question.
+		 */
+		if (alt.fill === "tradeoff") continue;
 		const card = fillSlot(ctx, alt, rotate);
 		if (card === null || ctx.seen.has(card.id)) continue;
 		if (spaced && !rhythmAllows(emitted, card, limits)) continue;

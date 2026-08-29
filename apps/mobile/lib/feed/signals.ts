@@ -195,16 +195,20 @@ export function applySwipe(
 			// dim, the discarded side is softly downweighted (§1.6).
 			const chosen = verdict === "right" ? card.right : card.left;
 			const discarded = verdict === "right" ? card.left : card.right;
-			next = {
-				...next,
-				dims: bump(next.dims, chosen.dim, 1),
-				tradeoffCount: (next.tradeoffCount ?? 0) + 1,
-			};
-			if (discarded.dim !== chosen.dim) {
-				next = {
-					...next,
-					dims: bump(next.dims, discarded.dim, -0.5),
-				};
+			next = { ...next, tradeoffCount: (next.tradeoffCount ?? 0) + 1 };
+			/*
+			 * Most of the v2 bank (2026-08-29) carries no `dim`: "One level /
+			 * Two stories" is a measurable property of the house, not one of the
+			 * eleven lifestyle dims. The vote is still COUNTED — it is what the
+			 * axis-repeat rule and the fatigue model read — but nothing is
+			 * bumped, because inventing a dim for it would record a preference
+			 * the buyer never expressed.
+			 */
+			if (chosen.dim !== undefined) {
+				next = { ...next, dims: bump(next.dims, chosen.dim, 1) };
+			}
+			if (discarded.dim !== undefined && discarded.dim !== chosen.dim) {
+				next = { ...next, dims: bump(next.dims, discarded.dim, -0.5) };
 			}
 			break;
 		}

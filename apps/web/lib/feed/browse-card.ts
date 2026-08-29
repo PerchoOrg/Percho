@@ -127,6 +127,8 @@ export type BrowseCard = {
     beds: number | null;
     baths: number | null;
     sqft: number | null;
+    /** Build year — the trade-off bank's era axis. */
+    year_built?: number | null;
     /**
      * Coordinates, when the row is geocoded. Feeds the mobile card's locality
      * map thumbnail (2026-07-28 card structure); web ignores them.

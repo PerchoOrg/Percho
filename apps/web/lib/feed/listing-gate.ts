@@ -72,6 +72,14 @@ export interface PoolListingDTO {
    */
   dims?: DimKey[];
   /**
+   * The structured axes the mobile trade-off bank measures against
+   * (`SideMatch` in apps/mobile/lib/feed/card-types.ts). Formatted separately
+   * into `bedBathSqft` for display; a predicate needs the numbers.
+   */
+  yearBuilt?: number;
+  sqft?: number;
+  beds?: number;
+  /**
    * Photo count for the redline's "⊕ N Photos" hero pill.
    *
    * Only sent when the listing has MORE THAN ONE photo: a pill reading
