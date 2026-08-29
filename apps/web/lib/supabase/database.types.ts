@@ -1568,6 +1568,62 @@ export type Database = {
           },
         ]
       }
+      listing_questions: {
+        Row: {
+          answer: string
+          basis: Json
+          decisiveness: number
+          form: string
+          generated_at: string
+          id: string
+          listing_id: string
+          model: string | null
+          question_id: string
+          reviewed_at: string | null
+          scope: string
+          status: string
+          verify: string | null
+        }
+        Insert: {
+          answer: string
+          basis?: Json
+          decisiveness?: number
+          form?: string
+          generated_at?: string
+          id?: string
+          listing_id: string
+          model?: string | null
+          question_id: string
+          reviewed_at?: string | null
+          scope?: string
+          status?: string
+          verify?: string | null
+        }
+        Update: {
+          answer?: string
+          basis?: Json
+          decisiveness?: number
+          form?: string
+          generated_at?: string
+          id?: string
+          listing_id?: string
+          model?: string | null
+          question_id?: string
+          reviewed_at?: string | null
+          scope?: string
+          status?: string
+          verify?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_questions_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listing_tour_assemblies: {
         Row: {
           bgm: Json | null

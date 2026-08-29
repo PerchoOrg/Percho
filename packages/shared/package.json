@@ -5,6 +5,7 @@
   "exports": {
     "./dims": "./src/dims.ts",
     "./icons": "./src/icons.ts",
+    "./questions": "./src/questions.ts",
     "./types": "./src/types.ts"
   },
   "scripts": {

@@ -44,6 +44,26 @@ export interface ListingVideoDTO {
 	durationSec?: number;
 }
 
+/** One "Based on" item under a question's answer. */
+export interface QuestionBasisDTO {
+	type: string;
+	note: string;
+	url?: string;
+}
+
+/**
+ * An approved move-in question answer (phase126). The question text is NOT
+ * carried — `@percho/shared/questions` owns it, keyed by `id`.
+ */
+export interface QuestionAnswerDTO {
+	id: string;
+	answer: string;
+	basis: QuestionBasisDTO[];
+	verify?: string;
+	decisiveness: 1 | 2 | 3;
+	form: string;
+}
+
 export interface ListingDetailDTO {
 	id: string;
 	slug: string;
@@ -72,6 +92,8 @@ export interface ListingDetailDTO {
 	/** The FMLS number a buyer can quote. */
 	mlsNumber?: string;
 	video?: ListingVideoDTO;
+	/** Approved move-in question answers. Absent when the listing has none. */
+	questions?: QuestionAnswerDTO[];
 }
 
 type State =

@@ -24,6 +24,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+	Linking,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -44,6 +45,7 @@ import { FitCard } from "../../components/listing/explore/FitCard";
 import { MediaCarousel } from "../../components/listing/explore/MediaCarousel";
 import { PhotoGrid } from "../../components/listing/explore/PhotoGrid";
 import { PhotoViewer } from "../../components/listing/explore/PhotoViewer";
+import { QuestionsBlock } from "../../components/listing/explore/QuestionsBlock";
 import { DEFAULT_ANNUAL_RATE } from "../../lib/listing/assumptions";
 import { assumptionLine, buildCost } from "../../lib/listing/cost";
 import { useListingDetail } from "../../lib/listing/detail-dto";
@@ -53,6 +55,10 @@ import {
 	buildFitDwellEvent,
 	buildMediaSwipeEvent,
 	buildPhotoFullscreenEvent,
+	buildQuestionOpenEvent,
+	buildQuestionSourceTapEvent,
+	buildQuestionThemeBrowseEvent,
+	buildQuestionVerifyTapEvent,
 	buildRoomJumpEvent,
 	buildTradeoffVoteEvent,
 } from "../../lib/listing/explore-events";
@@ -63,11 +69,13 @@ import {
 	formatUsd,
 	parseHoaMonthlyUsd,
 } from "../../lib/listing/monthly";
+import { mergeAnswers, rankQuestions } from "../../lib/listing/questions";
 import { buildRoomGroups } from "../../lib/listing/rooms";
 import { useListingSummaries } from "../../lib/listing/summaries";
 import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
+import { useQuestionAffinity } from "../../state/question-affinity";
 import { useSavedStore } from "../../state/saved";
 import { explore, fonts } from "../../theme/tokens";
 
@@ -100,6 +108,8 @@ export default function ListingExploreScreen() {
 	const funnelStage = useFunnelStore((s) => s.stage);
 	const savedItems = useSavedStore((s) => s.items);
 	const toggleSaved = useSavedStore((s) => s.toggle);
+	const questionAffinity = useQuestionAffinity((s) => s.opens);
+	const bumpQuestionAffinity = useQuestionAffinity((s) => s.bump);
 	const seenListingCount = useFeedSession((s) => s.seenListingIds.length);
 	const geoSignals = useFeedSession((s) => s.signals.geo);
 
@@ -256,6 +266,9 @@ export default function ListingExploreScreen() {
 			: null;
 
 	const facts = buildFacts(detail);
+	// Move-in questions (phase126): server answers + the local era rule, ranked
+	// by this buyer's theme affinity. Empty → the section is absent.
+	const questions = rankQuestions(mergeAnswers(detail), questionAffinity);
 
 	const specs = [
 		detail.beds !== undefined ? `${detail.beds} bd` : null,
@@ -412,6 +425,45 @@ export default function ListingExploreScreen() {
 								downFraction: DEFAULT_DOWN_FRACTION,
 								annualRate: DEFAULT_ANNUAL_RATE,
 							})}
+						/>
+					</View>
+				)}
+
+				{/* ——— Questions (phase126) — absent when nothing is answerable ——— */}
+				{questions.length > 0 && (
+					<View style={[styles.section, styles.sectionRuled]}>
+						<Text style={styles.eyebrow}>
+							WHAT PEOPLE ASK BEFORE THEY MOVE HERE
+						</Text>
+						<QuestionsBlock
+							ranked={questions}
+							onOpen={(q) => bumpQuestionAffinity(q.def.theme)}
+							onClose={(q, rank, dwellMs) =>
+								enqueue(
+									buildQuestionOpenEvent(ctx(), {
+										questionId: q.def.id,
+										rankShown: rank,
+										dwellMs,
+									}),
+								)
+							}
+							onVerify={(q) =>
+								enqueue(
+									buildQuestionVerifyTapEvent(ctx(), { questionId: q.def.id }),
+								)
+							}
+							onSource={(q, basisIndex, url) => {
+								enqueue(
+									buildQuestionSourceTapEvent(ctx(), {
+										questionId: q.def.id,
+										basisIndex,
+									}),
+								);
+								Linking.openURL(url).catch(() => {});
+							}}
+							onBrowseTheme={(theme) =>
+								enqueue(buildQuestionThemeBrowseEvent(ctx(), { theme }))
+							}
 						/>
 					</View>
 				)}
