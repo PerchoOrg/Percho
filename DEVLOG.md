@@ -16,6 +16,37 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-30 22:20 UTC — phase140.2: five ways to not have two buttons in the card's top-right
+
+**Objective**: owner leans F4 (sound on the card) but rejected the stacked pair
+— 「右上两个 button 很奇怪 有别的方案吗」.
+
+**Two findings that change the premise**:
+- **There is no sound control anywhere in the app except the You tab switch.**
+  The 2026-08-14 entry says the toggle "moved to the listing explore hero"
+  (`62f07528`), and it did — but phase119's explore rebuild (`146f8fba`)
+  deleted it and nobody noticed. So this is not "copy the explore control", it
+  is restoring a capability that the 2026-07-28 unmute fix put in and phase119
+  silently removed.
+- **Neither icon font has a speaker glyph.** `PerchoIcons` carries 19 names
+  (camera…arrowRight), `TabBarIcons` 4; `SoundToggle` draws 🔊/🔇 as EMOJI,
+  which is why it can never sit on a card next to the line-art bookmark.
+  Implementation must either draw it from bordered `View`s (the bookmark /
+  arrow precedent) or rebuild a font subset via `scripts/icon-fonts/`.
+
+**Actions**: demo grows a `?group=sound` with five variants — G1 one vertical
+capsule, G2 one horizontal capsule, G3 sound disc that auto-hides after ~2s,
+G4 sound inside the existing tap-to-pause overlay, G5 swap (sound alone
+top-right, bookmark moves next to Explore on the bottom row).
+
+**Decisions**: G1 is kept in the set but reads as two overlapping lobes even
+after tightening (38pt wide, 0.85 white, 0.10 divider) — a vertical capsule of
+two round cells cannot avoid it, which is the owner's objection restated. G2
+and G5 are the only two that read as ONE object in the corner.
+
+**Next steps**: owner picks among G1–G5; everything else on this branch is
+already decided (S3 · D2 · Y1).
+
 ## 2026-08-30 21:35 UTC — phase140.1: owner picks S3 + D2 + Y1; sound placement narrowed to two top-right variants
 
 **Objective**: owner reviewed https://www.percho.co/demos/feed-chrome-v1 and
