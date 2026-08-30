@@ -74,63 +74,83 @@ phase137:
 fine and does not need fixing: EAS builds and submits in the cloud. Do not
 attempt `expo run:ios` or a local archive.
 
-## Stage 2 — first build + TestFlight (needs Stage 0 active)
+## Stage 2 — first build + TestFlight (DONE 2026-08-30)
 
-Done already (2026-08-30): `eas login` (account `percho`), and `eas init` —
-the project is `@percho/percho`, id `7e6cc487-2c4c-4006-aadc-6e9816d96513`,
-committed to `app.json` in phase138.2.
+Membership confirmed active during the first build:
+**Qiaoxuan Xue (Individual)**, Team ID `5C84L6M8HT`, provider `129382799`.
 
-⚠ **The first build must be run interactively, by a human, once.** An App
-Store Connect API key is *not* sufficient to create the iOS build
-credentials. With `EXPO_ASC_API_KEY_PATH` / `EXPO_ASC_KEY_ID` /
-`EXPO_ASC_ISSUER_ID` all set, `eas build --non-interactive` still stops at:
+| Thing | Value |
+|---|---|
+| Expo account | `percho` |
+| EAS project | `@percho/percho` — `7e6cc487-2c4c-4006-aadc-6e9816d96513` |
+| Bundle ID (registered) | `co.percho.app` — portal id `6TNYULX4NA` |
+| App Store Connect app | `6806748456` — name Percho, SKU `percho-ios-001`, en-US |
+| First build | `de77e59e-c0f7-4f9f-ac13-d6a5f6e78f2d` — 1.0.0 (2) |
+| Distribution cert | serial `DDC05B9FC269B0609087CB6F23D2590`, expires 2027-08-30 |
+| Provisioning profile | `95776Q4K89`, expires 2027-08-30 |
+
+`buildNumber` went 1 → 2 on that first build because the `production` profile
+has `autoIncrement: true`. `app.json` was updated to match (phase138.4) — it
+must always say what actually shipped, or the next increment collides.
+
+### What needed a human, and what did not
+
+**Needed a human, once**: creating the distribution certificate and
+provisioning profile. An App Store Connect API key does *not* cover this —
+those are Developer Portal objects and need an Apple ID session with 2FA.
+`eas credentials` has no `--non-interactive` flag at all. With all three
+`EXPO_ASC_*` vars set, `eas build --non-interactive` still stops at:
 
 ```
 Distribution Certificate is not validated for non-interactive builds.
 Credentials are not set up. Run this command again in interactive mode.
 ```
 
-`eas credentials` has no `--non-interactive` flag at all. The ASC API key
-covers *submission*; the distribution certificate and provisioning profile
-are Developer Portal objects and need a real Apple ID session with 2FA. So
-the owner runs this one command in his own terminal:
+Now that they exist they are stored on Expo's servers against
+`@percho/percho`, so **this will not be needed again** until they expire
+(2027-08-30).
+
+**Did not need a human**: everything else. Rebuilds are now just
 
 ```bash
 cd apps/mobile
-npx eas-cli build --platform ios --profile production
-# → "Log in to your Apple account?" yes → Gmail Apple ID → password → 2FA code
-# → let EAS generate the Distribution Certificate + Provisioning Profile
+npx eas-cli build --platform ios --profile production --non-interactive
 ```
 
-The generated credentials are then stored on Expo's servers against
-`@percho/percho`, and **every later build and submit can run
-non-interactively**, including from an agent session:
+### Submitting
+
+⚠ `EXPO_ASC_API_KEY_PATH` / `EXPO_ASC_KEY_ID` / `EXPO_ASC_ISSUER_ID` are read
+only by `eas testflight`, `eas submit:status` and `eas metadata` — **the
+submit credential resolver ignores them** and fails with "App Store Connect
+API Keys cannot be set up in --non-interactive mode". The key must come from
+the submit profile in `eas.json`.
+
+`ascAppId` is committed. The other three fields are not: `ascApiKeyPath` is
+an absolute path on one machine, and the `.p8` must never sit near the repo
+(it is a one-time download that authorises uploads for the whole account, and
+`.gitignore` blocks `*.p8` since phase138.1). Add them locally, submit, then
+revert:
+
+```jsonc
+// apps/mobile/eas.json → submit.production.ios, alongside ascAppId
+"ascApiKeyPath": "/Users/<you>/.appstoreconnect/private_keys/AuthKey_P68W57U2G9.p8",
+"ascApiKeyId": "P68W57U2G9",
+"ascApiKeyIssuerId": "88793b4f-748d-40ef-b81e-c89b570f00d0"
+```
 
 ```bash
-npx eas-cli build --platform ios --profile production --non-interactive
 npx eas-cli submit --platform ios --latest --non-interactive
+git checkout -- eas.json   # do not commit the key path
 ```
 
-⚠ The `production` profile sets `autoIncrement: true`, so the interactive
-first build may ship as `buildNumber 2` rather than `1` and rewrite
-`app.json`. That is cosmetic — the number only has to be unique and
-increasing — but commit whatever `app.json` ends up saying.
+The alternative, if this becomes a chore: run `eas credentials --platform
+ios` once interactively and store the ASC key on Expo's servers — then the
+eas.json edit is unnecessary. It needs a TTY but *not* Apple 2FA.
 
-App Store Connect app record — create it by hand first, or let `eas submit`
-create it. Either way the values are:
+### TestFlight
 
-| Field | Value |
-|---|---|
-| Name | `Percho` |
-| Primary language | English (U.S.) |
-| Bundle ID | `co.percho.app` |
-| SKU | `percho-ios-001` (internal only, never shown to users) |
-| Version | `1.0.0` / build `1` |
-
-Then:
-
-- Internal TestFlight: add the owner + Vivian as internal testers →
-  installable minutes after processing, **no review**.
+- Internal testers install minutes after Apple finishes processing (5–10 min
+  after upload), **no review**.
 - External testers require one Beta App Review (~1 day).
 - Device pass on the build: the three tabs (Saved / You / Search focus), video
   feed, community tour scrub — the things only a phone shows.
