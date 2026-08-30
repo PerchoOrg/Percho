@@ -16,6 +16,45 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-30 09:45 UTC — device pass done; Stage 3 filled as far as the unfinished app allows
+
+**Objective**: owner verified 1.0.0 (2) on TestFlight on his iPhone ("Verified
+on testflight and percho app on ios"), then: "app 还没有做完，今天不着急上线,
+现在能稳定测试就行, 你把能填的填好, 剩下的 app 做完了再加".
+
+**Actions**: filled the App Store Connect fields that do not describe the
+finished product, over the ASC API (version record `da554336-…`):
+- versionString `1.0` → **`1.0.0`**. ASC auto-created it as `1.0`, which does
+  not match the build's `CFBundleShortVersionString` — that mismatch blocks
+  attaching a build, and it was silently wrong until queried.
+- Support URL → `https://www.percho.co/contact`; privacy policy URL →
+  `https://www.percho.co/privacy`; primary category → `LIFESTYLE`; age rating
+  questionnaire → all-none, resolves to 4+.
+
+**Deliberately not filled**: description / keywords / subtitle / promo text,
+screenshots, build attachment, and **App Privacy labels**. The privacy labels
+are a legal attestation; "Data Not Collected" is true today but the app is
+unfinished, so it gets set once the feature set is frozen.
+
+**Learnings**:
+- Apple's age-rating questionnaire has changed shape. `seventeenPlus` is gone,
+  and eight attributes that read like enums are **booleans**:
+  `userGeneratedContent`, `messagingAndChat`, `advertising`,
+  `parentalControls`, `healthOrWellnessTopics`, `ageAssurance`, `lootBox`,
+  `gambling`. `gunsOrOtherWeapons` stayed a string enum. The API's 409s name
+  the missing/mistyped fields exactly, so iterate against it rather than
+  guessing from docs.
+- `GET /v1/ageRatingDeclarations/{id}` is forbidden — UPDATE only. Read the
+  current state through `/v1/appInfos/{id}` (`ageRating` attribute) instead.
+- `hasAccessToAllBuilds` on a beta group is create-time only; PATCH returns
+  409. Use `eas submit --groups Internal` so each new build lands in the
+  internal group without recreating it.
+
+**Next steps**: nothing blocking. When the app is feature-frozen: screenshots
+on device (6.9", 1320×2868), store copy, App Privacy labels, attach the
+shipping build. Independently and earlier if "Percho" must be the public
+seller name: the legal-entity-name-change request has a waiting period.
+
 ## 2026-08-30 09:20 UTC — Percho is on TestFlight: build 1.0.0 (2) installable
 
 **Objective**: continue from the 02:10 entry — owner said "merge, 激活过了,
