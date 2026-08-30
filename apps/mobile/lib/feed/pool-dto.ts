@@ -283,6 +283,19 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 		...(num(raw.price) === undefined
 			? {}
 			: { price: num(raw.price) as number }),
+		/*
+		 * The three structured axes the trade-off bank measures against
+		 * (`SideMatch`). The server has sent them since 2026-08-29; this parser
+		 * silently dropped them until 08-30, which made every matcher-based
+		 * question score nothing and rank nothing — the feature was inert on
+		 * device while its unit tests passed on fixtures that set the fields by
+		 * hand. `pool-dto.test.ts` now asserts them off the wire.
+		 */
+		...(num(raw.yearBuilt) === undefined
+			? {}
+			: { yearBuilt: num(raw.yearBuilt) as number }),
+		...(num(raw.sqft) === undefined ? {} : { sqft: num(raw.sqft) as number }),
+		...(num(raw.beds) === undefined ? {} : { beds: num(raw.beds) as number }),
 		bedBathSqft: str(raw.bedBathSqft) ?? "",
 		heroUrl,
 		...(videoUrl ? { videoUrl } : {}),
