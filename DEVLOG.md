@@ -16,6 +16,70 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-30 09:20 UTC — Percho is on TestFlight: build 1.0.0 (2) installable
+
+**Objective**: continue from the 02:10 entry — owner said "merge, 激活过了,
+app 里用的就是 co.percho.app, 啥命令你跑就好了". Get an actual build into
+TestFlight.
+
+**Membership confirmed active**: Qiaoxuan Xue (Individual), Team ID
+`5C84L6M8HT`, provider `129382799`. The "pending activation" state had
+cleared.
+
+**Actions** (phase138.2 – phase138.7, each merged to main separately):
+- `eas login` (account `percho`) + `eas init` → `@percho/percho`,
+  `7e6cc487-2c4c-4006-aadc-6e9816d96513`. Did **not** take the CLI's app.json
+  output verbatim: it reformatted the file from tabs to spaces and injected an
+  `extra.router` key that expo-router supplies at runtime. Hand-applied the two
+  real additions instead (6-line diff).
+- Owner ran the one interactive build; cert `DDC05B9FC269B0609087CB6F23D2590`
+  and profile `95776Q4K89` created, both expiring 2027-08-30.
+- `buildNumber` 1 → 2 via the production profile's `autoIncrement`; app.json
+  updated to match what shipped (phase138.4).
+- `ascAppId 6806748456` pinned on the submit profile (phase138.5).
+- Submitted; build `a40309ad-…` reached `processingState VALID` in ~90 s.
+- Created the internal TestFlight group over the App Store Connect API,
+  attached the build, added the owner as tester. Verified: group holds build
+  "2", tester state `INVITED`.
+- `.gitignore` now blocks `*.p8` / `*.p12` / `*.cer` / `*.mobileprovision`
+  (phase138.1) — there was no rule for any of them, and the next step was
+  putting an ASC private key on this machine.
+
+**Issues / learnings**:
+- **An ASC API key does not cover build credentials.** With all three
+  `EXPO_ASC_*` vars set, `eas build --non-interactive` still stops at
+  "Distribution Certificate is not validated for non-interactive builds", and
+  `eas credentials` has no `--non-interactive` flag at all. Distribution certs
+  and provisioning profiles are Developer Portal objects and need an Apple ID
+  session with 2FA. One human run, once; the credentials now live on Expo's
+  servers and rebuilds are non-interactive until 2027-08-30.
+- **`EXPO_ASC_*` is not read by `eas submit`.** Only `eas testflight`,
+  `eas submit:status` and `eas metadata` consume those vars (grep of the CLI
+  build output confirms it). Submit resolves the key from the eas.json submit
+  profile, so it failed with "App Store Connect API Keys cannot be set up in
+  --non-interactive mode" until `ascApiKeyPath/Id/IssuerId` were added there.
+  Those three are deliberately **not** committed — the path is machine-local
+  and the `.p8` must stay away from the repo.
+- Same root cause made `--auto-testflight-setup` skip silently. Did the group
+  setup over the ASC API directly instead.
+- `usesNonExemptEncryption: false` came through on the build, so
+  `ITSAppUsesNonExemptEncryption` in app.json works as intended.
+- The App Store Connect app record already existed (6806748456) with exactly
+  the requested name / SKU / locale, so nothing had to be created there.
+
+**Still open**:
+- ⚠ Individual account ⇒ the public App Store seller name is **Qiaoxuan Xue**,
+  not "Percho". Needs a legal-entity-name-change request with a DBA
+  certificate. Does not block TestFlight; does affect the store listing.
+- Stage 3 metadata: screenshots, description, keywords, age rating. Support
+  URL is https://www.percho.co/contact (`/support` is a 404).
+- The reference worktree has two uncommitted changes that are not mine and
+  went into this build: `apps/mobile/app/_layout.tsx` and
+  `scripts/render-worker/bgm/manifest.json`.
+
+**Next steps**: owner accepts the TestFlight invite and does the device pass
+(three tabs, video feed, community tour scrub). Then Stage 3 metadata.
+
 ## 2026-08-30 02:10 UTC — iOS release: individual enrollment, runbook corrected, build re-verified
 
 **Objective**: owner — "prepare and publish the Percho iOS app through
