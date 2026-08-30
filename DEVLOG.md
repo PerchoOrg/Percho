@@ -16,6 +16,32 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-30 21:35 UTC — phase140.1: owner picks S3 + D2 + Y1; sound placement narrowed to two top-right variants
+
+**Objective**: owner reviewed https://www.percho.co/demos/feed-chrome-v1 and
+ruled: scope = **S3** (community-first breadcrumb + stats), drag feedback =
+**D2** (spec §1.8 LIKE/PASS badge — chosen over my legibility concern, his
+call), Undo toast dead in favour of **Y1** (You-tab RECENT + Bring back,
+confirmed). The foot-band sound disc was rejected: 「为啥不统一放到右上角?」.
+
+**Decisions**:
+- "Top-right" has two candidates on this page, so the demo grows F3 (disc in
+  the wordmark row's right corner — this reverses the owner's own 2026-08-14
+  "both top corners stay empty" rule, which is what evicted the mute control
+  to the explore hero in the first place) and F4 (disc on the CARD under the
+  bookmark, the explore hero's placement language). F1/F2 (foot band) removed
+  as rejected; D frames now render over the chosen S3 breadcrumb.
+- S3's sub-line in the demo says "40 communities · 12 with tours · median
+  $594K". The wire has communityCount and stats.medianListPrice per city geo
+  unit; a per-city WITH-TOURS count does NOT exist on the wire — implementation
+  either adds it server-side or the line ships without it. No faked stat.
+
+**Next steps**: owner picks F3 vs F4; then implement on
+`phase140/feed-page-chrome`: S3 breadcrumb + scope sheet (soft scope into
+`signals.geo`), mount `SwipeLabels` via `renderOverlay` (D2), sound disc at
+the chosen corner, You-tab RECENT backed by a new `recent` list in
+`feed-session`, `ExhaustedCard.onBrowseMap` → Search tab.
+
 ## 2026-08-30 11:00 UTC — phase140.0: feed-page chrome proposals, hosted as a demo page
 
 **Objective**: owner asked for design proposals for the main feed page ("now we

@@ -99,6 +99,9 @@ body.only{padding:0;background:var(--bg)} body.only .cap{display:none} body.only
 .echo.center{right:8px}
 .sound{position:absolute;right:0;bottom:0;height:8.5%;display:flex;align-items:center;z-index:5}
 .sound .d{width:32px;height:32px;border-radius:16px;background:var(--glass);border:1px solid rgba(23,23,21,.08);display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.soundChrome{position:absolute;top:65px;right:16px;z-index:120}
+.soundChrome .d{width:32px;height:32px;border-radius:16px;background:var(--glass);border:1px solid rgba(23,23,21,.08);display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.soundCard{position:absolute;top:62px;right:12px;width:40px;height:40px;border-radius:20px;background:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;z-index:2;color:#181B18}
 /* ---- you tab ---- */
 .you{padding:0 20px}
 .you h1{font:700 28px var(--serif);color:var(--ink);margin:6px 0 14px}
@@ -151,6 +154,7 @@ function listingCard(img, o={}){
     <img class="media" src="${img}">
     <div class="badge">Listing</div>
     <div class="save">${svg.bookmark}</div>
+    ${o.sound==='card'?`<div class="soundCard">${svg.vol}</div>`:''}
     <div class="scrim"></div>
     ${o.label?`<div class="lab">Like</div>`:''}
     <div class="info">
@@ -214,13 +218,13 @@ function feed(o){
   } else if(o.card==='community'){
     cards += communityCard(IMG.c3);
   } else {
-    cards += listingCard(IMG.l1);
+    cards += listingCard(IMG.l1,{sound:o.sound});
   }
   const foot = o.drag==='foot' ? `<div class="footWord"><span class="disc">${svg.check}</span>Like</div>` : '';
-  const echo = o.echo ? `<div class="echo ${o.sound?'':'center'}">${o.echo}</div>` : '';
-  const sound = o.sound ? `<div class="sound"><div class="d">${o.sound==='mute'?svg.mute:svg.vol}</div></div>` : '';
-  return `<div class="phone">${statusBar()}<div class="chrome"><span class="wordmark">Percho</span></div>${chromeExtra}
-    <div class="stage"><div class="stack">${slack}${cards}${foot}${echo}${sound}</div></div>
+  const echo = o.echo ? `<div class="echo center">${o.echo}</div>` : '';
+  const sound = o.sound==='chrome' ? `<div class="soundChrome"><div class="d">${svg.vol}</div></div>` : '';
+  return `<div class="phone">${statusBar()}<div class="chrome"><span class="wordmark">Percho</span></div>${chromeExtra}${sound}
+    <div class="stage"><div class="stack">${slack}${cards}${foot}${echo}</div></div>
     ${tabbar('feed')}${o.sheet?sheet():''}</div>`;
 }
 function youTab(){
@@ -246,13 +250,13 @@ function youTab(){
 const FRAMES = {
   S1:{group:'scope',title:'S1 · Pill in the slack band',sub:'Card keeps its size; the pill sits in the paper above it. 40 communities = the community-first count.',html:()=>feed({scope:'pill'})},
   S2:{group:'scope',title:'S2 · Quiet text under the wordmark',sub:'No pill, no box — one 13pt line. The lightest possible chrome.',html:()=>feed({scope:'textUnder'})},
-  S3:{group:'scope',title:'S3 · Community-first breadcrumb + stats',sub:'Metro › city, then the community numbers. Shown over a community card.',html:()=>feed({scope:'crumb',card:'community'})},
+  S3:{group:'scope',title:'S3 · Community-first breadcrumb + stats ✓ CHOSEN',sub:'Metro › city, then the community numbers. Shown over a community card.',html:()=>feed({scope:'crumb',card:'community'})},
   S4:{group:'scope',title:'S4 · The scope sheet (tap on any of S1–S3)',sub:'City list from the real pool (109 cities). Soft scope: ranks, never filters.',html:()=>feed({scope:'pill',sheet:true})},
-  D1:{group:'feedback',title:'D1 · Rim glow',sub:'A green rim + halo on the whole card, opacity follows the drag. (A leading-edge-only glow leaves the screen with the edge.)',html:()=>feed({scope:'pill',drag:'glow'})},
-  D2:{group:'feedback',title:'D2 · Spec §1.8 badge (LIKE / PASS)',sub:'The existing SwipeLabels component, un-hidden. Tinder register.',html:()=>feed({scope:'pill',drag:'badge'})},
-  D3:{group:'feedback',title:'D3 · Word in the foot band',sub:'The card stays clean; the verdict appears in the paper under it.',html:()=>feed({scope:'pill',drag:'foot'})},
-  F1:{group:'system',title:'F1 · Foot band: trade-off echo + sound disc',sub:'The echo line is live again (trade-off re-enabled). The 32pt disc is the only new resident element.',html:()=>feed({scope:'pill',echo:'Move-in ready · 6 homes moved up your feed',sound:'vol'})},
-  F2:{group:'system',title:'F2 · Same, muted state, no echo',sub:'What the band looks like 99% of the time.',html:()=>feed({scope:'pill',sound:'mute'})},
+  D1:{group:'feedback',title:'D1 · Rim glow',sub:'A green rim + halo on the whole card, opacity follows the drag. (A leading-edge-only glow leaves the screen with the edge.)',html:()=>feed({scope:'crumb',drag:'glow'})},
+  D2:{group:'feedback',title:'D2 · Spec §1.8 badge (LIKE / PASS) ✓ CHOSEN',sub:'The existing SwipeLabels component, un-hidden.',html:()=>feed({scope:'crumb',drag:'badge'})},
+  D3:{group:'feedback',title:'D3 · Word in the foot band',sub:'The card stays clean; the verdict appears in the paper under it.',html:()=>feed({scope:'crumb',drag:'foot'})},
+  F3:{group:'system',title:'F3 · Sound at the PAGE top-right',sub:'32pt glass disc in the wordmark row corner. Reverses the 2026-08-14 “both top corners stay empty” rule. Trade-off echo stays in the foot band.',html:()=>feed({scope:'crumb',echo:'Move-in ready · 6 homes moved up your feed',sound:'chrome'})},
+  F4:{group:'system',title:'F4 · Sound on the CARD, under the bookmark',sub:'Same 40pt disc language as the save button — the explore hero’s placement, brought to the card. Page corners stay empty.',html:()=>feed({scope:'crumb',echo:'Move-in ready · 6 homes moved up your feed',sound:'card'})},
   Y1:{group:'system',title:'Y1 · History in the You tab (instead of Undo)',sub:'Recent verdicts with “Bring back”. No toast on the feed at all.',html:()=>youTab()},
 };
 function fit(){const w=Number(new URLSearchParams(location.search).get('w'))||window.innerWidth; const k=Math.min(1,(w-16)/393); document.querySelectorAll('.frame, body.only .phone').forEach(el=>{el.style.zoom=String(k);});}
@@ -263,7 +267,7 @@ const root = document.getElementById('root');
 if(only){ document.body.classList.add('only'); root.innerHTML = FRAMES[only].html(); }
 else {
   const keys = Object.keys(FRAMES).filter(k=>!group||FRAMES[k].group===group);
-  const nav = `<div class="nav"><h1>Percho feed chrome — demo frames</h1><div>Scope: <a href="?group=scope">S1–S4</a> Drag feedback: <a href="?group=feedback">D1–D3</a> System: <a href="?group=system">F1 · F2 · Y1</a> <a href="./">All</a></div><div>Jump: ${Object.keys(FRAMES).map(k=>`<a href="#${k}">${k}</a>`).join('')}</div></div>`;
+  const nav = `<div class="nav"><h1>Percho feed chrome — demo frames</h1><div>Scope: <a href="?group=scope">S1–S4</a> Drag feedback: <a href="?group=feedback">D1–D3</a> System: <a href="?group=system">F3 · F4 · Y1</a> <a href="./">All</a></div><div>Jump: ${Object.keys(FRAMES).map(k=>`<a href="#${k}">${k}</a>`).join('')}</div></div>`;
   root.innerHTML = nav + `<div class="gallery">${keys.map(k=>`<div class="frame" id="${k}"><div class="cap">${FRAMES[k].title}<small>${FRAMES[k].sub}</small></div>${FRAMES[k].html()}</div>`).join('')}</div>`;
 }
 fit();
