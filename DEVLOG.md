@@ -16,6 +16,36 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-30 10:50 UTC — phase139.1: the root layout waits one frame for the icon fonts
+
+**Objective**: the second uncommitted edit in the reference worktree,
+`apps/mobile/app/_layout.tsx` (mtime 2026-08-23 01:36, author unknown).
+Owner: "如果已经在expo go上跑一周了 早就应该merge".
+
+**What it fixes**: the trade-off discs and the tab bar draw their icons from
+bundled PUA icon fonts. `useFonts` is async, so the first frame rendered those
+codepoints through the system fallback — tofu / "?" glyphs that stayed until
+some interaction re-rendered the tree (owner report 2026-08-18: "点一下才切换
+成正常的icon"). The layout now reads `[fontsLoaded, fontsError]` and renders a
+bare `colors.bg` `View` until the fonts are drawable; a font *error* falls
+through so a load failure can never white-screen the app. The fonts are
+2–8 KB each and bundled, so the gate is one frame. This reverses the
+2026-08-18 "deliberately NOT gated" decision recorded in the phase-era entry —
+that entry feared a flash; in practice the flash is one bg-coloured frame and
+the tofu was the worse defect.
+
+**Verification**: the identical file has been what Expo Go served from the
+reference worktree since 2026-08-23 and is inside TestFlight build 1.0.0 (2),
+which the owner verified on device today. `pnpm typecheck` clean;
+`pnpm lint` exit 0 (16 pre-existing warnings, none in this file).
+
+**Learnings**: both stray edits were written straight into
+`~/Workspace/Percho`, which §2.5 forbids — they were live on the owner's phone
+for a week and in a TestFlight build without ever being on a branch. Landing
+them now makes main equal what actually shipped. The reference worktree is
+clean again after this merge.
+
+
 ## 2026-08-30 10:30 UTC — phase139: bgm manifest.json catches up with the library on disk
 
 **Objective**: the reference worktree carried an uncommitted edit to
