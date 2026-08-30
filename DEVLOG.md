@@ -16,6 +16,50 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-30 11:00 UTC — phase140.0: feed-page chrome proposals, hosted as a demo page
+
+**Objective**: owner asked for design proposals for the main feed page ("now we
+only have card, we need to complete the whole UI"), then for demos of the
+scope-at-the-top idea (「符合我们 community first 的理念」), the drag feedback,
+and the system layer — and, being on Claude Code remote access, for them on a
+web page rather than as local files.
+
+**Actions**:
+- `apps/web/public/demos/feed-chrome-v1/index.html` — a static HTML mockup
+  page (no build step, `noindex`) that renders ten iPhone-15-sized frames from
+  one template: S1–S4 (scope pill / quiet text / community-first breadcrumb /
+  the scope sheet), D1–D3 (rim glow / spec §1.8 badge / word in the foot band),
+  F1–F2 (foot band with the trade-off echo + a sound disc), Y1 (swipe history
+  in the You tab as the alternative to an Undo toast). `?group=scope|feedback|
+  system` and `?only=<id>` isolate frames. Photos, addresses, prices,
+  community names and city counts come from the live `/api/mobile/feed` pool
+  (Supabase public URLs, nothing copied); the two fonts the app bundles
+  (`DMSerifDisplay-Regular.ttf`, `TabBarIcons.ttf`) are copied next to it so
+  the wordmark and tab glyphs are the real ones.
+- Live at `https://www.percho.co/demos/feed-chrome-v1/`.
+
+**Findings while drawing** (the reason the demo was worth making):
+- A leading-edge-only swipe glow is invisible by construction: at the 35%
+  commit threshold the card's leading edge is already off-screen. D1 is a
+  whole-card rim instead.
+- The spec §1.8 LIKE/PASS badge (`SwipeLabels`, built but never mounted — the
+  feed passes no `renderOverlay`) is close to illegible over a green photo.
+- The paper band under the card (17% of the stage) is where the trade-off
+  echo already lands, so the sound control can share it without touching a
+  top corner (owner rule 2026-08-14) or the card.
+- The pool's geo units are city-level only (`communities.zip` is NULL), so
+  "scope" can only be a city today; the pill shows the community count under
+  it as the community-first expression.
+
+**Decisions**: owner already ruled out the Undo toast (「之前的视线有点丑陋」) in
+favour of history on the You tab — Y1 mocks that. Nothing else is decided;
+the four choices (S1/S2/S3, D1/D2/D3, the sound disc, Y1) are with the owner.
+
+**Next steps**: on the owner's pick, open the real phase140 work on this branch:
+scope pill + sheet (soft scope written into `signals.geo`), drag feedback via
+`renderOverlay`, sound disc in the foot band, `ExhaustedCard.onBrowseMap`
+wired to the Search tab, a `recent` list in `feed-session` for the You tab.
+
 ## 2026-08-30 10:50 UTC — phase139.1: the root layout waits one frame for the icon fonts
 
 **Objective**: the second uncommitted edit in the reference worktree,
