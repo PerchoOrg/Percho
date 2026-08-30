@@ -76,18 +76,45 @@ attempt `expo run:ios` or a local archive.
 
 ## Stage 2 — first build + TestFlight (needs Stage 0 active)
 
+Done already (2026-08-30): `eas login` (account `percho`), and `eas init` —
+the project is `@percho/percho`, id `7e6cc487-2c4c-4006-aadc-6e9816d96513`,
+committed to `app.json` in phase138.2.
+
+⚠ **The first build must be run interactively, by a human, once.** An App
+Store Connect API key is *not* sufficient to create the iOS build
+credentials. With `EXPO_ASC_API_KEY_PATH` / `EXPO_ASC_KEY_ID` /
+`EXPO_ASC_ISSUER_ID` all set, `eas build --non-interactive` still stops at:
+
+```
+Distribution Certificate is not validated for non-interactive builds.
+Credentials are not set up. Run this command again in interactive mode.
+```
+
+`eas credentials` has no `--non-interactive` flag at all. The ASC API key
+covers *submission*; the distribution certificate and provisioning profile
+are Developer Portal objects and need a real Apple ID session with 2FA. So
+the owner runs this one command in his own terminal:
+
 ```bash
 cd apps/mobile
-npx eas-cli login                 # Expo account (not the Apple ID)
-npx eas-cli init                  # links the project, writes extra.eas.projectId
-git add app.json && git commit -m "phaseN: link EAS project"
-
 npx eas-cli build --platform ios --profile production
-# First run prompts for the Apple ID (the Gmail one) and walks credentials.
-# Let EAS manage the distribution cert + provisioning profile.
-
-npx eas-cli submit --platform ios --latest
+# → "Log in to your Apple account?" yes → Gmail Apple ID → password → 2FA code
+# → let EAS generate the Distribution Certificate + Provisioning Profile
 ```
+
+The generated credentials are then stored on Expo's servers against
+`@percho/percho`, and **every later build and submit can run
+non-interactively**, including from an agent session:
+
+```bash
+npx eas-cli build --platform ios --profile production --non-interactive
+npx eas-cli submit --platform ios --latest --non-interactive
+```
+
+⚠ The `production` profile sets `autoIncrement: true`, so the interactive
+first build may ship as `buildNumber 2` rather than `1` and rewrite
+`app.json`. That is cosmetic — the number only has to be unique and
+increasing — but commit whatever `app.json` ends up saying.
 
 App Store Connect app record — create it by hand first, or let `eas submit`
 create it. Either way the values are:
