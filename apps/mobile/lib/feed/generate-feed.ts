@@ -135,11 +135,95 @@ function rankCommunities(
 	signals: SignalState,
 ): CommunityCardV3[] {
 	const passed = new Set(signals.passedCommunityIds);
-	const score = (c: CommunityCardV3): number => (passed.has(c.id) ? -100 : 0);
+	/**
+	 * A community has no `yearBuilt` or `sqft`, so the structured matchers say
+	 * nothing about it. The five questions whose sides carry a `dim` still do:
+	 * choosing "A quiet street" should move quiet communities up.
+	 */
+	const dims = signals.dims;
+	const dimScore = (c: CommunityCardV3): number => {
+		let s = 0;
+		for (const dim of c.dims ?? []) s += dims[dim] ?? 0;
+		return Math.max(-ANSWER_CAP, Math.min(ANSWER_CAP, s));
+	};
+	const score = (c: CommunityCardV3): number =>
+		(passed.has(c.id) ? -100 : 0) + dimScore(c);
 	return [...communities].sort((a, b) => {
 		const d = score(b) - score(a);
 		return d !== 0 ? d : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 	});
+}
+
+/**
+ * What one answered trade-off is worth when ordering a house.
+ *
+ * `+1` for the side the buyer chose, `−0.5` against the side they discarded —
+ * the same ratio the `dims` bump has always used, so the deck does not grow a
+ * second tuning scale. A house that matches NEITHER side scores 0: it is
+ * neutral on that axis, and a listing whose `yearBuilt` is simply missing must
+ * not be buried for our lack of data.
+ */
+const ANSWER_FOR = 1;
+const ANSWER_AGAINST = 0.5;
+
+/**
+ * The most the whole ledger may move a house.
+ *
+ * An explicit swipe is worth `-100`; answers live inside ±8 so a stated
+ * preference can reorder the deck but can never outrank what the buyer did with
+ * their own thumb. Without a cap, a buyer eight questions in would see a feed
+ * shaped more by an interview than by the houses they actually liked.
+ */
+const ANSWER_CAP = 8;
+
+/**
+ * How strongly the answers so far favour this house.
+ *
+ * Deliberately a REORDER and not a filter. The buyer said "more of this", not
+ * "never that": the matchers are coarse (median splits), a filter can empty the
+ * feed, and every house stays reachable this way. See `TradeoffAnswer` for why
+ * the matchers are read here rather than frozen at vote time.
+ */
+export function answerScore(
+	listing: ListingCardV3,
+	signals: SignalState,
+	medians: PoolMedians,
+): number {
+	let score = 0;
+	for (const answer of signals.answers ?? []) {
+		const card = TRADEOFFS.find((q) => q.id === answer.cardId);
+		if (card === undefined) continue;
+		const chosen = answer.chose === "right" ? card.right : card.left;
+		const discarded = answer.chose === "right" ? card.left : card.right;
+		if (
+			chosen.match !== undefined &&
+			matchesSide(listing, chosen.match, medians)
+		) {
+			score += ANSWER_FOR;
+		} else if (
+			discarded.match !== undefined &&
+			matchesSide(listing, discarded.match, medians)
+		) {
+			score -= ANSWER_AGAINST;
+		}
+	}
+	return Math.max(-ANSWER_CAP, Math.min(ANSWER_CAP, score));
+}
+
+/** How many loaded homes fall on the side just chosen — the echo's number. */
+export function movedUpCount(
+	listings: readonly ListingCardV3[],
+	card: TradeoffCardV3,
+	chose: "left" | "right",
+): number {
+	const side = chose === "right" ? card.right : card.left;
+	if (side.match === undefined) return 0;
+	const medians = poolMedians(listings);
+	let n = 0;
+	for (const row of listings) {
+		if (matchesSide(row, side.match, medians)) n += 1;
+	}
+	return n;
 }
 
 function rankListings(
@@ -147,7 +231,11 @@ function rankListings(
 	signals: SignalState,
 ): ListingCardV3[] {
 	const liked = new Set(signals.likedListingIds);
-	const score = (l: ListingCardV3): number => (liked.has(l.id) ? -100 : 0);
+	const medians = poolMedians(listings);
+	// `-100` keeps an already-liked house out of the way whatever the answers
+	// say; the answer score only orders everything else.
+	const score = (l: ListingCardV3): number =>
+		(liked.has(l.id) ? -100 : 0) + answerScore(l, signals, medians);
 	return [...listings].sort((a, b) => {
 		const d = score(b) - score(a);
 		return d !== 0 ? d : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
@@ -233,11 +321,11 @@ interface PoolMedians {
 }
 
 /** The thresholds an `aboveMedian` / `belowMedian` match is measured against. */
-function poolMedians(ctx: FillContext): PoolMedians {
+function poolMedians(listings: readonly ListingCardV3[]): PoolMedians {
 	const sqft: number[] = [];
 	const price: number[] = [];
 	const perBed: number[] = [];
-	for (const row of ctx.listingRanked) {
+	for (const row of listings) {
 		if (row.sqft !== undefined) sqft.push(row.sqft);
 		if (row.price !== undefined) price.push(row.price);
 		if (row.sqft !== undefined && row.beds !== undefined && row.beds > 0) {
@@ -394,7 +482,7 @@ function evenPlates(
 
 /** Lights both doors. See `lightSide` and `evenPlates`. */
 function withLitDoors(ctx: FillContext, card: TradeoffCardV3): TradeoffCardV3 {
-	const medians = poolMedians(ctx);
+	const medians = poolMedians(ctx.listingRanked);
 	const lit = lightSide(ctx, card.left, new Set(), medians);
 	const other = lightSide(
 		ctx,
@@ -491,8 +579,28 @@ function pickCommunity(
 	return firstUnseen(ctx.communityRanked, (c) => c.id, ctx.seen, rotate);
 }
 
+/**
+ * Rotation is the tie-break when we know nothing; RANK takes over once the
+ * buyer has told us something.
+ *
+ * `firstUnseen` starts at `rotate` and takes the first unseen row, so with a
+ * fresh deck it returns `ranked[rotate % len]` — pure round-robin. Rank decided
+ * the cycle's ORDER but not where the buyer entered it, which meant a stated
+ * preference reordered a list nobody read from the top. The rule-03 test caught
+ * exactly that: positions moved and the front of the deck was unchanged.
+ *
+ * Entering at 0 walks the ranked list in order as `seen` grows, so the homes an
+ * answer promoted are the ones that actually arrive next. Rotation is kept for
+ * the no-signal case, where it is what stops every buyer seeing the same first
+ * five houses and what lets the loop reach every row (see `loopedFallback`).
+ */
+function hasStatedPreference(signals: SignalState): boolean {
+	return (signals.answers?.length ?? 0) > 0;
+}
+
 function pickListing(ctx: FillContext, rotate: number): ListingCardV3 | null {
-	return firstUnseen(ctx.listingRanked, (x) => x.id, ctx.seen, rotate);
+	const cursor = hasStatedPreference(ctx.signals) ? 0 : rotate;
+	return firstUnseen(ctx.listingRanked, (x) => x.id, ctx.seen, cursor);
 }
 
 function fillSlot(

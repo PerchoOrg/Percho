@@ -16,6 +16,68 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-29 14:10 UTC — phase136: the trade-off answers finally rank something
+
+**Objective**: owner approved P0 after the proposal. The finding that motivated
+it: `rankListings` was **one line** — `liked.has(l.id) ? -100 : 0`. It never
+read `signals.dims`. So no trade-off vote, old bank or new, had ever changed
+what the buyer saw. 32 questions were pure extraction with nothing returned,
+to the buyer or to the ordering.
+
+**Actions**:
+- `signals.ts` — `TradeoffAnswer` and `SignalState.answers`. A vote records the
+  FACT (`{axis, cardId, chose}`), not a weight.
+- `generate-feed.ts` — `answerScore` (+1 for the chosen side, −0.5 against the
+  discarded, 0 for a home the axis cannot judge), capped at ±8; `rankListings`
+  adds it to the liked-demotion; `rankCommunities` gains the same treatment via
+  `dims` for the five questions that carry one; `movedUpCount` for the echo.
+- `app/(tabs)/feed.tsx` — a one-line echo under the card for ~3s:
+  `Newer build · 14 homes moved up your feed`.
+
+**Decisions**:
+- *Record the choice, not a weight.* The old `+1 / −0.5` bump was not
+  invertible, and 22 of 32 questions have no matcher yet — freezing a weight at
+  vote time would make those answers permanently worthless. Matchers are read at
+  ranking time from `content.ts`, and `SignalState` is persisted, so **the day a
+  question gains a `match` every answer already given starts ranking
+  retroactively**, with no migration.
+- *Reorder, never filter.* The buyer said "more of this", not "never that"; the
+  matchers are coarse median splits, a filter can empty the feed, and every home
+  stays reachable this way.
+- *A home the axis cannot judge scores 0.* A listing with no `yearBuilt` must
+  not be buried for OUR missing data.
+- *±8 against the liked-demotion's −100.* A stated preference reorders; a thumb
+  decides. Without a cap a buyer eight questions in would see a feed shaped more
+  by an interview than by the houses they actually liked.
+- *No echo when nothing moved.* A question whose field the mirror has not landed
+  reorders nothing, and "we'll remember that" is what an app says when nothing
+  happened.
+
+**Issues**: the rule-03 test — "an answer must move the feed" — failed with
+positions changed but the FRONT of the deck identical. `firstUnseen` starts at
+`rotate` and takes the first unseen row, so on a fresh deck it returns
+`ranked[rotate % len]`: **pure round-robin**. Ranking decided the cycle's order
+but not where the buyer entered it, so a stated preference reordered a list
+nobody read from the top.
+
+**Resolution**: `hasStatedPreference` — rotation stays the tie-break while we
+know nothing (it is what stops every buyer seeing the same first five houses,
+and what lets `loopedFallback` reach every row), and rank takes over the moment
+the buyer has answered anything. 593 tests pass (+4), typecheck clean, biome
+down to the one pre-existing warning on `feed.tsx`.
+
+**Learnings**: two separate mechanisms were quietly cancelling the feature —
+a ranker that ignored the signal, and a picker that ignored the ranker. Neither
+was visible from reading either file alone; the test that asserted the PRODUCT
+behaviour ("answering changes what comes next") found both in one run. Worth
+writing that kind of test first for anything whose value is end-to-end.
+
+**Next steps**: the ceiling is now the pool. Ranking can only reorder the ~40
+rows already loaded — real personalisation needs the server to filter the query
+by stated preference, which is the natural follow-on. And 22 of 32 questions
+still reorder nothing until the MLS mirror lands their fields.
+
+
 ## 2026-08-29 17:00 UTC — phase135.2: the questionnaire grows to 16 questions — the V3 questions V4 had dropped
 
 **Objective**: walkthrough with the owner. Decisions so far: add every V3

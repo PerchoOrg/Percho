@@ -26,6 +26,30 @@ export interface GeoSignal {
 	left: number;
 }
 
+/**
+ * One answered trade-off, as a FACT rather than a weight.
+ *
+ * ── Why not just bump `dims` (2026-08-29) ───────────────────────────────────
+ *
+ * The old `+1 / −0.5` bump was not invertible: given `dims` you cannot say what
+ * the buyer was asked or what they picked. Worse, 22 of the v2 bank's 32
+ * questions have no `dim` and no `SideMatch` yet — freezing a weight at vote
+ * time would make those answers permanently worthless.
+ *
+ * Recording the CHOICE instead means the matchers are read at ranking time from
+ * `content.ts`. `SignalState` is persisted (zustand + AsyncStorage), so the day
+ * a question gains a `match` — when the MLS mirror lands `lot_size`, `stories`,
+ * `hoa` — every answer already given starts ranking retroactively, with no
+ * migration and no code change here.
+ */
+export interface TradeoffAnswer {
+	/** The question's axis. One per session, by the bank's own rule. */
+	axis: string;
+	/** Which question, so its sides can be re-read as the bank grows. */
+	cardId: string;
+	chose: "left" | "right";
+}
+
 export interface SignalState {
 	geo: readonly GeoSignal[];
 	/** Preference dimension scores, fed by trade-off swipes (§1.6). */
@@ -46,6 +70,12 @@ export interface SignalState {
 	 * state persisted before this field existed rehydrates without it.
 	 */
 	tradeoffCount?: number;
+	/**
+	 * Every trade-off answered, newest last. Drives `rankListings` — see
+	 * `TradeoffAnswer`. Optional: state persisted before this field existed
+	 * rehydrates without it.
+	 */
+	answers?: readonly TradeoffAnswer[];
 }
 
 export const EMPTY_SIGNALS: SignalState = {
@@ -195,7 +225,18 @@ export function applySwipe(
 			// dim, the discarded side is softly downweighted (§1.6).
 			const chosen = verdict === "right" ? card.right : card.left;
 			const discarded = verdict === "right" ? card.left : card.right;
-			next = { ...next, tradeoffCount: (next.tradeoffCount ?? 0) + 1 };
+			next = {
+				...next,
+				tradeoffCount: (next.tradeoffCount ?? 0) + 1,
+				answers: [
+					...(next.answers ?? []),
+					{
+						axis: card.axis,
+						cardId: card.id,
+						chose: verdict === "right" ? "right" : "left",
+					},
+				],
+			};
 			/*
 			 * Most of the v2 bank (2026-08-29) carries no `dim`: "One level /
 			 * Two stories" is a measurable property of the house, not one of the

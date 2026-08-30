@@ -48,7 +48,7 @@ import type { FeedCardV3 } from "../../lib/feed/card-types";
 import { deckKey } from "../../lib/feed/deck-key";
 import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
-import { generateFeed } from "../../lib/feed/generate-feed";
+import { generateFeed, movedUpCount } from "../../lib/feed/generate-feed";
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
 import { CARD_TAP_TARGET } from "../../lib/gesture/tap-slot";
 import { useEventQueue } from "../../state/event-queue";
@@ -352,6 +352,25 @@ export default function FeedScreen() {
 		appendPage();
 	}, [remaining, deck.length, exhausted, fetchMore, appendPage]);
 
+	/**
+	 * The one line a trade-off answer earns back.
+	 *
+	 * 32 questions ask a great deal of a buyer, and until now a vote landed in
+	 * `signals` and produced nothing they could see. This says what actually
+	 * changed, with the real count — never "we'll remember that", which is the
+	 * kind of reassurance an app says when nothing happened.
+	 *
+	 * Shown ONLY when homes really moved. A question whose field the mirror has
+	 * not landed yet reorders nothing, and claiming otherwise would be the lie
+	 * this line exists to avoid.
+	 */
+	const [echo, setEcho] = useState<string | null>(null);
+	useEffect(() => {
+		if (echo === null) return;
+		const t = setTimeout(() => setEcho(null), 3200);
+		return () => clearTimeout(t);
+	}, [echo]);
+
 	const onDecision = useCallback(
 		(decision: "left" | "right", card: FeedCardV3) => {
 			const at = Date.now();
@@ -372,6 +391,16 @@ export default function FeedScreen() {
 			);
 
 			recordSwipe(card, decision, at);
+
+			if (card.kind === "tradeoff") {
+				const moved = movedUpCount(pool.listings, card, decision);
+				const side = decision === "right" ? card.right : card.left;
+				setEcho(
+					moved > 0
+						? `${side.label} · ${moved} ${moved === 1 ? "home" : "homes"} moved up your feed`
+						: null,
+				);
+			}
 			// A real swipe IS the discovery — the hint never plays again. Only
 			// reached by a committed PAN; every surviving kind commits.
 			recordSwipeHint();
@@ -385,7 +414,9 @@ export default function FeedScreen() {
 			sessionN,
 			recordSwipe,
 			recordSwipeHint,
-			pool.geoUnits,
+			// `movedUpCount` reads the loaded listings to count what the answer
+			// promoted. `geoUnits` was the stale entry it replaced.
+			pool.listings,
 		],
 	);
 
@@ -635,6 +666,13 @@ export default function FeedScreen() {
 						capability={capability}
 					/>
 				)}
+				{echo !== null && (
+					<View style={styles.echo} pointerEvents="none">
+						<Text style={styles.echoText} numberOfLines={2}>
+							{echo}
+						</Text>
+					</View>
+				)}
 				{/*
 				 * Paused glyph, centred on the card. Drawn here rather than in the
 				 * faces: `suspended` also covers "an explore page is over us",
@@ -661,6 +699,24 @@ const styles = StyleSheet.create({
 	 * the card fills the available height. `flex: 1` + centering keeps the
 	 * stack vertically centred and the card stretching edge to edge.
 	 */
+	/**
+	 * The answer echo. Absolutely positioned at the FOOT of the stage, in the
+	 * paper the card floats on — the card is `CARD_FRAME_RATIO` of the stage and
+	 * the slack below it is where this fits without covering anything.
+	 */
+	echo: {
+		position: "absolute",
+		left: 24,
+		right: 24,
+		bottom: 6,
+		alignItems: "center",
+		zIndex: 5,
+	},
+	echoText: {
+		...textStyles.footnote,
+		color: colors.ink2,
+		textAlign: "center",
+	},
 	stackWrap: {
 		flex: 1,
 		alignItems: "center",
