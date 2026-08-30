@@ -1,57 +1,112 @@
 # iOS Release Runbook
 
-Owner-approved plan (2026-08-23): company Apple account → EAS build →
-TestFlight → App Store. This file is the working checklist; tick items off in
-PRs as they land. The long pole is Apple's own process, not code — start
-Stage 0 immediately, everything else parallelizes.
+Plan: Apple Developer Program (**Individual**) → EAS cloud build → TestFlight →
+App Store. This file is the working checklist; tick items off in PRs as they
+land. The long pole is Apple's own process, not code.
 
-## Stage 0 — Apple Developer enrollment (OWNER, ~1–2 weeks for a company)
+**Revised 2026-08-30**: the original (2026-08-23) version of this file assumed
+an *Organization* enrollment and a D-U-N-S number. The owner enrolled as an
+**Individual** and the $99 has been paid, so Stage 0 is now a verification
+step, not a two-week wait. Everything that changes with an individual account
+is marked ⚠ below.
 
-1. A **D-U-N-S number** for the company (free, dnb.com; 1–2 weeks if the
-   company doesn't have one — check first at
-   https://developer.apple.com/enroll/duns-lookup/).
-2. Enroll the company in the Apple Developer Program ($99/yr) at
-   https://developer.apple.com/programs/enroll/ using an Apple ID controlled
-   by the company. Enrollment as an Organization requires the D-U-N-S, legal
-   entity name, and a person with legal authority.
-3. Once approved: invite the build operator (this repo's agents run EAS; the
-   owner holds the account) — App Store Connect → Users and Access, role
-   **App Manager** is enough for uploads.
+## Stage 0 — confirm the membership is live (OWNER)
 
-## Stage 1 — build readiness (DONE in phase118, verify on next session)
+Enrollment is paid but was last seen *pending activation*. Apple takes
+24–48 h after payment; nothing below works until it flips to active.
 
-- [x] App icon `apps/mobile/assets/icon.png` — 1024², forest green
-      (#0E6B57) + DM Serif "P". **Placeholder-quality by design**: owner may
-      replace the art; keep 1024×1024 PNG, no transparency, no rounded
-      corners (iOS masks its own).
-- [x] Splash via `expo-splash-screen` plugin — green P on warm paper
-      (#F7F5F0), `assets/splash-icon.png`.
-- [x] `app.json`: `version: 1.0.0`, `ios.buildNumber: "1"`,
-      `ITSAppUsesNonExemptEncryption: false` (HTTPS-only ⇒ exempt; skips the
-      export-compliance question per upload).
+1. Sign in to https://developer.apple.com/account with **the Gmail Apple ID**.
+   ⚠ Not the old QQ address — that account is not part of this release and
+   must not be touched or merged.
+2. Membership is active when **Certificates, Identifiers & Profiles** and
+   **App Store Connect** both appear in the sidebar. Pending shows a banner
+   instead and the sidebar is bare.
+3. Note the **Team ID** (Membership details, 10 chars). Stage 2 needs it.
+4. If it is still pending >48 h after payment, contact Apple Developer
+   Support — there is no way to force it from this side, and `eas build` will
+   simply fail at the credentials step.
+
+⚠ **Individual-account consequences** the owner should decide on before Stage 3:
+
+- The **public seller name on the App Store is the owner's legal name**, not
+  "Percho". Apple only shows a company name for Organization accounts, or for
+  an individual who files a *legal entity name change* with a registered DBA /
+  trade-name certificate. If "Percho" must be the visible seller, that request
+  goes in before the app is released — it does not block TestFlight.
+- Individual accounts can still invite App Store Connect users
+  (Users and Access → role **App Manager** is enough to upload builds), so
+  adding Vivian as a tester or a build operator is fine.
+- No D-U-N-S number is needed. Ignore any instruction that mentions one.
+
+## Stage 1 — build readiness (DONE; re-verified 2026-08-30)
+
+Re-checked after the 27 mobile commits that landed between phase118 and
+phase137:
+
+- [x] `expo export --platform ios` bundles clean — 1535 modules, 4.22 MB hbc,
+      27 assets, no warnings (2026-08-30).
+- [x] `expo config --type prebuild` resolves: name `Percho`, version `1.0.0`,
+      `ios.buildNumber "1"`, `supportsTablet false`,
+      `ITSAppUsesNonExemptEncryption false`.
+- [x] Bundle identifier **`co.percho.app`**. Owner-confirmed 2026-08-30 over
+      `com.percho.app`: percho.co reverse-DNS is `co.percho.*`, and we do not
+      own percho.com. ⚠ Permanent once the App Store Connect record exists.
+- [x] App icon `apps/mobile/assets/icon.png` — 1024×1024, **no alpha channel**
+      (verified with `sips`; an alpha channel is an automatic ITMS-90717
+      rejection at upload). Forest green #0E6B57 + DM Serif "P".
+      **Placeholder-quality by design** — owner may replace the art; keep
+      1024², no transparency, no rounded corners (iOS masks its own).
+- [x] Splash via `expo-splash-screen` plugin — green P on warm paper #F7F5F0,
+      `assets/splash-icon.png` (alpha here is correct and expected).
 - [x] `eas.json`: `development` / `preview` (internal) / `production`
       (autoIncrement) profiles.
-- [x] Bundle identifier `co.percho.app` (already set).
-- [x] `expo export --platform ios` bundles clean (checked 2026-08-23).
+- [x] **No iOS permission prompts to declare.** The app requests no location,
+      camera, photo library, contacts, notifications or tracking; `MapView`
+      never sets `showsUserLocation`. So no `NS*UsageDescription` strings are
+      needed and a missing-purpose-string rejection is not a risk. If that
+      ever changes, the purpose string must land in `app.json` `infoPlist` in
+      the same PR as the API call.
+- [ ] **Not linked to an EAS project yet** — `extra.eas.projectId` is absent.
+      `eas init` in Stage 2 creates it and writes the id back into `app.json`;
+      that edit must be committed.
 
-## Stage 2 — first build + TestFlight (agent + owner's Mac, needs Stage 0)
+⚠ **Xcode is not installed on this Mac** (Command Line Tools only). That is
+fine and does not need fixing: EAS builds and submits in the cloud. Do not
+attempt `expo run:ios` or a local archive.
+
+## Stage 2 — first build + TestFlight (needs Stage 0 active)
 
 ```bash
 cd apps/mobile
-npx eas-cli login                 # owner's Apple-linked Expo account
+npx eas-cli login                 # Expo account (not the Apple ID)
+npx eas-cli init                  # links the project, writes extra.eas.projectId
+git add app.json && git commit -m "phaseN: link EAS project"
+
 npx eas-cli build --platform ios --profile production
-# First run walks through credentials: let EAS manage certs + profiles.
+# First run prompts for the Apple ID (the Gmail one) and walks credentials.
+# Let EAS manage the distribution cert + provisioning profile.
+
 npx eas-cli submit --platform ios --latest
 ```
 
-- App Store Connect: create the app record (name **Percho**, bundle
-  `co.percho.app`, primary language en-US) — EAS submit can create it or do
-  it by hand first.
-- Internal TestFlight: add owner + Vivian as internal testers → installable
-  minutes after processing, no review.
+App Store Connect app record — create it by hand first, or let `eas submit`
+create it. Either way the values are:
+
+| Field | Value |
+|---|---|
+| Name | `Percho` |
+| Primary language | English (U.S.) |
+| Bundle ID | `co.percho.app` |
+| SKU | `percho-ios-001` (internal only, never shown to users) |
+| Version | `1.0.0` / build `1` |
+
+Then:
+
+- Internal TestFlight: add the owner + Vivian as internal testers →
+  installable minutes after processing, **no review**.
 - External testers require one Beta App Review (~1 day).
-- Device pass: the three tabs (Saved / You / Search focus), video feed,
-  community tour scrub — the things only a phone shows.
+- Device pass on the build: the three tabs (Saved / You / Search focus), video
+  feed, community tour scrub — the things only a phone shows.
 
 ## Stage 3 — App Store submission
 
@@ -59,7 +114,8 @@ Metadata checklist (App Store Connect):
 
 | Item | Value / note |
 |---|---|
-| Privacy policy URL | https://www.percho.co/privacy (live, verified 200) |
+| Privacy policy URL | https://www.percho.co/privacy (verified 200, 2026-08-30) |
+| **Support URL** (required) | https://www.percho.co/contact (verified 200, 2026-08-30). ⚠ `/support` is a 404 — do not enter it. |
 | App Privacy labels | **Data Not Collected** — no accounts, no analytics SDK, no ads, no tracking; the app talks only to percho.co for listings. Owner confirms before submitting: this claim must stay true. |
 | Category | Lifestyle (secondary: none) |
 | Age rating | 4+ (questionnaire: all "No") |
@@ -67,6 +123,7 @@ Metadata checklist (App Store Connect):
 | Description / keywords | Draft at submission time; pitch = swipe-first home discovery, video tours. |
 | Review notes | "No account or login — the app is fully usable anonymously on launch." |
 | ATT prompt | None (no tracking) — do not add one. |
+| Seller name | ⚠ Owner's legal name unless the DBA request in Stage 0 is filed. |
 
 Known review risks (first submission commonly bounces once; budget 1–2 wks):
 - Guideline 2.1 (performance): make sure production API has inventory when
@@ -74,6 +131,9 @@ Known review risks (first submission commonly bounces once; budget 1–2 wks):
 - 4.2 (minimum functionality): unlikely — the app is feature-complete.
 - 5.1.1 (data collection): clean while there are no accounts; revisit labels
   the day accounts land.
+- `app/dev-foundation.tsx` ships in the bundle but nothing links to it and it
+  is not a tab, so a reviewer cannot reach it. Low risk; delete it if a
+  reviewer ever cites 2.2 (beta content).
 
 ## Later — explicitly out of scope for v1
 
