@@ -500,3 +500,60 @@ describe("parseListing — neighborhood scores", () => {
 		expect(card?.scores).toBeUndefined();
 	});
 });
+
+/**
+ * The wire fields the trade-off bank ranks on.
+ *
+ * These exist because dropping one is INVISIBLE: the engine's own tests build
+ * listings by hand with the fields set, so they keep passing while the parser
+ * silently discards what the server actually sends. That is exactly what
+ * happened between 2026-08-29 and 08-30 — five matcher questions scored nothing
+ * on device while every unit test was green.
+ */
+describe("structured axes off the wire", () => {
+	const wire = (over: Record<string, unknown> = {}) => ({
+		pool: {
+			geoUnits: [],
+			communities: [],
+			listings: [
+				{
+					id: "l1",
+					slug: "l1",
+					address: "1 Peachtree St",
+					priceLabel: "$400,000",
+					heroUrl: "https://img/l1.jpg",
+					bedBathSqft: "3 bd · 2 ba · 1,800 sqft",
+					price: 400000,
+					yearBuilt: 2012,
+					sqft: 1800,
+					beds: 3,
+					...over,
+				},
+			],
+		},
+		done: false,
+	});
+
+	it("keeps yearBuilt, sqft and beds", () => {
+		const l = parsePoolResponse(wire()).pool.listings[0];
+		expect(l?.yearBuilt).toBe(2012);
+		expect(l?.sqft).toBe(1800);
+		expect(l?.beds).toBe(3);
+	});
+
+	it("omits them rather than defaulting when the row has none", () => {
+		const l = parsePoolResponse(
+			wire({ yearBuilt: undefined, sqft: undefined, beds: undefined }),
+		).pool.listings[0];
+		// A missing year must be ABSENT, never 0 — a 0 would sort the home onto
+		// the "older" side of every era question.
+		expect(l?.yearBuilt).toBeUndefined();
+		expect(l?.sqft).toBeUndefined();
+		expect(l?.beds).toBeUndefined();
+	});
+
+	it("rejects a non-numeric year rather than coercing it", () => {
+		const l = parsePoolResponse(wire({ yearBuilt: "2012" })).pool.listings[0];
+		expect(l?.yearBuilt).toBeUndefined();
+	});
+});

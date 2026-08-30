@@ -16,6 +16,59 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-30 00:45 UTC — phase137: the DTO was dropping the fields the whole bank ranks on
+
+**Objective**: owner asked 「how to verify this?」 about phase136's ranking.
+Building the verification found the feature was inert.
+
+**The bug**: `pool-dto.ts` never parsed `yearBuilt`, `sqft` or `beds`. The
+server has sent them since phase131; the client discarded all three. Every
+`SideMatch` therefore evaluated against `undefined`, so the five matcher
+questions scored nothing and reordered nothing. **P0 shipped doing exactly
+what it was written to fix.**
+
+**How it hid for two phases**: phase131 applied that edit with a Python
+`str.replace` and no assertion. The pattern did not match — the file had since
+been reformatted across three lines — and `replace` returns the string
+unchanged rather than raising. Nothing downstream caught it, because
+`generate-feed.test.ts` builds its listings by hand with the fields already set:
+**every unit test exercised the engine on data the parser could never produce.**
+
+**Actions**:
+- `lib/feed/pool-dto.ts` — parse the three axes.
+- `lib/feed/pool-dto.test.ts` — three tests off a WIRE-shaped payload: the
+  fields survive, a row without them yields `undefined` rather than 0 (a 0 year
+  would sort the home onto the "older" side of every era question), and a
+  string year is rejected rather than coerced.
+
+**Verification, against the live 40-listing pool** — share of the next page
+falling on the side just chosen, before → after:
+
+    to-era                 Newer build             0% → 100%   (8/40 qualify)
+    to-era                 Older character        71% → 100%  (25/40)
+    to-beds-vs-rooms       Another bedroom         0% →  29%   (3/40)
+    to-beds-vs-rooms       Bigger rooms           71% → 100%  (19/40)
+    to-spread-vs-upkeep    Room to spread out     14% → 100%  (19/40)
+    to-spread-vs-upkeep    Less to keep up        57% → 100%  (19/40)
+    to-space-vs-price      More space             14% → 100%  (19/40)
+    to-topofbudget-vs-room Top of your budget      0% → 100%  (18/40)
+
+"Another bedroom" tops out at 29% because only three homes in the pool have
+four bedrooms — the ranking is working, the inventory is thin.
+
+**Learnings**, two, both about verification rather than about ranking:
+- **A scripted edit that does not assert its own match is a silent no-op.**
+  Every `str.replace` in a patch script needs `assert old in h` — phase131 had
+  it on some edits and not this one, and the one without is the one that broke.
+- **Unit tests that construct their own fixtures cannot see a parser drop a
+  field.** The gap between "what the server sends" and "what the engine reads"
+  needs at least one test that starts from a wire-shaped payload. That is now
+  `pool-dto.test.ts`'s job.
+
+**Next steps**: unchanged — the ceiling is the ~40 loaded rows, and 22 of 32
+questions still reorder nothing until the MLS mirror lands their fields.
+
+
 ## 2026-08-29 14:10 UTC — phase136: the trade-off answers finally rank something
 
 **Objective**: owner approved P0 after the proposal. The finding that motivated
