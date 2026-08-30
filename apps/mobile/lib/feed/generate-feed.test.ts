@@ -7,11 +7,11 @@ import type {
 } from "./card-types";
 import { TRADEOFFS } from "./content";
 import type { FeedPool } from "./generate-feed";
-import { generateFeed, mixFor } from "./generate-feed";
+import { answerScore, generateFeed, mixFor } from "./generate-feed";
 import type { GeoUnit } from "./geo-unit";
 import { STAGE_MIX, WINDOW } from "./ratios";
 import type { SignalState } from "./signals";
-import { EMPTY_SIGNALS } from "./signals";
+import { EMPTY_SIGNALS, applySwipe } from "./signals";
 
 // ─── Fixtures: shaped like the real Supabase rows, no invented stats ──────────
 
@@ -285,13 +285,22 @@ describe("the v2 trade-off bank", () => {
 	/** Homes with the era axis populated on both sides of 2005/2000. */
 	const ERA_POOL: FeedPool = {
 		geoUnits: CITIES,
+		/*
+		 * Ids are chosen so the DEFAULT order (alphabetical, the engine's
+		 * tie-break) is the opposite of what answering "Newer build" should
+		 * produce. A fixture whose default order already matches the expected
+		 * one cannot tell a working reorder from a no-op — the first version of
+		 * this pool did exactly that and the rule-03 test passed vacuously.
+		 */
 		listings: [
-			built("n1", 2012, 400_000),
-			built("n2", 2008, 420_000),
-			built("n3", 2006, 380_000),
-			built("o1", 1998, 300_000),
-			built("o2", 1985, 280_000),
-			built("o3", 1972, 260_000),
+			built("a-old-1998", 1998, 300_000),
+			built("a-old-1995", 1995, 290_000),
+			built("a-old-1985", 1985, 280_000),
+			built("a-old-1978", 1978, 270_000),
+			built("a-old-1972", 1972, 260_000),
+			built("b-new-2012", 2012, 400_000),
+			built("b-new-2008", 2008, 420_000),
+			built("b-new-2006", 2006, 380_000),
 		],
 		communities: [community("c1")],
 		dimPhotos: {},
@@ -320,12 +329,12 @@ describe("the v2 trade-off bank", () => {
 
 	it("counts each side from the structured axis, not from prose", () => {
 		// `to-era` splits on `yearBuilt`, which no dim and no agent adjective can
-		// supply. Three homes a side, so both sides earn a median.
+		// supply. Both sides clear the three-home floor, so both earn a median.
 		const card = firstTradeoff(ERA_POOL, EXCEPT_ERA);
 		expect(card?.id).toBe("to-era");
 		expect(card?.left.homes).toBe(3);
 		expect(card?.left.medianLabel).toBe("$400,000");
-		expect(card?.right.homes).toBe(3);
+		expect(card?.right.homes).toBe(5);
 		expect(card?.right.medianLabel).toBe("$280,000");
 	});
 
@@ -471,6 +480,95 @@ describe("the v2 trade-off bank", () => {
 		const n = cards.filter((c) => c.kind === "tradeoff").length;
 		expect(n).toBeLessThanOrEqual(15);
 		expect(n).toBeGreaterThanOrEqual(10);
+	});
+
+	it("an answer actually reorders the feed — rule 03, enforced", () => {
+		/*
+		 * The bank's third rule is "it must move the feed": a question whose two
+		 * answers rank the same homes is decoration. Now that answers score, the
+		 * rule is a test rather than a judgement call.
+		 */
+		const before = generateFeed({
+			stage: 4,
+			signals: EMPTY_SIGNALS,
+			pool: ERA_POOL,
+			seenIds: [],
+			count: 20,
+		}).cards.filter((c) => c.kind === "listing");
+
+		const answered = applySwipe(
+			EMPTY_SIGNALS,
+			TRADEOFFS.find((q) => q.id === "to-era") as TradeoffCardV3,
+			"left", // "Newer build"
+		);
+		const after = generateFeed({
+			stage: 4,
+			signals: answered,
+			pool: ERA_POOL,
+			seenIds: [],
+			count: 20,
+		}).cards.filter((c) => c.kind === "listing");
+
+		const moved = before.filter((c, i) => after[i]?.id !== c.id).length;
+		expect(moved).toBeGreaterThanOrEqual(2);
+
+		/*
+		 * And it moved the RIGHT way — measured as a DISTRIBUTION, not as a
+		 * strict order.
+		 *
+		 * A `SideMatch` is a membership test rather than a gradient, so every
+		 * home built after 2005 scores alike and keeps its order among the
+		 * others — the assertion is about which SIDE leads, never which id.
+		 *
+		 * This is also the test that caught `firstUnseen`'s rotation defeating
+		 * the ranking entirely: before `hasStatedPreference`, positions moved
+		 * and the front of the deck did not.
+		 */
+		expect(after.slice(0, 3).every((c) => (c.yearBuilt ?? 0) >= 2005)).toBe(
+			true,
+		);
+	});
+
+	it("an answer never outranks a house the buyer liked", () => {
+		// A stated preference reorders; a thumb decides. `o3` is the oldest home
+		// in the pool and the answer is "newer", but it was liked.
+		const answered = applySwipe(
+			{ ...EMPTY_SIGNALS, likedListingIds: ["a-old-1972"] },
+			TRADEOFFS.find((q) => q.id === "to-era") as TradeoffCardV3,
+			"left",
+		);
+		const ranked = generateFeed({
+			stage: 4,
+			signals: answered,
+			pool: ERA_POOL,
+			seenIds: [],
+			count: 20,
+		}).cards.filter((c) => c.kind === "listing");
+		// `-100` keeps a liked house OUT of the fresh deck's front, whatever the
+		// answers say — it is demoted, not promoted, and stays demoted.
+		expect(ranked.map((c) => c.id).indexOf("a-old-1972")).not.toBe(0);
+	});
+
+	it("records the answer as a fact, not a weight", () => {
+		const card = TRADEOFFS.find((q) => q.id === "to-era") as TradeoffCardV3;
+		const s = applySwipe(EMPTY_SIGNALS, card, "right");
+		expect(s.answers).toEqual([
+			{ axis: "year", cardId: "to-era", chose: "right" },
+		]);
+		// Neither side of `to-era` carries a dim — nothing to bump, and nothing
+		// invented.
+		expect(s.dims).toEqual({});
+	});
+
+	it("scores a home neutral when it has no data for the axis", () => {
+		// A listing with no `yearBuilt` must not be buried for OUR missing data.
+		const answered = applySwipe(
+			EMPTY_SIGNALS,
+			TRADEOFFS.find((q) => q.id === "to-era") as TradeoffCardV3,
+			"left",
+		);
+		const medians = { sqft: 1600, price: 350_000, sqftPerBed: 500 };
+		expect(answerScore(listing("blank"), answered, medians)).toBe(0);
 	});
 
 	it("asks nothing at all when the pool is bare", () => {

@@ -9,6 +9,8 @@
 ## v1.3 — Opening a home now answers "does this fit me?"
 
 ### 2026-08-29
+- **Your either/or answers now actually change the feed.** Pick "newer build" and newer homes move up next — with a line under the card telling you how many did. Until now those answers were recorded and nothing happened; they never reordered anything. Answers you've already given start counting the moment we have the data behind a question, and what you swipe right on still outweighs anything you answered
+
 - **The buyer study can now be answered on the page.** The questionnaire at percho.co/research is a real form: tap the options, rate the four features, leave a WeChat name for the thank-you, and submit — answers are saved for analysis, and a half-finished page survives a refresh
 - **The either/or cards swipe smoothly again, and both sides now show the same number of photos.** They were downloading full-size images for every thumbnail — about seven times more than they needed — which made those cards stutter. One side showing three photos against the other's one was a bug, not a hint about which to pick
 
