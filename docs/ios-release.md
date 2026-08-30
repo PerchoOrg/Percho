@@ -167,26 +167,49 @@ Export compliance resolved itself: the build reports
 - Internal testers install minutes after Apple finishes processing, **no
   review**. Processing took ~90 s for this build, not the 5–10 min Apple
   quotes.
+- `hasAccessToAllBuilds` cannot be PATCHed onto an existing group (409 —
+  create-time only), so a new build does not appear automatically. Pass
+  `--groups Internal` on `eas submit` instead of recreating the group.
 - External testers require one Beta App Review (~1 day).
 - Device pass on the build: the three tabs (Saved / You / Search focus), video
   feed, community tour scrub — the things only a phone shows.
 
-## Stage 3 — App Store submission
+## Stage 3 — App Store submission (partially filled 2026-08-30)
 
-Metadata checklist (App Store Connect):
+Owner 2026-08-30: "app 还没有做完，今天不着急上线，现在能稳定测试就行" — so the
+fields that do not depend on the finished product are filled, and the ones
+that describe the shipped product are deliberately left empty.
 
-| Item | Value / note |
+App Store Connect version record: `da554336-…`, state `PREPARE_FOR_SUBMISSION`.
+
+### Done (set over the App Store Connect API)
+
+| Item | Value |
 |---|---|
-| Privacy policy URL | https://www.percho.co/privacy (verified 200, 2026-08-30) |
-| **Support URL** (required) | https://www.percho.co/contact (verified 200, 2026-08-30). ⚠ `/support` is a 404 — do not enter it. |
-| App Privacy labels | **Data Not Collected** — no accounts, no analytics SDK, no ads, no tracking; the app talks only to percho.co for listings. Owner confirms before submitting: this claim must stay true. |
-| Category | Lifestyle (secondary: none) |
-| Age rating | 4+ (questionnaire: all "No") |
-| Screenshots | 6.9" (1320×2868) required; 6.5" optional. Feed card, community tour, listing explore, Search map, Saved. Take on device/simulator. |
-| Description / keywords | Draft at submission time; pitch = swipe-first home discovery, video tours. |
-| Review notes | "No account or login — the app is fully usable anonymously on launch." |
-| ATT prompt | None (no tracking) — do not add one. |
-| Seller name | ⚠ Owner's legal name unless the DBA request in Stage 0 is filed. |
+| Version string | `1.0.0` — was auto-created as `1.0`, which would not match the build's `CFBundleShortVersionString` |
+| Support URL | https://www.percho.co/contact (`/support` is a 404 — do not use it) |
+| Privacy policy URL | https://www.percho.co/privacy |
+| Primary category | `LIFESTYLE` |
+| Age rating | all-none questionnaire → 4+ |
+
+### Deliberately still empty — needs the finished app
+
+| Item | Why it waits |
+|---|---|
+| Description / keywords / subtitle / promotional text | Copy should describe what actually ships |
+| Screenshots | 6.9" iPhone **1320×2868**, up to 10, must be the real UI. No Xcode on this Mac (Command Line Tools only) ⇒ no simulator; capture on the owner's device. Planned set: feed card, community tour, listing explore, Search map, Saved. |
+| Build attached to the version | The shipping build will not be 1.0.0 (2) |
+| **App Privacy labels** | Currently true that nothing is collected, but the app is unfinished. This is a legal attestation — set it once the feature set is frozen, and re-check the moment accounts or analytics land. |
+| Seller name | ⚠ Individual account ⇒ shows **Qiaoxuan Xue**, not "Percho". Needs a legal-entity-name-change request with a DBA certificate, which has a waiting period — start it *before* submission, not at it. |
+
+### Age rating questionnaire — actual API field types
+
+Apple's current questionnaire rejects the older field set. `seventeenPlus`
+no longer exists. These eight are **booleans**, not `NONE` enums, and all are
+required: `userGeneratedContent`, `messagingAndChat`, `advertising`,
+`parentalControls`, `healthOrWellnessTopics`, `ageAssurance`, `lootBox`,
+`gambling`. `gunsOrOtherWeapons` is still a string enum. All were set to
+`false` / `NONE` for Percho.
 
 Known review risks (first submission commonly bounces once; budget 1–2 wks):
 - Guideline 2.1 (performance): make sure production API has inventory when
