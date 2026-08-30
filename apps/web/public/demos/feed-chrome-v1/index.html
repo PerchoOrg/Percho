@@ -102,6 +102,19 @@ body.only{padding:0;background:var(--bg)} body.only .cap{display:none} body.only
 .soundChrome{position:absolute;top:65px;right:16px;z-index:120}
 .soundChrome .d{width:32px;height:32px;border-radius:16px;background:var(--glass);border:1px solid rgba(23,23,21,.08);display:flex;align-items:center;justify-content:center;color:var(--ink)}
 .soundCard{position:absolute;top:62px;right:12px;width:40px;height:40px;border-radius:20px;background:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;z-index:2;color:#181B18}
+.capV{position:absolute;top:12px;right:12px;width:38px;border-radius:19px;background:rgba(255,255,255,.85);z-index:2;color:#181B18;overflow:hidden}
+.capV .u{height:37px;display:flex;align-items:center;justify-content:center}
+.capV .line{height:1px;background:rgba(24,27,24,.10);margin:0 8px}
+.capH{position:absolute;top:12px;right:12px;height:38px;border-radius:19px;background:rgba(255,255,255,.85);z-index:2;color:#181B18;display:flex;align-items:center;overflow:hidden}
+.capH .u{width:37px;height:38px;display:flex;align-items:center;justify-content:center}
+.capH .line{width:1px;align-self:stretch;background:rgba(24,27,24,.10);margin:8px 0}
+.fadeDisc{opacity:.35}
+.pauseWrap{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.pauseDisc{width:64px;height:64px;border-radius:32px;background:var(--glass);display:flex;align-items:center;justify-content:center}
+.pauseTri{width:0;height:0;margin-left:5px;border-top:12px solid transparent;border-bottom:12px solid transparent;border-left:20px solid var(--ink)}
+.pausePill{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;border-radius:17px;background:rgba(250,246,240,.92);color:var(--ink);font:600 13px var(--ui)}
+.swapSave{display:flex;align-items:center;justify-content:center;width:30px;height:30px;margin-right:2px}
+.note{position:absolute;left:0;right:0;bottom:0;height:8.5%;display:flex;align-items:center;justify-content:center;font:400 12.5px var(--ui);color:var(--ink3);z-index:5;text-align:center;padding:0 12px}
 /* ---- you tab ---- */
 .you{padding:0 20px}
 .you h1{font:700 28px var(--serif);color:var(--ink);margin:6px 0 14px}
@@ -139,6 +152,8 @@ const svg = {
   chev:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
   check:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
   globe:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>',
+  volDark:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#181B18" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>',
+  bookmarkW:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
   vol:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>',
   mute:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>',
 };
@@ -153,16 +168,21 @@ function listingCard(img, o={}){
   return `<div class="${cls}">
     <img class="media" src="${img}">
     <div class="badge">Listing</div>
-    <div class="save">${svg.bookmark}</div>
+    ${(o.chrome==='swap'||o.chrome==='capV'||o.chrome==='capH')?'':`<div class="save">${svg.bookmark}</div>`}
     ${o.sound==='card'?`<div class="soundCard">${svg.vol}</div>`:''}
+    ${o.chrome==='capV'?`<div class="capV"><div class="u">${svg.volDark}</div><div class="line"></div><div class="u">${svg.bookmark}</div></div>`:''}
+    ${o.chrome==='capH'?`<div class="capH"><div class="u">${svg.volDark}</div><div class="line"></div><div class="u">${svg.bookmark}</div></div>`:''}
+    ${o.chrome==='fade'?`<div class="soundCard fadeDisc">${svg.volDark}</div>`:''}
+    ${o.chrome==='swap'?`<div class="save">${svg.volDark}</div>`:''}
     <div class="scrim"></div>
     ${o.label?`<div class="lab">Like</div>`:''}
+    ${o.chrome==='pause'?`<div class="pauseWrap"><div class="pauseDisc"><div class="pauseTri"></div></div><div class="pausePill">${svg.volDark} Sound on</div></div>`:''}
     <div class="info">
       <div class="price">${o.price||'$247,000'}</div>
       <div class="addr">${o.addr||'4123 Islington Way · Duluth, GA 30096'}</div>
       <div class="brow">
         <div class="specs"><span>${o.bd||'2 bd'}</span><i></i><span>${o.ba||'3 ba'}</span><i></i><span>${o.sq||'1,280 sqft'}</span></div>
-        <div class="cta">Explore ${svg.arrow}</div>
+        <div class="cta">${o.chrome==='swap'?`<span class="swapSave">${svg.bookmarkW}</span>`:''}Explore ${svg.arrow}</div>
       </div>
     </div>
   </div>`;
@@ -218,13 +238,14 @@ function feed(o){
   } else if(o.card==='community'){
     cards += communityCard(IMG.c3);
   } else {
-    cards += listingCard(IMG.l1,{sound:o.sound});
+    cards += listingCard(IMG.l1,{sound:o.sound,chrome:o.chrome});
   }
   const foot = o.drag==='foot' ? `<div class="footWord"><span class="disc">${svg.check}</span>Like</div>` : '';
   const echo = o.echo ? `<div class="echo center">${o.echo}</div>` : '';
+  const note = o.note ? `<div class="note">${o.note}</div>` : '';
   const sound = o.sound==='chrome' ? `<div class="soundChrome"><div class="d">${svg.vol}</div></div>` : '';
   return `<div class="phone">${statusBar()}<div class="chrome"><span class="wordmark">Percho</span></div>${chromeExtra}${sound}
-    <div class="stage"><div class="stack">${slack}${cards}${foot}${echo}</div></div>
+    <div class="stage"><div class="stack">${slack}${cards}${foot}${echo}${note}</div></div>
     ${tabbar('feed')}${o.sheet?sheet():''}</div>`;
 }
 function youTab(){
@@ -257,6 +278,11 @@ const FRAMES = {
   D3:{group:'feedback',title:'D3 · Word in the foot band',sub:'The card stays clean; the verdict appears in the paper under it.',html:()=>feed({scope:'crumb',drag:'foot'})},
   F3:{group:'system',title:'F3 · Sound at the PAGE top-right',sub:'32pt glass disc in the wordmark row corner. Reverses the 2026-08-14 “both top corners stay empty” rule. Trade-off echo stays in the foot band.',html:()=>feed({scope:'crumb',echo:'Move-in ready · 6 homes moved up your feed',sound:'chrome'})},
   F4:{group:'system',title:'F4 · Sound on the CARD, under the bookmark',sub:'Same 40pt disc language as the save button — the explore hero’s placement, brought to the card. Page corners stay empty.',html:()=>feed({scope:'crumb',echo:'Move-in ready · 6 homes moved up your feed',sound:'card'})},
+  G1:{group:'sound',title:'G1 · One capsule, stacked',sub:'A single 40×80 disc-capsule with a hairline between the two glyphs. One object in the corner, not two buttons.',html:()=>feed({scope:'crumb',chrome:'capV'})},
+  G2:{group:'sound',title:'G2 · One capsule, side by side',sub:'Same idea, laid horizontally. Shallower, sits level with the LISTING badge.',html:()=>feed({scope:'crumb',chrome:'capH'})},
+  G3:{group:'sound',title:'G3 · Sound auto-hides',sub:'Shown mid-fade. Appears for ~2s when a card becomes top or on tap, then only the bookmark stays. Nothing permanent added.',html:()=>feed({scope:'crumb',chrome:'fade',note:'the sound disc has ~1s left before it fades out'})},
+  G4:{group:'sound',title:'G4 · Sound lives in the pause state',sub:'Tap the card = pause (already shipped). The mute control appears with the pause glyph — zero resident chrome on a playing card.',html:()=>feed({scope:'crumb',chrome:'pause',note:'the card at rest looks exactly like today — bookmark only'})},
+  G5:{group:'sound',title:'G5 · Swap: sound top-right, bookmark to the foot',sub:'Exactly one disc in the corner. The save moves next to Explore, on the bottom row.',html:()=>feed({scope:'crumb',chrome:'swap'})},
   Y1:{group:'system',title:'Y1 · History in the You tab (instead of Undo)',sub:'Recent verdicts with “Bring back”. No toast on the feed at all.',html:()=>youTab()},
 };
 function fit(){const w=Number(new URLSearchParams(location.search).get('w'))||window.innerWidth; const k=Math.min(1,(w-16)/393); document.querySelectorAll('.frame, body.only .phone').forEach(el=>{el.style.zoom=String(k);});}
@@ -267,7 +293,7 @@ const root = document.getElementById('root');
 if(only){ document.body.classList.add('only'); root.innerHTML = FRAMES[only].html(); }
 else {
   const keys = Object.keys(FRAMES).filter(k=>!group||FRAMES[k].group===group);
-  const nav = `<div class="nav"><h1>Percho feed chrome — demo frames</h1><div>Scope: <a href="?group=scope">S1–S4</a> Drag feedback: <a href="?group=feedback">D1–D3</a> System: <a href="?group=system">F3 · F4 · Y1</a> <a href="./">All</a></div><div>Jump: ${Object.keys(FRAMES).map(k=>`<a href="#${k}">${k}</a>`).join('')}</div></div>`;
+  const nav = `<div class="nav"><h1>Percho feed chrome — demo frames</h1><div>Scope: <a href="?group=scope">S1–S4</a> Drag feedback: <a href="?group=feedback">D1–D3</a> Sound: <a href="?group=sound">G1–G5</a> System: <a href="?group=system">F3 · F4 · Y1</a> <a href="./">All</a></div><div>Jump: ${Object.keys(FRAMES).map(k=>`<a href="#${k}">${k}</a>`).join('')}</div></div>`;
   root.innerHTML = nav + `<div class="gallery">${keys.map(k=>`<div class="frame" id="${k}"><div class="cap">${FRAMES[k].title}<small>${FRAMES[k].sub}</small></div>${FRAMES[k].html()}</div>`).join('')}</div>`;
 }
 fit();
