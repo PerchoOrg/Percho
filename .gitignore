@@ -82,3 +82,12 @@ __pycache__
 
 # Real-ESRGAN ONNX weights (66MB) — scripts/render-worker/models/fetch.sh
 scripts/render-worker/models/*.onnx
+
+# Apple signing material. The App Store Connect API key (.p8) is downloadable
+# exactly once and grants uploads to the whole account; keep it outside the
+# repo (~/.appstoreconnect/private_keys/) and never let these land in a commit.
+*.p8
+AuthKey_*.p8
+*.p12
+*.cer
+*.mobileprovision
