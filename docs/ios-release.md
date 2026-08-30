@@ -147,10 +147,26 @@ The alternative, if this becomes a chore: run `eas credentials --platform
 ios` once interactively and store the ASC key on Expo's servers — then the
 eas.json edit is unnecessary. It needs a TTY but *not* Apple 2FA.
 
-### TestFlight
+### TestFlight (live 2026-08-30)
 
-- Internal testers install minutes after Apple finishes processing (5–10 min
-  after upload), **no review**.
+Set up over the App Store Connect API, because `eas submit
+--auto-testflight-setup` silently skips ("No complete App Store Connect
+credentials") — it reads the `EXPO_ASC_*` env vars, which were not exported
+in that shell.
+
+| Thing | Value |
+|---|---|
+| Internal group | `Internal` — `747516ea-e7ef-4879-8e28-60edb11bc76c` |
+| Build attached | 1.0.0 (2) — `a40309ad-224b-4c1f-959d-f7b213f4f7f3`, `processingState VALID` |
+| Tester | royxue812@gmail.com (Qiaoxuan Xue), state `INVITED` |
+
+Export compliance resolved itself: the build reports
+`usesNonExemptEncryption: false`, so `ITSAppUsesNonExemptEncryption` in
+`app.json` did its job and there is no per-upload question.
+
+- Internal testers install minutes after Apple finishes processing, **no
+  review**. Processing took ~90 s for this build, not the 5–10 min Apple
+  quotes.
 - External testers require one Beta App Review (~1 day).
 - Device pass on the build: the three tabs (Saved / You / Search focus), video
   feed, community tour scrub — the things only a phone shows.
