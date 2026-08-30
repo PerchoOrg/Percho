@@ -16,6 +16,66 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-30 02:10 UTC — iOS release: individual enrollment, runbook corrected, build re-verified
+
+**Objective**: owner — "prepare and publish the Percho iOS app through
+TestFlight and eventually the App Store". New facts from the owner: the Apple
+Developer Program membership is **Individual** (not the company account
+phase118 planned for), the $99 is paid, activation was last seen *pending*,
+and the Apple ID is the Gmail address — the old QQ address is out of scope.
+
+**Actions** (`phase138/ios-release-individual`):
+- Re-ran Stage 1 build readiness after the 27 mobile commits between phase118
+  and phase137: `expo export --platform ios` bundles clean (1535 modules,
+  4.22 MB hbc, 27 assets, no warnings); `expo config --type prebuild` resolves
+  with version 1.0.0 / buildNumber 1 / `ITSAppUsesNonExemptEncryption false`.
+- `sips` on `assets/icon.png`: 1024×1024, `hasAlpha: no` — passes the
+  ITMS-90717 alpha-channel check that rejects at upload, not at review.
+- Audited the app for permission-gated APIs: no location, camera, photo
+  library, contacts, notifications or tracking, and `MapView` never sets
+  `showsUserLocation`. No `NS*UsageDescription` strings are required.
+- Rewrote `docs/ios-release.md`: Stage 0 is now "confirm the membership is
+  live" instead of "get a D-U-N-S and enroll a company".
+
+**Decisions**:
+- **Bundle ID stays `co.percho.app`.** The owner's brief said
+  `com.percho.app`; asked, and he confirmed keeping the existing value.
+  percho.co reverse-DNS is `co.percho.*` and we do not own percho.com. This
+  is permanent once the App Store Connect record exists, which is why it was
+  worth one question rather than a silent pick.
+- Did not add Apple credentials to `eas.json`. `submit.production` stays
+  empty; the Apple ID and Team ID get supplied interactively at first submit
+  rather than committed to the repo.
+- Did not install Xcode. Only Command Line Tools are on this host, and EAS
+  builds in the cloud — a local toolchain is not on the critical path.
+
+**Issues**:
+- `https://www.percho.co/support` is a **404**. The old runbook's metadata
+  table never listed a Support URL, which App Store Connect requires.
+  `/contact` returns 200 and is now the documented value.
+- ⚠ **Individual accounts publish the owner's legal name as the seller**, not
+  "Percho". Showing "Percho" needs a legal-entity-name-change request with a
+  DBA / trade-name certificate. This does not block TestFlight, but it is a
+  product decision to make before public release.
+- No EAS project is linked yet (`extra.eas.projectId` absent). `eas init`
+  writes it and the resulting `app.json` edit must be committed.
+
+**Resolution**: everything in the repo that can be ready is ready and
+re-verified today. The remaining blockers are all owner-side and Apple-side:
+membership activation, `eas login` / `eas init`, and the Apple credentials
+prompt on the first build. None of them can be run from an agent session —
+they need the owner's Apple ID and an interactive terminal.
+
+**Learnings**: phase118 wrote the runbook against an assumption (company
+enrollment) that turned out not to match what the owner actually bought. A
+runbook aimed at a future account type is worth re-reading against reality
+before executing it, not just ticking off.
+
+**Next steps**: owner confirms activation at developer.apple.com → then
+Stage 2 (`eas login`, `eas init`, `eas build --profile production`,
+`eas submit --latest`) in an interactive terminal, and the app record with
+SKU `percho-ios-001`.
+
 ## 2026-08-30 00:45 UTC — phase137: the DTO was dropping the fields the whole bank ranks on
 
 **Objective**: owner asked 「how to verify this?」 about phase136's ranking.
