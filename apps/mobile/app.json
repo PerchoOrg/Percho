@@ -33,7 +33,11 @@
 			"typedRoutes": true
 		},
 		"extra": {
-			"apiBase": "https://www.percho.co"
-		}
+			"apiBase": "https://www.percho.co",
+			"eas": {
+				"projectId": "7e6cc487-2c4c-4006-aadc-6e9816d96513"
+			}
+		},
+		"owner": "percho"
 	}
 }
