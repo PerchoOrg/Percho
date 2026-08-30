@@ -6,19 +6,55 @@
   "attribution": "Music: Kevin MacLeod (incompetech.com), Licensed under Creative Commons: By Attribution 4.0 License",
   "storage_bucket": "bgm",
   "buckets": {
-    "warm-acoustic": {
-      "count": 8,
+    "acoustic": {
+      "count": 28,
       "tracks": [
         "01-carefree.mp3",
         "02-cheery-monday.mp3",
+        "03-wallpaper.mp3",
+        "07-amazing-plan.mp3",
         "08-wholesome.mp3",
+        "09-daily-beetle.mp3",
         "11-happy-alley.mp3",
+        "63-absolutesound-background-music-560443.mp3",
+        "64-absolutesound-vocal-background-music-562024.mp3",
+        "65-alex-morgan-background-music-545525.mp3",
+        "66-bombinsound-background-music-560453.mp3",
+        "67-ikoliks-aj-background-music-320427.mp3",
+        "68-ikoliks-aj-background-music-432715.mp3",
+        "69-miromaxmusic-music-promotion-no-copyright-513944.mp3",
+        "70-nastelbom-background-music-486996.mp3",
+        "71-sigmamusicart-background-music-inspiring-525840.mp3",
+        "73-vibehorn-background-music-496933.mp3",
+        "digital-clouds.mp3",
+        "driving-ambition.mp3",
         "feeling-happy.mp3",
+        "just-keep-walking.mp3",
+        "lifes-a-movie.mp3",
+        "serene-view.mp3",
         "summers-here.mp3",
+        "the-hamptons.mp3",
+        "tides-turning.mp3",
         "under-the-sun.mp3",
         "walking-in-the-park.mp3"
       ]
+    },
+    "electronic": {
+      "count": 3,
+      "tracks": [
+        "ai-electronic-amber-glow-7e61.mp3",
+        "ai-electronic-soft-current-ecff.mp3",
+        "ai-electronic-solar-drive-8433.mp3"
+      ]
+    },
+    "piano": {
+      "count": 3,
+      "tracks": [
+        "ai-luxury-20260820-3318.mp3",
+        "ai-modern-20260820-8eb4.mp3",
+        "ai-modern-20260820-bff7.mp3"
+      ]
     }
   },
-  "total_active_tracks": 8
+  "total_active_tracks": 34
 }

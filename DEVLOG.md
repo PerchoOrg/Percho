@@ -16,6 +16,26 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-30 10:30 UTC — phase139: bgm manifest.json catches up with the library on disk
+
+**Objective**: the reference worktree carried an uncommitted edit to
+`scripts/render-worker/bgm/manifest.json` (mtime 2026-08-30 08:34, author
+unknown — written straight into `~/Workspace/Percho`, against §2.5). Owner:
+"第二个merge". Land it on main so the reference worktree is clean again.
+
+**Actions**: copied the file verbatim onto a phase branch. `warm-acoustic`
+(8 tracks) becomes `acoustic` (28), plus new `electronic` (3) and `piano` (3)
+buckets; `total_active_tracks` 8 → 34. Verified against disk: `bgm/acoustic`,
+`bgm/electronic`, `bgm/piano` hold exactly 28 / 3 / 3 mp3s. `worker.py` has
+read the `acoustic` name since 2026-08-20 (`DEFAULT_BGM_VIBE`), so main's
+manifest was the stale side; only `fetch.sh` / `pull-bgm.sh` / the README
+consume it. No runtime change.
+
+**Still uncommitted in the reference worktree**: `apps/mobile/app/_layout.tsx`
+(font-load gate, mtime 2026-08-23) — owner has not decided yet. It is in
+TestFlight build 1.0.0 (2) and in what Expo Go serves.
+
+
 ## 2026-08-30 09:45 UTC — device pass done; Stage 3 filled as far as the unfinished app allows
 
 **Objective**: owner verified 1.0.0 (2) on TestFlight on his iPhone ("Verified
