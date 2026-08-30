@@ -11,11 +11,13 @@
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { TAB_BAR_FONT } from "../components/TabBarIconFont";
 import { ICON_FONT, OUTLINE_FONT } from "../components/cards/redline/icon-font";
 import { DM_SERIF_FONT } from "../theme/fonts";
+import { colors } from "../theme/tokens";
 
 export default function RootLayout() {
 	/**
@@ -23,17 +25,25 @@ export default function RootLayout() {
 	 * the outline weight the trade-off card uses, plus the TabBar's outline
 	 * set (see `TabBarIconFont.ts`).
 	 *
-	 * Deliberately NOT gated on a splash screen: `useFonts` returns false on the
-	 * first frame, and blocking the tree on it would flash the whole app. An
-	 * unloaded icon font costs a missing glyph for a few ms; an unloaded tree
-	 * costs the entire first paint. Cards render either way.
+	 * Gated: an unloaded icon font renders PUA codepoints through the system
+	 * fallback — a visible tofu/"?" glyph in the trade-off discs and the tab
+	 * bar until the first re-render swaps them in (owner report 2026-08-18:
+	 * "点一下才切换成正常的icon"). The fonts are tiny (~2–8 KB each) and
+	 * bundled, so the gate is a single frame; the tree behind it does not
+	 * mount until the glyphs are actually drawable.
 	 */
-	useFonts({
+	const [fontsLoaded, fontsError] = useFonts({
 		[ICON_FONT]: require("../assets/fonts/PerchoIcons.ttf"),
 		[OUTLINE_FONT]: require("../assets/fonts/PerchoIconsOutline.ttf"),
 		[TAB_BAR_FONT]: require("../assets/fonts/TabBarIcons.ttf"),
 		[DM_SERIF_FONT]: require("../assets/fonts/DMSerifDisplay-Regular.ttf"),
 	});
+
+	// Font load failure must NOT white-screen the app — fall through and let
+	// the system fallback render (a few tofu glyphs beat a dead app).
+	if (!fontsLoaded && !fontsError) {
+		return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+	}
 
 	return (
 		<GestureHandlerRootView style={{ flex: 1 }}>
