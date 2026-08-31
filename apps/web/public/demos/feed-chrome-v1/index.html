@@ -115,6 +115,18 @@ body.only{padding:0;background:var(--bg)} body.only .cap{display:none} body.only
 .pausePill{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;border-radius:17px;background:rgba(250,246,240,.92);color:var(--ink);font:600 13px var(--ui)}
 .swapSave{display:flex;align-items:center;justify-content:center;width:30px;height:30px;margin-right:2px}
 .note{position:absolute;left:0;right:0;bottom:0;height:8.5%;display:flex;align-items:center;justify-content:center;font:400 12.5px var(--ui);color:var(--ink3);z-index:5;text-align:center;padding:0 12px}
+.capsule{position:absolute;top:12px;right:12px;height:37px;border-radius:18.5px;background:rgba(255,255,255,.85);z-index:2;color:#181B18;display:flex;align-items:center;overflow:hidden}
+.capsule .u{width:37px;height:37px;display:flex;align-items:center;justify-content:center}
+.capsule .line{width:1px;align-self:stretch;background:rgba(24,27,24,.16);margin:8px 0}
+.commMute{position:absolute;top:52px;right:12px;width:40px;height:40px;border-radius:20px;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;z-index:2;color:#181B18}
+.filmLabel{position:absolute;top:12px;right:12px;z-index:2;display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:14px;background:rgba(255,255,255,.92);color:#181B18;font:600 11px var(--ui)}
+.filmLabel .pin{color:#0E6B57}
+.crumbBuilt{display:flex;flex-direction:column;align-items:center;gap:3px;padding:0 24px 4px;min-height:40px;justify-content:center}
+.crumbBuilt .l1{display:flex;align-items:center;gap:6px}
+.crumbBuilt .root{font:600 14px var(--ui);color:var(--rl-ink2)}
+.crumbBuilt .sep{font:400 14px var(--ui);color:var(--rl-ink3)}
+.crumbBuilt .cur{font:600 14px var(--ui);color:var(--rl-accent)}
+.crumbBuilt .l2{font:400 12px var(--ui);color:var(--rl-ink2)}
 /* ---- you tab ---- */
 .you{padding:0 20px}
 .you h1{font:700 28px var(--serif);color:var(--ink);margin:6px 0 14px}
@@ -174,6 +186,7 @@ function listingCard(img, o={}){
     ${o.chrome==='capH'?`<div class="capH"><div class="u">${svg.volDark}</div><div class="line"></div><div class="u">${svg.bookmark}</div></div>`:''}
     ${o.chrome==='fade'?`<div class="soundCard fadeDisc">${svg.volDark}</div>`:''}
     ${o.chrome==='swap'?`<div class="save">${svg.volDark}</div>`:''}
+    ${o.chrome==='built'?`<div class="capsule"><div class="u">${svg.volDark}</div><div class="line"></div><div class="u">${svg.bookmark}</div></div>`:''}
     <div class="scrim"></div>
     ${o.label?`<div class="lab">Like</div>`:''}
     ${o.chrome==='pause'?`<div class="pauseWrap"><div class="pauseDisc"><div class="pauseTri"></div></div><div class="pausePill">${svg.volDark} Sound on</div></div>`:''}
@@ -191,7 +204,7 @@ function communityCard(img, o={}){
   return `<div class="card ${o.cls||''}">
     <img class="media" src="${img}">
     <div class="badge">Community</div>
-    <div class="save">${svg.bookmark}</div>
+    ${o.built?`<div class="filmLabel"><span class="pin">${svg.pin}</span>Ashley Crossing · 2.4 mi</div><div class="commMute">${svg.volDark}</div>`:`<div class="save">${svg.bookmark}</div>`}
     <div class="cscrim"></div>
     <div class="cname">Ashley Crossing</div>
     <div class="csub">Alpharetta, GA · 34 restaurants nearby · Highly walkable</div>
@@ -205,11 +218,13 @@ function communityCard(img, o={}){
   </div>`;
 }
 function scopeChrome(kind){
+  if(kind==='built') return `<div class="crumbBuilt"><div class="l1"><span class="root">Atlanta metro</span><span class="sep">\u203a</span><span class="cur">Peachtree Corners</span><span style="color:var(--rl-ink3)">${svg.chev}</span></div><div class="l2">40 communities \u00b7 median $594K</div></div>`;
   if(kind==='textUnder') return `<div class="textUnder">Exploring <b>Peachtree Corners, GA</b> ${svg.chev}</div>`;
   return '';
 }
 function scopeSlack(kind){
   if(kind==='pill') return `<div class="slackTop"><div class="pill"><span class="dot">${svg.pin}</span>Peachtree Corners <span class="n">· 40 communities</span> <span style="color:var(--rl-ink3)">${svg.chev}</span></div></div>`;
+  if(kind==='built') return '';
   if(kind==='crumb') return `<div class="slackTop"><div class="crumb"><div class="l1"><span>Atlanta</span><span class="sep">›</span><span class="cur">Peachtree Corners</span><span style="color:var(--rl-ink3)">${svg.chev}</span></div><div class="l2">40 communities · 12 with tours · median $594K</div></div></div>`;
   return '';
 }
@@ -236,7 +251,7 @@ function feed(o){
     cards += listingCard(IMG.l2,{cls:'next',price:'$319,900',addr:'2214 Landing Walk Dr · Duluth, GA 30096',bd:'4 bd',ba:'4 ba',sq:'1,860 sqft'});
     cards += listingCard(IMG.l1,{cls:'drag'+(o.drag==='glow'?' glowR':''),label:o.drag==='badge'});
   } else if(o.card==='community'){
-    cards += communityCard(IMG.c3);
+    cards += communityCard(IMG.c3,{built:o.scope==='built'});
   } else {
     cards += listingCard(IMG.l1,{sound:o.sound,chrome:o.chrome});
   }
@@ -283,6 +298,9 @@ const FRAMES = {
   G3:{group:'sound',title:'G3 · Sound auto-hides',sub:'Shown mid-fade. Appears for ~2s when a card becomes top or on tap, then only the bookmark stays. Nothing permanent added.',html:()=>feed({scope:'crumb',chrome:'fade',note:'the sound disc has ~1s left before it fades out'})},
   G4:{group:'sound',title:'G4 · Sound lives in the pause state',sub:'Tap the card = pause (already shipped). The mute control appears with the pause glyph — zero resident chrome on a playing card.',html:()=>feed({scope:'crumb',chrome:'pause',note:'the card at rest looks exactly like today — bookmark only'})},
   G5:{group:'sound',title:'G5 · Swap: sound top-right, bookmark to the foot',sub:'Exactly one disc in the corner. The save moves next to Explore, on the bottom row.',html:()=>feed({scope:'crumb',chrome:'swap'})},
+  B1:{group:'built',title:'B1 · AS BUILT — home card',sub:'S3 crumb (no "12 with tours" \u2014 the wire has no such number), G2 capsule, D2 labels on drag. This is what is on the branch.',html:()=>feed({scope:'built',chrome:'built'})},
+  B2:{group:'built',title:'B2 · AS BUILT — community card',sub:'The mute drops to 52 so it clears the place-name pill the tour video BURNS into that corner. No bookmark \u2014 you removed it on 2026-08-20.',html:()=>feed({scope:'built',card:'community'})},
+  B3:{group:'built',title:'B3 · AS BUILT — You tab RECENT',sub:'Four rows, each with Bring back. No Undo toast anywhere on the feed.',html:()=>youTab()},
   Y1:{group:'system',title:'Y1 · History in the You tab (instead of Undo)',sub:'Recent verdicts with “Bring back”. No toast on the feed at all.',html:()=>youTab()},
 };
 function fit(){const w=Number(new URLSearchParams(location.search).get('w'))||window.innerWidth; const k=Math.min(1,(w-16)/393); document.querySelectorAll('.frame, body.only .phone').forEach(el=>{el.style.zoom=String(k);});}
@@ -293,7 +311,7 @@ const root = document.getElementById('root');
 if(only){ document.body.classList.add('only'); root.innerHTML = FRAMES[only].html(); }
 else {
   const keys = Object.keys(FRAMES).filter(k=>!group||FRAMES[k].group===group);
-  const nav = `<div class="nav"><h1>Percho feed chrome — demo frames</h1><div>Scope: <a href="?group=scope">S1–S4</a> Drag feedback: <a href="?group=feedback">D1–D3</a> Sound: <a href="?group=sound">G1–G5</a> System: <a href="?group=system">F3 · F4 · Y1</a> <a href="./">All</a></div><div>Jump: ${Object.keys(FRAMES).map(k=>`<a href="#${k}">${k}</a>`).join('')}</div></div>`;
+  const nav = `<div class="nav"><h1>Percho feed chrome — demo frames</h1><div><b>AS BUILT: <a href="?group=built">B1–B3</a></b> &nbsp;·&nbsp; Scope: <a href="?group=scope">S1–S4</a> Drag: <a href="?group=feedback">D1–D3</a> Sound: <a href="?group=sound">G1–G5</a> System: <a href="?group=system">F3 · F4 · Y1</a> <a href="./">All</a></div><div>Jump: ${Object.keys(FRAMES).map(k=>`<a href="#${k}">${k}</a>`).join('')}</div></div>`;
   root.innerHTML = nav + `<div class="gallery">${keys.map(k=>`<div class="frame" id="${k}"><div class="cap">${FRAMES[k].title}<small>${FRAMES[k].sub}</small></div>${FRAMES[k].html()}</div>`).join('')}</div>`;
 }
 fit();
