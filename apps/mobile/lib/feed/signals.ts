@@ -76,6 +76,19 @@ export interface SignalState {
 	 * rehydrates without it.
 	 */
 	answers?: readonly TradeoffAnswer[];
+	/**
+	 * The buyer's explicit community scope, chosen in the feed's scope sheet
+	 * (phase140). Distinct from `geo`, which is what SWIPES inferred: one is a
+	 * statement, the other an observation, and collapsing them would make an
+	 * explicit pick indistinguishable from a run of right-swipes.
+	 *
+	 * `name` is carried alongside the id because the crumb has to render before
+	 * the pool that could resolve the id has loaded.
+	 *
+	 * Optional: state persisted before this field existed rehydrates without it,
+	 * which reads as "no scope picked" — the correct default.
+	 */
+	scope?: { unitId: string; name: string };
 }
 
 export const EMPTY_SIGNALS: SignalState = {
@@ -282,6 +295,100 @@ export function applyDimRemoval(
 	const dims = { ...signals.dims };
 	delete dims[dim];
 	return { ...signals, dims };
+}
+
+/**
+ * The buyer picked a community scope in the feed's scope sheet, or cleared it
+ * ("Anywhere in metro Atlanta" → `null`).
+ *
+ * A SOFT scope, per §1.3: this records the pick and nothing else. What acts on
+ * it is `preferScope` in `scope.ts`, which reorders the pool client-side — the
+ * server query is deliberately untouched, so a city with no toured community
+ * cannot empty the community slots.
+ */
+export function applyScope(
+	signals: SignalState,
+	pick: { unitId: string; name: string } | null,
+): SignalState {
+	if (pick === null) {
+		const { scope: _dropped, ...rest } = signals;
+		return rest;
+	}
+	return { ...signals, scope: pick };
+}
+
+/**
+ * Undo exactly what `applySwipe` recorded for ONE card — the You tab's "Bring
+ * back" (phase140, the owner's replacement for the §1.8 Undo toast).
+ *
+ * Only `listing`, `community` and `area` are revertible, and that is not a
+ * limitation to work around: a trade-off answer is a preference STATEMENT that
+ * `answers` records by axis, and §1.8 already rules those out of undo ("信号已
+ * 入 scope"). The You tab lists only the two inventory kinds, so the trade-off
+ * branch is unreachable from the UI and returns the signals unchanged rather
+ * than guessing at an inverse.
+ *
+ * `swipesInStage` is deliberately NOT decremented: it counts swipes made, which
+ * is a fact about the session that bringing a card back does not unmake.
+ */
+export function revertSwipe(
+	signals: SignalState,
+	card: RevertibleSwipe,
+): SignalState {
+	let next: SignalState = signals;
+
+	if (card.kind === "community") {
+		next = {
+			...next,
+			likedCommunityIds: withoutId(next.likedCommunityIds, card.id),
+			passedCommunityIds: withoutId(next.passedCommunityIds, card.id),
+		};
+	} else if (card.kind === "listing") {
+		next = { ...next, likedListingIds: withoutId(next.likedListingIds, card.id) };
+	}
+
+	if (card.geoUnitId !== undefined) {
+		next = {
+			...next,
+			geo: subtractGeo(next.geo, card.geoUnitId, card.verdict, 1),
+		};
+	}
+	return next;
+}
+
+/** What `revertSwipe` needs to invert one swipe. */
+export interface RevertibleSwipe {
+	id: string;
+	kind: "listing" | "community" | "area";
+	verdict: SwipeVerdict;
+	/** The unit the swipe credited, when it credited one. */
+	geoUnitId?: string;
+}
+
+/**
+ * `addGeo`'s inverse. Clamped at zero and the entry dropped when both counters
+ * reach it, so repeated reverts cannot drive a unit negative and a fully
+ * reverted unit leaves no trace to rank on.
+ */
+function subtractGeo(
+	geo: readonly GeoSignal[],
+	unitId: string,
+	verdict: SwipeVerdict,
+	weight: number,
+): GeoSignal[] {
+	const idx = geo.findIndex((g) => g.unitId === unitId);
+	if (idx === -1) return [...geo];
+	const cur = geo[idx];
+	if (!cur) return [...geo];
+	const right = verdict === "right" ? Math.max(0, cur.right - weight) : cur.right;
+	const left = verdict === "left" ? Math.max(0, cur.left - weight) : cur.left;
+	const next = [...geo];
+	if (right === 0 && left === 0) {
+		next.splice(idx, 1);
+		return next;
+	}
+	next[idx] = { ...cur, right, left };
+	return next;
 }
 
 export function applySkipLayer(
