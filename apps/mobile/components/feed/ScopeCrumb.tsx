@@ -120,6 +120,25 @@ const styles = StyleSheet.create({
 	 * and the same reasoning applies above the deck).
 	 */
 	wrap: {
+		/**
+		 * ── Why this needs a z-index at all (owner on device, 2026-08-31) ────
+		 *
+		 * "看不到卡片上方的东西 但是点击空白居然可以弹窗 community list" — the
+		 * crumb was invisible while its touch target still worked.
+		 *
+		 * `SwipeStack`'s `stageClip` is an OPAQUE paper band (`colors.bg`) at
+		 * `top: -CLIP_OVERFLOW_PT`, i.e. 120pt ABOVE the stage, and no ancestor
+		 * clips it — it exists to hide the behind-card's top edge and its
+		 * elevation glow, and it is deliberately generous. It carries
+		 * `pointerEvents="none"`, so it paints over whatever is up here without
+		 * taking the touch: exactly one symptom, invisible-but-tappable.
+		 *
+		 * The wordmark row has survived it since 2026-08-14 for this reason and
+		 * no other — `chromeRow` sets `zIndex: 100`. Anything the feed puts
+		 * above the stage has to out-rank the band, so this matches it rather
+		 * than inventing a second number.
+		 */
+		zIndex: 100,
 		minHeight: 40,
 		alignItems: "center",
 		justifyContent: "center",

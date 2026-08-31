@@ -16,6 +16,38 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-31 00:20 UTC — phase140.9: the scope crumb was invisible and still tappable
+
+**Objective**: owner on device, minutes after the phase140 merge reached his
+Metro: 「看不到卡片上方的东西 但是点击空白居然可以弹窗 community list」.
+
+**Cause**: `SwipeStack`'s `stageClip` — an OPAQUE band in the page's own paper
+colour (`colors.bg`) at `top: -CLIP_OVERFLOW_PT`, i.e. **120pt above the
+stage**, unclipped by any ancestor, whose job is to hide the behind-card's top
+edge and its ~22pt elevation glow. It also carries `pointerEvents="none"`. So
+it painted over the new `ScopeCrumb` while the crumb kept taking touches:
+invisible, but the blank space still opened the scope sheet. The wordmark row
+has never had the problem for one reason only — `chromeRow` sets `zIndex: 100`.
+
+**Actions**:
+- `components/feed/ScopeCrumb.tsx` — `wrap` takes `zIndex: 100`, matching the
+  wordmark row rather than inventing a second number.
+- `theme/feed-chrome-layout.test.ts` (new, 3 tests) — pins the coupling: the
+  band is opaque/unclipped/`pointerEvents="none"`, and both the wordmark row
+  and the crumb out-rank it. It fails with the fix removed (verified).
+
+**Learnings**:
+- The first draft of that test PASSED with the fix removed, because
+  `ScopeCrumb`'s own doc block cites `zIndex: 100` in prose and the regex
+  matched the comment. A source-text assertion that a comment can satisfy
+  asserts nothing — `zIndexOf` now strips comments before matching, and every
+  future text assertion in this repo should.
+- The real lesson is about the band: anything the feed ever puts above the
+  stage is invisible-but-tappable by default. That is now a test, not folklore.
+
+**Verification**: `tsc --noEmit` clean; `biome check .` 0 errors (16
+pre-existing warnings); `vitest run` 53 files / 628 tests.
+
 ## 2026-08-30 23:40 UTC — phase140: the feed page stops being just a card
 
 **Objective**: build the four things the owner picked off
