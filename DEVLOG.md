@@ -16,6 +16,74 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-30 23:40 UTC — phase140: the feed page stops being just a card
+
+**Objective**: build the four things the owner picked off
+`percho.co/demos/feed-chrome-v1` — **S3** scope crumb, **D2** swipe labels,
+**G2** one control in the card's top-right, **Y1** You-tab history instead of
+an Undo toast.
+
+**Actions** (all `apps/mobile`, 17 files, +1720/−131):
+- `lib/feed/signals.ts` — `SignalState.scope` (an explicit pick, kept separate
+  from swipe-inferred `geo`), `applyScope`, and `revertSwipe` + `subtractGeo`,
+  the exact inverse of `applySwipe` for the three revertible kinds.
+- `lib/feed/scope.ts` (new) — `preferScope` reorders a pool so the scoped
+  city's content leads (a STABLE partition, nothing dropped) and
+  `scopeChoices` picks the sheet's rows.
+- `lib/feed/recent.ts` (new) — `recentEntryFor` snapshots a swipe for the You
+  tab; `pushRecent` de-dupes by id and caps at 30.
+- `state/feed-session.ts` — `setScope`, a persisted `recent`, and `bringBack`
+  (revert the signal + drop the id from `seenIds` so the composer can emit it
+  again; `seenListingIds` deliberately untouched).
+- `components/cards/CardCorner.tsx` (new) — the G2 capsule. Speaker art drawn
+  from bordered `View`s at Lucide's 24-grid geometry.
+- `components/feed/ScopeCrumb.tsx` + `ScopeSheet.tsx` (new).
+- `app/(tabs)/feed.tsx` — crumb + sheet, `renderOverlay` for `SwipeLabels`,
+  the sound tap target, `ExhaustedCard.onBrowseMap` → Search.
+- `app/(tabs)/you.tsx` — a RECENT section, four rows, each with "Bring back".
+- Tests: `scope.test.ts` (7), `recent.test.ts` (7), +5 signals cases, +6 store
+  cases, and `listing-layout.test.ts` rewritten to the new corner structure.
+
+**Three findings that changed the design**:
+1. **The `cities` parameter has never reached the server.** The client sends
+   unit ids (`city:duluth-ga`); `lib/zod/feed-pool.ts` accepts `/^[A-Za-z' -]+$/`
+   only, so every value is filtered out and the array arrives empty. The
+   community pool's `.in('city', …)` has therefore never run. Left alone
+   rather than "fixed": turning it on would hard-filter communities to one
+   city, and with only a handful of toured communities in a video-only feed
+   that empties the community slots. The scope is client-side ranking instead,
+   which is what §1.3 asks for anyway.
+2. **Listings are not city-filtered at all** (`fetchBrowseCardsVideosOnly`
+   ignores `cities`), so a "scope" could only ever have scoped communities.
+3. **There is no sound control anywhere in the app** except the You tab's
+   switch: 2026-08-14 moved it to the explore hero (`62f07528`) and phase119's
+   rebuild (`146f8fba`) deleted it. Neither icon font carries a speaker — the
+   old `SoundToggle` used the 🔊 EMOJI, which is why it could never sit beside
+   the line-art bookmark.
+
+**Decisions**:
+- **The community card's mute sits at `top: 52`, not 12.** Its tour video
+  BURNS a place-name pill into the top-right at the COMMUNITY badge's height
+  (`_render_label_png`), which is why the owner had the bookmark removed from
+  that corner on 2026-08-20. Same side, below the label — not a third corner.
+- **`SwipeLabels` renders for `decide` cards only.** A trade-off is
+  `either-or` and already shows the drag on its own terms; a red PASS badge
+  over the losing door would contradict the face. The gate reads
+  `cardBehavior(card).mode`, so nothing branches on a card kind.
+- **The crumb's stats line ships without "N with tours".** The approved demo
+  showed it; `city_geo_units` has no such column and inventing it would break
+  the "every emitted number is real or absent" rule. Needs a view migration.
+- **`AreaFace` untouched.** It has not been in the deck since 2026-08-22, so
+  giving it a mute would be dead code.
+
+**Verification**: `tsc --noEmit` clean; `biome check .` on `apps/mobile` — 0
+errors, 16 warnings, all pre-existing on `origin/main` (verified by linting a
+`git archive` of main); `vitest run` 52 files / 625 tests pass.
+
+**Next steps**: device pass on the owner's iPhone — the speaker art and the
+capsule's translucency are the two things a simulator cannot settle. The
+"N with tours" column is a small view migration if he wants that clause.
+
 ## 2026-08-30 22:20 UTC — phase140.2: five ways to not have two buttons in the card's top-right
 
 **Objective**: owner leans F4 (sound on the card) but rejected the stacked pair

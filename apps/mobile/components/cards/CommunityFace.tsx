@@ -130,11 +130,13 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
-import type { TapSlot } from "../../lib/gesture/tap-slot";
+import { SOUND_TAP_TARGET, type TapSlot } from "../../lib/gesture/tap-slot";
+import { useSoundStore } from "../../state/sound";
 import { redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
+import { CardCorner } from "./CardCorner";
 import { EXPLORE_TAP_TARGET } from "./ListingFace";
 import { RedlineIcon } from "./redline/RedlineChrome";
 
@@ -234,6 +236,13 @@ interface CommunityFaceProps {
 	deckGesture?: GestureType;
 }
 
+/**
+ * How far down the mute sits on this face. The tour video's burned-in
+ * place-name pill occupies the corner at the COMMUNITY badge's height (~12-40
+ * in card space), so 52 clears it with room rather than fighting it.
+ */
+const COMMUNITY_SOUND_TOP = 52;
+
 export function CommunityFace({
 	card,
 	isTop,
@@ -243,6 +252,12 @@ export function CommunityFace({
 	deckGesture,
 }: CommunityFaceProps) {
 	const icons = signalIcons(card);
+
+	const soundOn = useSoundStore((s) => s.soundOn);
+	const toggleSound = useSoundStore((s) => s.toggle);
+	const armSound = () => {
+		if (tapSlot) tapSlot.value = { target: SOUND_TAP_TARGET };
+	};
 
 	/* ── The name's true width ────────────────────────────────────────────── */
 
@@ -522,8 +537,23 @@ export function CommunityFace({
 			    worker), and a 40px disc at top:12/right:12 sat on top of it —
 			    owner 2026-08-20: "remove the save button on the top right for
 			    cards - this is where the location and distance will display".
-			    The other card kinds keep theirs; only this one plays a video
-			    with a label in that corner. */}
+
+			    The MUTE is a different case and does render (phase140): a
+			    community tour plays with music and, since phase119 deleted the
+			    explore hero's toggle, the app had no in-context control at all.
+			    It sits at `top: 52` — the same right-hand side as the listing
+			    card's capsule, dropped clear of the burned-in label rather than
+			    moved to a third corner. */}
+			{card.videoUrl ? (
+				<CardCorner
+					top={COMMUNITY_SOUND_TOP}
+					sound={{
+						on: soundOn,
+						onPress: toggleSound,
+						...(tapSlot ? { onTouchStart: armSound } : {}),
+					}}
+				/>
+			) : null}
 
 			{/* Bottom scrim — transparent until ~55% down, then darkening to a
 			    deep 0.92 at the bottom (owner 2026-08-19: 底部渐变 + 信息文字条,

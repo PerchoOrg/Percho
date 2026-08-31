@@ -8,6 +8,12 @@
 
 ## v1.3 — Opening a home now answers "does this fit me?"
 
+### 2026-08-30
+- **The feed now tells you where you're looking, and lets you change it.** A line under the Percho wordmark reads "Atlanta metro › Peachtree Corners" with the number of communities there and what homes typically cost. Tap it to pick a different city — communities there come first, and everything else still shows further down. Nothing is hidden from you; it's a preference, not a filter
+- **You can mute a tour from the feed again.** Dragging a card left or right now shows what it means — LIKE or PASS — before you let go, and the home card's top-right corner holds one small control with the sound and the bookmark side by side, instead of two separate buttons. Community tours get the same mute, placed clear of the name the film draws in that corner. Turning sound off anywhere turns it off everywhere, and it stays off
+- **Changed your mind about a card you already swiped?** The You tab now lists your recent likes and passes, with the price and place you actually saw at the time. "Bring back" undoes the verdict and puts the home or community back into your feed
+- **"You've seen everything in your area" now offers the map.** That card's second button had never been connected
+
 ### 2026-08-29
 - **Your either/or answers now actually change the feed.** Pick "newer build" and newer homes move up next — with a line under the card telling you how many did. Until now those answers were recorded and nothing happened; they never reordered anything. Answers you've already given start counting the moment we have the data behind a question, and what you swipe right on still outweighs anything you answered
 

@@ -4,12 +4,14 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 import { abbreviateAddress } from "../../lib/feed/abbreviate-address";
 import type { ListingCardV3 } from "../../lib/feed/card-types";
-import type { TapSlot } from "../../lib/gesture/tap-slot";
+import { SOUND_TAP_TARGET, type TapSlot } from "../../lib/gesture/tap-slot";
 import { useSavedStore } from "../../state/saved";
+import { useSoundStore } from "../../state/sound";
 import { redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
+import { CardCorner } from "./CardCorner";
 
 /**
  * ListingFace (§1.4) — the listing front face.
@@ -117,6 +119,8 @@ export function ListingFace({
 
 	const saved = useSavedStore((s) => s.isSaved(card.id));
 	const toggleSaved = useSavedStore((s) => s.toggle);
+	const soundOn = useSoundStore((s) => s.soundOn);
+	const toggleSound = useSoundStore((s) => s.toggle);
 
 	/**
 	 * Touch-start handler shared by the two interactive targets. Writes the
@@ -154,22 +158,30 @@ export function ListingFace({
 				</View>
 			</View>
 
-			{/* Bookmark — translucent white disc + dark bookmark, the CITY card's. */}
-			<View style={styles.saveSlot}>
-				<Pressable
-					onTouchStart={arm(SAVE_TAP_TARGET)}
-					onPress={tapSlot ? undefined : () => toggleSaved(card.id, "listing")}
-					accessibilityRole="button"
-					accessibilityLabel={saved ? "Saved" : "Save"}
-					hitSlop={12}
-					style={({ pressed }) => [
-						styles.saveDisc,
-						pressed && styles.savePressed,
-					]}
-				>
-					<BookmarkIcon saved={saved} />
-				</Pressable>
-			</View>
+			{/*
+			 * Top-right control (phase140, owner pick "G2"): ONE capsule holding
+			 * the mute and the bookmark, split by a hairline. Two separate discs
+			 * were the owner's objection — 「右上两个 button 很奇怪」 — and the
+			 * feed had had no mute at all since phase119 deleted the explore
+			 * hero's. A photo-only listing passes no `sound`, so it keeps the
+			 * plain 40pt bookmark disc this replaced.
+			 */}
+			<CardCorner
+				{...(card.videoUrl
+					? {
+							sound: {
+								on: soundOn,
+								onPress: toggleSound,
+								...(tapSlot ? { onTouchStart: arm(SOUND_TAP_TARGET) } : {}),
+							},
+						}
+					: {})}
+				save={{
+					saved,
+					onPress: () => toggleSaved(card.id, "listing"),
+					...(tapSlot ? { onTouchStart: arm(SAVE_TAP_TARGET) } : {}),
+				}}
+			/>
 
 			{/* Bottom scrim — transparent until ~55% down, then darkening to a
 			    deep 0.92 at the bottom (owner 2026-08-19: 底部渐变 + 信息文字条,
@@ -284,41 +296,6 @@ function ArrowRightIcon() {
 	);
 }
 
-/** 16 — the CITY card's bookmark size. */
-const BOOKMARK_SIZE = 16;
-const BOOKMARK_K = BOOKMARK_SIZE / 24;
-const BM_LEFT = 5 * BOOKMARK_K;
-const BM_WIDTH = 14 * BOOKMARK_K;
-const BM_TOP = 3 * BOOKMARK_K;
-const BM_BOTTOM = 21 * BOOKMARK_K;
-/** Where the V bites into the bottom edge. */
-const BM_NOTCH = 16 * BOOKMARK_K;
-const BM_RUN = BM_WIDTH / 2;
-const BM_RISE = BM_BOTTOM - BM_NOTCH;
-const BM_DIAG = Math.hypot(BM_RUN, BM_RISE);
-const BM_ANGLE = (Math.atan2(BM_RISE, BM_RUN) * 180) / Math.PI;
-
-/** Same dark ink as the CITY pill label — the CITY card's bookmark. */
-const BOOKMARK_INK = "#181B18";
-
-/**
- * The save bookmark. Dark outline in both states (the CITY card's version,
- * which reads on the translucent WHITE disc); saved additionally fills the
- * body, which is the classic outline-vs-filled bookmark distinction.
- */
-function BookmarkIcon({ saved }: { saved: boolean }) {
-	return (
-		<View style={styles.bookmarkBox}>
-			{saved && <View style={styles.bookmarkFill} />}
-			<View style={styles.bookmarkTop} />
-			<View style={[styles.bookmarkSide, styles.bookmarkSideLeft]} />
-			<View style={[styles.bookmarkSide, styles.bookmarkSideRight]} />
-			<View style={[styles.bookmarkDiag, styles.bookmarkDiagLeft]} />
-			<View style={[styles.bookmarkDiag, styles.bookmarkDiagRight]} />
-		</View>
-	);
-}
-
 const styles = StyleSheet.create({
 	/** `overflow: hidden` clips the scrim and the media to the card's radius. */
 	face: { flex: 1, backgroundColor: redline.card, overflow: "hidden" },
@@ -334,22 +311,6 @@ const styles = StyleSheet.create({
 	},
 	/** Neutral ink, not green — green is reserved for interactive state. */
 	badgeLabel: { ...redlineText.listingCard.badge, color: "#181B18" },
-	saveSlot: { position: "absolute", top: 12, right: 12, zIndex: 2 },
-	/**
-	 * The CITY card's save disc: 40px translucent white, dark bookmark.
-	 * Plain translucency, no blur — expo-blur red-screens Expo Go (DEVLOG
-	 * 2026-07-30; f7680a62).
-	 */
-	saveDisc: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		backgroundColor: "rgba(255,255,255,0.75)",
-		overflow: "hidden",
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	savePressed: { opacity: 0.7 },
 	/**
 	 * Bottom scrim — `overflow: hidden` on `face` clips it to the card's
 	 * rounded corner. Same as the CITY card's.
@@ -482,52 +443,5 @@ const styles = StyleSheet.create({
 		borderColor: "#FFFFFF",
 		borderTopRightRadius: OUTLINE_STROKE,
 		transform: [{ rotate: "45deg" }],
-	},
-
-	bookmarkBox: { width: BOOKMARK_SIZE, height: BOOKMARK_SIZE },
-	/** Saved: the body filled down to the notch tip. */
-	bookmarkFill: {
-		position: "absolute",
-		left: BM_LEFT + OUTLINE_STROKE,
-		top: BM_TOP + OUTLINE_STROKE,
-		width: BM_WIDTH - OUTLINE_STROKE * 2,
-		height: BM_NOTCH - BM_TOP - OUTLINE_STROKE,
-		backgroundColor: BOOKMARK_INK,
-	},
-	bookmarkTop: {
-		position: "absolute",
-		left: BM_LEFT,
-		top: BM_TOP,
-		width: BM_WIDTH,
-		height: OUTLINE_STROKE,
-		borderRadius: OUTLINE_STROKE / 2,
-		backgroundColor: BOOKMARK_INK,
-	},
-	bookmarkSide: {
-		position: "absolute",
-		top: BM_TOP,
-		width: OUTLINE_STROKE,
-		height: BM_BOTTOM - BM_TOP,
-		borderRadius: OUTLINE_STROKE / 2,
-		backgroundColor: BOOKMARK_INK,
-	},
-	bookmarkSideLeft: { left: BM_LEFT },
-	bookmarkSideRight: { left: BM_LEFT + BM_WIDTH - OUTLINE_STROKE },
-	/** The V: two bars rotated about their own centres onto the notch's legs. */
-	bookmarkDiag: {
-		position: "absolute",
-		top: (BM_BOTTOM + BM_NOTCH) / 2 - OUTLINE_STROKE / 2,
-		width: BM_DIAG,
-		height: OUTLINE_STROKE,
-		borderRadius: OUTLINE_STROKE / 2,
-		backgroundColor: BOOKMARK_INK,
-	},
-	bookmarkDiagLeft: {
-		left: BM_LEFT + BM_RUN / 2 - BM_DIAG / 2,
-		transform: [{ rotate: `${-BM_ANGLE}deg` }],
-	},
-	bookmarkDiagRight: {
-		left: BM_LEFT + BM_WIDTH - BM_RUN / 2 - BM_DIAG / 2,
-		transform: [{ rotate: `${BM_ANGLE}deg` }],
 	},
 });

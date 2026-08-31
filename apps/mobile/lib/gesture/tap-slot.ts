@@ -59,6 +59,13 @@ export const TAP_MAX_VX = 200;
  */
 export const CARD_TAP_TARGET = "card";
 
+/**
+ * The card-corner sound control's tap id (phase140). Lives here rather than on
+ * a face because the corner control is shared by two of them, and a face that
+ * imported it from another face would close an import cycle.
+ */
+export const SOUND_TAP_TARGET = "sound";
+
 /** The exclusive-tap gesture's slot; never read by the card faces. */
 export interface TapSlot {
 	/** Latest tap-target id, or `null` when the last release was not a tap. */

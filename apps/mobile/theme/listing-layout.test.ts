@@ -26,6 +26,12 @@ import { describe, expect, it } from "vitest";
 const LISTING = readFileSync("components/cards/ListingFace.tsx", "utf8");
 const AREA = readFileSync("components/cards/AreaFace.tsx", "utf8");
 const COMMUNITY = readFileSync("components/cards/CommunityFace.tsx", "utf8");
+/**
+ * The shared top-right control (phase140). The bookmark art and the disc
+ * geometry moved here when the mute joined it in one capsule, so the parity
+ * assertions below read it rather than each face.
+ */
+const CORNER = readFileSync("components/cards/CardCorner.tsx", "utf8");
 
 describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 	it("fills the card with media — no white text block below", () => {
@@ -56,7 +62,46 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 	it("keeps the LISTING badge and the bookmark", () => {
 		expect(LISTING).toContain("LISTING");
 		expect(LISTING).toContain("SAVE_TAP_TARGET");
-		expect(LISTING).toContain("BookmarkIcon");
+		// The bookmark is drawn by the shared corner control since phase140 —
+		// the listing face mounts it and passes the saved state.
+		expect(LISTING).toContain("<CardCorner");
+		expect(LISTING).toContain("save={{");
+		expect(CORNER).toContain("function BookmarkIcon");
+	});
+
+	/**
+	 * phase140 (owner pick "G2"): the corner holds ONE object. Two stacked
+	 * discs — a mute above the bookmark — was the shape the owner rejected
+	 * (「右上两个 button 很奇怪」), so a capsule with a hairline between two
+	 * cells replaced them, and a face with only one control keeps the plain
+	 * 40pt disc.
+	 */
+	it("puts the mute and the bookmark in ONE capsule", () => {
+		// Both cells, one container.
+		expect(CORNER).toContain("function SpeakerIcon");
+		expect(CORNER).toContain("function BookmarkIcon");
+		expect(CORNER).toContain("both ? styles.capsule : styles.disc");
+		// The lone-control form is still the disc every face drew before.
+		expect(CORNER).toContain(
+			"disc: { width: 40, height: 40, borderRadius: 20 }",
+		);
+		// A photo-only card gets no speaker: the control must not promise audio
+		// the card does not have.
+		expect(LISTING).toContain("card.videoUrl");
+	});
+
+	/**
+	 * The community face gets the mute but NOT at the badge's height: its tour
+	 * video burns a place-name pill into that corner (see `_render_label_png`
+	 * in the render worker), which is why the bookmark was removed from it on
+	 * 2026-08-20. The control drops below the pill instead of moving to a third
+	 * corner.
+	 */
+	it("drops the community mute clear of the film's burned-in label", () => {
+		expect(COMMUNITY).toContain("COMMUNITY_SOUND_TOP");
+		expect(COMMUNITY).toContain("<CardCorner");
+		// Still no bookmark on this face.
+		expect(COMMUNITY).not.toContain("save={{");
 	});
 
 	it("renders price, specs and address on the photo — no white container", () => {
@@ -75,14 +120,16 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 		expect(AREA).toContain(badge);
 		expect(COMMUNITY).toContain(badge);
 
-		// The save disc is shared by City and Listing. Community dropped it on
-		// 2026-08-20: the disc sat at top:12/right:12, where the tour video
-		// draws its place name and distance. Community is the only face that
-		// plays a labelled video, so it is the only one that had a collision.
+		// The save disc: AreaFace still draws its own (that face has not been in
+		// the deck since 2026-08-22 and phase140 left it untouched), while the
+		// listing card's moved into the shared corner control when the mute
+		// joined it. Community has never had one — it dropped the bookmark on
+		// 2026-08-20 because the disc sat where the tour video draws its place
+		// name and distance.
 		const disc =
 			'width: 40,\n\t\theight: 40,\n\t\tborderRadius: 20,\n\t\tbackgroundColor: "rgba(255,255,255,0.75)"';
-		expect(LISTING).toContain(disc);
 		expect(AREA).toContain(disc);
+		expect(CORNER).toContain('backgroundColor: "rgba(255,255,255,0.85)"');
 		expect(COMMUNITY).not.toContain(disc);
 
 		// Same explore CTA — label copy, size, weight, colour.
