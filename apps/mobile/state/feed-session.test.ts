@@ -29,6 +29,7 @@ beforeEach(() => {
 	useFeedSession.setState({
 		signals: EMPTY_SIGNALS,
 		seenIds: [],
+		recent: [],
 		sessionN: 0,
 		lastSwipeAt: undefined,
 		hydrated: false,
@@ -111,5 +112,60 @@ describe("skipLayer", () => {
 		s().skipLayer("city");
 		s().skipLayer("city");
 		expect(s().signals.skippedLayers).toEqual(["city"]);
+	});
+});
+
+/**
+ * phase140 — the scope pick and the You tab's RECENT / "Bring back", which
+ * together replace the §1.8 Undo toast the owner rejected.
+ */
+describe("setScope", () => {
+	it("records the pick and clears it again", () => {
+		s().setScope({ unitId: "city:duluth-ga", name: "Duluth" });
+		expect(s().signals.scope).toEqual({
+			unitId: "city:duluth-ga",
+			name: "Duluth",
+		});
+		s().setScope(null);
+		expect(s().signals.scope).toBeUndefined();
+	});
+});
+
+describe("recent + bringBack", () => {
+	it("records a swipe on inventory, newest first", () => {
+		s().recordSwipe(listing("l1"), "left", 1_000);
+		s().recordSwipe(listing("l2"), "right", 2_000);
+		expect(s().recent.map((e) => e.id)).toEqual(["l2", "l1"]);
+		expect(s().recent[0]?.verdict).toBe("right");
+	});
+
+	it("undoes the verdict and lets the card be composed again", () => {
+		s().recordSwipe(listing("l1"), "right", 1_000);
+		expect(s().seenIds).toContain("l1");
+		expect(s().signals.likedListingIds).toContain("l1");
+
+		s().bringBack("l1");
+		expect(s().seenIds).not.toContain("l1");
+		expect(s().signals.likedListingIds).not.toContain("l1");
+		expect(s().recent.map((e) => e.id)).not.toContain("l1");
+	});
+
+	it("keeps seenListingIds — the buyer did see the home", () => {
+		s().recordSwipe(listing("l1"), "left", 1_000);
+		s().bringBack("l1");
+		expect(s().seenListingIds).toContain("l1");
+	});
+
+	it("is a no-op for an id the list no longer holds", () => {
+		s().recordSwipe(listing("l1"), "left", 1_000);
+		const before = s().recent;
+		s().bringBack("nope");
+		expect(s().recent).toBe(before);
+	});
+
+	it("is cleared by the You-tab reset", () => {
+		s().recordSwipe(listing("l1"), "left", 1_000);
+		s().clearSignals();
+		expect(s().recent).toEqual([]);
 	});
 });

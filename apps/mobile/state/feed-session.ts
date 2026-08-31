@@ -28,9 +28,16 @@ import {
 	EMPTY_SIGNALS,
 	type SignalState,
 	applyDimRemoval,
+	applyScope,
 	applySkipLayer,
 	applySwipe,
+	revertSwipe,
 } from "../lib/feed/signals";
+import {
+	type RecentEntry,
+	pushRecent,
+	recentEntryFor,
+} from "../lib/feed/recent";
 
 interface FeedSessionState {
 	signals: SignalState;
@@ -43,6 +50,13 @@ interface FeedSessionState {
 	 * "from N homes you've seen".
 	 */
 	seenListingIds: readonly string[];
+	/**
+	 * The last `RECENT_CAP` verdicts on inventory cards, newest first — the You
+	 * tab's history (phase140). This is what the owner chose INSTEAD of the
+	 * §1.8 Undo toast: the feed stays free of a transient control and the
+	 * correction lives on a surface built for reviewing what Percho learned.
+	 */
+	recent: readonly RecentEntry[];
 	/** Nth session for this install (§1.10 `session_n`). */
 	sessionN: number;
 	/** Epoch ms of the previous swipe, for §1.10 `dt_since_prev_swipe`. */
@@ -56,6 +70,16 @@ interface FeedSessionState {
 		at: number,
 	) => SignalState;
 	skipLayer: (layer: FunnelLayer) => void;
+	/**
+	 * The buyer picked a community scope in the feed's scope sheet, or cleared
+	 * it (`null` = anywhere in the metro).
+	 */
+	setScope: (pick: { unitId: string; name: string } | null) => void;
+	/**
+	 * You-tab "Bring back": undo one recorded verdict and let the card be
+	 * composed into the deck again. A no-op for an id the list no longer holds.
+	 */
+	bringBack: (id: string) => void;
 	/** You-tab evidence correction: "No, remove" on one preference dim. */
 	removeDim: (dim: string) => void;
 	markSeen: (ids: readonly string[]) => void;
@@ -71,14 +95,19 @@ export const useFeedSession = create<FeedSessionState>()(
 			signals: EMPTY_SIGNALS,
 			seenIds: [],
 			seenListingIds: [],
+			recent: [],
 			sessionN: 0,
 			hydrated: false,
 
 			recordSwipe: (card, verdict, at) => {
 				const signals = applySwipe(get().signals, card, verdict);
+				// `null` for the kinds the You tab does not list (§1.8: an answer
+				// is not revertible), so nothing unrevertible reaches RECENT.
+				const entry = recentEntryFor(card, verdict, at);
 				set((s) => ({
 					signals,
 					lastSwipeAt: at,
+					...(entry ? { recent: pushRecent(s.recent, entry) } : {}),
 					seenIds: s.seenIds.includes(card.id)
 						? s.seenIds
 						: [...s.seenIds, card.id],
@@ -91,6 +120,31 @@ export const useFeedSession = create<FeedSessionState>()(
 
 			skipLayer: (layer) =>
 				set((s) => ({ signals: applySkipLayer(s.signals, layer) })),
+
+			setScope: (pick) =>
+				set((s) => ({ signals: applyScope(s.signals, pick) })),
+
+			bringBack: (id) =>
+				set((s) => {
+					const entry = s.recent.find((e) => e.id === id);
+					if (!entry) return s;
+					return {
+						signals: revertSwipe(s.signals, {
+							id: entry.id,
+							kind: entry.kind,
+							verdict: entry.verdict,
+							...(entry.geoUnitId ? { geoUnitId: entry.geoUnitId } : {}),
+						}),
+						// Dropping the id from `seenIds` is what actually brings the
+						// card back: the composer dedupes against it, so until it is
+						// gone the engine will not emit the card again.
+						seenIds: s.seenIds.filter((x) => x !== id),
+						recent: s.recent.filter((e) => e.id !== id),
+						// `seenListingIds` is deliberately NOT touched: it is the
+						// FitCard's "from N homes you've seen" denominator, and the
+						// buyer did see this one.
+					};
+				}),
 
 			removeDim: (dim) =>
 				set((s) => ({ signals: applyDimRemoval(s.signals, dim) })),
@@ -115,6 +169,7 @@ export const useFeedSession = create<FeedSessionState>()(
 					signals: EMPTY_SIGNALS,
 					seenIds: [],
 					seenListingIds: [],
+					recent: [],
 					lastSwipeAt: undefined,
 				}),
 		}),
@@ -127,6 +182,7 @@ export const useFeedSession = create<FeedSessionState>()(
 				signals: s.signals,
 				seenIds: s.seenIds,
 				seenListingIds: s.seenListingIds,
+				recent: s.recent,
 				sessionN: s.sessionN,
 			}),
 			onRehydrateStorage: () => () => {

@@ -17,10 +17,12 @@ import {
 	FATIGUE_WINDOW,
 	applyDimRemoval,
 	applySkipLayer,
+	applyScope,
 	applySwipe,
 	geoSignalFor,
 	isLayerFatigued,
 	isLayerSuppressed,
+	revertSwipe,
 } from "./signals";
 
 const city: AreaCardV3 = {
@@ -235,5 +237,124 @@ describe("applyDimRemoval — the You tab's 'No, remove'", () => {
 
 	it("is a no-op for a dim with no evidence", () => {
 		expect(applyDimRemoval(EMPTY_SIGNALS, "quiet")).toBe(EMPTY_SIGNALS);
+	});
+});
+
+/**
+ * phase140 — the explicit scope pick and its inverse, plus "Bring back".
+ */
+describe("applyScope", () => {
+	it("records the pick without touching swipe-derived geo", () => {
+		const swiped = applySwipe(EMPTY_SIGNALS, city, "right");
+		const next = applyScope(swiped, {
+			unitId: "city:duluth-ga",
+			name: "Duluth",
+		});
+		expect(next.scope).toEqual({ unitId: "city:duluth-ga", name: "Duluth" });
+		// The observation and the statement are separate facts.
+		expect(next.geo).toEqual(swiped.geo);
+	});
+
+	it("clears the pick on null, leaving no empty scope object behind", () => {
+		const picked = applyScope(EMPTY_SIGNALS, {
+			unitId: "city:duluth-ga",
+			name: "Duluth",
+		});
+		const cleared = applyScope(picked, null);
+		expect(cleared.scope).toBeUndefined();
+		expect("scope" in cleared).toBe(false);
+	});
+});
+
+describe("revertSwipe", () => {
+	const listingCard: ListingCardV3 = {
+		kind: "listing",
+		id: "listing-1",
+		slug: "listing-1",
+		address: "1 Main St",
+		priceLabel: "$400,000",
+		bedBathSqft: "3 bd · 2 ba · 1,500 sqft",
+		heroUrl: "https://example.test/1.jpg",
+		geoUnitId: "city:duluth-ga",
+	};
+
+	it("undoes a right swipe on a listing exactly", () => {
+		const after = applySwipe(EMPTY_SIGNALS, listingCard, "right");
+		expect(after.likedListingIds).toContain("listing-1");
+		const back = revertSwipe(after, {
+			id: "listing-1",
+			kind: "listing",
+			verdict: "right",
+			geoUnitId: "city:duluth-ga",
+		});
+		expect(back.likedListingIds).not.toContain("listing-1");
+		// The geo credit the swipe gave is handed back, and the emptied unit
+		// leaves no entry to rank on.
+		expect(back.geo).toEqual([]);
+	});
+
+	it("undoes a left swipe on a community", () => {
+		const card: CommunityCardV3 = {
+			kind: "community",
+			id: "comm-1",
+			slug: "comm-1",
+			name: "Ashley Crossing",
+			city: "Alpharetta",
+			state: "GA",
+			heroUrl: "https://example.test/c.jpg",
+			geoUnitId: "city:alpharetta-ga",
+		};
+		const after = applySwipe(EMPTY_SIGNALS, card, "left");
+		expect(after.passedCommunityIds).toContain("comm-1");
+		const back = revertSwipe(after, {
+			id: "comm-1",
+			kind: "community",
+			verdict: "left",
+			geoUnitId: "city:alpharetta-ga",
+		});
+		expect(back.passedCommunityIds).not.toContain("comm-1");
+		expect(back.likedCommunityIds).not.toContain("comm-1");
+		expect(back.geo).toEqual([]);
+	});
+
+	it("leaves another unit's geo weight alone", () => {
+		let s = applySwipe(EMPTY_SIGNALS, listingCard, "right");
+		s = applySwipe(s, city, "right");
+		const back = revertSwipe(s, {
+			id: "listing-1",
+			kind: "listing",
+			verdict: "right",
+			geoUnitId: "city:duluth-ga",
+		});
+		expect(geoSignalFor(back, "city:decatur-ga")?.right).toBe(1);
+	});
+
+	it("never drives a counter negative when reverted twice", () => {
+		const after = applySwipe(EMPTY_SIGNALS, listingCard, "right");
+		const once = revertSwipe(after, {
+			id: "listing-1",
+			kind: "listing",
+			verdict: "right",
+			geoUnitId: "city:duluth-ga",
+		});
+		const twice = revertSwipe(once, {
+			id: "listing-1",
+			kind: "listing",
+			verdict: "right",
+			geoUnitId: "city:duluth-ga",
+		});
+		expect(twice.geo).toEqual([]);
+		expect(twice.likedListingIds).toEqual([]);
+	});
+
+	it("does not decrement swipesInStage — the swipe still happened", () => {
+		const after = applySwipe(EMPTY_SIGNALS, listingCard, "right");
+		const back = revertSwipe(after, {
+			id: "listing-1",
+			kind: "listing",
+			verdict: "right",
+			geoUnitId: "city:duluth-ga",
+		});
+		expect(back.swipesInStage).toBe(after.swipesInStage);
 	});
 });
