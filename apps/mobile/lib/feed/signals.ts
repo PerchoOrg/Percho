@@ -344,7 +344,10 @@ export function revertSwipe(
 			passedCommunityIds: withoutId(next.passedCommunityIds, card.id),
 		};
 	} else if (card.kind === "listing") {
-		next = { ...next, likedListingIds: withoutId(next.likedListingIds, card.id) };
+		next = {
+			...next,
+			likedListingIds: withoutId(next.likedListingIds, card.id),
+		};
 	}
 
 	if (card.geoUnitId !== undefined) {
@@ -380,7 +383,8 @@ function subtractGeo(
 	if (idx === -1) return [...geo];
 	const cur = geo[idx];
 	if (!cur) return [...geo];
-	const right = verdict === "right" ? Math.max(0, cur.right - weight) : cur.right;
+	const right =
+		verdict === "right" ? Math.max(0, cur.right - weight) : cur.right;
 	const left = verdict === "left" ? Math.max(0, cur.left - weight) : cur.left;
 	const next = [...geo];
 	if (right === 0 && left === 0) {

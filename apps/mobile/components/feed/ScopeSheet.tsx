@@ -19,7 +19,14 @@
  * rows scroll, and a box that filtered a list this short would be chrome for
  * its own sake. The Search tab is where finding a place by name lives.
  */
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+	Image,
+	Pressable,
+	ScrollView,
+	StyleSheet,
+	Text,
+	View,
+} from "react-native";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
 import { scopeChoices } from "../../lib/feed/scope";
 import { colors, radii } from "../../theme/tokens";

@@ -46,7 +46,8 @@ export function preferScope(pool: FeedPool, unitId: string | null): FeedPool {
 	if (unitId === null) return pool;
 	const listings = partition<ListingCardV3>(pool.listings, unitId);
 	const communities = partition<CommunityCardV3>(pool.communities, unitId);
-	if (listings === pool.listings && communities === pool.communities) return pool;
+	if (listings === pool.listings && communities === pool.communities)
+		return pool;
 	return { ...pool, listings, communities };
 }
 
@@ -58,10 +59,9 @@ export function preferScope(pool: FeedPool, unitId: string | null): FeedPool {
  * and the honest one here too: a city with 731 communities is more useful to a
  * buyer than one with 3, and neither is a recommendation.
  */
-export function scopeChoices<T extends { level: string; communityCount: number }>(
-	units: readonly T[],
-	limit: number,
-): readonly T[] {
+export function scopeChoices<
+	T extends { level: string; communityCount: number },
+>(units: readonly T[], limit: number): readonly T[] {
 	return units
 		.filter((u) => u.level === "city")
 		.slice()

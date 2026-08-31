@@ -25,6 +25,11 @@ import type {
 	SwipeVerdict,
 } from "../lib/feed/card-types";
 import {
+	type RecentEntry,
+	pushRecent,
+	recentEntryFor,
+} from "../lib/feed/recent";
+import {
 	EMPTY_SIGNALS,
 	type SignalState,
 	applyDimRemoval,
@@ -33,11 +38,6 @@ import {
 	applySwipe,
 	revertSwipe,
 } from "../lib/feed/signals";
-import {
-	type RecentEntry,
-	pushRecent,
-	recentEntryFor,
-} from "../lib/feed/recent";
 
 interface FeedSessionState {
 	signals: SignalState;

@@ -83,7 +83,7 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 		expect(CORNER).toContain("both ? styles.capsule : styles.disc");
 		// The lone-control form is still the disc every face drew before.
 		expect(CORNER).toContain(
-			'disc: { width: 40, height: 40, borderRadius: 20 }',
+			"disc: { width: 40, height: 40, borderRadius: 20 }",
 		);
 		// A photo-only card gets no speaker: the control must not promise audio
 		// the card does not have.

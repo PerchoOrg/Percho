@@ -11,6 +11,10 @@
  *     Row tap → Search tab focused on the unit.
  *   · Evidence ("WHAT PERCHO KNOWS") — per-dim strength with the §5.3
  *     correction: tap → "Still true?" → No removes the dim's weight.
+ *   · Recent — the swipe history and "Bring back" (phase140). The owner
+ *     rejected the §1.8 Undo toast on the feed (「之前的视线有点丑陋」); a
+ *     correction belongs on the surface that explains what Percho concluded,
+ *     not on a control that appears over a card for three seconds.
  *   · Reset — shows the scope it is about to erase before erasing it
  *     (likes, trade-offs, area history), then `clearSignals()`.
  *   · Settings — only the switches that exist (sound autoplay). No account
@@ -20,6 +24,7 @@ import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import {
 	Alert,
+	Image,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -45,6 +50,9 @@ export default function YouTab() {
 	const signals = useFeedSession((s) => s.signals);
 	const clearSignals = useFeedSession((s) => s.clearSignals);
 	const removeDim = useFeedSession((s) => s.removeDim);
+	const recent = useFeedSession((s) => s.recent);
+	const bringBack = useFeedSession((s) => s.bringBack);
+
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const toggleSound = useSoundStore((s) => s.toggle);
 
@@ -119,6 +127,65 @@ export default function YouTab() {
 						: "Swipe the feed and Percho starts learning."}
 				</Text>
 			</View>
+
+			{/*
+			 * RECENT — what the buyer just did, and the one way to take it back.
+			 * Rows are SNAPSHOTS taken at swipe time (`lib/feed/recent.ts`), so
+			 * the list paints instantly and shows the price the buyer actually
+			 * saw. Trade-off answers are absent by construction: §1.8 rules them
+			 * out of undo, and `recentEntryFor` returns null for them.
+			 */}
+			{recent.length > 0 && (
+				<>
+					<Text style={styles.sectionHead}>RECENT</Text>
+					<View style={styles.card}>
+						{recent.slice(0, RECENT_SHOWN).map((e) => (
+							<View key={e.id} style={styles.recentRow}>
+								{e.thumbUrl ? (
+									<Image
+										source={{ uri: e.thumbUrl }}
+										style={styles.recentThumb}
+									/>
+								) : (
+									<View style={[styles.recentThumb, styles.recentThumbEmpty]} />
+								)}
+								<View style={styles.recentText}>
+									<Text style={styles.recentTitle} numberOfLines={1}>
+										{e.title}
+									</Text>
+									{e.subtitle ? (
+										<Text style={styles.recentSub} numberOfLines={1}>
+											{e.subtitle}
+										</Text>
+									) : null}
+									<Text
+										style={[
+											styles.recentVerdict,
+											e.verdict === "right"
+												? styles.verdictYes
+												: styles.verdictNo,
+										]}
+									>
+										{e.verdict === "right" ? "Liked" : "Passed"}
+									</Text>
+								</View>
+								<Pressable
+									onPress={() => bringBack(e.id)}
+									accessibilityRole="button"
+									accessibilityLabel={`Bring back ${e.title}`}
+									hitSlop={8}
+									style={({ pressed }) => [
+										styles.bringBack,
+										pressed && styles.bringBackPressed,
+									]}
+								>
+									<Text style={styles.bringBackTxt}>Bring back</Text>
+								</Pressable>
+							</View>
+						))}
+					</View>
+				</>
+			)}
 
 			{/* Area familiarity — same data the Search journey layer draws. */}
 			<Text style={styles.sectionHead}>HOW WELL YOU KNOW EACH AREA</Text>
@@ -244,6 +311,13 @@ export default function YouTab() {
 	);
 }
 
+/**
+ * How many verdicts the You tab shows. The store keeps `RECENT_CAP` (30); this
+ * is a summary, not an archive, and more rows would push the sections the page
+ * is actually about below the fold.
+ */
+const RECENT_SHOWN = 4;
+
 const styles = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: colors.bg },
 	title: { ...textStyles.title1, color: colors.ink, marginBottom: 12 },
@@ -274,6 +348,34 @@ const styles = StyleSheet.create({
 		color: colors.ink2,
 		paddingVertical: 12,
 	},
+	recentRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 12,
+		paddingVertical: 10,
+	},
+	recentThumb: {
+		width: 52,
+		height: 52,
+		borderRadius: radii.tile,
+		backgroundColor: colors.surface2,
+	},
+	recentThumbEmpty: { backgroundColor: colors.surface2 },
+	recentText: { flex: 1, minWidth: 0 },
+	recentTitle: { ...textStyles.headline, color: colors.ink },
+	recentSub: { ...textStyles.footnote, color: colors.ink2, marginTop: 2 },
+	recentVerdict: { ...textStyles.footnote, fontWeight: "600", marginTop: 2 },
+	verdictYes: { color: colors.pos },
+	verdictNo: { color: colors.neg },
+	/** A link, not a button: undoing is a quiet correction, not a CTA. */
+	bringBack: {
+		paddingVertical: 8,
+		paddingLeft: 8,
+		minHeight: 44,
+		justifyContent: "center",
+	},
+	bringBackPressed: { opacity: 0.6 },
+	bringBackTxt: { ...textStyles.headline, color: colors.accent },
 	areaRow: {
 		paddingVertical: 10,
 		gap: 6,

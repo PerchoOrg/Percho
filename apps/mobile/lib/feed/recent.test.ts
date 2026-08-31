@@ -7,7 +7,12 @@ import type {
 	ListingCardV3,
 	TradeoffCardV3,
 } from "./card-types";
-import { RECENT_CAP, type RecentEntry, pushRecent, recentEntryFor } from "./recent";
+import {
+	RECENT_CAP,
+	type RecentEntry,
+	pushRecent,
+	recentEntryFor,
+} from "./recent";
 
 const listing: ListingCardV3 = {
 	kind: "listing",
@@ -96,7 +101,8 @@ describe("pushRecent", () => {
 
 	it("caps the list", () => {
 		let list: readonly RecentEntry[] = [];
-		for (let i = 0; i < RECENT_CAP + 5; i++) list = pushRecent(list, entry(`x${i}`, i));
+		for (let i = 0; i < RECENT_CAP + 5; i++)
+			list = pushRecent(list, entry(`x${i}`, i));
 		expect(list).toHaveLength(RECENT_CAP);
 		expect(list[0]?.id).toBe(`x${RECENT_CAP + 4}`);
 	});
