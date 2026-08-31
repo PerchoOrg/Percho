@@ -38,10 +38,13 @@ import {
 	ListingFace,
 	SAVE_TAP_TARGET,
 } from "../../components/cards/ListingFace";
+import { SwipeLabels } from "../../components/cards/SwipeLabels";
 import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { OfflineBar } from "../../components/feed/OfflineBar";
+import { ScopeCrumb } from "../../components/feed/ScopeCrumb";
+import { ScopeSheet } from "../../components/feed/ScopeSheet";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
 import type { FeedCardV3 } from "../../lib/feed/card-types";
@@ -50,11 +53,13 @@ import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
 import { generateFeed, movedUpCount } from "../../lib/feed/generate-feed";
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
-import { CARD_TAP_TARGET } from "../../lib/gesture/tap-slot";
+import { preferScope } from "../../lib/feed/scope";
+import { CARD_TAP_TARGET, SOUND_TAP_TARGET } from "../../lib/gesture/tap-slot";
 import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
+import { useSoundStore } from "../../state/sound";
 import { useSwipeHintStore } from "../../state/swipe-hint";
 import { DM_SERIF_FONT } from "../../theme/fonts";
 import { colors } from "../../theme/tokens";
@@ -128,6 +133,12 @@ export default function FeedScreen() {
 	const sessionHydrated = useFeedSession((s) => s.hydrated);
 	const recordSwipe = useFeedSession((s) => s.recordSwipe);
 	const beginSession = useFeedSession((s) => s.beginSession);
+
+	const scope = useFeedSession((s) => s.signals.scope);
+	const setScope = useFeedSession((s) => s.setScope);
+	const [scopeOpen, setScopeOpen] = useState(false);
+
+	const toggleSound = useSoundStore((s) => s.toggle);
 
 	const enqueue = useEventQueue((s) => s.enqueue);
 	const takeSeq = useEventQueue((s) => s.takeSeq);
@@ -233,8 +244,19 @@ export default function FeedScreen() {
 	 * Signals and seenIds are likewise read imperatively at composition time:
 	 * declaring them would rebuild the deck after every swipe.
 	 */
-	const poolRef = useRef(pool);
-	poolRef.current = pool;
+	/**
+	 * The pool the composer sees, with the buyer's explicit scope applied
+	 * (phase140). `preferScope` REORDERS — the scoped city's content leads and
+	 * nothing is dropped, per §1.3 — and returns the pool by identity when no
+	 * scope is set, so a buyer who never opens the sheet pays nothing.
+	 */
+	const scopedPool = useMemo(
+		() => preferScope(pool, scope?.unitId ?? null),
+		[pool, scope?.unitId],
+	);
+
+	const poolRef = useRef(scopedPool);
+	poolRef.current = scopedPool;
 
 	/**
 	 * DEV-ONLY recompose trigger, and 0 whenever the sampler is off.
@@ -267,7 +289,7 @@ export default function FeedScreen() {
 	const poolReady =
 		pool.listings.length + pool.communities.length + pool.geoUnits.length > 0;
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: `samplerPoolSize` (DEV-only) and `poolReady` are recompose TRIGGERS, not values this effect reads directly (it reads `poolRef`). Biome sees no read and calls them unnecessary; without `poolReady` the production deck composes once from the still-empty pool and stays blank forever.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `samplerPoolSize` (DEV-only), `poolReady` and `scope?.unitId` are recompose TRIGGERS, not values this effect reads directly (it reads `poolRef`). Biome sees no read and calls them unnecessary; without `poolReady` the production deck composes once from the still-empty pool and stays blank forever.
 	useEffect(() => {
 		if (!hydrated) return;
 		const s = useFeedSession.getState();
@@ -309,7 +331,11 @@ export default function FeedScreen() {
 		// from the pool, so it must recompose once the pool lands. `poolReady` is
 		// the production bootstrap (see its note): one false→true flip per stage,
 		// so pagination still never rebuilds the deck mid-session.
-	}, [hydrated, stage, samplerPoolSize, poolReady]);
+		// `scope?.unitId` is a recompose TRIGGER: a new scope reorders the pool,
+		// and the deck the buyer is holding was built from the old order. This is
+		// the one case where resetting `activeIndex` to 0 is correct — they just
+		// asked for a different place.
+	}, [hydrated, stage, samplerPoolSize, poolReady, scope?.unitId]);
 
 	/**
 	 * §1.7 pagination: append from the pool already held, deduped by the deck.
@@ -420,10 +446,41 @@ export default function FeedScreen() {
 		],
 	);
 
+	/**
+	 * The scoped unit's row, for the crumb's stats line. Absent until the pool
+	 * lands — which is why the crumb takes its NAME from `scope` (persisted, so
+	 * it paints on the first frame) and its NUMBERS from here.
+	 */
+	const scopedUnit = useMemo(
+		() =>
+			scope ? pool.geoUnits.find((u) => u.id === scope.unitId) : undefined,
+		[pool.geoUnits, scope],
+	);
+
 	const cardWidth = width - GUTTER * 2;
 
 	const capability = useCallback(
 		(card: FeedCardV3) => cardBehavior(card).capability,
+		[],
+	);
+
+	/**
+	 * §1.8's direction labels (owner pick "D2"), finally mounted. The component
+	 * has existed since task-0 and the feed never passed a `renderOverlay`, so a
+	 * drag has had no directional feedback at all: the card tilted and the buyer
+	 * learned what it meant only after letting go.
+	 *
+	 * Only for `decide` cards. A trade-off is `either-or` and already shows the
+	 * drag on its own terms — the chosen door widens and a green check lands by
+	 * its label — so a red PASS badge over the losing door would contradict the
+	 * face rather than annotate it. `cardBehavior` knows the difference, so
+	 * nothing here branches on a card kind.
+	 */
+	const renderOverlay = useCallback(
+		(card: FeedCardV3, args: CardRenderArgs) =>
+			cardBehavior(card).mode === "decide" ? (
+				<SwipeLabels card={card} tx={args.tx} cardWidth={args.cardWidth} />
+			) : null,
 		[],
 	);
 
@@ -587,6 +644,13 @@ export default function FeedScreen() {
 				if (hasVideo) setPaused((p) => !p);
 				return;
 			}
+			if (target === SOUND_TAP_TARGET) {
+				// Global state (§0.7): muting here mutes the community tours and
+				// the explore page too, which is the point — the buyer is
+				// silencing Percho, not this one card.
+				toggleSound();
+				return;
+			}
 			if (target === SAVE_TAP_TARGET) {
 				const top = deckRef.current[activeIndex];
 				// Listing and area faces both draw the bookmark disc. The area
@@ -613,7 +677,7 @@ export default function FeedScreen() {
 				}
 			}
 		},
-		[activeIndex, toggleSaved, emitGesture],
+		[activeIndex, toggleSaved, toggleSound, emitGesture],
 	);
 
 	const atEnd = activeIndex >= deck.length;
@@ -644,6 +708,18 @@ export default function FeedScreen() {
 			<View style={styles.chromeRow}>
 				<Text style={styles.wordmark}>Percho</Text>
 			</View>
+			{/*
+			 * The scope line (owner pick "S3"). This reverses the 2026-07-25
+			 * "卡外零常驻 chrome" rule, on the owner's own grounds that a
+			 * community-first product has to say which place it is showing:
+			 * 「顶部显示 scope 这个想法好 符合我们 community first 的理念」.
+			 * The two top CORNERS are still empty.
+			 */}
+			<ScopeCrumb
+				scopeName={scope?.name ?? null}
+				{...(scopedUnit ? { unit: scopedUnit } : {})}
+				onPress={() => setScopeOpen(true)}
+			/>
 			<View style={styles.stackWrap}>
 				{deck.length === 0 && loading ? (
 					<View style={styles.cardContainer}>
@@ -651,7 +727,15 @@ export default function FeedScreen() {
 					</View>
 				) : showExhausted ? (
 					<View style={styles.cardContainer}>
-						<ExhaustedCard onAdjustScope={retry} />
+						<ExhaustedCard
+							onAdjustScope={retry}
+							/*
+							 * §1.9's second exit, wired at last: the button went
+							 * unrendered because the Search tab did not exist when
+							 * `ExhaustedCard` was written. It does now.
+							 */
+							onBrowseMap={() => router.navigate("/search")}
+						/>
 					</View>
 				) : (
 					<SwipeStack
@@ -661,6 +745,7 @@ export default function FeedScreen() {
 						onTapTarget={onTapTarget}
 						onHintReady={onHintReady}
 						renderCard={renderCard}
+						renderOverlay={renderOverlay}
 						keyExtractor={deckKey}
 						cardWidth={cardWidth}
 						capability={capability}
@@ -688,6 +773,13 @@ export default function FeedScreen() {
 					</View>
 				)}
 			</View>
+			<ScopeSheet
+				visible={scopeOpen}
+				units={pool.geoUnits}
+				scopedId={scope?.unitId ?? null}
+				onPick={setScope}
+				onClose={() => setScopeOpen(false)}
+			/>
 		</SafeAreaView>
 	);
 }
