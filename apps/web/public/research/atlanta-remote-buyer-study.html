@@ -284,9 +284,10 @@
         <p class="errmsg">请选 1–3 项。</p>
       </fieldset>
 
-      <fieldset>
-        <legend><span class="qn">10</span>如果当时有一个「神奇的 app」帮您，您最希望它能做什么？<small>选填 · 写一两句就行</small></legend>
+      <fieldset data-q="q10_wish" data-req="text">
+        <legend><span class="qn">10</span>如果当时有一个「神奇的 app」帮您，您最希望它能做什么？<small>写一两句就行</small></legend>
         <div class="other"><input type="text" name="q10_wish" maxlength="200" placeholder="一两句话"></div>
+        <p class="errmsg">请写一两句。</p>
       </fieldset>
     </section>
 
@@ -492,7 +493,9 @@
     capAll(); buildQ6Top();
     if (d.answers.q6_top) { var t = form.querySelector('input[name=q6_top][value="' + d.answers.q6_top + '"]'); if (t) t.checked = true; }
   }
-  form.addEventListener('change', function (ev) { var fs = ev.target.closest('fieldset'); if (fs) fs.classList.remove('err'); });
+  function clearErr(ev) { var fs = ev.target.closest('fieldset'); if (fs) fs.classList.remove('err'); }
+  form.addEventListener('change', clearErr);
+  form.addEventListener('input', clearErr);
   form.addEventListener('change', saveDraft);
   form.addEventListener('input', saveDraft);
   restoreDraft();
@@ -508,6 +511,7 @@
       if (req === 'one') ok = checkedCount(q) === 1;
       if (req === 'many') { var n = checkedCount(q); var max = Number(fs.getAttribute('data-max') || 99); ok = n >= 1 && n <= max; }
       if (req === 'rates') ok = ['q13_community', 'q13_tradeoff', 'q13_movein', 'q13_persona'].every(function (n) { return checkedCount(n) === 1; });
+      if (req === 'text') { var t = form.querySelector('input[name="' + q + '"]'); ok = !!t && t.value.trim().length > 0; }
       // nested second choice inside the same fieldset
       fs.querySelectorAll('.opts[data-q]').forEach(function (grp) {
         var gq = grp.getAttribute('data-q'); var greq = grp.getAttribute('data-req');

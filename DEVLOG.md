@@ -16,6 +16,52 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-31 02:10 UTC — phase141: the study's one open question becomes required
+
+**Objective**: the customer study has been live in WeChat since 2026-08-30
+16:41 UTC and has collected six responses. Q10 (「如果当时有一个神奇的 app
+帮您，您最希望它能做什么？」) is the study's only free-text question and was
+marked 选填 — the four responses that answered it are the sharpest material in
+the whole set (「房子持有成本，房屋状况，本身暗病和维护成本等」, 「房子预期会
+有的采坑指南」, 「查周围有没有犯罪的邻居」, 「给几个选项，按照个人偏好选一个
+综合分数高的房子」), and the two that skipped it were the two fastest
+completions (7.3 and 14.7 min). Owner: make it required.
+
+**Actions**: `apps/web/public/research/atlanta-remote-buyer-study.html` only.
+The Q10 `<fieldset>` gains `data-q="q10_wish" data-req="text"` and an
+`.errmsg`, the legend drops 「选填 ·」, `validate()` gains a `text` branch
+(`ok = input.value.trim().length > 0`), and the error-clearing listener is
+extracted to `clearErr` and bound to `input` as well as `change` so the red
+state lifts while the respondent types rather than on blur.
+
+**Decisions**: client-side only. `lib/zod/research-response.ts` keeps `answers`
+as a loose record on purpose (§ its own docblock) — required-ness for every
+other question already lives in the page's `validate()`, so putting Q10's
+there is the consistent choice, not a gap. The contact field and the six
+「其他」 supplements to choice questions stay optional; Q10 is the only
+standalone open question. Same study id — the six existing rows keep their
+schema, four with `q10_wish` and two without.
+
+**Verification**: Chrome headless against a copy of the page with an injected
+test script and a stubbed `fetch` (no live row created). Ten assertions, all
+passing: submit blocked with Q10 empty; status reads 「还有 1 题没答完」;
+Q10 is the fieldset marked red; a whitespace-only answer is still blocked;
+typing clears the red state; submit goes through once filled; `q10_wish`
+reaches the payload; the other 23 answers are still collected.
+
+**Issues**: none. No TS/TSX changed, so typecheck and lint are untouched by
+this diff.
+
+**Learnings**: an open question at the end of a 16-question form is the first
+thing a fast respondent drops — the two skips correlate exactly with the two
+shortest durations, not with having nothing to say. If a later study wants
+narrative material, either require it or move it earlier.
+
+**Next steps**: the responses so far are worth a read as a set — Q15 is
+「有点失望」 six times out of six (no 「非常失望」 yet), 「怕推荐带有商业推广
+倾向」 is five out of six, and 「本地华人真实居住体验评论区」 and 「实时 MLS」
+are tied as the most-requested additions in Q16.
+
 ## 2026-08-31 00:20 UTC — phase140.9: the scope crumb was invisible and still tappable
 
 **Objective**: owner on device, minutes after the phase140 merge reached his
