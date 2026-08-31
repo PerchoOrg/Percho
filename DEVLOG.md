@@ -16,6 +16,73 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-31 06:07 UTC — phase142: the study gains a behavioural-commitment question
+
+**Objective**: Q15 is the Sean Ellis PMF question and all seven responses so
+far sit in the middle box (`somewhat`, 0 × `very`, 0 × `not`). That reads like
+a failed PMF test but is not one: the questionnaire shows a 1'40" demo video
+and then asks a NON-USER how they would feel if the product vanished. The
+Sean Ellis test presumes recent active users (canonically ≥2 uses in the last
+two weeks); asked of someone with no product in their workflow, it measures
+concept appeal, not switching cost. Zero variance across seven responses means
+the question is currently carrying no information. Owner's call: keep Q15
+as-is (it stays a baseline to re-ask once TestFlight users exist) and add a
+behavioural-commitment question beside it.
+
+**Actions**: `apps/web/public/research/atlanta-remote-buyer-study.html` only.
+- New Q17 `q17_commit`, `data-req="many"`, three options: `refer_friend`
+  (转给正在看房的朋友), `notify_launch` (留联系方式，上线通知), `none`
+  (都不愿意，想再观望一下). Section counter 15–16 → 15–17.
+- `none` is mutually exclusive with the two commitments, both directions,
+  via one `change` listener next to the Q6 handler.
+- The contact fieldset gains `data-q="contact"` and an `.errmsg`, and
+  `validate()` gains a tail branch: contact is required IFF `notify_launch`
+  is checked. Its legend changes from 「领红包用的联系方式 · 选填」 to
+  「联系方式 · 用来发红包和上线通知」.
+
+**Decisions**:
+- Owner picked the two middle rungs of the commitment ladder and rejected the
+  two ends. A willingness-to-pay rung was rejected — asking for money off a
+  demo video drags the conversation to pricing and depresses response rates at
+  a stage where no one has used the thing. A TestFlight rung was rejected too,
+  despite the build being live (phase138.7).
+- `none` is a deliberate escape hatch. A required commitment question without
+  one manufactures consent and inflates the result; 「都不愿意」 is itself a
+  valuable reading.
+- Requiring contact behind `notify_launch` is the point of the change. A
+  ticked box with no contact behind it is a stated preference, which is what
+  Q15 already fails to escape. The cost is what makes the answer mean
+  something.
+- Client-side only, consistent with phase141: `lib/zod/research-response.ts`
+  keeps `answers` loose by design, and `q17_commit` already satisfies its
+  `^q\d{1,2}(_[a-z]+)*$` key regex. Same study id — the seven existing rows
+  keep their schema, simply without `q17_commit`.
+
+**Verification**: headless Chrome against a copy of the page with an injected
+test script and a stubbed `fetch` (no live row created). 20 assertions, all
+passing: submit blocked with Q17 empty and the fieldset marked red; `none`
+clears both commitments and either commitment clears `none`; `notify_launch`
+with an empty or whitespace-only contact is blocked and the contact fieldset
+goes red; filling contact lets it through; `q17_commit` arrives as an array;
+`contact` reaches the payload without being duplicated into `answers`; the
+`none` path submits with no contact; the other 23 answers still collected.
+
+**Issues**: none. No TS/TSX in the diff, so typecheck and lint are untouched.
+
+**Learnings**: a PMF question asked before anyone has used the product is a
+category error, and the tell was in the data before it was in the reasoning —
+seven identical answers is not a finding, it is an instrument reading zero.
+Worth re-asking Q15 verbatim to the TestFlight cohort; that comparison is the
+whole reason not to delete or reword it now.
+
+**Next steps**: re-run the aggregate once the sample passes ~25. The open
+question is whether `q17_commit` splits along `q2_purpose` — the one
+respondent who called Percho 「只是一个看着好玩的短视频流」 (`q11_value =
+just_fun`) is a pure investor whose Q10 and Q16 both point at price and ROI,
+not at neighbourhood feel. If investors keep landing on `none`, the product's
+current narrative is aimed at owner-occupiers and the investor case needs its
+own line.
+
 ## 2026-08-31 02:10 UTC — phase141: the study's one open question becomes required
 
 **Objective**: the customer study has been live in WeChat since 2026-08-30

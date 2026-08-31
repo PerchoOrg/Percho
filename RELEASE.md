@@ -8,6 +8,9 @@
 
 ## v1.3 — Opening a home now answers "does this fit me?"
 
+### 2026-08-31
+- **The buyer study asks one more thing at the end: what you'd actually do right now.** After the "what else would it need" question, the form asks whether you'd pass it to a friend who's house-hunting, whether you'd like to be told when it launches, or neither — and if you ask to be notified, it now asks for a contact so the notice can actually reach you
+
 ### 2026-08-30
 - **The feed now tells you where you're looking, and lets you change it.** A line under the Percho wordmark reads "Atlanta metro › Peachtree Corners" with the number of communities there and what homes typically cost. Tap it to pick a different city — communities there come first, and everything else still shows further down. Nothing is hidden from you; it's a preference, not a filter
 - **You can mute a tour from the feed again.** Dragging a card left or right now shows what it means — LIKE or PASS — before you let go, and the home card's top-right corner holds one small control with the sound and the bookmark side by side, instead of two separate buttons. Community tours get the same mute, placed clear of the name the film draws in that corner. Turning sound off anywhere turns it off everywhere, and it stays off
