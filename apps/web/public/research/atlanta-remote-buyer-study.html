@@ -365,7 +365,7 @@
 
     <!-- ── 四 ── -->
     <section class="part">
-      <div class="part-head"><h2>四、留存与行动意愿</h2><span class="n">15–16</span></div>
+      <div class="part-head"><h2>四、留存与行动意愿</h2><span class="n">15–17</span></div>
 
       <fieldset data-q="q15_pmf" data-req="one">
         <legend><span class="qn">15</span>如果这款 App 现已上线但突然无法使用，您的感受是：<small>单选</small></legend>
@@ -391,9 +391,20 @@
         <p class="errmsg">请至少选一项。</p>
       </fieldset>
 
-      <fieldset>
-        <legend><span class="qn">✉</span>领红包用的联系方式<small>选填 · 微信名或手机号，只用来发红包</small></legend>
+      <fieldset data-q="q17_commit" data-req="many">
+        <legend><span class="qn">17</span>下面这几件事，您现在就愿意做哪一件？<small>可多选</small></legend>
+        <div class="opts">
+          <label class="opt wide"><input type="checkbox" name="q17_commit" value="refer_friend"><span>愿意把它转给正在看房的朋友</span></label>
+          <label class="opt wide"><input type="checkbox" name="q17_commit" value="notify_launch"><span>愿意留下联系方式，上线后第一时间通知我试用</span></label>
+          <label class="opt wide"><input type="checkbox" name="q17_commit" value="none"><span>都不愿意，想再观望一下</span></label>
+        </div>
+        <p class="errmsg">请至少选一项（不愿意也请选「都不愿意」）。</p>
+      </fieldset>
+
+      <fieldset data-q="contact">
+        <legend><span class="qn">✉</span>联系方式<small>微信名或手机号，用来发红包和上线通知</small></legend>
         <div class="other"><input type="text" name="contact" maxlength="120" placeholder="微信名 / 手机号"></div>
+        <p class="errmsg">您选了「上线后通知我」，请留一个联系方式。</p>
       </fieldset>
     </section>
 
@@ -459,6 +470,19 @@
   }
   q6.addEventListener('change', function (ev) { if (ev.target.name === 'q6_check') buildQ6Top(); });
 
+  // Q17: "none of these" cannot coexist with a commitment
+  form.addEventListener('change', function (ev) {
+    if (ev.target.name !== 'q17_commit') return;
+    var none = form.querySelector('input[name=q17_commit][value=none]');
+    if (ev.target === none) {
+      if (none.checked) {
+        form.querySelectorAll('input[name=q17_commit]').forEach(function (b) { if (b !== none) b.checked = false; });
+      }
+    } else if (ev.target.checked) {
+      none.checked = false;
+    }
+  });
+
   // draft: survive a refresh
   function collect() {
     var answers = {};
@@ -521,6 +545,12 @@
       fs.classList.toggle('err', !ok);
       if (!ok) bad.push(fs);
     });
+    // the contact field is optional unless Q17 asked to be notified at launch
+    var notify = form.querySelector('input[name=q17_commit][value=notify_launch]:checked');
+    var contactFs = form.querySelector('fieldset[data-q="contact"]');
+    var okContact = !notify || form.contact.value.trim().length > 0;
+    contactFs.classList.toggle('err', !okContact);
+    if (!okContact) bad.push(contactFs);
     return bad;
   }
 
