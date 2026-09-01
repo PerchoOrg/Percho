@@ -16,6 +16,66 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-01 02:05 UTC — phase143: the study's nine responses become one page
+
+**Objective**: owner wants every questionnaire result summarised on a web page.
+Nine responses to `atlanta-remote-buyer-v4` as of 2026-08-31 23:19 UTC.
+
+**Actions**: one new file,
+`apps/web/public/demos/buyer-study-summary/index.html` (~43 KB, self-contained,
+no build step, no network). Data is baked in as a JSON `<script>` block
+generated from the live table; option labels and question legends are parsed
+out of the questionnaire page itself rather than retyped, so the two cannot
+drift. Seven sections: KPI tiles, sample composition, decision behaviour,
+post-demo evaluation, intent/commitment, the seven verbatim Q10 answers, a
+per-response table, and a limitations note.
+
+**Decisions**:
+- **Counts, never percentages.** At n=9 one response moves any proportion by
+  11 points. Every bar is labelled with an absolute count and each card
+  carries its own `n=` denominator, because the denominator is NOT constant —
+  `q17_commit` has 2 valid answers, everything else has 9. A page that showed
+  "100% somewhat disappointed" would be technically true and actively
+  misleading.
+- **No PII on the page.** 7 of 9 left a WeChat name or phone. The page is
+  served from `percho.co`, so contacts are reduced to a `has_contact` boolean
+  at generation time; the raw values never enter the file. Verified by
+  grepping the built page for each known contact string. `noindex,nofollow`
+  as a second layer, not as the primary control.
+- **Single-hue sequential palette** (blue, `#2a78d6` light / `#3987e5` dark,
+  soft step `#86b6ef` / `#184f95`). Every bar in a card compares magnitudes
+  *within one question*, which is a sequential job, not a categorical one —
+  so the whole page needs no categorical ramp and sidesteps CVD adjacency
+  entirely. Validated with the dataviz skill's `validate_palette.js`:
+  ALL PASS for `--ordinal` in both modes against both surfaces.
+- **The limitations section is not boilerplate.** It states in the page itself
+  that Q15 is not a PMF reading (Sean Ellis presumes recent active users; these
+  respondents have only watched a video), that Q17's n is 2, and that the
+  channel is WeChat-only. If this page circulates without me attached to it,
+  those four caveats have to travel with it.
+- Table cells use short option labels via an explicit `SHORT` map; the full
+  wording is always spelled out in the card above. The first render pushed the
+  last three columns out of view.
+
+**Verification**: headless Chrome render at 1000x5600 plus targeted crops of
+the table/notes tail and a dark-mode pass — all seven sections populate, 21
+cards, 9 table rows, 7 quotes, no label collisions or overflow. PII grep clean.
+
+**Issues**: none.
+
+**Learnings**: the honest form for a 9-response survey is mostly *not* a
+chart — stat tiles, count bars with visible denominators, verbatim quotes and
+a full 9-row table. The table is legible at this n, which means the reader can
+always check the aggregate against the rows; that is worth more than any
+visualisation here.
+
+**Next steps**: `DEVLOG.md` rotation is now due — UTC has crossed into
+September and this file still holds all of August. Move August into
+`docs/devlog/2026-08.md` per § 2.1 rule 2. Separately, the owner is reviewing
+a proposal for a successor questionnaire reframed from home-buying to
+relocation (`relocation-v1`), prompted by the note that "Percho 是个移居的
+app，不是买房的 app"; nothing has been built for it.
+
 ## 2026-08-31 06:07 UTC — phase142: the study gains a behavioural-commitment question
 
 **Objective**: Q15 is the Sean Ellis PMF question and all seven responses so

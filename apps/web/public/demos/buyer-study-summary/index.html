@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>亚特兰大远程买家研究 — 结果汇总</title>
+<style>
+  :root{
+    --plane:#f9f9f7; --surface:#fcfcfb;
+    --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10);
+    --bar:#2a78d6; --bar-soft:#86b6ef; --track:#eeeeea;
+    --warn:#fab219; --crit:#d03b3b; --good:#0ca30c;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:where(:not([data-theme="light"])){
+      --plane:#0d0d0d; --surface:#1a1a19;
+      --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+      --bar:#3987e5; --bar-soft:#184f95; --track:#232322;
+    }
+  }
+  :root[data-theme="dark"]{
+    --plane:#0d0d0d; --surface:#1a1a19;
+    --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+    --bar:#3987e5; --bar-soft:#184f95; --track:#232322;
+  }
+  *{box-sizing:border-box}
+  html{color-scheme:light dark}
+  body{
+    margin:0; background:var(--plane); color:var(--ink);
+    font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:940px;margin:0 auto;padding:40px 20px 96px}
+  header.top{margin-bottom:28px}
+  .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+  h1{font-size:27px;line-height:1.25;margin:0 0 10px;font-weight:640;letter-spacing:-.01em}
+  .lede{color:var(--ink2);margin:0;max-width:64ch}
+  .toggle{
+    position:absolute;top:20px;right:20px;background:var(--surface);color:var(--ink2);
+    border:1px solid var(--ring);border-radius:999px;padding:6px 13px;font:inherit;font-size:13px;cursor:pointer;
+  }
+  .toggle:hover{color:var(--ink)}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin:26px 0 8px}
+  .tile{background:var(--surface);border:1px solid var(--ring);border-radius:12px;padding:15px 16px}
+  .tile .k{font-size:12px;color:var(--muted);margin:0 0 6px}
+  .tile .v{font-size:29px;font-weight:640;letter-spacing:-.02em;line-height:1.05;margin:0}
+  .tile .s{font-size:12.5px;color:var(--ink2);margin:6px 0 0}
+  .hero{grid-column:span 1}
+  .hero .v{font-size:44px}
+
+  section{margin-top:44px}
+  h2{font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);
+     margin:0 0 16px;padding-bottom:9px;border-bottom:1px solid var(--grid);font-weight:600}
+  .card{background:var(--surface);border:1px solid var(--ring);border-radius:12px;padding:18px 18px 16px;margin-bottom:14px}
+  .qh{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin:0 0 3px}
+  .qt{font-size:15px;font-weight:600;margin:0}
+  .qn{font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .qsub{font-size:12.5px;color:var(--muted);margin:0 0 14px}
+
+  .bars{display:flex;flex-direction:column;gap:7px}
+  .row{display:grid;grid-template-columns:minmax(0,1fr) 118px 34px;align-items:center;gap:11px;
+       padding:2px 0;border-radius:6px}
+  .row:hover{background:color-mix(in srgb,var(--bar) 7%,transparent)}
+  .rl{font-size:13.5px;color:var(--ink2);min-width:0;overflow-wrap:anywhere}
+  .track{height:9px;background:var(--track);border-radius:999px;overflow:hidden}
+  .fill{height:100%;background:var(--bar);border-radius:999px;min-width:2px}
+  .fill.soft{background:var(--bar-soft)}
+  .rv{font-size:13px;font-weight:640;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .rv small{font-weight:400;color:var(--muted)}
+
+  .quotes{display:grid;gap:11px}
+  .quote{background:var(--surface);border:1px solid var(--ring);border-left:3px solid var(--bar);
+         border-radius:9px;padding:13px 15px}
+  .quote p{margin:0;font-size:15px;line-height:1.55}
+  .quote .meta{margin:8px 0 0;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  .tblwrap{overflow-x:auto;border:1px solid var(--ring);border-radius:12px;background:var(--surface)}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--grid);white-space:nowrap}
+  th{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:600;
+     position:sticky;top:0;background:var(--surface)}
+  tr:last-child td{border-bottom:none}
+  td{color:var(--ink2);font-variant-numeric:tabular-nums}
+  td.em{color:var(--ink);font-weight:600}
+  .dash{color:var(--muted)}
+
+  .note{background:var(--surface);border:1px solid var(--ring);border-radius:12px;padding:18px 20px}
+  .note h3{margin:0 0 9px;font-size:14px;font-weight:640}
+  .note ul{margin:0;padding-left:19px;color:var(--ink2)}
+  .note li{margin:6px 0}
+  .flag{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;
+        border-radius:999px;padding:3px 10px;border:1px solid var(--ring);color:var(--ink2)}
+  .flag b{font-weight:640}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  footer{margin-top:52px;padding-top:18px;border-top:1px solid var(--grid);color:var(--muted);font-size:12.5px}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;color:var(--ink2)}
+  @media (max-width:620px){
+    .row{grid-template-columns:minmax(0,1fr) 72px 30px}
+    h1{font-size:23px}
+  }
+</style>
+</head>
+<body>
+<button class="toggle" id="themeBtn" type="button">深色</button>
+<div class="wrap">
+
+<header class="top">
+  <p class="eyebrow">Percho · Customer Study</p>
+  <h1>亚特兰大远程买家研究 — 结果汇总</h1>
+  <p class="lede">
+    问卷 <code>atlanta-remote-buyer-v4</code>，2026-08-30 起经微信发放。受访者观看一段
+    1 分 40 秒的产品演示后作答，共 17 题。本页汇总全部回复，<b>所有数字均为绝对人数，不折算百分比</b>。
+  </p>
+</header>
+
+<div class="kpis" id="kpis"></div>
+
+<section>
+  <h2>一 · 样本构成</h2>
+  <div id="sec-sample"></div>
+</section>
+
+<section>
+  <h2>二 · 他们当时怎么做决定</h2>
+  <div id="sec-decide"></div>
+</section>
+
+<section>
+  <h2>三 · 看完演示之后的评价</h2>
+  <div id="sec-product"></div>
+</section>
+
+<section>
+  <h2>四 · 留存与行动意愿</h2>
+  <div id="sec-intent"></div>
+</section>
+
+<section>
+  <h2>五 · 自由回答 —— 「如果有一个神奇的 app」</h2>
+  <p class="qsub" style="margin-top:-6px">
+    Q10 是全卷唯一的开放题。前 6 份中有 2 份跳过（2026-08-31 起改为必填）。
+    这一栏是整份研究里信息密度最高的材料，原文照录、未作编辑。
+  </p>
+  <div class="quotes" id="sec-quotes"></div>
+</section>
+
+<section>
+  <h2>六 · 逐份明细</h2>
+  <div class="tblwrap"><table id="tbl"></table></div>
+</section>
+
+<section>
+  <h2>七 · 读这份数据时必须知道的事</h2>
+  <div class="note">
+    <h3>四条限制</h3>
+    <ul>
+      <li><b>n = 9。</b>任何比例都不稳定，因此本页只给人数。一份回复的进出就能改变 11 个百分点，看比例会把噪声读成趋势。</li>
+      <li><b>Q15 不是 PMF 读数。</b>它是 Sean Ellis test，而该方法要求受访者是近期真实使用过产品的活跃用户。这里的受访者只看过一段视频，
+          产品从未进入他们的流程，「拿走它」自然不痛。九份全部落在中间档、方差为零，说明这道题目前测不出东西——保留它，是为了将来对 TestFlight 真实用户再问一次时有基线可比。</li>
+      <li><b>Q17 有效样本只有 2。</b>该题 2026-08-31 才上线，之前的 7 份没有这一栏，表格中记为 —。</li>
+      <li><b>渠道单一。</b>全部经微信发放、全部中文作答，样本偏向在美华人买家，不代表全体美国购房者。</li>
+    </ul>
+    <h3 style="margin-top:16px">隐私</h3>
+    <ul>
+      <li>9 份中有 7 份留了微信名或手机号，用于发红包与上线通知。<b>联系方式不在本页出现</b>，仅保留「是否留下」这一布尔值，原始值留在数据库中。</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  数据截至 <span id="asof"></span>，共 9 份回复 · 生成自 <code>research_responses</code> · 本页为内部分析用，未对外索引
+</footer>
+</div>
+<script id="payload" type="application/json">{"labels":{"q1_area":{"north":"经典北区（Johns Creek / Alpharetta / Suwanee / Duluth / Cumming）","northeast":"东北发展区（Lawrenceville / Buford / Sugar Hill）","intown":"核心市区（Midtown / Buckhead / Decatur / West Midtown）","other":"其他"},"q1_time":{"lt6m":"半年内","6m_1y":"半年–1 年","1y_2y":"1–2 年","gt2y":"2 年以上"},"q2_purpose":{"live":"自住","invest":"纯投资出租","family":"为家人购置","later":"先投资 / 空置，未来搬入"},"q2_where":{"us_other_state":"美国外州","china":"中国国内","other_country":"其他国家"},"q3_why":{"job":"工作在这","family_friends":"家人或朋友在这","price":"房价便宜","schools":"学区好","asian_community":"华人多，生活方便","roi":"投资回报好","climate":"气候","content":"看了视频或帖子被种草","other":"其他"},"q4_visits":{"0":"0 次（全远程）","1":"1 次","2plus":"2 次及以上"},"q4_sources":{"agent_video":"中介实拍视频 / FaceTime 连线","street_view":"Google 街景 / 地图漫游","community":"华人社群 / 朋友打听","creators":"YouTube / 小红书博主探店或探区","portals":"Zillow / Redfin 数据及学区网"},"q5_narrow":{"agent":"中介推荐","friends":"朋友或家人推荐","school_rank":"学区排名","commute":"离公司近","asian_community":"华人多的地方","budget":"预算能买到什么","map_browsing":"自己在地图上一片片翻","other":"其他"},"q6_check":{"schools":"学区（小学到高中）","amenities":"小区自己的设施（泳池、会所、网球场、门禁）","outdoor":"公园、步道、湖","dining":"吃饭（餐馆、咖啡）","nightlife":"夜生活、酒吧","shopping":"购物（商场、大超市）","errands":"日常跑腿（超市、药房、银行）","asian":"华人超市和餐馆","fitness":"健身房、运动场馆","kids":"小孩的去处（playground、兴趣班、日托）","healthcare":"医疗（医院、诊所、儿科）","pets":"宠物（狗公园、宠物医院）","faith":"教会 / 寺庙","commute":"通勤（公司、机场）","transit":"公共交通","safety":"治安","price_trend":"房价走势 / 投资回报","age":"新房还是老房","street_feel":"街上看起来什么样、邻居是什么人"},"q7_video_seen":{"agent_walkthrough":"中介录的房子走一圈","youtube_area":"YouTube 上的街区介绍","drone":"航拍","tour3d":"3D 看房","rednote":"小红书上的探房视频","builder":"Builder / 开发商的样板房视频","none":"没看过视频"},"q7_video_changed":{"yes":"有","no":"没有"},"q8_decider":{"price":"价格谈到位了","agent_said":"中介说这套好","proxy_saw":"朋友或家人看了说好","visited":"亲自飞过去看了一眼","video":"视频里看着就对","schools":"学区","fomo":"怕再不买就没了","other":"其他"},"q9_gaps":{"vibe":"社区真实氛围与邻里画像（白天 / 晚上街区感觉、邻居群体）","commute":"高峰期实际通勤与周边车流、噪音","convenience":"真实生活便利度（华人超市、常去餐饮、跑腿距离）","amenities":"小区公共设施现状（泳池 / 会所维护度、真实门禁与绿化）","hidden_costs":"隐性规则与成本（HOA 限制、出租门槛、地税）","house_condition":"房屋本身暗病与维护成本"},"q11_value":{"immersive_tour":"沉浸式「云逛社区」，省去逐个查街景和碎视频的时间","narrow_down":"帮我把模糊的选房需求快速收敛到具体 1–2 个适合的社区","flag_issues":"真实指出社区 / 房源的潜在硬伤与入住注意事项","just_fun":"只是一个看着好玩的房产短视频流，对实际做决定帮助有限","other":"其他"},"q12_stage":{"a_no_area":"阶段 A：刚确定亚特兰大，完全不知道选哪个 Zipcode / 区域时","b_compare_areas":"阶段 B：锁定了 2–3 个大区，需要横向对比具体 Neighborhood 时","c_check_homes":"阶段 C：已经看到具体几套房子，用来确认周边配套和硬伤时","d_wont_use":"阶段 D：基本不会用，因为更习惯直接找中介或刷 Zillow"},"q14_trust":{"trust":"非常信任：只要画面真实、客观呈现优缺点就会参考","verify":"半信半疑：会参考，但必须核对数据来源（如标注来源于 MLS / 学区局 / 官方数据）","need_human":"不太相信：除非有本地真人（中介 / 当地住户）背书或答疑"},"q14_concerns":{"only_praise":"怕只吹不贬","wrong_data":"怕数据不准","paid_bias":"怕推荐带有商业推广倾向"},"q15_pmf":{"very":"非常失望（它极大简化了我的远程决策）","somewhat":"有点失望（有它挺好，但没有也能用传统方式看）","not":"无所谓（对我影响不大）"},"q16_needs":{"mls_live":"实时 MLS 挂牌房源与历史成交底价","resident_reviews":"本地华人真实居住体验评论区 / 业主 Q&A","local_agent":"一键连线对该片区极度熟悉的本地中介咨询","roi_calc":"房屋投资回报测算器（租金估算、现金流与升值走势）","family_share":"跨设备分享与家庭成员协同点赞 / 打分功能","other":"其他"},"q17_commit":{"refer_friend":"愿意把它转给正在看房的朋友","notify_launch":"愿意留下联系方式，上线后第一时间通知我试用","none":"都不愿意，想再观望一下"},"q6_top":{"' + c.value + '":"' + c.nextElementSibling.textContent + '"}},"titles":{"q1_area":"您购置的房产位于亚特兰大哪个区域？成交时间大概在什么时候？","q1_time":"区域 经典北区（Johns Creek / Alpharetta / Suwanee / Duluth / Cumming） 东北发展区（Lawrenceville / Buford / Sugar Hill） 核心市区（Midtown / Buckhead / Decatur / West Midtown） 其他 成交时间","q2_purpose":"购房主要目的及当时看房状态？","q2_where":"主要目的 自住 纯投资出租 为家人购置 先投资 / 空置，未来搬入 看房期间人在","q3_why":"为什么是亚特兰大？可多选","q4_visits":"下 Offer 前，您本人实地看过几次？信息主要靠什么补足？","q4_sources":"实地去亚特兰大次数 0 次（全远程） 1 次 2 次及以上 远程信息主要依赖 可多选","q5_narrow":"您主要是靠什么从「亚特兰大」缩到具体几个区的？选最主要的一个","q6_check":"一个您没去过的区，您会先查哪几样？最多选 5 个","q7_video_seen":"看房过程中您看过哪些视频？可多选","q7_video_changed":"有没有哪一段视频，让您对某个地方改了主意（想要了或不想要了）？","q8_decider":"最后让您下决心选这一套的，是哪一件事？选最主要的一个","q9_gaps":"远程看房 / 选区时，让您最「心里没底」或实际入住后「落差最大」的是什么？最多选 3 项","q10_wish":"如果当时有一个「神奇的 app」帮您，您最希望它能做什么？写一两句就行","q11_value":"看完视频后，您直观认为 Percho 最核心的价值是什么？单选","q12_stage":"如果当时您正在选房，您最可能在哪个阶段高频使用它？单选","q13":"核心功能打分：视频中的哪些模块让您觉得「切中刚需」？1 分 = 鸡肋，5 分 = 极有价值","q14_trust":"针对这些基于公开信息汇总出来的社区解析和优缺点判断，您的信任度如何？单选","q15_pmf":"如果这款 App 现已上线但突然无法使用，您的感受是：单选","q16_needs":"要让您完全信任并拿它作为选区 / 下 Offer 的主力辅助工具，还必须补充什么？可多选","q17_commit":"下面这几件事，您现在就愿意做哪一件？可多选","contact":"✉联系方式微信名或手机号，用来发红包和上线通知","q1_area__sub":"区域","q2_purpose__sub":"成交时间</p> <div class=\"opts\" data-q=\"q1_time\" data-req=\"one\"> <label class=\"opt\"><input type=\"radio\" name=\"q1_time\" value=\"lt6m\"><span>半年内</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q1_time\" value=\"6m_1y\"><span>半年–1 年</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q1_time\" value=\"1y_2y\"><span>1–2 年</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q1_time\" value=\"gt2y\"><span>2 年以上</span></label> </div> <p class=\"errmsg\">请选择区域和成交时间。</p> </fieldset> <fieldset data-q=\"q2_purpose\" data-req=\"one\"> <legend><span class=\"qn\">2</span>购房主要目的及当时看房状态？</legend> <p class=\"sub\">主要目的","q4_visits__sub":"看房期间人在</p> <div class=\"opts\" data-q=\"q2_where\" data-req=\"one\"> <label class=\"opt\"><input type=\"radio\" name=\"q2_where\" value=\"us_other_state\"><span>美国外州</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q2_where\" value=\"china\"><span>中国国内</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q2_where\" value=\"other_country\"><span>其他国家</span></label> </div> <p class=\"errmsg\">请选择目的和当时所在地。</p> </fieldset> <fieldset data-q=\"q3_why\" data-req=\"many\"> <legend><span class=\"qn\">3</span>为什么是亚特兰大？<small>可多选</small></legend> <div class=\"opts\"> <label class=\"opt\"><input type=\"checkbox\" name=\"q3_why\" value=\"job\"><span>工作在这</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q3_why\" value=\"family_friends\"><span>家人或朋友在这</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q3_why\" value=\"price\"><span>房价便宜</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q3_why\" value=\"schools\"><span>学区好</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q3_why\" value=\"asian_community\"><span>华人多，生活方便</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q3_why\" value=\"roi\"><span>投资回报好</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q3_why\" value=\"climate\"><span>气候</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q3_why\" value=\"content\"><span>看了视频或帖子被种草</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q3_why\" value=\"other\"><span>其他</span></label> </div> <div class=\"other\"><input type=\"text\" name=\"q3_why_other\" maxlength=\"80\" placeholder=\"其他原因请写在这里\"></div> <p class=\"errmsg\">请至少选一项。</p> </fieldset> <fieldset data-q=\"q4_visits\" data-req=\"one\"> <legend><span class=\"qn\">4</span>下 Offer 前，您本人实地看过几次？信息主要靠什么补足？</legend> <p class=\"sub\">实地去亚特兰大次数","q14_concerns__sub":"远程信息主要依赖 <small>可多选</small></p> <div class=\"opts\" data-q=\"q4_sources\" data-req=\"many\"> <label class=\"opt\"><input type=\"checkbox\" name=\"q4_sources\" value=\"agent_video\"><span>中介实拍视频 / FaceTime 连线</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q4_sources\" value=\"street_view\"><span>Google 街景 / 地图漫游</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q4_sources\" value=\"community\"><span>华人社群 / 朋友打听</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q4_sources\" value=\"creators\"><span>YouTube / 小红书博主探店或探区</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q4_sources\" value=\"portals\"><span>Zillow / Redfin 数据及学区网</span></label> </div> <p class=\"errmsg\">请选择实地次数，并至少选一个信息来源。</p> </fieldset> <fieldset data-q=\"q5_narrow\" data-req=\"one\"> <legend><span class=\"qn\">5</span>您主要是靠什么从「亚特兰大」缩到具体几个区的？<small>选最主要的一个</small></legend> <div class=\"opts\"> <label class=\"opt\"><input type=\"radio\" name=\"q5_narrow\" value=\"agent\"><span>中介推荐</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q5_narrow\" value=\"friends\"><span>朋友或家人推荐</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q5_narrow\" value=\"school_rank\"><span>学区排名</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q5_narrow\" value=\"commute\"><span>离公司近</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q5_narrow\" value=\"asian_community\"><span>华人多的地方</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q5_narrow\" value=\"budget\"><span>预算能买到什么</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q5_narrow\" value=\"map_browsing\"><span>自己在地图上一片片翻</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q5_narrow\" value=\"other\"><span>其他</span></label> </div> <div class=\"other\"><input type=\"text\" name=\"q5_narrow_other\" maxlength=\"80\" placeholder=\"其他请写在这里\"></div> <p class=\"errmsg\">请选一项。</p> </fieldset> <fieldset data-q=\"q6_check\" data-req=\"many\" data-max=\"5\"> <legend><span class=\"qn\">6</span>一个您没去过的区，您会先查哪几样？<small>最多选 5 个</small></legend> <div class=\"opts\"> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"schools\"><span>学区（小学到高中）</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"amenities\"><span>小区自己的设施（泳池、会所、网球场、门禁）</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"outdoor\"><span>公园、步道、湖</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"dining\"><span>吃饭（餐馆、咖啡）</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"nightlife\"><span>夜生活、酒吧</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"shopping\"><span>购物（商场、大超市）</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"errands\"><span>日常跑腿（超市、药房、银行）</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"asian\"><span>华人超市和餐馆</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"fitness\"><span>健身房、运动场馆</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"kids\"><span>小孩的去处（playground、兴趣班、日托）</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"healthcare\"><span>医疗（医院、诊所、儿科）</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"pets\"><span>宠物（狗公园、宠物医院）</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"faith\"><span>教会 / 寺庙</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"commute\"><span>通勤（公司、机场）</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"transit\"><span>公共交通</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"safety\"><span>治安</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"price_trend\"><span>房价走势 / 投资回报</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"age\"><span>新房还是老房</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q6_check\" value=\"street_feel\"><span>街上看起来什么样、邻居是什么人</span></label> </div> <p class=\"sub\" id=\"q6topLabel\" style=\"display:none\">其中最看重的一个</p> <div class=\"opts\" id=\"q6top\"></div> <p class=\"errmsg\">请选 1–5 项。</p> </fieldset> <fieldset data-q=\"q7_video_seen\" data-req=\"many\"> <legend><span class=\"qn\">7</span>看房过程中您看过哪些视频？<small>可多选</small></legend> <div class=\"opts\"> <label class=\"opt\"><input type=\"checkbox\" name=\"q7_video_seen\" value=\"agent_walkthrough\"><span>中介录的房子走一圈</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q7_video_seen\" value=\"youtube_area\"><span>YouTube 上的街区介绍</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q7_video_seen\" value=\"drone\"><span>航拍</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q7_video_seen\" value=\"tour3d\"><span>3D 看房</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q7_video_seen\" value=\"rednote\"><span>小红书上的探房视频</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q7_video_seen\" value=\"builder\"><span>Builder / 开发商的样板房视频</span></label> <label class=\"opt\"><input type=\"checkbox\" name=\"q7_video_seen\" value=\"none\"><span>没看过视频</span></label> </div> <p class=\"sub\">有没有哪一段视频，让您对某个地方改了主意（想要了或不想要了）？</p> <div class=\"opts\" data-q=\"q7_video_changed\" data-req=\"one\"> <label class=\"opt\"><input type=\"radio\" name=\"q7_video_changed\" value=\"yes\"><span>有</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q7_video_changed\" value=\"no\"><span>没有</span></label> </div> <p class=\"errmsg\">请选看过的视频类型，并回答有没有改过主意。</p> </fieldset> <fieldset data-q=\"q8_decider\" data-req=\"one\"> <legend><span class=\"qn\">8</span>最后让您下决心选这一套的，是哪一件事？<small>选最主要的一个</small></legend> <div class=\"opts\"> <label class=\"opt\"><input type=\"radio\" name=\"q8_decider\" value=\"price\"><span>价格谈到位了</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q8_decider\" value=\"agent_said\"><span>中介说这套好</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q8_decider\" value=\"proxy_saw\"><span>朋友或家人看了说好</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q8_decider\" value=\"visited\"><span>亲自飞过去看了一眼</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q8_decider\" value=\"video\"><span>视频里看着就对</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q8_decider\" value=\"schools\"><span>学区</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q8_decider\" value=\"fomo\"><span>怕再不买就没了</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q8_decider\" value=\"other\"><span>其他</span></label> </div> <div class=\"other\"><input type=\"text\" name=\"q8_decider_other\" maxlength=\"80\" placeholder=\"其他请写在这里\"></div> <p class=\"errmsg\">请选一项。</p> </fieldset> <fieldset data-q=\"q9_gaps\" data-req=\"many\" data-max=\"3\"> <legend><span class=\"qn\">9</span>远程看房 / 选区时，让您最「心里没底」或实际入住后「落差最大」的是什么？<small>最多选 3 项</small></legend> <div class=\"opts\"> <label class=\"opt wide\"><input type=\"checkbox\" name=\"q9_gaps\" value=\"vibe\"><span>社区真实氛围与邻里画像（白天 / 晚上街区感觉、邻居群体）</span></label> <label class=\"opt wide\"><input type=\"checkbox\" name=\"q9_gaps\" value=\"commute\"><span>高峰期实际通勤与周边车流、噪音</span></label> <label class=\"opt wide\"><input type=\"checkbox\" name=\"q9_gaps\" value=\"convenience\"><span>真实生活便利度（华人超市、常去餐饮、跑腿距离）</span></label> <label class=\"opt wide\"><input type=\"checkbox\" name=\"q9_gaps\" value=\"amenities\"><span>小区公共设施现状（泳池 / 会所维护度、真实门禁与绿化）</span></label> <label class=\"opt wide\"><input type=\"checkbox\" name=\"q9_gaps\" value=\"hidden_costs\"><span>隐性规则与成本（HOA 限制、出租门槛、地税）</span></label> <label class=\"opt wide\"><input type=\"checkbox\" name=\"q9_gaps\" value=\"house_condition\"><span>房屋本身暗病与维护成本</span></label> </div> <p class=\"errmsg\">请选 1–3 项。</p> </fieldset> <fieldset data-q=\"q10_wish\" data-req=\"text\"> <legend><span class=\"qn\">10</span>如果当时有一个「神奇的 app」帮您，您最希望它能做什么？<small>写一两句就行</small></legend> <div class=\"other\"><input type=\"text\" name=\"q10_wish\" maxlength=\"200\" placeholder=\"一两句话\"></div> <p class=\"errmsg\">请写一两句。</p> </fieldset> </section> <!-- ── 二 ── --> <section class=\"part\"> <div class=\"part-head\"><h2>二、观看 1 分多钟产品体验视频</h2><span class=\"n\">🎥</span></div> <div class=\"video\"> <h3>Percho 产品演示 Demo <span class=\"mono\" style=\"font-weight:400;font-size:.85rem\">· 约 1 分 40 秒</span></h3> <p>主要功能展示：短视频刷社区与街景 POI、二选一偏好匹配卡片、入住须知与潜在硬伤预警、个性化人设画像。社区和房子的片段有声音，请开着声音看。</p> <video controls playsinline preload=\"metadata\" poster=\"https://www.percho.co/research/percho-demo-poster.jpg\" src=\"https://www.percho.co/research/percho-demo-zh-720p.mp4\"></video> <p class=\"links\">看不了的话直接打开：<a href=\"https://www.percho.co/research/percho-demo-zh-720p.mp4\">中文版</a> · <a href=\"https://www.percho.co/research/percho-demo-en-720p.mp4\">English version</a></p> </div> </section> <!-- ── 三 ── --> <section class=\"part\"> <div class=\"part-head\"><h2>三、产品接受度与价值验证</h2><span class=\"n\">11–14</span></div> <fieldset data-q=\"q11_value\" data-req=\"one\"> <legend><span class=\"qn\">11</span>看完视频后，您直观认为 Percho 最核心的价值是什么？<small>单选</small></legend> <div class=\"opts\"> <label class=\"opt wide\"><input type=\"radio\" name=\"q11_value\" value=\"immersive_tour\"><span>沉浸式「云逛社区」，省去逐个查街景和碎视频的时间</span></label> <label class=\"opt wide\"><input type=\"radio\" name=\"q11_value\" value=\"narrow_down\"><span>帮我把模糊的选房需求快速收敛到具体 1–2 个适合的社区</span></label> <label class=\"opt wide\"><input type=\"radio\" name=\"q11_value\" value=\"flag_issues\"><span>真实指出社区 / 房源的潜在硬伤与入住注意事项</span></label> <label class=\"opt wide\"><input type=\"radio\" name=\"q11_value\" value=\"just_fun\"><span>只是一个看着好玩的房产短视频流，对实际做决定帮助有限</span></label> <label class=\"opt\"><input type=\"radio\" name=\"q11_value\" value=\"other\"><span>其他</span></label> </div> <div class=\"other\"><input type=\"text\" name=\"q11_value_other\" maxlength=\"120\" placeholder=\"其他请写在这里\"></div> <p class=\"errmsg\">请选一项。</p> </fieldset> <fieldset data-q=\"q12_stage\" data-req=\"one\"> <legend><span class=\"qn\">12</span>如果当时您正在选房，您最可能在哪个阶段高频使用它？<small>单选</small></legend> <div class=\"opts\"> <label class=\"opt wide\"><input type=\"radio\" name=\"q12_stage\" value=\"a_no_area\"><span><b>阶段 A：</b>刚确定亚特兰大，完全不知道选哪个 Zipcode / 区域时</span></label> <label class=\"opt wide\"><input type=\"radio\" name=\"q12_stage\" value=\"b_compare_areas\"><span><b>阶段 B：</b>锁定了 2–3 个大区，需要横向对比具体 Neighborhood 时</span></label> <label class=\"opt wide\"><input type=\"radio\" name=\"q12_stage\" value=\"c_check_homes\"><span><b>阶段 C：</b>已经看到具体几套房子，用来确认周边配套和硬伤时</span></label> <label class=\"opt wide\"><input type=\"radio\" name=\"q12_stage\" value=\"d_wont_use\"><span><b>阶段 D：</b>基本不会用，因为更习惯直接找中介或刷 Zillow</span></label> </div> <p class=\"errmsg\">请选一项。</p> </fieldset> <fieldset data-q=\"q13\" data-req=\"rates\"> <legend><span class=\"qn\">13</span>核心功能打分：视频中的哪些模块让您觉得「切中刚需」？<small>1 分 = 鸡肋，5 分 = 极有价值</small></legend> <div class=\"rate\"> <div class=\"lab\"><b>社区动态视频与设施进度条</b><i>大门、学校、超市、公园直达</i></div> <div class=\"scale\" data-name=\"q13_community\"></div> <div class=\"lab\"><b>「二选一」视觉偏好卡片</b><i>帮你快速明确预算与社区取向</i></div> <div class=\"scale\" data-name=\"q13_tradeoff\"></div> <div class=\"lab\"><b>「After You Move In」入住注意事项</b><i>避坑、噪音、硬伤预警</i></div> <div class=\"scale\" data-name=\"q13_movein\"></div> <div class=\"lab\"><b>个性化偏好与匹配画像</b><i>基于偏好推荐适合的社区标签</i></div> <div class=\"scale\" data-name=\"q13_persona\"></div> </div> <div class=\"scale-key\"><span>1 = 鸡肋</span><span>5 = 极有价值</span></div> <p class=\"errmsg\">四个模块都请打分。</p> </fieldset> <fieldset data-q=\"q14_trust\" data-req=\"one\"> <legend><span class=\"qn\">14</span>针对这些基于公开信息汇总出来的社区解析和优缺点判断，您的信任度如何？<small>单选</small></legend> <div class=\"opts\"> <label class=\"opt wide\"><input type=\"radio\" name=\"q14_trust\" value=\"trust\"><span><b>非常信任：</b>只要画面真实、客观呈现优缺点就会参考</span></label> <label class=\"opt wide\"><input type=\"radio\" name=\"q14_trust\" value=\"verify\"><span><b>半信半疑：</b>会参考，但必须核对数据来源（如标注来源于 MLS / 学区局 / 官方数据）</span></label> <label class=\"opt wide\"><input type=\"radio\" name=\"q14_trust\" value=\"need_human\"><span><b>不太相信：</b>除非有本地真人（中介 / 当地住户）背书或答疑</span></label> </div> <p class=\"sub\">关键疑虑点 <small>可多选，可不选</small>"},"q13":{"q13_community":{"name":"社区动态视频与设施进度条","hint":"大门、学校、超市、公园直达"},"q13_tradeoff":{"name":"「二选一」视觉偏好卡片","hint":"帮你快速明确预算与社区取向"},"q13_movein":{"name":"「After You Move In」入住注意事项","hint":"避坑、噪音、硬伤预警"},"q13_persona":{"name":"个性化偏好与匹配画像","hint":"基于偏好推荐适合的社区标签"}},"rows":[{"n":1,"created_at":"2026-08-30T16:41:19.837563+00:00","duration_min":26.1,"has_contact":true,"answers":{"q3_why":["price","roi","climate"],"q6_top":"schools","q15_pmf":"somewhat","q1_area":"north","q1_time":"6m_1y","q9_gaps":["hidden_costs","house_condition"],"q10_wish":"房子持有成本，房屋状况，本身暗病和维护成本等","q2_where":"china","q6_check":["schools","amenities","shopping","asian"],"q11_value":"narrow_down","q12_stage":"b_compare_areas","q14_trust":"verify","q16_needs":["mls_live","resident_reviews","roi_calc"],"q4_visits":"0","q5_narrow":"agent","q13_movein":4,"q2_purpose":"invest","q4_sources":["agent_video","portals"],"q8_decider":"schools","q13_persona":2,"q13_tradeoff":5,"q14_concerns":["paid_bias"],"q13_community":3,"q7_video_seen":["agent_walkthrough","tour3d"],"q7_video_changed":"no"}},{"n":2,"created_at":"2026-08-30T17:37:52.851135+00:00","duration_min":9.0,"has_contact":false,"answers":{"q3_why":["price","schools"],"q6_top":"schools","q15_pmf":"somewhat","q1_area":"northeast","q1_time":"gt2y","q9_gaps":["commute","convenience","hidden_costs"],"q10_wish":"给几个选项，按照个人偏好选一个综合分数高的房子","q2_where":"us_other_state","q6_check":["schools","commute","safety","price_trend","street_feel"],"q11_value":"immersive_tour","q12_stage":"c_check_homes","q14_trust":"verify","q16_needs":["local_agent","family_share"],"q4_visits":"1","q5_narrow":"school_rank","q13_movein":5,"q2_purpose":"later","q4_sources":["agent_video","street_view","portals"],"q8_decider":"agent_said","q13_persona":4,"q13_tradeoff":4,"q14_concerns":["paid_bias"],"q13_community":4,"q7_video_seen":["agent_walkthrough","tour3d","builder"],"q7_video_changed":"yes"}},{"n":3,"created_at":"2026-08-30T18:15:39.190706+00:00","duration_min":29.3,"has_contact":true,"answers":{"q3_why":["price","asian_community","climate","content"],"q6_top":"safety","q15_pmf":"somewhat","q1_area":"north","q1_time":"6m_1y","q9_gaps":["vibe"],"q10_wish":"房子预期会有的采坑指南","q2_where":"us_other_state","q6_check":["amenities","shopping","asian","safety","age"],"q11_value":"flag_issues","q12_stage":"b_compare_areas","q14_trust":"verify","q16_needs":["mls_live","resident_reviews","local_agent","roi_calc"],"q4_visits":"1","q5_narrow":"map_browsing","q13_movein":5,"q2_purpose":"live","q4_sources":["agent_video","street_view","community","creators","portals"],"q8_decider":"visited","q13_persona":4,"q13_tradeoff":3,"q14_concerns":["only_praise","wrong_data","paid_bias"],"q13_community":5,"q7_video_seen":["agent_walkthrough","tour3d","rednote","builder"],"q7_video_changed":"no"}},{"n":4,"created_at":"2026-08-30T20:37:04.867678+00:00","duration_min":16.0,"has_contact":true,"answers":{"q3_why":["family_friends","schools","asian_community","climate"],"q6_top":"schools","q15_pmf":"somewhat","q1_area":"north","q1_time":"1y_2y","q9_gaps":["vibe"],"q10_wish":"查周围有没有犯罪的邻居","q2_where":"us_other_state","q6_check":["schools","amenities","shopping","asian","age"],"q11_value":"narrow_down","q12_stage":"c_check_homes","q14_trust":"verify","q16_needs":["mls_live","local_agent"],"q4_visits":"0","q5_narrow":"agent","q13_movein":2,"q2_purpose":"live","q4_sources":["agent_video"],"q8_decider":"agent_said","q13_persona":5,"q13_tradeoff":5,"q13_community":5,"q7_video_seen":["agent_walkthrough"],"q7_video_changed":"yes"}},{"n":5,"created_at":"2026-08-31T01:39:46.930924+00:00","duration_min":14.7,"has_contact":false,"answers":{"q3_why":["price"],"q15_pmf":"somewhat","q1_area":"north","q1_time":"gt2y","q9_gaps":["vibe","commute","hidden_costs"],"q2_where":"us_other_state","q6_check":["schools","amenities","shopping","safety","age"],"q11_value":"narrow_down","q12_stage":"b_compare_areas","q14_trust":"verify","q16_needs":["mls_live","resident_reviews","roi_calc"],"q4_visits":"1","q5_narrow":"budget","q13_movein":5,"q2_purpose":"invest","q4_sources":["agent_video","portals"],"q8_decider":"price","q13_persona":5,"q13_tradeoff":5,"q14_concerns":["paid_bias"],"q13_community":5,"q7_video_seen":["tour3d"],"q7_video_changed":"no"}},{"n":6,"created_at":"2026-08-31T01:46:17.551132+00:00","duration_min":7.3,"has_contact":true,"answers":{"q3_why":["family_friends","schools","asian_community"],"q6_top":"schools","q15_pmf":"somewhat","q1_area":"northeast","q1_time":"1y_2y","q9_gaps":["vibe","convenience","amenities"],"q2_where":"us_other_state","q6_check":["schools","amenities","asian","healthcare","safety"],"q11_value":"immersive_tour","q12_stage":"d_wont_use","q14_trust":"trust","q16_needs":["resident_reviews","roi_calc"],"q4_visits":"1","q5_narrow":"friends","q13_movein":5,"q2_purpose":"live","q4_sources":["agent_video","community"],"q8_decider":"proxy_saw","q13_persona":5,"q13_tradeoff":5,"q14_concerns":["paid_bias"],"q13_community":5,"q7_video_seen":["agent_walkthrough"],"q7_video_changed":"no"}},{"n":7,"created_at":"2026-08-31T03:15:02.02529+00:00","duration_min":23.6,"has_contact":true,"answers":{"q3_why":["schools","asian_community","roi"],"q6_top":"schools","q15_pmf":"somewhat","q1_area":"northeast","q1_time":"1y_2y","q9_gaps":["hidden_costs"],"q10_wish":"谈到最低的价格","q2_where":"us_other_state","q6_check":["schools","amenities","shopping","safety","price_trend"],"q11_value":"just_fun","q12_stage":"c_check_homes","q14_trust":"trust","q16_needs":["roi_calc"],"q4_visits":"1","q5_narrow":"agent","q13_movein":4,"q2_purpose":"invest","q4_sources":["agent_video","portals"],"q8_decider":"price","q13_persona":3,"q13_tradeoff":4,"q14_concerns":["paid_bias"],"q13_community":3,"q7_video_seen":["agent_walkthrough"],"q7_video_changed":"yes"}},{"n":8,"created_at":"2026-08-31T19:32:27.629043+00:00","duration_min":7.6,"has_contact":true,"answers":{"q3_why":["price","schools","asian_community","climate"],"q15_pmf":"somewhat","q1_area":"northeast","q1_time":"1y_2y","q9_gaps":["vibe","amenities","house_condition"],"q10_wish":"可以随时实景看房，会把学区，交通等信息都罗列出来。","q2_where":"us_other_state","q6_check":["schools","asian","kids","safety"],"q11_value":"immersive_tour","q12_stage":"c_check_homes","q14_trust":"verify","q16_needs":["resident_reviews","family_share"],"q4_visits":"1","q5_narrow":"budget","q13_movein":4,"q17_commit":["notify_launch"],"q2_purpose":"live","q4_sources":["agent_video","street_view","portals"],"q8_decider":"price","q13_persona":5,"q13_tradeoff":4,"q13_community":3,"q7_video_seen":["agent_walkthrough"],"q7_video_changed":"no"}},{"n":9,"created_at":"2026-08-31T23:19:57.805736+00:00","duration_min":12.0,"has_contact":true,"answers":{"q3_why":["roi"],"q6_top":"age","q15_pmf":"somewhat","q1_area":"north","q1_time":"gt2y","q9_gaps":["hidden_costs","house_condition"],"q10_wish":"投资收益估算，区块未来潜力。","q2_where":"us_other_state","q6_check":["safety","price_trend","age","street_feel"],"q11_value":"immersive_tour","q12_stage":"c_check_homes","q14_trust":"trust","q16_needs":["mls_live","local_agent","roi_calc","family_share"],"q4_visits":"0","q5_narrow":"agent","q13_movein":2,"q17_commit":["refer_friend","notify_launch"],"q2_purpose":"invest","q4_sources":["agent_video"],"q8_decider":"agent_said","q13_persona":4,"q13_tradeoff":3,"q14_concerns":["only_praise","paid_bias"],"q13_community":4,"q7_video_seen":["agent_walkthrough","builder"],"q7_video_changed":"no"}}]}</script>
+<script>
+(function(){
+  var D = JSON.parse(document.getElementById('payload').textContent);
+  var L = D.labels, T = D.titles, rows = D.rows, N = rows.length;
+
+  function lab(name, v){ return (L[name] && L[name][String(v)]) || String(v); }
+  function esc(s){ return String(s).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+
+  // count answers for one question id; returns {items:[[value,count]], answered:int}
+  function tally(name){
+    var c = {}, answered = 0;
+    rows.forEach(function(r){
+      var v = r.answers[name];
+      if (v === undefined || v === null) return;
+      answered++;
+      (Array.isArray(v) ? v : [v]).forEach(function(x){ c[x] = (c[x]||0)+1; });
+    });
+    var items = Object.keys(c).map(function(k){ return [k, c[k]]; });
+    items.sort(function(a,b){ return b[1]-a[1]; });
+    return { items: items, answered: answered };
+  }
+
+  // one question card: horizontal count bars, denominator = respondents who answered
+  function card(name, opts){
+    opts = opts || {};
+    var t = tally(name);
+    if (!t.items.length) return '';
+    var title = opts.title || T[name] || name;
+    var denom = t.answered;
+    var multi = t.items.reduce(function(s,i){ return s+i[1]; }, 0) > denom;
+    var soft = opts.soft ? ' soft' : '';
+    var bars = t.items.map(function(it){
+      var pct = denom ? (it[1]/denom*100) : 0;
+      return '<div class="row" title="' + esc(lab(name,it[0])) + '：' + it[1] + ' / ' + denom + '">'
+        + '<div class="rl">' + esc(opts.map ? opts.map(it[0]) : lab(name, it[0])) + '</div>'
+        + '<div class="track"><div class="fill' + soft + '" style="width:' + pct.toFixed(1) + '%"></div></div>'
+        + '<div class="rv">' + it[1] + '</div></div>';
+    }).join('');
+    return '<div class="card">'
+      + '<div class="qh"><p class="qt">' + esc(title) + '</p>'
+      + '<span class="qn">n=' + denom + (multi ? ' · 多选' : '') + '</span></div>'
+      + (opts.sub ? '<p class="qsub">' + esc(opts.sub) + '</p>' : '<p class="qsub"></p>')
+      + '<div class="bars">' + bars + '</div></div>';
+  }
+
+  // ── KPI row ────────────────────────────────────────────────────────────
+  var durs = rows.map(function(r){ return r.duration_min; }).sort(function(a,b){ return a-b; });
+  var med  = durs[Math.floor(N/2)];
+  var q17n = rows.filter(function(r){ return r.answers.q17_commit; }).length;
+  var contacts = rows.filter(function(r){ return r.has_contact; }).length;
+  var visits0 = rows.filter(function(r){ return r.answers.q4_visits === '0'; }).length;
+  var visits1 = rows.filter(function(r){ return r.answers.q4_visits === '1'; }).length;
+
+  document.getElementById('kpis').innerHTML = [
+    ['回复总数', N, '2026-08-30 16:41 → 08-31 23:19 UTC', 'hero'],
+    ['中位完成用时', med + ' 分钟', '区间 ' + durs[0] + ' – ' + durs[N-1] + ' 分钟'],
+    ['下 Offer 前实地看房 ≤1 次', (visits0 + visits1) + ' / ' + N, '其中 ' + visits0 + ' 人全程未到访'],
+    ['Q15 落在同一档', N + ' / ' + N, '「有点失望」；very 与 not 均为 0'],
+    ['留下联系方式', contacts + ' / ' + N, 'Q17 有效样本仅 ' + q17n + ' 份']
+  ].map(function(t){
+    return '<div class="tile ' + (t[3]||'') + '"><p class="k">' + t[0] + '</p>'
+      + '<p class="v">' + t[1] + '</p><p class="s">' + t[2] + '</p></div>';
+  }).join('');
+
+  // ── sections ───────────────────────────────────────────────────────────
+  document.getElementById('sec-sample').innerHTML =
+      card('q2_purpose', {title:'购房主要目的'})
+    + card('q2_where',   {title:'看房期间人在'})
+    + card('q1_area',    {title:'购置区域'})
+    + card('q1_time',    {title:'成交时间'})
+    + card('q3_why',     {title:'为什么是亚特兰大'});
+
+  document.getElementById('sec-decide').innerHTML =
+      card('q4_visits',  {title:'下 Offer 前实地看过几次', map:function(v){ return lab('q4_visits',v); }})
+    + card('q4_sources', {title:'远程信息主要依赖'})
+    + card('q5_narrow',  {title:'靠什么从「亚特兰大」缩到具体几个区'})
+    + card('q6_check',   {title:'一个没去过的区，会先查什么'})
+    + card('q8_decider', {title:'最后让他下决心的那一件事'})
+    + card('q9_gaps',    {title:'最心里没底 / 落差最大的地方',
+                          sub:'这一题与 Q10 的自由回答互相印证：隐性成本与社区氛围是两个反复出现的空白。'});
+
+  // Q13: four module ratings, mean of 1–5 shown on a shared 5-wide track
+  var q13html = Object.keys(D.q13).map(function(k){
+    var vals = rows.map(function(r){ return r.answers[k]; }).filter(function(v){ return typeof v === 'number'; });
+    var mean = vals.reduce(function(a,b){ return a+b; }, 0) / vals.length;
+    var dist = [1,2,3,4,5].map(function(s){ return vals.filter(function(v){ return v===s; }).length; });
+    return '<div class="row" title="' + esc(D.q13[k].name) + '：' + dist.map(function(c,i){ return (i+1)+'分×'+c; }).join('，') + '">'
+      + '<div class="rl">' + esc(D.q13[k].name) + '<br><span style="color:var(--muted);font-size:12px">' + esc(D.q13[k].hint) + '</span></div>'
+      + '<div class="track"><div class="fill" style="width:' + (mean/5*100).toFixed(1) + '%"></div></div>'
+      + '<div class="rv">' + mean.toFixed(1) + '</div></div>';
+  }).join('');
+
+  document.getElementById('sec-product').innerHTML =
+      card('q11_value', {title:'看完视频后，认为 Percho 最核心的价值'})
+    + card('q12_stage', {title:'最可能在哪个阶段高频使用'})
+    + '<div class="card"><div class="qh"><p class="qt">四个模块的价值打分</p><span class="qn">n=' + N + ' · 均值，1–5</span></div>'
+    + '<p class="qsub">1 分 = 鸡肋，5 分 = 极有价值。悬停可看每档的人数分布。</p>'
+    + '<div class="bars">' + q13html + '</div></div>'
+    + card('q14_trust',    {title:'对公开信息汇总出的社区解析，信任度如何'})
+    + card('q14_concerns', {title:'关键疑虑点', sub:'「怕推荐带有商业推广倾向」是全卷分布最集中的一项。'})
+    + card('q16_needs',    {title:'还必须补充什么，才愿意拿它当主力工具'});
+
+  document.getElementById('sec-intent').innerHTML =
+      card('q15_pmf',    {title:'如果它突然无法使用，您的感受是',
+                          sub:'零方差：九份全部选中间档。见第七节——这不构成 PMF 读数。'})
+    + card('q17_commit', {title:'现在就愿意做的事（行为承诺）',
+                          sub:'2026-08-31 新增题，之前的 7 份没有这一栏。两位作答者都真的留下了联系方式。'});
+
+  // ── quotes ─────────────────────────────────────────────────────────────
+  document.getElementById('sec-quotes').innerHTML = rows.filter(function(r){
+    return r.answers.q10_wish;
+  }).map(function(r){
+    return '<div class="quote"><p>「' + esc(r.answers.q10_wish) + '」</p>'
+      + '<p class="meta">第 ' + r.n + ' 份 · ' + lab('q2_purpose', r.answers.q2_purpose)
+      + ' · 用时 ' + r.duration_min + ' 分钟</p></div>';
+  }).join('');
+
+  // ── per-response table ─────────────────────────────────────────────────
+  // the full option wording is too long for a table cell; these are the same
+  // options under short names, and every one of them is spelled out in full
+  // in the corresponding card above.
+  var SHORT = {
+    q11_value: { narrow_down:'缩小范围', immersive_tour:'沉浸式云逛区', flag_issues:'指出硬伤', just_fun:'只是好玩' },
+    q14_trust: { trust:'非常信任', verify:'半信半疑', doubt:'不太相信' },
+    q17_commit:{ refer_friend:'转给朋友', notify_launch:'上线通知我', none:'都不愿意' }
+  };
+  function shortLab(name, v){ return (SHORT[name] && SHORT[name][v]) || lab(name, v); }
+  var cols = [
+    ['#',        function(r){ return r.n; }, true],
+    ['提交时间 (UTC)', function(r){ return r.created_at.slice(0,16).replace('T',' '); }],
+    ['用时',     function(r){ return r.duration_min + ' 分'; }],
+    ['目的',     function(r){ return lab('q2_purpose', r.answers.q2_purpose); }],
+    ['所在地',   function(r){ return lab('q2_where', r.answers.q2_where); }],
+    ['实地次数', function(r){ return lab('q4_visits', r.answers.q4_visits); }],
+    ['核心价值', function(r){ return shortLab('q11_value', r.answers.q11_value); }],
+    ['信任度',   function(r){ return shortLab('q14_trust', r.answers.q14_trust); }],
+    ['Q15',      function(r){ return lab('q15_pmf', r.answers.q15_pmf).split('（')[0]; }],
+    ['Q17 承诺', function(r){
+        var v = r.answers.q17_commit;
+        return v ? v.map(function(x){ return shortLab('q17_commit', x); }).join(' + ')
+                 : '<span class="dash">—</span>';
+      }],
+    ['联系方式', function(r){ return r.has_contact ? '已留' : '<span class="dash">未留</span>'; }]
+  ];
+  document.getElementById('tbl').innerHTML =
+    '<thead><tr>' + cols.map(function(c){ return '<th>' + c[0] + '</th>'; }).join('') + '</tr></thead>'
+    + '<tbody>' + rows.map(function(r){
+        return '<tr>' + cols.map(function(c){
+          return '<td' + (c[2] ? ' class="em"' : '') + '>' + c[1](r) + '</td>';
+        }).join('') + '</tr>';
+      }).join('') + '</tbody>';
+
+  document.getElementById('asof').textContent =
+    rows[N-1].created_at.slice(0,16).replace('T',' ') + ' UTC';
+
+  // ── theme toggle ───────────────────────────────────────────────────────
+  var btn = document.getElementById('themeBtn');
+  var root = document.documentElement;
+  function paint(){ btn.textContent = root.getAttribute('data-theme') === 'dark' ? '浅色' : '深色'; }
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    root.setAttribute('data-theme','dark');
+  }
+  paint();
+  btn.addEventListener('click', function(){
+    root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    paint();
+  });
+})();
+</script>
+</body>
+</html>
