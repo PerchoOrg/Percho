@@ -16,6 +16,62 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-01 17:35 UTC — phase144: the study closes at 10 responses
+
+**Objective**: owner: close the questionnaire channel and refresh the summary.
+
+**Actions**:
+- `lib/zod/research-response.ts` — `CLOSED_STUDIES` + `isStudyClosed()`. The id
+  stays in `RESEARCH_STUDIES` so the 10 existing rows keep validating and the
+  admin CSV export keeps working; only the write path shuts.
+- `app/api/research/responses/route.ts` — a closed study returns **410 Gone**
+  after zod parsing. This is the real control: the questionnaire is a static
+  HTML file, so a stale tab or a `curl` can POST long after the page changes.
+- `public/research/atlanta-remote-buyer-study.html` — a closing banner, the
+  form greyed out and `pointer-events:none`, the submit row hidden, and a
+  `STUDY_CLOSED` early return in the submit handler. Questions stay in the DOM
+  for reference rather than being deleted.
+- `lib/zod/__tests__/research-response.test.ts` — 2 new tests (6 total): the
+  study reports closed while its rows still parse, and every id in
+  `CLOSED_STUDIES` is a real study.
+- `public/demos/buyer-study-summary/index.html` — payload regenerated from the
+  live table (10 rows) and the hand-written prose corrected where the 10th
+  response falsified it.
+
+**The 10th response is why the prose needed care.** It arrived 2026-09-01
+14:44 UTC and broke the zero-variance streak on Q15 with the first-ever `not`
+(「无所谓」). The page previously said "九份全部落在中间档、方差为零"; it now
+says the question separates the people who have no use for the product but
+still cannot surface 「非常失望」, which needs real usage. Also updated: the KPI
+tile (was "Q15 落在同一档 9/9", now "Q15 答「非常失望」0/10"), the Q17 sample
+(2 → 3), the contact count (7/9 → 8/10), and the footer.
+
+That respondent is worth remembering: Q15 「无所谓」 but Q17 「愿意转给朋友」,
+`q14_trust` 「非常信任」, all four modules at 4. He is the only person in the
+sample whose `q8_decider` was 「亲自飞过去看了一眼」 — for someone who decides
+on the ground, a remote tool genuinely can be optional. That is a segment
+boundary, not a bad review.
+
+**Verification**: 6/6 vitest pass. Headless Chrome on both pages — the closed
+banner renders and the form is inert; the summary rebuilds to 10 tbody rows,
+8 quotes, Q15 bars 9/1, KPI reading 0/10. PII grep on the rebuilt page clean
+(contacts are still reduced to a boolean at generation time).
+
+**Issues**: `tsc --noEmit` and `biome check .` both fail in this worktree
+BEFORE this diff — tsc on `lib/insights/*` cannot resolve `@percho/shared`
+(the workspace package is unbuilt here) and biome flags formatting in code
+this diff does not touch, including the pre-existing lines of the very test
+file I extended (verified by running biome against `origin/main`'s copy).
+My own added import was formatted to biome's shape; the pre-existing lines
+were left alone per § 0.3 rather than swept into this diff. Neither failure
+is caused by, or fixed by, this change.
+
+**Next steps**: with the channel closed the hourly-then-6-hourly response
+monitor has nothing left to watch; it should be cancelled. `DEVLOG.md`
+rotation into `docs/devlog/2026-08.md` is still outstanding. The
+`relocation-v1` successor questionnaire is still a proposal awaiting the
+owner's four decisions.
+
 ## 2026-09-01 02:05 UTC — phase143: the study's nine responses become one page
 
 **Objective**: owner wants every questionnaire result summarised on a web page.

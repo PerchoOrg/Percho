@@ -9,7 +9,7 @@
  */
 
 import { createAnonClient } from '@/lib/supabase/server';
-import { researchResponseSchema } from '@/lib/zod/research-response';
+import { isStudyClosed, researchResponseSchema } from '@/lib/zod/research-response';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -45,6 +45,11 @@ export async function POST(req: Request) {
     );
   }
   const { study, lang, answers, contact, durationMs } = parsed.data;
+  // A closed study is shut at the server, not just on the page — the form is
+  // a static file that a stale tab or a curl can still POST from.
+  if (isStudyClosed(study)) {
+    return NextResponse.json({ error: 'study closed' }, { status: 410, headers: cors });
+  }
   // The table has no SELECT policy (reads are admin-only), so an insert must
   // not ask for its row back — `returning` is a read and RLS refuses it. The
   // id is minted here instead and handed to the client.

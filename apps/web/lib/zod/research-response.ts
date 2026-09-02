@@ -12,6 +12,18 @@ import { z } from 'zod';
 
 export const RESEARCH_STUDIES = ['atlanta-remote-buyer-v4'] as const;
 
+/**
+ * Studies that no longer accept submissions. The id stays in
+ * `RESEARCH_STUDIES` so existing rows keep validating and the admin export
+ * keeps working — only the write path is shut. Closed 2026-09-01 at 10
+ * responses.
+ */
+export const CLOSED_STUDIES: readonly string[] = ['atlanta-remote-buyer-v4'];
+
+export function isStudyClosed(study: string): boolean {
+  return CLOSED_STUDIES.includes(study);
+}
+
 const choice = z.string().trim().min(1).max(200);
 
 export const researchAnswerSchema = z.union([
