@@ -16,6 +16,53 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-02 14:45 UTC — phase154: the listing goes live; video segmentation paused
+
+**Objective**: owner stopped the segmentation work — 「镜头切换的太突然 不连贯
+没有原来4条拼接版本好，先暂时不接着做视频的切分了」 — and asked two things:
+why the photo tour is not visible on iOS, and for the Cloudflare links to send
+to Vivian.
+
+**The iOS answer: `status='inactive'`, exactly as suspected.** Traced rather
+than guessed — `lib/feed/browse-cards.ts` filters `status='active'` in seven
+places, and `lib/listings/feed-load.ts` defaults `statuses=['active']` for the
+public page. There is NO `published_at` gate anywhere in the feed path; status
+is the only one. I set the listing inactive in phase147 by choice, so this was
+my doing and not a bug.
+
+Activated it the way `publish-actions.ts` does — `status='active'` plus a
+first-activation `published_at` stamp. Verified after: the public page
+`percho.co/v/vivzh123/2930-shoalwood-drive` returns 200 and carries the
+landscape uid, and `/api/mobile/feed` now returns the listing with
+`videoUrl` pointing at the square cut. It is publicly visible now; one field
+reverts it.
+
+**The three renders, all `readyToStream`**:
+
+| cut | uid | length | canvas |
+|---|---|---|---|
+| agent footage + her Mandarin narration | `c3280f9e2288f66ad7871820690bc386` | 138.5s | 1080x1576 |
+| photo tour, vertical (what iOS plays) | `0a28f9e007d87d58f32b7e20f6135a9b` | 33.5s | 1080x1576 |
+| photo tour, landscape (what web plays) | `633348cce2e71d4c4990adc9b9ac3843` | 33.0s | 1920x1080 |
+
+**Why the segmentation is parked**: the owner's verdict on phase153's pool was
+that the cuts are too abrupt and the whole thing is less coherent than the
+plain four-clip concatenation of phase150. That is a real finding and it is
+consistent with what the pool is: 16 shots with no transitions, no planned
+order and no narration over them — a pool is not a film, and watching it back
+to back was always going to read worse than a take that was filmed as one
+continuous walk. The lesson for whenever this resumes is that the pool cannot
+be judged, or shipped, without the planner and the audio spine that were
+always meant to sit on top of it.
+
+`shred_clips.py`, `clip_quality_probe.py`, `pool_preview.py` and
+`video_tag_probe.py` all stay in `scripts/spikes/` with their findings in
+phases 149–153.
+
+**Next steps**: none started. The open question when it resumes is unchanged —
+her narration as a continuous spine under a freely ordered picture, or an
+order constrained to keep each clip's audio whole.
+
 ## 2026-09-02 09:10 UTC — phase153: length is a result, not a target
 
 **Objective**: owner on phase152's pool — 「不要限定3-6秒 要以事实为依据 有结构
