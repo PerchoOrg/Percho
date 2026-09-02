@@ -98,9 +98,24 @@
   .thanks p { color: var(--ink-2); }
   .hp { position: absolute; left: -9999px; top: -9999px; }
   footer { margin-top: 48px; color: var(--ink-3); font-size: 0.82rem; }
+
+  /* study closed 2026-09-01 — the form stays in the DOM for reference but is
+     inert; the real block is the 410 from /api/research/responses */
+  .closed{background:#fff8e6;border:1px solid #f0d071;border-radius:12px;
+          padding:20px 22px;margin:0 0 26px}
+  .closed h2{margin:0 0 8px;font-size:19px}
+  .closed p{margin:0;line-height:1.65}
+  .closed p + p{margin-top:9px}
+  body.is-closed form{opacity:.45;pointer-events:none;filter:saturate(.3)}
+  body.is-closed .submit{display:none}
 </style>
 </head>
-<body>
+<body class="is-closed">
+<div class="closed">
+  <h2>问卷已结束，感谢参与</h2>
+  <p>本次调研已于 <b>2026-09-01</b> 关闭，共收到 10 份回复，不再接受新的提交。</p>
+  <p>已经提交过的朋友：红包会通过您留下的联系方式发放。下面的题目保留在页面上仅供查阅，提交按钮已停用。</p>
+</div>
 <div class="wrap">
   <header>
     <p class="eyebrow">Percho · 用户调研 · V4</p>
@@ -554,8 +569,15 @@
     return bad;
   }
 
+  var STUDY_CLOSED = true; // 2026-09-01
+
   form.addEventListener('submit', async function (ev) {
     ev.preventDefault();
+    if (STUDY_CLOSED) {
+      status.className = 'status bad';
+      status.textContent = '问卷已于 2026-09-01 结束，不再接受新的提交。';
+      return;
+    }
     var bad = validate();
     if (bad.length) {
       status.className = 'status bad';

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { researchResponseSchema } from '../research-response';
+import {
+  CLOSED_STUDIES,
+  RESEARCH_STUDIES,
+  isStudyClosed,
+  researchResponseSchema,
+} from '../research-response';
 
 const good = {
   study: 'atlanta-remote-buyer-v4',
@@ -28,5 +33,18 @@ describe('researchResponseSchema', () => {
   it('defaults lang to zh', () => {
     const parsed = researchResponseSchema.parse({ study: good.study, answers: good.answers });
     expect(parsed.lang).toBe('zh');
+  });
+
+  it('reports the atlanta study as closed while still parsing its rows', () => {
+    expect(isStudyClosed('atlanta-remote-buyer-v4')).toBe(true);
+    expect(isStudyClosed('some-future-study')).toBe(false);
+    // closing shuts the write path only — old rows must still validate
+    expect(researchResponseSchema.safeParse(good).success).toBe(true);
+  });
+
+  it('only closes ids that are real studies', () => {
+    for (const id of CLOSED_STUDIES) {
+      expect(RESEARCH_STUDIES).toContain(id);
+    }
   });
 });
