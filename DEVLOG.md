@@ -16,6 +16,72 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-02 05:25 UTC — phase147: a builder's quick move-in, imported by hand
+
+**Objective**: owner handed over a John Wieland listing URL — lot 10901 at
+Sterling Pointe, Cumming — and asked for a listing plus its photos, ready for
+the home tour pipeline.
+
+**Actions**: new `scripts/admin/import-jw-listing.ts`; one listing and 14
+photos written to production.
+- Listing `4159c606-71ed-46d5-b612-306277f3f05e`, slug `2930-shoalwood-drive`,
+  agent `royxue812`, **status `inactive`** — the tour pipeline reads every
+  non-archived listing, so nothing needed publishing to run it, and an
+  unfinished builder home is not something to put in front of buyers by
+  default. One field flips it.
+- 5 bed / 4.5 bath / 3,476 sqft / 2-car / 2 stories, $1,057,242 (was
+  $1,282,992), completes Oct/Nov 2026, lat-lng from the builder's own payload.
+
+**Where the data actually lives on that page** — worth writing down, because
+three plausible sources disagree:
+- The visible header address is the **sales centre** (2520 Wilton Ct). The
+  home is **2930 Shoalwood Drive**. Taking the header would have geocoded the
+  listing to a different street.
+- The Facebook-pixel blob carries the **floor plan's** base spec (4 bed / 4
+  bath). The `dataLayer.push({"pageType":"qmi_view"})` blob carries **this
+  home's** (5 / 4.5). The script reads the latter — and skips an earlier bare
+  `{"pageType":"qmi_view"}` marker that parses fine and contains nothing.
+- Square feet, garage, stories, lot and completion are only in the spec tiles,
+  which use `<p class="big">` and `<p class="regular">` interchangeably.
+
+**Photos**: the page's gallery is client-rendered, so no `<img src>` in the
+HTML — the carousel markup carries `data-name` pointing at picturepark, which
+serves originals only to Cloudinary's fetch proxy. Fetching through that proxy
+with `c_limit,w_2400` returns the native file (1448-1920px wide). All 14
+uploaded, `status='ready'`, `sort_order` = carousel position; the render
+worker's enhance pass had upscaled all 14 to `approved` within a few minutes,
+unprompted, because `enhanced_status` defaults to `queued`.
+
+**Decisions**:
+- **Agent-owned, not external.** `listings_agent_or_external_chk` allows
+  `agent_id` XOR `source`, so recording provenance in `source='jwhomes'` would
+  have meant an ownerless row routed at `/v/jwhomes/...`. The owner asked for a
+  listing he owns; provenance lives in the script header and here.
+- **A committed script rather than an ad-hoc write.** Same reasoning as
+  `ingest-community-photos.ts`: a production write with the service-role key
+  should be reproducible and re-runnable. Dry run by default; re-running with
+  `--apply` updates the row in place and uploads only carousel positions that
+  have no photo row yet (verified - second run skipped all 14).
+
+**Issues**: `pnpm lint` fails on two **pre-existing** formatter errors in
+`app/api/research/responses/route.ts` and
+`lib/zod/__tests__/research-response.test.ts`, both from the phase143-146
+research work and both on `main`. Not touched here. `pnpm typecheck` and
+`pnpm test` (815 tests) pass; repo-root `scripts/` is outside both the
+typecheck and lint scopes, so the new file was formatted and checked by hand.
+
+**Caveat the owner should know before the tour runs**: this home completes in
+Oct/Nov 2026 - it does not exist yet. All 14 photos are the Waterstone model's
+marketing shots, not this lot. The tour will be a faithful film of the floor
+plan, not of the house at 2930 Shoalwood Drive. Also: Sterling Pointe (Cumming)
+has no `communities` row - only three unrelated same-name communities in
+McDonough, Powder Springs and Douglasville - so `community_id` is null and the
+tour has no neighbourhood context to draw on.
+
+**Next steps**: run the home tour's tag -> plan -> generate -> assemble in
+/admin/pipeline/tour-jobs when the owner wants it. Unchanged from before:
+DEVLOG rotation, and the `relocation-v1` proposal.
+
 ## 2026-09-01 18:45 UTC — phase146: every answer, per respondent
 
 **Objective**: owner on the summary page — 「逐个明细部分 对每个调查对象显示
