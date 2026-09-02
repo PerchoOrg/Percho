@@ -16,6 +16,79 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-02 07:45 UTC — phase151: yes, it can be broken up — but only if the audio stops being part of the cut
+
+**Objective**: owner watched phase150 — 「先不用管web」 and 「需要granular
+control 视频画面有些抖动 有些画面不清楚 单个镜头时间很长 打碎之后重新拼凑的
+可能性大不大」. Answer it with measurement and a rebuilt clip, not an estimate.
+
+**Actions**: two spikes — `scripts/spikes/clip_quality_probe.py` (which
+seconds are unusable) and `scripts/spikes/recut_clip.py` (rebuild the picture
+without touching the voice). One clip re-cut and uploaded for review:
+`https://customer-4vgbwrmdsd3h7zzb.cloudflarestream.com/2be43a2849e32df49d2af509cbac80f1/watch`
+
+**How bad is the footage, measured** — `blurdetect` for smear, frame-to-frame
+difference (`tblend=difference` + `signalstats` YAVG) for camera motion, per
+second, thresholds taken as percentiles of the footage itself rather than
+guessed. A second is called unusable only when it is BOTH smeared and moving
+fast: a slow deliberate pan is high motion and perfectly watchable.
+
+Over all four clips, **11 of 140 seconds (8%)**, in runs of 2–5s:
+- `8b85be07` (44.6s upstairs): 9s — 6-8s, 13-15s, 33-34s, 37-41s
+- `8e4c9c56` (57.3s): 2s — 6-7s, 11-12s
+- `8e231af0`, `b83c1f55`: nothing flagged
+
+**`deshake` does not help.** Measured on the worst 9-second span: blur
+9.22 → 9.32, motion 7.828 → 8.208. Both slightly WORSE. The problem is not
+jitter, it is motion blur baked into the frames by fast panning, and no
+stabiliser un-smears a frame. So bad windows must be REPLACED, not repaired.
+
+**The constraint that decides the design**: her narration runs continuously
+across those windows. From the transcript of `8b85be07`, 13-15s sits inside
+「然后上来了之后，首先是一个开放式的楼上的小客厅」 (7.0–14.8) and 37-41s
+straddles two sentences (35.3–38.6 and 39.0–44.5). Cutting video and audio
+together would take words out of her mouth.
+
+So **the audio is the spine and never moves; the picture is free underneath
+it**. `recut_clip.py` demonstrates it: each bad window is covered by a slow
+push on the sharpest frame from the 1.5s before it (chosen by `blurdetect`,
+not by position) — Ken Burns on a still, which is what the photo pipeline
+already does for every listing. Output is 44.56s against a 44.57s source, so
+the voice never drifts.
+
+**Result, same clip, same method, before → after**:
+
+| | original | recut |
+|---|---|---|
+| blur p50 | 7.51 | 7.95 |
+| blur p90 | 10.77 | 10.39 |
+| motion p50 | 4.222 | 3.261 |
+| motion p75 | 7.129 | 4.625 |
+| motion p90 | 9.889 | 6.814 |
+
+The motion tail is what went: p90 down 31%, p75 down 35% — the whip-pans are
+gone. Blur p90 improves slightly, but **blur p50 gets marginally worse**, and
+that is honest rather than surprising: a zoom into a still is softer than
+sharp handheld footage. The trade is a few seconds of "mildly soft but steady"
+in place of a few seconds of "smeared and lurching".
+
+**Note on the probe's own limitation**: its thresholds are percentiles of
+whatever corpus it is given, so a re-run over a single clip is NOT comparable
+with a run over four. The before/after above deliberately runs each clip
+alone. Any production version needs absolute thresholds calibrated once.
+
+**What this means for 「单个镜头时间很长」**: the same decoupling answers it.
+Once the picture is independent of the voice, a 57-second continuous take
+becomes a source to cut FROM — Gemini's phase149 timeline already gives
+room-level boundaries — and the visual can change every 3–6 seconds over an
+unbroken narration, mixing her footage with the listing's photo clips.
+
+**Next steps**: this is the shape of the feature — an audio spine plus a
+freely edited picture track. Building it needs the segment tags in the
+database (phase149's estimate), an admin timeline to keep/drop/cover each
+window, and an assemble path that treats agent audio as the spine. None of it
+started; the owner is looking at the re-cut first.
+
 ## 2026-09-02 07:05 UTC — phase150: the agent's own cut, end to end, before any pipeline work
 
 **Objective**: owner picked option 1 — the Chinese-language cut IS this
