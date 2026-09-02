@@ -16,6 +16,91 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-02 05:50 UTC — phase148: the home tour can fetch its own photos
+
+**Objective**: owner, on phase147's listing — 「1) agent name should be Vivian,
+2) you need to add a manual fetch button (with some web urls) before tag in
+admin home tour - similar to community tour」.
+
+**Actions (1) — the listing is Vivian's**: `agents.name` for `vivzh123` was
+still the placeholder `vivzh123`; set to `Vivian`. Listing
+`4159c606-71ed-46d5-b612-306277f3f05e` reassigned from `royxue812` to that
+agent. Public path is now `/v/vivzh123/2930-shoalwood-drive` — the agent SLUG
+is untouched, because changing it would break every `/v/<agent>/…` link her
+two existing listings already have.
+
+**Actions (2) — Fetch photos from a web page**:
+- `lib/poi/ingest-listing-page-photos.ts` — new. Writes `listing_photos`.
+- `lib/poi/ingest-page-photos.ts` — `collectPagePhotos` lifted out of
+  `ingestPagePhotos`. Everything up to "these are the bytes worth keeping" was
+  identical for both entities; only the rows written differ. The community
+  path now calls it and behaves exactly as before.
+- `app/api/admin/listings/[id]/ingest-url/route.ts` — one page per request,
+  same shape as the community route. No source row to record: a listing has no
+  research step naming candidate sites, so there is no list to tick.
+- `app/admin/_components/ListingPhotoSourcePanel.tsx` — a textarea, one URL per
+  line, fetched SEQUENTIALLY (five parallel 80-image crawls at one origin is
+  how a site starts answering 403), reporting each page as it lands. Sits
+  directly above `TourStepStrip`, which is what "before tag" means on screen.
+  Open by default only when the listing has no photos.
+- `ListingPhotoIngest` in `lib/zod/schemas.ts` — the community twin minus
+  `label`, which named a synthetic POI a listing does not have.
+
+**Decision — photos land `approved`, not `pending`.** The community panel's
+whole design is "pending, you approve", but migration 20260821100000 inverted
+that for `listing_photos` on the owner's own instruction ("all the photos in
+the listing should be auto approved for plan purpose"), and reviewing a home
+tour means REJECTING the few that should not be in the film. A page an admin
+pasted by hand is no less deliberate than an upload. The panel copy says so
+out loud, because a page of scraped images is where that default most deserves
+a second look.
+
+**Decision — no `listing_photo_sources` table.** The community's tickable
+source list exists because its ingest STEP discovers sites and needs to know
+which it may read. Nothing discovers sites for a listing, so the list would
+have one column and no readers. Cost: the box does not remember what you
+pasted last session.
+
+**Idempotency without a schema change**: `listing_photos` has no
+`content_hash` column, so the storage path carries the hash instead —
+`{listingId}/web-{sha256[:24]}.{ext}`. Re-fetching a page you have already
+read adds nothing, and a resize CDN handing the same photograph a new URL does
+not defeat it. Adding two columns for a filename was the wrong trade.
+
+**Issue found by running it, not by reading it**: the first real page — the
+phase147 JW quick move-in — kept exactly ONE image out of ten, and it was the
+footer signature `/-/media/images/footer-logos/jwhn-sig-1.png` at 1806x578. A
+brand mark is comfortably over the 400px floor and sits under a content path,
+so nothing in `CHROME_PATH` would ever have caught it. Widened to cover
+`favicons?` and `(?:[a-z]+-)?logos?` — the prefix alternative is what
+`footer-logos` needs. **This was a hole on the community side too**; it is
+strictly better there.
+
+The same run says something about the feature's reach: JW's gallery is
+client-rendered, so both JW pages now yield 0 of 10 and 0 of 19. Honest, and
+the panel reports it as "0 of 10 kept" rather than silence — but this panel
+will not get that listing's photos. Builder sites that render `<img>` server
+side will work; single-page galleries will not, and a headless fetch is a
+different piece of work.
+
+**Verification**: an end-to-end run against a scratch listing, then deleted —
+a local HTTP server serving two known JPEGs plus a `/logos/` decoy, so the
+second run sees byte-identical images and the dedupe is actually exercised.
+Result: found 3, kept 2 (decoy skipped), `sort_order` 0 and 1, `status=ready`,
+`review_status=approved`, `enhanced_status=queued`, `cover_url` set and
+serving HTTP 200; second run added 0 with "already ingested"; cleanup removed
+both objects, both rows and the listing. `pnpm typecheck` and `pnpm test`
+(web 829 + mobile 628) pass. `pnpm lint` still fails on the same two
+PRE-EXISTING formatter errors noted in phase147; every file touched here is
+biome-clean.
+
+**Not verified**: the panel has not been clicked in a browser — /admin is
+cookie-gated and there is no local dev server here. It renders after the merge
+deploys.
+
+**Next steps**: run the home tour for 2930 Shoalwood Drive when the owner
+wants it. Unchanged: DEVLOG rotation, and the `relocation-v1` proposal.
+
 ## 2026-09-02 05:25 UTC — phase147: a builder's quick move-in, imported by hand
 
 **Objective**: owner handed over a John Wieland listing URL — lot 10901 at

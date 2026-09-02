@@ -119,6 +119,18 @@ describe('extractImageUrls', () => {
 });
 
 describe('isFurniture', () => {
+  it('rejects a brand mark wherever the site files it', () => {
+    expect(isFurniture('https://www.jwhomes.com/-/media/images/footer-logos/jwhn-sig-1.png')).toBe(
+      true,
+    );
+    expect(isFurniture('https://example.com/media/logo/wordmark.png')).toBe(true);
+    expect(isFurniture('https://example.com/favicons/apple-touch-icon.png')).toBe(true);
+  });
+
+  it('does not reject a photo whose path merely ends in those letters', () => {
+    expect(isFurniture('https://example.com/photos/bungalows/front.jpg')).toBe(false);
+  });
+
   it('rejects an SVG, which could never have become a photo', () => {
     // imageSizeOf reads JPEG and PNG headers only. Thirteen of Bellmoore
     // Park's first forty slots went to icon SVGs that were always going to be

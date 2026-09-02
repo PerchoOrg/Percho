@@ -137,6 +137,23 @@ export const CommunityPhotoIngest = z.object({
 export type CommunityPhotoIngest = z.infer<typeof CommunityPhotoIngest>;
 
 /**
+ * One page an admin nominated as a source of photos for a LISTING.
+ *
+ * The community's twin carries a `label`, which names the synthetic POI its
+ * photos hang off. A listing's photos hang off the listing, so there is
+ * nothing to name and the field would only be a box to leave blank.
+ */
+export const ListingPhotoIngest = z.object({
+  url: z
+    .string()
+    .url()
+    .refine((u) => u.startsWith('https://') || u.startsWith('http://'), {
+      message: 'Must be an http(s) URL',
+    }),
+});
+export type ListingPhotoIngest = z.infer<typeof ListingPhotoIngest>;
+
+/**
  * Tick or untick one page in `community_photo_sources`.
  *
  * Only `enabled` is writable. The URL, the label and the origin are all
