@@ -16,6 +16,64 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-02 07:05 UTC — phase150: the agent's own cut, end to end, before any pipeline work
+
+**Objective**: owner picked option 1 — the Chinese-language cut IS this
+listing's main film. Rather than start with the planner (the expensive half),
+prove the ARTEFACT first: can her four clips be one watchable film?
+
+**Actions**: `scripts/spikes/build_agent_cut.py`, then a Cloudflare Stream
+upload for review. No model calls, no schema change, nothing attached to the
+listing yet.
+
+**The cut**: 138.5s, 1080x1576 (the iOS canvas), her narration throughout,
+music underneath.
+`https://customer-4vgbwrmdsd3h7zzb.cloudflarestream.com/c3280f9e2288f66ad7871820690bc386/watch`
+
+**ORDER came from what she says, not from filenames** — the four uploads sort
+into a sequence she had clearly planned:
+1. `8e231af0` kitchen piece to camera — 「跟着小云一起来看房」, the hook
+2. `b83c1f55` exterior approach — ends 「我们进去看一下」
+3. `8e4c9c56` main floor, kitchen/café/dining lighting
+4. `8b85be07` opens 「好，我们去楼上看下」 — so it goes last
+
+**Decisions**:
+- **Hard cuts, not crossfades.** `process_listing_assembly` crossfades 0.5s
+  because stills have no audio to protect. Her sentences run to the edge of
+  each clip, and a 0.5s audio crossfade eats words.
+- **The audio chain is `mux_audio` verbatim**, with her real track in the slot
+  the TTS wavs normally occupy: `loudnorm I=-14` on the voice, music at
+  `I=-26` bed level, `sidechaincompress` ducking it under her, 2s fade out.
+  Deliberate — if this is productionised, the assembler already does the hard
+  part. Measured on the result: **-16.8 LUFS integrated, -0.9 dBTP, LRA 7.2**.
+- **Music**: `piano/ai-luxury-*` — what `paletteForListing` would reach for on
+  a 2026 build in the top price percentile.
+- **iOS canvas only.** 720x1280 scales 1.5x to cover 1080x1576, losing 18%
+  top and bottom. Into the 1920x1080 web canvas the same footage would be a
+  centre-cropped strip, so the web surface is unresolved — it either keeps the
+  photo film or gets a blurred pillarbox.
+
+**Caught before overwriting**: the listing ALREADY had a `walkthrough` row
+(`ad06dc79`, square + landscape uids) from a photo tour run at 05:33–05:55 UTC
+today — the owner ran the pipeline himself while this work was going on. The
+obvious move, publishing this cut into that row, would have destroyed the film
+he had just generated. So the cut is uploaded and handed over as a URL, and
+`listing_videos` is untouched until he says the Chinese cut replaces the photo
+one.
+
+**Learnings**: the artefact was cheap and the plumbing is the expensive part —
+138 seconds of finished film cost four ffmpeg invocations and no model spend,
+while the planner work estimated in phase149 remains untouched. Worth
+remembering the next time a feature looks like it needs a pipeline: the
+pipeline is for the hundredth listing, not the first.
+
+**Next steps**: owner watches it. If the Chinese cut replaces the photo film,
+the work is (a) get the four clips into storage and `listing_videos` rather
+than a temp upload folder, (b) an assemble path that concats agent footage
+with its own audio, (c) decide the web surface. If he wants her voice over the
+PHOTO film instead, that is a different and smaller job — `mux_audio` already
+takes the segments.
+
 ## 2026-09-02 06:30 UTC — phase149: can Gemini tag a walkthrough like a photo? Yes — and she is speaking Chinese
 
 **Objective**: owner sent four videos Vivian recorded and asked, before any
