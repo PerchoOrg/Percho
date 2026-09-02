@@ -16,6 +16,51 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-01 18:45 UTC — phase146: every answer, per respondent
+
+**Objective**: owner on the summary page — 「逐个明细部分 对每个调查对象显示
+所有的回答」. Section 六 showed 11 hand-picked columns; he wants all 17
+questions for each of the 10 respondents.
+
+**Actions**: `public/demos/buyer-study-summary/index.html` only.
+- The compact table stays as an index; below it, one `<details>` per
+  respondent whose summary row carries #, timestamp, purpose, location,
+  duration and whether a contact was left. Expanding shows every question in
+  **questionnaire order** as a `<dl>`: single choices as text, multi-selects
+  as a list, 1–5 ratings as `n / 5`, Q10 as a tinted quote, unanswered as
+  「未答」. Native `<details>` rather than JS state — plus 展开全部 / 全部收起.
+- An empty `_other` supplement is skipped for that respondent rather than
+  printed as 「未答」; it supplements a question already listed, so a blank one
+  is noise, not a missing answer.
+
+**Recovering the question order** was the interesting part: phase145 deleted
+the questionnaire from the repo, so the labels and ordering came out of
+`git show 47db0851:...` — the archived copy — and are baked into the payload
+as an explicit `order` array. The page no longer has a live source to parse.
+
+**Three extraction bugs, all caught by dumping the rendered DOM rather than
+trusting the parse:**
+- Nested option groups (`q1_time`, `q2_where`, `q4_sources`) took the whole
+  fieldset body as their title, because the `<p class="sub">` regex was
+  allowed to span intervening markup. Tightened to `[^<]*`.
+- `q6_top` rendered its raw value (`schools`) — its radios are built by JS
+  from whatever `q6_check` is ticked, so no static label map exists. It now
+  borrows `q6_check`'s labels.
+- Titles carried their `<small>` hints (「可多选」/「单选」), which read as part
+  of the question. Stripped.
+
+**Verification**: headless Chrome DOM dump — 10 detail blocks, 26 rows for
+respondent #1 (17 questions expanded into their sub-parts), every title
+human-readable, every value label-resolved. Screenshots of the collapsed list
+and one expanded respondent. PII grep still clean — the payload continues to
+carry `has_contact` only.
+
+**Learnings**: a label-extraction regex that "works" can still be silently
+wrong; the only check that caught all three of these was rendering the page
+and reading the output as a human would. Verify the artefact, not the parse.
+
+**Next steps**: unchanged — DEVLOG rotation, and the `relocation-v1` proposal.
+
 ## 2026-09-01 18:10 UTC — phase145: the study page comes down
 
 **Objective**: owner clarified phase144 — 「关闭这个页面 对外不可见了」. The
