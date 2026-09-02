@@ -16,6 +16,103 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-02 06:30 UTC — phase149: can Gemini tag a walkthrough like a photo? Yes — and she is speaking Chinese
+
+**Objective**: owner sent four videos Vivian recorded and asked, before any
+building: 「We should tag videos just like what we do for photos, so we know
+how to orchestrate the home tour, can you give me some understanding of how
+difficult it is and how expensive it is」. He also chose Gemini over a local
+faster-whisper for now.
+
+**Actions**: `scripts/spikes/video_tag_probe.py` — one Gemini call per video
+asking for a room-level TIMELINE plus a verbatim transcript, in the shape
+`photo_tagger.py` uses for stills. Ran all four.
+
+**The material** (all 720x1280 vertical, h264+AAC, ONE continuous take each —
+ffmpeg scene detection finds 0 cuts in all four, so free scene splitting is no
+help; segmentation has to come from content):
+
+| file | length | what |
+|---|---|---|
+| `8e231af0` | 13.8s | agent to camera, in the kitchen |
+| `b83c1f55` | 22.9s | walking up to the front elevation |
+| `8b85be07` | 44.6s | hall → under-stair storage → stairs → landing → bedroom |
+| `8e4c9c56` | 57.3s | kitchen/café lighting → dining → main-floor bedroom |
+
+**THE FINDING: the narration is in Mandarin.** All four. This was invisible
+until the transcript came back — I cannot listen to audio, and had inferred
+only "somebody is speaking" from speech-band energy sitting 9–11 dB over the
+low band. Verbatim, so it is not lost when the uploads expire:
+
+- *(opener)* 「跟着小云一起来看房，100万在亚特兰大，能够买到什么样的新房，
+  并且是在十分的小学区，这套房子有非常非常多设计的巧思，我们一起来看一下。」
+- *(exterior)* 「这套一百万的豪宅坐落于一个新建的小区内，它是2026年刚刚要完工
+  的一个房子，现在呢是降价在100万就可以出售。整体的面积呢是在3400平方英尺，
+  一共有五房4.5卫…」
+- *(storage)* 「它其实真的是有好多储藏的空间…楼下都设计了楼梯下面的一个储藏间
+  …上来之后首先是一个开放式的楼上的小客厅…可以做楼上的一个娱乐间或者小孩的
+  一个学习间。」
+- *(light)* 「橱柜下面的 under cabinet light 都是全部都装好的…上面半截的采光，
+  它不影响这边吃饭的一个私密性，但是又有做了上面半截的采光…等于说三面都可以
+  有光进来。」
+
+**This also settles which house it is.** I had told the owner in phase147 that
+2930 Shoalwood Drive "does not exist yet" — completion is Oct/Nov 2026. He
+corrected me: the house is standing, and Vivian filmed it. Her own words
+corroborate the listing row independently — 3400 sqft (row: 3,476), 五房4.5卫
+(5 bed / 4.5 bath), 100万 and 降价 (row: $1,057,242, was $1,282,992). The JW
+photos remain the Waterstone MODEL; this footage is the actual home, which is
+why the two will not intercut cleanly.
+
+**Cost and latency, measured** — 17,549 tokens and 14.1s of wall clock for all
+138.5 seconds of video:
+
+| clip | in | out | total | time |
+|---|---|---|---|---|
+| 13.8s | 1,873 | 366 | 2,239 | 2.7s |
+| 22.9s | 2,696 | 274 | 2,970 | 1.8s |
+| 44.6s | 4,691 | 1,001 | 5,692 | 3.4s |
+| 57.3s | 5,793 | 855 | 6,648 | 6.2s |
+
+At flash-lite rates that is a fraction of a cent for the set. `ai_usage_log`
+records only `listing_copy` and `social_copy`, so photo tagging has never been
+costed either and there is no actual to quote — this is arithmetic over the
+token counts above, not a bill.
+
+**Quality**: room-level segmentation is genuinely good. The 44.6s clip came
+back as seven segments (hallway 0–3.8, closet 3.8–6.8, stairs 6.8–14.3,
+landing 14.3–27, bedroom 27–34.5, hallway 34.5–40.5, landing 40.5–44.5) with
+per-segment `quality`, `hero_score` and `usable`. Model: the repo-pinned
+`GEMINI_VISION_MODEL=gemini-3.1-flash-lite`.
+
+**Known gap**: speech timestamps are coarse — the 13.8s clip came back as one
+0–14.2 span. Good enough to know WHAT is said in a room, not good enough to
+cut a photo on a word. Word-level timing is what `gemini-3.5-transcribe` (on
+this key) or a local faster-whisper would buy, and that is the natural moment
+to revisit the owner's "we can try faster-whisper later".
+
+**What building it would actually take** (nothing built yet — he asked for the
+estimate first): a migration for `listing_videos.ai_tags` + `tagged_at`
+mirroring `listing_photos`; the spike moved next to `photo_tagger.py`; an
+admin surface to review the timeline; **the planner learning that a shot can
+be "file X, seconds 14.3–27"**, which is the real work because
+`photo_selector.build_plan` emits `{photo_id, duration_s, engine}` and every
+clip resolves through `listing_photo_clips`; and the assembler carrying a
+segment's own audio through — `process_listing_assembly` currently maps only
+its own audio graph, though `mux_audio` already ducks BGM under a voice.
+
+**Open decision for the owner**: her audio makes this a CHINESE-language cut.
+CLAUDE.md §1 puts multilingual buyer-facing marketing explicitly in scope, so
+this is on-strategy rather than a drift — but whether it is the listing's main
+film, a second language variant beside the silent+BGM cut, or a source for an
+English TTS pass, is his call and blocks the design.
+
+**Learnings**: the transcript is worth more than the tags. Four minutes of a
+human standing in the house yields specifics no vision model would infer from
+stills — under-cabinet lighting, transom windows chosen so the dining area
+keeps its privacy, the loft framed as a kids' study. That is `listing_insights`
+material, not just film material.
+
 ## 2026-09-02 05:50 UTC — phase148: the home tour can fetch its own photos
 
 **Objective**: owner, on phase147's listing — 「1) agent name should be Vivian,
