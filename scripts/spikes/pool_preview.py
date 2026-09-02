@@ -39,10 +39,11 @@ def label_png(entry: dict, n: int, total: int, dest: Path) -> None:
     big = ImageFont.truetype(FONT, 34)
     small = ImageFont.truetype(FONT, 26)
     head = (f"{n}/{total}  {entry['file'].replace('.mp4', '')}  "
-            f"{entry['start']:.1f}-{entry['start'] + entry['duration']:.1f}s")
+            f"{entry['duration']:.1f}s  ({entry['start']:.1f}-"
+            f"{entry['start'] + entry['duration']:.1f}s)")
     d.text((28, 16), head, font=big, fill=(255, 255, 255, 255))
     meta = (f"{entry.get('room_type')}   q {entry.get('quality')}   "
-            f"hero {entry.get('hero_score')}")
+            f"hero {entry.get('hero_score')}   ·   {entry.get('boundary')}")
     d.text((28, 62), meta, font=small, fill=(150, 220, 255, 255))
     cap = str(entry.get("caption") or "")[:74]
     d.text((28, 100), cap, font=small, fill=(220, 220, 220, 255))

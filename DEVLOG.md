@@ -16,6 +16,62 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-02 09:10 UTC — phase153: length is a result, not a target
+
+**Objective**: owner on phase152's pool — 「不要限定3-6秒 要以事实为依据 有结构
+的拆分 然后再重组 如果原视频保留就是最好的 那就保留」. The 3–6s window was a
+rhythm I imposed; he wants the footage's own structure to decide, and a take
+that is good end to end left alone.
+
+He is demonstrably right. phase152 cut the 23-second exterior approach into
+five 4.5s pieces. It is one continuous shot with no unusable second in it, and
+re-tagged whole it scores **quality 0.90, hero 0.95** — the best shot in the
+set. Chopping it destroyed a shot to satisfy a constant.
+
+**Actions**: `shred_clips.py` rewritten. No target length, no maximum. A
+boundary exists only where a fact puts one:
+- **the subject changes** — Gemini's timeline, which is already asked to cut
+  on room/subject change and explicitly not on a clock
+- **a span is unusable** — the measured smear+motion span is removed, which
+  necessarily ends one clip and starts the next
+
+The only length rule left is a floor of 2.0s, and it is about information
+rather than rhythm: a two-second remnant left over after removing damage
+cannot carry a caption.
+
+**Result — 16 clips, 127.6s, lengths 2.0s to 23.0s**:
+`https://customer-4vgbwrmdsd3h7zzb.cloudflarestream.com/d5a5bc24718a56c762246186a93cbaed/watch`
+
+- `b83c1f55-01` — **23.0s, whole take**, exterior, hero 0.95. Untouched.
+- `8e4c9c56-04` — 18.0s dining, one subject, no damage in it
+- `8e4c9c56-05` — 15.0s kitchen
+- the upstairs take, which carries all 9 damaged seconds, yields seven clips
+  of 2.0–9.5s around them
+
+Against phase152: 28 clips → 16, and the pool got LONGER (121.2s → 127.6s),
+because pieces previously discarded as sub-target remnants are now part of the
+shot they belong to.
+
+**A labelling bug the rewrite exposed**: each clip records WHY it ends where
+it does, and the first pass called the piece to camera "unusable span removed"
+when it has no damaged second at all. The test compared the clip's end against
+Gemini's declared segment end, and Gemini's last segment routinely runs a
+fraction past the real duration. Now the question is asked of the DAMAGE —
+is the second before the start, or the second at the end, in the bad set —
+and the piece to camera reads "subject change" as it should.
+
+**Non-determinism worth knowing**: Gemini returned 8 subject segments for the
+upstairs take on one run and 4 for `8e4c9c56` on another, with different
+boundaries. Re-running the segmenter therefore reshuffles the pool. A
+production version must PERSIST the timeline once (that is what the
+`listing_videos.ai_tags` migration in phase149's estimate is for) rather than
+re-deriving it per render, or two renders of the same listing would not agree.
+
+**Still open, unchanged from phase152**: how her narration is laid back over a
+re-ordered pool. Her audio cannot be cut mid-sentence, so either it becomes a
+continuous spine with the picture free underneath (`mux_audio` already does
+this) or the order is constrained to keep each clip's own audio whole.
+
 ## 2026-09-02 08:30 UTC — phase152: the footage becomes a clip pool
 
 **Objective**: owner rejected phase151 outright — 「静帧推镜不可以接受，有很多
