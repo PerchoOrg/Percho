@@ -7,9 +7,10 @@
  * same shape (owner 2026-08-20: "the goal is to have a similar big table for
  * home tour as well, with all the columns, buttons if needed"):
  *
- *   header          listing facts + the latest cut, one player
- *   TourStepStrip   Tag → Review → Plan → Render → Assemble
- *   PhotoTable      OPEN, full width, every photo — the workspace
+ *   header            listing facts + the latest cut, one player
+ *   PhotoSourcePanel  paste the pages the photos live on (2026-09-02)
+ *   TourStepStrip     Tag → Review → Plan → Render → Assemble
+ *   PhotoTable        OPEN, full width, every photo — the workspace
  *
  * What it replaces is one button. `AdminGenerateTourButton` posted to
  * /generate-tour and polled a render_jobs row; everything between the click
@@ -25,7 +26,9 @@
 
 import { streamIframeUrl } from '@/lib/cloudflare/stream';
 import { type StepJob, jobStepNote, jobStepState } from '@/lib/poi/listing-tour-steps/job-state';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ListingPhotoSourcePanel } from './ListingPhotoSourcePanel';
 import type { PhotoRow, PlanCell, SurfaceClips } from './PhotoTable';
 import { PhotoTable } from './PhotoTable';
 import {
@@ -161,6 +164,7 @@ export function HomeTourSection({
   bucket: string;
   photos: PhotoRow[];
 }) {
+  const router = useRouter();
   const [runs, setRuns] = useState<Run[]>([]);
   const [jobs, setJobs] = useState<Array<StepJob & { run_id: string }>>([]);
   const [clipRows, setClipRows] = useState<ClipRow[]>([]);
@@ -597,7 +601,16 @@ export function HomeTourSection({
         />
       </section>
 
-      {/* 2 · The whole pipeline as one row of chips. */}
+      {/* 2 · Where the photos come from, when they did not arrive by upload.
+           Above the strip because it feeds Tag — the first chip is useless
+           until this table has something in it. */}
+      <ListingPhotoSourcePanel
+        listingId={listingId}
+        photoCount={photos.length}
+        onIngested={() => router.refresh()}
+      />
+
+      {/* 3 · The whole pipeline as one row of chips. */}
       <TourStepStrip
         steps={HOME_TOUR_STEPS}
         stateOf={stateOf}
@@ -610,7 +623,7 @@ export function HomeTourSection({
         error={stepError}
       />
 
-      {/* 3 · THE workspace. Open, full width — everything is managed here. */}
+      {/* 4 · THE workspace. Open, full width — everything is managed here. */}
       <section className="rounded-2xl border border-line bg-surface p-4">
         <PhotoTable
           table="listing_photos"

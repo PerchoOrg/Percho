@@ -41,8 +41,17 @@ const FETCH_TIMEOUT_MS = 15_000;
  * `/themes/…/assets/img/graphics/graphic-boat-launch.png`, a stylised drawing
  * of a dock, which passed every other filter and landed in Aberdeen's photo
  * table as an amenity (2026-08-19). A drawing is not a photograph of anywhere.
+ *
+ * Brand marks joined the list on 2026-09-02, when the listing surface's first
+ * real page — a John Wieland quick move-in — kept exactly one image out of ten
+ * and it was the footer signature, `/-/media/images/footer-logos/jwhn-sig-1.png`
+ * at 1806x578. A logo is comfortably over the size floor and lives under a
+ * content path, so nothing else here would ever have caught it. The prefix
+ * alternative is what `footer-logos` needs; a bare `logos?` segment would not
+ * match it.
  */
-const CHROME_PATH = /\/(themes?|assets|static|dist|graphics|icons?|sprites?|ui|chrome)\//i;
+const CHROME_PATH =
+  /\/(themes?|assets|static|dist|graphics|icons?|sprites?|ui|chrome|favicons?|(?:[a-z]+-)?logos?)\//i;
 
 /**
  * A URL that is a page's furniture rather than its content, judged without
@@ -204,23 +213,36 @@ function titleCase(s: string): string {
     .join(' ');
 }
 
-export async function ingestPagePhotos(
-  communityId: string,
+/** One image a page yielded, downloaded and checked. */
+export interface PageImage {
+  /** Where it came from — kept for the skip list and for attribution. */
+  url: string;
+  bytes: Buffer;
+  contentType: string;
+  width: number;
+  height: number;
+  contentHash: string;
+}
+
+export interface PagePhotoHarvest {
+  /** Every image URL the page pointed at, before any filtering. */
+  found: number;
+  images: PageImage[];
+  skipped: Array<{ url: string; reason: string }>;
+}
+
+/**
+ * Every usable photograph on a page, downloaded and measured.
+ *
+ * Lifted out of `ingestPagePhotos` (2026-09-02) when the home tour grew the
+ * same paste-a-URL box. Everything up to "these are the bytes worth keeping"
+ * is identical for a community and for a listing; only the rows written
+ * afterwards differ. Duplicating the filters is how the two surfaces would
+ * quietly stop agreeing about what site furniture is.
+ */
+export async function collectPagePhotos(
   pageUrl: string,
-  label: string,
-): Promise<IngestResult | { error: string; message: string }> {
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const sb: any = createServiceClient();
-
-  const { data: community } = (await sb
-    .from('communities')
-    .select('id, name, city, state')
-    .eq('id', communityId)
-    .maybeSingle()) as {
-    data: { id: string; name: string; city: string | null; state: string | null } | null;
-  };
-  if (!community) return { error: 'not_found', message: 'No such community.' };
-
+): Promise<PagePhotoHarvest | { error: string; message: string }> {
   let html: string;
   try {
     const res = await fetchWithTimeout(pageUrl);
@@ -239,6 +261,105 @@ export async function ingestPagePhotos(
   if (urls.length === 0) {
     return { error: 'no_images', message: 'No images found on that page.' };
   }
+
+  const skipped: PagePhotoHarvest['skipped'] = [];
+
+  // Furniture is rejected on the URL alone, and — this is the point — before
+  // MAX_IMAGES is applied. Deciding it inside the capped loop meant a header
+  // full of icons could spend the whole budget before the first photograph:
+  // thirteen of Bellmoore Park's first forty slots went to SVG chrome. An SVG
+  // is furniture by definition here; `imageSizeOf` reads JPEG and PNG only, so
+  // one could never have become a photo.
+  const candidates: string[] = [];
+  for (const url of urls) {
+    if (isFurniture(url)) {
+      skipped.push({ url, reason: 'site furniture, not content' });
+    } else {
+      candidates.push(url);
+    }
+  }
+  // Say so when the cap bites. Silent truncation is what made this look like a
+  // page with no photos on it rather than a page we stopped reading.
+  for (const url of candidates.slice(MAX_IMAGES)) {
+    skipped.push({ url, reason: `past the ${MAX_IMAGES}-image limit for one page` });
+  }
+
+  const images: PageImage[] = [];
+  for (const url of candidates.slice(0, MAX_IMAGES)) {
+    let bytes: Buffer;
+    let contentType: string;
+    try {
+      const res = await fetchWithTimeout(url);
+      if (!res.ok) {
+        skipped.push({ url, reason: `HTTP ${res.status}` });
+        continue;
+      }
+      contentType = res.headers.get('content-type') ?? 'image/jpeg';
+      bytes = Buffer.from(await res.arrayBuffer());
+    } catch {
+      skipped.push({ url, reason: 'download failed' });
+      continue;
+    }
+
+    if (bytes.length < MIN_BYTES) {
+      skipped.push({ url, reason: `too small (${Math.round(bytes.length / 1024)} KB)` });
+      continue;
+    }
+    const size = imageSizeOf(bytes);
+    if (!size) {
+      skipped.push({ url, reason: 'not a JPEG, PNG or WebP' });
+      continue;
+    }
+    if (size.width < MIN_EDGE_PX || size.height < MIN_EDGE_PX) {
+      skipped.push({ url, reason: `too small (${size.width}x${size.height})` });
+      continue;
+    }
+
+    images.push({
+      url,
+      bytes,
+      contentType,
+      width: size.width,
+      height: size.height,
+      contentHash: createHash('sha256').update(bytes).digest('hex'),
+    });
+  }
+
+  return { found: urls.length, images, skipped };
+}
+
+/**
+ * The file extension the stored object must carry.
+ *
+ * It has to match the bytes: the render worker and the enhancer open the file
+ * by path, and a WebP saved as `.jpg` is a decode error two steps later rather
+ * than here.
+ */
+export function extensionFor(contentType: string): string {
+  if (contentType.includes('png')) return '.png';
+  if (contentType.includes('webp')) return '.webp';
+  return '.jpg';
+}
+
+export async function ingestPagePhotos(
+  communityId: string,
+  pageUrl: string,
+  label: string,
+): Promise<IngestResult | { error: string; message: string }> {
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const sb: any = createServiceClient();
+
+  const { data: community } = (await sb
+    .from('communities')
+    .select('id, name, city, state')
+    .eq('id', communityId)
+    .maybeSingle()) as {
+    data: { id: string; name: string; city: string | null; state: string | null } | null;
+  };
+  if (!community) return { error: 'not_found', message: 'No such community.' };
+
+  const harvest = await collectPagePhotos(pageUrl);
+  if ('error' in harvest) return harvest;
 
   const poiName = `${community.name} ${titleCase(label)}`;
   const placeId = `percho:community:${community.id}:${label.toLowerCase().replace(/\s+/g, '-')}`;
@@ -274,61 +395,12 @@ export async function ingestPagePhotos(
     { onConflict: 'community_id,poi_id' },
   );
 
-  const skipped: IngestResult['skipped'] = [];
+  const skipped: IngestResult['skipped'] = [...harvest.skipped];
   const queued: string[] = [];
   let added = 0;
 
-  // Furniture is rejected on the URL alone, and — this is the point — before
-  // MAX_IMAGES is applied. Deciding it inside the capped loop meant a header
-  // full of icons could spend the whole budget before the first photograph:
-  // thirteen of Bellmoore Park's first forty slots went to SVG chrome. An SVG
-  // is furniture by definition here; `imageSizeOf` reads JPEG and PNG only, so
-  // one could never have become a photo.
-  const candidates: string[] = [];
-  for (const url of urls) {
-    if (isFurniture(url)) {
-      skipped.push({ url, reason: 'site furniture, not content' });
-    } else {
-      candidates.push(url);
-    }
-  }
-  // Say so when the cap bites. Silent truncation is what made this look like a
-  // page with no photos on it rather than a page we stopped reading.
-  for (const url of candidates.slice(MAX_IMAGES)) {
-    skipped.push({ url, reason: `past the ${MAX_IMAGES}-image limit for one page` });
-  }
-
-  for (const url of candidates.slice(0, MAX_IMAGES)) {
-    let bytes: Buffer;
-    let contentType: string;
-    try {
-      const res = await fetchWithTimeout(url);
-      if (!res.ok) {
-        skipped.push({ url, reason: `HTTP ${res.status}` });
-        continue;
-      }
-      contentType = res.headers.get('content-type') ?? 'image/jpeg';
-      bytes = Buffer.from(await res.arrayBuffer());
-    } catch {
-      skipped.push({ url, reason: 'download failed' });
-      continue;
-    }
-
-    if (bytes.length < MIN_BYTES) {
-      skipped.push({ url, reason: `too small (${Math.round(bytes.length / 1024)} KB)` });
-      continue;
-    }
-    const size = imageSizeOf(bytes);
-    if (!size) {
-      skipped.push({ url, reason: 'not a JPEG, PNG or WebP' });
-      continue;
-    }
-    if (size.width < MIN_EDGE_PX || size.height < MIN_EDGE_PX) {
-      skipped.push({ url, reason: `too small (${size.width}x${size.height})` });
-      continue;
-    }
-
-    const contentHash = createHash('sha256').update(bytes).digest('hex');
+  for (const image of harvest.images) {
+    const { url, bytes, contentType, contentHash } = image;
     const { data: existing } = (await sb
       .from('poi_photos')
       .select('id')
@@ -340,15 +412,7 @@ export async function ingestPagePhotos(
       continue;
     }
 
-    // The stored extension has to match the bytes: the render worker and the
-    // enhancer open the file by path, and a WebP saved as `.jpg` is a decode
-    // error two steps later rather than here.
-    const ext = contentType.includes('png')
-      ? '.png'
-      : contentType.includes('webp')
-        ? '.webp'
-        : '.jpg';
-    const storagePath = `poi/${poi.id}/${contentHash.slice(0, 32)}${ext}`;
+    const storagePath = `poi/${poi.id}/${contentHash.slice(0, 32)}${extensionFor(contentType)}`;
     const { error: upErr } = await sb.storage
       .from(POI_PHOTO_BUCKET)
       .upload(storagePath, bytes, { contentType, upsert: true });
@@ -364,8 +428,8 @@ export async function ingestPagePhotos(
         source: 'community_site',
         storage_path: storagePath,
         content_hash: contentHash,
-        width_px: size.width,
-        height_px: size.height,
+        width_px: image.width,
+        height_px: image.height,
         bytes: bytes.length,
         attribution: { source_page: pageUrl, source_image: url },
         // Pending, always. The whole point of this path is human review.
@@ -383,5 +447,5 @@ export async function ingestPagePhotos(
     added += 1;
   }
 
-  return { poi_id: poi.id, poi_name: poiName, found: urls.length, added, skipped };
+  return { poi_id: poi.id, poi_name: poiName, found: harvest.found, added, skipped };
 }
