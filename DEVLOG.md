@@ -16,6 +16,63 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-02 08:30 UTC — phase152: the footage becomes a clip pool
+
+**Objective**: owner rejected phase151 outright — 「静帧推镜不可以接受，有很多
+卡的地方 或者突然有些奇怪的画面」 — and gave the shape he wants instead:
+「你能不能把原视频裁剪成多个几秒的clip 每个clip都有信息量 然后最后再统一
+plan」. He is right: covering a bad window with a push on a still reads as a
+stall, which is worse than the smear it hides.
+
+**Actions**: `scripts/spikes/shred_clips.py` and `scripts/spikes/pool_preview.py`.
+Result — **28 clips, 121.2s, every frame real footage, no stills anywhere**:
+`https://customer-4vgbwrmdsd3h7zzb.cloudflarestream.com/a748d8bba0fcc5e810ce1e7db1399cc7/watch`
+
+Pool by room: kitchen 8, bedroom 6, exterior 5, living 4, hallway 3, stairs 1,
+dining 1. Fourteen clips score hero >= 0.7; exactly one scores below 0.4.
+
+**Three inputs decide each cut**: the per-second smear/motion measurement
+(a clip may not contain an unusable second at all), Gemini's room-level
+timeline (a clip never straddles two rooms, or it has no single caption), and
+a 3–6s target length, which is the answer to 「单个镜头时间很长」. Every
+surviving clip is then tagged ON ITS OWN, so "有信息量" is verified per clip
+rather than inherited from its parent take.
+
+**A rule I got wrong, and the measurement that caught it.** The first draft
+disqualified any second whose motion exceeded the corpus p90, on the theory
+that a whip pan carries no information. That threw away **9 of the 23 seconds
+of the exterior approach** — which turned out to be the SHARPEST footage in
+the whole set (blur 3.6–6.2 against a 7.5 median elsewhere) and the source of
+the two highest hero scores in the pool, 0.90 and 0.95. Its motion is high
+because the camera walks forward through a detailed outdoor frame. That is a
+good shot, not a broken one. Motion alone now never disqualifies a second;
+only smeared-AND-moving does. With the rule fixed the exterior yields five
+clips, all quality 0.90, and the pool went 25 → 28.
+
+This is the same trap phase151's own note warned about ("a slow deliberate pan
+is high motion and perfectly watchable") and I walked into it one commit
+later. Thresholds are now ABSOLUTE constants calibrated once against the
+four-clip corpus, not percentiles of whatever is passed in.
+
+**Preview is silent by design**: the pool is being judged on picture, and each
+clip's audio is a fragment of a sentence, which is noise when you are looking
+at shots. Labels are drawn with PIL and overlaid because this ffmpeg has no
+`drawtext` (built without libfreetype); `pool_preview.py` therefore runs under
+`.venv-render`'s python.
+
+**The open question this defers, deliberately**: her narration no longer
+matches the picture once the clips are reordered. phase151 established that
+her audio cannot be cut without taking words out of sentences. So a planned
+order needs either (a) the narration laid over it as a continuous spine, with
+the picture free underneath — which is what `mux_audio` already does — or
+(b) an order constrained to keep each clip's own audio intact. Not decided;
+the owner is looking at the pool first.
+
+**Next steps**: if the pool is right, the planner is the remaining work —
+`photo_selector.build_plan` scores and orders stills today, and these clips
+carry the same fields it reads (`room_type`, `quality`, `hero_score`), which
+is why they were tagged into that shape.
+
 ## 2026-09-02 07:45 UTC — phase151: yes, it can be broken up — but only if the audio stops being part of the cut
 
 **Objective**: owner watched phase150 — 「先不用管web」 and 「需要granular
