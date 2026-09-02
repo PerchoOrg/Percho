@@ -16,6 +16,48 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-01 18:10 UTC — phase145: the study page comes down
+
+**Objective**: owner clarified phase144 — 「关闭这个页面 对外不可见了」. The
+closing banner was the wrong reading of "close the channel"; he wants the page
+gone from the public site, not sitting there with a notice on it.
+
+**Actions**: `git rm apps/web/public/research/atlanta-remote-buyer-study.html`.
+That path is a plain static file, so removing it is the whole change — the URL
+now 404s. Checked first that nothing in the app links to it: the only
+remaining references are historical prose in this DEVLOG, which is a record of
+what happened and stays as written.
+
+**Decisions**:
+- **The 410 from phase144 stays.** It is now belt-and-braces rather than the
+  primary control, and it costs nothing. A stale tab from before the page came
+  down can still POST, and the study should refuse that on its own terms
+  rather than because a file is missing.
+- `CLOSED_STUDIES` stays too — the study id is still a valid id for the 10
+  stored rows and the admin export.
+- **The demo assets in the same folder were NOT removed**:
+  `percho-demo-zh-720p.mp4`, `percho-demo-en-720p.mp4`,
+  `percho-demo-poster.jpg` (~26 MB). They are the product demo, not the
+  questionnaire, and may be linked from elsewhere; deleting them was outside
+  what was asked. They remain publicly fetchable by direct URL — flagged to
+  the owner rather than decided unilaterally.
+- The summary page at `/demos/buyer-study-summary/` was left up. It is the
+  thing the owner asked for one message earlier, and "this page" in context
+  means the questionnaire. It is `noindex,nofollow` and carries no PII, but it
+  IS publicly reachable by anyone with the URL — also flagged.
+
+**Verification**: production returns **404** for
+`/research/atlanta-remote-buyer-study.html`; the summary page still returns
+200 with its 10-row payload; `POST /api/research/responses` still returns 410.
+
+**Learnings**: "关闭通道" and "把页面撤下来" are different asks and I shipped
+the first when the second was meant. When a closing action has a visible
+artefact left behind, ask which one is intended before building the banner.
+
+**Next steps**: unchanged — DEVLOG rotation into `docs/devlog/2026-08.md`, and
+the `relocation-v1` proposal awaiting four decisions. Owner may also want the
+demo mp4s and/or the summary page taken off the public site.
+
 ## 2026-09-01 17:35 UTC — phase144: the study closes at 10 responses
 
 **Objective**: owner: close the questionnaire channel and refresh the summary.

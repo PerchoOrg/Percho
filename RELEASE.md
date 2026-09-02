@@ -9,7 +9,7 @@
 ## v1.3 — Opening a home now answers "does this fit me?"
 
 ### 2026-09-01
-- **The buyer study is closed.** It ran for two days and collected 10 responses; the page now opens with a thank-you notice and no longer takes submissions
+- **The buyer study is closed and its page has been taken down.** It ran for two days and collected 10 responses
 
 ### 2026-08-31
 - **The buyer study asks one more thing at the end: what you'd actually do right now.** After the "what else would it need" question, the form asks whether you'd pass it to a friend who's house-hunting, whether you'd like to be told when it launches, or neither — and if you ask to be notified, it now asks for a contact so the notice can actually reach you
