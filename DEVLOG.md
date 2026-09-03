@@ -16,6 +16,72 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-03 10:15 UTC — phase162: the Windward amenity photos, and which Windward they belong to
+
+**Objective**: owner — "windward community 照片加到哪里了". Answer at the time:
+nowhere. phase155 imported the 35 house photos and only *recorded* that the
+other 44 in the Redfin gallery were community marketing shots. He asked for
+them to go into `lake-windward`, and for the two Windward rows to be
+understood before anything is done about them.
+
+**The two rows are neighbours, not a duplicate.** Both are Nextdoor seeds:
+
+| | nextdoor slug | residents | centroid | boundary |
+|---|---|---|---|---|
+| `lake-windward` | `lakewindward` | 1,327 | 34.0835, -84.2343 | 4 rings / 1180 verts |
+| `windward` | `windward` | 4,589 | 34.0976, -84.2386 | 2 rings / 102 verts |
+
+2% of one's vertices fall inside the other and 3% the other way — edge noise,
+not nesting. Neither centroid is inside the other. `windward` is the larger
+neighbourhood to the north; `lake-windward` is the one around the lake, and the
+listing at 2090 Lake Windward Dr is inside it and only it. **Merging them would
+be wrong and the current association is right.** Left alone, as instructed.
+
+Worth knowing: FMLS puts this listing's subdivision at **WINDWARD**, while
+Nextdoor's carve-up puts the address in **Lake Windward**. Two authorities
+disagree; the app follows the polygon, which is the only one of the two it can
+check.
+
+**Which photos are actually the community's.** Redfin's captions are not
+enough — the 44 were looked at. They are three different things:
+- **24 are Windward's own amenities**: the lake and its docks, the marina, the
+  golf course, the swim park with its slide, playgrounds, a picnic pavilion,
+  the clubhouse. Ingested.
+- **14 are Avalon and Alpharetta City Center** — Crate & Barrel, Kilwins, the
+  City Center lawn. Real places, not this community's, and already covered as
+  POIs by the discovery pipeline. Left out.
+- **6 are neither**: Alpharetta High School's entrance and its athletics fields
+  (schools come from the POI pipeline with real district data), plus one
+  house exterior and one living room. Left out. Two of the excluded are 296px
+  thumbnails in any case.
+
+**Actions**: 24 photos into `lake-windward` via `ingest-community-photos.ts`,
+as seven synthetic amenity POIs — Waterfront (6), Golf Course (6), Marina (5),
+Playground (3), Swim Park (2), Clubhouse (1), Picnic Pavilion (1). The
+community went from 0 POI links and 0 photos to 7 and 24. The render worker
+started the enhance pass unprompted, as it does.
+
+**One change to the script**: a `--source-note` flag. It hardcoded
+`attribution.source_note` to "<Community> community website", which is where
+the Aberdeen batch came from and is simply false about these — they are a
+listing agent's marketing photos out of an FMLS gallery. A provenance column
+that lies is worse than no column. Default unchanged.
+
+**Issues**:
+- `ingest-community-photos.ts` inserts `status: 'approved'`, skipping the review
+  pass Google discoveries get. That was written for photos the operator had
+  hand-picked off the community's own site; here the hand doing the picking was
+  mine. The 24 are live in the amenities bucket now — worth a look in /admin,
+  and rejecting one is a click.
+- **Tagging cannot run**: the tour pipeline's `tag` step is what annotates these,
+  and `GEMINI_API_KEY` is out of credit (phase160). Until it is topped up the
+  photos are in the bucket but unannotated, so the planner cannot use them.
+
+**Next steps**: top up Gemini, then run the tag step for `lake-windward` and,
+if wanted, a community tour — it now has enough of its own imagery to be worth
+filming. `windward` still has its own 18 POIs and 57 Google photos and is
+untouched by any of this.
+
 ## 2026-09-03 15:50 UTC — phase161: Expo SDK 54 → 57, because Expo Go on the phone moved first
 
 **Objective**: owner's phone shows "Project is incompatible with this version
