@@ -16,6 +16,93 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-03 09:30 UTC — phase158: three tracks were carrying a third of the book
+
+**Objective**: owner on a tour's Soundtrack panel — "Carefree Living /
+acoustic · bed — why almost all home tours use this music??? can we make music
+evenly distributed?"
+
+**The premise was wrong and the instinct was right.** Measured before touching
+anything:
+- The 18 home tours that exist each play a DIFFERENT track (assembly id →
+  `muxing <file>` out of the render-worker log). Carefree Living is in none of
+  them. The five community films with a planned track are five different
+  tracks. Carefree Living appears exactly once in the whole product: the
+  **Windward** community film — which is the neighbourhood of the listing
+  imported an hour earlier, so it is the panel he had open.
+- But simulating `selectBgm` over all 262 active listings found real
+  concentration: **three tracks covering 82 listings, 31% of the book.**
+
+**Why**: energy is a HARD filter over a lopsidedly tagged library. Acoustic
+holds 28 approved beds — 24 `gentle`, 3 `moving`, 0 `still`. Every listing at
+or below the 35th price percentile asks for `moving` and lands in a pool of
+three; that is 81 listings. Piano is worse in kind: 3 tracks total, and
+`paletteForListing` sends every home built 2015+ there — 32 listings. Roughly
+43% of the book was being served by six tracks while 24 gentle acoustic tracks
+served the other 125. The hash was never the problem; it spreads evenly across
+whatever pool it is handed.
+
+**Actions** — two changes, both in `lib/bgm/select.ts`, wired into both callers:
+- `MIN_ENERGY_SHARE = 0.25`. The energy filter applies only while it leaves at
+  least a quarter of the palette. A filter that throws away nine tracks in ten
+  has stopped being a preference and become a bottleneck. A SHARE not a count,
+  so it holds as the library grows: one `still` track out of two is a real
+  choice, one out of a hundred is not. The palette itself is never widened this
+  way — a thin piano bucket means the library needs more piano, not that a
+  piano home should be handed a guitar.
+- `usage` — how many films of the same kind already ship with each track. The
+  least-used track in the final pool wins; the seed only breaks the tie. This
+  is the difference between "random" and "even", which is what was asked for.
+  Counted per listing / per community rather than per assembly row, since iOS
+  and web are one film on two canvases and would otherwise each vote. Counted
+  per film TYPE, not across both: a home tour and a community film are never
+  watched back to back.
+
+Measured over the same 262 listings — busiest track and the shape of the
+distribution:
+
+| | busiest | top-3 share | counts |
+|---|---|---|---|
+| before | 30 | 31% | 30, 28, 24, 14, 11, … 2, 2, 1 |
+| share floor only | 14 | 16% | 14, 14, 14, 13, … 3, 2, 2 |
+| **floor + usage** | **11** | **12%** | 11, 11, 10, 9×7, then 8×21 |
+
+31 of the 34 tracks are in play; the 3 that are not are the electronic bucket,
+which `paletteForListing` never reaches by design.
+
+**Decisions**:
+- **Incumbency still wins over everything**, usage included — a film that
+  already shipped keeps its music however heavily used that track is. Music
+  that changed on a re-render would read as a different film, and that rule
+  predates this work.
+- **The share floor, not a flat count.** A count of 8 would have broken the
+  existing `prefers the asked-for energy` test, whose 1-of-2 pool is a
+  perfectly real choice. The test survived unchanged, which is the point.
+- **Both callers wired.** `chooseBgm` (community) and `chooseListingBgm`
+  (listing) are the only two callers of the function being changed; fixing one
+  would have left the sibling with the old behaviour.
+
+**Issues**: none. `pnpm typecheck` and `pnpm test` (838 web + mobile) pass;
+`pnpm lint` still fails on the same two PRE-EXISTING formatter errors in
+`app/api/research/responses/route.ts` and
+`lib/zod/__tests__/research-response.test.ts` that phase147 recorded.
+
+**Learnings**: the DEVLOG of 2026-08-23 blamed the spread on the worker
+"rolling dice" and moved the choice to the planner. Random was in fact the more
+even of the two — a uniform draw per render has no memory and no filters. What
+the planner bought was reviewability and stability, and it paid for them in
+variety until today. Any hard filter over a library nobody balanced will do the
+same thing again; the share floor is the general guard, not a patch for
+`energy`.
+
+**Not done**: the underlying tagging is still lopsided (0 acoustic `still`,
+3 piano tracks total). Generating more costs Lyria money and the owner has not
+asked for it. Windward keeps Carefree Living — his call; the incumbency rule
+holds it there.
+
+**Next steps**: nothing pending on this. The new rule applies to the next plan
+step that runs; existing films are untouched by design.
+
 ## 2026-09-03 09:20 UTC — phase157: a step claim that nothing could clear
 
 **Objective**: owner, watching Windward's pipeline: 「Why is it still pending：

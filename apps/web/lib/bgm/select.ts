@@ -134,6 +134,22 @@ function hash(seed: string): number {
 }
 
 /**
+ * The smallest share of a palette the energy filter may leave behind.
+ *
+ * Owner 2026-09-03: "can we make music evenly distributed?" Measured over the
+ * 262 active listings, three tracks were carrying 31% of the book — and they
+ * were exactly the three `moving` tracks in an acoustic bucket of 28. Energy is
+ * tagged lopsidedly (24 gentle / 3 moving / 0 still) and it is a HARD filter,
+ * so every listing under the 35th price percentile landed in a pool of three.
+ *
+ * A filter that throws away nine tracks in ten has stopped being a preference
+ * and become a bottleneck, so it is dropped and the whole palette is used. A
+ * SHARE rather than a count because it has to hold as the library grows: one
+ * `still` track out of two is a real choice, one out of a hundred is not.
+ */
+const MIN_ENERGY_SHARE = 0.25;
+
+/**
  * Pick one track.
  *
  * Filters hard on ROLE — a narrated film may only use a bed, and a track that
@@ -141,6 +157,11 @@ function hash(seed: string): number {
  * the requested vibe but falls back rather than returning nothing: a film with
  * the wrong-flavoured music is a preference, a film with no music is a
  * regression.
+ *
+ * Among the tracks that remain, the LEAST-USED one wins. The seed alone spreads
+ * evenly only in the average; over a real book it leaves some tracks on eight
+ * films and others on two, and `usage` is the difference between "random" and
+ * "even" — which is what was actually asked for.
  */
 export function selectBgm({
   candidates,
@@ -149,6 +170,7 @@ export function selectBgm({
   energy,
   seed,
   incumbent,
+  usage,
 }: {
   candidates: BgmCandidate[];
   vibe: BgmVibe;
@@ -162,6 +184,14 @@ export function selectBgm({
    * whatever else has been added to the library since.
    */
   incumbent?: string | null;
+  /**
+   * How many films of THIS KIND already ship with each track, by path. Counted
+   * per film type rather than across both: a home tour and a community film are
+   * never watched back to back, and mixing the two would let one book's
+   * history push the other's choices around. Absent means "no history" — every
+   * track ties and the seed decides, exactly as before.
+   */
+  usage?: Readonly<Record<string, number>>;
 }): BgmCandidate | null {
   if (candidates.length === 0) return null;
 
@@ -184,12 +214,21 @@ export function selectBgm({
   }
   const onVibe = pool.filter((c) => vibeOf(c) === vibe);
   const vibePool = onVibe.length > 0 ? onVibe : pool;
-  // Energy narrows within the palette, and only if that leaves anything.
+  // Energy narrows within the palette, and only while it still leaves a real
+  // choice — see MIN_ENERGY_SHARE. The palette itself is never widened this
+  // way: a thin bucket means the library needs more of that instrument, not
+  // that a piano home should be handed a guitar.
   const onEnergy = energy ? vibePool.filter((c) => c.meta?.energy === energy) : [];
-  const finalPool = onEnergy.length > 0 ? onEnergy : vibePool;
+  const finalPool =
+    onEnergy.length >= vibePool.length * MIN_ENERGY_SHARE && onEnergy.length > 0
+      ? onEnergy
+      : vibePool;
 
   // Sorted first, so the pick does not move when Storage returns a different
   // order.
   const sorted = [...finalPool].sort((a, b) => a.path.localeCompare(b.path));
-  return sorted[hash(seed) % sorted.length] ?? null;
+  const useCount = (c: BgmCandidate): number => usage?.[c.path] ?? 0;
+  const fewest = Math.min(...sorted.map(useCount));
+  const leastUsed = sorted.filter((c) => useCount(c) === fewest);
+  return leastUsed[hash(seed) % leastUsed.length] ?? null;
 }

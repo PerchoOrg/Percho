@@ -221,6 +221,93 @@ describe('energy', () => {
         ?.path,
     ).toBe('acoustic/moving.mp3');
   });
+
+  it('drops the energy filter when it would leave a token pool', () => {
+    // The real library on 2026-09-03: 24 acoustic beds tagged gentle, 3 moving.
+    // Asking for `moving` used to pin 81 listings onto those three.
+    const library = [
+      ...Array.from({ length: 24 }, (_, i) =>
+        track(`acoustic/g${i}.mp3`, 'bed', 'acoustic', 'gentle'),
+      ),
+      ...Array.from({ length: 3 }, (_, i) =>
+        track(`acoustic/m${i}.mp3`, 'bed', 'acoustic', 'moving'),
+      ),
+    ];
+    const picked = new Set(
+      Array.from(
+        { length: 60 },
+        (_, i) =>
+          selectBgm({
+            candidates: library,
+            vibe: 'acoustic',
+            role: 'bed',
+            energy: 'moving',
+            seed: `l${i}`,
+          })?.path,
+      ),
+    );
+    expect(picked.size).toBeGreaterThan(3);
+  });
+
+  it('still narrows when the asked-for energy is a real part of the palette', () => {
+    const library = [
+      ...Array.from({ length: 6 }, (_, i) =>
+        track(`acoustic/g${i}.mp3`, 'bed', 'acoustic', 'gentle'),
+      ),
+      ...Array.from({ length: 6 }, (_, i) =>
+        track(`acoustic/s${i}.mp3`, 'bed', 'acoustic', 'still'),
+      ),
+    ];
+    for (const seed of ['a', 'b', 'c', 'd']) {
+      expect(
+        selectBgm({ candidates: library, vibe: 'acoustic', role: 'bed', energy: 'still', seed })
+          ?.meta?.energy,
+      ).toBe('still');
+    }
+  });
+});
+
+describe('usage', () => {
+  it('passes over a track other films already use', () => {
+    const got = selectBgm({
+      candidates: beds,
+      vibe: 'acoustic',
+      role: 'bed',
+      seed: 'abc',
+      usage: { 'acoustic/a.mp3': 4, 'acoustic/b.mp3': 4 },
+    });
+    expect(got?.path).toBe('acoustic/c.mp3');
+  });
+
+  it('spreads a book across the library instead of leaving some tracks unused', () => {
+    const library = Array.from({ length: 5 }, (_, i) => track(`acoustic/${i}.mp3`, 'bed'));
+    const usage: Record<string, number> = {};
+    for (let i = 0; i < 20; i++) {
+      const got = selectBgm({
+        candidates: library,
+        vibe: 'acoustic',
+        role: 'bed',
+        seed: `listing-${i}`,
+        usage,
+      })!;
+      usage[got.path] = (usage[got.path] ?? 0) + 1;
+    }
+    // Perfectly even: 20 films over 5 tracks is 4 each, and least-used-first
+    // cannot do otherwise.
+    expect(Object.values(usage).sort()).toEqual([4, 4, 4, 4, 4]);
+  });
+
+  it('leaves the incumbent alone however heavily used it is', () => {
+    const got = selectBgm({
+      candidates: beds,
+      vibe: 'acoustic',
+      role: 'bed',
+      seed: 'abc',
+      incumbent: 'acoustic/a.mp3',
+      usage: { 'acoustic/a.mp3': 99 },
+    });
+    expect(got?.path).toBe('acoustic/a.mp3');
+  });
 });
 
 describe('paletteForListing', () => {
