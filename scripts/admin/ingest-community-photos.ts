@@ -14,10 +14,17 @@
  *
  * Usage:
  *   pnpm tsx scripts/admin/ingest-community-photos.ts <community-slug> <dir>
+ *     [--source-note "<where these came from>"]
  *
  * <dir> holds one subdirectory per amenity; the directory name becomes the
  * POI name, so `pool/`, `clubhouse/`, `tennis-courts/` become "<Community>
  * Pool", "<Community> Clubhouse", "<Community> Tennis Courts".
+ *
+ * `--source-note` is what lands in each photo's `attribution`. It defaults to
+ * the community's own website, which is where the first batch came from — but
+ * the Windward set (2026-09-03) came out of a listing agent's Redfin gallery,
+ * and a row that says "community website" about someone else's marketing
+ * photos is simply a false provenance record.
  *
  * Re-running is safe: a file already ingested (same sha256 under the same POI)
  * is skipped rather than duplicated.
@@ -52,10 +59,14 @@ function requireEnv(name: string): string {
 }
 
 async function main() {
-  const [slug, dir] = process.argv.slice(2);
+  const argv = process.argv.slice(2);
+  const noteAt = argv.indexOf('--source-note');
+  const sourceNote = noteAt >= 0 ? argv[noteAt + 1] : undefined;
+  const [slug, dir] = argv.filter((a, i) => !a.startsWith('--') && i !== noteAt + 1);
   if (!slug || !dir) {
     console.error(
-      'Usage: pnpm tsx scripts/admin/ingest-community-photos.ts <community-slug> <dir>',
+      'Usage: pnpm tsx scripts/admin/ingest-community-photos.ts <community-slug> <dir>' +
+        ' [--source-note "<where these came from>"]',
     );
     process.exit(1);
   }
@@ -162,7 +173,10 @@ async function main() {
           width_px: size.width,
           height_px: size.height,
           bytes: bytes.length,
-          attribution: { source_note: `${community.name} community website`, file: basename(file) },
+          attribution: {
+            source_note: sourceNote ?? `${community.name} community website`,
+            file: basename(file),
+          },
           status: 'approved',
           enhanced_status: 'queued',
         })
