@@ -16,6 +16,80 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-03 08:55 UTC — phase155: 2090 Lake Windward Drive, imported from Redfin
+
+**Objective**: owner handed over a Redfin URL — 2090 Lake Windward Dr,
+Alpharetta — and asked for a new listing.
+
+**Actions**: new `scripts/admin/import-redfin-listing.ts`; one listing and 35
+photos written to production.
+- Listing `f18bda46-dd90-421c-97c0-45aba52aa928`, slug
+  `2090-lake-windward-drive`, agent `vivzh123`, **status `active`** (owner's
+  call — he also chose the agent). Public page
+  `www.percho.co/v/vivzh123/2090-lake-windward-drive` returns 200.
+- 4 bed / 4.5 bath / 4,641 sqft / built 2001 / 0.40 acres / Craftsman /
+  HOA $81/month, $1,175,000. `community_id` = `lake-windward`.
+- Provenance, which has nowhere to live on an agent-owned row: FMLS
+  **#7754807**, listed by **RHONDA SHELL, Keller Williams North Atlanta**,
+  on market since 2026-04-18, $1,250,000 → $1,200,000 → $1,175,000.
+
+**Where the data actually lives on a Redfin page** — the page is fetchable
+with a plain UA (200, 1.3 MB) and server-renders its own API responses into
+`root.__reactServerState.InitialContext`, keyed by API path, each body
+prefixed with `{}&&` as a JSON-hijacking guard. Four of them matter:
+`aboveTheFold` (price/beds/baths/sqft/lat-lng/lot/year + the media browser's
+photo list), `mainHouseInfoPanelInfo` (MLS #, listing agent, and the Style /
+HOA Dues / Community tiles), `belowTheFold` (the full MLS amenity groups),
+`photoTagsAndCaptions` (a caption per photo, used as `alt_text`). The
+marketing remarks come from the `ld+json` block — the only copy that is
+HTML-escaped once rather than twice.
+
+**Photos: 79 in the gallery, 35 of them the house.** Redfin's
+`previousListingPhotosCount` says 0, so all 79 belong to this listing — but
+the captions give it away: after index 34 they stop being rooms and become
+*Windward lake · marina · golf course · playgrounds · high school · Avalon
+street scenes*. The listing agent padded her gallery with community
+marketing shots. The file names carry the batch: `7754807_<n>_<letter>`, and
+the 35 house photos are exactly the leading run sharing the primary photo's
+letter (`_U`). The script imports that run and prints every photo it skipped.
+On an ordinary single-batch listing the same rule imports everything.
+
+**Decisions**:
+- **Agent-owned, not external** (`agent_id` set, `source` NULL), and under
+  `vivzh123` at the owner's direction — same reasoning as phase147: the
+  `listings_agent_or_external_chk` XOR means recording `source='redfin'`
+  would produce an ownerless row that the dashboard cannot see. This is
+  another brokerage's active FMLS listing, so provenance is recorded here
+  and in the script header instead.
+- **Community by the app's own rule.** Rather than eyeballing it, the script
+  runs `lib/geo/point-in-polygon.ts` over the boundaries in the listing's
+  city — the same test `lib/geo/find-community.ts` applies. Exactly one hit,
+  `Lake Windward`.
+- **Insert inactive, activate last.** `--status active` still writes the row
+  inactive, uploads the photos, sets the cover, and only then flips status and
+  stamps `published_at` the way `publish-actions.ts` does. An active listing
+  with an empty gallery is a live page with nothing on it.
+
+**Issues**: Supabase Storage starts answering
+`429 too_many_connections` around the 30th upload of a run. It killed the
+first `--apply` at photo 29 (the run is resumable, so nothing was lost), and
+it also failed the render worker's enhance pass on 11 of the 35 photos, which
+was reading the same bucket at the same time. **Resolution**: a 4-attempt
+backoff around the upload, and the 11 failed rows re-queued by hand — all 35
+are now `enhanced_status` `approved`/`queued`. Worth knowing before the next
+bulk import: this project's storage tier will not take ~35 uploads flat out
+while a worker is running.
+
+**Learnings**: the 44 photos this import deliberately left behind are a
+ready-made community photo set for `lake-windward` — aerials of the lake,
+the marina, the golf course, the parks, Avalon. If that community ever needs
+imagery, they are already identified and `ingest-community-photos.ts` is the
+tool.
+
+**Next steps**: run the home tour's tag → plan → generate → assemble in
+/admin/pipeline/tour-jobs when the owner wants it. Unchanged: DEVLOG
+rotation, and the `relocation-v1` proposal.
+
 ## 2026-09-02 14:45 UTC — phase154: the listing goes live; video segmentation paused
 
 **Objective**: owner stopped the segmentation work — 「镜头切换的太突然 不连贯
