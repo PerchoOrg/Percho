@@ -16,6 +16,74 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-03 09:45 UTC — phase160: 36 tracks generated, and the Gemini balance ran out
+
+**Objective**: owner on phase158's "not done" note — "补曲!". phase158 spread
+the choice across the library; this fills the library it spreads across.
+
+**The arithmetic, because the count is not a taste judgement.** phase158's
+`MIN_ENERGY_SHARE` keeps an energy filter only while it leaves a quarter of its
+palette, so "enough tracks" has an exact meaning: each energy at 25% of its own
+vibe. Solving that against what was there (acoustic 25 gentle / 3 moving / 0
+still; piano 3 gentle; electronic 2 gentle / 1 moving) gives +10 acoustic
+moving, +13 acoustic still, +9 piano, +6 electronic = **38**, at $0.08 each.
+An earlier sketch of 13+13 for acoustic was one track short of the floor —
+13 still of 54 is 24.07% — and 10+13 clears it at 25.5% with three fewer
+tracks.
+
+**Actions**: new `scripts/admin/generate-bgm.ts`. Same library, prompts and
+review gate as `/api/admin/bgm/generate`; a script because that route is
+cookie-gated, caps a request at 4 tracks and 300s, and this run needed 38 over
+twenty minutes. One track was generated first as a smoke test and verified in
+Storage and in `pending` before the other 37 were started.
+
+**Result: 36 of 38 landed, $2.88.**
+
+| vibe | was | now | after approval: gentle / moving / still |
+|---|---|---|---|
+| acoustic | 28 | 51 | 25 (49%) / 13 (25%) / 13 (25%) |
+| piano | 3 | 12 | 6 (50%) / 3 (25%) / 3 (25%) |
+| electronic | 3 | 7 | 3 (43%) / **1 (14%)** / 3 (43%) |
+
+**Issues**: the last two calls failed with `RESOURCE_EXHAUSTED` — "Your
+prepayment credits are depleted". Verified after the run that this is NOT
+specific to Lyria: a plain `gemini-3.5-flash` text call returns the same 429.
+**The whole `GEMINI_API_KEY` is out of credit**, which is research, POI and
+photo tagging, narration, TTS and photo enhancement, not just music. This run
+spent $2.88 of a balance whose starting value is not visible from here, so how
+much of the exhaustion it caused cannot be stated. Top-up is in AI Studio and
+is the owner's to do.
+
+The two casualties were both `electronic/moving`, which is why that bucket sits
+at 14% and will keep having its energy filter dropped. It costs nothing today:
+the community film is the only caller that reaches `electronic`, and
+`chooseBgm` passes no energy at all. Two more tracks close it when the billing
+is back.
+
+**Decisions**:
+- **The sidecar entry is written BEFORE the audio is uploaded.** `pull-bgm.sh`
+  skips what the sidecar lists as pending or rejected — so an object in Storage
+  that the sidecar has never heard of is treated as APPROVED and synced to the
+  worker. Writing state first means a crash at minute fifteen leaves inert
+  pending entries with no object behind them, rather than fifteen unreviewed
+  tracks eligible for a film. The route can write once at the end because it
+  generates at most four; a twenty-minute run cannot.
+- **Read-modify-write per track**, not one write at the end, for the same
+  reason. The sidecar is a whole-object overwrite and this is the only writer
+  during the run.
+- **Nothing was approved.** All 36 are `pending` and invisible to the render
+  worker until the owner listens to them in /admin/pipeline/bgm. Generating is
+  a machine's job; deciding what a film sounds like is not.
+
+**Learnings**: `pull-bgm.sh`'s "unknown means approved" default is a sharp edge
+that only shows up when something writes to the bucket outside the admin route.
+Anything that ever uploads to `bgm/` must register in the sidecar first.
+
+**Next steps**: owner reviews the 36 pending tracks; each rejection moves a
+bucket's share, and a bucket that drops back under 25% wants a top-up run.
+Gemini billing needs attention before any tour, narration or photo-tagging job
+runs again.
+
 ## 2026-09-03 09:30 UTC — phase158: three tracks were carrying a third of the book
 
 **Objective**: owner on a tour's Soundtrack panel — "Carefree Living /
