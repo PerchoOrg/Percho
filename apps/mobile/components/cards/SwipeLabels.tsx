@@ -94,7 +94,7 @@ export function SwipeLabels({ card, tx, cardWidth }: SwipeLabelsProps) {
 }
 
 const styles = StyleSheet.create({
-	layer: { ...StyleSheet.absoluteFillObject, zIndex: 20 },
+	layer: { ...StyleSheet.absoluteFill, zIndex: 20 },
 	badge: {
 		position: "absolute",
 		top: 72,

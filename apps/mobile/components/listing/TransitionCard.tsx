@@ -59,7 +59,7 @@ function joinSignals(signals: readonly string[]): string {
 
 const styles = StyleSheet.create({
 	backdrop: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		alignItems: "center",
 		justifyContent: "center",
 		padding: 24,

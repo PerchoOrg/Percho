@@ -16,6 +16,52 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-03 15:50 UTC — phase161: Expo SDK 54 → 57, because Expo Go on the phone moved first
+
+**Objective**: owner's phone shows "Project is incompatible with this version
+of Expo Go" — the App Store auto-updated Expo Go to SDK 57, the project is on
+SDK 54, and iOS offers no way to install an older Expo Go. The only fix is to
+move the project.
+
+**Actions** (all `apps/mobile` + lockfile):
+- `expo@~57.0.19` and every SDK package aligned via `expo install --fix`:
+  RN 0.81.5 → 0.86.3, React 19.1 → 19.2.3, reanimated 4.1 → 4.5,
+  gesture-handler 2.28 → 2.32, worklets 0.5 → 0.10, react-native-maps
+  1.20.1 → 1.27.2, screens 4.16 → 4.26, TypeScript 5 → 6.0.3. Expo's own
+  packages now share the 57.x version number (expo-router 6 → 57, etc.).
+- `app.json`: dropped `newArchEnabled` (option removed in SDK 55 — New
+  Architecture is mandatory now); the CLI added `expo-font` and
+  `expo-status-bar` to `plugins`.
+- Two code-level breakages from RN 0.86 / maps 1.27, both mechanical:
+  `StyleSheet.absoluteFillObject` is gone (23 call sites →
+  `StyleSheet.absoluteFill`, which is now the same plain object), and
+  react-native-maps renamed `showsPointsOfInterest` →
+  `showsPointsOfInterests` (one call site in `app/(tabs)/search.tsx`).
+
+**Issues**: running the SDK 54 CLI's `expo install expo@^57.0.0 --fix`
+resolved "^57.0.0" to `expo@~54.0.37` and then respawned `expo install --fix`
+in a loop — a dozen orphan processes killed by hand. The working order in this
+pnpm monorepo: hand-edit `expo` to `~57.0.19` in package.json, `pnpm install`,
+THEN let the new v57 CLI run `expo install --fix`.
+
+**Verification**: `expo-doctor` 21/21 checks pass; mobile typecheck (TS 6)
+clean; biome 0 errors (16 pre-existing warnings); mobile 628 + web 838 tests
+pass; `expo export --platform ios` bundles clean (4.0 MB hbc);
+`expo config --type prebuild` resolves.
+
+**Learnings**: SDK 55 removed `newArchEnabled` and legacy-arch support; SDK 56
+made expo-router independent of React Navigation (we never imported
+`@react-navigation/*` directly, so no codemod needed) and dropped
+`@expo/vector-icons` from expo's deps (unused here); SDK 57 is RN 0.86 with
+zero breaking changes of its own. Expo Go on iOS only ever supports the
+latest SDK — the next Expo Go bump will break the phone again until the
+project follows.
+
+**Next steps**: owner reopens the project in Expo Go after the reference
+worktree is pulled, reinstalled and Metro + ngrok restarted (done this
+session). The TestFlight build (1.0.0 (2)) predates this upgrade; the next
+EAS build picks it up.
+
 ## 2026-09-03 09:45 UTC — phase160: 36 tracks generated, and the Gemini balance ran out
 
 **Objective**: owner on phase158's "not done" note — "补曲!". phase158 spread

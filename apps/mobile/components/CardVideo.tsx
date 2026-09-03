@@ -483,7 +483,7 @@ export function CardVideo({
 
 const styles = StyleSheet.create({
 	frame: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		alignItems: "center",
 		justifyContent: "center",
 		// Behind the blurred poster, so a video with no poster still sits on the
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
 	},
 	/** Dims the blurred backdrop so it reads as a frame, not a second image. */
 	scrim: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: colors.cardPlainTo,
 		opacity: 0.55,
 	},

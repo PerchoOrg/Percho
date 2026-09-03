@@ -823,7 +823,7 @@ const styles = StyleSheet.create({
 	 */
 	cardContainer: { flex: 1, alignSelf: "stretch" },
 	pausedWrap: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		alignItems: "center",
 		justifyContent: "center",
 	},

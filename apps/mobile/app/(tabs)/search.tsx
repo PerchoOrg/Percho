@@ -138,7 +138,7 @@ export default function SearchTab() {
 					ref={mapRef}
 					style={StyleSheet.absoluteFill}
 					mapType="mutedStandard"
-					showsPointsOfInterest={false}
+					showsPointsOfInterests={false}
 					showsCompass={false}
 					initialRegion={{
 						latitude: 33.749,

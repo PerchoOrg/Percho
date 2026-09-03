@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
 	 * foot to that gradient; over a photo it is the text's readability layer.
 	 */
 	scrim: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		zIndex: 1,
 	},
 	info: {

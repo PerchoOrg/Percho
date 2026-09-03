@@ -65,13 +65,13 @@ export function CardPhoto({ url, fit = "contain" }: CardPhotoProps) {
 
 const styles = StyleSheet.create({
 	frame: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		alignItems: "center",
 		justifyContent: "center",
 		backgroundColor: colors.cardPlainTo,
 	},
 	scrim: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: colors.cardPlainTo,
 		opacity: 0.55,
 	},

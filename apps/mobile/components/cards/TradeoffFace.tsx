@@ -441,13 +441,13 @@ const styles = StyleSheet.create({
 	/** The right door takes whatever the animated left one leaves. */
 	doorRight: { flex: 1 },
 
-	scrim: { ...StyleSheet.absoluteFillObject, zIndex: 2 },
+	scrim: { ...StyleSheet.absoluteFill, zIndex: 2 },
 	veil: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: "rgba(9,8,7,1)",
 		zIndex: 3,
 	},
-	greenWash: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
+	greenWash: { ...StyleSheet.absoluteFill, zIndex: 1 },
 	/**
 	 * The unlit field's glyph, bled off the door's right edge — a watermark, not
 	 * an illustration: at 0.085 it gives the field a subject without competing

@@ -386,10 +386,10 @@ const styles = StyleSheet.create({
 	backTxt: { ...textStyles.footnote, color: colors.surface },
 
 	hero: { height: HERO_H, backgroundColor: colors.cardPlainTo },
-	heroImg: { ...StyleSheet.absoluteFillObject, resizeMode: "cover" },
+	heroImg: { ...StyleSheet.absoluteFill, resizeMode: "cover" },
 	/** The name sits on the photo, so the photo needs a floor to sit it on. */
 	heroScrim: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: "rgba(0,0,0,0.42)",
 	},
 	heroText: { flex: 1, justifyContent: "flex-end", padding: 20 },

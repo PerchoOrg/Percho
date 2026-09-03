@@ -84,7 +84,7 @@ export function BottomSheet({
 
 const styles = StyleSheet.create({
 	root: { flex: 1, justifyContent: "flex-end" },
-	backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.scrim },
+	backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.scrim },
 	sheet: {
 		backgroundColor: colors.surface,
 		borderTopLeftRadius: radii.sheet,

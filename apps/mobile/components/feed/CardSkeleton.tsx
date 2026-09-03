@@ -41,7 +41,7 @@ export function CardSkeleton() {
 
 const styles = StyleSheet.create({
 	card: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: colors.surface2,
 		borderRadius: radii.card,
 	},
