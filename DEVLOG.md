@@ -82,7 +82,15 @@ which `paletteForListing` never reaches by design.
   (listing) are the only two callers of the function being changed; fixing one
   would have left the sibling with the old behaviour.
 
-**Issues**: none. `pnpm typecheck` and `pnpm test` (838 web + mobile) pass;
+**Issues**: a **NUL byte** went into `listing-tour-steps/assemble.ts` with this
+change — the space in the `` `${row.listing_id} ${path}` `` Set key was written
+as `\x00`. TypeScript and the tests never noticed (a NUL is a perfectly good
+separator between two UUIDs), but `file` reports the source as `data` and git
+diffs it as `Bin 11223 -> 11680 bytes`, which makes it unreviewable. Merged
+before it was caught; fixed on top in phase159. The tell is a `Bin` line in the
+merge summary for a `.ts` file — worth a glance every time.
+
+Otherwise: `pnpm typecheck` and `pnpm test` (838 web + mobile) pass;
 `pnpm lint` still fails on the same two PRE-EXISTING formatter errors in
 `app/api/research/responses/route.ts` and
 `lib/zod/__tests__/research-response.test.ts` that phase147 recorded.
