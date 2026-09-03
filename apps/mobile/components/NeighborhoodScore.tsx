@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
 	ring: { width: RING, height: RING },
 	/** The full unfilled circle, always visible under the arc. */
 	ringTrack: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		borderRadius: RING / 2,
 		borderWidth: STROKE,
 		borderColor: scoreTokens.ringTrack,

@@ -56,7 +56,7 @@ export function ExhaustedCard({
 
 const styles = StyleSheet.create({
 	card: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: colors.surface,
 		borderRadius: radii.card,
 		alignItems: "center",

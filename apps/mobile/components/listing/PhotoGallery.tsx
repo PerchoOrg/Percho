@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
 	 * buyer is here to judge the house's colour, not ours.
 	 */
 	screen: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: colors.photoVoid,
 	},
 	headerRow: {

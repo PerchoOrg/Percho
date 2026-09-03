@@ -768,7 +768,7 @@ const styles = StyleSheet.create({
 	 * rounded corner. Same as the CITY card's.
 	 */
 	scrim: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		zIndex: 1,
 	},
 	info: {

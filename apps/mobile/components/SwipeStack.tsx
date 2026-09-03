@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
 		shadowOpacity: 1,
 	},
 	card: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		borderRadius: radii.card,
 		overflow: "hidden",
 		backgroundColor: colors.ink, // card face is always dark (§0.3)
