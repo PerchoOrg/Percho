@@ -16,6 +16,66 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-03 09:20 UTC — phase157: a step claim that nothing could clear
+
+**Objective**: owner, watching Windward's pipeline: 「Why is it still pending：
+6 · Render running… 4m 20s」. Then 「fix it」.
+
+**It was not running.** `generate` finished at 08:47:52.697, 2.4 seconds after
+it was claimed, and reported `created: 0, requeued: 0` — all 34 clips already
+existed with a matching `render_key`, so it had no work. The run reached
+`status='assembled'` at 08:56:19. Only the strip was wrong.
+
+**The mechanism, caught live rather than reasoned about.** Polling the run
+across two minutes showed `step_results.active` flip to
+`{assemble, 08:56:18.841}` and then flip BACK to `{generate, 08:47:50.268}`
+half a second later. That is the whole bug:
+
+1. The route reads `run` — `active` is `generate`'s stale marker.
+2. `claimActiveStep` writes `active = {assemble, 08:56:18}`.
+3. The handler's `saveStep(sb, run, 'assemble', …)` merges onto the route's
+   PRE-CLAIM snapshot. `step_results` is one JSONB value, so that write carries
+   every key — and hands `active` back its old value.
+4. `clearActiveStep` re-reads, sees `started_at` 08:47:50 against its own
+   08:56:18, and by the "clear only your own claim" rule declines to clear it.
+
+Self-perpetuating: every subsequent step restored the same marker, so the strip
+would have shown Render as running (then red at `ACTIVE_STALE_MS` = 5.5 min)
+for the rest of the run's life.
+
+**Actions**: `apps/web/lib/poi/tour-steps/shared.ts` — new `mergeBase()` reads
+the run immediately before a `step_results` write; `claimActiveStep` and
+`saveStep` both merge onto that instead of the caller's snapshot. Extracted
+`mayClearClaim()` and relaxed the rule from "only your own marker" to "your own,
+or anything older than you" — a marker older than our claim belongs to a step
+that has already returned or that Vercel killed at `maxDuration` without running
+its `finally`; only a NEWER marker is live work worth protecting. New
+`active-claim.test.ts` covers all four cases, the Windward pair among them.
+
+**Decisions**: considered an `UPDATE … SET step_results = step_results || patch`
+RPC, which would make the merge atomic instead of read-then-write. Rejected for
+now — it needs a migration and a types regen for what is a UI marker bug, and
+the route already serialises steps, so the remaining window is a handler's own
+sequential writes. Noted here in case a second writer ever appears.
+
+**Issues**: `mergeBase` costs one extra read per `step_results` write. Accepted;
+these are per-click, not per-row.
+
+**Resolution**: `pnpm typecheck` clean, `pnpm test` 833/833 (4 new), lint clean
+on both changed files. Also cleared the stuck marker on Windward's run
+(`3a11c4d6`) by hand so the strip stops lying about a step that succeeded 12
+minutes earlier.
+
+**Learnings**: the `started_at` guard was written to stop a slow step clearing a
+fast one's claim, and it did — but it also made the first uncleared marker
+permanent, because "not mine" and "already dead" were the same branch. A guard
+that cannot distinguish those two is a deadlock waiting for its first missed
+`finally`.
+
+**Next steps**: the strip renders a stale claim as red `failed`. For a step that
+actually succeeded, "we lost track of this" would be more honest than "this
+failed" — worth a separate state if it recurs.
+
 ## 2026-09-03 09:00 UTC — phase156: reframing is a manual action, never an automatic one
 
 **Objective**: owner, looking at Windward's photo table: 「seeing a lot photos

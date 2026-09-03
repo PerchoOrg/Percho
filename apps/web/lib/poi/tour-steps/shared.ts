@@ -109,9 +109,29 @@ export interface ActiveStep {
   started_at: string;
 }
 
+/**
+ * The freshest `step_results` to merge a write onto — never the caller's own
+ * snapshot.
+ *
+ * The column is a single JSONB value, so every writer in this file carries the
+ * whole of it. Merging through a stale snapshot therefore does not merely fail
+ * to see the other keys, it rolls them back to what they were when that
+ * snapshot was taken. A read per write, and still not atomic — but the route
+ * runs one step at a time, so what is left is a handler's own writes, and those
+ * are sequential.
+ */
+async function mergeBase(
+  sb: TourDb,
+  runId: string,
+  fallback: Record<string, Json>,
+): Promise<Record<string, Json>> {
+  return (await getRun(sb, runId))?.step_results ?? fallback;
+}
+
 /** Claim the run for `step`. Returns the stamp `clearActiveStep` needs. */
 export async function claimActiveStep(sb: TourDb, run: RunRow, step: string): Promise<string> {
   const startedAt = new Date().toISOString();
+  const base = await mergeBase(sb, run.id, run.step_results);
   // Best-effort: losing the claim costs a spinner, and refusing to run the step
   // over it would be the worse trade.
   await bestEffortWrite(
@@ -119,7 +139,7 @@ export async function claimActiveStep(sb: TourDb, run: RunRow, step: string): Pr
     sb
       .from('community_tour_runs')
       .update({
-        step_results: asJson({ ...run.step_results, active: { step, started_at: startedAt } }),
+        step_results: asJson({ ...base, active: { step, started_at: startedAt } }),
         updated_at: startedAt,
       })
       .eq('id', run.id),
@@ -128,17 +148,37 @@ export async function claimActiveStep(sb: TourDb, run: RunRow, step: string): Pr
 }
 
 /**
- * Release the claim — but only our own. A re-read is required: the handler has
- * been writing `step_results` for minutes and the snapshot this route started
- * with is stale, so clearing through it would roll back everything the step
- * just produced. The `started_at` check keeps a slow step from clearing the
- * claim of a faster one that started after it.
+ * May `startedAt`'s owner clear the marker currently in the run?
+ *
+ * Yes for its own marker, and yes for any marker OLDER than it: that one
+ * belongs to a step which has already returned, or which the platform killed
+ * at `maxDuration` without running its `finally`. No for a NEWER marker —
+ * that is a step which started after us and is still going, and clearing it
+ * would blank the spinner out from under live work.
+ *
+ * The "no" used to cover the older case too, which is how one uncleared marker
+ * became permanent: `generate` finished at 08:47:52 and left its claim behind,
+ * and every step for the next nine minutes then declined to clear it because
+ * the `started_at` did not match theirs. The strip showed Render as running,
+ * then as failed, while the film assembled fine underneath (Windward,
+ * 2026-09-03).
+ */
+export function mayClearClaim(active: ActiveStep | null | undefined, startedAt: string): boolean {
+  if (!active) return true;
+  return Date.parse(active.started_at) <= Date.parse(startedAt);
+}
+
+/**
+ * Release the claim — ours, or a dead one left behind before it. A re-read is
+ * required: the handler has been writing `step_results` for minutes and the
+ * snapshot this route started with is stale, so clearing through it would roll
+ * back everything the step just produced.
  */
 export async function clearActiveStep(sb: TourDb, runId: string, startedAt: string) {
   const fresh = await getRun(sb, runId);
   if (!fresh) return;
   const active = fresh.step_results.active as ActiveStep | null | undefined;
-  if (active && active.started_at !== startedAt) return;
+  if (!mayClearClaim(active, startedAt)) return;
   await bestEffortWrite(
     'clearActiveStep',
     sb
@@ -151,7 +191,18 @@ export async function clearActiveStep(sb: TourDb, runId: string, startedAt: stri
   );
 }
 
-/** Persist a step's output under step_results.<step> (merge, not replace). */
+/**
+ * Persist a step's output under step_results.<step> (merge, not replace).
+ *
+ * Merged onto a RE-READ of the run, never onto the caller's `run`. The whole
+ * column is one JSONB value, so this write carries every other key with it —
+ * and the handler's snapshot was taken before `claimActiveStep` wrote the
+ * marker, so merging through it hands the marker back its previous value.
+ * Windward, 2026-09-03: `assemble` claimed the run at 08:56:18, saved its
+ * result 0.5s later, and restored `generate`'s nine-minute-old claim in the
+ * same write. Everything downstream then looked hung on a step that had
+ * finished in 2.4 seconds.
+ */
 export async function saveStep(sb: TourDb, run: RunRow, step: string, result: unknown) {
   // Stamp when this step last produced its result. A panel renders whatever is
   // stored, so after a prompt or rule change the screen looks identical until
@@ -163,6 +214,8 @@ export async function saveStep(sb: TourDb, run: RunRow, step: string, result: un
       ? { ...(result as Record<string, unknown>), ran_at: new Date().toISOString() }
       : result;
 
+  const base = await mergeBase(sb, run.id, run.step_results);
+
   // The write whose silent failure is indistinguishable from "the step did
   // nothing": the panel simply keeps rendering the previous run's numbers.
   await mustWrite(
@@ -170,7 +223,7 @@ export async function saveStep(sb: TourDb, run: RunRow, step: string, result: un
     sb
       .from('community_tour_runs')
       .update({
-        step_results: asJson({ ...run.step_results, [step]: stamped }),
+        step_results: asJson({ ...base, [step]: stamped }),
         updated_at: new Date().toISOString(),
       })
       .eq('id', run.id),
