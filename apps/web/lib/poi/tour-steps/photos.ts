@@ -734,14 +734,27 @@ async function chooseBgm(sb: TourDb, run: RunRow, shots: unknown[]) {
     // the choice stable: the seed only picks an index, so growing the library
     // moves every index and a re-render would come back with music nobody
     // reviewed. Assemblies are the record of what really went out.
+    //
+    // The same rows also give the usage counts that spread the choice across
+    // the library (2026-09-03) — one per COMMUNITY, since a community that was
+    // re-rendered six times is still one film.
     const { data: shipped } = await sb
       .from('tour_assemblies')
-      .select('bgm')
-      .eq('community_id', run.community_id)
+      .select('community_id, bgm')
       .not('bgm', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(1);
-    const incumbent = (shipped?.[0]?.bgm as { path?: string } | null)?.path ?? null;
+      .order('created_at', { ascending: false });
+    const usage: Record<string, number> = {};
+    const counted = new Set<string>();
+    let incumbent: string | null = null;
+    for (const row of shipped ?? []) {
+      const path = (row.bgm as { path?: string } | null)?.path;
+      if (!path) continue;
+      if (row.community_id === run.community_id) incumbent ??= path;
+      const key = `${row.community_id} ${path}`;
+      if (counted.has(key)) continue;
+      counted.add(key);
+      usage[path] = (usage[path] ?? 0) + 1;
+    }
 
     // 'bed' always: this film is narrated, and a track that surges fights the
     // voice however well it suits the place.
@@ -751,6 +764,7 @@ async function chooseBgm(sb: TourDb, run: RunRow, shots: unknown[]) {
       role: 'bed',
       seed: run.community_id,
       incumbent,
+      usage,
     });
     if (!picked) return null;
     return { path: picked.path, title: picked.meta?.title ?? null, vibe, role: 'bed' as const };
