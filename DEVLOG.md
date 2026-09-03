@@ -16,6 +16,74 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-03 09:00 UTC — phase156: reframing is a manual action, never an automatic one
+
+**Objective**: owner, looking at Windward's photo table: 「seeing a lot photos
+have queued tasks for Reframed outpainted to 2:3？why？it is expensive」, then
+「never reframe automatically」 and 「keep the reframe function but only allow
+manual action」.
+
+**What he was seeing, measured before touching anything.** Windward
+(`ef8e204b`, 18 POIs, 57 linked photos): 19 reframed or in flight, 16 of them
+fired in one batch at 08:34 today when the plan step ran. Every one is a
+landscape photo (aspect 1.33–3.00); not a single portrait was queued.
+
+**Why the gate fired on all of them.** `needsOutpaint()` thresholds
+`OUTPAINT_MIN_CROP_LOSS = 0.35` against 9:16. A 4:3 loses 0.58 to that crop,
+3:2 loses 0.63, 16:9 loses 0.68 — all far past 0.35, while a 3:4 portrait loses
+0.25 and passes. The gate had degraded into "is this photo landscape?", and
+Google Places photos are overwhelmingly landscape.
+
+**His second question — "any changes?" — answered no.** `outpaint.ts` was
+untouched since phase71 (`62172d2e`, 2026-08-19); `photos.ts` / `scheduler.ts`
+since 2026-08-23; the admin Reframed column since `f85e0f22`. Reframes to date,
+by community: Apremont - Highcroft 34, Bellmoore Park 23, Ashley Crossing 20,
+Aberdeen 33, Windward 19 — 118 total, ~$10.6 at the $0.09/photo the admin
+tooltip quotes. Windward was on the LOW end. He only caught it because a
+reframe is queued in the instant the plan step runs, and he happened to have
+that community's table open; on 08-23 the queue had drained before anyone
+looked.
+
+**Actions**: `apps/web/lib/poi/tour-steps/photos.ts` — deleted both automatic
+queueing blocks and the now-orphaned `selectOutpaintCandidates()`, plus the two
+write-only counters they fed (`outpaint_queued`, `rescueQueued`; nothing read
+either). A comment at the deletion site records the decision so a future agent
+does not re-add it. `apps/web/lib/poi/outpaint.ts` — header rewritten to say
+nothing calls the policy to decide spend any more. 8 insertions, 114 deletions.
+
+**Decisions**: kept `outpaint.ts` rather than deleting it with its caller. The
+worker applies the same threshold as a guard on hand-queued jobs (`worker.py`
+`process_outpaint`, marks `skipped` below the threshold), so the module is now
+the tested mirror of that guard, not a live gate. Considered instead just
+raising the threshold to 0.65 (would have cut Windward 19 → 6), but the owner
+asked for zero automatic spend, not less of it.
+
+**Issues**: two behaviours die with this, deliberately. (1) A badly framed photo
+in the cut is centre-cropped again, as before phase71 — the median 63% loss that
+motivated phase71 is back for anything nobody reframes by hand. (2) The rescue
+path is gone, so phase73.23's automated loop returns to being manual: a photo
+below `tooLowRes` cannot enter the cut, and cannot leave that state without
+someone clicking Reframe. Both are the direct cost of "never automatically" and
+were flagged to the owner rather than worked around.
+
+**Resolution**: `pnpm typecheck` clean, `pnpm test` 829/829, `pnpm lint` clean
+on both changed files. The repo's 2 pre-existing biome formatter errors
+(`lib/zod/__tests__/research-response.test.ts`, `app/api/research/responses/
+route.ts`) are untouched and unrelated.
+
+**Learnings**: the admin column hint reads "outpainted to 2:3" and is wrong —
+`worker.py` sends `aspectRatio: "9:16"` and returns 768x1376 (0.558), while the
+film renders at 1080x1576 (0.685). Three different numbers, and the model has
+been inventing a strip of height the film never uses. Left alone here to keep
+this diff to what was asked; it is the obvious next cleanup and is probably the
+main source of the re-render drift noted in phase71.
+
+**Next steps**: decide whether the worker should still skip a hand-queued photo
+that is already well framed — now that only a human can queue one, the threshold
+overrides an explicit instruction. Fix the "2:3" hint. Consider a free
+horizontal Ken Burns pan across landscape photos as the standing answer to bad
+framing, since nothing pays for outpainting any more.
+
 ## 2026-09-03 08:55 UTC — phase155: 2090 Lake Windward Drive, imported from Redfin
 
 **Objective**: owner handed over a Redfin URL — 2090 Lake Windward Dr,

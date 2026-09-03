@@ -610,78 +610,15 @@ export async function runPlan(sb: TourDb, run: RunRow) {
   // decide".
   const bgm = await chooseBgm(sb, run, shots);
 
-  // Queue reframing — AFTER selection, so it only runs on photos that reach
-  // the film. Aberdeen has 103 photos linked but 29 in the cut, of which 21
-  // are badly framed; outpainting all 103 would be four times the cost for
-  // work nobody sees (owner 2026-08-19: "i see only 29 selected right?").
+  // NO reframing is queued here. Owner 2026-09-03, after Windward's plan queued
+  // 16 outpaints in a single step: "never reframe automatically" — the function
+  // stays, the automatic trigger does not. A reframe is now only ever started by
+  // the Reframe button in the admin photo table (`requeueOutpaint`).
   //
-  // The threshold means "already in a good shape" is left alone: a 3:4
-  // portrait loses 25% to the crop and passes through untouched.
-  const outpaintCandidates = await selectOutpaintCandidates(
-    sb,
-    shots as Array<{ photo_id?: string; engine?: string }>,
-  );
-  if (outpaintCandidates.length > 0) {
-    await mustWrite(
-      `queue ${outpaintCandidates.length} photo(s) for reframing`,
-      sb
-        .from('poi_photos')
-        .update({ outpaint_status: 'queued', outpaint_error: null })
-        .in('id', outpaintCandidates),
-    );
-  }
-
-  // RESCUE — photos that are only too small, on POIs the film is visiting.
-  //
-  // Resolution stopped being a rejection (owner 2026-08-20: "we should decide
-  // based on content first, quality can be improved with rendering"), which
-  // leaves the question of who does the rendering. This does: a reframe
-  // re-renders the frame at 768x1376 and the enhance pass takes that to
-  // 1536x2752, clearing a gate the original failed from well below.
-  //
-  // It also breaks a loop that used to need hands. Reframing was queued only
-  // for photos already in the cut, and a photo could not enter the cut while
-  // it was too small — Lambert High's 512px facade sat outside for exactly that
-  // reason until it was queued by hand. Queued here, it lands before the next
-  // plan, which then picks it up on its own.
-  const { tooLowRes } = await import('./shots');
-  const { data: candidates } = (await sb
-    .from('poi_photos')
-    .select('id, width_px, height_px, enhanced_status, enhanced_meta, outpaint_status')
-    .in('poi_id', cutPoiIds)
-    .neq('status', 'rejected')) as {
-    data: Array<{
-      id: string;
-      width_px: number | null;
-      height_px: number | null;
-      enhanced_status: string | null;
-      enhanced_meta: { width?: number; height?: number } | null;
-      outpaint_status: string | null;
-    }> | null;
-  };
-  const chosenIds = new Set(
-    (shots as Array<{ photo_id?: string }>).map((sh) => sh.photo_id).filter(Boolean) as string[],
-  );
-  const rescue = (candidates ?? [])
-    .filter((c) => {
-      if (chosenIds.has(c.id)) return false; // already in; nothing to rescue
-      // Not already reframed, in flight, or deliberately set aside.
-      if (c.outpaint_status && c.outpaint_status !== 'none') return false;
-      const enh = c.enhanced_status === 'approved' ? c.enhanced_meta : null;
-      const w = enh?.width ?? c.width_px ?? 0;
-      const h = enh?.height ?? c.height_px ?? 0;
-      return w > 0 && h > 0 && tooLowRes(w, h);
-    })
-    .map((c) => c.id);
-  if (rescue.length > 0) {
-    await mustWrite(
-      `queue ${rescue.length} undersized photo(s) for a rescue reframe`,
-      sb
-        .from('poi_photos')
-        .update({ outpaint_status: 'queued', outpaint_error: null })
-        .in('id', rescue),
-    );
-  }
+  // Two behaviours went with it, deliberately. A badly framed photo in the cut
+  // is centre-cropped again, as it was before phase71. And an undersized photo
+  // is no longer rescued into eligibility — it stays out of the cut until
+  // someone reframes it by hand, which is the loop phase73.23 automated away.
 
   // `approved` = in the cut. Stamped HERE, because this is where the cut is
   // decided — owner 2026-08-19: "approved can not be 82!!… they should already
@@ -724,7 +661,6 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     ...photosStep,
     phase: 'done',
     cut_poi_ids: cutPoiIds,
-    outpaint_queued: outpaintCandidates.length,
     shots,
     dropped,
     plan,
@@ -738,7 +674,6 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     dropped: dropped.length,
     approved: promote.length,
     unapproved: demote.length,
-    rescueQueued: rescue.length,
     plan,
     narration: { lines: narration.segments.length, voice: narration.voice, error: narration.error },
     bgm,
@@ -915,46 +850,6 @@ async function writeNarration(sb: TourDb, run: RunRow, shots: unknown[]) {
     return { ...previous, error: fresh.error, stale: true } as typeof fresh & { stale: true };
   }
   return fresh;
-}
-
-/**
- * Which of the chosen photos are framed badly enough to be worth reframing.
- *
- * Three filters, each of which removes real spend:
- *  - Seedance shots are excluded. That engine generates its own 496x864 video
- *    from the photo and does the aspect conversion itself, so reframing first
- *    pays for work the video model redoes (owner 2026-08-19).
- *  - Photos already close to 9:16 are left alone.
- *  - Photos already reframed or in flight are not paid for twice on a re-run.
- */
-async function selectOutpaintCandidates(
-  sb: TourDb,
-  shots: Array<{ photo_id?: string; engine?: string }>,
-): Promise<string[]> {
-  const ids = shots
-    .filter((s) => s.engine !== 'seedance')
-    .map((s) => s.photo_id)
-    .filter((id): id is string => Boolean(id));
-  if (ids.length === 0) return [];
-
-  const { needsOutpaint } = await import('@/lib/poi/outpaint');
-  const { data: rows } = (await sb
-    .from('poi_photos')
-    .select('id, width_px, height_px, outpaint_status')
-    .in('id', ids)) as {
-    data: Array<{
-      id: string;
-      width_px: number | null;
-      height_px: number | null;
-      outpaint_status: string | null;
-    }> | null;
-  };
-  return (rows ?? [])
-    .filter(
-      (r) => !r.outpaint_status || r.outpaint_status === 'none' || r.outpaint_status === 'failed',
-    )
-    .filter((r) => r.width_px && r.height_px && needsOutpaint(r.width_px, r.height_px))
-    .map((r) => r.id);
 }
 
 // ─── step: tag ──────────────────────────────────────────────────────────────
