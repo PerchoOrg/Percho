@@ -12,6 +12,14 @@
  * then Real-ESRGAN takes that to the canvas. The prompt and the per-category
  * fill hints live there too, so there is one copy of them.
  *
+ * NOTHING CALLS THIS TO DECIDE WHETHER TO SPEND. Owner 2026-09-03: "never
+ * reframe automatically". The plan step used to queue every photo past the
+ * threshold below — on Windward that was 16 in one step, and 118 across five
+ * communities since phase71 — and it no longer queues any. A reframe starts
+ * only from the admin Reframe button. What is left here is the tested mirror of
+ * the guard the worker still applies to a hand-queued job: a photo already
+ * close to the canvas comes back `skipped` rather than billed.
+ *
  * Known limitation, accepted by the owner 2026-08-19 after reviewing outputs:
  * the model re-renders rather than strictly extends. Measured drift from the
  * source was 7.4/255 on a landscape subject but 35/255 on a shopfront, where a
