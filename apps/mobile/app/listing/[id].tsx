@@ -47,6 +47,7 @@ import { InsightRail } from "../../components/listing/explore/InsightRail";
 import { MediaCarousel } from "../../components/listing/explore/MediaCarousel";
 import { PhotoGrid } from "../../components/listing/explore/PhotoGrid";
 import { PhotoViewer } from "../../components/listing/explore/PhotoViewer";
+import { TourRequestSheet } from "../../components/listing/explore/TourRequestSheet";
 import { DEFAULT_ANNUAL_RATE } from "../../lib/listing/assumptions";
 import { assumptionLine, buildCost } from "../../lib/listing/cost";
 import { useListingDetail } from "../../lib/listing/detail-dto";
@@ -72,6 +73,7 @@ import {
 } from "../../lib/listing/monthly";
 import { buildRoomGroups } from "../../lib/listing/rooms";
 import { useListingSummaries } from "../../lib/listing/summaries";
+import { useAuthStore } from "../../state/auth";
 import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
@@ -142,6 +144,7 @@ export default function ListingExploreScreen() {
 	// ——— overlays ———
 	const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 	const [gridOpen, setGridOpen] = useState(false);
+	const [tourOpen, setTourOpen] = useState(false);
 
 	// ——— vote (optimistic; the offline-durable queue reports behind it) ———
 	const [vote, setVote] = useState<"worth" | "not" | null>(null);
@@ -509,7 +512,16 @@ export default function ListingExploreScreen() {
 					router.back();
 				}}
 				onToggleSave={() => toggleSave("dock")}
-				onTour={() => enqueue(buildDockActionEvent(ctx(), { action: "tour" }))}
+				onTour={() => {
+					enqueue(buildDockActionEvent(ctx(), { action: "tour" }));
+					// Same gate as saving: a tour request is contact, and the
+					// sheet prefills from the account.
+					if (!useAuthStore.getState().session) {
+						router.push("/auth");
+						return;
+					}
+					setTourOpen(true);
+				}}
 			/>
 
 			{/* Overlays — mounted only while open (see DEVLOG 2026-07-27). */}
@@ -530,6 +542,14 @@ export default function ListingExploreScreen() {
 					}}
 				/>
 			)}
+			{tourOpen && (
+				<TourRequestSheet
+					listingId={detail.id}
+					address={detail.address}
+					onClose={() => setTourOpen(false)}
+				/>
+			)}
+
 			{viewerIndex !== null && (
 				<PhotoViewer
 					photos={detail.photos}

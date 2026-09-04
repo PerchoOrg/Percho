@@ -16,6 +16,65 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-04 09:40 UTC — phase168: the tour CTA becomes a lead; telemetry stops being thrown away (Phase C)
+
+**Objective**: store-launch Phase C — the app's most prominent button
+("Request a tour") does something observable, and the event queue drains to
+a server instead of a no-op.
+
+**The discovery that shrank this phase**: `POST /api/leads` already existed
+and does everything the tour CTA needs — zod validation, server-side
+`agent_id` derivation, active-listing gate, and a DB AFTER INSERT trigger
+that calls the `notify-lead` Edge Function (Resend email, idempotent via
+`notified_at`). The audit's "Request a tour does nothing" was purely a
+client-wiring gap. The only server change leads needed: **external listings
+(`listings_owner_chk`: `agent_id` null + `source` set) had nobody to route
+to** — a first attempt to backfill `agent_id` on the 6 external demo
+listings bounced off that very constraint, which is the schema saying the
+provenance model is load-bearing. So the route now falls back to the oldest
+`is_admin` agent (the owner) when `listing.agent_id` is null.
+
+**Actions**:
+- Migration `20260904120000_mobile_events.sql` (applied, `Finished supabase
+  db push`): one table for both client event streams, envelope columns
+  lifted out (`type`/`seq`/`at`/`listing_id`), full event in `payload`
+  jsonb, **unique (install_id, seq)** so re-sent batches dedupe — the
+  transport contract requires re-sending on a lost ack. `listing_id` is a
+  bare uuid, not an FK: events must survive listing deletion (phase166
+  would have cascaded 249 listings' history away). RLS enabled with no
+  policies (service-role only, unlike the anon-writable baseline `events`).
+  Generated types regenerated (`--linked`; this worktree is now
+  `supabase link`ed).
+- `POST /api/mobile/events`: zod envelope (`lib/zod/mobile-events.ts`) that
+  deliberately does NOT model the client unions — unknown types/fields pass
+  through, so a new client build never loses data on an old server; bounds
+  are the point (batch ≤100, event ≤4KB, uuid installId). Optional Bearer →
+  `user_id` attribution; bad token ≠ lost telemetry. In-memory per-install
+  rate limit (12/min), same soft-ceiling posture as `lib/ai/rate-limit.ts`.
+- Mobile: `lib/install-id.ts` (persisted anonymous uuid, the dedupe key),
+  `lib/events-transport.ts` (chunks the ≤500-event drain into ≤100 POSTs,
+  acks only if all land), wired in `_layout` (transport + boot drain +
+  drain at queue depth ≥20; the feed's reconnect drain already existed).
+- Mobile tour: `TourRequestSheet` (name/email/phone/message, email
+  prefilled from the session, posts `/api/leads` with
+  `source: "mobile_tour"`), opened from the dock behind the same sign-in
+  gate as saving. Overlay pattern matches PhotoGrid.
+- 7 zod tests (`lib/zod/__tests__/mobile-events.test.ts`).
+
+**Issues**: a raw-curl backfill of the 6 null-agent listings was
+permission-blocked AND wrong (the check constraint) — the route-level
+fallback is the correct fix and touches no data. `StyleSheet
+.absoluteFillObject` no longer exists in RN 0.86.
+
+**Verification**: root typecheck 0, mobile lint 0 errors, mobile 635 / web
+845 tests green. Production endpoint checks after this merge deploys
+(leads fallback on an external listing, events insert + dedupe + 429).
+Sentry is still absent — needs an owner-created project/DSN; deliberately
+not scaffolded until one exists.
+
+**Next steps**: prod verification; owner device pass; Phase D (tab fixes,
+Compare, cost breakdown, schools, share).
+
 ## 2026-09-04 08:20 UTC — phase167: accounts on the phone (store-launch Phase B)
 
 **Objective**: v1 gets real accounts (owner decision 2026-09-04, store-launch

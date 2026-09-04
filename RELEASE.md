@@ -9,6 +9,7 @@
 ## v1.3 — Opening a home now answers "does this fit me?"
 
 ### 2026-09-04
+- **"Request a tour" now actually requests a tour.** The button on a home's page opens a short form — name, email, phone if you like — and the request lands with an agent, who gets an email about it. Before this, the app's most prominent button did nothing at all
 - **Percho now has accounts on the phone.** Sign in with Apple or with a 6-digit code sent to your email. Your saved homes and neighbourhoods now belong to your account and follow you across devices, instead of living on one phone. Browsing never requires signing in — only saving does — and you can sign out or permanently delete your account from the You tab
 
 ### 2026-09-03
