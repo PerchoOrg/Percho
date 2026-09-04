@@ -9,6 +9,9 @@
 ## v1.3 — Opening a home now answers "does this fit me?"
 
 ### 2026-09-04
+- **Every tab now does what its buttons say.** Search finds real homes, communities and cities by address, name or zip, with pins on the map and a tap-through to each page — the decorative "For sale" chip is gone. Saved has a working Compare: pick two or three homes and see price, monthly cost, size, year, HOA, typical rent and nearby schools side by side. The feed's end-of-deck card actually opens the scope sheet. The You tab links to the privacy policy, terms and support, and shows the app version
+- **A home's page now shows what it really costs, what it could earn, and where the kids would go.** The monthly figure uses this week's national mortgage rate and adds upkeep; a new "If you rented it out" block estimates cash flow, cap rate and yield from a typical rent for the ZIP that you can edit; nearest public elementary, middle and high schools appear with the state's own test-proficiency percentage. Every figure names its source, and there is no invented rating anywhere
+- **Share a home or a neighbourhood** from the ↑ button — it sends the public web page
 - **"Request a tour" now actually requests a tour.** The button on a home's page opens a short form — name, email, phone if you like — and the request lands with an agent, who gets an email about it. Before this, the app's most prominent button did nothing at all
 - **Percho now has accounts on the phone.** Sign in with Apple or with a 6-digit code sent to your email. Your saved homes and neighbourhoods now belong to your account and follow you across devices, instead of living on one phone. Browsing never requires signing in — only saving does — and you can sign out or permanently delete your account from the You tab
 
