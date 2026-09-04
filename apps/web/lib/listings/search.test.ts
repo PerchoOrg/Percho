@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { mobileSearchQuerySchema } from '@/lib/zod/mobile-search';
+import { describe, expect, it } from 'vitest';
 import { projectSearchCommunities, projectSearchListings } from './search';
 
 describe('mobileSearchQuerySchema', () => {

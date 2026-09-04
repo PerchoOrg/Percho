@@ -530,6 +530,16 @@ export default function ListingExploreScreen() {
 						/>
 					</View>
 				)}
+
+				{/* ——— Trust line (phase D) — copy pending owner review ——— */}
+				<View style={[styles.section, styles.sectionRuled]}>
+					<Text style={styles.trust}>
+						Percho doesn't take placement fees. No home, agent or neighbourhood
+						pays to appear here or to rank higher; what you see is ordered by
+						what you've told us you care about. Figures name their source, and
+						anything we can't source stays blank.
+					</Text>
+				</View>
 			</ScrollView>
 
 			<CollapsedAppBar
@@ -644,6 +654,12 @@ const styles = StyleSheet.create({
 		letterSpacing: 1.5,
 		color: explore.muted,
 		marginBottom: 12,
+		fontFamily: fonts.ui,
+	},
+	trust: {
+		fontSize: 11.5,
+		lineHeight: 17,
+		color: explore.ink2,
 		fontFamily: fonts.ui,
 	},
 	headline: {

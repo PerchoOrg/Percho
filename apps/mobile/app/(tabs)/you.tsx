@@ -22,11 +22,13 @@
  *     `state/auth.ts`; the actions live in `lib/auth.ts`.
  *   · Settings — only the switches that exist (sound autoplay).
  */
+import Constants from "expo-constants";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import {
 	Alert,
 	Image,
+	Linking,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -360,7 +362,8 @@ export default function YouTab() {
 				)}
 			</View>
 
-			{/* Settings — only real switches. */}
+			{/* Settings — one real switch, then the pages the store listing
+			    points at (they open in the system browser, so one source). */}
 			<Text style={styles.sectionHead}>SETTINGS</Text>
 			<View style={styles.card}>
 				<View style={styles.settingRow}>
@@ -370,6 +373,22 @@ export default function YouTab() {
 						onValueChange={toggleSound}
 						trackColor={{ true: colors.pos }}
 					/>
+				</View>
+				{LINKS.map((l) => (
+					<Pressable
+						key={l.href}
+						style={styles.accountRow}
+						onPress={() => void Linking.openURL(l.href)}
+						accessibilityRole="link"
+					>
+						<Text style={styles.settingLabel}>{l.label}</Text>
+					</Pressable>
+				))}
+				<View style={styles.accountRow}>
+					<Text style={styles.accountSub}>
+						Percho {Constants.expoConfig?.version ?? "?"}
+						{buildLabel()}
+					</Text>
 				</View>
 			</View>
 		</ScrollView>
@@ -382,6 +401,20 @@ export default function YouTab() {
  * is actually about below the fold.
  */
 const RECENT_SHOWN = 4;
+
+const LINKS = [
+	{ label: "Privacy policy", href: "https://www.percho.co/privacy" },
+	{ label: "Terms of use", href: "https://www.percho.co/terms" },
+	{ label: "Contact & support", href: "https://www.percho.co/contact" },
+] as const;
+
+/** " (build 2)" from app.json; empty in Expo Go where there is no build. */
+function buildLabel(): string {
+	const build =
+		Constants.expoConfig?.ios?.buildNumber ??
+		Constants.expoConfig?.android?.versionCode;
+	return build ? ` (build ${build})` : "";
+}
 
 const styles = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: colors.bg },

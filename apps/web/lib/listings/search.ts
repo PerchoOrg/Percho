@@ -156,7 +156,8 @@ export async function searchEntities(q: string): Promise<SearchResultDTO> {
       .limit(SEARCH_LIMIT),
   ]);
 
-  if (listingRes.error) throw new Error(`search: listings read failed: ${listingRes.error.message}`);
+  if (listingRes.error)
+    throw new Error(`search: listings read failed: ${listingRes.error.message}`);
   if (communityRes.error) {
     throw new Error(`search: communities read failed: ${communityRes.error.message}`);
   }

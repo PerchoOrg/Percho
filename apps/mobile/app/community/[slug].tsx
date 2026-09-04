@@ -33,6 +33,7 @@ import {
 	Image,
 	Pressable,
 	ScrollView,
+	Share,
 	StyleSheet,
 	Text,
 	View,
@@ -242,6 +243,23 @@ export default function CommunityWhyScreen() {
 					<Text style={styles.saveTxt}>{saved ? "Saved ✓" : "Save"}</Text>
 				</Pressable>
 
+				{/* Share (phase D) — the public web page for this community. */}
+				<Pressable
+					onPress={() => {
+						const url = `https://www.percho.co/c/${data.slug}`;
+						void Share.share({
+							message: `${data.name} — ${url}`,
+							url,
+						}).catch(() => {});
+					}}
+					hitSlop={12}
+					accessibilityRole="button"
+					accessibilityLabel="Share"
+					style={[styles.close, styles.share, { top: insets.top + 8 }]}
+				>
+					<Text style={styles.closeTxt}>↑</Text>
+				</Pressable>
+
 				<View style={styles.body}>
 					{!!data.blurb && <Text style={styles.blurb}>{data.blurb}</Text>}
 
@@ -407,6 +425,8 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.glass,
 	},
 	closeTxt: { fontSize: 15, color: colors.ink },
+	/** Second glass disc, left of the close. */
+	share: { right: 56 },
 	/** The close disc's mirror — same glass, left corner, sized by its label. */
 	save: {
 		position: "absolute",
