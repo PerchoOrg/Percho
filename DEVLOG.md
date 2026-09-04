@@ -16,6 +16,39 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-04 10:20 UTC — phase168.1: verified in production; the lead email was broken since the rename
+
+**Objective**: prod verification of phase168 after deploy.
+
+**Events**: POST `/api/mobile/events` with a 2-event batch → `{accepted:2}`;
+the SAME batch re-sent → accepted again but the table still holds exactly 2
+rows — the (install_id, seq) dedupe works. `listing_id` lands lifted out.
+
+**Leads**: POST `/api/leads` against an external demo listing (agent_id
+null) → 201, lead routed to the owner's is_admin agent. But `notified_at`
+stayed null: invoking `notify-lead` directly returned
+`{"error":"resend_failed","status":403}`. Cause: the Edge Function's
+secrets were set 2026-06-09 — before the Vicinity→Percho rename and a month
+before percho.co was verified in Resend (2026-07-11), so the function was
+still trying to send from the old identity. **The lead notification email
+has therefore been broken in production since the rename**; nobody noticed
+because nothing user-facing ever created leads (web LeadModal traffic is
+~zero and mobile never wired the CTA).
+
+**Fix (infra, no code)**: `supabase secrets set RESEND_API_KEY=<current>
+RESEND_FROM="Percho <notifications@percho.co>" PUBLIC_APP_URL=
+"https://www.percho.co"`. Re-ran the full pipeline: a fresh lead through
+`/api/leads` got `notified_at` stamped ~20s after insert with no manual
+help — trigger → Edge Function → Resend all live (so the vault
+`service_role_key` one-time step HAD been done; only the Resend identity
+was stale). Two test leads named "Percho Test … ignore" sit in the owner's
+dashboard + inbox as the evidence; left in place deliberately.
+
+**Learnings**: when a notification path has a config half (secrets, vault)
+and a code half, verify the config half end-to-end after every identity
+change — the rename updated the web env but not the Edge Function secrets,
+and the failure mode (row lands, email silently skipped) is invisible.
+
 ## 2026-09-04 09:40 UTC — phase168: the tour CTA becomes a lead; telemetry stops being thrown away (Phase C)
 
 **Objective**: store-launch Phase C — the app's most prominent button
