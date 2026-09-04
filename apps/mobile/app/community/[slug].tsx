@@ -31,6 +31,7 @@ import { type MutableRefObject, useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Image,
+	Linking,
 	Pressable,
 	ScrollView,
 	Share,
@@ -442,6 +443,18 @@ export default function CommunityWhyScreen() {
 										</Text>
 									</View>
 									<Text style={styles.reviewBody}>{r.body}</Text>
+									{/* App Store 1.2 (UGC): a way to report, next to every item. */}
+									<Pressable
+										hitSlop={8}
+										accessibilityRole="link"
+										onPress={() =>
+											Linking.openURL(
+												`mailto:hello@percho.co?subject=${encodeURIComponent(`Report review ${r.id}`)}`,
+											).catch(() => {})
+										}
+									>
+										<Text style={styles.reviewReport}>Report</Text>
+									</Pressable>
 								</View>
 							))}
 						</View>
@@ -636,6 +649,7 @@ const styles = StyleSheet.create({
 	reviewRatingOff: { color: colors.border },
 	reviewMeta: { ...textStyles.caption, color: colors.ink3 },
 	reviewBody: { ...textStyles.footnote, color: colors.ink, lineHeight: 20 },
+	reviewReport: { ...textStyles.caption, color: colors.ink3, marginTop: 2 },
 	reviewEmpty: { ...textStyles.footnote, color: colors.ink2, lineHeight: 20 },
 	reviewPending: {
 		...textStyles.footnote,

@@ -16,6 +16,121 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-04 18:30 UTC — phase172: store sprint (Phase G) — legal pages, UGC report link, store copy; build blocked on an App ID capability
+
+**Objective**: Phase G, the last of the store-launch plan the owner asked
+to be run without waiting for approval. Turn the two legal placeholders
+into pages that describe the shipped app, make the app pass Apple 1.2
+now that it carries user-generated content, ship a build from the frozen
+feature set, and write down everything only the owner can do.
+
+**Actions**:
+- `apps/web/app/(public)/privacy/page.tsx` — rewritten. Covers Sign in
+  with Apple / email code, saves on the account, tour requests forwarded
+  to the agent, resident reviews (anonymous, human-moderated), usage
+  events keyed by the random install id and linked to the account when
+  signed in, no precise location / contacts / photos / IDFA, the four
+  infrastructure processors (Supabase, Vercel, Cloudflare, Resend) plus
+  Apple, account deletion from the You tab, retention, children, contact.
+- `apps/web/app/(public)/terms/page.tsx` — placeholder removed; §4 User
+  content gains the review rules and the report path (hello@percho.co,
+  response within 24 h — Apple 1.2 wants a stated turnaround); new §5
+  Tour requests; sections renumbered 1–12; disclaimers now say cost /
+  rental / school figures are estimates and reviews are opinions.
+- `apps/mobile/app/community/[slug].tsx` — a **Report** link under every
+  approved review, `mailto:hello@percho.co?subject=Report review <id>`.
+  Apple's UGC checklist needs an in-app report mechanism; email is the
+  cheapest one that a reviewer can see working.
+- `apps/mobile/app.json` — `ios.buildNumber` 2 → 4, written by EAS
+  `autoIncrement` across the two build attempts below; committed so the
+  next increment does not collide (nothing shipped as 3 or 4).
+- `docs/ios-release.md` — Stage 3 rewritten for the frozen feature set:
+  App Privacy label table (email / name / phone / user id / install id /
+  user content / product interaction — all linked, none for tracking;
+  location explicitly *not* collected), age-rating change
+  (`userGeneratedContent: true`, everything else unchanged), store copy
+  draft (name, subtitle, promo text, keywords, description, reviewer
+  notes), the owner-only table, and updated review-risk notes.
+- `RELEASE.md` bullet under v1.3 / 2026-09-04.
+- EAS: `npx eas-cli build --platform ios --profile production
+  --non-interactive --no-wait` → build `adeba44c-fe79-4b2d-8b1c-191e84334bbb`,
+  1.0.0 (3), from `6eb7ac2f`. **Errored** — see Issues. Retry `6b984390`
+  with the `EXPO_ASC_*` vars (1.0.0 (4)) was cancelled once it was clear
+  EAS had fetched the profiles without re-syncing the App ID.
+
+**Decisions**:
+- **Entity name "Percho", not "Percho, Inc."** in both legal pages: the
+  old text named a corporation that, as far as the repo knows, does not
+  exist (the Apple account is an Individual enrollment). Both files carry
+  a header comment saying counsel has not reviewed them; the governing
+  law clause (Delaware) was left as it was for the lawyer to confirm.
+- **Report = mailto**, not a form + table. A report is a rare event and
+  the moderation queue is already human; a new endpoint, schema and admin
+  view for it would be speculative. The review id in the subject line is
+  enough to find the row.
+- **Reviews cannot be deleted in-app** (no delete policy, by design in
+  phase170). The privacy page says: edit any time; to remove, email or
+  delete the account. Apple 5.1.1(v) is about the account, which does
+  delete everything by cascade.
+- **Not submitted for App Store review**, and **not pushed to TestFlight
+  by the agent**. Attaching a build to the 1.0.0 version and pressing
+  Submit is the owner's call; the runbook says exactly how. TestFlight
+  submit needs the ASC key path written temporarily into `eas.json`; I
+  left that step for the owner too so the working tree never carries the
+  key fields, even uncommitted — nothing in the build depends on it.
+- **Store copy is a draft**, marked as such. Owner rule: no AI-written
+  copy ships unreviewed. It sits in the runbook, not in any fixture.
+
+**Issues**:
+- **Build blocked on the App ID's capabilities.** Xcode: *Provisioning
+  profile "…AppStore 2026-08-30…" doesn't include the Sign In with Apple
+  capability / the `com.apple.developer.applesignin` entitlement*. Phase A
+  set `ios.usesAppleSignIn: true` (the entitlement in the binary) but the
+  App ID `co.percho.app` (`6TNYULX4NA`) still lists only `IN_APP_PURCHASE`
+  — checked over the ASC API — and the profile was cut on 2026-08-30 before
+  the capability existed. EAS only syncs capabilities when it holds an
+  Apple session; non-interactive with `EXPO_ASC_*` it fetched the profile
+  list and moved on.
+- Enabling the capability over the ASC API from this shell
+  (`POST /v1/bundleIdCapabilities`, `capabilityType: APPLE_ID_AUTH`) was
+  **denied by the sandbox policy** (modifying the Apple developer
+  account). Not worked around — it is the owner's account.
+- Web biome still reports the two pre-existing errors in
+  `lib/zod/__tests__/research-response.test.ts` and
+  `app/api/research/responses/route.ts` (not touched).
+
+**Resolution**: no store build exists yet. The fix is one checkbox in the
+Developer Portal (Identifiers → `co.percho.app` → Sign In with Apple) and
+a rebuild; the exact steps, the fallback (`eas credentials` interactive
+once) and the equivalent API call are written into
+`docs/ios-release.md` Stage 3. Everything else in Phase G — legal pages,
+report link, privacy-label table, age-rating change, store copy — is
+done and merged; none of it waits on the build.
+
+**Learnings**:
+- Apple's 1.2 checklist is four concrete things (filter, report, block,
+  contact). Pre-publication moderation covers *filter* and *block* at
+  once; a mailto covers *report*; the legal pages cover *contact*. None of
+  it needs new backend.
+- `autoIncrement` with `appVersionSource: local` edits `app.json` on the
+  machine that runs the build — the commit must follow, or the runbook's
+  "app.json says what shipped" rule silently breaks.
+- `usesAppleSignIn: true` in `app.json` is only half of Sign in with
+  Apple: the App ID in the Developer Portal must have the capability too,
+  and an existing provisioning profile does not pick it up on its own.
+  Should have been checked in Phase A, before the first build attempt.
+- ASC API names the capability `APPLE_ID_AUTH`, setting key
+  `APPLE_ID_AUTH_APP_CONSENT`, option `PRIMARY_APP_CONSENT`
+  (`SIGN_IN_WITH_APPLE` is rejected with a 409).
+
+**Next steps (owner)**: first the Sign In with Apple checkbox + rebuild
+(runbook Stage 3), then the table "Still owner-only" in
+`docs/ios-release.md`: screenshots from that build, privacy labels, age
+rating flag, seller name DBA, legal review, Sentry DSN, MLS channel,
+then submit. Engineering follow-ups from the earlier phases: render
+reviews on the web `/c/<slug>` page (DTO already carries them), and the
+`ANTHROPIC_API_KEY` call sites in `lib/poi/*` still need porting.
+
 ## 2026-09-04 17:10 UTC — phase171: MLS go-live readiness note (Phase F)
 
 **Objective**: Phase F of the store-launch plan — say exactly what stands

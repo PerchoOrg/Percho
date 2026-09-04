@@ -192,39 +192,183 @@ App Store Connect version record: `da554336-…`, state `PREPARE_FOR_SUBMISSION`
 | Primary category | `LIFESTYLE` |
 | Age rating | all-none questionnaire → 4+ |
 
-### Deliberately still empty — needs the finished app
+### Store sprint (2026-09-04, phase172) — what the launch build changes
 
-| Item | Why it waits |
+The feature set froze with the store-launch phases A–F: Sign in with Apple +
+email code, saves on the account, tour requests, resident reviews with a
+human approval gate, FMLS rows hard-deleted except the video-backed ones,
+and event telemetry keyed by a random install id (`lib/install-id.ts`).
+That flips three of the "still empty" rows below from *wait* to *fill*.
+
+**Build: ⚠ blocked on one Developer Portal checkbox (OWNER).** EAS build
+`adeba44c` (1.0.0 (3), from `phase172/store-sprint`) failed in Xcode:
+
+```
+Provisioning profile "*[expo] co.percho.app AppStore 2026-08-30T09:03:18.564Z"
+doesn't include the Sign In with Apple capability / the
+com.apple.developer.applesignin entitlement.
+```
+
+Phase A added `ios.usesAppleSignIn: true`, which adds the entitlement to the
+binary, but the App ID `co.percho.app` (portal id `6TNYULX4NA`) still has
+only `IN_APP_PURCHASE` enabled — verified over the ASC API on 2026-09-04 —
+and the 2026-08-30 profile was cut before the capability existed. EAS only
+syncs capabilities when it holds an Apple session; in `--non-interactive`
+mode with `EXPO_ASC_*` set it fetched the profiles but did not touch the
+App ID (retry `6b984390` was cancelled before it hit the same wall). Turning
+the capability on from the agent's shell was denied by the sandbox policy,
+so it is a human step:
+
+1. https://developer.apple.com/account/resources/identifiers → `co.percho.app`
+   → tick **Sign In with Apple** (leave "Enable as a primary App ID") → Save.
+   Apple marks profile `95776Q4K89` *Invalid* the moment you save; that is
+   expected.
+2. From `apps/mobile`:
+   ```bash
+   EXPO_ASC_API_KEY_PATH=~/.appstoreconnect/private_keys/AuthKey_P68W57U2G9.p8 \
+   EXPO_ASC_KEY_ID=P68W57U2G9 EXPO_ASC_ISSUER_ID=88793b4f-748d-40ef-b81e-c89b570f00d0 \
+   npx eas-cli build --platform ios --profile production --non-interactive
+   ```
+   EAS sees the invalid profile and regenerates it with the new capability.
+   If it instead stops at "Credentials are not set up", run
+   `npx eas-cli credentials --platform ios` once interactively (Apple ID +
+   2FA, ~2 min) and choose *Build credentials → Provisioning profile →
+   regenerate*, then rebuild.
+3. Commit the `app.json` `buildNumber` EAS writes (it will be `5`;
+   `3` and `4` were consumed by the failed and the cancelled attempt and
+   the file already says `4`).
+
+Equivalent API call, for an agent whose shell is allowed to make it:
+`POST /v1/bundleIdCapabilities` with `capabilityType: "APPLE_ID_AUTH"`,
+`settings: [{key: "APPLE_ID_AUTH_APP_CONSENT", options: [{key: "PRIMARY_APP_CONSENT"}]}]`,
+relationship `bundleId → 6TNYULX4NA`. (`SIGN_IN_WITH_APPLE` is not a valid
+enum value; the API calls it `APPLE_ID_AUTH`.)
+
+Everything else in this section was done from the frozen feature set and
+does not depend on the build.
+
+**Legal pages** are real now: `/privacy` and `/terms` describe the shipped
+app (accounts, saves, tour requests, reviews, telemetry, moderation and the
+report path). Both still carry a header comment saying *not reviewed by
+counsel* — the entity name ("Percho", not a registered "Percho, Inc.") and
+the governing-law clause in `/terms` §10 are the owner's to confirm.
+
+### App Privacy labels — set these (legal attestation, owner submits)
+
+Apple asks per data type: collected? linked to identity? used for tracking?
+Percho does no tracking (no ad SDK, no IDFA, nothing shared with data
+brokers), so the tracking answer is **No** everywhere.
+
+| Data type | Collected | Linked to you | Purpose | Where in the app |
+|---|---|---|---|---|
+| Contact Info → Email Address | Yes | Yes | App functionality | Sign-in (Apple relay or the address the code went to); tour request form |
+| Contact Info → Name | Yes | Yes | App functionality | Tour request form only (Apple's name from Sign in with Apple is not stored) |
+| Contact Info → Phone Number | Yes (optional) | Yes | App functionality | Tour request form |
+| Identifiers → User ID | Yes | Yes | App functionality | Supabase auth user id |
+| Identifiers → Device ID | Yes | Yes when signed in | Analytics | Random install id generated on the phone (`lib/install-id.ts`); not the IDFA/IDFV |
+| User Content → Other User Content | Yes | Yes | App functionality | Resident reviews (rating + text); tour request message |
+| Usage Data → Product Interaction | Yes | Yes when signed in | Analytics, App functionality | Feed events (view, dwell, save, skip, search, filters) via `/api/mobile/events` |
+| Location | **No** | — | — | The app never calls `requestForegroundPermissions`; ZIP/city search is typed |
+| Contacts, Photos, Health, Financial, Browsing/Search history (outside the app), Diagnostics | **No** | — | — | Nothing collected. Crash reporting stays off until the owner adds a Sentry DSN (then add *Diagnostics → Crash Data, not linked*) |
+
+Account deletion (5.1.1(v)) exists: You tab → Delete account, served by
+`/api/mobile/account`. The privacy policy says so in §4.
+
+### Age rating — one answer changes
+
+Reviews are user-generated content that other users see, so
+`userGeneratedContent` must be **`true`** (it was `false` on 2026-08-30).
+Apple's 1.2 checklist for UGC apps and where Percho meets it:
+
+- filter objectionable material → every review is `pending` until a human
+  approves it in `/admin/pipeline/reviews`; nothing is auto-published;
+- report mechanism → each review carries a **Report** link (mails
+  hello@percho.co with the review id); terms §4 promise a response within
+  24 hours;
+- block abusive users → moderation is pre-publication, so an abusive user
+  never reaches other users; the admin queue rejects them;
+- contact information → hello@percho.co in the terms and legal@percho.co in
+  the privacy policy.
+
+Setting `userGeneratedContent: true` alone does not raise the rating above
+4+; the other seven booleans stay `false`, `gunsOrOtherWeapons` stays `NONE`.
+
+### Store copy — draft (owner edits, then pastes into App Store Connect)
+
+- **Name** (30): `Percho`
+- **Subtitle** (30): `Feel the neighbourhood first`
+- **Promotional text** (170, editable without a new build): `Short films of
+  real Atlanta neighbourhoods and the homes for sale in them. Browse
+  without an account; sign in to keep your saves.`
+- **Keywords** (100, comma-separated, no spaces after commas):
+  `homes,houses,real estate,neighborhood,atlanta,house hunting,home buying,community,tour,relocate`
+- **Description** (4000):
+
+  ```
+  Percho is house hunting in the order you actually decide: neighbourhood
+  first, house second.
+
+  Swipe through short films of real communities — the streets, the parks,
+  the coffee place, the school-run traffic — and the homes for sale inside
+  them. Every clip is made from real photos of that place, not stock
+  footage.
+
+  WHAT YOU CAN DO
+  • Watch a 60-second film of a neighbourhood before you ever drive there
+  • See the homes for sale in it, with photos, price, beds and baths
+  • Explore what's nearby: groceries, parks, schools, commute anchors
+  • Read what residents say about living there — every review is read by
+    a person before it appears
+  • Save homes and neighbourhoods; sign in and they follow you to any device
+  • Ask for a tour in one tap — your request goes straight to the agent
+
+  NO ACCOUNT NEEDED
+  Browse everything without signing in. Sign in with Apple or an emailed
+  code only when you want saves to sync or want to leave a review.
+
+  WHERE
+  Metro Atlanta today, more cities as we film them.
+
+  Percho does not show ads, does not sell your information and does not
+  track you across other apps.
+  ```
+
+- **What's New** (first release): `First release.`
+- **Support URL**: https://www.percho.co/contact · **Marketing URL**: https://www.percho.co
+- Fair-housing note for the reviewer field ("Notes"): reviews are limited to
+  four neighbourhood dimensions (quiet, walkable, neighbourly, value) and are
+  moderated; the app does not rate schools or safety. Link
+  https://www.percho.co/fair-housing.
+
+### Still owner-only — nothing here can be done from this Mac
+
+| Item | Why |
 |---|---|
-| Description / keywords / subtitle / promotional text | Copy should describe what actually ships |
-| Screenshots | 6.9" iPhone **1320×2868**, up to 10, must be the real UI. No Xcode on this Mac (Command Line Tools only) ⇒ no simulator; capture on the owner's device. Planned set: feed card, community tour, listing explore, Search map, Saved. |
-| Build attached to the version | The shipping build will not be 1.0.0 (2) |
-| **App Privacy labels** | Currently true that nothing is collected, but the app is unfinished. This is a legal attestation — set it once the feature set is frozen, and re-check the moment accounts or analytics land. |
+| **Sign In with Apple capability on the App ID** | The build step above — one checkbox in the Developer Portal, then rebuild. Nothing else in this table can move until a build exists. |
+| Screenshots | 6.9" iPhone **1320×2868**, up to 10, must be the real UI. No Xcode on this Mac ⇒ no simulator; capture on the owner's device from the first build that succeeds (see the capability step above). Set: feed card with a film, community tour, community page with reviews, listing explore, Search map, Saved, tour request sheet. |
+| App Privacy labels | Table above — an attestation the account holder signs. |
+| Age rating `userGeneratedContent: true` | Same questionnaire; re-answer and save. |
 | Seller name | ⚠ Individual account ⇒ shows **Qiaoxuan Xue**, not "Percho". Needs a legal-entity-name-change request with a DBA certificate, which has a waiting period — start it *before* submission, not at it. |
-
-### Age rating questionnaire — actual API field types
-
-Apple's current questionnaire rejects the older field set. `seventeenPlus`
-no longer exists. These eight are **booleans**, not `NONE` enums, and all are
-required: `userGeneratedContent`, `messagingAndChat`, `advertising`,
-`parentalControls`, `healthOrWellnessTopics`, `ageAssurance`, `lootBox`,
-`gambling`. `gunsOrOtherWeapons` is still a string enum. All were set to
-`false` / `NONE` for Percho.
+| Legal review of `/privacy` and `/terms` | Entity name, governing law (§10), CCPA/GDPR wording. |
+| Sentry DSN | Crash reporting is wired to nothing; if you want it for launch, create the project, add the DSN to EAS secrets, and add the Diagnostics label. |
+| MLS channel | `docs/mls-integration/go-live.md` — licence + Bridge dataset credentials. The store build does not wait on it (photo cards fill the feed). |
+| Submit for review | Attach the successful build to version 1.0.0, fill the above, press Submit. **Not done by the agent** — first-submission timing and the review notes are the owner's call. |
 
 Known review risks (first submission commonly bounces once; budget 1–2 wks):
 - Guideline 2.1 (performance): make sure production API has inventory when
-  review runs — an empty feed looks broken.
-- 4.2 (minimum functionality): unlikely — the app is feature-complete.
-- 5.1.1 (data collection): clean while there are no accounts; revisit labels
-  the day accounts land.
-- `app/dev-foundation.tsx` ships in the bundle but nothing links to it and it
-  is not a tab, so a reviewer cannot reach it. Low risk; delete it if a
-  reviewer ever cites 2.2 (beta content).
+  review runs — an empty feed looks broken. Give the reviewer a signed-in
+  path too: the sign-in code lands in email, so either provide a demo
+  account or note that Sign in with Apple works with any Apple ID.
+- 1.2 (UGC): covered above; make sure the admin queue is actually watched
+  during review week — a pending review that never appears is fine, a
+  rejected one is fine, an offensive one that appears is not.
+- 5.1.1 (data collection): labels must match the table above; the reviewer
+  compares them with what the app visibly asks for.
+- 5.1.1(v) (account deletion): You tab → Delete account; it is in the app,
+  keep it reachable within two taps.
 
 ## Later — explicitly out of scope for v1
 
 - Push notifications (05 §5.4) — adds capability + review surface; ship
   after v1 is live.
 - Universal links (percho.co/l/…) — needs AASA file on the web app.
-- Accounts / sync — changes the privacy labels and adds the
-  account-deletion requirement (Guideline 5.1.1(v)); plan before building.
