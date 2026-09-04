@@ -38,6 +38,7 @@
  */
 
 import { publicCoverImageUrl } from '@/lib/communities/cover';
+import { type CommunityReviewsDTO, fetchCommunityReviews } from '@/lib/communities/reviews';
 import { fetchPoiCounts } from '@/lib/feed/community-pool';
 import type { TourSegment } from '@/lib/feed/tour-segments';
 import { fetchVerticalVideos, streamManifestUrl } from '@/lib/feed/vertical-videos';
@@ -99,6 +100,8 @@ export interface CommunityDetailDTO {
    * above, so the page shows the source rather than asking to be believed.
    */
   interests: string[];
+  /** Approved resident reviews (phase E). Absent until one is approved. */
+  reviews?: CommunityReviewsDTO;
 }
 
 type DetailRow = {
@@ -141,9 +144,10 @@ export async function fetchCommunityDetail(idOrSlug: string): Promise<CommunityD
   const row = data as DetailRow;
   // Counts of real places, fetched here too so this page cannot show WEAKER
   // facts than the tile the user tapped to reach it.
-  const [poiCounts, videos] = await Promise.all([
+  const [poiCounts, videos, reviews] = await Promise.all([
     fetchPoiCounts(supabase, [row.id]),
     fetchVerticalVideos(),
+    fetchCommunityReviews(supabase, row.id),
   ]);
   // The winning-uid rule lives in `fetchVerticalVideos`; re-deciding it here
   // would let this page and the feed card disagree about which film is "the"
@@ -151,7 +155,8 @@ export async function fetchCommunityDetail(idOrSlug: string): Promise<CommunityD
   const uid = videos.byCommunity.get(row.id);
   const videoUrl = uid ? streamManifestUrl(uid) : await fetchLatestAiTourVideo(supabase, row.id);
   const segments = uid ? videos.segmentsByCommunity.get(row.id) : undefined;
-  return projectCommunityDetail(row, poiCounts[row.id], videoUrl, segments);
+  const detail = projectCommunityDetail(row, poiCounts[row.id], videoUrl, segments);
+  return detail && reviews ? { ...detail, reviews } : detail;
 }
 
 /** Latest READY AI community-tour video for a community, or null. */
