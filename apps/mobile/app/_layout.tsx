@@ -17,9 +17,15 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { TAB_BAR_FONT } from "../components/TabBarIconFont";
 import { ICON_FONT, OUTLINE_FONT } from "../components/cards/redline/icon-font";
+import { createEventsTransport } from "../lib/events-transport";
 import { initAuth } from "../state/auth";
+import { useEventQueue } from "../state/event-queue";
+
 import { DM_SERIF_FONT } from "../theme/fonts";
 import { colors } from "../theme/tokens";
+
+/** Queue depth that triggers an opportunistic mid-session drain. */
+const DRAIN_THRESHOLD = 20;
 
 export default function RootLayout() {
 	/**
@@ -38,6 +44,19 @@ export default function RootLayout() {
 	// Before the font gate on purpose: the session read can run while fonts load.
 	useEffect(() => {
 		initAuth();
+	}, []);
+
+	// Telemetry stops being a no-op (phase C): install the real transport,
+	// drain whatever survived the last session, and drain again whenever the
+	// queue builds up. The feed's reconnect handler still drains on
+	// network-return; this threshold covers long browse sessions in between.
+	useEffect(() => {
+		const q = useEventQueue.getState();
+		q.setTransport(createEventsTransport());
+		void q.drain();
+		return useEventQueue.subscribe((s) => {
+			if (s.queue.length >= DRAIN_THRESHOLD && !s.draining) void s.drain();
+		});
 	}, []);
 
 	const [fontsLoaded, fontsError] = useFonts({

@@ -1282,6 +1282,62 @@ export type Database = {
           },
         ]
       }
+      listing_insights: {
+        Row: {
+          basis: Json
+          decisiveness: number
+          detail: string
+          generated_at: string
+          headline: string
+          id: string
+          kind: string
+          listing_id: string
+          model: string | null
+          reviewed_at: string | null
+          status: string
+          theme: string
+          verify: string | null
+        }
+        Insert: {
+          basis?: Json
+          decisiveness?: number
+          detail: string
+          generated_at?: string
+          headline: string
+          id?: string
+          kind: string
+          listing_id: string
+          model?: string | null
+          reviewed_at?: string | null
+          status?: string
+          theme: string
+          verify?: string | null
+        }
+        Update: {
+          basis?: Json
+          decisiveness?: number
+          detail?: string
+          generated_at?: string
+          headline?: string
+          id?: string
+          kind?: string
+          listing_id?: string
+          model?: string | null
+          reviewed_at?: string | null
+          status?: string
+          theme?: string
+          verify?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_insights_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listing_likes: {
         Row: {
           created_at: string
@@ -1564,62 +1620,6 @@ export type Database = {
             columns: ["poi_id"]
             isOneToOne: false
             referencedRelation: "pois"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      listing_insights: {
-        Row: {
-          basis: Json
-          decisiveness: number
-          detail: string
-          generated_at: string
-          headline: string
-          id: string
-          kind: string
-          listing_id: string
-          model: string | null
-          reviewed_at: string | null
-          status: string
-          theme: string
-          verify: string | null
-        }
-        Insert: {
-          basis?: Json
-          decisiveness?: number
-          detail: string
-          generated_at?: string
-          headline: string
-          id?: string
-          kind: string
-          listing_id: string
-          model?: string | null
-          reviewed_at?: string | null
-          status?: string
-          theme: string
-          verify?: string | null
-        }
-        Update: {
-          basis?: Json
-          decisiveness?: number
-          detail?: string
-          generated_at?: string
-          headline?: string
-          id?: string
-          kind?: string
-          listing_id?: string
-          model?: string | null
-          reviewed_at?: string | null
-          status?: string
-          theme?: string
-          verify?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "listing_insights_listing_id_fkey"
-            columns: ["listing_id"]
-            isOneToOne: false
-            referencedRelation: "listings"
             referencedColumns: ["id"]
           },
         ]
@@ -2147,6 +2147,42 @@ export type Database = {
           last_modification_timestamp?: string | null
           source_system?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      mobile_events: {
+        Row: {
+          at: string
+          id: number
+          install_id: string
+          listing_id: string | null
+          payload: Json
+          received_at: string
+          seq: number
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          at: string
+          id?: never
+          install_id: string
+          listing_id?: string | null
+          payload: Json
+          received_at?: string
+          seq: number
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          at?: string
+          id?: never
+          install_id?: string
+          listing_id?: string | null
+          payload?: Json
+          received_at?: string
+          seq?: number
+          type?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -3947,12 +3983,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3976,11 +4012,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4001,11 +4037,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4026,11 +4062,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4043,11 +4079,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

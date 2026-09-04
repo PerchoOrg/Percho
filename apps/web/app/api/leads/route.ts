@@ -62,12 +62,34 @@ export async function POST(req: Request) {
       console.error('[leads] listing lookup failed', lookup.error.message);
       return NextResponse.json({ error: 'internal' }, { status: 500 });
     }
-    const listing = lookup.data as { id: string; agent_id: string; status: string } | null;
+    const listing = lookup.data as { id: string; agent_id: string | null; status: string } | null;
     if (!listing || listing.status !== 'active') {
       return NextResponse.json({ error: 'listing_not_available' }, { status: 404 });
     }
     listingId = listing.id;
-    agentId = listing.agent_id;
+
+    if (listing.agent_id) {
+      agentId = listing.agent_id;
+    } else {
+      // External listing (`listings_owner_chk`: source set, agent_id null) —
+      // no Percho agent owns it, but `leads.agent_id` is NOT NULL and the
+      // inquiry still needs a human. Route it to the platform: the oldest
+      // is_admin agent (the owner's account). This is the mobile tour CTA's
+      // path for the phase166 demo inventory.
+      // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+      const admin = await (supabase as any)
+        .from('agents')
+        .select('id')
+        .eq('is_admin', true)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (admin.error || !admin.data) {
+        console.error('[leads] no admin agent for external listing', admin.error?.message);
+        return NextResponse.json({ error: 'internal' }, { status: 500 });
+      }
+      agentId = (admin.data as { id: string }).id;
+    }
   } else if (parsed.data.community_id) {
     // Community-targeted lead: agent_id from communities.created_by.
     // Communities without an owner (legacy / unowned) cannot accept leads —

@@ -92,3 +92,17 @@ export function listingSummariesUrl(ids: readonly string[]): string {
 export function accountUrl(): string {
 	return `${apiBase()}/api/mobile/account`;
 }
+
+/** `/api/mobile/events` — the telemetry queue's drain target (phase C). */
+export function eventsUrl(): string {
+	return `${apiBase()}/api/mobile/events`;
+}
+
+/**
+ * `/api/leads` — the web app's public lead endpoint, shared as-is: it
+ * validates, derives the agent server-side, and its DB trigger owns the
+ * notification email. The tour sheet POSTs here.
+ */
+export function leadsUrl(): string {
+	return `${apiBase()}/api/leads`;
+}
