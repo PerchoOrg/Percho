@@ -16,6 +16,68 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-03 10:45 UTC — phase163: follow FMLS, merge Lake Windward into Windward
+
+**Objective**: owner, correcting phase162 on both counts — "lets follow fmls in
+this case, and merge the lake-windward to windward **with** all 44 photos, also
+they should belong to community poi instead of 7, and we do not have pic limit
+for community poi itself when building the video".
+
+**He is right about the 7 POIs, and for a better reason than tidiness.** The
+community act's shot allocation (`tour-orchestrator/amenity.ts`,
+`communityActSlots`) budgets CLIPS IN THE FILM, not photos on a POI, and it
+allocates them across `Amenity` categories that come from each photo's TAGS.
+Splitting the set into seven synthetic POIs named "Lake Windward Marina",
+"… Golf Course" and so on rebuilt by hand a structure the tag step derives
+anyway. One POI holding everything loses nothing.
+
+`Windward Amenities` already existed on the target community — synthetic,
+`percho:community:<windward-id>:amenities`, one photo on it — so the ingest
+upserted onto it rather than making anything new.
+
+**Actions**:
+- All **44** photos into `Windward Amenities`, which now holds 45. This
+  includes the 20 that phase162 left out (Avalon, Alpharetta City Center, the
+  high school and its fields, and two shots of a house) — the owner's call,
+  overriding that filter.
+- New `scripts/admin/merge-communities.ts`, then `lake-windward → windward`:
+  the listing repointed, 7 POI links moved, boundaries unioned 2 + 4 → 6 rings,
+  and the source row set `status='inactive'` rather than deleted.
+- The 7 duplicate amenity POIs that the merge carried across are set
+  `status='rejected'` on their `community_pois` links.
+
+**The boundary is the part of a merge that is easy to get wrong.**
+`find-community.ts` associates a listing by point-in-polygon, so repointing the
+listing without carrying the source polygon would leave a `community_id` that
+the next auto-association contradicts — the target's own polygon does not
+contain 2090 Lake Windward Dr, which is why the listing was in the source in
+the first place. Verified after: the address is inside the merged boundary.
+
+**Why `rejected` and not `archived`** for the 7 links, when archived is the
+honest word: `photos.ts` reads `community_pois` twice, once with
+`.eq('status','approved')` and once with `.neq('status','rejected')`. Only
+`rejected` is excluded by both. The value is doing the job of a tombstone here;
+worth a real state if this recurs.
+
+**Issues**: deleting the 7 POIs and their 24 photo rows outright — which is
+what should have happened — was **blocked by the harness's auto-mode
+classifier** as a bulk production delete, and I did not work around it. So the
+rows and their 24 Storage objects still exist, unreachable through the rejected
+links and duplicated by the 44 now on `Windward Amenities`. It is dead weight,
+not a correctness problem. It needs either a granted permission or a hand.
+
+**Verified**: `windward` active with 6 boundary rings and containing the
+listing; `lake-windward` inactive; listing `community_id` = windward; 18 usable
+POI links carrying 101 photos, `Windward Amenities` holding 45 of them.
+
+**Still blocked on Gemini credit** (phase160): the tag step cannot run, so none
+of the 44 is annotated and the planner cannot use them yet.
+
+**Next steps**: top up Gemini → tag `windward` → regenerate its community film,
+which is what the photos were wanted for. Two of the 44 are 296×197 thumbnails
+(`69.jpg`, `74.jpg` in the gallery) and will look it; rejecting them in /admin
+is a click each.
+
 ## 2026-09-03 10:15 UTC — phase162: the Windward amenity photos, and which Windward they belong to
 
 **Objective**: owner — "windward community 照片加到哪里了". Answer at the time:
