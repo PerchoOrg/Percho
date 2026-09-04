@@ -111,3 +111,8 @@ export function leadsUrl(): string {
 export function ratesUrl(): string {
 	return `${apiBase()}/api/mobile/rates`;
 }
+
+/** `/api/mobile/search?q=…` — listings + communities by text (phase D). */
+export function searchUrl(q: string): string {
+	return `${apiBase()}/api/mobile/search?q=${encodeURIComponent(q)}`;
+}

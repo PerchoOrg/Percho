@@ -3,36 +3,28 @@
  *
  * ── v1 scope vs §4.1 ────────────────────────────────────────────────────────
  * The spec's full version wants: 3-detent sheet, pin↔row two-way sync,
- * popularity sorting server-side, listing price pins at zoom ≥14. None of that
- * is shippable today because the live pool has no listing/community
- * coordinates (only city geo-unit centroids) and no popularity mat view. So
- * this is the honest subset, same contract, fewer rows:
+ * popularity sorting server-side, listing price pins at zoom ≥14. This is the
+ * honest subset that ships for the store launch (phase D):
  *
- *   · map renders CITY pins (§4.2 "zoom <12" aggregation rule is effectively
- *     always on — there is nothing to zoom into)
- *   · the sheet is a plain collapsible list (peek/half/full via a drag
- *     handle), listing the 109 city units the pool actually returns
- *   · city tap → fly to city + pin emphasis (no boundary polygon — no geojson
- *     source exists for cities yet)
- *   · row tap → keep the map focused on that city (city/zip "don't leave the
- *     surface" per §4.4); community/listing entities aren't reachable this
- *     pass
- *   · "Your journey" layer chip on → familiarity heatmap from the same
+ *   · no query → map renders CITY pins from the feed pool; the sheet lists
+ *     the city units, familiar ones first when the journey layer is on
+ *   · ≥2 characters → `/api/mobile/search` (`hooks/use-search.ts`) returns
+ *     communities + homes; the sheet shows them grouped, plus any city whose
+ *     name matches, and the map fits to the hits that have coordinates
+ *   · community / home row tap → its detail page; city row tap → fly to it
+ *     (city/zip "don't leave the surface" per §4.4)
+ *   · "Your journey" layer chip on → familiarity from the same
  *     `areaFamiliarity` source the You tab uses (05 §5.3), so the two faces
  *     cannot disagree
- *   · search box filters the CITY list client-side (the only entity class the
- *     pool has) — no backend round trip, no fake address/community search
- *
- * When coordinates for listings/communities exist, the pin layer + detents +
- * entity search land on top of this unchanged shape.
  *
  * ── No filter UI anywhere ───────────────────────────────────────────────────
  * The only narrowing affordances are the search box, the viewport, and the
- * layer chips (§4.1 铁律). There is no price/bed/bath picker on this screen.
+ * layer chip (§4.1 铁律). There is no price/bed/bath picker on this screen.
  */
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+	ActivityIndicator,
 	Image,
 	Pressable,
 	ScrollView,
@@ -45,23 +37,14 @@ import {
 import MapView, { Marker } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFeedPool } from "../../hooks/use-feed-pool";
+import { MIN_QUERY_LEN, useSearch } from "../../hooks/use-search";
 import { familiarityFor, unknownDimsLabel } from "../../lib/area-familiarity";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
+import { formatPrice, specsLine } from "../../lib/saved/rows";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
-
-const PEACH = "#FAF6F0";
-
-/** Journey strip — 5-step funnel progress (§4.3). */
-const STEPS = [
-	{ n: 0, label: "Intent" },
-	{ n: 1, label: "Area" },
-	{ n: 2, label: "Zips" },
-	{ n: 3, label: "Comm." },
-	{ n: 4, label: "Homes" },
-] as const;
 
 export default function SearchTab() {
 	const { height } = useWindowDimensions();
@@ -69,7 +52,7 @@ export default function SearchTab() {
 
 	const stage = useFunnelStore((s) => s.stage);
 	const signals = useFeedSession((s) => s.signals);
-	const { pool, loading } = useFeedPool({
+	const { pool, loading: poolLoading } = useFeedPool({
 		stage,
 		cities: [],
 		likedCommunityIds: [],
@@ -81,6 +64,9 @@ export default function SearchTab() {
 	// v1: the sheet is one expanded panel (half) or collapsed (peek).
 	const [expanded, setExpanded] = useState(false);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
+
+	const search = useSearch(query);
+	const searching = query.trim().length >= MIN_QUERY_LEN;
 
 	const mapRef = useRef<MapView>(null);
 
@@ -128,7 +114,41 @@ export default function SearchTab() {
 		return familiarityFor(signals, u.id);
 	}
 
+	const hits = search.result;
+
+	// A fresh result set opens the sheet and fits the map to whatever has a
+	// pin. Cities keep their centroid pins so a city-only match still lands.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: fit once per result set, not on every city-list re-sort
+	useEffect(() => {
+		if (!hits) return;
+		setExpanded(true);
+		const coords = [
+			...hits.listings.flatMap((l) =>
+				l.lat !== undefined && l.lng !== undefined
+					? [{ latitude: l.lat, longitude: l.lng }]
+					: [],
+			),
+			...hits.communities.flatMap((c) =>
+				c.lat !== undefined && c.lng !== undefined
+					? [{ latitude: c.lat, longitude: c.lng }]
+					: [],
+			),
+			...units.map((u) => ({
+				latitude: u.centroid.lat,
+				longitude: u.centroid.lng,
+			})),
+		];
+		if (coords.length === 0) return;
+		mapRef.current?.fitToCoordinates(coords, {
+			edgePadding: { top: 160, right: 40, bottom: 80, left: 40 },
+			animated: true,
+		});
+	}, [hits]);
+
 	const sheetH = expanded ? Math.min(height * 0.55, 480) : 110;
+	const hitCount = hits
+		? hits.communities.length + hits.listings.length + units.length
+		: units.length;
 
 	return (
 		<View style={styles.screen}>
@@ -165,6 +185,30 @@ export default function SearchTab() {
 							}
 						/>
 					))}
+					{hits?.communities.map((c) =>
+						c.lat !== undefined && c.lng !== undefined ? (
+							<Marker
+								key={`c-${c.id}`}
+								coordinate={{ latitude: c.lat, longitude: c.lng }}
+								title={c.name}
+								description={c.city}
+								pinColor={colors.pos}
+								onCalloutPress={() => router.push(`/community/${c.slug}`)}
+							/>
+						) : null,
+					)}
+					{hits?.listings.map((l) =>
+						l.lat !== undefined && l.lng !== undefined ? (
+							<Marker
+								key={`l-${l.id}`}
+								coordinate={{ latitude: l.lat, longitude: l.lng }}
+								title={formatPrice(l.price) ?? l.address}
+								description={l.address}
+								pinColor={colors.accent}
+								onCalloutPress={() => router.push(`/listing/${l.id}`)}
+							/>
+						) : null,
+					)}
 				</MapView>
 
 				{/* Search pill (floats above map, §4.1 #1) */}
@@ -172,13 +216,17 @@ export default function SearchTab() {
 					<TextInput
 						value={query}
 						onChangeText={setQuery}
-						placeholder="City, zip or community…"
+						placeholder="Address, community, city or zip…"
 						placeholderTextColor={colors.ink3}
 						style={styles.searchInput}
 						autoCorrect={false}
 						autoCapitalize="words"
 						returnKeyType="search"
+						onFocus={() => setExpanded(true)}
 					/>
+					{search.loading && (
+						<ActivityIndicator size="small" color={colors.ink2} />
+					)}
 					{query.length > 0 && (
 						<Pressable onPress={() => setQuery("")} hitSlop={12}>
 							<Text style={styles.searchClear}>×</Text>
@@ -186,15 +234,8 @@ export default function SearchTab() {
 					)}
 				</View>
 
-				{/* Layer chips (§4.1) */}
+				{/* Layer chip (§4.1) */}
 				<View style={[styles.chipRow, { top: insets.top + 56 }]}>
-					<Pressable
-						style={[styles.chip, styles.chipOn]}
-						onPress={() => {}}
-						disabled
-					>
-						<Text style={[styles.chipLabel, styles.chipLabelOn]}>For sale</Text>
-					</Pressable>
 					<Pressable
 						style={[styles.chip, journeyOn && styles.chipOn]}
 						onPress={() => setJourneyOn((v) => !v)}
@@ -204,38 +245,6 @@ export default function SearchTab() {
 						</Text>
 					</Pressable>
 				</View>
-
-				{/* Journey strip (§4.3) — shown when the layer is on */}
-				{journeyOn && (
-					<View style={[styles.journeyStrip, { top: insets.top + 100 }]}>
-						<Text style={styles.journeyTitle}>Your search, so far</Text>
-						<View style={styles.stepRow}>
-							{STEPS.map((s) => {
-								const done = stage > s.n;
-								const current = stage === s.n;
-								return (
-									<View key={s.label} style={styles.stepItem}>
-										<View
-											style={[
-												styles.stepDot,
-												done && styles.stepDone,
-												current && styles.stepCurrent,
-											]}
-										/>
-										<Text
-											style={[
-												styles.stepLabel,
-												(done || current) && styles.stepLabelOn,
-											]}
-										>
-											{s.label}
-										</Text>
-									</View>
-								);
-							})}
-						</View>
-					</View>
-				)}
 			</View>
 
 			{/* Collapsible list sheet */}
@@ -249,19 +258,92 @@ export default function SearchTab() {
 					<View style={styles.grabber} />
 				</Pressable>
 				<Text style={styles.sheetTitle}>
-					{query
+					{searching
 						? `"${query.trim()}"`
 						: journeyOn
 							? "Your journey"
 							: "All areas"}
-					{loading ? "" : ` · ${units.length}`}
+					{poolLoading || search.loading ? "" : ` · ${hitCount}`}
 				</Text>
 				{expanded && (
 					<ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
-						{units.length === 0 && (
+						{searching && search.error && (
+							<View style={styles.stateBox}>
+								<Text style={styles.empty}>Couldn’t reach search.</Text>
+								<Pressable onPress={search.retry} style={styles.retryBtn}>
+									<Text style={styles.retryLabel}>Try again</Text>
+								</Pressable>
+							</View>
+						)}
+						{searching && !search.error && !hits && (
+							<Text style={styles.empty}>Searching…</Text>
+						)}
+						{searching && hits && hitCount === 0 && (
 							<Text style={styles.empty}>
-								No match — try a city name.{"\n"}Discovery lives in the feed.
+								No match — try a street, community, city or zip.
 							</Text>
+						)}
+						{!searching && !poolLoading && units.length === 0 && (
+							<Text style={styles.empty}>
+								No areas yet.{"\n"}Discovery lives in the feed.
+							</Text>
+						)}
+
+						{hits && hits.communities.length > 0 && (
+							<Text style={styles.groupTitle}>Communities</Text>
+						)}
+						{hits?.communities.map((c) => (
+							<Pressable
+								key={`c-${c.id}`}
+								style={styles.row}
+								onPress={() => router.push(`/community/${c.slug}`)}
+							>
+								<Image
+									source={c.heroUrl ? { uri: c.heroUrl } : undefined}
+									style={styles.rowThumb}
+								/>
+								<View style={styles.rowText}>
+									<Text style={styles.rowName}>{c.name}</Text>
+									<Text style={styles.rowSub}>
+										{c.city}, {c.state}
+									</Text>
+								</View>
+							</Pressable>
+						))}
+
+						{hits && hits.listings.length > 0 && (
+							<Text style={styles.groupTitle}>Homes</Text>
+						)}
+						{hits?.listings.map((l) => (
+							<Pressable
+								key={`l-${l.id}`}
+								style={styles.row}
+								onPress={() => router.push(`/listing/${l.id}`)}
+							>
+								<Image
+									source={l.coverUrl ? { uri: l.coverUrl } : undefined}
+									style={styles.rowThumb}
+								/>
+								<View style={styles.rowText}>
+									<Text style={styles.rowName} numberOfLines={1}>
+										{[formatPrice(l.price), l.address]
+											.filter(Boolean)
+											.join(" · ")}
+									</Text>
+									<Text style={styles.rowSub} numberOfLines={1}>
+										{[
+											`${l.city}, ${l.state}${l.zip ? ` ${l.zip}` : ""}`,
+											specsLine(l.beds, l.baths, l.sqft),
+										]
+											.filter(Boolean)
+											.join(" · ")}
+									</Text>
+								</View>
+							</Pressable>
+						))}
+
+						{hits && units.length > 0 && (
+							<Text style={styles.groupTitle}>Areas</Text>
 						)}
 						{units.map((u) => {
 							const f = fam(u);
@@ -300,14 +382,15 @@ export default function SearchTab() {
 }
 
 const styles = StyleSheet.create({
-	screen: { flex: 1, backgroundColor: PEACH },
-	mapWrap: { flex: 1, backgroundColor: "#E8E2D6" },
+	screen: { flex: 1, backgroundColor: colors.bg },
+	mapWrap: { flex: 1, backgroundColor: colors.surface2 },
 	searchPill: {
 		position: "absolute",
 		left: 16,
 		right: 16,
 		flexDirection: "row",
 		alignItems: "center",
+		gap: 8,
 		backgroundColor: colors.glass,
 		borderRadius: radii.pill,
 		paddingHorizontal: 16,
@@ -318,7 +401,7 @@ const styles = StyleSheet.create({
 		shadowOffset: { width: 0, height: 2 },
 	},
 	searchInput: { flex: 1, ...textStyles.body, color: colors.ink },
-	searchClear: { ...textStyles.title2, color: colors.ink2, marginLeft: 8 },
+	searchClear: { ...textStyles.title2, color: colors.ink2 },
 	chipRow: {
 		position: "absolute",
 		left: 16,
@@ -334,29 +417,6 @@ const styles = StyleSheet.create({
 	chipOn: { backgroundColor: colors.cta },
 	chipLabel: { ...textStyles.caption, color: colors.ink },
 	chipLabelOn: { color: "#FFFFFF" },
-	journeyStrip: {
-		position: "absolute",
-		left: 16,
-		right: 16,
-		backgroundColor: colors.glass,
-		borderRadius: radii.tile,
-		paddingHorizontal: 16,
-		paddingVertical: 12,
-		gap: 8,
-	},
-	journeyTitle: { ...textStyles.footnote, color: colors.ink },
-	stepRow: { flexDirection: "row", justifyContent: "space-between" },
-	stepItem: { alignItems: "center", gap: 4 },
-	stepDot: {
-		width: 10,
-		height: 10,
-		borderRadius: 5,
-		backgroundColor: colors.ink3,
-	},
-	stepDone: { backgroundColor: colors.accent },
-	stepCurrent: { backgroundColor: colors.cta },
-	stepLabel: { ...textStyles.caption, fontSize: 9, color: colors.ink3 },
-	stepLabelOn: { color: colors.ink },
 	sheet: {
 		backgroundColor: colors.surface,
 		borderTopLeftRadius: radii.sheet,
@@ -380,12 +440,29 @@ const styles = StyleSheet.create({
 		marginBottom: 6,
 	},
 	list: { flex: 1, paddingHorizontal: 12 },
+	groupTitle: {
+		...textStyles.caption,
+		color: colors.ink3,
+		textTransform: "uppercase",
+		letterSpacing: 0.6,
+		paddingHorizontal: 8,
+		paddingTop: 12,
+		paddingBottom: 4,
+	},
+	stateBox: { alignItems: "center", gap: 8, paddingBottom: 12 },
 	empty: {
 		...textStyles.body,
 		color: colors.ink2,
 		padding: 20,
 		textAlign: "center",
 	},
+	retryBtn: {
+		backgroundColor: colors.cta,
+		borderRadius: radii.pill,
+		paddingHorizontal: 18,
+		paddingVertical: 8,
+	},
+	retryLabel: { ...textStyles.caption, color: "#FFFFFF" },
 	row: {
 		flexDirection: "row",
 		alignItems: "center",
