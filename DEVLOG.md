@@ -16,7 +16,72 @@ Same reverse-chronological format, same content.
 
 ---
 
-## 2026-09-03 11:30 UTC — phase164: the dead POIs deleted, the 44 tagged
+## 2026-09-04 05:20 UTC — phase165: a high school opened the Windward film
+
+**Objective**: owner, on the cut he assembled after phase164's tagging —
+"Windward - why the assembly video starts with high school???"
+
+**The first shot is `60.jpg`, Alpharetta High School's entrance sign, labelled
+"Windward Entrance".** Two things put it there and they compound:
+
+1. **The community act walks a fixed order.** `amenity.ts` lists
+   `entrance, clubhouse, pool, courts, playground, green_space, fitness, other,
+   streetscape`, and the cut's first eight shots follow it exactly. Whatever is
+   classified `entrance` opens the film. There is no scoring involved.
+2. **Everything on `Windward Amenities` is assumed to BE Windward's.** All 44
+   photos sit on that one POI (phase163, at the owner's direction), so the
+   Curator reads each as one of the community's own amenities. A photo of a
+   name carved into a low wall with flagpoles behind it is the canonical
+   community-entrance shot, and this one is a high school's.
+
+The Curator's own output contradicts itself: `chip_label: "Windward Entrance"`
+next to `vo_line: "Alpharetta High School is located within the immediate
+vicinity."` It recognised the building and still labelled it as the
+neighbourhood's front door — and the same school then gets its own honest
+section at shots 28-30, from the real Places POI.
+
+**The identity bleeds into the tags too**, which is the more useful finding.
+`vision-tagger` described `63.jpg` as "a baseball field **at the Windward
+community** amenity" and `72.jpg` as "outdoor plaza and courtyard **at
+Windward**". Neither is at Windward — they are the high school's field and
+Avalon. The POI's name is context the model treats as fact.
+
+Three of 33 clips were affected, all in the community act: shot 0 (`60.jpg`,
+the school), shot 5 (`64.jpg`, Avalon aerial as "Windward Green Space"), shot 7
+(`75.jpg`, downtown Alpharetta as "Windward Neighborhood").
+
+**Actions**: the 20 photos on `Windward Amenities` that are not Windward
+amenities — the school and its fields (4), Avalon and City Center (14), a house
+exterior and a living room — set `status='rejected'` with the reason recorded
+on the row. These are exactly the 20 phase162 excluded and phase163 put back at
+the owner's instruction; the film is what that instruction looks like in
+practice. 25 genuine amenity photos remain: lake, marina, golf, pool,
+playground, clubhouse, picnic pavilion.
+
+**Why the remaining 25 are all still eligible**, though only 5 of them read
+`approved`: `shots.ts` treats a photo as hand-picked when
+`source === 'community_site' && status !== 'rejected'`, and the ingest stamps
+that source on every row. `pending` is not a barrier here; `rejected` is the
+only status that removes a photo. So the next plan gets 25 candidates, not 5.
+
+**Not done, and worth considering**: nothing stops the next third-party photo
+set from doing this again. The mechanism is that a `community_site` photo
+inherits its POI's name as an assertion — in the tagger's description and in
+the Curator's chip label. A guard would be to tell both that a `community_site`
+photo's POI name is a LOCATION HINT rather than a subject identification. That
+is a prompt change in `vision-tagger.ts` and `curator.ts` and it is not
+something to do while guessing at the owner's intent for these photos.
+
+**Timestamps corrected**: phase162, 163 and 164 were headed 10:15, 10:45 and
+11:30 on 2026-09-03. Their commits are 20:15 on 2026-09-03 and 04:08 and 04:52
+on 2026-09-04 UTC — the session ran long and the headers were written from a
+stale sense of the clock. A reverse-chronological log whose dates are wrong is
+worse than one that is merely terse; fixed against `git log`.
+
+**Next steps**: owner re-runs `pnpm tour windward --steps plan,generate,assemble`
+when he wants the cut. Nothing else is pending on Windward.
+
+## 2026-09-04 04:52 UTC — phase164: the dead POIs deleted, the 44 tagged
 
 **Objective**: owner cleared both blockers from phase163 — "1) you have
 permission to delete, 2) already bought credit".
@@ -63,7 +128,7 @@ is what the photos were collected for. Gemini spend from here is the plan and
 narration calls plus Seedance clips, which is real money rather than the
 $0.0x of tagging.
 
-## 2026-09-03 10:45 UTC — phase163: follow FMLS, merge Lake Windward into Windward
+## 2026-09-04 04:08 UTC — phase163: follow FMLS, merge Lake Windward into Windward
 
 **Objective**: owner, correcting phase162 on both counts — "lets follow fmls in
 this case, and merge the lake-windward to windward **with** all 44 photos, also
@@ -125,7 +190,7 @@ which is what the photos were wanted for. Two of the 44 are 296×197 thumbnails
 (`69.jpg`, `74.jpg` in the gallery) and will look it; rejecting them in /admin
 is a click each.
 
-## 2026-09-03 10:15 UTC — phase162: the Windward amenity photos, and which Windward they belong to
+## 2026-09-03 20:15 UTC — phase162: the Windward amenity photos, and which Windward they belong to
 
 **Objective**: owner — "windward community 照片加到哪里了". Answer at the time:
 nowhere. phase155 imported the 35 house photos and only *recorded* that the
