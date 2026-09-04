@@ -16,6 +16,84 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-04 09:40 UTC — phase169: tab fixes for the store (Phase D) — cost, ROI, schools, search, compare, share, trust
+
+**Objective**: store-launch Phase D — every tab usable with real data and no
+placeholder affordances, on free data only. Owner was offline ("don't get
+blocked by my approval"); decisions below are mine and flagged for review.
+
+**Actions** (`phase169/tab-fixes`, 3 commits):
+- **Live rates + all-in cost**: `apps/web/lib/rates/pmms.ts` parses the
+  Freddie Mac PMMS CSV; `GET /api/mobile/rates`; mobile `useRates()` with
+  the pinned `DEFAULT_ANNUAL_RATE` as fallback. `buildCost` adds an upkeep
+  line (1%/yr) so "monthly" means tax + insurance + upkeep + HOA + P&I.
+- **ROI block** ("If you rented it out") under the cost block: editable
+  rent prefilled from `apps/web/data/rent-by-zip.json` (Zillow ZORI ZIP
+  all-homes × metro SFR/all factor, asOf 2026-07-31, 8543 ZIPs, refreshed
+  by `scripts/admin/refresh-rent-index.ts`), cash flow / cap rate /
+  cash-on-cash / gross yield after 5% vacancy. `lib/listing/roi.ts`.
+- **Schools**: `k12_schools` filled for GA from NCES CCD 2023-24 + EDGE
+  geocodes + GOSA Milestones 2024-25 (`scripts/admin/import-ga-schools.ts`,
+  2270 open regular schools, 2169 with Milestones). Migration
+  `20260904150000_k12_nces_schools.sql` adds `source='nces'` and
+  `get_k12_nearest_schools(lat,lng)` (nearest public per level, zone-match
+  first). Detail DTO gains `schools[]`; `SchoolsBlock` shows the state's
+  proficient-or-above % only — no rating we invented. The 15 legacy
+  GreatSchools rows were UPDATED in place (photos kept), not deleted.
+- **Coordinates**: the 6 FMLS listings had null lat/lng
+  (`mls_listings` is empty) → `scripts/admin/geocode-listings.ts` via the
+  free Census geocoder; all 18 listings now have a point.
+- **Share**: `listingShareUrl()` → `https://www.percho.co/v/<agent>/<slug>`
+  or `/v/fmls/<sourceId>`; ↑ disc in `MediaCarousel`; community page gets
+  the same disc sending `/c/<slug>`. RN's built-in `Share.share`.
+- **Search**: `GET /api/mobile/search?q=` (`lib/zod/mobile-search.ts`
+  folds to `[a-z0-9 -]`, 2–40 chars; `lib/listings/search.ts` ilike over
+  active listings + covered communities, ≤24 each). `search.tsx` rewritten:
+  debounced `useSearch`, grouped Communities / Homes / Areas, listing and
+  community pins, map fits to hits, loading / error / empty states, rows
+  open detail pages. The fake "For sale" chip and the journey step strip
+  are gone; `PEACH` / `#E8E2D6` replaced with tokens.
+- **Feed**: `ExhaustedCard` "Adjust my scope" now opens the scope sheet
+  (it used to re-fetch the exhausted pool); "Browse map" → Search tab.
+- **Dead code**: 33 files no screen imports deleted (old tour / gallery /
+  histogram / slider / hotspot machinery, `dev-foundation.tsx`,
+  `listing/nearby.tsx`, `CardFoot` / `KindChip` / `MatchBadge` /
+  `ExploreButton`, `lib/ui/arc.ts`, `theme/listing-geometry.ts`) plus
+  `scripts/probe-hotspots.ts`. The one live assertion in
+  `redline-listing-geometry.test.ts` moved to `redline-type.test.ts`.
+- **Compare** (05 §5.2): Saved tab's "Coming soon" block is a picker —
+  tick 2–3 homes → `/compare` (`lib/listing/compare.ts`): price, monthly
+  all-in, $/sqft, beds·baths, sqft, year, HOA, typical rent, nearest
+  school per level with %, neighbourhood. Rows nobody has data for drop.
+- **You tab**: Privacy / Terms / Contact rows (`Linking.openURL` to
+  percho.co), "Percho 1.0.0 (build 2)" from `expoConfig`.
+- **Trust**: insight "Sources · N" link ink2/600 (was muted 11pt); listing
+  page ends with the no-placement-fees paragraph.
+
+**Decisions** (owner to confirm or veto):
+- No composite school rating and no compare "winner" — only the state's
+  own proficiency %. GA's CCRPI single score is not a flat file; GreatSchools
+  `gs_rating` is never displayed.
+- ZORI is presented as an editable DEFAULT ("typical single-family rent in
+  <zip>"), never as "this house rents for".
+- Share links use a fixed canonical origin (`SITE_ORIGIN`) rather than the
+  request host, so a preview deploy never leaks a vercel.app URL.
+- Areas segment on Saved KEPT: `AreaFace` still draws a bookmark, so
+  hiding the segment would orphan existing area saves.
+- Trust copy ("Percho doesn't take placement fees…") and the persona names
+  in `lib/feed/persona.ts` shown on the You tab are **pending owner review**.
+- Small additive backfills done without a plan doc: 6 listing coordinates,
+  15 school rows enriched, 2255 school rows inserted. All reversible.
+
+**Verification**: mobile `tsc` clean, biome 0 errors (8 warnings, all
+pre-existing exhaustive-deps), vitest 525 pass; web `tsc` clean, biome 2
+pre-existing errors untouched, vitest 859 pass. Production check of
+`/api/mobile/rates`, `/api/mobile/search?q=duluth` and a listing's
+`rentEstimate` / `schools` / `shareUrl` after merge — see next entry.
+
+**Next steps**: Phase E (resident reviews), F (MLS-live readiness), G
+(store sprint).
+
 ## 2026-09-04 10:20 UTC — phase168.1: verified in production; the lead email was broken since the rename
 
 **Objective**: prod verification of phase168 after deploy.

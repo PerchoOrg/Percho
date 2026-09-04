@@ -6,7 +6,8 @@
       ".next",
       "node_modules",
       "supabase/functions/**/deno.lock",
-      "lib/supabase/database.types.ts"
+      "lib/supabase/database.types.ts",
+      "data/rent-by-zip.json"
     ]
   },
   "formatter": {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  listingShareUrl,
   projectComps,
   projectDetail,
   projectInsights,
@@ -266,5 +267,67 @@ describe('projectInsights — a card with no source is not a card', () => {
   it('lands on the DTO only when non-empty', () => {
     expect('insights' in projectDetail(baseListing, [], [])).toBe(false);
     expect(projectDetail(baseListing, [], [], { insights: [row] }).insights).toHaveLength(1);
+  });
+});
+
+describe('projectDetail — phase D (schools, rent, share link)', () => {
+  const school = {
+    level: 'elementary',
+    name: 'Simpson Elementary School',
+    district: 'Gwinnett County',
+    grade_range: 'PK-5',
+    distance_km: 0.29,
+    in_zone: false,
+    test_scores: { ga_milestones: { year: '2024-25', proficientPct: 80.6, subjects: {} } },
+    enrollment: 862,
+  };
+
+  it('projects a nearest school with the state proficiency figure, never a rating', () => {
+    const d = projectDetail(baseListing, [], [], { schools: [school] });
+    expect(d.schools).toEqual([
+      {
+        level: 'elementary',
+        name: 'Simpson Elementary School',
+        district: 'Gwinnett County',
+        grades: 'PK-5',
+        distanceKm: 0.29,
+        assigned: false,
+        proficiencyPct: 80.6,
+        testYear: '2024-25',
+        enrollment: 862,
+      },
+    ]);
+  });
+
+  it('omits proficiency when the school has no Milestones row, and skips unknown levels', () => {
+    const d = projectDetail(baseListing, [], [], {
+      schools: [
+        { ...school, test_scores: {} },
+        { ...school, level: 'k8' },
+      ],
+    });
+    expect(d.schools).toHaveLength(1);
+    expect(d.schools?.[0] && 'proficiencyPct' in d.schools[0]).toBe(false);
+  });
+
+  it('adds a rent estimate only for a covered ZIP', () => {
+    expect(
+      projectDetail({ ...baseListing, zip: '30092' }, [], []).rentEstimate?.monthlyUsd,
+    ).toBeGreaterThan(1000);
+    expect('rentEstimate' in projectDetail({ ...baseListing, zip: '00000' }, [], [])).toBe(false);
+    expect('rentEstimate' in projectDetail(baseListing, [], [])).toBe(false);
+  });
+
+  it('builds the canonical share link per provenance, or none', () => {
+    expect(listingShareUrl({ slug: 's', agentSlug: 'royxue812' })).toBe(
+      'https://www.percho.co/v/royxue812/s',
+    );
+    expect(listingShareUrl({ slug: 's', source: 'fmls', sourceId: '583364989' })).toBe(
+      'https://www.percho.co/v/fmls/583364989',
+    );
+    expect(listingShareUrl({ slug: 's' })).toBeUndefined();
+    expect(projectDetail({ ...baseListing, agents: { slug: 'vivzh123' } }, [], []).shareUrl).toBe(
+      'https://www.percho.co/v/vivzh123/1204-copper-leaf-ct',
+    );
   });
 });

@@ -100,6 +100,15 @@ describe("redline type scale", () => {
 		expect(redlineText.nano.fontSize).toBeLessThanOrEqual(10);
 	});
 
+	it("tightens only the story's LEADING, never its 13px size", () => {
+		// Shrinking the font would read as fine print; the leading is what bought
+		// the second line. 13px is the redline's floor for body copy. (Moved
+		// from `redline-listing-geometry.test.ts` when the proportional listing
+		// geometry it asserted was deleted as dead code, phase D.)
+		expect(redlineText.storyCompact.fontSize).toBe(13);
+		expect(redlineText.storyCompact.lineHeight).toBe(14);
+	});
+
 	// ── Weights ───────────────────────────────────────────────────────────
 	it("sets every display line to 500, not bold", () => {
 		// The redline says 500 for every display line; the chrome's own serif

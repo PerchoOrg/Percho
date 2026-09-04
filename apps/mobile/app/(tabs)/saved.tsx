@@ -13,8 +13,8 @@
  *   · price-change / DOM / delisted badges — the schema has no price history
  *     and no listing date; a 404 from the detail endpoint is the one honest
  *     "gone" signal and renders as such.
- *   · Compare — §5.2's own scoping is "v1.1 范围,先出灰态入口": the gray
- *     entry is here, the side-by-side is not.
+ *   · Compare — shipped in phase D as a picker: tap Compare, tick 2–3 homes,
+ *     and `/compare` lays them side by side (`lib/listing/compare.ts`).
  *
  * Rows re-fetch from the detail endpoints on every mount — the store keeps
  * ids only, so a price change shows the moment the server knows it.
@@ -33,6 +33,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { communityDetailUrl, listingDetailUrl } from "../../lib/api/base";
+import { COMPARE_MAX, COMPARE_MIN } from "../../lib/listing/compare";
 import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
 import { useAuthStore } from "../../state/auth";
 import { useFunnelStore } from "../../state/funnel";
@@ -131,6 +132,8 @@ export default function SavedTab() {
 
 	const [rows, setRows] = useState<Record<string, Row>>({});
 	const [segment, setSegment] = useState<Segment>("listing");
+	// Compare picker: null = off; otherwise the ticked listing ids.
+	const [picking, setPicking] = useState<string[] | null>(null);
 
 	const counts: Record<Segment, number> = {
 		listing: items.filter((i) => i.kind === "listing").length,
@@ -217,6 +220,58 @@ export default function SavedTab() {
 				style={styles.list}
 				contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
 			>
+				{/* Compare (05 §5.2): pick 2–3 homes, then open the side-by-side. */}
+				{segment === "listing" && counts.listing >= COMPARE_MIN && (
+					<View style={styles.compare}>
+						{picking ? (
+							<>
+								<Text style={styles.compareBody}>
+									{picking.length < COMPARE_MIN
+										? `Tick ${COMPARE_MIN}–${COMPARE_MAX} homes to compare.`
+										: `${picking.length} homes picked.`}
+								</Text>
+								<View style={styles.compareActions}>
+									<Pressable
+										style={[
+											styles.compareBtn,
+											picking.length < COMPARE_MIN && styles.compareBtnOff,
+										]}
+										disabled={picking.length < COMPARE_MIN}
+										onPress={() =>
+											router.push({
+												pathname: "/compare",
+												params: { ids: picking.join(",") },
+											})
+										}
+										accessibilityRole="button"
+									>
+										<Text style={styles.compareBtnTxt}>Compare</Text>
+									</Pressable>
+									<Pressable
+										style={styles.compareCancel}
+										onPress={() => setPicking(null)}
+										accessibilityRole="button"
+									>
+										<Text style={styles.compareCancelTxt}>Cancel</Text>
+									</Pressable>
+								</View>
+							</>
+						) : (
+							<Pressable
+								style={styles.compareEntry}
+								onPress={() => setPicking([])}
+								accessibilityRole="button"
+							>
+								<Text style={styles.compareHead}>COMPARE</Text>
+								<Text style={styles.compareBody}>
+									Pick {COMPARE_MIN}–{COMPARE_MAX} homes and see them side by
+									side — price, monthly cost, size, schools.
+								</Text>
+							</Pressable>
+						)}
+					</View>
+				)}
+
 				{active.length === 0 && (
 					<Text style={styles.segmentEmpty}>
 						{segment === "listing"
@@ -241,19 +296,21 @@ export default function SavedTab() {
 							row={rows[item.id] ?? { status: "loading" }}
 							onRetry={() => void load(item)}
 							onRemove={() => toggle(item.id, item.kind)}
+							picked={
+								picking && item.kind === "listing"
+									? picking.includes(item.id)
+									: undefined
+							}
+							onPick={() =>
+								setPicking((p) => {
+									if (!p) return p;
+									if (p.includes(item.id))
+										return p.filter((x) => x !== item.id);
+									return p.length < COMPARE_MAX ? [...p, item.id] : p;
+								})
+							}
 						/>
 					),
-				)}
-
-				{/* Compare — §5.2's gray v1 entry. */}
-				{segment === "listing" && counts.listing >= 2 && (
-					<View style={styles.compare}>
-						<Text style={styles.compareHead}>COMPARE</Text>
-						<Text style={styles.compareBody}>
-							Select 2–3 homes → side-by-side on the dims you care about. Coming
-							soon.
-						</Text>
-					</View>
 				)}
 			</ScrollView>
 		</View>
@@ -264,10 +321,15 @@ function SavedRow({
 	row,
 	onRetry,
 	onRemove,
+	picked,
+	onPick,
 }: {
 	row: Row;
 	onRetry: () => void;
 	onRemove: () => void;
+	/** Defined only while the compare picker is open. */
+	picked?: boolean;
+	onPick: () => void;
 }) {
 	if (row.status === "loading") {
 		return (
@@ -297,13 +359,20 @@ function SavedRow({
 			</View>
 		);
 	}
+	const pickMode = picked !== undefined;
 	return (
 		<Pressable
-			style={styles.row}
-			onPress={() => router.push(row.href as never)}
-			accessibilityRole="button"
+			style={[styles.row, picked && styles.rowPicked]}
+			onPress={pickMode ? onPick : () => router.push(row.href as never)}
+			accessibilityRole={pickMode ? "checkbox" : "button"}
+			accessibilityState={pickMode ? { checked: picked } : undefined}
 			accessibilityLabel={`${row.title}${row.sub ? `, ${row.sub}` : ""}`}
 		>
+			{pickMode && (
+				<View style={[styles.tick, picked && styles.tickOn]}>
+					{picked && <Text style={styles.tickMark}>✓</Text>}
+				</View>
+			)}
 			{row.thumbUrl ? (
 				<Image source={{ uri: row.thumbUrl }} style={styles.thumb} />
 			) : (
@@ -319,14 +388,16 @@ function SavedRow({
 					</Text>
 				)}
 			</View>
-			<Pressable
-				onPress={onRemove}
-				hitSlop={8}
-				accessibilityRole="button"
-				accessibilityLabel="Remove from saved"
-			>
-				<Text style={styles.rowAction}>Remove</Text>
-			</Pressable>
+			{!pickMode && (
+				<Pressable
+					onPress={onRemove}
+					hitSlop={8}
+					accessibilityRole="button"
+					accessibilityLabel="Remove from saved"
+				>
+					<Text style={styles.rowAction}>Remove</Text>
+				</Pressable>
+			)}
 		</Pressable>
 	);
 }
@@ -417,11 +488,40 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.surface2,
 		borderRadius: radii.tile,
 		padding: 14,
-		marginTop: 8,
+		marginBottom: 8,
 		gap: 4,
 	},
+	compareEntry: { gap: 4 },
 	compareHead: { ...textStyles.caption, color: colors.ink3 },
 	compareBody: { ...textStyles.footnote, color: colors.ink2 },
+	compareActions: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 12,
+		marginTop: 8,
+	},
+	compareBtn: {
+		backgroundColor: colors.cta,
+		borderRadius: radii.btn,
+		paddingHorizontal: 18,
+		paddingVertical: 10,
+	},
+	compareBtnOff: { opacity: 0.4 },
+	compareBtnTxt: { ...textStyles.headline, color: colors.surface },
+	compareCancel: { minHeight: 44, justifyContent: "center" },
+	compareCancelTxt: { ...textStyles.footnote, color: colors.accent },
+	rowPicked: { borderWidth: 1.5, borderColor: colors.accent },
+	tick: {
+		width: 22,
+		height: 22,
+		borderRadius: 11,
+		borderWidth: 1.5,
+		borderColor: colors.border,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	tickOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+	tickMark: { ...textStyles.caption, color: colors.surface },
 	emptyTitle: { ...textStyles.title2, color: colors.ink, textAlign: "center" },
 	backBtn: {
 		backgroundColor: colors.cta,

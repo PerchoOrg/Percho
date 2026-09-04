@@ -65,6 +65,29 @@ export interface InsightDTO {
 	decisiveness: 1 | 2 | 3;
 }
 
+/** Typical single-family rent in the ZIP — a default for the ROI block, not a valuation. */
+export interface RentEstimateDTO {
+	monthlyUsd: number;
+	/** Month the index covers, ISO date. */
+	asOf: string;
+	source: string;
+	zip: string;
+}
+
+/** Nearest public school at one level. `assigned` is false until zones are seeded. */
+export interface SchoolDTO {
+	level: "elementary" | "middle" | "high";
+	name: string;
+	district?: string;
+	grades?: string;
+	distanceKm: number;
+	assigned: boolean;
+	/** % Proficient-or-above on GA Milestones — the state's figure, not ours. */
+	proficiencyPct?: number;
+	testYear?: string;
+	enrollment?: number;
+}
+
 export interface ListingDetailDTO {
 	id: string;
 	slug: string;
@@ -95,6 +118,11 @@ export interface ListingDetailDTO {
 	video?: ListingVideoDTO;
 	/** Approved "After you move in" cards. Absent when the listing has none. */
 	insights?: InsightDTO[];
+	rentEstimate?: RentEstimateDTO;
+	/** Nearest public school per level; absent when the home has no coordinate. */
+	schools?: SchoolDTO[];
+	/** Absolute public web page — what the share sheet sends. Absent = no page. */
+	shareUrl?: string;
 }
 
 type State =

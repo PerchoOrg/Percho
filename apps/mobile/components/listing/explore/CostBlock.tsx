@@ -1,8 +1,8 @@
 /**
  * CostBlock (phase119 spec §3.7) — "What you'd actually pay".
  *
- * The big number is the estimated MONTHLY payment; the four bars break it into
- * P&I / tax / insurance / HOA at widths proportional to their share. All the
+ * The big number is the estimated MONTHLY all-in cost; the bars break it into
+ * P&I / tax / insurance / upkeep / HOA at widths proportional to their share. All the
  * math and the assumptions line live in `lib/listing/cost.ts`; this file only
  * draws. The Adjust affordance is P1 — no dead link is rendered for it.
  */
@@ -16,6 +16,7 @@ const TINTS = [
 	explore.brand,
 	explore.costBar2,
 	explore.costBar3,
+	explore.costBar4,
 	explore.costBar4,
 ] as const;
 /** Widest bar's track length in pt. */
@@ -31,6 +32,7 @@ export function CostBlock({ cost, assumptionLine }: CostBlockProps) {
 		{ label: "Principal & interest", value: cost.principalInterestUsd },
 		{ label: "Property tax", value: cost.taxUsd },
 		{ label: "Insurance", value: cost.insuranceUsd },
+		{ label: "Upkeep reserve", value: cost.maintenanceUsd },
 		...(cost.hoaUsd !== undefined
 			? [{ label: "HOA", value: cost.hoaUsd }]
 			: []),
@@ -41,7 +43,7 @@ export function CostBlock({ cost, assumptionLine }: CostBlockProps) {
 		<View>
 			<View style={styles.head}>
 				<Text style={styles.big}>{formatUsd(cost.totalUsd)}</Text>
-				<Text style={styles.per}>/ month estimated</Text>
+				<Text style={styles.per}>/ month, all in (est.)</Text>
 			</View>
 			<View style={styles.bars}>
 				{rows.map((row, i) => (

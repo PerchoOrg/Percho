@@ -106,3 +106,13 @@ export function eventsUrl(): string {
 export function leadsUrl(): string {
 	return `${apiBase()}/api/leads`;
 }
+
+/** `/api/mobile/rates` — this week's Freddie Mac averages (phase D). */
+export function ratesUrl(): string {
+	return `${apiBase()}/api/mobile/rates`;
+}
+
+/** `/api/mobile/search?q=…` — listings + communities by text (phase D). */
+export function searchUrl(q: string): string {
+	return `${apiBase()}/api/mobile/search?q=${encodeURIComponent(q)}`;
+}

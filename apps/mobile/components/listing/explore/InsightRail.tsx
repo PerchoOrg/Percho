@@ -109,7 +109,7 @@ function Card({
 					hitSlop={8}
 				>
 					<Text style={styles.sources}>
-						{card.basis.length} source{card.basis.length === 1 ? "" : "s"}
+						{showSources ? "Hide sources" : "Sources"} · {card.basis.length}
 					</Text>
 				</Pressable>
 			</View>
@@ -295,8 +295,9 @@ const styles = StyleSheet.create({
 		fontFamily: fonts.ui,
 	},
 	sources: {
-		fontSize: 11,
-		color: explore.muted,
+		fontSize: 12,
+		fontWeight: "600",
+		color: explore.ink2,
 		textDecorationLine: "underline",
 		fontFamily: fonts.ui,
 	},

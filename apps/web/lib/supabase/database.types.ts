@@ -3312,6 +3312,20 @@ export type Database = {
         Returns: boolean
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
+      get_k12_nearest_schools: {
+        Args: { p_lat: number; p_lng: number; p_max_km?: number }
+        Returns: {
+          distance_km: number
+          district: string
+          enrollment: number
+          grade_range: string
+          in_zone: boolean
+          level: string
+          name: string
+          school_id: string
+          test_scores: Json
+        }[]
+      }
       get_k12_school_pipeline: {
         Args: { p_lat: number; p_lng: number }
         Returns: {

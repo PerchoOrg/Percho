@@ -52,6 +52,8 @@ export interface MediaCarouselProps {
 	saved: boolean;
 	onBack: () => void;
 	onToggleSave: () => void;
+	/** Present only when the home has a public page to send (phase D). */
+	onShare?: () => void;
 	onOpenGrid: () => void;
 	/** Tap on a photo slide → full-screen viewer at that photo. */
 	onOpenViewer: (photoIndex: number) => void;
@@ -122,6 +124,7 @@ export function MediaCarousel(props: MediaCarouselProps) {
 		saved,
 		onBack,
 		onToggleSave,
+		onShare,
 		onOpenGrid,
 		onOpenViewer,
 		onSlideChange,
@@ -267,9 +270,21 @@ export function MediaCarousel(props: MediaCarouselProps) {
 				<Pressable onPress={onBack} hitSlop={10} style={styles.gbtn}>
 					<Text style={styles.gbtnGlyph}>←</Text>
 				</Pressable>
-				<Pressable onPress={onToggleSave} hitSlop={10} style={styles.gbtn}>
-					<Text style={styles.gbtnGlyph}>{saved ? "♥" : "♡"}</Text>
-				</Pressable>
+				<View style={styles.navRight}>
+					{onShare && (
+						<Pressable
+							onPress={onShare}
+							hitSlop={10}
+							style={styles.gbtn}
+							accessibilityLabel="Share"
+						>
+							<Text style={styles.gbtnGlyph}>↑</Text>
+						</Pressable>
+					)}
+					<Pressable onPress={onToggleSave} hitSlop={10} style={styles.gbtn}>
+						<Text style={styles.gbtnGlyph}>{saved ? "♥" : "♡"}</Text>
+					</Pressable>
+				</View>
 			</View>
 
 			<View style={[styles.tr, { top: insets.top + 54 }]}>
@@ -323,6 +338,7 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		justifyContent: "space-between",
 	},
+	navRight: { flexDirection: "row", gap: 8 },
 	gbtn: {
 		width: 36,
 		height: 36,

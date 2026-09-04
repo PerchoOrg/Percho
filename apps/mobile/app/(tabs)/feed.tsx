@@ -208,7 +208,7 @@ export default function FeedScreen() {
 		[signals.geo],
 	);
 
-	const { pool, loading, offline, exhausted, fetchMore, retry } = useFeedPool({
+	const { pool, loading, offline, exhausted, fetchMore } = useFeedPool({
 		stage,
 		cities,
 		likedCommunityIds: signals.likedCommunityIds,
@@ -728,13 +728,14 @@ export default function FeedScreen() {
 				) : showExhausted ? (
 					<View style={styles.cardContainer}>
 						<ExhaustedCard
-							onAdjustScope={retry}
 							/*
-							 * §1.9's second exit, wired at last: the button went
-							 * unrendered because the Search tab did not exist when
-							 * `ExhaustedCard` was written. It does now.
+							 * §1.9's two exits: "Adjust my scope" opens the same
+							 * scope sheet as the header chip (it used to re-fetch
+							 * the exhausted pool, which changed nothing), and
+							 * "Browse map" goes to the Search tab.
 							 */
-							onBrowseMap={() => router.navigate("/search")}
+							onAdjustScope={() => setScopeOpen(true)}
+							onBrowseMap={() => router.navigate("/(tabs)/search")}
 						/>
 					</View>
 				) : (
