@@ -16,6 +16,7 @@ export default defineConfig({
 				__dirname,
 				"test/async-storage-stub.ts",
 			),
+			"expo-constants": resolve(__dirname, "test/expo-constants-stub.ts"),
 		},
 	},
 });

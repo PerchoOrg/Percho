@@ -9,6 +9,8 @@
  *   Headline        price / specs / address / days·$psf·built
  *   FitCard         ★ locally-derived match & trade-off rows (`lib/listing/fit`)
  *   CostBlock       monthly payment split, stated assumptions
+ *   RoiBlock        "if you rented it out" on the same figures (phase D)
+ *   SchoolsBlock    nearest public school per level, state proficiency (phase D)
  *   FactsBlock      ≤6 real fields; the long tail is P1's Ask entry
  *   CompareRail     this home next to the buyer's SAVES (not recommendations)
  *   ActionDock      ✕ / ♡ / Request a tour
@@ -28,6 +30,7 @@ import {
 	Linking,
 	Pressable,
 	ScrollView,
+	Share,
 	StyleSheet,
 	Text,
 	View,
@@ -47,8 +50,9 @@ import { InsightRail } from "../../components/listing/explore/InsightRail";
 import { MediaCarousel } from "../../components/listing/explore/MediaCarousel";
 import { PhotoGrid } from "../../components/listing/explore/PhotoGrid";
 import { PhotoViewer } from "../../components/listing/explore/PhotoViewer";
+import { RoiBlock } from "../../components/listing/explore/RoiBlock";
+import { SchoolsBlock } from "../../components/listing/explore/SchoolsBlock";
 import { TourRequestSheet } from "../../components/listing/explore/TourRequestSheet";
-import { DEFAULT_ANNUAL_RATE } from "../../lib/listing/assumptions";
 import { assumptionLine, buildCost } from "../../lib/listing/cost";
 import { useListingDetail } from "../../lib/listing/detail-dto";
 import {
@@ -71,6 +75,7 @@ import {
 	formatUsd,
 	parseHoaMonthlyUsd,
 } from "../../lib/listing/monthly";
+import { useRates } from "../../lib/listing/rates";
 import { buildRoomGroups } from "../../lib/listing/rooms";
 import { useListingSummaries } from "../../lib/listing/summaries";
 import { useAuthStore } from "../../state/auth";
@@ -100,6 +105,7 @@ export default function ListingExploreScreen() {
 	const insets = useSafeAreaInsets();
 	const { width, height: screenH } = useWindowDimensions();
 	const state = useListingDetail(params.id);
+	const rate = useRates();
 
 	// Reference §3.1: clamp(340, screenHeight * 0.46, 460) — 388pt on iPhone 15.
 	const heroH = Math.min(Math.max(340, screenH * 0.46), 460);
@@ -262,7 +268,7 @@ export default function ListingExploreScreen() {
 		detail.price !== undefined
 			? buildCost({
 					priceUsd: detail.price,
-					annualRate: DEFAULT_ANNUAL_RATE,
+					annualRate: rate.annualRate,
 					downFraction: DEFAULT_DOWN_FRACTION,
 					...(hoaMonthlyUsd !== undefined ? { hoaMonthlyUsd } : {}),
 				})
@@ -332,6 +338,16 @@ export default function ListingExploreScreen() {
 					saved={saved}
 					onBack={() => router.back()}
 					onToggleSave={() => toggleSave("hero")}
+					{...(detail.shareUrl
+						? {
+								onShare: () => {
+									Share.share({
+										message: `${detail.address}, ${detail.city} — ${detail.shareUrl}`,
+										url: detail.shareUrl,
+									}).catch(() => {});
+								},
+							}
+						: {})}
 					onOpenGrid={() => setGridOpen(true)}
 					onOpenViewer={(photoIndex) => {
 						setViewerIndex(photoIndex);
@@ -427,9 +443,33 @@ export default function ListingExploreScreen() {
 							cost={cost}
 							assumptionLine={assumptionLine({
 								downFraction: DEFAULT_DOWN_FRACTION,
-								annualRate: DEFAULT_ANNUAL_RATE,
+								annualRate: rate.annualRate,
+								rateAsOf: rate.asOf,
 							})}
 						/>
+					</View>
+				)}
+
+				{/* ——— ROI (phase D) — same cost figures, rent is the buyer's input ——— */}
+				{cost && detail.price !== undefined && (
+					<View style={[styles.section, styles.sectionRuled]}>
+						<Text style={styles.eyebrow}>IF YOU RENTED IT OUT</Text>
+						<RoiBlock
+							priceUsd={detail.price}
+							downFraction={DEFAULT_DOWN_FRACTION}
+							cost={cost}
+							{...(detail.rentEstimate
+								? { rentEstimate: detail.rentEstimate }
+								: {})}
+						/>
+					</View>
+				)}
+
+				{/* ——— Schools (phase D) — absent when the home has no coordinate ——— */}
+				{detail.schools && detail.schools.length > 0 && (
+					<View style={[styles.section, styles.sectionRuled]}>
+						<Text style={styles.eyebrow}>SCHOOLS</Text>
+						<SchoolsBlock schools={detail.schools} />
 					</View>
 				)}
 

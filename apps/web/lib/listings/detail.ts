@@ -33,6 +33,8 @@
 
 import { streamManifestUrl, streamPosterUrl } from '@/lib/feed/vertical-videos';
 import { mobileVideoUid } from '@/lib/feed/video-uid';
+import { type RentEstimateDTO, rentEstimateForZip } from '@/lib/listings/rent-index';
+import { type NearestSchoolRow, type SchoolDTO, projectSchools } from '@/lib/listings/schools';
 import type { Database } from '@/lib/supabase/database.types';
 import { photoPublicUrl, preferredPhotoPath } from '@/lib/supabase/storage';
 import { createClient as createPlainClient } from '@supabase/supabase-js';
@@ -131,6 +133,30 @@ export interface ListingDetailDTO {
   video?: ListingVideoDTO;
   /** Approved "After you move in" cards. Absent when the listing has none. */
   insights?: InsightDTO[];
+  /** Typical single-family rent in the ZIP (phase D ROI block). Absent = no coverage. */
+  rentEstimate?: RentEstimateDTO;
+  /** Nearest public school per level (phase D). Absent when the listing has no coordinate. */
+  schools?: SchoolDTO[];
+  /**
+   * The public web page for this home, absolute — what the share sheet
+   * sends. Agent listings live at `/v/<agentSlug>/<slug>`, FMLS imports at
+   * `/v/fmls/<sourceId>`; a listing with neither has no page and no link.
+   */
+  shareUrl?: string;
+}
+
+/** Share links are canonical (www) so a preview deploy never leaks its own host. */
+export const SITE_ORIGIN = 'https://www.percho.co';
+
+export function listingShareUrl(input: {
+  slug: string;
+  agentSlug?: string | null;
+  source?: string | null;
+  sourceId?: string | null;
+}): string | undefined {
+  if (input.agentSlug) return `${SITE_ORIGIN}/v/${input.agentSlug}/${input.slug}`;
+  if (input.source === 'fmls' && input.sourceId) return `${SITE_ORIGIN}/v/fmls/${input.sourceId}`;
+  return undefined;
 }
 
 type ListingRow = {
@@ -150,6 +176,12 @@ type ListingRow = {
   lot_size?: string | null;
   zip?: string | null;
   neighborhood?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  source?: string | null;
+  source_id?: string | null;
+  /** PostgREST embed of the owning agent's slug; null for FMLS imports. */
+  agents?: { slug: string | null } | null;
 };
 
 /** The slice of the `mls_listings` mirror the DTO reads. */
@@ -232,10 +264,19 @@ export function projectDetail(
     mls?: MlsMirrorRow | null;
     video?: ListingVideoRow | null;
     insights?: InsightRow[];
+    schools?: NearestSchoolRow[];
   } = {},
 ): ListingDetailDTO {
   const video = projectVideo(extras.video ?? null);
   const insights = projectInsights(extras.insights ?? []);
+  const schools = projectSchools(extras.schools ?? []);
+  const rentEstimate = rentEstimateForZip(listing.zip ?? undefined);
+  const shareUrl = listingShareUrl({
+    slug: listing.slug,
+    agentSlug: listing.agents?.slug,
+    source: listing.source,
+    sourceId: listing.source_id,
+  });
   // A mirror row the MLS forbids displaying projects nothing at all.
   const mls =
     extras.mls && extras.mls.internet_entire_listing_display_yn !== false ? extras.mls : null;
@@ -269,6 +310,9 @@ export function projectDetail(
     ...(mls?.listing_key?.trim() ? { mlsNumber: mls.listing_key.trim() } : {}),
     ...(video ? { video } : {}),
     ...(insights.length > 0 ? { insights } : {}),
+    ...(rentEstimate ? { rentEstimate } : {}),
+    ...(schools.length > 0 ? { schools } : {}),
+    ...(shareUrl ? { shareUrl } : {}),
     photos: projectPhotos(photos),
     comps: projectComps(comps, listing.city),
   };
@@ -414,8 +458,9 @@ function createUncachedServiceClient() {
  */
 export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetailDTO | null> {
   const supabase = createUncachedAnonClient();
+  // `agents(slug)` embeds the owning agent for the share link; null for FMLS rows.
   const columns =
-    'id, slug, address, city, state, price, beds, baths, sqft, year_built, hoa, description, community_id, status, lot_size, zip, neighborhood';
+    'id, slug, address, city, state, price, beds, baths, sqft, year_built, hoa, description, community_id, status, lot_size, zip, neighborhood, lat, lng, source, source_id, agents(slug)';
 
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
   const { data: rows, error } = await supabase
@@ -430,7 +475,8 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
 
   // Independent reads — run them together rather than paying four sequential
   // round trips on a screen the buyer is waiting on.
-  const [photoRes, compRes, mlsRes, videoRes, insightRes] = await Promise.all([
+  const hasCoord = typeof row.lat === 'number' && typeof row.lng === 'number';
+  const [photoRes, compRes, mlsRes, videoRes, insightRes, schoolRes] = await Promise.all([
     supabase
       .from('listing_photos')
       .select('id, storage_path, enhanced_path, enhanced_status, ai_tags, sort_order')
@@ -472,6 +518,14 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
       .select('id, headline, detail, kind, theme, verify, basis, decisiveness')
       .eq('listing_id', row.id)
       .eq('status', 'approved'),
+    // Nearest public school per level (phase D). Skipped, not errored, when
+    // the listing has no coordinate.
+    hasCoord
+      ? supabase.rpc('get_k12_nearest_schools', {
+          p_lat: row.lat as number,
+          p_lng: row.lng as number,
+        })
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   if (photoRes.error) throw new Error(`listing-detail: photos failed: ${photoRes.error.message}`);
@@ -483,6 +537,7 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
   // Same soft failure — and it also covers the table not existing yet on a
   // database the migration has not reached.
   const insights = insightRes.error ? [] : ((insightRes.data ?? []) as InsightRow[]);
+  const schools = schoolRes.error ? [] : ((schoolRes.data ?? []) as NearestSchoolRow[]);
 
   return projectDetail(
     row,
@@ -492,6 +547,7 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
       mls,
       video,
       insights,
+      schools,
     },
   );
 }

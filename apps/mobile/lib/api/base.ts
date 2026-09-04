@@ -106,3 +106,8 @@ export function eventsUrl(): string {
 export function leadsUrl(): string {
 	return `${apiBase()}/api/leads`;
 }
+
+/** `/api/mobile/rates` — this week's Freddie Mac averages (phase D). */
+export function ratesUrl(): string {
+	return `${apiBase()}/api/mobile/rates`;
+}
