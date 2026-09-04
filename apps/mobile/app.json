@@ -1,48 +1,48 @@
 {
-	"expo": {
-		"name": "Percho",
-		"slug": "percho",
-		"scheme": "percho",
-		"version": "1.0.0",
-		"orientation": "portrait",
-		"userInterfaceStyle": "light",
-		"icon": "./assets/icon.png",
-		"ios": {
-			"supportsTablet": false,
-			"bundleIdentifier": "co.percho.app",
-			"buildNumber": "2",
-			"usesAppleSignIn": true,
-			"infoPlist": {
-				"ITSAppUsesNonExemptEncryption": false
-			}
-		},
-		"plugins": [
-			"expo-apple-authentication",
-			"expo-router",
-			"expo-video",
-			[
-				"expo-splash-screen",
-				{
-					"image": "./assets/splash-icon.png",
-					"imageWidth": 160,
-					"resizeMode": "contain",
-					"backgroundColor": "#F7F5F0"
-				}
-			],
-			"expo-font",
-			"expo-status-bar"
-		],
-		"experiments": {
-			"typedRoutes": true
-		},
-		"extra": {
-			"apiBase": "https://www.percho.co",
-			"supabaseUrl": "https://tavmbcghxjeyaoptndvn.supabase.co",
-			"supabaseAnonKey": "sb_publishable_OGGUv8IGIByhsoYpOm5Rpw_PsMOBQ5H",
-			"eas": {
-				"projectId": "7e6cc487-2c4c-4006-aadc-6e9816d96513"
-			}
-		},
-		"owner": "percho"
-	}
+  "expo": {
+    "name": "Percho",
+    "slug": "percho",
+    "scheme": "percho",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "co.percho.app",
+      "buildNumber": "3",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "plugins": [
+      "expo-apple-authentication",
+      "expo-router",
+      "expo-video",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#F7F5F0"
+        }
+      ],
+      "expo-font",
+      "expo-status-bar"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiBase": "https://www.percho.co",
+      "supabaseUrl": "https://tavmbcghxjeyaoptndvn.supabase.co",
+      "supabaseAnonKey": "sb_publishable_OGGUv8IGIByhsoYpOm5Rpw_PsMOBQ5H",
+      "eas": {
+        "projectId": "7e6cc487-2c4c-4006-aadc-6e9816d96513"
+      }
+    },
+    "owner": "percho"
+  }
 }
