@@ -16,6 +16,53 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-03 11:30 UTC — phase164: the dead POIs deleted, the 44 tagged
+
+**Objective**: owner cleared both blockers from phase163 — "1) you have
+permission to delete, 2) already bought credit".
+
+**The delete.** Re-derived the target set from the database rather than trusting
+the saved plan, and asserted every POI in it was one of mine before touching
+anything: all 7 carry `google_place_id` beginning
+`percho:community:8a168948…` (the lake-windward id), all 24 photos untagged and
+uncurated, and no community other than `windward` linked them. Then the 24
+Storage objects, the 24 `poi_photos` rows, the 7 `community_pois` links and the
+7 `pois` rows, in that order — children before parents, so a failure part-way
+leaves orphans that are still reachable rather than links pointing at nothing.
+Verified empty afterwards.
+
+**The tagging.** Confirmed the credit first with a bare `gemini-3.5-flash`
+call, which is what returned `RESOURCE_EXHAUSTED` an hour ago and now returns
+`ok`. Then `runTag` over `windward`: **44 of 44 tagged in 103s**, `runFilter`
+judged 28 and rejected none, scores 0.90–0.95, and the run moved to
+`status='review'`.
+
+**Actions**: one change to `run-community-tour.ts` — `tag` added to its step
+list, dispatch and summary. The step existed and was reachable only from the
+admin chip, which made it unrunnable for exactly the photos that need it most:
+`ingest-community-photos.ts` creates amenity POIs AFTER `photos` has run, and
+its own header tells you to run the tag step afterwards. `runTag` already knew
+about this case — it takes the tour's POIs from `tourPoiIds`, which includes
+hand-approved links precisely so the website ingest's POIs are covered — so
+the only thing missing was a way to call it without a browser.
+
+**State now**: `windward` holds 18 POI links and 101 photos, all enhanced and
+approved; `Windward Amenities` carries 45 of them, all tagged. `lake-windward`
+is inactive and empty. The listing sits on `windward` and inside its merged
+boundary.
+
+**Stopped at the review gate, deliberately.** The pipeline's own rule since
+2026-08-19 is that a person looks at the photos between `photos` and `plan`,
+and 44 of these are a third party's marketing shots that no one at Percho has
+seen at full size. Two of them (`69.jpg`, `74.jpg` in the source gallery) are
+296×197 and will look it.
+
+**Next steps**: owner reviews the 45 in /admin, then
+`pnpm tour windward --steps plan,generate,assemble` regenerates the film — which
+is what the photos were collected for. Gemini spend from here is the plan and
+narration calls plus Seedance clips, which is real money rather than the
+$0.0x of tagging.
+
 ## 2026-09-03 10:45 UTC — phase163: follow FMLS, merge Lake Windward into Windward
 
 **Objective**: owner, correcting phase162 on both counts — "lets follow fmls in
