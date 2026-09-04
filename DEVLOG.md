@@ -41,9 +41,9 @@ feature set, and write down everything only the owner can do.
   approved review, `mailto:hello@percho.co?subject=Report review <id>`.
   Apple's UGC checklist needs an in-app report mechanism; email is the
   cheapest one that a reviewer can see working.
-- `apps/mobile/app.json` — `ios.buildNumber` 2 → 3, written by EAS
-  `autoIncrement` when the build started; committed so the next increment
-  does not collide.
+- `apps/mobile/app.json` — `ios.buildNumber` 2 → 4, written by EAS
+  `autoIncrement` across the two build attempts below; committed so the
+  next increment does not collide (nothing shipped as 3 or 4).
 - `docs/ios-release.md` — Stage 3 rewritten for the frozen feature set:
   App Privacy label table (email / name / phone / user id / install id /
   user content / product interaction — all linked, none for tracking;
@@ -54,9 +54,9 @@ feature set, and write down everything only the owner can do.
 - `RELEASE.md` bullet under v1.3 / 2026-09-04.
 - EAS: `npx eas-cli build --platform ios --profile production
   --non-interactive --no-wait` → build `adeba44c-fe79-4b2d-8b1c-191e84334bbb`,
-  1.0.0 (3), from this branch. Credentials were already on Expo's servers
-  (phase138), so nothing needed a TTY. Result recorded below under
-  Resolution.
+  1.0.0 (3), from `6eb7ac2f`. **Errored** — see Issues. Retry `6b984390`
+  with the `EXPO_ASC_*` vars (1.0.0 (4)) was cancelled once it was clear
+  EAS had fetched the profiles without re-syncing the App ID.
 
 **Decisions**:
 - **Entity name "Percho", not "Percho, Inc."** in both legal pages: the
@@ -81,12 +81,31 @@ feature set, and write down everything only the owner can do.
 - **Store copy is a draft**, marked as such. Owner rule: no AI-written
   copy ships unreviewed. It sits in the runbook, not in any fixture.
 
-**Issues**: none in code. Web biome still reports the two pre-existing
-errors in `lib/zod/__tests__/research-response.test.ts` and
-`app/api/research/responses/route.ts` (not touched).
+**Issues**:
+- **Build blocked on the App ID's capabilities.** Xcode: *Provisioning
+  profile "…AppStore 2026-08-30…" doesn't include the Sign In with Apple
+  capability / the `com.apple.developer.applesignin` entitlement*. Phase A
+  set `ios.usesAppleSignIn: true` (the entitlement in the binary) but the
+  App ID `co.percho.app` (`6TNYULX4NA`) still lists only `IN_APP_PURCHASE`
+  — checked over the ASC API — and the profile was cut on 2026-08-30 before
+  the capability existed. EAS only syncs capabilities when it holds an
+  Apple session; non-interactive with `EXPO_ASC_*` it fetched the profile
+  list and moved on.
+- Enabling the capability over the ASC API from this shell
+  (`POST /v1/bundleIdCapabilities`, `capabilityType: APPLE_ID_AUTH`) was
+  **denied by the sandbox policy** (modifying the Apple developer
+  account). Not worked around — it is the owner's account.
+- Web biome still reports the two pre-existing errors in
+  `lib/zod/__tests__/research-response.test.ts` and
+  `app/api/research/responses/route.ts` (not touched).
 
-**Resolution**: see the follow-up line at the end of this entry for the
-build outcome.
+**Resolution**: no store build exists yet. The fix is one checkbox in the
+Developer Portal (Identifiers → `co.percho.app` → Sign In with Apple) and
+a rebuild; the exact steps, the fallback (`eas credentials` interactive
+once) and the equivalent API call are written into
+`docs/ios-release.md` Stage 3. Everything else in Phase G — legal pages,
+report link, privacy-label table, age-rating change, store copy — is
+done and merged; none of it waits on the build.
 
 **Learnings**:
 - Apple's 1.2 checklist is four concrete things (filter, report, block,
@@ -96,9 +115,17 @@ build outcome.
 - `autoIncrement` with `appVersionSource: local` edits `app.json` on the
   machine that runs the build — the commit must follow, or the runbook's
   "app.json says what shipped" rule silently breaks.
+- `usesAppleSignIn: true` in `app.json` is only half of Sign in with
+  Apple: the App ID in the Developer Portal must have the capability too,
+  and an existing provisioning profile does not pick it up on its own.
+  Should have been checked in Phase A, before the first build attempt.
+- ASC API names the capability `APPLE_ID_AUTH`, setting key
+  `APPLE_ID_AUTH_APP_CONSENT`, option `PRIMARY_APP_CONSENT`
+  (`SIGN_IN_WITH_APPLE` is rejected with a 409).
 
-**Next steps (owner)**: the table "Still owner-only" in
-`docs/ios-release.md`: screenshots from build 3, privacy labels, age
+**Next steps (owner)**: first the Sign In with Apple checkbox + rebuild
+(runbook Stage 3), then the table "Still owner-only" in
+`docs/ios-release.md`: screenshots from that build, privacy labels, age
 rating flag, seller name DBA, legal review, Sentry DSN, MLS channel,
 then submit. Engineering follow-ups from the earlier phases: render
 reviews on the web `/c/<slug>` page (DTO already carries them), and the

@@ -200,9 +200,52 @@ human approval gate, FMLS rows hard-deleted except the video-backed ones,
 and event telemetry keyed by a random install id (`lib/install-id.ts`).
 That flips three of the "still empty" rows below from *wait* to *fill*.
 
-**Build**: 1.0.0 (3) — EAS build `adeba44c` from `phase172/store-sprint`.
-`app.json` `ios.buildNumber` was bumped to `3` by `autoIncrement` and is
-committed. This is the build to attach to the 1.0.0 version record.
+**Build: ⚠ blocked on one Developer Portal checkbox (OWNER).** EAS build
+`adeba44c` (1.0.0 (3), from `phase172/store-sprint`) failed in Xcode:
+
+```
+Provisioning profile "*[expo] co.percho.app AppStore 2026-08-30T09:03:18.564Z"
+doesn't include the Sign In with Apple capability / the
+com.apple.developer.applesignin entitlement.
+```
+
+Phase A added `ios.usesAppleSignIn: true`, which adds the entitlement to the
+binary, but the App ID `co.percho.app` (portal id `6TNYULX4NA`) still has
+only `IN_APP_PURCHASE` enabled — verified over the ASC API on 2026-09-04 —
+and the 2026-08-30 profile was cut before the capability existed. EAS only
+syncs capabilities when it holds an Apple session; in `--non-interactive`
+mode with `EXPO_ASC_*` set it fetched the profiles but did not touch the
+App ID (retry `6b984390` was cancelled before it hit the same wall). Turning
+the capability on from the agent's shell was denied by the sandbox policy,
+so it is a human step:
+
+1. https://developer.apple.com/account/resources/identifiers → `co.percho.app`
+   → tick **Sign In with Apple** (leave "Enable as a primary App ID") → Save.
+   Apple marks profile `95776Q4K89` *Invalid* the moment you save; that is
+   expected.
+2. From `apps/mobile`:
+   ```bash
+   EXPO_ASC_API_KEY_PATH=~/.appstoreconnect/private_keys/AuthKey_P68W57U2G9.p8 \
+   EXPO_ASC_KEY_ID=P68W57U2G9 EXPO_ASC_ISSUER_ID=88793b4f-748d-40ef-b81e-c89b570f00d0 \
+   npx eas-cli build --platform ios --profile production --non-interactive
+   ```
+   EAS sees the invalid profile and regenerates it with the new capability.
+   If it instead stops at "Credentials are not set up", run
+   `npx eas-cli credentials --platform ios` once interactively (Apple ID +
+   2FA, ~2 min) and choose *Build credentials → Provisioning profile →
+   regenerate*, then rebuild.
+3. Commit the `app.json` `buildNumber` EAS writes (it will be `5`;
+   `3` and `4` were consumed by the failed and the cancelled attempt and
+   the file already says `4`).
+
+Equivalent API call, for an agent whose shell is allowed to make it:
+`POST /v1/bundleIdCapabilities` with `capabilityType: "APPLE_ID_AUTH"`,
+`settings: [{key: "APPLE_ID_AUTH_APP_CONSENT", options: [{key: "PRIMARY_APP_CONSENT"}]}]`,
+relationship `bundleId → 6TNYULX4NA`. (`SIGN_IN_WITH_APPLE` is not a valid
+enum value; the API calls it `APPLE_ID_AUTH`.)
+
+Everything else in this section was done from the frozen feature set and
+does not depend on the build.
 
 **Legal pages** are real now: `/privacy` and `/terms` describe the shipped
 app (accounts, saves, tour requests, reviews, telemetry, moderation and the
@@ -301,14 +344,15 @@ Setting `userGeneratedContent: true` alone does not raise the rating above
 
 | Item | Why |
 |---|---|
-| Screenshots | 6.9" iPhone **1320×2868**, up to 10, must be the real UI. No Xcode on this Mac ⇒ no simulator; capture on the owner's device from build 3. Set: feed card with a film, community tour, community page with reviews, listing explore, Search map, Saved, tour request sheet. |
+| **Sign In with Apple capability on the App ID** | The build step above — one checkbox in the Developer Portal, then rebuild. Nothing else in this table can move until a build exists. |
+| Screenshots | 6.9" iPhone **1320×2868**, up to 10, must be the real UI. No Xcode on this Mac ⇒ no simulator; capture on the owner's device from the first build that succeeds (see the capability step above). Set: feed card with a film, community tour, community page with reviews, listing explore, Search map, Saved, tour request sheet. |
 | App Privacy labels | Table above — an attestation the account holder signs. |
 | Age rating `userGeneratedContent: true` | Same questionnaire; re-answer and save. |
 | Seller name | ⚠ Individual account ⇒ shows **Qiaoxuan Xue**, not "Percho". Needs a legal-entity-name-change request with a DBA certificate, which has a waiting period — start it *before* submission, not at it. |
 | Legal review of `/privacy` and `/terms` | Entity name, governing law (§10), CCPA/GDPR wording. |
 | Sentry DSN | Crash reporting is wired to nothing; if you want it for launch, create the project, add the DSN to EAS secrets, and add the Diagnostics label. |
 | MLS channel | `docs/mls-integration/go-live.md` — licence + Bridge dataset credentials. The store build does not wait on it (photo cards fill the feed). |
-| Submit for review | Attach build 3 to version 1.0.0, fill the above, press Submit. **Not done by the agent** — first-submission timing and the review notes are the owner's call. |
+| Submit for review | Attach the successful build to version 1.0.0, fill the above, press Submit. **Not done by the agent** — first-submission timing and the review notes are the owner's call. |
 
 Known review risks (first submission commonly bounces once; budget 1–2 wks):
 - Guideline 2.1 (performance): make sure production API has inventory when
