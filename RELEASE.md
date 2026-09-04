@@ -8,6 +8,9 @@
 
 ## v1.3 — Opening a home now answers "does this fit me?"
 
+### 2026-09-04
+- **Percho now has accounts on the phone.** Sign in with Apple or with a 6-digit code sent to your email. Your saved homes and neighbourhoods now belong to your account and follow you across devices, instead of living on one phone. Browsing never requires signing in — only saving does — and you can sign out or permanently delete your account from the You tab
+
 ### 2026-09-03
 - **Tours stop reaching for the same few pieces of music.** Which track a film gets was narrowing to a handful of options for a large share of homes — lower-priced homes shared three tracks between them, and newer builds shared three. Now the whole library is in play and the least-used piece wins, so the music spreads evenly across the catalogue instead of clustering. A film that already went out keeps the music it has
 

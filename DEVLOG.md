@@ -16,6 +16,70 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-04 08:20 UTC — phase167: accounts on the phone (store-launch Phase B)
+
+**Objective**: v1 gets real accounts (owner decision 2026-09-04, store-launch
+plan): Sign in with Apple + email code, Saved synced to the server, in-app
+account deletion (App Review 5.1.1(v)). Browsing stays anonymous — signing in
+is required only to save (5.1.1 forbids forcing registration for
+non-account features).
+
+**Actions**:
+- Migration `20260904090000_mobile_auth_saves.sql` — no new tables.
+  `saved_listings` / `saved_communities` were designed for this in baseline
+  0016; the migration adds authenticated RLS policies
+  (`user_id = auth.uid()`) and the missing table grants. An authenticated
+  save writes `device_id = user_id::text`, so the existing
+  (device_id, item_id) PK dedupes per user across devices. Web's anonymous
+  device rows stay service-role-only.
+- Mobile: `lib/supabase.ts` (one client; publishable key committed in
+  `app.json` `extra` by design — RLS is the access control),
+  `state/auth.ts` (session mirror, not persisted — supabase-js already
+  persists the session), `lib/auth.ts` (Apple id-token flow, email OTP
+  request/verify, sign-out, delete), `app/auth.tsx` (sign-in screen: stock
+  Apple button when available + 6-digit email code — OTP over magic link
+  because a link round-trips through a browser and a redirect allowlist for
+  a worse phone UX). `app.json`: `usesAppleSignIn`, plugin, supabase extra.
+- `state/saved.ts` v3: server is the truth, local list demoted to
+  write-through cache. Sign-in reconciles: pre-account local saves push up
+  ONCE (`migratedAt` guard — re-pushing would resurrect saves removed on
+  another device), then the server list replaces the cache. Sign-out clears.
+  The sign-in gate lives in `toggle` itself (signed out → `/auth`), so all
+  five bookmark call sites got it without touching any of them. 7 new
+  vitest cases pin the contract (gate, optimistic revert, migrate-once,
+  newest-first merge, sign-out clear).
+- You tab: ACCOUNT section (email, sign out, delete with destructive
+  confirm). Saved tab: signed-out empty state doubles as the sign-in prompt.
+- Web: `DELETE /api/mobile/account` — verifies the caller's own JWT via
+  `auth.getUser(token)`, then service-role `admin.deleteUser`. The token IS
+  the authorization: it names the only user the call can delete.
+
+**Issues**:
+- Installing the mobile deps re-hoisted `@types/react@19` where next@14's
+  d.ts files could reach it and web typecheck exploded (two React type
+  majors in one program). Evidence says web was *already* checking against
+  19 via the hidden hoist (async Server Components only type-check under
+  19's `ReactNode`). Fixed deterministically: web devDeps pinned to
+  `@types/react@^19` / `@types/react-dom@^19` (runtime untouched at React
+  18) + tsconfig `paths` pinning `react` type resolution to web's own copy.
+- Supabase auth config (enable Apple provider with client id
+  `co.percho.app`, `mailer_otp_length` 8→6, magic-link template must emit
+  `{{ .Token }}` as a code) — my Management-API PATCH was permission-blocked.
+  OWNER ACTION or an allowed re-run; without it Apple sign-in errors at the
+  Supabase step and the email carries a link instead of a code. Web is
+  unaffected (agents use password auth; the magic-link template is unused).
+- Expo Go has no Apple-sign-in entitlement: `isAvailableAsync` gates the
+  button, so on the owner's Expo Go phone only email-code shows. The Apple
+  button appears in the next TestFlight build.
+
+**Verification**: root typecheck 0, mobile lint 0 errors (16 pre-existing
+warnings in untouched files), mobile 635 / web 838 tests green. NOT verified
+on device yet. `db:push` + production route check after merge.
+
+**Next steps**: apply the auth-config PATCH; owner device pass (email-code
+path in Expo Go); Phase C (tour lead + events endpoint + Sentry + rate
+limits).
+
 ## 2026-09-04 07:25 UTC — phase166: hard-delete the 249 FMLS listings without videos
 
 **Objective**: first step of the App Store push. Owner, on the feed-supply

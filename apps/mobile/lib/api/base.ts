@@ -87,3 +87,8 @@ export function listingSummariesUrl(ids: readonly string[]): string {
 		.map(encodeURIComponent)
 		.join(",")}`;
 }
+
+/** `/api/mobile/account` — DELETE with a Bearer token removes the account. */
+export function accountUrl(): string {
+	return `${apiBase()}/api/mobile/account`;
+}

@@ -11,11 +11,13 @@
 			"supportsTablet": false,
 			"bundleIdentifier": "co.percho.app",
 			"buildNumber": "2",
+			"usesAppleSignIn": true,
 			"infoPlist": {
 				"ITSAppUsesNonExemptEncryption": false
 			}
 		},
 		"plugins": [
+			"expo-apple-authentication",
 			"expo-router",
 			"expo-video",
 			[
@@ -35,6 +37,8 @@
 		},
 		"extra": {
 			"apiBase": "https://www.percho.co",
+			"supabaseUrl": "https://tavmbcghxjeyaoptndvn.supabase.co",
+			"supabaseAnonKey": "sb_publishable_OGGUv8IGIByhsoYpOm5Rpw_PsMOBQ5H",
 			"eas": {
 				"projectId": "7e6cc487-2c4c-4006-aadc-6e9816d96513"
 			}
