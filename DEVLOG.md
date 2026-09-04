@@ -16,6 +16,51 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-04 07:25 UTC — phase166: hard-delete the 249 FMLS listings without videos
+
+**Objective**: first step of the App Store push. Owner, on the feed-supply
+question during store-launch planning: the existing listings "are from fmls,
+they are not legal" for a public app — "keeping the ones with videos should be
+fine for demo purpose, but lets cleanup others". Explicitly hard delete, not
+soft-deactivate (asked and answered).
+
+**Actions**: new `scripts/admin/delete-non-video-listings.ts` (dry-run by
+default, `--apply` to execute, full JSON snapshot of every doomed row to
+`~/Percho-backups/` first). Keep criterion is exactly the feed's `videosOnly`
+rule (`fetchBrowseCardsVideosOnly`): a `listing_videos` row with
+`status='ready'` and any media column non-null. Ran dry, reviewed, applied.
+
+**Result**: 267 listings → **18 kept** (all active, all with finished
+walkthrough videos), 249 deleted. Children: 2,329 `listing_photos` rows whose
+4,626 storage objects (originals + enhanced) were removed path-precise from
+`listing-photos` — never by prefix, because that bucket also holds POI photos
+(`POI_PHOTO_BUCKET`). Zero leads (the one FK without cascade — deleted
+explicitly before the parent), zero clips, zero `listing_videos`, zero
+`generated_videos` on the delete set, so **no orphaned Cloudflare Stream
+assets** — the CF-cleanup decision I expected to need never arose. All other
+child tables went by `on delete cascade`. Verified after: `listings` count 18,
+production `/api/mobile/feed` returns a full 12-listing page + 12 communities
++ 109 geoUnits (the `city_geo_units` view is community-based, unchanged),
+kept-listing detail endpoint 200.
+
+**Decisions**: mirrored the serving path's own eligibility query rather than
+inventing a criterion, so "what survives" is by construction "what the feed
+already showed". Backup lives outside the repo (contains listing rows wholesale).
+
+**Issues**: `pnpm lint` fails with 2 pre-existing errors in `apps/web`
+(`TopBar.tsx` a11y among them) present on main before this branch; biome does
+not process `scripts/`. Not touched per §0.3.
+
+**Learnings**: the delete set had *no* video rows at all (not even
+processing/error), and no leads — the FMLS import never generated either.
+`mls_listings.our_listing_id` is `on delete set null`, so the raw MLS mirror
+tables still hold the source rows; they are server-side only and not exposed
+by any public endpoint.
+
+**Next steps**: store-launch phases B–E per the 2026-09-04 plan (accounts,
+tour-lead + telemetry, tab fixes, store assets). Questionnaire review with the
+owner decides the Phase D feature cut.
+
 ## 2026-09-04 05:20 UTC — phase165: a high school opened the Windward film
 
 **Objective**: owner, on the cut he assembled after phase164's tagging —
