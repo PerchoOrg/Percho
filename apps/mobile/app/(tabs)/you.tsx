@@ -17,8 +17,10 @@
  *     not on a control that appears over a card for three seconds.
  *   · Reset — shows the scope it is about to erase before erasing it
  *     (likes, trade-offs, area history), then `clearSignals()`.
- *   · Settings — only the switches that exist (sound autoplay). No account
- *     rows: there are no accounts.
+ *   · Account (phase B, store launch) — sign in / out and the in-app account
+ *     deletion App Review 5.1.1(v) requires. Session state from
+ *     `state/auth.ts`; the actions live in `lib/auth.ts`.
+ *   · Settings — only the switches that exist (sound autoplay).
  */
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
@@ -35,7 +37,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { familiarityFor, unknownDimsLabel } from "../../lib/area-familiarity";
+import { deleteAccount, signOut } from "../../lib/auth";
 import { DIM_LABELS, personaName, rankedDims } from "../../lib/feed/persona";
+import { useAuthStore } from "../../state/auth";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
 import { useSoundStore } from "../../state/sound";
@@ -55,6 +59,8 @@ export default function YouTab() {
 
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const toggleSound = useSoundStore((s) => s.toggle);
+
+	const session = useAuthStore((s) => s.session);
 
 	const stage = useFunnelStore((s) => s.stage);
 	const { pool } = useFeedPool({
@@ -105,6 +111,26 @@ export default function YouTab() {
 
 	const focusArea = (unitId: string) =>
 		router.navigate({ pathname: "/(tabs)/search", params: { focus: unitId } });
+
+	const confirmDeleteAccount = () => {
+		Alert.alert(
+			"Delete your account?",
+			"This permanently removes your account and your saved homes. There is no undo.",
+			[
+				{ text: "Cancel", style: "cancel" },
+				{
+					text: "Delete",
+					style: "destructive",
+					onPress: async () => {
+						const res = await deleteAccount();
+						if (!res.ok && res.error) {
+							Alert.alert("Couldn't delete account", res.error);
+						}
+					},
+				},
+			],
+		);
+	};
 
 	return (
 		<ScrollView
@@ -295,6 +321,45 @@ export default function YouTab() {
 				</Pressable>
 			</View>
 
+			{/* Account — sign in/out and the deletion Apple requires in-app. */}
+			<Text style={styles.sectionHead}>ACCOUNT</Text>
+			<View style={styles.card}>
+				{session ? (
+					<>
+						<View style={styles.settingRow}>
+							<Text style={styles.settingLabel} numberOfLines={1}>
+								{session.user.email ?? "Signed in with Apple"}
+							</Text>
+						</View>
+						<Pressable
+							style={styles.accountRow}
+							onPress={() => void signOut()}
+							accessibilityRole="button"
+						>
+							<Text style={styles.accountAction}>Sign out</Text>
+						</Pressable>
+						<Pressable
+							style={styles.accountRow}
+							onPress={confirmDeleteAccount}
+							accessibilityRole="button"
+						>
+							<Text style={styles.accountDelete}>Delete account</Text>
+						</Pressable>
+					</>
+				) : (
+					<Pressable
+						style={styles.accountRowPlain}
+						onPress={() => router.push("/auth")}
+						accessibilityRole="button"
+					>
+						<Text style={styles.accountAction}>Sign in</Text>
+						<Text style={styles.accountSub}>
+							Keep your saved homes on every device
+						</Text>
+					</Pressable>
+				)}
+			</View>
+
 			{/* Settings — only real switches. */}
 			<Text style={styles.sectionHead}>SETTINGS</Text>
 			<View style={styles.card}>
@@ -438,4 +503,14 @@ const styles = StyleSheet.create({
 		paddingVertical: 8,
 	},
 	settingLabel: { ...textStyles.body, color: colors.ink },
+	accountRow: {
+		paddingVertical: 12,
+		borderTopWidth: StyleSheet.hairlineWidth,
+		borderTopColor: colors.border,
+		gap: 2,
+	},
+	accountRowPlain: { paddingVertical: 12, gap: 2 },
+	accountAction: { ...textStyles.headline, color: colors.accent },
+	accountDelete: { ...textStyles.headline, color: colors.neg },
+	accountSub: { ...textStyles.footnote, color: colors.ink2 },
 });

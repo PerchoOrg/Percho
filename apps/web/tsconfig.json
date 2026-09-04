@@ -19,7 +19,15 @@
     "incremental": true,
     "plugins": [{ "name": "next" }],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      // Pin react TYPE resolution to this app's own @types/react@18. The
+      // monorepo also carries @types/react@19 (apps/mobile is on React 19),
+      // and pnpm's hidden hoist can land 19 where next@14's .d.ts files find
+      // it first — every <Link>/<Icon> then fails JSX checking against two
+      // React type majors. Runtime resolution is untouched.
+      "react": ["./node_modules/@types/react"],
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"],
+      "react-dom": ["./node_modules/@types/react-dom"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

@@ -11,11 +11,13 @@
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { TAB_BAR_FONT } from "../components/TabBarIconFont";
 import { ICON_FONT, OUTLINE_FONT } from "../components/cards/redline/icon-font";
+import { initAuth } from "../state/auth";
 import { DM_SERIF_FONT } from "../theme/fonts";
 import { colors } from "../theme/tokens";
 
@@ -32,6 +34,12 @@ export default function RootLayout() {
 	 * bundled, so the gate is a single frame; the tree behind it does not
 	 * mount until the glyphs are actually drawable.
 	 */
+	// Auth session restore + the saved-list sync it triggers (`state/saved.ts`).
+	// Before the font gate on purpose: the session read can run while fonts load.
+	useEffect(() => {
+		initAuth();
+	}, []);
+
 	const [fontsLoaded, fontsError] = useFonts({
 		[ICON_FONT]: require("../assets/fonts/PerchoIcons.ttf"),
 		[OUTLINE_FONT]: require("../assets/fonts/PerchoIconsOutline.ttf"),

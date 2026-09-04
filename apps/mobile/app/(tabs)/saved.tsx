@@ -34,6 +34,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { communityDetailUrl, listingDetailUrl } from "../../lib/api/base";
 import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
+import { useAuthStore } from "../../state/auth";
 import { useFunnelStore } from "../../state/funnel";
 import { type SavedItem, useSavedStore } from "../../state/saved";
 import { colors, radii } from "../../theme/tokens";
@@ -116,6 +117,7 @@ export default function SavedTab() {
 	const items = useSavedStore((s) => s.items);
 	const hydrated = useSavedStore((s) => s.hydrated);
 	const toggle = useSavedStore((s) => s.toggle);
+	const signedIn = useAuthStore((s) => s.session !== null);
 
 	// Area rows resolve from the pool (a bookmarked CITY card's unit is pool
 	// data, not a detail endpoint) — same source the Search tab reads.
@@ -155,16 +157,33 @@ export default function SavedTab() {
 	const active = items.filter((i) => i.kind === segment);
 
 	if (hydrated && items.length === 0) {
-		// §5.5's Saved empty state — always a way back to the main loop.
+		// §5.5's Saved empty state — always a way back to the main loop. Signed
+		// out it doubles as the sign-in prompt: saves live on the account now,
+		// so an empty list here usually means "not signed in on this phone".
 		return (
 			<View style={[styles.screen, styles.center]}>
-				<Text style={styles.emptyTitle}>Homes you like will live here</Text>
+				<Text style={styles.emptyTitle}>
+					{signedIn
+						? "Homes you like will live here"
+						: "Sign in to keep the homes you like"}
+				</Text>
+				{!signedIn && (
+					<Pressable
+						style={styles.backBtn}
+						onPress={() => router.push("/auth")}
+						accessibilityRole="button"
+					>
+						<Text style={styles.backTxt}>Sign in</Text>
+					</Pressable>
+				)}
 				<Pressable
-					style={styles.backBtn}
+					style={signedIn ? styles.backBtn : styles.backLink}
 					onPress={() => router.navigate("/(tabs)/feed")}
 					accessibilityRole="button"
 				>
-					<Text style={styles.backTxt}>Back to feed</Text>
+					<Text style={signedIn ? styles.backTxt : styles.backLinkTxt}>
+						Back to feed
+					</Text>
 				</Pressable>
 			</View>
 		);
@@ -411,4 +430,6 @@ const styles = StyleSheet.create({
 		paddingVertical: 12,
 	},
 	backTxt: { ...textStyles.headline, color: colors.surface },
+	backLink: { minHeight: 44, justifyContent: "center", marginTop: 4 },
+	backLinkTxt: { ...textStyles.footnote, color: colors.accent },
 });
