@@ -16,7 +16,7 @@ Same reverse-chronological format, same content.
 
 ---
 
-## 2026-09-04 18:30 UTC — phase172: store sprint (Phase G) — legal pages, UGC report link, build 3, store copy
+## 2026-09-04 18:30 UTC — phase172: store sprint (Phase G) — legal pages, UGC report link, store copy; build blocked on an App ID capability
 
 **Objective**: Phase G, the last of the store-launch plan the owner asked
 to be run without waiting for approval. Turn the two legal placeholders
