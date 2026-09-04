@@ -19,7 +19,19 @@
  */
 import { createClient } from '@supabase/supabase-js';
 
-const ALL_STEPS = ['research', 'resolve', 'photos', 'plan', 'generate', 'assemble'] as const;
+const ALL_STEPS = [
+  'research',
+  'resolve',
+  'photos',
+  // `tag` was reachable only from the admin chip until 2026-09-03, which
+  // made it unrunnable for photos that arrive outside the pipeline —
+  // `ingest-community-photos.ts` creates amenity POIs after `photos` has
+  // already run, and its own header tells you to tag them afterwards.
+  'tag',
+  'plan',
+  'generate',
+  'assemble',
+] as const;
 type Step = (typeof ALL_STEPS)[number];
 
 /**
@@ -111,6 +123,7 @@ async function main() {
   const { runResearch } = await import('../../apps/web/lib/poi/tour-steps/research.js');
   const { runResolve } = await import('../../apps/web/lib/poi/tour-steps/resolve.js');
   const { runPhotos, runPlan } = await import('../../apps/web/lib/poi/tour-steps/photos.js');
+  const { runTag } = await import('../../apps/web/lib/poi/tour-steps/tag.js');
   const { runGenerate } = await import('../../apps/web/lib/poi/tour-steps/generate.js');
   const { runAssemble } = await import('../../apps/web/lib/poi/tour-steps/assemble.js');
 
@@ -139,6 +152,12 @@ async function main() {
         // The photo table auto-approves 'ready' rows when an admin opens it,
         // so this is the same policy, not a new one.
         result = await settleEnhancements(sb, community.id, runId, result);
+        break;
+      case 'tag':
+        // Tags every untagged photo the tour can see and then filters them,
+        // which is what fills the statuses the review gate is about. Bounded
+        // internally at 220s, so a large pile needs the step run twice.
+        result = await runTag(sb, run);
         break;
       case 'plan':
         result = await runPlan(sb, run);
@@ -287,6 +306,10 @@ function summarise(step: Step, result: unknown): string {
       return `${r.resolved} resolved, ${r.dropped} dropped`;
     case 'photos':
       return `${(r.shots as unknown[] | undefined)?.length ?? 0} shots, ${(r.dropped as unknown[] | undefined)?.length ?? 0} dropped`;
+    case 'tag':
+      return `${r.tagged}/${r.total} tagged${
+        r.unreached ? `, ${r.unreached} not reached — run tag again` : ''
+      }${r.failed ? `, ${r.failed} failed` : ''}`;
     case 'generate':
       return `${r.created} clips queued, ${r.requeued} requeued`;
     case 'assemble':
