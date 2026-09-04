@@ -195,6 +195,7 @@ regenerated `database.types.ts` in the same PR.
 | `marketing/` | Voice, templates, account notes, daily logs. |
 | `references/` | External data sources and their terms. |
 | `bgm/` | Music vibe mapping. |
+| `mls-integration/` | MLS go-live readiness: what of the RESO path exists, what is still to build, owner-only steps. |
 | `archive/` | Finished process artifacts — sprint prompts, verification checklists, handoffs. Not maintained. If it contradicts the code, the code wins. |
 
 ---

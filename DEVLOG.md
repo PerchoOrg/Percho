@@ -16,6 +16,45 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-04 17:10 UTC — phase171: MLS go-live readiness note (Phase F)
+
+**Objective**: Phase F of the store-launch plan — say exactly what stands
+between "owner signs an MLS data licence" and "live listings in the app",
+and settle the two decisions the plan asked for (render for new listings,
+feed without a film).
+
+**Actions**: `docs/mls-integration/go-live.md` (new — the folder the
+`mls_tables` migration pointed at in July and nobody wrote); one line in
+`ARCHITECTURE.md` under `docs/`. No code.
+
+**Findings** (from a read of `lib/mls/*`, the mirror migration, the render
+entry points and the feed pool):
+- The RESO/Bridge client and the mirror sync worker are built and have
+  never run — no creds, no npm script, no cron, `mls_listings` empty.
+- The projection mirror → `listings` does not exist; today's 18 FMLS rows
+  came from the retired scraper. The doc carries the column map
+  (`source = 'fmls_bridge'`, `source_id = listing_key`, slug rule kept so
+  `/v/fmls/<key>` survives, `external_*` fields to satisfy
+  `listings_owner_chk`, photos copied into Storage because
+  `listing_photos.storage_path` is not-null unique).
+- Withdrawn listings need a nightly full sync + archive pass — the
+  incremental watermark cannot see them.
+
+**Decisions**
+- **Render**: on projection, auto-create the run and execute the free
+  **tag** step only; **review** stays the owner's editorial pass (same
+  rule as community tours); `kenburns` is the default engine; `seedance`
+  remains a manual per-listing choice because it is the only one that
+  bills.
+- **Feed**: photo cards are already the default (`videosOnly` = 0) and the
+  mobile card already renders hero + carousel without a film. **No
+  change** — a listing rides the feed the moment it is projected.
+- **No projection code yet.** Writing it against an empty mirror would be
+  untestable; it is a ~150-line admin script once real rows exist.
+
+**Next steps**: owner secures the licence (§2 of the doc); then §4's
+checklist top to bottom. Phase G (store sprint) next.
+
 ## 2026-09-04 16:30 UTC — phase170: resident reviews with a human approval gate (Phase E)
 
 **Objective**: Phase E of the store-launch plan. A signed-in buyer who lives
