@@ -44,6 +44,14 @@ import {
 	type RedlineIconName,
 } from "../../components/cards/redline/RedlineChrome";
 import { apiBase } from "../../lib/api/base";
+import {
+	REVIEW_DIMENSION_LABELS,
+	type ReviewDimension,
+	type ReviewStatus,
+	fetchMyReview,
+	reviewMonth,
+} from "../../lib/reviews/reviews";
+import { useAuthStore } from "../../state/auth";
 import { useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
 import { colors, radii } from "../../theme/tokens";
@@ -79,6 +87,19 @@ interface CommunityDetailDTO {
 	moreReasons: ReasonDTO[];
 	stats: { label: string; value: string }[];
 	interests: string[];
+	/** Approved resident reviews (phase E). Absent until one is approved. */
+	reviews?: {
+		count: number;
+		avgRating: number;
+		dimensionAvgs: Partial<Record<ReviewDimension, number>>;
+		items: {
+			id: string;
+			rating: number;
+			dimensions: Partial<Record<ReviewDimension, number>>;
+			body: string;
+			date: string;
+		}[];
+	};
 }
 
 /** Reason row: the resident's own word, its glyph, and its evidence. */
@@ -160,6 +181,22 @@ export default function CommunityWhyScreen() {
 	// (owner 2026-08-20: "remove the save button on the top right for cards").
 	const saved = useSavedStore((s) => (data ? s.isSaved(data.id) : false));
 	const toggleSaved = useSavedStore((s) => s.toggle);
+
+	// The signed-in user's own review, in any status — so the CTA can read
+	// "Edit your review" and a pending one can say so. Anon sees only approved
+	// rows, so this is skipped without a session.
+	const uid = useAuthStore((s) => s.session?.user.id);
+	const [myStatus, setMyStatus] = useState<ReviewStatus | null>(null);
+	useEffect(() => {
+		if (!uid || !data) return;
+		let alive = true;
+		fetchMyReview(uid, data.id)
+			.then((mine) => alive && setMyStatus(mine?.status ?? null))
+			.catch(() => {});
+		return () => {
+			alive = false;
+		};
+	}, [uid, data]);
 
 	useEffect(() => {
 		if (!slug) return;
@@ -364,6 +401,80 @@ export default function CommunityWhyScreen() {
 					)}
 
 					{/*
+					 * Resident reviews (phase E). Real people, read by a person before
+					 * they appear, shown without names. The section is always here so
+					 * the door to write one is always visible — an empty section beats
+					 * a generated one.
+					 */}
+					<Text style={styles.sectionHead}>RESIDENT REVIEWS</Text>
+					{data.reviews ? (
+						<View style={styles.card}>
+							<View style={styles.statRow}>
+								<Text style={styles.statLabel}>
+									{data.reviews.count}{" "}
+									{data.reviews.count === 1 ? "review" : "reviews"}
+								</Text>
+								<Text style={styles.statValue}>
+									{data.reviews.avgRating.toFixed(1)} / 5
+								</Text>
+							</View>
+							{Object.entries(data.reviews.dimensionAvgs).length > 0 && (
+								<Text style={styles.dimLine}>
+									{Object.entries(data.reviews.dimensionAvgs)
+										.map(
+											([k, v]) =>
+												`${REVIEW_DIMENSION_LABELS[k as ReviewDimension]} ${v.toFixed(1)}`,
+										)
+										.join("  ·  ")}
+								</Text>
+							)}
+							{data.reviews.items.map((r) => (
+								<View key={r.id} style={styles.review}>
+									<View style={styles.reviewHead}>
+										<Text style={styles.reviewRating}>
+											{"★".repeat(r.rating)}
+											<Text style={styles.reviewRatingOff}>
+												{"★".repeat(5 - r.rating)}
+											</Text>
+										</Text>
+										<Text style={styles.reviewMeta}>
+											A resident · {reviewMonth(r.date)}
+										</Text>
+									</View>
+									<Text style={styles.reviewBody}>{r.body}</Text>
+								</View>
+							))}
+						</View>
+					) : (
+						<Text style={styles.reviewEmpty}>
+							No resident reviews yet. Live here? Yours would be the first.
+						</Text>
+					)}
+					{myStatus === "pending" && (
+						<Text style={styles.reviewPending}>
+							Your review is waiting to be read.
+						</Text>
+					)}
+					<Pressable
+						style={styles.reviewCta}
+						accessibilityRole="button"
+						onPress={() => {
+							if (!uid) {
+								router.push("/auth");
+								return;
+							}
+							router.push({
+								pathname: "/community/review",
+								params: { id: data.id, name: data.name },
+							});
+						}}
+					>
+						<Text style={styles.reviewCtaTxt}>
+							{myStatus ? "Edit your review" : "Write a review"}
+						</Text>
+					</Pressable>
+
+					{/*
 					 * Source line, per §3.4's rule that every evidence block names where
 					 * it came from. One source today, stated plainly rather than dressed
 					 * up as several.
@@ -500,6 +611,47 @@ const styles = StyleSheet.create({
 	},
 	statLabel: { ...textStyles.footnote, color: colors.ink2 },
 	statValue: { ...textStyles.headline, color: colors.ink },
+
+	dimLine: {
+		...textStyles.caption,
+		color: colors.ink2,
+		textTransform: "none",
+		letterSpacing: 0,
+		paddingVertical: 10,
+		borderBottomWidth: StyleSheet.hairlineWidth,
+		borderBottomColor: colors.border,
+	},
+	review: {
+		paddingVertical: 13,
+		borderBottomWidth: StyleSheet.hairlineWidth,
+		borderBottomColor: colors.border,
+		gap: 6,
+	},
+	reviewHead: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+	},
+	reviewRating: { fontSize: 13, color: colors.accent, letterSpacing: 1 },
+	reviewRatingOff: { color: colors.border },
+	reviewMeta: { ...textStyles.caption, color: colors.ink3 },
+	reviewBody: { ...textStyles.footnote, color: colors.ink, lineHeight: 20 },
+	reviewEmpty: { ...textStyles.footnote, color: colors.ink2, lineHeight: 20 },
+	reviewPending: {
+		...textStyles.footnote,
+		color: colors.accent,
+		marginTop: 10,
+	},
+	reviewCta: {
+		marginTop: 14,
+		alignSelf: "flex-start",
+		paddingHorizontal: 16,
+		paddingVertical: 10,
+		borderRadius: radii.pill,
+		borderWidth: 1,
+		borderColor: colors.accent,
+	},
+	reviewCtaTxt: { ...textStyles.footnote, color: colors.accent },
 
 	source: {
 		...textStyles.caption,
