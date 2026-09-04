@@ -16,6 +16,93 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-04 16:30 UTC — phase170: resident reviews with a human approval gate (Phase E)
+
+**Objective**: Phase E of the store-launch plan. A signed-in buyer who lives
+(or lived) in a community can leave ONE review — overall rating, up to four
+optional 1–5 dimensions, a paragraph — and it shows on the community page
+only after a person approves it. No seed, no generated content: an empty
+section with a "Write a review" door beats a fake one (owner, 2026-09-03).
+
+**Actions**
+- `supabase/migrations/20260904170000_community_reviews.sql` — table
+  (`rating 1–5`, `dimensions jsonb`, `body 20–1200 chars`,
+  `status pending|approved|rejected`, `unique (community_id, user_id)`,
+  cascades on community and `auth.users`), two indexes, RLS:
+  anon+authenticated read `approved`; authenticated read own; insert/update
+  own row **only as `pending`**; no delete policy.
+- `20260904171000_community_reviews_grants.sql` — follow-up: this project's
+  default privileges hand ALL on new public tables to anon/authenticated
+  (checked live: both held INSERT/SELECT/UPDATE on every column), so the
+  first migration's column-level grants were additive no-ops. Revoked and
+  re-granted exactly: anon selects 8 columns (no `user_id`, no
+  `reviewed_at`); authenticated inserts 6 / updates 5 columns.
+  Both applied with `supabase db push`; `database.types.ts` regenerated.
+- Web: `lib/communities/reviews.ts` (`projectCommunityReviews` — count,
+  mean rating, per-dimension means, first 10 items; `cleanDimensions`
+  keeps only `quiet|walkable|friendly|value` scored 1–5), wired into
+  `CommunityDetailDTO.reviews?` in `detail.ts` (absent until one is
+  approved). Admin: `/admin/pipeline/reviews` (service-role list, pending
+  first) + `ReviewQueue.tsx` (Approve / Reject / Re-queue) +
+  `POST /api/admin/reviews` behind `requireAdmin()` with
+  `lib/zod/admin-review.ts`; new "Reviews" tab in `admin/layout.tsx`.
+  Tests: `reviews.test.ts` (4).
+- Mobile: `lib/reviews/reviews.ts` (`submitReview`, `fetchMyReview`,
+  `draftProblem`, constants; 3 tests), `app/community/review.tsx` (form:
+  five-dot rating rows, textarea with counter, prefill of the user's own
+  row, "Thanks — it'll show once reviewed."), and a **RESIDENT REVIEWS**
+  section on `app/community/[slug].tsx` (summary row, dimension means,
+  items as "★★★★☆ · A resident · Aug 2026", empty-state line, "Your review
+  is waiting to be read.", CTA → `/auth` when signed out, else the form;
+  label flips to "Edit your review" once a row exists).
+
+**Decisions**
+- **Writes go straight through RLS, no POST route.** Same shape as saves
+  (phase B). The policy is the validator: a client can only ever produce a
+  `pending` row of its own; DB check constraints hold rating range and body
+  length; the server drops unknown dimension keys on the way out. Approval
+  is the only privileged write and it is service-role behind `requireAdmin`.
+- **Edits re-enter the queue.** The update policy's `with check` forces
+  `status = 'pending'`, so an approved review vanishes from the page the
+  moment its author edits it, until re-approved. Cheaper than versioning and
+  it means nothing approved can be swapped for something unapproved.
+- **Update-then-insert, not `upsert`.** PostgREST's `ON CONFLICT DO UPDATE`
+  re-sets every payload column, and authenticated deliberately lacks UPDATE
+  on `community_id` / `user_id` — the upsert was refused (42501) in the live
+  smoke test. Two calls it is; `updated_at` is left to its default on insert
+  for the same reason.
+- **Anonymous to buyers.** A review is "A resident · <month>"; anon cannot
+  select `user_id` at all. Admin sees the row, not the account, either.
+- **Four dimensions, closed set**: Quiet, Walkable, Neighbourly, Value.
+  Deliberately no "safety"/"schools" dimension — those are the fair-housing
+  proxies `community-reasons.ts` already refuses. Owner may rename/extend.
+- Web `/c/<slug>` page does **not** render reviews yet — mobile is the
+  launch surface; the DTO is ready when the web page wants it.
+
+**Verification**
+- Live RLS smoke test with a throwaway auth user (created + deleted via
+  service role, no rows left after cascade): insert as pending ✓; insert as
+  `approved` refused (42501) ✓; body < 20 chars refused (23514) ✓; own
+  pending row visible to author ✓; delete refused ✓; anon sees 0 pending ✓;
+  after service-role approve anon sees 1 ✓; author edit → status back to
+  `pending`, anon sees 0 again ✓.
+- mobile: `tsc` clean, biome 0 errors / 8 pre-existing warnings, vitest
+  528 pass. web: `tsc` clean, biome 2 pre-existing format errors
+  (`research-response.test.ts`, `research/responses/route.ts`), vitest 863
+  pass.
+- **Phase D production check (phase169.1, folded in here)**: on
+  `www.percho.co` after `92950ef0` deployed — `/api/mobile/rates` 200
+  (`rate30 0.0671`, Freddie Mac PMMS as of 2026-09-03);
+  `/api/mobile/search?q=duluth` → 3 listings / 24 communities;
+  `/api/mobile/listing/<id>` carries `rentEstimate`, `schools`,
+  `shareUrl https://www.percho.co/v/fmls/584501905`; `/api/mobile/community/
+  windward` 200 (no `reviews` key yet, as designed).
+
+**Next steps**: Phase F (MLS-live readiness notes) and Phase G (store
+sprint). Owner to review: dimension names, the "Only people who live or have
+lived here" honesty line (no residency proof is asked for), and whether
+web `/c/<slug>` should show reviews before launch.
+
 ## 2026-09-04 09:40 UTC — phase169: tab fixes for the store (Phase D) — cost, ROI, schools, search, compare, share, trust
 
 **Objective**: store-launch Phase D — every tab usable with real data and no

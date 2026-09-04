@@ -12,7 +12,7 @@
  */
 
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { Activity, Building2, Film, Home, ListVideo, Music } from 'lucide-react';
+import { Activity, Building2, Film, Home, ListVideo, MessageSquare, Music } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { type AdminHubTab, AdminHubTabs } from './_components/AdminHubTabs';
 
@@ -41,6 +41,12 @@ const TABS: AdminHubTab[] = [
     label: 'Music',
     href: '/admin/pipeline/bgm',
     icon: <Music size={22} />,
+  },
+  {
+    id: 'reviews',
+    label: 'Reviews',
+    href: '/admin/pipeline/reviews',
+    icon: <MessageSquare size={22} />,
   },
   {
     id: 'health',
