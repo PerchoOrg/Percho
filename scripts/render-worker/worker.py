@@ -2192,261 +2192,26 @@ def _label_font() -> str | None:
     return next((f for f in LABEL_FONTS if os.path.exists(f)), None)
 
 
-def _ui_font(path: str, size: int, weight: str) -> Any:
-    """The card's UI face at a named weight.
-
-    SF Pro ships as one variable file, so the weight is an axis rather than a
-    separate file. On a host without it the fallback is a static Arial and the
-    axis call simply does not apply — the label still renders, one weight for
-    everything.
-    """
-    from PIL import ImageFont
-
-    font = ImageFont.truetype(path, size)
-    try:
-        font.set_variation_by_name(weight)
-    except Exception:  # noqa: BLE001 — static font, or no FreeType variation support
-        pass
-    return font
-
-
-# The place card is the feed card's COMMUNITY badge, on the video.
+# NOTE (2026-09-05, phase174): the place card USED to be burned in here.
 #
-# Near-opaque on purpose: three translucent attempts all flashed, because a
-# see-through treatment has to follow the photo to stay legible and following
-# the photo means changing at every cut. At 92% white nothing follows anything.
-LABEL_PILL_ALPHA = 235                      # rgba(255,255,255,0.92) on the card
-LABEL_INK = (23, 23, 21)                    # redline.ink
-LABEL_INK2 = (111, 107, 101)                # redline.ink2
-LABEL_ACCENT = (14, 107, 87)                # redline.accent — the only accent
-
-# The place card is the COMMUNITY badge's twin, so its geometry is derived from
-# the badge's rather than tuned to look close.
+# `_render_label_png` drew an opaque white pill — the feed card's COMMUNITY
+# badge, with the POI name and its distance — and `_label_overlay` pinned one
+# per place across the finished timeline. It is gone, and the phone draws that
+# label itself now (`CommunityFace`, top-left).
 #
-# `CommunityFace` puts `badgeSlot` at top 12 / left 12 and the badge itself at
-# 7pt vertical padding around 9.5pt System type. The feed card is
-# `screenWidth - GUTTER*2` wide — 361pt on an iPhone 15, the reference used
-# here, since the video is one fixed size and the card is not.
+# Why it could not stay: the pill was scaled from a FIXED reference card width
+# (`CARD_REF_WIDTH_PT = 361`) while the card plays the film with `fit="cover"`,
+# so its on-screen size followed the video's crop rather than the card. It could
+# not sit on the COMMUNITY badge's line on any device, and it owned the corner
+# the sound/save control wants — owner 2026-09-05: "this is not aligned with top
+# left community label, and it pushes the sound and saved icons below".
 #
-# Owner 2026-08-20: "their heights are not the same, can you make sure they are
-# perfectly aligned." Single-line pills are now the same height as the badge
-# and share its top edge; a wrapped name grows downward from that edge rather
-# than shrinking the type.
+# The data it drew still ships: `ordered_clips[].label` / `label_distance` are
+# written by `tour-steps/shots.ts` and read by `lib/feed/tour-segments.ts`, so
+# the phone gets the same names and distances off the same rows.
 #
-# 2026-08-23: 341 -> 361. This constant is a MIRROR of the feed's `GUTTER`
-# (`apps/mobile/app/(tabs)/feed.tsx`) and it had gone stale: the comment's
-# `screenWidth - 52` was a gutter of 26, but the gutter had been 37 since
-# 2026-08-16, so the pill was being scaled for a 341pt card and drawn on a
-# 319pt one — it rendered ~6.5% SMALLER than the badge it is supposed to be
-# the twin of. The gutter is now 16, so the reference card is 393-32 = 361.
-#
-# A change to `GUTTER` therefore invalidates every rendered community tour's
-# baked-in place card. There is no render_key on this — the label is drawn into
-# the assembled film — so the tours must be re-rendered by hand after a gutter
-# change (scripts/admin/run-community-tour.ts).
-CARD_REF_WIDTH_PT = 361.0
-BADGE_TOP_PT = 12.0
-BADGE_PAD_V_PT = 7.0
-BADGE_FONT_PT = 9.5
-# React Native gives Text no explicit lineHeight here, so it takes the face's
-# own — about 1.19x for SF Pro.
-BADGE_LINE_PT = BADGE_FONT_PT * 1.19
-# `redlineRadii.badge`. At the badge's own height this exceeds half of it, so
-# the shape resolves to a stadium — which is why a 33px radius on an
-# identically-tall box still read as a different object (owner 2026-08-20:
-# "box heights are not the same"). They were the same; the corners were not.
-BADGE_RADIUS_PT = 20.0
-
-
-def _render_label_png(
-    name: str,
-    distance: str,
-    w: int,
-    h: int,
-    font_path: str,
-    dest: Path,
-) -> None:
-    """One transparent full-frame PNG carrying a place card.
-
-    AN OPAQUE PILL, after three failed attempts at a subtle one.
-    ------------------------------------------------------------------
-    A 38%-black panel, then a gradient, then a gradient whose strength was
-    measured per clip. All three flashed, because all three were see-through:
-    a translucent treatment has to follow the photo to keep the type legible,
-    and following the photo means changing at every cut. The last attempt made
-    it worse — the darkening itself pulsed, a smudge growing and shrinking over
-    the top right, which is more visible than the contrast problem it fixed.
-
-    You cannot win that inside the video. What does win is not being
-    see-through: at 92% white the pill looks the same over a blown-out ceiling
-    (luma 220) and over dark pines (luma 60), so there is nothing left to
-    fluctuate. Verified across eight real backgrounds spanning luma 59-220.
-
-    It is also the card's own language. The COMMUNITY badge on the feed card is
-    `rgba(255,255,255,0.92)` with #181B18 ink, and it has never flashed for
-    exactly this reason — owner 2026-08-20: "the location should be on the same
-    height as community tag on the card", and, on where this belongs at all,
-    "the latter one would better align other information style in the card".
-
-    Colour is an accent, not a fill: the pin is the brand's deep forest green,
-    which `theme/tokens.ts` calls "the ONLY accent on these faces". A pill
-    filled with it competes with the photography for ninety seconds.
-
-    Pillow rather than ffmpeg's drawtext: the ffmpeg on this Mac mini is built
-    without libfreetype, so `drawtext` does not exist as a filter at all.
-    """
-    from PIL import Image, ImageDraw, ImageFont
-
-    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-
-    # Everything below is the badge's own geometry, scaled from card points to
-    # canvas pixels. Same type size, same weight, same pill height.
-    scale = w / CARD_REF_WIDTH_PT
-    size = round(BADGE_FONT_PT * scale)
-    font = _ui_font(font_path, size, "Bold")
-    sub_font = _ui_font(font_path, round(size * 0.82), "Regular")
-
-    badge_h = round((BADGE_LINE_PT + BADGE_PAD_V_PT * 2) * scale)
-    badge_top = round(BADGE_TOP_PT * scale)
-
-    # The pin, if the icon font is here. Optional — a missing brand asset must
-    # not cost the label.
-    pin, pin_font, pin_w = "", None, 0.0
-    icon_path = REPO_ROOT / "brand/icons/Phosphor-Fill.ttf"
-    if icon_path.exists():
-        pin = "\ue316"  # map-pin-fill
-        pin_font = ImageFont.truetype(str(icon_path), round(size * 1.05))
-        pin_w = draw.textlength(pin, font=pin_font)
-
-    # WRAP a long name onto a second line rather than shrinking it away.
-    # "Publix Super Market at The Village Shoppes at Windermere" is 54
-    # characters; on one line it would stretch the pill across the frame.
-    lines = _wrap_to_width(draw, name, font, w * 0.50)[:2]
-    line_h = round(BADGE_LINE_PT * scale)
-    # Vertical padding solved from the badge's height rather than chosen, so a
-    # one-line pill matches it exactly.
-    pad_v = max(2, round((badge_h - line_h) / 2))
-    pad_h = round(BADGE_FONT_PT * 1.05 * scale)
-    gap = round(size * 0.80)
-
-    text_w = max(draw.textlength(l, font=font) for l in lines)
-    dist_w = draw.textlength(distance, font=sub_font) if distance else 0.0
-    box_w = pin_w + (gap * 0.7 if pin else 0) + text_w + (gap + dist_w if distance else 0) + pad_h * 2
-    box_h = line_h * len(lines) + pad_v * 2
-
-    # Mirrors `badgeSlot`'s left inset of 12pt, on the other side.
-    x1 = w - badge_top
-    x0 = x1 - box_w
-    # TOP edges aligned, so a single-line pill is the badge's twin and a
-    # two-line one grows downward instead of drifting off its line.
-    y0 = badge_top
-    y1 = y0 + box_h
-
-    draw.rounded_rectangle(
-        (x0, y0, x1, y1),
-        radius=min(box_h // 2, round(BADGE_RADIUS_PT * scale)),
-        fill=(255, 255, 255, LABEL_PILL_ALPHA),
-    )
-
-    cx = x0 + pad_h
-    if pin_font:
-        draw.text((cx, y0 + box_h / 2), pin, font=pin_font, fill=LABEL_ACCENT, anchor="lm")
-        cx += pin_w + gap * 0.7
-    for i, line in enumerate(lines):
-        draw.text(
-            (cx, y0 + pad_v + line_h * i + line_h / 2), line, font=font, fill=LABEL_INK, anchor="lm"
-        )
-    if distance:
-        rule_x = x1 - pad_h - dist_w - gap * 0.6
-        draw.line(
-            [(rule_x, y0 + pad_v * 1.15), (rule_x, y1 - pad_v * 1.15)],
-            fill=(*LABEL_INK2, 110),
-            width=2,
-        )
-        draw.text(
-            (x1 - pad_h, y0 + box_h / 2), distance, font=sub_font, fill=LABEL_INK2, anchor="rm"
-        )
-
-    img.save(dest)
-
-
-def _wrap_to_width(draw: Any, text: str, font: Any, max_w: float) -> list[str]:
-    """Greedy word wrap. A single word wider than `max_w` gets its own line."""
-    lines: list[str] = []
-    line = ""
-    for word in text.split():
-        trial = f"{line} {word}".strip()
-        if line and draw.textlength(trial, font=font) > max_w:
-            lines.append(line)
-            line = word
-        else:
-            line = trial
-    if line:
-        lines.append(line)
-    return lines or [text]
-
-
-def _label_overlay(
-    labels: list[tuple[str, str]],
-    durs: list[float],
-    offsets: list[float],
-    xfade: float,
-    scale_to: list[int],
-    workdir: Path,
-    first_input_index: int,
-    prev: str,
-) -> tuple[list[str], list[str], str]:
-    """PNG inputs, overlay filters, and the label the chain now ends on.
-
-    The card is PINNED: spans are contiguous, so exactly one is on screen at
-    every instant and only its content changes. Owner 2026-08-19: "it shows up
-    and goes again and again, you need to pin it on the screen but change the
-    content."
-
-    It used to bound each label to the span between its clip's incoming and
-    outgoing crossfades, leaving the card absent for `xfade` seconds at every
-    cut — the card blinked off and back 26 times in a 27-clip film. Handing each
-    label the span up to the NEXT label's start closes those gaps. A place name
-    now carries a half second into its successor's dissolve, which is correct:
-    during a dissolve the outgoing place is still the one mostly on screen.
-
-    A clip with no name at all still yields its span to the previous card rather
-    than blanking it, for the same reason.
-    """
-    font = _label_font()
-    if not font or not any(n.strip() for n, _ in labels):
-        return [], [], prev
-
-    w, h = scale_to[0], scale_to[1]
-    total = crossfade_total(durs, xfade)
-    inputs: list[str] = []
-    steps: list[str] = []
-    idx = first_input_index
-
-    # Where each clip's card takes over: its own start on the finished timeline.
-    starts = [0.0] + [offsets[i - 1] + xfade for i in range(1, len(labels))]
-    named = [i for i, (n, _) in enumerate(labels) if n.strip()]
-
-    for pos, i in enumerate(named):
-        name, distance = labels[i][0].strip(), labels[i][1].strip()
-        start = 0.0 if pos == 0 else starts[i]  # the first card opens the film
-        end = starts[named[pos + 1]] if pos + 1 < len(named) else total
-        if end - start < 0.5:  # too short to read; let the previous card hold
-            continue
-        png = workdir / f"label_{i:02d}.png"
-        _render_label_png(name, distance, w, h, font, png)
-        inputs.extend(["-i", str(png)])
-        out = f"[lo{i}]"
-        steps.append(f"[{idx}:v]format=rgba[lb{i}]")
-        steps.append(
-            f"{prev}[lb{i}]overlay=0:0:enable='between(t\\,{start:.3f}\\,{end:.3f})'{out}"
-        )
-        prev = out
-        idx += 1
-
-    return inputs, steps, prev
-
+# An assembly rendered before today still has the pill IN the pixels; those five
+# films were re-assembled (phase174) rather than left to show two labels.
 
 # ── end card ────────────────────────────────────────────────────────────────
 
@@ -2538,10 +2303,6 @@ def process_assembly(row: dict[str, Any]) -> None:
         # only photo_id/engine), so resolve storage paths here: photo_clips ready rows
         # keyed by photo_id — seedance → ai-videos, depthflow/kenburns → clip-renders.
         clip_paths: list[Path] = []
-        # Kept in lockstep with clip_paths, NOT with `ordered` — a shot whose
-        # clip is not ready is skipped below, and a label list built from
-        # `ordered` would caption every following clip with the wrong place.
-        clip_labels: list[tuple[str, str]] = []
         skipped: list[str] = []
         by_photo = {}
         # Ask for the clips of THESE photos, not the first page of every ready
@@ -2600,7 +2361,6 @@ def process_assembly(row: dict[str, Any]) -> None:
             dest = workdir / f"{i:02d}.mp4"
             storage_download(bucket, path, dest)
             clip_paths.append(dest)
-            clip_labels.append((str(c.get("label") or ""), str(c.get("label_distance") or "")))
             print(f"[assembly {assembly_id}] downloaded {bucket}/{path}", flush=True)
 
         if len(clip_paths) < 2:
@@ -2659,25 +2419,15 @@ def process_assembly(row: dict[str, Any]) -> None:
             prev = f"[{name}]"
         total = crossfade_total(durs, xfade)
 
-        # Place labels (owner 2026-08-19). A community tour changes subject
-        # every few seconds — "we should add location names to the videos so
-        # people know what it is and how far it is from community". The text
-        # itself is computed web-side (lib/poi/tour-orchestrator/clip-label.ts)
-        # and arrives on the clip as `label`; here we only place it on the
-        # timeline. Nothing is drawn when a clip has no label, so an older
-        # assembly renders exactly as it did.
-        #
-        # This is the community tour only. The listing tour still carries no
-        # on-screen text at all (2026-08-01) — there the subject is one house
-        # for the whole film, so a caption band interrupts rather than informs.
-        label_inputs, label_steps, prev = _label_overlay(
-            clip_labels, durs, offsets, xfade, scale_to, workdir, len(clip_paths), prev,
-        )
-        filters.extend(label_steps)
+        # No place labels are drawn into the film any more (phase174) — the
+        # phone draws them over the video instead. See the note above
+        # `_label_font`.
 
-        # THE END CARD — after the labels, never before. The label chain gives
-        # its last card the span up to `total`, so a card folded in earlier
-        # would wear the final place name across it.
+        # THE END CARD.
+        #
+        # It used to be built AFTER the label chain and had to be, because the
+        # last label's span ran to `total` and would have been worn across the
+        # card. With the labels gone it simply follows the xfade chain.
         card_inputs: list[str] = []
         community_name = (row.get("community") or {}).get("name") or ""
         hero = workdir / "hero.png"
@@ -2690,7 +2440,7 @@ def process_assembly(row: dict[str, Any]) -> None:
         if community_name and _render_end_card(
             community_name, hero, scale_to[0], scale_to[1], card_png
         ):
-            card_idx = len(clip_paths) + len(label_inputs) // 2
+            card_idx = len(clip_paths)
             card_inputs = ["-loop", "1", "-t", f"{END_CARD_S:.2f}", "-i", str(card_png)]
             filters.append(
                 f"[{card_idx}:v]fps=30,scale={scale_to[0]}:{scale_to[1]},setsar=1,"
@@ -2708,7 +2458,6 @@ def process_assembly(row: dict[str, Any]) -> None:
         cmd = [
             "ffmpeg", "-y",
             *inputs,
-            *label_inputs,
             *card_inputs,
             "-filter_complex", vf,
             "-c:v", "libx264", "-preset", "medium", "-crf", "20",

@@ -7,7 +7,7 @@ import type { ListingCardV3 } from "../../lib/feed/card-types";
 import { SOUND_TAP_TARGET, type TapSlot } from "../../lib/gesture/tap-slot";
 import { useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
-import { redline, redlineRadii } from "../../theme/tokens";
+import { redline } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
@@ -25,8 +25,11 @@ import { CardCorner } from "./CardCorner";
  * 白色 information container」). The listing card is no longer media + white
  * panel; it is a photo with the facts on it, exactly like the CITY card.
  *
- *   · LISTING pill top-left — the frosted badge, same padding as CITY /
- *     COMMUNITY (7/10, was 5/11).
+ *   · top-left EMPTY since phase174. It held a LISTING pill, and the owner
+ *     took it off: "remove the listing tag from top left of the card, since it
+ *     is obvious" (2026-09-05). A photo of a house priced in dollars with a bed
+ *     and bath count is not mistakable for anything else in this deck, and the
+ *     pill was the only chrome competing with the photograph up there.
  *   · bookmark disc top-right — the CITY card's 40px translucent white disc
  *     + dark bookmark (was a 32px dark disc).
  *   · bottom scrim — `LinearGradient` transparent → rgba(0,0,0,0.5),
@@ -150,13 +153,6 @@ export function ListingFace({
 			) : (
 				<CardPhoto url={card.heroUrl} fit="cover" />
 			)}
-
-			{/* LISTING pill — the CITY / COMMUNITY frosted badge, relabelled. */}
-			<View style={styles.badgeSlot}>
-				<View style={styles.badge}>
-					<Text style={styles.badgeLabel}>LISTING</Text>
-				</View>
-			</View>
 
 			{/*
 			 * Top-right control (phase140, owner pick "G2"): ONE capsule holding
@@ -299,18 +295,6 @@ function ArrowRightIcon() {
 const styles = StyleSheet.create({
 	/** `overflow: hidden` clips the scrim and the media to the card's radius. */
 	face: { flex: 1, backgroundColor: redline.card, overflow: "hidden" },
-	badgeSlot: { position: "absolute", top: 12, left: 12, zIndex: 2 },
-	/** Frosted LISTING badge — the CITY card's badge (7/10), relabelled. */
-	badge: {
-		alignSelf: "flex-start",
-		backgroundColor: "rgba(255,255,255,0.92)",
-		borderRadius: redlineRadii.badge,
-		paddingVertical: 7,
-		paddingHorizontal: 10,
-		overflow: "hidden",
-	},
-	/** Neutral ink, not green — green is reserved for interactive state. */
-	badgeLabel: { ...redlineText.listingCard.badge, color: "#181B18" },
 	/**
 	 * Bottom scrim — `overflow: hidden` on `face` clips it to the card's
 	 * rounded corner. Same as the CITY card's.

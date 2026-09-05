@@ -234,8 +234,17 @@ export interface CommunityCardV3 {
 	 *
 	 * Absent whenever the video did not come from a tour assembly; the card
 	 * draws a plain continuous bar then.
+	 *
+	 * `distance` is how far the place is from the community ("0 mi" for its own
+	 * amenities), absent when unknown. Since phase174 these entries also drive
+	 * the card's place LABEL, not just the bar — the render worker used to burn
+	 * that label into the film and no longer does.
 	 */
-	tourSegments?: readonly { name: string; endFraction: number }[];
+	tourSegments?: readonly {
+		name: string;
+		endFraction: number;
+		distance?: string;
+	}[];
 }
 
 // ─── Trade-off (§1.6) ───────────────────────────────────────────────

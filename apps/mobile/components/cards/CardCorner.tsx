@@ -16,10 +16,18 @@
  * of round discs was tried first (demo `G1`) and reads as two overlapping
  * circles no matter how it is tightened, which is the same objection restated.
  *
- * The community card carries only the speaker: its bookmark was removed on
- * 2026-08-20 (owner: "remove the save button on the top right for community
- * card") and this is not the place to argue with that. One control renders as
- * a plain 40pt disc, so both faces show exactly one object in the corner.
+ * ── Both faces carry both controls again (phase174) ─────────────────────────
+ *
+ * The community card used to carry only the speaker, dropped below the badge's
+ * line: its bookmark was removed on 2026-08-20 because the tour video BURNED a
+ * place-name pill into that corner and a 40pt disc sat on top of it. phase174
+ * moved that label out of the pixels and onto the card, so the corner is free —
+ * owner 2026-09-05: "keep the sound and saved button on the top right to be
+ * consistent with listing". The `top` prop and its community override went with
+ * it; every face now puts one capsule at 12/12.
+ *
+ * A face with only ONE control is still a plain 40pt disc — that is what a
+ * photo-only card (no film to mute) renders.
  *
  * ── The speaker is drawn, not typed ─────────────────────────────────────────
  *
@@ -119,25 +127,15 @@ interface CardCornerProps {
 	 * speaker rather than a control that promises audio it does not have.
 	 */
 	sound?: CornerControl & { on: boolean };
-	/** Present when the card is saveable. Absent on the community face. */
+	/** Present when the card is saveable. */
 	save?: CornerControl & { saved: boolean };
-	/**
-	 * How far below the card's top edge the control sits. 12 (the badge's own
-	 * inset) everywhere except the community face, whose top-right corner is
-	 * occupied by the tour video's BURNED-IN place-name pill — the render
-	 * worker draws it at the COMMUNITY badge's height, and it is why the owner
-	 * had the bookmark removed from that corner on 2026-08-20. Dropping the
-	 * control below the pill keeps the control on the same side without
-	 * covering the film's own label.
-	 */
-	top?: number;
 }
 
 /**
  * One object in the corner: a capsule when the card has both controls, a plain
  * disc when it has one, nothing when it has neither.
  */
-export function CardCorner({ sound, save, top = 12 }: CardCornerProps) {
+export function CardCorner({ sound, save }: CardCornerProps) {
 	const both = sound !== undefined && save !== undefined;
 	if (sound === undefined && save === undefined) return null;
 
@@ -170,7 +168,7 @@ export function CardCorner({ sound, save, top = 12 }: CardCornerProps) {
 	);
 
 	return (
-		<View style={[styles.slot, both ? styles.capsule : styles.disc, { top }]}>
+		<View style={[styles.slot, both ? styles.capsule : styles.disc]}>
 			{soundCell}
 			{both && <View style={styles.divider} />}
 			{saveCell}
@@ -182,6 +180,7 @@ const CELL = 37;
 const styles = StyleSheet.create({
 	slot: {
 		position: "absolute",
+		top: 12,
 		right: 12,
 		zIndex: 2,
 		flexDirection: "row",

@@ -95,6 +95,24 @@ describe('tourSegments', () => {
     expect(segments).toHaveLength(1);
   });
 
+  /**
+   * phase174: the distance rides along with the name. The two were one object
+   * while the render worker burned them into the film; the card draws them now
+   * and needs both off the same clip.
+   */
+  it('carries the clip distance onto the segment', () => {
+    const segments = tourSegments([
+      { ...clip('a', 3), label_distance: '0 mi' },
+      { ...clip('b', 3), label_distance: '2.4 mi' },
+    ]);
+    expect(segments.map((s) => s.distance)).toEqual(['0 mi', '2.4 mi']);
+  });
+
+  it('omits the distance when the clip has none', () => {
+    const [segment] = tourSegments([clip('a', 3), clip('b', 3)]);
+    expect(segment && 'distance' in segment).toBe(false);
+  });
+
   it('matches the worker constant', () => {
     expect(TOUR_XFADE_S).toBe(0.5);
   });

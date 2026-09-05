@@ -45,6 +45,17 @@ export interface TourSegment {
   name: string;
   /** Where the stretch ENDS, as a fraction (0..1] of the finished film. */
   endFraction: number;
+  /**
+   * How far the place is from the community — "0 mi" for the community's own
+   * amenities, "" when it is genuinely unknown.
+   *
+   * Formatted server-side by `tour-orchestrator/clip-label.ts` and stored on
+   * the clip as `label_distance`; this only carries it through. It is the
+   * second half of the label the render worker used to BURN into the film
+   * (phase174 moved that label onto the card), so it has to travel with the
+   * name that was burned beside it.
+   */
+  distance?: string;
 }
 
 interface ParsedClip {
@@ -52,6 +63,7 @@ interface ParsedClip {
   key: string;
   name: string;
   seconds: number;
+  distance: string;
 }
 
 function parseClips(orderedClips: unknown): ParsedClip[] {
@@ -66,9 +78,10 @@ function parseClips(orderedClips: unknown): ParsedClip[] {
     if (!Number.isFinite(seconds) || seconds <= 0) return [];
     const name = typeof c.poi_name === 'string' ? c.poi_name : '';
     const id = typeof c.poi_id === 'string' ? c.poi_id : '';
+    const distance = typeof c.label_distance === 'string' ? c.label_distance : '';
     // `poi_id` groups; the name is only what we would show. A tour with
     // neither cannot be grouped, so each clip stands alone.
-    out.push({ key: id || name || `clip-${out.length}`, name, seconds });
+    out.push({ key: id || name || `clip-${out.length}`, name, seconds, distance });
   }
   return out;
 }
@@ -106,7 +119,15 @@ export function tourSegments(orderedClips: unknown, xfade = TOUR_XFADE_S): TourS
     if (next && next.key === clip.key) continue; // same place, keep accumulating
     // The place ends where the next one starts; the last runs to the end.
     const end = k + 1 < clips.length ? (starts[k + 1] ?? total) : total;
-    segments.push({ name: clip.name, endFraction: Math.min(end / total, 1) });
+    segments.push({
+      name: clip.name,
+      endFraction: Math.min(end / total, 1),
+      // Omitted rather than sent empty: the card decides whether to draw the
+      // distance at all, and `''` would have it draw a divider with nothing
+      // after it. Consecutive clips of one place carry the same distance, so
+      // taking the last of the group is taking the place's.
+      ...(clip.distance ? { distance: clip.distance } : {}),
+    });
   }
 
   // Float drift must not leave the bar a hair short of full.
