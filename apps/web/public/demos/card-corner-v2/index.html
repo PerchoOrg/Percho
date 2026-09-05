@@ -204,7 +204,7 @@ function feed(kind, o={}){
 
 const FRAMES = {
   H0:{title:'H0 · What ships today (the thing that looks off)',sub:'37pt capsule next to a 26pt badge, hairline in the middle, and both glyphs drawn from rectangles: the speaker’s box collapses into a blob, the bookmark’s notch is two rotated bars with a seam.',html:(m)=>(m?mag:feed)('h0',{zoom:true})},
-  H1:{title:'H1 · One pill, badge height, real glyphs ★ recommended',sub:'The corner becomes the badge’s twin: same 26pt height, same frosted white, same radius. Two Phosphor glyphs at 15pt, no divider — the bookmark is the Saved tab’s own icon, so the card and the tab bar finally match.',html:(m)=>(m?mag:feed)('pill',{zoom:true})},
+  H1:{title:'H1 · One pill, badge height, real glyphs ✓ CHOSEN — SHIPPED',sub:'The corner becomes the badge’s twin: same 26pt height, same frosted white, same radius. Two Phosphor glyphs at 15pt, no divider — the bookmark is the Saved tab’s own icon, so the card and the tab bar finally match.',html:(m)=>(m?mag:feed)('pill',{zoom:true})},
   H1b:{title:'H1 · muted + saved state',sub:'Mute is the slashed speaker; saved fills the bookmark in the redline green — the one colour reserved for interactive state, so the fill reads as “yours” rather than as a darker icon.',html:(m)=>(m?mag:feed)('pill',{on:false,saved:true,zoom:true})},
   H1d:{title:'H1 · one step larger (30pt, 17pt glyphs)',sub:'If 26 feels too quiet as a tap target: 30pt pill, glyphs at 17. Sits 2pt proud of the badge top and bottom — still one family, a little more present.',html:(m)=>(m?mag:feed)('pill',{big:true,zoom:true})},
   H1c:{title:'H1 · with a hairline (if you want the two taps visibly split)',sub:'Same pill, 12pt hairline between the glyphs. Slightly busier; shown so the choice is explicit.',html:(m)=>(m?mag:feed)('pill',{sep:true,zoom:true})},
@@ -223,6 +223,7 @@ if(only && FRAMES[only]){ document.body.classList.add('only'); root.innerHTML = 
 else {
   const keys = Object.keys(FRAMES);
   const nav = `<div class="nav"><h1>Card corner — sound + save, redesign frames</h1>
+    <p><b>Owner picked H1 (2026-09-05); it is on main.</b> The shipped control is the badge's twin — same 26pt height, same frosted white — with Phosphor glyphs from the redline font subset (both weights), saved filling the bookmark in redline green.</p>
     <p>What is wrong today (H0): the control is 37pt tall beside a 26pt badge, so the top row has two different sizes of white; and both glyphs are hand-built from rectangles because neither icon font had a speaker. Every frame below uses Phosphor glyphs — the same library as the tab bar — which the font pipeline can subset in one run.</p>
     <div>Jump: ${keys.map(k=>`<a href="#${k}">${k}</a>`).join('')} <a href="?only=H1">H1 full-screen</a></div></div>`;
   root.innerHTML = nav + `<div class="gallery">${keys.map(k=>`<div class="frame" id="${k}"><div class="cap">${FRAMES[k].title}<small>${FRAMES[k].sub}</small></div>${FRAMES[k].html(true)}${FRAMES[k].html(false)}</div>`).join('')}</div>`;

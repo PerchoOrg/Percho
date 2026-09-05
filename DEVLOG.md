@@ -16,67 +16,76 @@ Same reverse-chronological format, same content.
 
 ---
 
-## 2026-09-05 06:40 UTC — phase177: tab bar icons — redesign demo, decision pending
+## 2026-09-05 08:45 UTC — phase175: the corner ships as H1 — badge-height pill, real Phosphor glyphs
 
-**Objective**: owner: "feed search saved you icons do not interesting,
-immersive, cute to me (saved button is even not centered!), redesign this."
-Asked for demos before choosing, so this phase ships a hosted picker, not
-the app change.
-
-**Diagnosis — the off-centre Saved icon is a measured bug, not taste.**
-`TabBarIconFont.ts` documents the glyphs as flush-left with
-`TAB_BAR_ART_WIDTH` = drawing width, and `TabBar.tsx` shifts each glyph by
-`(1 - artWidth) / 2` em to centre it. fontTools on the shipped
-`TabBarIcons.ttf` says otherwise: every glyph is already centred in its em
-box (bookmark x=[0.219, 0.781], house [0.125, 0.875], search [0.093, 0.906],
-user [0.094, 0.906]); the recorded "widths" are xMax. So the shift pushes
-every icon RIGHT — bookmark by 0.11 em ≈ 2.7 px at the 24.9 px render size,
-house ≈ 1.5 px, search/you ≈ 1.2 px. The fix is to delete the shift and the
-table; that lands with the redesign.
+**Objective**: owner picked **H1** off
+`percho.co/demos/card-corner-v2` ("go with your recommendation"). Build it.
 
 **Actions**:
-- `apps/web/public/demos/tabbar-redesign/index.html` + Phosphor regular /
-  fill / bold woff2 (self-hosted, ~430 KB, demo only). Live at
-  https://www.percho.co/demos/tabbar-redesign
-- Panel: per-tab icon pickers (Feed: house-simple / house / house-line;
-  Search: magnifying-glass / binoculars / compass; Saved: bookmark-simple /
-  bookmark / heart / heart-straight / star; You: user / smiley /
-  hand-waving / person / planet), active style (duotone = outline + 22% fill
-  tint, bold duotone, solid fill, bold outline, outline-only as shipped),
-  switch motion (pop + tilt, pop, jump, none), active label 600 vs 500.
-- Six phones update live: **0** current (shift bug reproduced), **A** flat
-  bar, **B** flat + 10% green pill, **C** floating white capsule, **D** C +
-  pill, **E** dark ink capsule with mint active. Tapping a tab in any phone
-  plays the motion.
+- `scripts/icon-fonts/build-icon-font.py` — now builds **both** weights.
+  `PerchoIconsOutline.ttf` had no build script at all (it was a hand-made
+  artifact), so a glyph could not be added to it reproducibly; the regular
+  weight is fetched from the same pinned npm package
+  (`@phosphor-icons/web` 2.1.2) `build-tabbar-icon-font.py` uses. The script
+  also prints measured art widths for both fonts now, instead of leaving the
+  measurement to a snippet pasted in a docstring.
+  - Also fixed: `REPO` was `parent.parent`, from before the scripts moved
+    into `icon-fonts/`, so every path resolved under `scripts/` and the
+    script could not find its own source font. `build-tabbar-icon-font.py`
+    still carries the unfixed copy — untouched, nothing needed it today.
+- Three glyphs added to the subset (both weights, now 21 each):
+  `soundOn` = speaker-simple-high, `soundOff` = speaker-simple-slash, and
+  `bookmark` **repointed** from bookmark-fill to **bookmark-simple** — which
+  is `TAB_BAR_GLYPH.saved`, the Saved tab's own drawing, so the card's save
+  control and the tab it saves into are one shape. Repointing was free:
+  nothing rendered `bookmark` (phase140 replaced it with `View` art), so no
+  call site changed art.
+- `components/cards/CardCorner.tsx` — rewritten, 317 → 156 lines. All the
+  hand-built art (`SpeakerIcon`, `BookmarkIcon`, ~20 geometry constants and
+  ~15 styles) is gone; the file mounts two `RedlineIcon`s. Container is
+  `CORNER_HEIGHT = 26` (the LISTING badge's height) at the badge's own
+  `rgba(255,255,255,0.92)`, was 37pt at 0.85. Saved fills the bookmark in
+  `redline.accent`. The hairline divider is gone (owner picked H1, not H1c).
+  Per-cell `hitSlop` is now asymmetric — 12 outward, `GAP / 2` inward — so
+  the two 15pt glyphs get ~33 × 50pt targets that do not overlap.
+- `theme/listing-layout.test.ts` — the two assertions that pinned the old
+  shape (37pt capsule / `function SpeakerIcon` / 0.85 fill) now pin the new
+  one, and assert the corner's fill EQUALS the badge's, which is the whole
+  point of the change.
+- Demo page marked "CHOSEN — SHIPPED".
 
 **Decisions**:
-- Still an icon font, still Phosphor. `react-native-svg` red-screened in
-  Expo Go (2026-07-30) and the phone is still on Expo Go, so "cute" has to
-  come from weight + a second layered glyph + motion, not bespoke SVG. The
-  duotone look in the demo is two stacked `<Text>`s (fill under regular) —
-  exactly what the RN version would be, no new native module.
-- Bold weight offered because at 22 px it is the chunkier, friendlier
-  Phosphor; it costs one more subset in the font.
-- Floating capsule variants included even though the owner rejected a
-  capsule on 2026-08-14 — "immersive" is in this brief, so it gets a fair
-  frame rather than a silent omission. Card height is identical in flat and
-  floating frames (the 96 pt bar and the 108 pt float inset match).
+- **Both weights in the redline subset**, rather than a new card-chrome font
+  or extending `TabBarIcons.ttf`. `RedlineIcon` already renders either
+  weight off one codepoint table, so the corner needed no new machinery —
+  and the outline/fill pair is exactly what the saved state wants.
+- **Verified before rebuilding**: the committed `PerchoIcons.ttf` and
+  `PerchoIconsOutline.ttf` are both byte-identical to what the script's
+  subset calls produce from Phosphor 2.1.2, so none of the existing 19
+  glyphs moved. Internal family names ("Phosphor-Fill" / "Phosphor") are
+  preserved, which is what keeps CoreText from collapsing the two
+  registrations (the failure mode `build-tabbar-icon-font.py` documents).
+- **`OUTLINE_ART_WIDTH` left alone** except for the changed `bookmark`. The
+  table disagrees with the font it describes for ~8 glyphs (it says camera
+  0.9062; the committed font measures 0.8125), which shifts outline icons
+  by ~0.05em ≈ 0.6pt on the trade-off face. Pre-existing, cosmetic, and not
+  this task — flagged here rather than fixed silently.
 
-**Issues**: first deploy rendered every icon as an empty box. Not the
-codepoints (verified in the committed file) — the `@font-face` URLs were
-relative (`./Phosphor.woff2`). Vercel serves this page at
-`/demos/tabbar-redesign` and 308-redirects the trailing-slash form to it, so
-a relative URL resolves one directory up: `/demos/Phosphor.woff2` → 404,
-every glyph falls back to the system font, and PUA codepoints draw as
-tofu. **Resolution**: all four `url()`s are now absolute
-(`/demos/tabbar-redesign/…`, and the DM Serif borrow from
-`/demos/feed-chrome-v1/…`). Rule for the next hosted demo: no relative asset
-URLs — this directory is served without a trailing slash.
+**Verification**: `tsc --noEmit` clean; `vitest run` 50 files / 528 tests
+pass; `biome check .` on `apps/mobile` — 1 error, 8 warnings, byte-identical
+to the same command run against a `git archive` of `origin/main` (all in
+`search.tsx` / `feed.tsx` / `use-swipe-card.ts` / `scripts/probe-session.ts`,
+none in a file this phase touched). Both new glyphs were rasterised out of
+both .ttf files and eyeballed — a wrong codepoint draws a real icon, so no
+test can catch that.
 
-**Next steps**: owner picks icons + style + motion + bar shape from the
-demo; then port to `components/TabBar.tsx` (rebuild `TabBarIcons.ttf` with
-the chosen glyphs in the chosen weights, drop the art-width shift, add the
-reanimated spring + `Haptics.selectionAsync`).
+**Issues**: none blocking. Not verifiable off-device: the 26pt pill's
+translucency over a bright sky, and whether 15pt glyphs are big enough for
+the owner's taste (H1d — 30pt / 17pt — is still on the demo page if not).
+
+**Next steps**: device pass on the owner's iPhone. Metro serves
+`~/Workspace/Percho`, so that worktree needs `git pull` before the change
+appears — the fonts are assets, so Metro must restart to pick them up.
 
 ## 2026-09-05 08:20 UTC — phase175: the card's top-right control — redesign frames, decision pending
 
@@ -291,6 +300,68 @@ guessed. Not seen on device by me.
 (the chips and the chart both need the new API). Open questions for him:
 the `moreReasons` evidence call above, and whether the body should move to
 the listing's green palette.
+
+## 2026-09-05 06:40 UTC — phase177: tab bar icons — redesign demo, decision pending
+
+**Objective**: owner: "feed search saved you icons do not interesting,
+immersive, cute to me (saved button is even not centered!), redesign this."
+Asked for demos before choosing, so this phase ships a hosted picker, not
+the app change.
+
+**Diagnosis — the off-centre Saved icon is a measured bug, not taste.**
+`TabBarIconFont.ts` documents the glyphs as flush-left with
+`TAB_BAR_ART_WIDTH` = drawing width, and `TabBar.tsx` shifts each glyph by
+`(1 - artWidth) / 2` em to centre it. fontTools on the shipped
+`TabBarIcons.ttf` says otherwise: every glyph is already centred in its em
+box (bookmark x=[0.219, 0.781], house [0.125, 0.875], search [0.093, 0.906],
+user [0.094, 0.906]); the recorded "widths" are xMax. So the shift pushes
+every icon RIGHT — bookmark by 0.11 em ≈ 2.7 px at the 24.9 px render size,
+house ≈ 1.5 px, search/you ≈ 1.2 px. The fix is to delete the shift and the
+table; that lands with the redesign.
+
+**Actions**:
+- `apps/web/public/demos/tabbar-redesign/index.html` + Phosphor regular /
+  fill / bold woff2 (self-hosted, ~430 KB, demo only). Live at
+  https://www.percho.co/demos/tabbar-redesign
+- Panel: per-tab icon pickers (Feed: house-simple / house / house-line;
+  Search: magnifying-glass / binoculars / compass; Saved: bookmark-simple /
+  bookmark / heart / heart-straight / star; You: user / smiley /
+  hand-waving / person / planet), active style (duotone = outline + 22% fill
+  tint, bold duotone, solid fill, bold outline, outline-only as shipped),
+  switch motion (pop + tilt, pop, jump, none), active label 600 vs 500.
+- Six phones update live: **0** current (shift bug reproduced), **A** flat
+  bar, **B** flat + 10% green pill, **C** floating white capsule, **D** C +
+  pill, **E** dark ink capsule with mint active. Tapping a tab in any phone
+  plays the motion.
+
+**Decisions**:
+- Still an icon font, still Phosphor. `react-native-svg` red-screened in
+  Expo Go (2026-07-30) and the phone is still on Expo Go, so "cute" has to
+  come from weight + a second layered glyph + motion, not bespoke SVG. The
+  duotone look in the demo is two stacked `<Text>`s (fill under regular) —
+  exactly what the RN version would be, no new native module.
+- Bold weight offered because at 22 px it is the chunkier, friendlier
+  Phosphor; it costs one more subset in the font.
+- Floating capsule variants included even though the owner rejected a
+  capsule on 2026-08-14 — "immersive" is in this brief, so it gets a fair
+  frame rather than a silent omission. Card height is identical in flat and
+  floating frames (the 96 pt bar and the 108 pt float inset match).
+
+**Issues**: first deploy rendered every icon as an empty box. Not the
+codepoints (verified in the committed file) — the `@font-face` URLs were
+relative (`./Phosphor.woff2`). Vercel serves this page at
+`/demos/tabbar-redesign` and 308-redirects the trailing-slash form to it, so
+a relative URL resolves one directory up: `/demos/Phosphor.woff2` → 404,
+every glyph falls back to the system font, and PUA codepoints draw as
+tofu. **Resolution**: all four `url()`s are now absolute
+(`/demos/tabbar-redesign/…`, and the DM Serif borrow from
+`/demos/feed-chrome-v1/…`). Rule for the next hosted demo: no relative asset
+URLs — this directory is served without a trailing slash.
+
+**Next steps**: owner picks icons + style + motion + bar shape from the
+demo; then port to `components/TabBar.tsx` (rebuild `TabBarIcons.ttf` with
+the chosen glyphs in the chosen weights, drop the art-width shift, add the
+reanimated spring + `Haptics.selectionAsync`).
 
 ## 2026-09-05 06:40 UTC — phase176: the community page's hero follows the listing hero — places as a strip on the film
 
