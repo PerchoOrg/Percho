@@ -16,7 +16,10 @@ Same reverse-chronological format, same content.
 
 ---
 
-## 2026-09-05 06:40 UTC — phase174: the community page's hero follows the listing hero — places as a strip on the film
+## 2026-09-05 06:40 UTC — phase176: the community page's hero follows the listing hero — places as a strip on the film
+
+(Numbered phase174 while in review; 174 and 175 landed from another
+agent in the meantime, so this merged as 176.)
 
 **Objective**: owner (2026-09-04): "Community explore page first section
 should follow the listing pattern, so users can select parts to view, and
