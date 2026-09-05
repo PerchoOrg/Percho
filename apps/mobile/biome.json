@@ -3,5 +3,11 @@
 	"extends": ["../../biome.base.json"],
 	"files": {
 		"ignore": [".expo", "expo-env.d.ts", "node_modules"]
-	}
+	},
+	"overrides": [
+		{
+			"include": ["app.json"],
+			"formatter": { "indentStyle": "space", "indentWidth": 2 }
+		}
+	]
 }
