@@ -16,6 +16,53 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-05 06:45 UTC — phase179: feed header compacted — one-line crumb, card top-aligned
+
+**Objective**: owner on device: "Space between Percho/city/community info
+and card is too big, it doesnt look good, and no need to show xxx
+communities in this page". What he sees is `Atlanta metro › Dallas` over
+`188 communities` (Dallas, GA has no median, so the stats line was a bare
+count), then ~60pt of paper, then the card.
+
+**Actions**:
+- `components/feed/ScopeCrumb.tsx` — the stats line is gone from the crumb;
+  it is one line, `Atlanta metro › Dallas ⌄`, in a 24pt box (was
+  `minHeight: 40` + gap). `hitSlop` grew to 10pt vertical so the touch
+  target stays at 44. `scopeStatsLine` and its test are untouched —
+  `ScopeSheet` still draws it under every city, which is where the owner
+  did not object to it. The `unit` prop is dropped.
+- `components/SwipeStack.tsx` — the top card rests at the stage's TOP
+  (`restTop = 0`) instead of centred `(stageHeight - frameHeight) / 2`.
+  `StackCard` takes `restTop` in place of `stageHeight` (that was its only
+  use); the peek anchor and the paper clip band derive from the same
+  number, so the behind card still hides exactly under the top card's
+  bottom edge.
+- `app/(tabs)/feed.tsx` — `scopedUnit` memo removed (only fed the crumb's
+  stats). `CARD_INSET.top` stays 12, so crumb-to-card is now 2 + 12 = 14pt.
+- `RELEASE.md` dated bullet under v1.3.
+
+**Decisions**: where the gap actually came from was the stage, not the
+header — `CARD_FRAME_RATIO` 0.83 leaves ~100pt of slack on an iPhone 15 and
+centring split it 50/50, so half of it sat between the crumb and the card
+no matter how tight the header was. Moving the card up rather than
+enlarging it keeps the card's aspect (and so the tour's crop) exactly
+where the 2026-08-23 pairing of ratio and gutter put it. The slack now all
+sits under the card, above the tab bar, where the trade-off `echo` line
+already lives. Did not fold the crumb into the wordmark row: the owner's
+2026-08-14 rule (wordmark centred, corners empty) still holds and a
+side-by-side would break it.
+
+**Verification**: `pnpm typecheck` clean; `pnpm test` 528/528; biome clean
+on the three changed files. `pnpm lint` for the whole app fails on
+`app.json` FORMAT — pre-existing on `origin/main` since `ea2195c5`
+(phase173's `eas build` rewrote the file with 2-space indent and the
+repo's biome wants tabs). Not touched here; one `biome format --write
+app.json` fixes it whenever someone is in that file.
+
+**Next steps**: owner to eyeball on Metro after merge (`git pull` in the
+reference worktree; no dependency change this time, so no `pnpm install`
+needed).
+
 ## 2026-09-05 06:30 UTC — phase173: build 5 exists — the App ID checkbox, then a missing babel preset
 
 **Objective**: get the first store-candidate build out after phase172

@@ -8,6 +8,9 @@
 
 ## v1.3 — Opening a home now answers "does this fit me?"
 
+### 2026-09-05
+- **The feed's header is one tidy line and the card sits right under it.** "Atlanta metro › Dallas" no longer carries a "188 communities" line beneath it (those numbers still show in the city picker), and the card no longer floats with a band of empty paper above it — it now starts just below the header, with the spare room at the bottom instead
+
 ### 2026-09-04
 - **The privacy policy and terms now describe the real app.** Both pages were placeholders; they now explain accounts (Sign in with Apple or an emailed code), what happens to a tour request, how resident reviews are moderated and shown without names, what usage information the app records, and how to delete your account from the You tab. Every review in the app also has a Report link that emails us with the review reference
 - **Residents can now review their neighbourhood.** Every community page has a Resident Reviews section: an overall rating, a few optional specifics (quiet, walkable, neighbourly, value) and a paragraph in the reviewer's own words. You need to be signed in to write one, each person gets one review per neighbourhood, and nothing appears until a member of the team has read it — reviews are shown without names. Until a neighbourhood has an approved review, the section simply says so and invites the first one; there is no filler
