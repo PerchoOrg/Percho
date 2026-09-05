@@ -171,9 +171,53 @@ export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
     for (const [id, uid] of byCommunityLatest) {
       byCommunity.set(id, uid);
     }
+    await fillSegmentBuckets(supabase, segmentsByCommunity);
   }
 
   return { byListing, byCommunity, segmentsByCommunity };
+}
+
+/**
+ * Attach `community_pois.intent_bucket` to every segment that has a `poiId`.
+ *
+ * The community page's jump strip groups the film by CATEGORY rather than by
+ * place name (owner 2026-09-05), and only this table knows a place's category:
+ * Ken Burns assemblies write a `bucket` onto each clip, Seedance ones do not.
+ * Measured 2026-09-05, the join resolves 9/9 and 12/12 of the two live tours'
+ * places, so a clip's own `bucket` is only the fallback.
+ *
+ * One query for every tour community at once (15 assemblies exist in total).
+ * Mutates in place: a failed read leaves the segments as they were, and the
+ * strip falls back to the un-grouped film — never an empty strip.
+ */
+async function fillSegmentBuckets(
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  supabase: any,
+  segmentsByCommunity: Map<string, TourSegment[]>,
+): Promise<void> {
+  const communityIds = [...segmentsByCommunity.keys()];
+  if (communityIds.length === 0) return;
+
+  const { data, error } = (await supabase
+    .from('community_pois')
+    .select('community_id, poi_id, intent_bucket')
+    .in('community_id', communityIds)) as {
+    data: { community_id: string; poi_id: string; intent_bucket: string }[] | null;
+    error: unknown;
+  };
+  if (error || !data) return;
+
+  const bucketByKey = new Map<string, string>();
+  for (const row of data) {
+    bucketByKey.set(`${row.community_id}:${row.poi_id}`, row.intent_bucket);
+  }
+  for (const [communityId, segments] of segmentsByCommunity) {
+    for (const seg of segments) {
+      if (!seg.poiId) continue;
+      const bucket = bucketByKey.get(`${communityId}:${seg.poiId}`);
+      if (bucket) seg.bucket = bucket;
+    }
+  }
 }
 
 /** Listing ids that have a hero tour, for the dev `videoFirst` fetch. */

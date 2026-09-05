@@ -164,6 +164,102 @@ or the app's label and the video's coexist for a while.
 **Next steps**: owner picks L1–L5 at
 https://www.percho.co/demos/community-label-v1/ — L1 recommended.
 
+## 2026-09-05 07:20 UTC — phase178: the community page becomes numbers — categories on the strip, counts charted
+
+**Objective**: the owner's four notes on phase176, on device: "1) no need
+to show numbers, 2) dont say the poi name, just group them by tag or
+category, it is too long to show all of them, 3) put city and state on the
+right side of the community name, 4) still too many text, we need to be
+more interactive, and better visualization, with numbers as much as
+possible, text is not preferred, exception for the key insights, numbers".
+
+**Actions** — server:
+- `apps/web/lib/feed/tour-segments.ts` — `TourSegment` gains `poiId` and
+  `bucket`. Clips already carried `poi_id`; Ken Burns assemblies also
+  carry a `bucket`, Seedance ones do not.
+- `apps/web/lib/feed/vertical-videos.ts` — new `fillSegmentBuckets()`, one
+  `community_pois` read for every tour community, attaching
+  `intent_bucket` to each segment. Measured against production: the join
+  resolves **9/9** of Peachtree Corners' places and **12/12** of
+  Aberdeen's, so the clip's own `bucket` is only a fallback.
+- `apps/web/lib/communities/detail.ts` — `nearby: {bucket,count}[]` added
+  to the DTO, biggest first. `fetchPoiCounts` was ALREADY being fetched on
+  this path and only ever reached the screen as three or four sentences of
+  reason evidence; sending the whole map is what makes note 4 possible.
+  `NEARBY_BUCKET_DENYLIST` = `other`, `asian_community` (reasoning below).
+
+**Actions** — mobile:
+- New `lib/community/tour-buckets.ts` (+ 8 tests): `intent_bucket` →
+  chip label, and `buildTourGroups()` — the listing's `lib/listing/rooms.ts`
+  for a film. Same `{groups, keyByIndex}` shape, same "chip jumps to the
+  group's first member, highlight follows the current one" contract.
+- `components/community/TourHero.tsx` — chips are now categories with a
+  place count ("Schools 2"), not names with an ordinal.
+- New `components/community/{StatBand,NearbyChart,RatingBars}.tsx` —
+  the three figures as numerals, the POI counts as bars scaled to the
+  community's own largest, the four review dimensions as bars out of a
+  fixed 5.
+- `app/community/[slug].tsx` — headline row (name left, place right);
+  reason evidence lines survive only on the top three; `moreReasons` and
+  interests become label chips; the interest ordinals and the
+  `label ——— value` stat rows are gone.
+
+**Decisions**:
+- **"No numbers" is about ORDINALS, not counts.** Note 1 and note 4 read
+  as contradictory until you see which numbers each is about: the chips'
+  `1 2 3` counted the chips, which the eye already does. "Schools 2"
+  counts the neighbourhood. Ordinals off everywhere (tour strip,
+  interests), counts on.
+- **Categories from `community_pois`, not from the clip.** The clip's
+  `bucket` is only written by one of the two renderers; the table is the
+  schema-constrained column and joins at 100%.
+- **`other` and `asian_community` are not named** — on the strip they fold
+  into "More", in the chart they are dropped. `other` is the tagger's
+  shrug. `asian_community` is left out on the same reasoning
+  `community-reasons.ts` refuses `avg_income`: a demographic-sounding
+  label on a neighbourhood page steers by proxy, and unlike "39
+  restaurants" the label does not say what was counted. 3 rows in the
+  whole table today. Revisit if a seed makes those places legible as what
+  they are (grocers, restaurants) — then chart them under that name.
+- **The biggest editorial call: `moreReasons` lost their evidence lines.**
+  A community stating ten attributes drew ten icon+label+sentence rows.
+  Every number those sentences carried is now charted above them (POI
+  counts in `NearbyChart`, `homeowners_pct` / `residents_count` in
+  `StatBand`), so no evidence left the page — it stopped being narrated
+  one line at a time. The top three keep their sentences, which is note
+  4's own "exception for the key insights". One JSX block to revert.
+- **Body palette left on `colors.*` (amber), not switched to the listing's
+  `explore.*` (green).** "Follow the listing pattern" was about structure;
+  repainting every section head is a separate decision the owner has not
+  made. The hero uses `explore.*` because it draws over media, same as the
+  listing hero.
+- `nearby` is OPTIONAL in the mobile DTO. The phone reads
+  `https://www.percho.co` (`lib/api/base.ts`), so a Metro reload lands
+  before the Vercel deploy — a build in the field must not crash on a
+  field the API is not sending yet.
+
+**Verification**: web `pnpm typecheck` / `pnpm test` 867 / `pnpm build`
+all clean; mobile `pnpm typecheck` / `pnpm test` 536 (8 new) / biome clean
+on changed files. Production data read directly to size the design (two
+live tours, 228 POI rows on Peachtree Corners, 38 on Aberdeen) rather than
+guessed. Not seen on device by me.
+
+**Learnings**:
+- `community_pois.intent_bucket` is populated far better than the
+  2026-08-02 note in `detail.ts` suggests for the communities that MATTER
+  here — a community with an assembled tour necessarily has POI rows,
+  because the tour was cut from them. The "1 of 8,679" figure is true of
+  the whole table and misleading about the tour set.
+- The check constraint in the original migration lists 15 buckets; live
+  data also contains `amenities`, `civic`, `waterfront`, `other`, so the
+  constraint was relaxed somewhere later. `BUCKET_LABELS` covers all 16
+  seen plus `faith`/`work_hubs` from the original list.
+
+**Next steps**: owner review on the phone, after the Vercel deploy lands
+(the chips and the chart both need the new API). Open questions for him:
+the `moreReasons` evidence call above, and whether the body should move to
+the listing's green palette.
+
 ## 2026-09-05 06:40 UTC — phase176: the community page's hero follows the listing hero — places as a strip on the film
 
 (Numbered phase174 while in review; 174 and 175 landed from another
