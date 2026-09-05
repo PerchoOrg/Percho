@@ -62,6 +62,17 @@ table; that lands with the redesign.
   frame rather than a silent omission. Card height is identical in flat and
   floating frames (the 96 pt bar and the 108 pt float inset match).
 
+**Issues**: first deploy rendered every icon as an empty box. Not the
+codepoints (verified in the committed file) — the `@font-face` URLs were
+relative (`./Phosphor.woff2`). Vercel serves this page at
+`/demos/tabbar-redesign` and 308-redirects the trailing-slash form to it, so
+a relative URL resolves one directory up: `/demos/Phosphor.woff2` → 404,
+every glyph falls back to the system font, and PUA codepoints draw as
+tofu. **Resolution**: all four `url()`s are now absolute
+(`/demos/tabbar-redesign/…`, and the DM Serif borrow from
+`/demos/feed-chrome-v1/…`). Rule for the next hosted demo: no relative asset
+URLs — this directory is served without a trailing slash.
+
 **Next steps**: owner picks icons + style + motion + bar shape from the
 demo; then port to `components/TabBar.tsx` (rebuild `TabBarIcons.ttf` with
 the chosen glyphs in the chosen weights, drop the art-width shift, add the
