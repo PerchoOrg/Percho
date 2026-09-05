@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho feed — put it at the TOP</title>
+<style>
+:root{
+  --bg:#F7F5F0; --ink:#2B2116; --ink2:#6F6B65; --ink3:#96918A;
+  --green:#0E6B57; --mint:#E7F1ED; --neg:#B3402A;
+  --serif: ui-serif,"New York","Iowan Old Style",Georgia,serif;
+  --ui:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:20px}
+.nav{max-width:1240px;margin:0 auto 18px;font:400 14px/1.6 var(--ui)}
+.nav h1{font:600 22px var(--ui);color:#086B5B;margin-bottom:6px}
+.nav p{max-width:860px;color:#5A4E40;margin:4px 0}
+.nav b{color:#2B2116} .nav a{color:#B45309;font-weight:600;text-decoration:none;margin-right:10px}
+.gallery{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start;justify-content:center}
+.frame{width:428px}
+.cap{min-height:104px;padding:6px 2px;font:600 15px/1.3 var(--ui)}
+.cap small{display:block;font:400 12.5px/1.4 var(--ui);color:#6F6B65;margin-top:3px}
+.cap em{font-style:normal;color:var(--green)} .cap u{text-decoration:none;color:#B3402A}
+.phone{position:relative;width:428px;height:926px;background:var(--bg);overflow:hidden;border-radius:44px;box-shadow:0 18px 44px rgba(0,0,0,.25)}
+/* real status bar, clipped out of the owner's own screenshot */
+.status{position:absolute;left:0;top:0;width:428px;height:47px;overflow:hidden}
+.status img{width:428px;display:block}
+.tab{position:absolute;left:0;bottom:0;width:428px;display:block}
+.card{position:absolute;left:16px;width:396px;height:575px;border-radius:28px;overflow:hidden;
+  background:url("/demos/feed-page-v2/card.jpg") center/100% 100% no-repeat;
+  box-shadow:0 3px 10px rgba(32,28,22,.05),0 16px 38px rgba(32,28,22,.085)}
+.card.tall{height:693px}
+.hdr{position:absolute;left:0;right:0;top:47px}
+.word{height:44px;display:flex;align-items:center;justify-content:center;font:400 34px var(--serif);color:#086B5B;letter-spacing:-.5px;line-height:1}
+.word.sm{height:38px;font-size:26px}
+.crumbLine{display:flex;align-items:center;justify-content:center;gap:6px;font:600 14px var(--ui);color:var(--ink)}
+.crumbLine .root{color:var(--ink2);font-weight:500}
+.crumbLine .sep{color:var(--ink3);font-weight:400}
+.crumbLine .cur{color:var(--green)}
+.stats{text-align:center;font:400 12px var(--ui);color:var(--ink2);margin-top:3px}
+.cityRow{display:flex;align-items:baseline;justify-content:center;gap:8px}
+.cityName{font:500 30px var(--serif);letter-spacing:-.6px;color:var(--ink)}
+.chips{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:8px}
+.chip{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 11px;border-radius:14px;background:#fff;
+  border:1px solid rgba(23,23,21,.08);font:600 12px var(--ui);color:var(--ink2)}
+.chip b{color:var(--ink);font-weight:700}
+.chip.mint{background:var(--mint);border-color:transparent;color:var(--green)}
+/* the community strip */
+.strip{display:flex;gap:10px;padding:0 16px;margin-top:8px;overflow:hidden}
+.pin{width:52px;flex:0 0 52px;text-align:center}
+.pin img{width:52px;height:52px;border-radius:16px;object-fit:cover;background:#EFE9DE;display:block}
+.pin.on img{border:2px solid var(--green)}
+.pin span{display:block;font:500 10px/12px var(--ui);color:var(--ink2);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pin.on span{color:var(--green);font-weight:700}
+.stripHead{display:flex;align-items:baseline;justify-content:space-between;padding:0 20px;margin-top:12px}
+.stripHead .eb{font:600 10px var(--ui);letter-spacing:1.3px;color:var(--ink3);text-transform:uppercase}
+.stripHead .all{font:600 12px var(--ui);color:var(--green)}
+/* the leftover band, measured */
+.band{position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:center;font:600 11px var(--ui);color:#B3402A}
+.band.ok{color:var(--green)}
+.band i{position:absolute;left:22px;right:22px;height:1px;background:currentColor;opacity:.3}
+.band span{position:relative;background:var(--bg);padding:0 8px}
+.cap i{display:block;font:400 11px/1.35 var(--ui);color:#8A7358;font-style:normal;margin-top:5px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const TABTOP=830, CARD_H=575, GAP=12;
+const COVERS=[
+ ['Aberdeen','https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/aberdeen-2.jpg'],
+ ['Bellmoore Park','https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/bellmoore-park.jpg'],
+ ['Ashley Crossing','https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/ashley-crossing.jpg'],
+ ['Apremont','https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/apremont-highcroft.jpg'],
+ ['Abbotts Mill','https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/abbotts-mill.jpg'],
+];
+const svg={
+ chev:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+ spark:'<svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor"><path d="M208,144a15.78,15.78,0,0,1-10.42,14.94l-51.65,19-19,51.61a15.92,15.92,0,0,1-29.88,0L78.07,178l-51.65-19a15.92,15.92,0,0,1,0-29.88l51.65-19,19-51.61a15.92,15.92,0,0,1,29.88,0l19,51.61,51.65,19A15.78,15.78,0,0,1,208,144Z"/></svg>',
+};
+const crumb=`<div class="crumbLine"><span class="root">Atlanta metro</span><span class="sep">›</span><span class="cur">Dallas</span><span style="color:var(--ink3);display:flex">${svg.chev}</span></div>`;
+const strip=(active=0)=>`<div class="strip">${COVERS.map(([n,u],i)=>`<div class="pin ${i===active?'on':''}"><img src="${u}"><span>${n}</span></div>`).join('')}</div>`;
+
+/* headerH = everything above the card, status bar included. The card then sits
+   at headerH + 12 and the leftover band is what is left above the tab bar. */
+function phone(headerH, header, o={}){
+  const cardTop=headerH+GAP, cardH=o.cardH||CARD_H, band=TABTOP-(cardTop+cardH);
+  return `<div class="phone">
+    <div class="status"><img src="/demos/feed-page-v2/header.png"></div>
+    <div class="hdr">${header}</div>
+    <div class="card ${o.cardH?'tall':''}" style="top:${cardTop}px${o.art?`;background-image:url('${o.art}')`:''}"></div>
+    ${band>14?`<div class="band ${band<=48?'ok':''}" style="top:${cardTop+cardH}px;height:${band}px"><i></i><span>${band} pt empty</span></div>`:''}
+    <img class="tab" src="/demos/feed-page-v2/tabbar.png">
+  </div>`;
+}
+
+const FRAMES={
+ T0:{title:'T0 · Today — 128 pt of it sits under the card',
+     sub:'For reference. Everything above the card is the wordmark and one scope line (115 pt of content), so all the leftover space ends up in one band at the bottom.',
+     html:()=>phone(115, `<div class="word">Percho</div>${crumb}`)},
+
+ T1:{title:'T1 · The stats line comes back  (+24 → 104 still empty)',
+     sub:'What the scope line looked like before this morning: the city, then what is in it. The cheapest possible answer — and it closes less than a fifth of the gap.',
+     src:'Real: geoUnit.communityCount, geoUnit.stats.medianListPrice.',
+     html:()=>phone(139, `<div class="word">Percho</div>${crumb}<div class="stats">40 communities · median $594K</div>`)},
+
+ T2:{title:'T2 · City header, stats as chips  (+60 → 68 left)',
+     sub:'The city becomes the page\'s title instead of a crumb, its numbers sitting under it as chips. The wordmark shrinks to make room — the app already said its name on the launch screen.',
+     src:'Real: geoUnit name / communityCount / medianListPrice. No "N with tours" — that column does not exist on the wire.',
+     html:()=>phone(175, `<div class="word sm">Percho</div>
+       <div class="cityRow"><span class="cityName">Dallas, GA</span><span style="color:var(--ink3);display:flex">${svg.chev}</span></div>
+       <div class="chips"><span class="chip"><b>40</b> communities</span><span class="chip">median <b>$594K</b></span></div>`)},
+
+ T3:{title:'T3 · The community strip ★ the one I would build  (+104 → 24 left)',
+     sub:'Community-first, literally: the city header, then the neighbourhoods Percho has toured there as a row you can scroll and tap — the one on screen is ringed and moves with the deck. <em>The card keeps its full height and the film keeps every pixel</em>, and the hole drops from 128 pt to 24.',
+     src:'Real: community covers + names from the pool (the scope sheet already lists them); the ring follows the deck index.',
+     html:()=>phone(219, `<div class="word sm">Percho</div>
+       <div class="cityRow"><span class="cityName">Dallas, GA</span><span style="color:var(--ink3);display:flex">${svg.chev}</span></div>
+       <div class="stats">40 communities · median $594K</div>
+       ${strip(0)}`)},
+
+ T4:{title:'T4 · Strip only, no city title  (+72 → 56 left)',
+     sub:'T3 with the big name cut: one line of scope, then the neighbourhoods. Lighter, and the row still says "this is a community app" — but it leaves 56 pt under the card, so it does not close the gap on its own.',
+     src:'Real: same as T3.',
+     html:()=>phone(187, `<div class="word sm">Percho</div>${crumb}${strip(0)}`)},
+
+ T5:{title:'T5 · City header + what Percho is learning  (+104 → 24 left)',
+     sub:'Same geometry as T3, different second row: where you are looking, and what your swiping has taught it. The chips change as you swipe. Pick this if the strip of faces feels like too much furniture.',
+     src:'Real: geoUnit stats + rankedDims / DIM_LABELS (the You tab\'s evidence, surfaced where the learning happens).',
+     html:()=>phone(219, `<div class="word sm">Percho</div>
+       <div class="cityRow"><span class="cityName">Dallas, GA</span><span style="color:var(--ink3);display:flex">${svg.chev}</span></div>
+       <div class="stats">40 communities · median $594K</div>
+       <div class="chips" style="margin-top:12px"><span class="chip mint">${svg.spark} Walkable streets</span><span class="chip mint">Move-in ready</span></div>`)},
+
+ A2:{title:'A2 · The fallback you named — card fills the stage',
+     sub:'No band, no new header: the card grows to 693 pt and the page is header · card · tab bar. It costs <u>17% of the film\'s width</u> — this frame is composited from your own tour, so that is the real crop. Still the simplest thing that removes the hole.',
+     html:()=>phone(115, `<div class="word">Percho</div>${crumb}`, {cardH:693, art:'/demos/feed-page-v2/card-693.jpg'})},
+};
+
+const q=new URLSearchParams(location.search), only=q.get('only'), root=document.getElementById('root');
+function fit(){const w=Number(q.get('w'))||window.innerWidth;const k=Math.min(1,(w-14)/428);document.querySelectorAll('.frame').forEach(el=>{el.style.zoom=String(k)});}
+if(only&&FRAMES[only]){document.body.style.padding='0';root.innerHTML=FRAMES[only].html();}
+else{
+ const keys=Object.keys(FRAMES);
+ root.innerHTML=`<div class="nav"><h1>Put it at the top — the header carries the place</h1>
+  <p>The geometry works in your favour here: anything added <b>above</b> the card pushes the card down, and the empty band below shrinks by exactly the same amount. There is exactly <b>128 pt</b> of headroom — the same 128 that is empty today. The header block can grow from 115 pt to 243 before the card would touch the tab bar.</p>
+  <p>Every frame keeps the card at <b>396×575</b>, the tour's own aspect, so the film is never cropped. Each says how much empty space is left and what data it is built from. A2 at the end is the fallback you named, for a side-by-side.</p>
+  <div>Jump: ${keys.map(k=>`<a href="#${k}">${k}</a>`).join('')}</div></div>
+  <div class="gallery">${keys.map(k=>`<div class="frame" id="${k}"><div class="cap">${FRAMES[k].title}<small>${FRAMES[k].sub}</small>${FRAMES[k].src?`<i>${FRAMES[k].src}</i>`:''}</div>${FRAMES[k].html()}</div>`).join('')}</div>`;
+ fit();window.addEventListener('resize',fit);
+}
+</script>
+</body>
+</html>
