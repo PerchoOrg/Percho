@@ -16,6 +16,76 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-05 09:40 UTC — phase181: the tab bar's icons were being clipped; the band under the card gets a demo
+
+**Objective**: owner, testing build on device: (1) 「too much empty under
+the card, you need to consider the whole page layouts」 (2) 「icons get
+truncated, the heart one, why??」
+
+**(2) The clipped icons — diagnosed off his screenshot, then fixed**:
+`TabBar.tsx` draws each glyph as a `<Text>` pinned `left: 0, right: 0`
+inside the 24pt icon box. `TAB_BAR_OPTICAL_SCALE` is 1.13, so the glyph's
+1 em advance is 27.1pt — WIDER than the line it is given. iOS lays a glyph
+that overflows its line out from the left and clips the rest, so every icon
+lost its right-hand side.
+
+Measured, not guessed: each icon's ink bounding box in the 1284×2778
+screenshot, against the same glyph's outline bounds read out of
+`TabBarIcons.ttf` with fontTools.
+
+| glyph | expected | measured | lost |
+|---|---|---|---|
+| house-line | 24.4 × 20.3 | 23.3 × 20.7 | −1.1 wide |
+| compass | 22.0 × 22.0 | 21.3 × 22.0 | −0.7 wide |
+| heart | 23.7 × 20.3 | 22.3 × 20.3 | −1.4 wide |
+| hand-waving | 22.0 × 22.9 | 21.3 × 23.0 | −0.7 wide |
+
+Heights match to 0.4pt; only widths are short, and the deficit equals the
+em-box overflow in every case — which is what named the cause. Fix: the
+glyph `<Text>` gets `width: fontSize` and `left: (ICON_SIZE - fontSize) / 2`,
+the horizontal twin of the `top` the file already computed.
+`theme/tabbar-icon-font.test.ts` gains a case that fails if the
+`left: 0, right: 0` form comes back, and asserts the premise (em box wider
+than the icon box for every glyph, at any allowed scale).
+
+**(1) The band under the card — measured, then demoed, not fixed**:
+the card is NOT wrong. It measures 396 × 575pt on his device — aspect
+0.689, which is the tour canvas's own 0.685, exactly as `card-frame.ts`
+intends. What changed is where the stage's slack goes: phase179
+(`ffacc6e0`, this morning) anchored the card to the stage top —
+`restTop = 0` — because the owner had called the gap ABOVE the card a hole.
+All 128pt of slack is now in one band below it. Same slack, one end
+instead of two.
+
+The slack itself is structural: stage 693pt, card 575pt at its own aspect,
+and the card cannot grow without eating the film, because a taller card at
+the same width crops the 1080×1576 tour left and right. So this is a
+page-layout decision, not a constant to nudge — hence a demo rather than a
+patch.
+
+`apps/web/public/demos/feed-page-v2/` — six frames at his real geometry
+(428×926, header 127, card 396×575, tab bar 96), built from his own
+screenshot's pixels: A0 as-built, A1 the pre-phase179 split, **A2 card
+fills the stage** (recommended; film loses 17% of its width), A2b the 640pt
+middle setting (10%), A3 the scope crumb moves into the band, A4 deck
+controls in the band, A5 a 96pt header instead. The taller frames are
+COMPOSITED, not stretched: the film is cover-scaled and cropped while the
+card's chrome is pasted back at its real insets, so the crop shown is the
+crop he would get.
+
+**Decisions**: did not touch `restTop` or `CARD_FRAME_RATIO`. phase179 set
+those hours ago on the owner's own instruction; changing them again without
+his pick would be the third answer to the same question today.
+
+**Verification**: `tsc --noEmit` clean; `vitest run` 51 files / 539 tests
+pass (was 536 — the new case); `biome check .` 1 error / 8 warnings,
+identical to `origin/main`'s baseline and none in a touched file.
+
+**Next steps**: owner picks a frame off
+`percho.co/demos/feed-page-v2`. The icon fix needs only a Metro reload on
+his phone.
+
+
 ## 2026-09-05 17:10 UTC — phase174: the community card's place label leaves the video and joins the app
 
 **Objective**: build the owner's pick (M7 on `/demos/community-label-v1`) from

@@ -9,6 +9,7 @@
 ## v1.3 — Opening a home now answers "does this fit me?"
 
 ### 2026-09-05
+- **The tab bar's icons are whole again.** Each one was being cut down its right-hand side — the heart lost part of its lobe, the waving hand its thumb — because the drawing was given a box narrower than itself
 - **Neighbourhood cards now tell you where you are in the film.** As a neighbourhood's tour plays, the top-left corner names the place on screen and how far it is from the neighbourhood — the clubhouse, the greenway, the high school — and changes as the film moves. It used to be printed into the video itself, which meant it never quite lined up with the card and crowded out the buttons beside it. The sound and save buttons now sit in the same place they do on a home card, and you can save a neighbourhood from the feed again. The neighbourhood's name is bigger and clearer, with a small "Community" label above it
 - **Home cards have lost the "Listing" tag in the corner.** A photo of a house with a price on it was never in danger of being mistaken for anything else, and the corner is better spent on the photograph
 - **The four tabs along the bottom have been redrawn.** Feed, Search, Saved and You now use friendlier icons — a house, a compass, a heart and a waving hand — drawn a little larger than before, with the tab you're on sitting on a soft green pill and giving a small bounce as you switch to it. The old Saved icon also sat slightly off-centre; it doesn't any more

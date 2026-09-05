@@ -130,15 +130,27 @@ function Tab({
 
 	const color = active ? ACTIVE_GREEN : INACTIVE_GRAY;
 	/**
-	 * The glyph's 1 em line box is taller than the icon box (`fontSize` is
-	 * ICON_SIZE × 1.13), so it is placed explicitly rather than left to Yoga:
-	 * `top` centres the line box, `translateY` then centres the drawing inside
-	 * it. Both layers get the same numbers, which is what keeps them registered.
+	 * The glyph's 1 em box is BIGGER than the icon box in both axes (`fontSize`
+	 * is ICON_SIZE × 1.13), so it is placed explicitly rather than left to Yoga:
+	 * `top`/`left` centre the em box over the icon box, `translateY` then
+	 * centres the drawing inside it. Both layers get the same numbers, which is
+	 * what keeps them registered.
+	 *
+	 * `width` is the horizontal half of that, and it is not optional: a `<Text>`
+	 * pinned `left: 0, right: 0` inside the 24pt box gets a 24pt line — narrower
+	 * than the glyph's 1 em advance (27.1pt) — and iOS lays the glyph out from
+	 * the left of that line and CLIPS the overflow instead of letting it hang.
+	 * Measured off the owner's screenshot (2026-09-05): every icon rendered
+	 * 0.6–1.4pt narrower than its own outline, cut down the right-hand side —
+	 * the heart lost its right lobe, hand-waving its thumb. Heights matched
+	 * exactly, which is what pointed at the width.
 	 */
 	const glyphStyle = {
 		fontSize,
 		lineHeight: fontSize,
 		top: (ICON_SIZE - fontSize) / 2,
+		left: (ICON_SIZE - fontSize) / 2,
+		width: fontSize,
 		transform: [{ translateY }],
 	};
 
@@ -227,8 +239,6 @@ const styles = StyleSheet.create({
 	 */
 	icon: {
 		position: "absolute",
-		left: 0,
-		right: 0,
 		includeFontPadding: false,
 		textAlign: "center",
 	},
