@@ -10,6 +10,7 @@ import {
 	TAB_BAR_GLYPH,
 	TAB_BAR_GLYPH_CENTER_Y,
 	TAB_BAR_GLYPH_SCALE,
+	TAB_BAR_OPTICAL_SCALE,
 } from "../components/TabBarIconFont";
 const FONTS = {
 	outline: join(__dirname, "../assets/fonts/TabBarIcons.ttf"),
@@ -119,6 +120,37 @@ describe("tab bar icon font", () => {
 				TAB_BAR_GLYPH_SCALE[name as keyof typeof TAB_BAR_GLYPH_SCALE];
 			expect(scale, `${name} scale`).toBeGreaterThan(0.8);
 			expect(scale, `${name} scale`).toBeLessThanOrEqual(1);
+		}
+	});
+
+	/**
+	 * The glyph `<Text>` must carry its own em-wide box.
+	 *
+	 * `TAB_BAR_OPTICAL_SCALE` is 1.13, so the 1 em advance is always WIDER than
+	 * the 24pt icon box it sits in. A `<Text>` pinned `left: 0, right: 0` gets
+	 * the box's width, and iOS clips the overflow rather than letting the glyph
+	 * hang: on the owner's 2026-09-05 screenshot every icon measured 0.6–1.4pt
+	 * narrower than its outline, cut down the right side (the heart lost its
+	 * right lobe). So the style must set an explicit `width: fontSize`.
+	 */
+	it("gives the glyph a box at least as wide as its em advance", () => {
+		const source = readFileSync(
+			join(__dirname, "../components/TabBar.tsx"),
+			"utf8",
+		);
+		expect(source).toContain("width: fontSize");
+		expect(source).toContain("left: (ICON_SIZE - fontSize) / 2");
+		// The pinned-to-both-edges form is the bug; it must not come back.
+		expect(source).not.toMatch(/icon:\s*\{[^}]*left:\s*0,\s*right:\s*0/);
+
+		// The premise: the em box really is wider than the icon box for every
+		// glyph, so no scale value can make the explicit width unnecessary.
+		for (const name of Object.keys(TAB_BAR_GLYPH)) {
+			const scale =
+				TAB_BAR_GLYPH_SCALE[name as keyof typeof TAB_BAR_GLYPH_SCALE];
+			expect(TAB_BAR_OPTICAL_SCALE * scale, `${name} em vs box`).toBeGreaterThan(
+				1,
+			);
 		}
 	});
 });
