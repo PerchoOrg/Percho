@@ -16,6 +16,57 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-05 06:40 UTC — phase177: tab bar icons — redesign demo, decision pending
+
+**Objective**: owner: "feed search saved you icons do not interesting,
+immersive, cute to me (saved button is even not centered!), redesign this."
+Asked for demos before choosing, so this phase ships a hosted picker, not
+the app change.
+
+**Diagnosis — the off-centre Saved icon is a measured bug, not taste.**
+`TabBarIconFont.ts` documents the glyphs as flush-left with
+`TAB_BAR_ART_WIDTH` = drawing width, and `TabBar.tsx` shifts each glyph by
+`(1 - artWidth) / 2` em to centre it. fontTools on the shipped
+`TabBarIcons.ttf` says otherwise: every glyph is already centred in its em
+box (bookmark x=[0.219, 0.781], house [0.125, 0.875], search [0.093, 0.906],
+user [0.094, 0.906]); the recorded "widths" are xMax. So the shift pushes
+every icon RIGHT — bookmark by 0.11 em ≈ 2.7 px at the 24.9 px render size,
+house ≈ 1.5 px, search/you ≈ 1.2 px. The fix is to delete the shift and the
+table; that lands with the redesign.
+
+**Actions**:
+- `apps/web/public/demos/tabbar-redesign/index.html` + Phosphor regular /
+  fill / bold woff2 (self-hosted, ~430 KB, demo only). Live at
+  https://www.percho.co/demos/tabbar-redesign
+- Panel: per-tab icon pickers (Feed: house-simple / house / house-line;
+  Search: magnifying-glass / binoculars / compass; Saved: bookmark-simple /
+  bookmark / heart / heart-straight / star; You: user / smiley /
+  hand-waving / person / planet), active style (duotone = outline + 22% fill
+  tint, bold duotone, solid fill, bold outline, outline-only as shipped),
+  switch motion (pop + tilt, pop, jump, none), active label 600 vs 500.
+- Six phones update live: **0** current (shift bug reproduced), **A** flat
+  bar, **B** flat + 10% green pill, **C** floating white capsule, **D** C +
+  pill, **E** dark ink capsule with mint active. Tapping a tab in any phone
+  plays the motion.
+
+**Decisions**:
+- Still an icon font, still Phosphor. `react-native-svg` red-screened in
+  Expo Go (2026-07-30) and the phone is still on Expo Go, so "cute" has to
+  come from weight + a second layered glyph + motion, not bespoke SVG. The
+  duotone look in the demo is two stacked `<Text>`s (fill under regular) —
+  exactly what the RN version would be, no new native module.
+- Bold weight offered because at 22 px it is the chunkier, friendlier
+  Phosphor; it costs one more subset in the font.
+- Floating capsule variants included even though the owner rejected a
+  capsule on 2026-08-14 — "immersive" is in this brief, so it gets a fair
+  frame rather than a silent omission. Card height is identical in flat and
+  floating frames (the 96 pt bar and the 108 pt float inset match).
+
+**Next steps**: owner picks icons + style + motion + bar shape from the
+demo; then port to `components/TabBar.tsx` (rebuild `TabBarIcons.ttf` with
+the chosen glyphs in the chosen weights, drop the art-width shift, add the
+reanimated spring + `Haptics.selectionAsync`).
+
 ## 2026-09-05 08:20 UTC — phase175: the card's top-right control — redesign frames, decision pending
 
 **Objective**: owner: "top right of the card - sound and saved icons look
