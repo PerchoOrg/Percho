@@ -16,6 +16,46 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-05 15:43 UTC — phase180: `pnpm lint` is green again — biome yields app.json to the Expo CLI
+
+**Objective**: `pnpm lint` in `apps/mobile` had exactly one ERROR, and it
+had been on main since `ea2195c5` (phase173): `app.json` fails
+`format`. Everything else biome reports there is a warning (4
+`useExhaustiveDependencies`, 4 `noConsoleLog` in `scripts/probe-session.ts`),
+so this one file was the whole red exit code.
+
+**Actions**: `apps/mobile/biome.json` gains an `overrides` entry — `app.json`
+is formatted with 2 spaces, the rest of the app stays on biome's default
+tabs. One file, 5 lines. `app.json` itself is NOT touched.
+
+**Decisions**: the obvious fix is `biome format --write app.json`, and it is
+the wrong one. `app.json` is not hand-maintained — `eas build` rewrites it
+on every build to bump `buildNumber`, and the Expo CLI writes 2-space JSON.
+Tab-formatting it therefore breaks again on the very next build, which is
+exactly how it broke this time (the 2026-08-30 build predates the EAS
+host's pnpm bump; phase173's rewrite is what introduced the spaces). The
+override makes the repo agree with the tool that owns the file, so there is
+nothing to re-fix. Every other JSON in `apps/mobile` (`eas.json`,
+`package.json`, `tsconfig.json`) is tab-indented and stays that way.
+
+Rejected `files.ignore` for the same file: that would stop biome checking
+`app.json` at all, and the point is to keep checking it, not to stop caring.
+
+**Verification**: `pnpm lint` exits 0 (8 warnings, 0 errors — those 8 are
+pre-existing and untouched, per §0.3). `pnpm typecheck` clean, `pnpm test`
+536/536. Proved the file is still CHECKED rather than skipped: re-indenting
+`app.json` to tabs makes biome report 1 error again, and restoring Expo's
+2-space output makes it clean. The tab version was reverted with `git
+checkout --`; the committed `app.json` is byte-identical to main's.
+
+**Learnings**: a formatter fighting a code-generating CLI is a recurring
+bug, not a one-off. Pin the config to the generator's output rather than
+reformatting the generated file.
+
+**Next steps**: none. The 8 warnings stay as they are — `noConsoleLog` in a
+dev probe script is intentional, and the `useExhaustiveDependencies` four
+are the deliberate ref-not-dep patterns documented in `feed.tsx`.
+
 ## 2026-09-05 15:39 UTC — phase179: feed header compacted — one-line crumb, card top-aligned
 
 **Objective**: owner on device: "Space between Percho/city/community info
