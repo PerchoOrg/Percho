@@ -16,6 +16,38 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-05 08:50 UTC — phase177: tab bar round 2 — bar shape settled (B), icon-vs-label size open
+
+**Objective**: owner picked **B** (flat bar + soft pill behind the active
+icon) from the round-1 demo, and asked for the icon to be bigger relative to
+the label.
+
+**Actions**: `apps/web/public/demos/tabbar-redesign/index.html` — icon size,
+label size and the icon↔label gap are now CSS custom properties
+(`--icon` / `--label` / `--gap`) set per phone, so one stylesheet drives every
+ratio. The active pill scales off `--icon` (`2× wide, 1.36× tall`) instead of
+a fixed 44×30, so it stays proportional. Gallery is now the shipped bar plus
+five B frames: 24/12, 26/11.5, 28/11, 30/10.5, and 30 with no label.
+
+**Decisions**:
+- The label shrinks as the icon grows rather than holding at 12.5. Growing
+  only the icon inside a fixed 62pt bar eats the breathing room above and
+  below; trading ~1pt of label for ~4pt of icon keeps the block height flat
+  and widens the size contrast twice as fast.
+- `--gap` tightens 5 → 3 across the ramp so icon+label keep reading as one
+  unit rather than two stacked things.
+- An icon-only frame is included because "immersive" was in the original
+  brief, but it is flagged as a real cost: Saved and You are not
+  self-evident without their names, and B5 is the only frame that loses the
+  4-tab wayfinding the rest of the app assumes.
+- Bar height stays 62pt + inset in every frame. At 30/10.5 the content is
+  30 + 3 + 12 = 45pt, so even the largest ramp step fits with 17pt of
+  padding — no geometry change is needed to ship any of these.
+
+**Next steps**: owner picks a size step (and confirms icons / active style /
+motion, which still default to house · magnifying-glass · heart · smiley,
+duotone, pop + tilt); then port to `components/TabBar.tsx`.
+
 ## 2026-09-05 06:40 UTC — phase177: tab bar icons — redesign demo, decision pending
 
 **Objective**: owner: "feed search saved you icons do not interesting,

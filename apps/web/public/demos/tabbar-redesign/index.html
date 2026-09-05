@@ -35,11 +35,13 @@ body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px}
 .chip:hover{border-color:#CFC6B8}
 .chip.on{border-color:var(--green);background:#EAF3F0}
 .chip small{color:var(--rl-ink2);font-weight:400}
-.chip .ic{width:24px;height:24px}
 
-/* ---- the icon itself: two stacked glyphs (fill under outline) ---- */
-.ic{position:relative;display:inline-block;width:22px;height:22px;flex:none}
-.ic i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:25px;line-height:1;transition:opacity .18s ease,color .18s ease}
+/* ---- the icon itself: two stacked glyphs (fill under outline) ----
+   `--icon` / `--label` / `--gap` are the size knobs; each phone sets its own. */
+.phone{--icon:22px;--label:12.5px;--gap:5px}
+.ic{position:relative;display:inline-block;width:var(--icon);height:var(--icon);flex:none}
+.ic i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:calc(var(--icon)*1.13);line-height:1;transition:opacity .18s ease,color .18s ease}
+.chip .ic{--icon:24px}
 .ic .f{font-family:"PhFill";opacity:0}
 .ic .o{font-family:"Ph"}
 .ic .b{font-family:"PhBold";opacity:0}
@@ -87,11 +89,14 @@ body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px}
 
 /* tab bar — flat (as shipped: 62pt + 34 inset, hairline) */
 .tabbar{height:96px;padding-bottom:34px;display:flex;border-top:1px solid rgba(23,23,21,.05);background:var(--bg);position:relative;z-index:10}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--gray);font:500 12.5px var(--ui);cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--gap);color:var(--gray);font:500 var(--label)/1.15 var(--ui);cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
 .tab.on{color:var(--green)}
 .l-600 .tab.on{font-weight:600}
-/* pill behind the active icon */
-.tab .box{width:44px;height:30px;border-radius:15px;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.tab .lbl{display:block}
+/* label off — icon only */
+.z-noLabel .tab .lbl{display:none}
+/* pill behind the active icon — scales with the icon */
+.tab .box{width:calc(var(--icon)*2);height:calc(var(--icon)*1.36);border-radius:999px;display:flex;align-items:center;justify-content:center;transition:background .2s}
 .pill .tab.on .box{background:rgba(14,107,87,.10)}
 /* floating capsule */
 .float .stage{padding-bottom:108px}
@@ -108,6 +113,14 @@ body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px}
 .dark .tab.on .ic{color:#7FD7BF}
 .dark.pill .tab.on .box{background:rgba(127,215,191,.14)}
 .dark .home{background:#fff;opacity:.75}
+/* size presets — icon grows, label shrinks. `--gap` tightens as the icon grows
+   so the pair still reads as one unit inside the 62pt bar. */
+.z-now{--icon:22px;--label:12.5px;--gap:5px}
+.z-1{--icon:24px;--label:12px;--gap:5px}
+.z-2{--icon:26px;--label:11.5px;--gap:4px}
+.z-3{--icon:28px;--label:11px;--gap:4px}
+.z-4{--icon:30px;--label:10.5px;--gap:3px}
+.z-noLabel{--icon:30px;--label:0px;--gap:0px}
 /* the shipped bar for the baseline — no fill layer, wrong 2.7px shift on saved reproduced */
 .baseline .ic .f,.baseline .ic .b{display:none}
 .baseline .ic[data-k="saved"] .o{transform:translateX(2.7px)}
@@ -121,8 +134,8 @@ body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px}
 </head>
 <body class="s-duotone m-tilt l-600">
 <div class="nav">
-  <h1>Tab bar — redesign demo</h1>
-  <p>Pick icons and an active style in the panel; every phone below updates live. <b>Tap the tabs inside each phone</b> to feel the switch motion. Phone <b>0</b> is the shipped bar for comparison (its <em>Saved</em> icon sits 2.7px right of centre — a measured bug, fixed in every other frame).</p>
+  <h1>Tab bar — redesign, round 2: how big is the icon?</h1>
+  <p>Bar shape is settled: <b>B — flat bar with a soft pill behind the active icon</b>. Every frame below is that bar; only the <b>icon size vs label size</b> changes. Pick icons and an active style in the panel and all frames update live. <b>Tap the tabs inside a phone</b> to feel the motion. Phone <b>0</b> is the shipped bar for comparison (its <em>Saved</em> icon sits 2.7px right of centre — a measured bug, fixed in every other frame).</p>
 </div>
 
 <div class="panel" id="panel">
@@ -189,12 +202,12 @@ function phone(id, title, sub, cls, icons){
 
 const gallery = document.getElementById('gallery');
 gallery.innerHTML = [
-  phone('0','Current (as shipped)','Flat bar, outline only, no motion. Note Saved drifting right.','baseline s-outline', SHIPPED),
-  phone('A','Flat bar','Same geometry as today. Only the icons, the active state and the motion change.',''),
-  phone('B','Flat bar + soft pill','A 10% green pill fades in behind the active icon.','pill'),
-  phone('C','Floating capsule','Bar lifts off the bottom and floats over the feed on a white capsule.','float'),
-  phone('D','Floating capsule + pill','C with the pill — most “app-like”.','float pill'),
-  phone('E','Dark floating capsule','Ink capsule over the feed; mint active. The most immersive read.','float pill dark'),
+  phone('0','Current (as shipped)','Icon 22 · label 12.5. Outline only, no pill, no motion — and Saved drifts 2.7px right.','baseline s-outline z-now', SHIPPED),
+  phone('B1','B — icon 24 · label 12','One step up. Safest, reads as a tidy-up rather than a change.','pill z-1'),
+  phone('B2','B — icon 26 · label 11.5','Icon clearly leads; label becomes a caption. My pick.','pill z-2'),
+  phone('B3','B — icon 28 · label 11','Icon dominant. Closest to Instagram / Threads proportions.','pill z-3'),
+  phone('B4','B — icon 30 · label 10.5','Maximum before the label stops being comfortably legible.','pill z-4'),
+  phone('B5','B — icon 30, no label','Icons only. The most immersive, but Saved/You lose their names.','pill z-noLabel'),
 ].join('');
 
 // tab switching with the pop animation
