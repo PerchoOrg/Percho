@@ -113,6 +113,65 @@ or the app's label and the video's coexist for a while.
 **Next steps**: owner picks L1–L5 at
 https://www.percho.co/demos/community-label-v1/ — L1 recommended.
 
+## 2026-09-05 06:40 UTC — phase176: the community page's hero follows the listing hero — places as a strip on the film
+
+(Numbered phase174 while in review; 174 and 175 landed from another
+agent in the meantime, so this merged as 176.)
+
+**Objective**: owner (2026-09-04): "Community explore page first section
+should follow the listing pattern, so users can select parts to view, and
+you don't have to show a lot of texts after that to tell users what
+community has." The listing page's hero (`MediaCarousel`) has a chip strip
+at its foot that jumps between the video and each room; the community page
+had the film as a 260pt hero with the name on a scrim, then a blurb
+paragraph, then a separate "THE TOUR VISITS" chip section that seeked the
+film and scrolled the page back up.
+
+**Actions**:
+- New `apps/mobile/components/community/TourHero.tsx` — the listing hero's
+  shape for a single film: same height rule (`clamp(340, 46vh, 460)`),
+  ← / ↑ / ♡ glass discs, the global `SoundToggle`, top cap + foot wash,
+  and a horizontal chip strip at the foot with one chip per
+  `tourSegments` row (numbered, in film order — the card's dashed bar).
+  The lit chip follows playback via a 0.25s `timeUpdate` listener; tapping
+  one seeks to that place's start. Strip absent when there is no film or
+  no structure (legacy AI mp4); a cover photo stands in when there is no
+  film at all. `explore.*` tokens over the media, as the listing hero uses.
+- `apps/mobile/app/community/[slug].tsx` — hero block, the three absolute
+  buttons, the blurb and the "THE TOUR VISITS" section replaced by
+  `<TourHero>`; the name + city/state now sit under the media as a
+  headline (listing pattern) instead of on a scrim. `CommunityTourVideo`,
+  `scrollRef`, `seekRef` and their styles removed. `blurb` stays in the
+  DTO (the API still sends it) with a note that it is not rendered.
+- `RELEASE.md` bullet under v1.3 / 2026-09-05.
+
+**Decisions**:
+- **Seek with `seekBy`, not `player.currentTime =`.** The old chip code
+  used the setter; DEVLOG 2026-08-23 records that on HLS the setter seeks
+  with zero tolerance and a slow seek is silently abandoned. Same
+  post-seek hold as `CardVideo` (1.5s, simpler: the tapped chip stays lit
+  until a tick lands in it or the hold expires), because the player
+  reports the pre-seek position for a tick or two.
+- **What "a lot of texts" meant: the blurb.** The prose paragraph is the
+  only thing under the hero that describes what the place has; the
+  reason rows, interests, stats and reviews are evidence rows and stayed.
+  If the owner meant the reason sections too, each is one JSX block.
+- **`nativeControls` off**, as on the listing hero — the strip is the
+  scrubber now, and the sound toggle covers the silent-switch case the
+  native controls were there for.
+- Not done: auto-scrolling the strip so the lit chip stays in view as
+  the film plays. Needs per-chip `onLayout`; a tour visits ~5–8 places
+  so most strips fit on screen. Add if a long tour turns up.
+
+**Verification**: `pnpm typecheck` clean, `pnpm test` 528/528, biome
+clean on both changed files (the four pre-existing `useExhaustiveDependencies`
+/ `noConsoleLog` errors and the `app.json` format error are untouched).
+Not run on device — the owner's phone runs Metro from the reference
+worktree, which needs `git pull` + `pnpm install` after the merge.
+
+**Next steps**: owner review on the phone: does the lit chip track the
+film, does a tap land, does the headline under the media read right.
+
 ## 2026-09-05 06:30 UTC — phase173: build 5 exists — the App ID checkbox, then a missing babel preset
 
 **Objective**: get the first store-candidate build out after phase172
