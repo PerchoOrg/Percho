@@ -16,7 +16,87 @@ Same reverse-chronological format, same content.
 
 ---
 
-## 2026-09-05 08:50 UTC — phase177: tab bar round 2 — bar shape settled (B), icon-vs-label size open
+## 2026-09-05 16:05 UTC — phase177: the new tab bar ships — new glyphs, duotone active, and the centring bug deleted
+
+**Objective**: implement the owner's picks from `/demos/tabbar-redesign`:
+**house-line · compass · heart · hand-waving**, size step **B1** (icon 24 /
+label 12), bar **B** (flat + soft pill). Active style and motion were not
+named, so the demo defaults the owner had been looking at ship: duotone
+active icon + pop-and-tilt on switch, active label 600.
+
+**Actions**:
+- `scripts/icon-fonts/build-tabbar-icon-font.py` — builds TWO subsets now
+  (regular → `TabBarIcons.ttf`, fill → `TabBarIconsFill.ttf`, 2.6/2.2 KB),
+  because the active tab stacks the fill glyph under the outline one. Each
+  is renamed to its own family so CoreText cannot collide them. Also fixed
+  `REPO`, which was `parent.parent` and resolved to `scripts/` — the script
+  could not have written its output since it moved into `scripts/icon-fonts/`.
+- `components/TabBarIconFont.ts` — new glyph table (U+E2C4 / U+E1C8 /
+  U+E2A8 / U+E580), `TAB_BAR_FONT_FILL`, and the metric tables replaced:
+  `TAB_BAR_ART_WIDTH` is **deleted**, `TAB_BAR_GLYPH_CENTER_Y` +
+  `TAB_BAR_BOX_CENTER_Y` added.
+- `components/TabBar.tsx` — icon 24 / label 12, a `Tab` subcomponent (one
+  `useSharedValue` each; hooks cannot run in a `map`), the pill, the duotone
+  layer, and the pop.
+- `app/_layout.tsx` — loads the fill font behind the same gate.
+- `theme/tabbar-icon-font.test.ts` — now checks BOTH weights for every
+  codepoint, and that each glyph has a measured centre and scale.
+- `RELEASE.md` — dated bullet under v1.3.
+
+**Decisions**:
+- **The Saved drift was arithmetic, not taste.** fontTools on the built
+  subsets: all four glyphs have `cx` exactly 0.500 — they were already
+  centred, and `TAB_BAR_ART_WIDTH` held each glyph's xMax, not its width.
+  The `(1 - artWidth) / 2` "correction" was therefore a pure rightward
+  shove: bookmark 2.7 px, house 1.5 px, search/you 1.2 px. Deleted rather
+  than re-derived, with a comment saying not to reintroduce it.
+- **Vertical centring is now explicit.** The glyph's 1 em line box is taller
+  than the 24 pt icon box, so `top: (ICON_SIZE - fontSize) / 2` places the
+  box and `translateY = (glyphCentre - 0.4375) × fontSize` centres the
+  drawing inside it, per-glyph — heart is 0.031 em low, house-line 0.015 em
+  high, a 1.1 px spread that a row of four icons shows up. Relying on Yoga's
+  treatment of an inset-less absolute child or on `textAlignVertical`
+  (Android-only) would have left it to chance.
+- **Only house-line gets an optical scale.** By `sqrt(w×h)` the four
+  drawings are 0.812 / 0.810 / 0.828 / 0.856 em; only house-line is
+  meaningfully off the group, so it gets 0.96 and the rest get 1. Tuning
+  the other three would be noise.
+- **Duotone is two `<Text>` layers, not a new dependency.** Both weights
+  measure identical to 0.001 em, so the layers register exactly. Still no
+  `react-native-svg` (it red-screens in Expo Go, 2026-07-30).
+- **The pill renders on every tab, coloured only when active**, so the icon
+  row cannot shift when the active tab changes.
+- **No haptics.** Not in the brief and not in the demo the owner approved.
+
+**Issues**: `pnpm lint` in `apps/mobile` reported `app.json format` on this
+branch — pre-existing, and already fixed on main by phase180's biome
+override, so main was merged in before merging out. The 8 remaining biome
+warnings (`useExhaustiveDependencies` ×4, `noConsoleLog` ×4 in a script) are
+also pre-existing and untouched. Merging main also conflicted in
+`RELEASE.md`: phase175's bullet said the card's save mark "is the same
+bookmark the Saved tab uses", which this change makes false — reworded to
+"is a bookmark" rather than left contradicting the entry above it.
+
+**Verification**: `pnpm test` 529 passed / 50 files, `pnpm typecheck` clean,
+`pnpm lint` clean on the changed files. Both fonts carry all four codepoints
+and register as `TabBarIcons` / `TabBarIconsFill` (fontTools). The demo page
+now defaults to exactly the shipped combination, so it is a picture of what
+is in the app. **Not yet seen on a device** — the icon-font path can only
+really be confirmed in Expo Go.
+
+**Learnings**: a "measured" constant whose name lies is a trap —
+`TAB_BAR_ART_WIDTH` held xMax under a name that said width, and the code
+that consumed it was written to match the name, not the data. The
+replacements say `CENTER_Y`, and the test now asserts a value exists per
+glyph so a future glyph swap cannot silently inherit stale numbers.
+
+**Next steps**: owner opens Expo Go (reference worktree needs `git pull` +
+`pnpm install`) and checks the bar on device. Open question this raises: the
+card's save button is still a **bookmark** while the Saved tab is now a
+**heart** — one action, two symbols. Worth unifying; not changed here
+because it was not asked.
+
+## 2026-09-05 15:49 UTC — phase177: tab bar round 2 — bar shape settled (B), icon-vs-label size open
 
 **Objective**: owner picked **B** (flat bar + soft pill behind the active
 icon) from the round-1 demo, and asked for the icon to be bigger relative to
@@ -48,67 +128,169 @@ five B frames: 24/12, 26/11.5, 28/11, 30/10.5, and 30 with no label.
 motion, which still default to house · magnifying-glass · heart · smiley,
 duotone, pop + tilt); then port to `components/TabBar.tsx`.
 
-## 2026-09-05 06:40 UTC — phase177: tab bar icons — redesign demo, decision pending
+## 2026-09-05 15:43 UTC — phase180: `pnpm lint` is green again — biome yields app.json to the Expo CLI
 
-**Objective**: owner: "feed search saved you icons do not interesting,
-immersive, cute to me (saved button is even not centered!), redesign this."
-Asked for demos before choosing, so this phase ships a hosted picker, not
-the app change.
+**Objective**: `pnpm lint` in `apps/mobile` had exactly one ERROR, and it
+had been on main since `ea2195c5` (phase173): `app.json` fails
+`format`. Everything else biome reports there is a warning (4
+`useExhaustiveDependencies`, 4 `noConsoleLog` in `scripts/probe-session.ts`),
+so this one file was the whole red exit code.
 
-**Diagnosis — the off-centre Saved icon is a measured bug, not taste.**
-`TabBarIconFont.ts` documents the glyphs as flush-left with
-`TAB_BAR_ART_WIDTH` = drawing width, and `TabBar.tsx` shifts each glyph by
-`(1 - artWidth) / 2` em to centre it. fontTools on the shipped
-`TabBarIcons.ttf` says otherwise: every glyph is already centred in its em
-box (bookmark x=[0.219, 0.781], house [0.125, 0.875], search [0.093, 0.906],
-user [0.094, 0.906]); the recorded "widths" are xMax. So the shift pushes
-every icon RIGHT — bookmark by 0.11 em ≈ 2.7 px at the 24.9 px render size,
-house ≈ 1.5 px, search/you ≈ 1.2 px. The fix is to delete the shift and the
-table; that lands with the redesign.
+**Actions**: `apps/mobile/biome.json` gains an `overrides` entry — `app.json`
+is formatted with 2 spaces, the rest of the app stays on biome's default
+tabs. One file, 5 lines. `app.json` itself is NOT touched.
+
+**Decisions**: the obvious fix is `biome format --write app.json`, and it is
+the wrong one. `app.json` is not hand-maintained — `eas build` rewrites it
+on every build to bump `buildNumber`, and the Expo CLI writes 2-space JSON.
+Tab-formatting it therefore breaks again on the very next build, which is
+exactly how it broke this time (the 2026-08-30 build predates the EAS
+host's pnpm bump; phase173's rewrite is what introduced the spaces). The
+override makes the repo agree with the tool that owns the file, so there is
+nothing to re-fix. Every other JSON in `apps/mobile` (`eas.json`,
+`package.json`, `tsconfig.json`) is tab-indented and stays that way.
+
+Rejected `files.ignore` for the same file: that would stop biome checking
+`app.json` at all, and the point is to keep checking it, not to stop caring.
+
+**Verification**: `pnpm lint` exits 0 (8 warnings, 0 errors — those 8 are
+pre-existing and untouched, per §0.3). `pnpm typecheck` clean, `pnpm test`
+536/536. Proved the file is still CHECKED rather than skipped: re-indenting
+`app.json` to tabs makes biome report 1 error again, and restoring Expo's
+2-space output makes it clean. The tab version was reverted with `git
+checkout --`; the committed `app.json` is byte-identical to main's.
+
+**Learnings**: a formatter fighting a code-generating CLI is a recurring
+bug, not a one-off. Pin the config to the generator's output rather than
+reformatting the generated file.
+
+**Next steps**: none. The 8 warnings stay as they are — `noConsoleLog` in a
+dev probe script is intentional, and the `useExhaustiveDependencies` four
+are the deliberate ref-not-dep patterns documented in `feed.tsx`.
+
+## 2026-09-05 15:39 UTC — phase179: feed header compacted — one-line crumb, card top-aligned
+
+**Objective**: owner on device: "Space between Percho/city/community info
+and card is too big, it doesnt look good, and no need to show xxx
+communities in this page". What he sees is `Atlanta metro › Dallas` over
+`188 communities` (Dallas, GA has no median, so the stats line was a bare
+count), then ~60pt of paper, then the card.
 
 **Actions**:
-- `apps/web/public/demos/tabbar-redesign/index.html` + Phosphor regular /
-  fill / bold woff2 (self-hosted, ~430 KB, demo only). Live at
-  https://www.percho.co/demos/tabbar-redesign
-- Panel: per-tab icon pickers (Feed: house-simple / house / house-line;
-  Search: magnifying-glass / binoculars / compass; Saved: bookmark-simple /
-  bookmark / heart / heart-straight / star; You: user / smiley /
-  hand-waving / person / planet), active style (duotone = outline + 22% fill
-  tint, bold duotone, solid fill, bold outline, outline-only as shipped),
-  switch motion (pop + tilt, pop, jump, none), active label 600 vs 500.
-- Six phones update live: **0** current (shift bug reproduced), **A** flat
-  bar, **B** flat + 10% green pill, **C** floating white capsule, **D** C +
-  pill, **E** dark ink capsule with mint active. Tapping a tab in any phone
-  plays the motion.
+- `components/feed/ScopeCrumb.tsx` — the stats line is gone from the crumb;
+  it is one line, `Atlanta metro › Dallas ⌄`, in a 24pt box (was
+  `minHeight: 40` + gap). `hitSlop` grew to 10pt vertical so the touch
+  target stays at 44. `scopeStatsLine` and its test are untouched —
+  `ScopeSheet` still draws it under every city, which is where the owner
+  did not object to it. The `unit` prop is dropped.
+- `components/SwipeStack.tsx` — the top card rests at the stage's TOP
+  (`restTop = 0`) instead of centred `(stageHeight - frameHeight) / 2`.
+  `StackCard` takes `restTop` in place of `stageHeight` (that was its only
+  use); the peek anchor and the paper clip band derive from the same
+  number, so the behind card still hides exactly under the top card's
+  bottom edge.
+- `app/(tabs)/feed.tsx` — `scopedUnit` memo removed (only fed the crumb's
+  stats). `CARD_INSET.top` stays 12, so crumb-to-card is now 2 + 12 = 14pt.
+- `RELEASE.md` dated bullet under v1.3.
+
+**Decisions**: where the gap actually came from was the stage, not the
+header — `CARD_FRAME_RATIO` 0.83 leaves ~100pt of slack on an iPhone 15 and
+centring split it 50/50, so half of it sat between the crumb and the card
+no matter how tight the header was. Moving the card up rather than
+enlarging it keeps the card's aspect (and so the tour's crop) exactly
+where the 2026-08-23 pairing of ratio and gutter put it. The slack now all
+sits under the card, above the tab bar, where the trade-off `echo` line
+already lives. Did not fold the crumb into the wordmark row: the owner's
+2026-08-14 rule (wordmark centred, corners empty) still holds and a
+side-by-side would break it.
+
+**Verification**: `pnpm typecheck` clean; `pnpm test` 528/528; biome clean
+on the three changed files. `pnpm lint` for the whole app fails on
+`app.json` FORMAT — pre-existing on `origin/main` since `ea2195c5`
+(phase173's `eas build` rewrote the file with 2-space indent and the
+repo's biome wants tabs). Not touched here; one `biome format --write
+app.json` fixes it whenever someone is in that file.
+
+**Renumber**: branched as phase174; 174–178 all landed on main from other
+agents while this was in review (174 was reused three times by them), so it
+merged as **phase179**. Next free number is 180. Main moved twice more
+DURING the merge verification — the merge was rebuilt from the freshest
+`origin/main` each time rather than pushed from a stale base.
+
+**Next steps**: owner to eyeball on Metro after merge (`git pull` in the
+reference worktree; no dependency change this time, so no `pnpm install`
+needed).
+
+## 2026-09-05 08:45 UTC — phase175: the corner ships as H1 — badge-height pill, real Phosphor glyphs
+
+**Objective**: owner picked **H1** off
+`percho.co/demos/card-corner-v2` ("go with your recommendation"). Build it.
+
+**Actions**:
+- `scripts/icon-fonts/build-icon-font.py` — now builds **both** weights.
+  `PerchoIconsOutline.ttf` had no build script at all (it was a hand-made
+  artifact), so a glyph could not be added to it reproducibly; the regular
+  weight is fetched from the same pinned npm package
+  (`@phosphor-icons/web` 2.1.2) `build-tabbar-icon-font.py` uses. The script
+  also prints measured art widths for both fonts now, instead of leaving the
+  measurement to a snippet pasted in a docstring.
+  - Also fixed: `REPO` was `parent.parent`, from before the scripts moved
+    into `icon-fonts/`, so every path resolved under `scripts/` and the
+    script could not find its own source font. `build-tabbar-icon-font.py`
+    still carries the unfixed copy — untouched, nothing needed it today.
+- Three glyphs added to the subset (both weights, now 21 each):
+  `soundOn` = speaker-simple-high, `soundOff` = speaker-simple-slash, and
+  `bookmark` **repointed** from bookmark-fill to **bookmark-simple** — which
+  is `TAB_BAR_GLYPH.saved`, the Saved tab's own drawing, so the card's save
+  control and the tab it saves into are one shape. Repointing was free:
+  nothing rendered `bookmark` (phase140 replaced it with `View` art), so no
+  call site changed art.
+- `components/cards/CardCorner.tsx` — rewritten, 317 → 156 lines. All the
+  hand-built art (`SpeakerIcon`, `BookmarkIcon`, ~20 geometry constants and
+  ~15 styles) is gone; the file mounts two `RedlineIcon`s. Container is
+  `CORNER_HEIGHT = 26` (the LISTING badge's height) at the badge's own
+  `rgba(255,255,255,0.92)`, was 37pt at 0.85. Saved fills the bookmark in
+  `redline.accent`. The hairline divider is gone (owner picked H1, not H1c).
+  Per-cell `hitSlop` is now asymmetric — 12 outward, `GAP / 2` inward — so
+  the two 15pt glyphs get ~33 × 50pt targets that do not overlap.
+- `theme/listing-layout.test.ts` — the two assertions that pinned the old
+  shape (37pt capsule / `function SpeakerIcon` / 0.85 fill) now pin the new
+  one, and assert the corner's fill EQUALS the badge's, which is the whole
+  point of the change.
+- Demo page marked "CHOSEN — SHIPPED".
 
 **Decisions**:
-- Still an icon font, still Phosphor. `react-native-svg` red-screened in
-  Expo Go (2026-07-30) and the phone is still on Expo Go, so "cute" has to
-  come from weight + a second layered glyph + motion, not bespoke SVG. The
-  duotone look in the demo is two stacked `<Text>`s (fill under regular) —
-  exactly what the RN version would be, no new native module.
-- Bold weight offered because at 22 px it is the chunkier, friendlier
-  Phosphor; it costs one more subset in the font.
-- Floating capsule variants included even though the owner rejected a
-  capsule on 2026-08-14 — "immersive" is in this brief, so it gets a fair
-  frame rather than a silent omission. Card height is identical in flat and
-  floating frames (the 96 pt bar and the 108 pt float inset match).
+- **Both weights in the redline subset**, rather than a new card-chrome font
+  or extending `TabBarIcons.ttf`. `RedlineIcon` already renders either
+  weight off one codepoint table, so the corner needed no new machinery —
+  and the outline/fill pair is exactly what the saved state wants.
+- **Verified before rebuilding**: the committed `PerchoIcons.ttf` and
+  `PerchoIconsOutline.ttf` are both byte-identical to what the script's
+  subset calls produce from Phosphor 2.1.2, so none of the existing 19
+  glyphs moved. Internal family names ("Phosphor-Fill" / "Phosphor") are
+  preserved, which is what keeps CoreText from collapsing the two
+  registrations (the failure mode `build-tabbar-icon-font.py` documents).
+- **`OUTLINE_ART_WIDTH` left alone** except for the changed `bookmark`. The
+  table disagrees with the font it describes for ~8 glyphs (it says camera
+  0.9062; the committed font measures 0.8125), which shifts outline icons
+  by ~0.05em ≈ 0.6pt on the trade-off face. Pre-existing, cosmetic, and not
+  this task — flagged here rather than fixed silently.
 
-**Issues**: first deploy rendered every icon as an empty box. Not the
-codepoints (verified in the committed file) — the `@font-face` URLs were
-relative (`./Phosphor.woff2`). Vercel serves this page at
-`/demos/tabbar-redesign` and 308-redirects the trailing-slash form to it, so
-a relative URL resolves one directory up: `/demos/Phosphor.woff2` → 404,
-every glyph falls back to the system font, and PUA codepoints draw as
-tofu. **Resolution**: all four `url()`s are now absolute
-(`/demos/tabbar-redesign/…`, and the DM Serif borrow from
-`/demos/feed-chrome-v1/…`). Rule for the next hosted demo: no relative asset
-URLs — this directory is served without a trailing slash.
+**Verification**: `tsc --noEmit` clean; `vitest run` 50 files / 528 tests
+pass; `biome check .` on `apps/mobile` — 1 error, 8 warnings, byte-identical
+to the same command run against a `git archive` of `origin/main` (all in
+`search.tsx` / `feed.tsx` / `use-swipe-card.ts` / `scripts/probe-session.ts`,
+none in a file this phase touched). Both new glyphs were rasterised out of
+both .ttf files and eyeballed — a wrong codepoint draws a real icon, so no
+test can catch that.
 
-**Next steps**: owner picks icons + style + motion + bar shape from the
-demo; then port to `components/TabBar.tsx` (rebuild `TabBarIcons.ttf` with
-the chosen glyphs in the chosen weights, drop the art-width shift, add the
-reanimated spring + `Haptics.selectionAsync`).
+**Issues**: none blocking. Not verifiable off-device: the 26pt pill's
+translucency over a bright sky, and whether 15pt glyphs are big enough for
+the owner's taste (H1d — 30pt / 17pt — is still on the demo page if not).
+
+**Next steps**: device pass on the owner's iPhone. Metro serves
+`~/Workspace/Percho`, so that worktree needs `git pull` before the change
+appears — the fonts are assets, so Metro must restart to pick them up.
 
 ## 2026-09-05 08:20 UTC — phase175: the card's top-right control — redesign frames, decision pending
 
@@ -204,8 +386,246 @@ a tour (ffmpeg only — clips are reused, zero Seedance). Corners then match
 the listing card: badge 12/12, mute 12/12. Order matters: re-assemble first,
 or the app's label and the video's coexist for a while.
 
-**Next steps**: owner picks L1–L5 at
-https://www.percho.co/demos/community-label-v1/ — L1 recommended.
+**Owner's direction** (same session, after seeing L0–L5): drop the LISTING
+badge entirely ("it is obvious"); on the community card put the POI + distance
+top-left, keep sound AND save top-right to match the listing card, and move
+COMMUNITY down to the community name as a small label. Drawn as M1–M6.
+
+M2–M4 put the tag to the RIGHT of the name and cost two things: the two signal
+glyphs (the row cannot hold name + tag + glyphs + Explore) and, on a long name,
+the name itself — M5 shows "Apremont – Highcroft" ellipsizing at ~125pt, which
+the 2026-08-22 no-truncation rule forbids. M6 fixed that by dropping the tag
+under a wrapped name, i.e. a conditional layout.
+
+Owner then: "put community label on top of the community name in this case."
+M7/M8 — the tag as an EYEBROW above the name. It never competes for the row's
+width, so there is one rule for every name length instead of M6's conditional,
+and the signal glyphs come back to the name row. This is the design to build.
+
+**Next steps**: build M7. Order: (1) `worker.py` drops `_label_overlay`,
+restart the three launchd workers, re-assemble the 5 communities with a tour
+(ffmpeg only, clips reused, zero Seedance); (2) `distance` onto the segment in
+`lib/feed/tour-segments.ts` + `pool-dto.ts`; (3) `CommunityFace` — native place
+pill top-left, `CardCorner` gains save, COMMUNITY eyebrow above the name,
+`COMMUNITY_SOUND_TOP` deleted; (4) `ListingFace` loses its badge; (5) owner
+verifies in Expo Go before merge.
+
+## 2026-09-05 07:20 UTC — phase178: the community page becomes numbers — categories on the strip, counts charted
+
+**Objective**: the owner's four notes on phase176, on device: "1) no need
+to show numbers, 2) dont say the poi name, just group them by tag or
+category, it is too long to show all of them, 3) put city and state on the
+right side of the community name, 4) still too many text, we need to be
+more interactive, and better visualization, with numbers as much as
+possible, text is not preferred, exception for the key insights, numbers".
+
+**Actions** — server:
+- `apps/web/lib/feed/tour-segments.ts` — `TourSegment` gains `poiId` and
+  `bucket`. Clips already carried `poi_id`; Ken Burns assemblies also
+  carry a `bucket`, Seedance ones do not.
+- `apps/web/lib/feed/vertical-videos.ts` — new `fillSegmentBuckets()`, one
+  `community_pois` read for every tour community, attaching
+  `intent_bucket` to each segment. Measured against production: the join
+  resolves **9/9** of Peachtree Corners' places and **12/12** of
+  Aberdeen's, so the clip's own `bucket` is only a fallback.
+- `apps/web/lib/communities/detail.ts` — `nearby: {bucket,count}[]` added
+  to the DTO, biggest first. `fetchPoiCounts` was ALREADY being fetched on
+  this path and only ever reached the screen as three or four sentences of
+  reason evidence; sending the whole map is what makes note 4 possible.
+  `NEARBY_BUCKET_DENYLIST` = `other`, `asian_community` (reasoning below).
+
+**Actions** — mobile:
+- New `lib/community/tour-buckets.ts` (+ 8 tests): `intent_bucket` →
+  chip label, and `buildTourGroups()` — the listing's `lib/listing/rooms.ts`
+  for a film. Same `{groups, keyByIndex}` shape, same "chip jumps to the
+  group's first member, highlight follows the current one" contract.
+- `components/community/TourHero.tsx` — chips are now categories with a
+  place count ("Schools 2"), not names with an ordinal.
+- New `components/community/{StatBand,NearbyChart,RatingBars}.tsx` —
+  the three figures as numerals, the POI counts as bars scaled to the
+  community's own largest, the four review dimensions as bars out of a
+  fixed 5.
+- `app/community/[slug].tsx` — headline row (name left, place right);
+  reason evidence lines survive only on the top three; `moreReasons` and
+  interests become label chips; the interest ordinals and the
+  `label ——— value` stat rows are gone.
+
+**Decisions**:
+- **"No numbers" is about ORDINALS, not counts.** Note 1 and note 4 read
+  as contradictory until you see which numbers each is about: the chips'
+  `1 2 3` counted the chips, which the eye already does. "Schools 2"
+  counts the neighbourhood. Ordinals off everywhere (tour strip,
+  interests), counts on.
+- **Categories from `community_pois`, not from the clip.** The clip's
+  `bucket` is only written by one of the two renderers; the table is the
+  schema-constrained column and joins at 100%.
+- **`other` and `asian_community` are not named** — on the strip they fold
+  into "More", in the chart they are dropped. `other` is the tagger's
+  shrug. `asian_community` is left out on the same reasoning
+  `community-reasons.ts` refuses `avg_income`: a demographic-sounding
+  label on a neighbourhood page steers by proxy, and unlike "39
+  restaurants" the label does not say what was counted. 3 rows in the
+  whole table today. Revisit if a seed makes those places legible as what
+  they are (grocers, restaurants) — then chart them under that name.
+- **The biggest editorial call: `moreReasons` lost their evidence lines.**
+  A community stating ten attributes drew ten icon+label+sentence rows.
+  Every number those sentences carried is now charted above them (POI
+  counts in `NearbyChart`, `homeowners_pct` / `residents_count` in
+  `StatBand`), so no evidence left the page — it stopped being narrated
+  one line at a time. The top three keep their sentences, which is note
+  4's own "exception for the key insights". One JSX block to revert.
+- **Body palette left on `colors.*` (amber), not switched to the listing's
+  `explore.*` (green).** "Follow the listing pattern" was about structure;
+  repainting every section head is a separate decision the owner has not
+  made. The hero uses `explore.*` because it draws over media, same as the
+  listing hero.
+- `nearby` is OPTIONAL in the mobile DTO. The phone reads
+  `https://www.percho.co` (`lib/api/base.ts`), so a Metro reload lands
+  before the Vercel deploy — a build in the field must not crash on a
+  field the API is not sending yet.
+
+**Verification**: web `pnpm typecheck` / `pnpm test` 867 / `pnpm build`
+all clean; mobile `pnpm typecheck` / `pnpm test` 536 (8 new) / biome clean
+on changed files. Production data read directly to size the design (two
+live tours, 228 POI rows on Peachtree Corners, 38 on Aberdeen) rather than
+guessed. Not seen on device by me.
+
+**Learnings**:
+- `community_pois.intent_bucket` is populated far better than the
+  2026-08-02 note in `detail.ts` suggests for the communities that MATTER
+  here — a community with an assembled tour necessarily has POI rows,
+  because the tour was cut from them. The "1 of 8,679" figure is true of
+  the whole table and misleading about the tour set.
+- The check constraint in the original migration lists 15 buckets; live
+  data also contains `amenities`, `civic`, `waterfront`, `other`, so the
+  constraint was relaxed somewhere later. `BUCKET_LABELS` covers all 16
+  seen plus `faith`/`work_hubs` from the original list.
+
+**Next steps**: owner review on the phone, after the Vercel deploy lands
+(the chips and the chart both need the new API). Open questions for him:
+the `moreReasons` evidence call above, and whether the body should move to
+the listing's green palette.
+
+## 2026-09-05 06:40 UTC — phase177: tab bar icons — redesign demo, decision pending
+
+**Objective**: owner: "feed search saved you icons do not interesting,
+immersive, cute to me (saved button is even not centered!), redesign this."
+Asked for demos before choosing, so this phase ships a hosted picker, not
+the app change.
+
+**Diagnosis — the off-centre Saved icon is a measured bug, not taste.**
+`TabBarIconFont.ts` documents the glyphs as flush-left with
+`TAB_BAR_ART_WIDTH` = drawing width, and `TabBar.tsx` shifts each glyph by
+`(1 - artWidth) / 2` em to centre it. fontTools on the shipped
+`TabBarIcons.ttf` says otherwise: every glyph is already centred in its em
+box (bookmark x=[0.219, 0.781], house [0.125, 0.875], search [0.093, 0.906],
+user [0.094, 0.906]); the recorded "widths" are xMax. So the shift pushes
+every icon RIGHT — bookmark by 0.11 em ≈ 2.7 px at the 24.9 px render size,
+house ≈ 1.5 px, search/you ≈ 1.2 px. The fix is to delete the shift and the
+table; that lands with the redesign.
+
+**Actions**:
+- `apps/web/public/demos/tabbar-redesign/index.html` + Phosphor regular /
+  fill / bold woff2 (self-hosted, ~430 KB, demo only). Live at
+  https://www.percho.co/demos/tabbar-redesign
+- Panel: per-tab icon pickers (Feed: house-simple / house / house-line;
+  Search: magnifying-glass / binoculars / compass; Saved: bookmark-simple /
+  bookmark / heart / heart-straight / star; You: user / smiley /
+  hand-waving / person / planet), active style (duotone = outline + 22% fill
+  tint, bold duotone, solid fill, bold outline, outline-only as shipped),
+  switch motion (pop + tilt, pop, jump, none), active label 600 vs 500.
+- Six phones update live: **0** current (shift bug reproduced), **A** flat
+  bar, **B** flat + 10% green pill, **C** floating white capsule, **D** C +
+  pill, **E** dark ink capsule with mint active. Tapping a tab in any phone
+  plays the motion.
+
+**Decisions**:
+- Still an icon font, still Phosphor. `react-native-svg` red-screened in
+  Expo Go (2026-07-30) and the phone is still on Expo Go, so "cute" has to
+  come from weight + a second layered glyph + motion, not bespoke SVG. The
+  duotone look in the demo is two stacked `<Text>`s (fill under regular) —
+  exactly what the RN version would be, no new native module.
+- Bold weight offered because at 22 px it is the chunkier, friendlier
+  Phosphor; it costs one more subset in the font.
+- Floating capsule variants included even though the owner rejected a
+  capsule on 2026-08-14 — "immersive" is in this brief, so it gets a fair
+  frame rather than a silent omission. Card height is identical in flat and
+  floating frames (the 96 pt bar and the 108 pt float inset match).
+
+**Issues**: first deploy rendered every icon as an empty box. Not the
+codepoints (verified in the committed file) — the `@font-face` URLs were
+relative (`./Phosphor.woff2`). Vercel serves this page at
+`/demos/tabbar-redesign` and 308-redirects the trailing-slash form to it, so
+a relative URL resolves one directory up: `/demos/Phosphor.woff2` → 404,
+every glyph falls back to the system font, and PUA codepoints draw as
+tofu. **Resolution**: all four `url()`s are now absolute
+(`/demos/tabbar-redesign/…`, and the DM Serif borrow from
+`/demos/feed-chrome-v1/…`). Rule for the next hosted demo: no relative asset
+URLs — this directory is served without a trailing slash.
+
+**Next steps**: owner picks icons + style + motion + bar shape from the
+demo; then port to `components/TabBar.tsx` (rebuild `TabBarIcons.ttf` with
+the chosen glyphs in the chosen weights, drop the art-width shift, add the
+reanimated spring + `Haptics.selectionAsync`).
+
+## 2026-09-05 06:40 UTC — phase176: the community page's hero follows the listing hero — places as a strip on the film
+
+(Numbered phase174 while in review; 174 and 175 landed from another
+agent in the meantime, so this merged as 176.)
+
+**Objective**: owner (2026-09-04): "Community explore page first section
+should follow the listing pattern, so users can select parts to view, and
+you don't have to show a lot of texts after that to tell users what
+community has." The listing page's hero (`MediaCarousel`) has a chip strip
+at its foot that jumps between the video and each room; the community page
+had the film as a 260pt hero with the name on a scrim, then a blurb
+paragraph, then a separate "THE TOUR VISITS" chip section that seeked the
+film and scrolled the page back up.
+
+**Actions**:
+- New `apps/mobile/components/community/TourHero.tsx` — the listing hero's
+  shape for a single film: same height rule (`clamp(340, 46vh, 460)`),
+  ← / ↑ / ♡ glass discs, the global `SoundToggle`, top cap + foot wash,
+  and a horizontal chip strip at the foot with one chip per
+  `tourSegments` row (numbered, in film order — the card's dashed bar).
+  The lit chip follows playback via a 0.25s `timeUpdate` listener; tapping
+  one seeks to that place's start. Strip absent when there is no film or
+  no structure (legacy AI mp4); a cover photo stands in when there is no
+  film at all. `explore.*` tokens over the media, as the listing hero uses.
+- `apps/mobile/app/community/[slug].tsx` — hero block, the three absolute
+  buttons, the blurb and the "THE TOUR VISITS" section replaced by
+  `<TourHero>`; the name + city/state now sit under the media as a
+  headline (listing pattern) instead of on a scrim. `CommunityTourVideo`,
+  `scrollRef`, `seekRef` and their styles removed. `blurb` stays in the
+  DTO (the API still sends it) with a note that it is not rendered.
+- `RELEASE.md` bullet under v1.3 / 2026-09-05.
+
+**Decisions**:
+- **Seek with `seekBy`, not `player.currentTime =`.** The old chip code
+  used the setter; DEVLOG 2026-08-23 records that on HLS the setter seeks
+  with zero tolerance and a slow seek is silently abandoned. Same
+  post-seek hold as `CardVideo` (1.5s, simpler: the tapped chip stays lit
+  until a tick lands in it or the hold expires), because the player
+  reports the pre-seek position for a tick or two.
+- **What "a lot of texts" meant: the blurb.** The prose paragraph is the
+  only thing under the hero that describes what the place has; the
+  reason rows, interests, stats and reviews are evidence rows and stayed.
+  If the owner meant the reason sections too, each is one JSX block.
+- **`nativeControls` off**, as on the listing hero — the strip is the
+  scrubber now, and the sound toggle covers the silent-switch case the
+  native controls were there for.
+- Not done: auto-scrolling the strip so the lit chip stays in view as
+  the film plays. Needs per-chip `onLayout`; a tour visits ~5–8 places
+  so most strips fit on screen. Add if a long tour turns up.
+
+**Verification**: `pnpm typecheck` clean, `pnpm test` 528/528, biome
+clean on both changed files (the four pre-existing `useExhaustiveDependencies`
+/ `noConsoleLog` errors and the `app.json` format error are untouched).
+Not run on device — the owner's phone runs Metro from the reference
+worktree, which needs `git pull` + `pnpm install` after the merge.
+
+**Next steps**: owner review on the phone: does the lit chip track the
+film, does a tap land, does the headline under the media read right.
 
 ## 2026-09-05 06:30 UTC — phase173: build 5 exists — the App ID checkbox, then a missing babel preset
 

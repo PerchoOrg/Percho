@@ -446,17 +446,6 @@ export default function FeedScreen() {
 		],
 	);
 
-	/**
-	 * The scoped unit's row, for the crumb's stats line. Absent until the pool
-	 * lands — which is why the crumb takes its NAME from `scope` (persisted, so
-	 * it paints on the first frame) and its NUMBERS from here.
-	 */
-	const scopedUnit = useMemo(
-		() =>
-			scope ? pool.geoUnits.find((u) => u.id === scope.unitId) : undefined,
-		[pool.geoUnits, scope],
-	);
-
 	const cardWidth = width - GUTTER * 2;
 
 	const capability = useCallback(
@@ -714,10 +703,13 @@ export default function FeedScreen() {
 			 * community-first product has to say which place it is showing:
 			 * 「顶部显示 scope 这个想法好 符合我们 community first 的理念」.
 			 * The two top CORNERS are still empty.
+			 *
+			 * One line since 2026-09-05 — its name comes from `scope` (persisted,
+			 * so it paints on the first frame); the stats line it used to carry
+			 * is gone from the feed (see `ScopeCrumb`).
 			 */}
 			<ScopeCrumb
 				scopeName={scope?.name ?? null}
-				{...(scopedUnit ? { unit: scopedUnit } : {})}
 				onPress={() => setScopeOpen(true)}
 			/>
 			<View style={styles.stackWrap}>
