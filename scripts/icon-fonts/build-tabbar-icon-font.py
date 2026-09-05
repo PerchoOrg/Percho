@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
-"""Rebuild the TabBar icon subset font.
+"""Rebuild the TabBar icon subset fonts (outline + fill).
 
 The TabBar spec (owner 2026-08-14): one icon library (Phosphor), outline
-style, 22px at ~1.75 stroke. The project's existing icon fonts are the
-redline's (PerchoIconsFill / PerchoIconsOutline); the TabBar is OUTSIDE the
-redline — its tokens come from theme/tokens `colors` (warm paper, amber
-accent), not the redline green — so it gets its own font.
+style. The project's existing icon fonts are the redline's (PerchoIconsFill /
+PerchoIconsOutline); the TabBar is OUTSIDE the redline — its tokens come from
+theme/tokens `colors` (warm paper, amber accent), not the redline green — so
+it gets its own font.
+
+2026-09-05 (owner): new glyph set — house-line / compass / heart /
+hand-waving — and the active tab is DUOTONE: the fill glyph at low opacity
+sits under the outline glyph. That needs the same four drawings in both
+weights, so this script now builds two subsets from two upstream TTFs.
+Codepoints are identical across weights, so one table addresses both.
 
 Source: Phosphor's regular (outline) weight TTF from the @phosphor-icons/web
 npm package (`package/src/regular/Phosphor.ttf`), subset with fontTools
@@ -30,25 +36,33 @@ import gzip
 import io
 import tarfile
 from pathlib import Path
-REPO = Path(__file__).resolve().parent.parent
-OUT = REPO / "apps/mobile/assets/fonts/TabBarIcons.ttf"
+# scripts/icon-fonts/<this file> -> repo root is three levels up. (Was two,
+# left stale when the script moved into scripts/icon-fonts/.)
+REPO = Path(__file__).resolve().parent.parent.parent
 TMP = Path("/tmp/phosphor-web")
 PKG_URL = "https://registry.npmjs.org/@phosphor-icons/web/-/web-2.1.2.tgz"
 
-GLYPHS = ["house-simple", "magnifying-glass", "bookmark-simple", "user"]
+# (upstream TTF inside the package, output font, registered family name)
+WEIGHTS = [
+    ("regular", "TabBarIcons.ttf", "TabBarIcons"),
+    ("fill", "TabBarIconsFill.ttf", "TabBarIconsFill"),
+]
 
-# Fill-weight codepoints (phosphor-selection.json) — same across weights.
-FILL_CODEPOINTS = {
-    "house-simple": 0xE2C6,
-    "magnifying-glass": 0xE30C,
-    "bookmark-simple": 0xE0EA,
-    "user": 0xE4C2,
+GLYPHS = ["house-line", "compass", "heart", "hand-waving"]
+
+# Codepoints (phosphor-selection.json) — identical in every weight.
+CODEPOINTS = {
+    "house-line": 0xE2C4,
+    "compass": 0xE1C8,
+    "heart": 0xE2A8,
+    "hand-waving": 0xE580,
 }
 
 
-def fetch_regular_ttf() -> Path:
-    """Return the regular-weight TTF path (cached in /tmp)."""
-    src = TMP / "package/src/regular/Phosphor.ttf"
+def fetch_ttf(weight: str) -> Path:
+    """Return the TTF path for `weight` (cached in /tmp)."""
+    member = f"package/src/{weight}/{'Phosphor' if weight == 'regular' else 'Phosphor-' + weight.capitalize()}.ttf"
+    src = TMP / member
     if src.exists():
         return src
     print(f"fetching {PKG_URL}")
@@ -61,36 +75,38 @@ def fetch_regular_ttf() -> Path:
         data = gzip.decompress(data)
     TMP.mkdir(parents=True, exist_ok=True)
     with tarfile.open(fileobj=io.BytesIO(data)) as t:
-        t.extract("package/src/regular/Phosphor.ttf", TMP)
+        t.extractall(TMP, members=[m for m in t.getmembers() if m.name.endswith(".ttf")])
     return src
 
 
 def main() -> int:
-    src = fetch_regular_ttf()
-    unicodes = ",".join(f"U+{FILL_CODEPOINTS[g]:04X}" for g in GLYPHS)
-    subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "fontTools.subset",
-            str(src),
-            f"--unicodes={unicodes}",
-            f"--output-file={OUT}",
-            "--no-hinting",
-            "--name-IDs=*",
-        ],
-        check=True,
-    )
-    # The source family name is "Phosphor" — identical to
-    # `PerchoIconsOutline.ttf` (the redline outline set). expo-font/CoreText
-    # key fonts by their INTERNAL name table, so a second font registering the
-    # same family silently loses, the glyph falls back to an emoji/PUA glyph,
-    # and every tab icon renders as a colored blob (owner: "我的 expo 视频都没有声音"
-    # — same class of breakage). Rename this subset so it registers uniquely.
-    rename_family(OUT, "TabBarIcons")
-    print(f"wrote {OUT} ({unicodes})")
+    unicodes = ",".join(f"U+{CODEPOINTS[g]:04X}" for g in GLYPHS)
+    for weight, filename, family in WEIGHTS:
+        src = fetch_ttf(weight)
+        out = REPO / "apps/mobile/assets/fonts" / filename
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "fontTools.subset",
+                str(src),
+                f"--unicodes={unicodes}",
+                f"--output-file={out}",
+                "--no-hinting",
+                "--name-IDs=*",
+            ],
+            check=True,
+        )
+        # The source family name is "Phosphor" — identical to
+        # `PerchoIconsOutline.ttf` (the redline outline set). expo-font/CoreText
+        # key fonts by their INTERNAL name table, so a second font registering the
+        # same family silently loses, the glyph falls back to an emoji/PUA glyph,
+        # and every tab icon renders as a colored blob (owner: "我的 expo 视频都没有声音"
+        # — same class of breakage). Rename each subset so it registers uniquely.
+        rename_family(out, family)
+        print(f"wrote {out} ({unicodes})")
     for g in GLYPHS:
-        print(f"{g} = U+{FILL_CODEPOINTS[g]:04X}")
+        print(f"{g} = U+{CODEPOINTS[g]:04X}")
     return 0
 
 

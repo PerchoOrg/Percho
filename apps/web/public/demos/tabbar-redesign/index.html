@@ -134,8 +134,8 @@ body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px}
 </head>
 <body class="s-duotone m-tilt l-600">
 <div class="nav">
-  <h1>Tab bar — redesign, round 2: how big is the icon?</h1>
-  <p>Bar shape is settled: <b>B — flat bar with a soft pill behind the active icon</b>. Every frame below is that bar; only the <b>icon size vs label size</b> changes. Pick icons and an active style in the panel and all frames update live. <b>Tap the tabs inside a phone</b> to feel the motion. Phone <b>0</b> is the shipped bar for comparison (its <em>Saved</em> icon sits 2.7px right of centre — a measured bug, fixed in every other frame).</p>
+  <h1>Tab bar — shipped</h1>
+  <p><b>B1 is what shipped</b> (2026-09-05): flat bar, soft green pill behind the active icon, house-line · compass · heart · hand-waving, icon 24 over a 12 label, duotone active icon, pop + tilt on switch. Phone <b>0</b> is the bar it replaced — note its <em>Saved</em> bookmark sitting 2.7px right of centre, a measured bug that is gone. The panel still works if you want to try another combination; the larger steps are kept as the ramp we compared against.</p>
 </div>
 
 <div class="panel" id="panel">
@@ -179,7 +179,7 @@ const TABS = [
   {k:'you',    label:'You',    opts:['user','smiley','hand-waving','person','planet']},
 ];
 const SHIPPED = {feed:'house-simple',search:'magnifying-glass',saved:'bookmark-simple',you:'user'};
-const pick = {feed:'house',search:'magnifying-glass',saved:'heart',you:'smiley'};
+const pick = {feed:'house-line',search:'compass',saved:'heart',you:'hand-waving'};
 
 const IMG = 'https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/listing-photos/fmls-import/587946116/00.jpg';
 
@@ -203,7 +203,7 @@ function phone(id, title, sub, cls, icons){
 const gallery = document.getElementById('gallery');
 gallery.innerHTML = [
   phone('0','Current (as shipped)','Icon 22 · label 12.5. Outline only, no pill, no motion — and Saved drifts 2.7px right.','baseline s-outline z-now', SHIPPED),
-  phone('B1','B — icon 24 · label 12','One step up. Safest, reads as a tidy-up rather than a change.','pill z-1'),
+  phone('B1','B1 — icon 24 · label 12  ✅ SHIPPED','What is in the app as of 2026-09-05.','pill z-1'),
   phone('B2','B — icon 26 · label 11.5','Icon clearly leads; label becomes a caption. My pick.','pill z-2'),
   phone('B3','B — icon 28 · label 11','Icon dominant. Closest to Instagram / Threads proportions.','pill z-3'),
   phone('B4','B — icon 30 · label 10.5','Maximum before the label stops being comfortably legible.','pill z-4'),

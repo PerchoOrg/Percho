@@ -16,6 +16,86 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-05 16:05 UTC — phase177: the new tab bar ships — new glyphs, duotone active, and the centring bug deleted
+
+**Objective**: implement the owner's picks from `/demos/tabbar-redesign`:
+**house-line · compass · heart · hand-waving**, size step **B1** (icon 24 /
+label 12), bar **B** (flat + soft pill). Active style and motion were not
+named, so the demo defaults the owner had been looking at ship: duotone
+active icon + pop-and-tilt on switch, active label 600.
+
+**Actions**:
+- `scripts/icon-fonts/build-tabbar-icon-font.py` — builds TWO subsets now
+  (regular → `TabBarIcons.ttf`, fill → `TabBarIconsFill.ttf`, 2.6/2.2 KB),
+  because the active tab stacks the fill glyph under the outline one. Each
+  is renamed to its own family so CoreText cannot collide them. Also fixed
+  `REPO`, which was `parent.parent` and resolved to `scripts/` — the script
+  could not have written its output since it moved into `scripts/icon-fonts/`.
+- `components/TabBarIconFont.ts` — new glyph table (U+E2C4 / U+E1C8 /
+  U+E2A8 / U+E580), `TAB_BAR_FONT_FILL`, and the metric tables replaced:
+  `TAB_BAR_ART_WIDTH` is **deleted**, `TAB_BAR_GLYPH_CENTER_Y` +
+  `TAB_BAR_BOX_CENTER_Y` added.
+- `components/TabBar.tsx` — icon 24 / label 12, a `Tab` subcomponent (one
+  `useSharedValue` each; hooks cannot run in a `map`), the pill, the duotone
+  layer, and the pop.
+- `app/_layout.tsx` — loads the fill font behind the same gate.
+- `theme/tabbar-icon-font.test.ts` — now checks BOTH weights for every
+  codepoint, and that each glyph has a measured centre and scale.
+- `RELEASE.md` — dated bullet under v1.3.
+
+**Decisions**:
+- **The Saved drift was arithmetic, not taste.** fontTools on the built
+  subsets: all four glyphs have `cx` exactly 0.500 — they were already
+  centred, and `TAB_BAR_ART_WIDTH` held each glyph's xMax, not its width.
+  The `(1 - artWidth) / 2` "correction" was therefore a pure rightward
+  shove: bookmark 2.7 px, house 1.5 px, search/you 1.2 px. Deleted rather
+  than re-derived, with a comment saying not to reintroduce it.
+- **Vertical centring is now explicit.** The glyph's 1 em line box is taller
+  than the 24 pt icon box, so `top: (ICON_SIZE - fontSize) / 2` places the
+  box and `translateY = (glyphCentre - 0.4375) × fontSize` centres the
+  drawing inside it, per-glyph — heart is 0.031 em low, house-line 0.015 em
+  high, a 1.1 px spread that a row of four icons shows up. Relying on Yoga's
+  treatment of an inset-less absolute child or on `textAlignVertical`
+  (Android-only) would have left it to chance.
+- **Only house-line gets an optical scale.** By `sqrt(w×h)` the four
+  drawings are 0.812 / 0.810 / 0.828 / 0.856 em; only house-line is
+  meaningfully off the group, so it gets 0.96 and the rest get 1. Tuning
+  the other three would be noise.
+- **Duotone is two `<Text>` layers, not a new dependency.** Both weights
+  measure identical to 0.001 em, so the layers register exactly. Still no
+  `react-native-svg` (it red-screens in Expo Go, 2026-07-30).
+- **The pill renders on every tab, coloured only when active**, so the icon
+  row cannot shift when the active tab changes.
+- **No haptics.** Not in the brief and not in the demo the owner approved.
+
+**Issues**: `pnpm lint` in `apps/mobile` reported `app.json format` on this
+branch — pre-existing, and already fixed on main by phase180's biome
+override, so main was merged in before merging out. The 8 remaining biome
+warnings (`useExhaustiveDependencies` ×4, `noConsoleLog` ×4 in a script) are
+also pre-existing and untouched. Merging main also conflicted in
+`RELEASE.md`: phase175's bullet said the card's save mark "is the same
+bookmark the Saved tab uses", which this change makes false — reworded to
+"is a bookmark" rather than left contradicting the entry above it.
+
+**Verification**: `pnpm test` 529 passed / 50 files, `pnpm typecheck` clean,
+`pnpm lint` clean on the changed files. Both fonts carry all four codepoints
+and register as `TabBarIcons` / `TabBarIconsFill` (fontTools). The demo page
+now defaults to exactly the shipped combination, so it is a picture of what
+is in the app. **Not yet seen on a device** — the icon-font path can only
+really be confirmed in Expo Go.
+
+**Learnings**: a "measured" constant whose name lies is a trap —
+`TAB_BAR_ART_WIDTH` held xMax under a name that said width, and the code
+that consumed it was written to match the name, not the data. The
+replacements say `CENTER_Y`, and the test now asserts a value exists per
+glyph so a future glyph swap cannot silently inherit stale numbers.
+
+**Next steps**: owner opens Expo Go (reference worktree needs `git pull` +
+`pnpm install`) and checks the bar on device. Open question this raises: the
+card's save button is still a **bookmark** while the Saved tab is now a
+**heart** — one action, two symbols. Worth unifying; not changed here
+because it was not asked.
+
 ## 2026-09-05 15:49 UTC — phase177: tab bar round 2 — bar shape settled (B), icon-vs-label size open
 
 **Objective**: owner picked **B** (flat bar + soft pill behind the active

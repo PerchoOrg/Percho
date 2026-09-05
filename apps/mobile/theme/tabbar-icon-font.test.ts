@@ -6,8 +6,15 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { TAB_BAR_ART_WIDTH, TAB_BAR_GLYPH } from "../components/TabBarIconFont";
-const FONT = join(__dirname, "../assets/fonts/TabBarIcons.ttf");
+import {
+	TAB_BAR_GLYPH,
+	TAB_BAR_GLYPH_CENTER_Y,
+	TAB_BAR_GLYPH_SCALE,
+} from "../components/TabBarIconFont";
+const FONTS = {
+	outline: join(__dirname, "../assets/fonts/TabBarIcons.ttf"),
+	fill: join(__dirname, "../assets/fonts/TabBarIconsFill.ttf"),
+};
 
 /** Minimal TrueType `cmap` reader — every codepoint the font can actually draw. */
 function codepointsInFont(path: string): Set<number> {
@@ -54,16 +61,24 @@ function codepointsInFont(path: string): Set<number> {
 }
 
 describe("tab bar icon font", () => {
-	const present = codepointsInFont(FONT);
-
-	it("draws every glyph the icon table names", () => {
-		const missing = Object.entries(TAB_BAR_GLYPH)
-			.filter(([, glyph]) => !present.has(glyph.codePointAt(0) as number))
-			.map(
-				([name, glyph]) => `${name} (U+${glyph.codePointAt(0)?.toString(16)})`,
-			);
-		expect(missing).toEqual([]);
-	});
+	/**
+	 * BOTH weights are checked: the active tab stacks the fill glyph under the
+	 * outline one, so a codepoint present in only one font renders a half-drawn
+	 * icon on device and nowhere else.
+	 */
+	it.each(Object.entries(FONTS))(
+		"the %s font draws every glyph the icon table names",
+		(_weight, path) => {
+			const present = codepointsInFont(path);
+			const missing = Object.entries(TAB_BAR_GLYPH)
+				.filter(([, glyph]) => !present.has(glyph.codePointAt(0) as number))
+				.map(
+					([name, glyph]) =>
+						`${name} (U+${glyph.codePointAt(0)?.toString(16)})`,
+				);
+			expect(missing).toEqual([]);
+		},
+	);
 
 	it("maps each icon name to exactly one codepoint", () => {
 		for (const [name, glyph] of Object.entries(TAB_BAR_GLYPH)) {
@@ -84,14 +99,26 @@ describe("tab bar icon font", () => {
 		}
 	});
 
-	it("knows every glyph's art width, for the centring shift", () => {
-		for (const name of Object.keys(TAB_BAR_GLYPH)) {
-			const w = TAB_BAR_ART_WIDTH[name as keyof typeof TAB_BAR_ART_WIDTH];
-			expect(w, `${name} art width`).toBeGreaterThan(0);
-			expect(w, `${name} art width`).toBeLessThanOrEqual(1);
+	/**
+	 * The metric tables are what centre and size the drawing. A glyph swapped in
+	 * `TAB_BAR_GLYPH` without re-measuring would silently inherit the old
+	 * glyph's numbers — which is exactly how the 2.7px Saved drift shipped.
+	 */
+	it("has a measured centre and scale for every glyph", () => {
+		const names = Object.keys(TAB_BAR_GLYPH).sort();
+		expect(Object.keys(TAB_BAR_GLYPH_CENTER_Y).sort()).toEqual(names);
+		expect(Object.keys(TAB_BAR_GLYPH_SCALE).sort()).toEqual(names);
+		for (const name of names) {
+			const cy =
+				TAB_BAR_GLYPH_CENTER_Y[name as keyof typeof TAB_BAR_GLYPH_CENTER_Y];
+			// Phosphor draws inside the em box; a centre outside this band means
+			// the number was guessed, not measured.
+			expect(cy, `${name} centre`).toBeGreaterThan(0.3);
+			expect(cy, `${name} centre`).toBeLessThan(0.6);
+			const scale =
+				TAB_BAR_GLYPH_SCALE[name as keyof typeof TAB_BAR_GLYPH_SCALE];
+			expect(scale, `${name} scale`).toBeGreaterThan(0.8);
+			expect(scale, `${name} scale`).toBeLessThanOrEqual(1);
 		}
-		expect(Object.keys(TAB_BAR_ART_WIDTH).sort()).toEqual(
-			Object.keys(TAB_BAR_GLYPH).sort(),
-		);
 	});
 });

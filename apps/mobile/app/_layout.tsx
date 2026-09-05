@@ -15,7 +15,7 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { TAB_BAR_FONT } from "../components/TabBarIconFont";
+import { TAB_BAR_FONT, TAB_BAR_FONT_FILL } from "../components/TabBarIconFont";
 import { ICON_FONT, OUTLINE_FONT } from "../components/cards/redline/icon-font";
 import { createEventsTransport } from "../lib/events-transport";
 import { initAuth } from "../state/auth";
@@ -30,8 +30,10 @@ const DRAIN_THRESHOLD = 20;
 export default function RootLayout() {
 	/**
 	 * The card icon fonts — Phosphor Fill (main set, see `icon-font.ts`) plus
-	 * the outline weight the trade-off card uses, plus the TabBar's outline
-	 * set (see `TabBarIconFont.ts`).
+	 * the outline weight the trade-off card uses, plus BOTH TabBar weights —
+	 * its active tab draws the fill glyph under the outline one (duotone), so a
+	 * missing fill font would silently flatten the active state (see
+	 * `TabBarIconFont.ts`).
 	 *
 	 * Gated: an unloaded icon font renders PUA codepoints through the system
 	 * fallback — a visible tofu/"?" glyph in the trade-off discs and the tab
@@ -63,6 +65,7 @@ export default function RootLayout() {
 		[ICON_FONT]: require("../assets/fonts/PerchoIcons.ttf"),
 		[OUTLINE_FONT]: require("../assets/fonts/PerchoIconsOutline.ttf"),
 		[TAB_BAR_FONT]: require("../assets/fonts/TabBarIcons.ttf"),
+		[TAB_BAR_FONT_FILL]: require("../assets/fonts/TabBarIconsFill.ttf"),
 		[DM_SERIF_FONT]: require("../assets/fonts/DMSerifDisplay-Regular.ttf"),
 	});
 
