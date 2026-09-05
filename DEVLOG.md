@@ -16,6 +16,48 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-05 07:40 UTC — phase174: the community card's place label — demo frames, decision pending
+
+**Objective**: owner: "Community card top right has poi name, this is not
+aligned with top left community label, and it pushes the sound and saved
+icons below, it is not consistent with listing, can you redesign this?" He
+asked for demos before picking a placement.
+
+**Diagnosis**: the top-right place pill is not the app's. `worker.py`
+`_render_label_png` burns it into every community tour at assembly, scaled
+for a 361pt reference card (`CARD_REF_WIDTH_PT`). The card then plays the
+film with `fit="cover"`, so the pill's on-screen size follows the video's
+crop, not the card — it cannot sit exactly on the COMMUNITY badge's line on
+any device, and a two-line name grows it downward. Because the corner is
+taken by the video, `CommunityFace` parks the mute at `top: 52`
+(`COMMUNITY_SOUND_TOP`), where the listing card's capsule is at 12. The
+community card has no save control (owner removed it 2026-08-20) — the
+inconsistency is the height, not the count.
+
+**Actions**: `apps/web/public/demos/community-label-v1/index.html` — static
+mockup, same template as `feed-chrome-v1`. Seven frames: R (listing, as
+built), L0 (community, as built — burned pill + mute at 52), L1 place pill
+above the community name, L2 eyebrow text above the name, L3 stacked under
+the badge, L4 merged into the badge (`COMMUNITY | 📍 place`), L5 top-right
+but app-drawn (fixes alignment only; mute stays at 52). Every frame plays a
+20s loop of the real Windward tour's places (`tour_assemblies` labels +
+`label_distance`, including the 54-character Publix) with the dashed bar
+filling, so the label is seen CHANGING the way the phone would drive it.
+`?only=<id>`, `?group=ref|proposal`, `?guides=1` draws the top-12 / badge-
+bottom lines.
+
+**Proposed build** (not started): draw the label in the app from data the
+card already has — `tourSegments` + the `progress` shared value drive the
+scrub label today; add `distance` to the segment (`lib/feed/tour-segments.ts`
+reads `ordered_clips[].label_distance`, `pool-dto.ts` parses it). Remove
+`_label_overlay` from the worker and re-assemble the 5 communities that have
+a tour (ffmpeg only — clips are reused, zero Seedance). Corners then match
+the listing card: badge 12/12, mute 12/12. Order matters: re-assemble first,
+or the app's label and the video's coexist for a while.
+
+**Next steps**: owner picks L1–L5 at
+https://www.percho.co/demos/community-label-v1/ — L1 recommended.
+
 ## 2026-09-05 06:30 UTC — phase173: build 5 exists — the App ID checkbox, then a missing babel preset
 
 **Objective**: get the first store-candidate build out after phase172
