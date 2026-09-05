@@ -28,7 +28,7 @@ body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:20px}
 .tab{position:absolute;left:0;bottom:0;width:428px;display:block}
 /* the card: left 16, width 396; top/height per frame */
 .card{position:absolute;left:16px;width:396px;border-radius:28px;overflow:hidden;
-  background:url("./card.jpg") center/cover no-repeat;background-size:100% 100%;
+  background:url("/demos/feed-page-v2/card.jpg") center/cover no-repeat;background-size:100% 100%;
   box-shadow:0 3px 10px rgba(32,28,22,.05),0 16px 38px rgba(32,28,22,.085)}
 /* the measured band, drawn as a ruler so the space is a number, not a vibe */
 .band{position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:center;
@@ -83,19 +83,19 @@ function phone(o){
   const header = o.tightHeader
     ? `<div class="hdrTight"><div class="status"><span>9:41</span><span>●●●● ᯤ ▮</span></div>
        <div class="row"><span class="word">Percho</span><span class="sc">Dallas ${svg.chev}</span></div></div>`
-    : `<img class="hdr" src="./header.png">`;
+    : `<img class="hdr" src="/demos/feed-page-v2/header.png">`;
   const bands = [];
   if (o.rulers !== false) {
     if (gapAbove > 14) bands.push(`<div class="band ${gapAbove<=70?'ok':''}" style="top:${STAGE_TOP}px;height:${gapAbove}px"><i></i><span>${Math.round(gapAbove)} pt</span></div>`);
     if (gapBelow > 14) bands.push(`<div class="band ${gapBelow<=70?'ok':''}" style="top:${cardBottom}px;height:${gapBelow}px"><i></i><span>${Math.round(gapBelow)} pt empty</span></div>`);
   }
-  const art = o.art ? `background-image:url('./${o.art}')` : "";
+  const art = o.art ? `background-image:url('/demos/feed-page-v2/${o.art}')` : "";
   return `<div class="phone">
     ${header}
     <div class="card" style="top:${cardTop}px;height:${cardH}px;${art}"></div>
     ${bands.join("")}
     ${o.extra||""}
-    <img class="tab" src="./tabbar.png">
+    <img class="tab" src="/demos/feed-page-v2/tabbar.png">
   </div>`;
 }
 
