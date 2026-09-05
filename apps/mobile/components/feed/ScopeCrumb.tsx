@@ -10,19 +10,22 @@
  * is that it knows neighbourhoods. The owner reversed it on the strength of
  * that: 「顶部显示 scope 这个想法好 符合我们 community first 的理念」.
  *
- * Two lines, both real:
- *   1. `Atlanta metro › Peachtree Corners` — where the buyer is centred.
- *   2. `40 communities · median $594K` — the numbers behind it.
+ * One line: `Atlanta metro › Peachtree Corners ⌄` — where the buyer is centred.
  *
- * ── What is deliberately NOT on line 2 ──────────────────────────────────────
+ * ── The stats line that used to sit under it (removed 2026-09-05) ───────────
  *
- * The approved demo showed "12 with tours" between those two. It is not here,
- * because the wire has no such number: `city_geo_units` aggregates
- * `community_count` and a median list price, and a per-city count of
- * communities WITH a finished tour would need the view changed. Shipping it
- * from a guess would be the one thing this codebase refuses ("every emitted
- * number is real or absent" — `lib/feed/geo-units.ts`), so the line ships with
- * the two numbers that exist and grows the third when the view does.
+ * Until then a second line carried `40 communities · median $594K`. The owner
+ * cut it from the feed ("no need to show xxx communities in this page") —
+ * with the wordmark above and the card's own headline below, a third line of
+ * type read as clutter, and a city with no median shrank it to a bare count.
+ * `scopeStatsLine` survives because the scope sheet still shows it under each
+ * city, where the numbers are the point.
+ *
+ * The approved demo also showed "12 with tours". It has never shipped, because
+ * the wire has no such number: `city_geo_units` aggregates `community_count`
+ * and a median list price, and a per-city count of communities WITH a finished
+ * tour would need the view changed ("every emitted number is real or absent" —
+ * `lib/feed/geo-units.ts`).
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
@@ -47,7 +50,8 @@ function shortPrice(value: number): string {
 }
 
 /**
- * The stats line for the scoped unit, built only from what the unit carries.
+ * The stats line for a unit, built only from what the unit carries. Used by
+ * `ScopeSheet` for each city's subtitle (no longer drawn on the crumb itself).
  * Exported for its test: a city with no median must produce one clause, not a
  * dangling separator.
  */
@@ -69,13 +73,10 @@ export function scopeStatsLine(unit: GeoUnit | undefined): string | null {
 interface ScopeCrumbProps {
 	/** The picked scope's display name, or null for the whole metro. */
 	scopeName: string | null;
-	/** The picked unit, when the pool has loaded it — supplies line 2. */
-	unit?: GeoUnit;
 	onPress: () => void;
 }
 
-export function ScopeCrumb({ scopeName, unit, onPress }: ScopeCrumbProps) {
-	const stats = scopeStatsLine(unit);
+export function ScopeCrumb({ scopeName, onPress }: ScopeCrumbProps) {
 	return (
 		<Pressable
 			onPress={onPress}
@@ -85,7 +86,8 @@ export function ScopeCrumb({ scopeName, unit, onPress }: ScopeCrumbProps) {
 					? `Scope: ${scopeName}. Change`
 					: `Scope: ${SCOPE_ROOT_LABEL}. Change`
 			}
-			hitSlop={8}
+			// The box is a 24pt line; 10pt each side restores the 44pt target.
+			hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
 			style={({ pressed }) => [styles.wrap, pressed && styles.pressed]}
 		>
 			<View style={styles.line1}>
@@ -102,7 +104,6 @@ export function ScopeCrumb({ scopeName, unit, onPress }: ScopeCrumbProps) {
 				) : null}
 				<Chevron />
 			</View>
-			{stats ? <Text style={styles.stats}>{stats}</Text> : null}
 		</Pressable>
 	);
 }
@@ -114,10 +115,11 @@ function Chevron() {
 
 const styles = StyleSheet.create({
 	/**
-	 * Sits between the wordmark row and the card stage. 44pt of touch height
-	 * (§0.5's floor) without a background: this is a line of type on paper, not
-	 * a bar — the card stays the visual centre (owner's rule for the tab bar,
-	 * and the same reasoning applies above the deck).
+	 * Sits between the wordmark row and the card stage, as ONE line of type on
+	 * paper — no background, no bar; the card stays the visual centre. Since
+	 * 2026-09-05 the box is just the line plus 2pt each side (it was a 40pt
+	 * minimum with the stats line inside); the `hitSlop` on the Pressable is
+	 * what keeps the touch target at §0.5's 44pt floor.
 	 */
 	wrap: {
 		/**
@@ -139,12 +141,10 @@ const styles = StyleSheet.create({
 		 * than inventing a second number.
 		 */
 		zIndex: 100,
-		minHeight: 40,
 		alignItems: "center",
 		justifyContent: "center",
 		paddingHorizontal: 24,
-		paddingBottom: 4,
-		gap: 3,
+		paddingVertical: 2,
 	},
 	pressed: { opacity: 0.6 },
 	line1: { flexDirection: "row", alignItems: "center", gap: 6 },
@@ -160,7 +160,6 @@ const styles = StyleSheet.create({
 		color: redline.accent,
 		flexShrink: 1,
 	},
-	stats: { ...redlineText.locality, color: redline.ink2 },
 	chevron: {
 		width: 7,
 		height: 7,
