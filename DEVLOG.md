@@ -55,8 +55,29 @@ a tour (ffmpeg only — clips are reused, zero Seedance). Corners then match
 the listing card: badge 12/12, mute 12/12. Order matters: re-assemble first,
 or the app's label and the video's coexist for a while.
 
-**Next steps**: owner picks L1–L5 at
-https://www.percho.co/demos/community-label-v1/ — L1 recommended.
+**Owner's direction** (same session, after seeing L0–L5): drop the LISTING
+badge entirely ("it is obvious"); on the community card put the POI + distance
+top-left, keep sound AND save top-right to match the listing card, and move
+COMMUNITY down to the community name as a small label. Drawn as M1–M6.
+
+M2–M4 put the tag to the RIGHT of the name and cost two things: the two signal
+glyphs (the row cannot hold name + tag + glyphs + Explore) and, on a long name,
+the name itself — M5 shows "Apremont – Highcroft" ellipsizing at ~125pt, which
+the 2026-08-22 no-truncation rule forbids. M6 fixed that by dropping the tag
+under a wrapped name, i.e. a conditional layout.
+
+Owner then: "put community label on top of the community name in this case."
+M7/M8 — the tag as an EYEBROW above the name. It never competes for the row's
+width, so there is one rule for every name length instead of M6's conditional,
+and the signal glyphs come back to the name row. This is the design to build.
+
+**Next steps**: build M7. Order: (1) `worker.py` drops `_label_overlay`,
+restart the three launchd workers, re-assemble the 5 communities with a tour
+(ffmpeg only, clips reused, zero Seedance); (2) `distance` onto the segment in
+`lib/feed/tour-segments.ts` + `pool-dto.ts`; (3) `CommunityFace` — native place
+pill top-left, `CardCorner` gains save, COMMUNITY eyebrow above the name,
+`COMMUNITY_SOUND_TOP` deleted; (4) `ListingFace` loses its badge; (5) owner
+verifies in Expo Go before merge.
 
 ## 2026-09-05 06:30 UTC — phase173: build 5 exists — the App ID checkbox, then a missing babel preset
 
