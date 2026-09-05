@@ -16,6 +16,61 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-05 08:20 UTC — phase175: the card's top-right control — redesign frames, decision pending
+
+**Objective**: owner: "top right of the card - sound and saved icons look
+weird, redesign, give me some demos."
+
+**Diagnosis** (why the G2 capsule reads wrong on device):
+1. **Two sizes of white on one row.** The capsule is 37pt tall
+   (`CardCorner.tsx` `CELL`); the LISTING badge beside it is ~26pt (9.5pt
+   label + 7pt padding each side). Same material, same corner inset,
+   different height — the eye sees a mismatch before it reads either glyph.
+2. **The glyphs are not glyphs.** Both are built from bordered `View`s at
+   Lucide geometry because neither font had a speaker. At 17pt the
+   speaker's box is 2.8pt wide with a 1.75pt border on each side, so the
+   "outline" closes into a solid blob next to a filled flare and a thin
+   crescent; the 16pt bookmark's notch is two rotated bars that meet with a
+   seam. The demo's H0 frame replicates that art in CSS at 2× so the owner
+   can see it beside the alternatives.
+
+**Actions**: `apps/web/public/demos/card-corner-v2/index.html` — static
+mockup on the `feed-chrome-v1` template (fonts referenced from that
+folder, not duplicated). Every frame after H0 uses **Phosphor regular**
+glyphs — the tab bar's own library, so the card's bookmark becomes the
+Saved tab's icon — inline as SVG paths here; on device they come from a
+font subset (`scripts/icon-fonts/build-tabbar-icon-font.py` already
+subsets Phosphor regular; add `speaker-simple-high`,
+`speaker-simple-slash`, and the fill-weight `bookmark-simple` for the saved
+state). Frames:
+- **H0** as built (replica). **H1 ★** one frosted pill at the badge's own
+  26pt height, two 15pt glyphs, no divider. **H1b** muted + saved (saved
+  fills the bookmark in redline green, the colour reserved for interactive
+  state). **H1c** same with a hairline. **H1d** the 30pt / 17pt step up.
+- **H2** dark glass (45% ink, white glyphs) for the controls only; **H2b**
+  badge and controls both dark.
+- **H3** no container — 20pt white glyphs with a shadow, Reels-style.
+- **C1 / C2** H1 and H2 on the community card (single-glyph disc at 52).
+Each listing frame carries a 2× strip with the badge and the control side
+by side, which is where the height mismatch is obvious.
+
+**Decisions**: no two-disc variant — the owner rejected "two buttons" on
+2026-08-30 and G2 was his pick among five; this pass keeps ONE object and
+fixes its size and its art. Not re-litigating G5 (bookmark to the foot
+row) for the same reason. Recommendation is H1: it changes nothing about
+the corner's placement or behaviour, only makes the control the badge's
+twin.
+
+**Issues**: phase174 (same morning, other session) is redesigning the
+community card's burned-in place label; wherever that lands, the
+community mute's `top` follows it. C1/C2 here show it at the as-built 52.
+
+**Next steps**: owner picks a frame → implement in `CardCorner.tsx`:
+pill height from the badge (26 or 30), the two glyphs from a rebuilt
+Phosphor subset (drop the `View`-drawn speaker and bookmark), saved fill
+in `redline.accent`; `listing-layout.test.ts` and `icon-font.test.ts`
+updated for the new codepoints.
+
 ## 2026-09-05 07:40 UTC — phase174: the community card's place label — demo frames, decision pending
 
 **Objective**: owner: "Community card top right has poi name, this is not
