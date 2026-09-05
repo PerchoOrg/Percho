@@ -16,6 +16,56 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-05 06:30 UTC — phase173: build 5 exists — the App ID checkbox, then a missing babel preset
+
+**Objective**: get the first store-candidate build out after phase172
+stalled on the provisioning profile.
+
+**Actions**:
+- Owner ticked **Sign In with Apple** on App ID `co.percho.app` and ran
+  `eas build` interactively from `~/Workspace/Percho/apps/mobile`. Two
+  things went wrong there, neither Apple's fault:
+  1. `expo config --json` died with `Failed to resolve plugin for module
+     "expo-apple-authentication"` — the reference worktree's
+     `node_modules` predated Phase B. `pnpm install --frozen-lockfile`
+     there fixed it (deps only, no tracked files touched).
+  2. Build `c98e6109` (1.0.0 (5)) regenerated the profile fine (so the
+     capability fix worked) and then failed in Xcode's bundling step:
+     `Cannot find module 'babel-preset-expo'`, surfaced by EAS as
+     "Cannot read properties of undefined (reading 'transformFile')".
+     `babel.config.js` names the preset but `apps/mobile/package.json`
+     never declared it; local pnpm 9.12 hoists it out of expo's tree,
+     the build host's pnpm 11.9 does not. The 2026-08-30 build predates
+     the host's pnpm bump.
+- `apps/mobile/package.json` devDependencies + `babel-preset-expo
+  57.0.10`, lockfile updated (`5d5ded57`). Local `expo export` produces
+  the identical hbc hash before and after, so it is purely a resolution
+  fix.
+- EAS build `2b38d4c6-6c54-4a22-a096-fced58ac353c` → **FINISHED, 1.0.0
+  (5)**, from `5d5ded57`. `app.json` `buildNumber` 5 committed
+  (`ea2195c5`). Build numbers 3 and 4 were consumed by phase172's failed
+  and cancelled attempts and never reached Apple; `c98e6109` also said 5
+  but failed, so Apple's first sight of 5 is this build.
+
+**Decisions**: pinned the preset to the exact version the lockfile
+already resolved for `@expo/metro-config` (57.0.10) rather than a range,
+so there is one copy. Did not add `packageManager`/corepack pinning to
+force pnpm 9 on EAS — declaring the dependency is the fix Expo documents;
+pinning the package manager would paper over it.
+
+**Learnings**:
+- "transformFile of undefined" from Metro on EAS means the transformer
+  failed to construct; the real error (`Failed to construct transformer`)
+  is ~90 lines earlier in the Xcode log.
+- EAS log files are Brotli-compressed (`content-encoding: br`);
+  `curl -s $url | node -e 'zlib.brotliDecompressSync'`, not gunzip.
+- After every mobile merge the reference worktree needs `pnpm install`,
+  not just `git pull` — the owner builds and runs Metro from there.
+
+**Next steps**: `eas submit` to TestFlight Internal for the owner's
+product review; store steps (screenshots, labels, submit) wait on that
+review — nothing publishes without the owner pressing Submit.
+
 ## 2026-09-04 18:30 UTC — phase172: store sprint (Phase G) — legal pages, UGC report link, store copy; build blocked on an App ID capability
 
 **Objective**: Phase G, the last of the store-launch plan the owner asked
