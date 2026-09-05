@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho card corner — redesign frames</title>
+<style>
+@font-face { font-family: "DM Serif Display"; src: url("../feed-chrome-v1/DMSerifDisplay-Regular.ttf"); }
+@font-face { font-family: "TabBarIcons"; src: url("../feed-chrome-v1/TabBarIcons.ttf"); }
+:root{
+  --bg:#F7F5F0; --ink:#2B2116; --ink2:#8A7358; --ink3:#B9A88F; --accent:#B45309;
+  --rl-ink:#171715; --rl-ink2:#6F6B65; --rl-ink3:#96918A; --rl-accent:#0E6B57;
+  --card-ink:#181B18;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --ui: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px}
+.gallery{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;justify-content:center}
+.nav{max-width:1200px;margin:0 auto 20px;font:400 14px/1.6 var(--ui);color:#2B2116}
+.nav h1{font:400 26px "DM Serif Display",serif;color:#086B5B;margin-bottom:4px}
+.nav a{color:#B45309;text-decoration:none;font-weight:600;margin-right:12px}
+.nav p{max-width:760px;color:#5A4E40;margin:6px 0}
+.frame{scroll-margin-top:12px;width:393px}
+.cap{min-height:56px;padding:6px 2px;font:600 15px/1.25 var(--ui);color:#2B2116}
+.cap small{display:block;font:400 12.5px/1.3 var(--ui);color:#6F6B65;margin-top:2px}
+.phone{position:relative;width:393px;height:852px;background:var(--bg);overflow:hidden;border-radius:44px;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+body.only{padding:0;background:var(--bg)} body.only .cap{display:none} body.only .phone{border-radius:0;box-shadow:none}
+.status{height:59px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 10px 34px;font:600 15px var(--ui)}
+.chrome{height:44px;display:flex;align-items:center;justify-content:center}
+.wordmark{font:400 34px "DM Serif Display",serif;letter-spacing:-.5px;color:#086B5B;line-height:1}
+.crumb{display:flex;flex-direction:column;align-items:center;gap:3px;padding:0 24px 4px;min-height:40px;justify-content:center}
+.crumb .l1{display:flex;align-items:center;gap:6px}
+.crumb .root{font:600 14px var(--ui);color:var(--rl-ink2)} .crumb .sep{font:400 14px var(--ui);color:var(--rl-ink3)} .crumb .cur{font:600 14px var(--ui);color:var(--rl-accent)}
+.crumb .l2{font:400 12px var(--ui);color:var(--rl-ink2)}
+.stage{flex:1;position:relative;padding:12px 16px 10px;display:flex;align-items:center;justify-content:center}
+.stack{position:relative;width:361px;height:100%}
+.card{z-index:1;position:absolute;left:0;width:361px;height:83%;top:8.5%;border-radius:28px;overflow:hidden;background:#2B2116;box-shadow:0 3px 10px rgba(32,28,22,.05),0 16px 38px rgba(32,28,22,.085)}
+.card img.media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scrim{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 55%,rgba(0,0,0,.5) 78%,rgba(0,0,0,.92) 100%);z-index:1}
+.info{position:absolute;left:30px;right:30px;bottom:30px;z-index:2;color:#fff}
+.price{font:600 28px/28px var(--serif);letter-spacing:-1.1px}
+.addr{font:400 12px var(--ui);color:rgba(255,255,255,.72);margin-top:6px}
+.brow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+.specs{flex:2;display:flex;align-items:center;gap:10px;font:600 12.5px/15px var(--ui);color:rgba(255,255,255,.92)}
+.specs i{width:1px;height:14px;background:rgba(255,255,255,.35)}
+.cta{flex:1;display:flex;justify-content:flex-end;align-items:center;gap:6px;font:500 15px var(--ui);color:rgba(255,255,255,.92)}
+/* community face */
+.cscrim{position:absolute;inset:0;z-index:1;background:linear-gradient(to bottom,rgba(7,12,9,.5) 0%,rgba(7,12,9,.12) 34%,rgba(7,12,9,.10) 60%,rgba(7,12,9,.55) 100%)}
+.cname{position:absolute;left:24px;right:24px;top:62px;z-index:2;color:#fff;font:500 38px/38px var(--serif);letter-spacing:-.9px}
+.csub{position:absolute;left:24px;right:24px;top:108px;z-index:2;font:400 14px/20px var(--ui);color:rgba(255,255,255,.86)}
+.tiles{position:absolute;left:20px;right:20px;bottom:78px;display:flex;gap:8px;z-index:2}
+.tile{flex:1;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.15);border-radius:18px;padding:12px 8px;text-align:center;color:#fff}
+.tile b{display:block;font:600 12.5px var(--ui)} .tile span{display:block;font:400 10px/13px var(--ui);color:rgba(255,255,255,.72);margin-top:4px}
+.ccta{position:absolute;right:24px;bottom:40px;z-index:2;display:flex;align-items:center;gap:6px;font:500 15px var(--ui);color:rgba(255,255,255,.92)}
+.dash{position:absolute;left:24px;right:24px;bottom:22px;display:flex;gap:4px;z-index:2}
+.dash i{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.35)} .dash i.on{background:#fff}
+.filmLabel{position:absolute;top:12px;right:12px;z-index:2;display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:14px;background:rgba(255,255,255,.92);color:var(--card-ink);font:600 11px var(--ui)}
+.filmLabel .pin{color:#0E6B57;display:flex}
+/* tab bar */
+.tabbar{height:96px;padding-bottom:34px;display:flex;border-top:1px solid rgba(23,23,21,.05);background:var(--bg)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#9B9B94;font:500 12.5px var(--ui)}
+.tab .g{font-family:"TabBarIcons";font-size:24.9px;line-height:24.9px} .tab.on{color:#0E6B57}
+.home{position:absolute;bottom:8px;left:50%;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:#2B2116;opacity:.9}
+
+/* ---- the badge (unchanged in every frame unless .dark) ---- */
+.badge{position:absolute;top:12px;left:12px;height:26px;display:flex;align-items:center;background:rgba(255,255,255,.92);border-radius:20px;padding:0 10px;font:700 9.5px var(--ui);letter-spacing:1px;text-transform:uppercase;color:var(--card-ink);z-index:2}
+.badge.dark{background:rgba(24,27,24,.45);color:#fff}
+
+/* ---- H0: replica of what is on the branch today (View-drawn art) ---- */
+.h0{position:absolute;top:12px;right:12px;height:37px;border-radius:18.5px;background:rgba(255,255,255,.85);z-index:2;display:flex;align-items:center;overflow:hidden}
+.h0 .u{width:37px;height:37px;display:flex;align-items:center;justify-content:center}
+.h0 .line{width:1px;align-self:stretch;background:rgba(24,27,24,.16);margin:8px 0}
+.h0 .spk{position:relative;width:17px;height:17px}
+.h0 .spk .body{position:absolute;left:1.4px;top:6.4px;width:2.8px;height:4.25px;border:1.75px solid var(--card-ink);border-radius:1.5px}
+.h0 .spk .flare{position:absolute;left:4.25px;top:3.54px;width:0;height:0;border-right:3.54px solid var(--card-ink);border-top:4.96px solid transparent;border-bottom:4.96px solid transparent}
+.h0 .spk .wave{position:absolute;left:8.15px;top:4.96px;width:7.08px;height:7.08px;border-radius:50%;border:1.75px solid transparent;border-right-color:var(--card-ink)}
+.h0 .bm{position:relative;width:16px;height:16px}
+.h0 .bm i{position:absolute;background:var(--card-ink);border-radius:.9px}
+.h0 .bm .t{left:3.33px;top:2px;width:9.33px;height:1.75px}
+.h0 .bm .l{left:3.33px;top:2px;width:1.75px;height:12px} .h0 .bm .r{left:10.92px;top:2px;width:1.75px;height:12px}
+.h0 .bm .dl{left:3.33px;top:11.8px;width:5.7px;height:1.75px;transform:rotate(-35.5deg);transform-origin:0 50%}
+.h0 .bm .dr{left:12.67px;top:11.8px;width:5.7px;height:1.75px;transform:rotate(-144.5deg);transform-origin:0 50%}
+
+/* ---- H1 / H2: one badge-height pill, real Phosphor glyphs ---- */
+.pill{position:absolute;top:12px;right:12px;height:26px;padding:0 9px;border-radius:13px;background:rgba(255,255,255,.92);z-index:2;display:flex;align-items:center;gap:12px;color:var(--card-ink)}
+.pill svg{display:block}
+.pill.one{width:26px;padding:0;justify-content:center}
+.pill.dark{background:rgba(24,27,24,.45);color:#fff}
+.pill .saved{color:var(--rl-accent)}
+.pill.dark .saved{color:#fff}
+.pill.c{top:52px}
+.pill.big{height:30px;border-radius:15px;padding:0 10px;gap:13px}
+.pill.sep{gap:0;padding:0}
+.pill.sep .u{width:30px;height:26px;display:flex;align-items:center;justify-content:center}
+.pill.sep .line{width:1px;height:12px;background:rgba(24,27,24,.16)}
+
+/* ---- H3: bare glyphs, no container ---- */
+.bare{position:absolute;top:12px;right:16px;height:26px;z-index:2;display:flex;align-items:center;gap:16px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45)) drop-shadow(0 0 6px rgba(0,0,0,.25))}
+.bare svg{display:block}
+.bare.c{top:52px}
+.bare .saved{color:#fff}
+
+.note{position:absolute;left:0;right:0;bottom:0;height:8.5%;display:flex;align-items:center;justify-content:center;font:400 12.5px var(--ui);color:var(--ink3);z-index:5;text-align:center;padding:0 12px}
+.mag{position:relative;width:393px;height:104px;margin-bottom:10px;border-radius:16px;overflow:hidden;background:#8B8F86 center 22% / cover no-repeat}
+.mag .band{position:absolute;right:0;top:0;width:196px;height:52px;transform:scale(2);transform-origin:top right}
+.mag .band .badge{left:12px}
+.mag .tag{position:absolute;left:10px;bottom:8px;font:600 10px var(--ui);letter-spacing:1px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+body.only .mag{display:none}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const IMG = {
+  l1:'https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/listing-photos/fmls-import/587946116/00.jpg',
+  l2:'https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/listing-photos/fmls-import/584585849/00.jpg',
+  c3:'https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/ashley-crossing.jpg',
+};
+/* Phosphor regular (the TabBar font's own library) — 256 grid, fill paths. */
+const P = {
+  spkOn:'M163.51,24.81a8,8,0,0,0-8.42.88L85.25,80H40A16,16,0,0,0,24,96v64a16,16,0,0,0,16,16H85.25l69.84,54.31A8,8,0,0,0,168,224V32A8,8,0,0,0,163.51,24.81ZM152,207.64,92.91,161.69A7.94,7.94,0,0,0,88,160H40V96H88a7.94,7.94,0,0,0,4.91-1.69L152,48.36ZM208,104v48a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm32-16v80a8,8,0,0,1-16,0V88a8,8,0,0,1,16,0Z',
+  spkOff:'M192,152V104a8,8,0,0,1,16,0v48a8,8,0,0,1-16,0Zm40-72a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,232,80ZM221.92,210.62a8,8,0,1,1-11.84,10.76L168,175.09V224a8,8,0,0,1-12.91,6.31L85.25,176H40a16,16,0,0,1-16-16V96A16,16,0,0,1,40,80H81.55L50.08,45.38A8,8,0,0,1,61.92,34.62ZM152,157.49,96.1,96H40v64H88a7.94,7.94,0,0,1,4.91,1.69L152,207.64ZM125.06,69.31l26.94-21v58.47a8,8,0,0,0,16,0V32a8,8,0,0,0-12.91-6.31l-39.85,31a8,8,0,0,0,9.82,12.63Z',
+  bm:'M184,32H72A16,16,0,0,0,56,48V224a8,8,0,0,0,12.24,6.78L128,193.43l59.77,37.35A8,8,0,0,0,200,224V48A16,16,0,0,0,184,32Zm0,177.57-51.77-32.35a8,8,0,0,0-8.48,0L72,209.57V48H184Z',
+  bmFill:'M184,32H72A16,16,0,0,0,56,48V224a8,8,0,0,0,12.24,6.78L128,193.43l59.77,37.35A8,8,0,0,0,200,224V48A16,16,0,0,0,184,32Z',
+};
+const ph = (d, s=15, cls='') => `<svg class="${cls}" width="${s}" height="${s}" viewBox="0 0 256 256" fill="currentColor"><path d="${d}"/></svg>`;
+const svg = {
+  arrow:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>',
+  pin:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+  chev:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+};
+const tabIcons = {feed:'',search:'',saved:'',you:''};
+
+function h0(){ return `<div class="h0"><div class="u"><div class="spk"><div class="body"></div><div class="flare"></div><div class="wave"></div></div></div><div class="line"></div><div class="u"><div class="bm"><i class="t"></i><i class="l"></i><i class="r"></i><i class="dl"></i><i class="dr"></i></div></div></div>`; }
+/* o: {on, saved, dark, sep, sound:true/false, save:true/false, community} */
+function pill(o){
+  const cls = ['pill', o.big?'big':'', o.dark?'dark':'', o.sep?'sep':'', o.community?'c':'', (o.save===false||o.sound===false)?'one':''].filter(Boolean).join(' ');
+  const spk = o.sound===false ? '' : ph(o.on===false?P.spkOff:P.spkOn, o.big?17:15);
+  const bm  = o.save===false ? '' : (o.saved ? ph(P.bmFill,o.big?17:15,'saved') : ph(P.bm,o.big?17:15));
+  if(o.sep) return `<div class="${cls}"><div class="u">${spk}</div><div class="line"></div><div class="u">${bm}</div></div>`;
+  return `<div class="${cls}">${spk}${bm}</div>`;
+}
+function bare(o){
+  const spk = o.sound===false ? '' : ph(o.on===false?P.spkOff:P.spkOn, 20);
+  const bm  = o.save===false ? '' : (o.saved ? ph(P.bmFill,20,'saved') : ph(P.bm,20));
+  return `<div class="bare ${o.community?'c':''}">${spk}${bm}</div>`;
+}
+function corner(kind, o={}){
+  if(kind==='h0') return h0();
+  if(kind==='bare') return bare(o);
+  return pill(o);
+}
+
+function statusBar(){return `<div class="status"><span>9:41</span><span>●●●● ᯤ ▮</span></div>`;}
+function tabbar(){return `<div class="tabbar">${['feed','search','saved','you'].map(k=>`<div class="tab ${k==='feed'?'on':''}"><span class="g">${tabIcons[k]}</span>${k[0].toUpperCase()+k.slice(1)}</div>`).join('')}</div><div class="home"></div>`;}
+function crumb(){return `<div class="crumb"><div class="l1"><span class="root">Atlanta metro</span><span class="sep">›</span><span class="cur">Peachtree Corners</span><span style="color:var(--rl-ink3);display:flex">${svg.chev}</span></div><div class="l2">40 communities · median $594K</div></div>`;}
+
+function listingCard(kind, o={}){
+  return `<div class="card">
+    <img class="media" src="${o.img||IMG.l1}">
+    <div class="badge ${o.darkBadge?'dark':''}">Listing</div>
+    ${corner(kind,o)}
+    <div class="scrim"></div>
+    <div class="info">
+      <div class="price">$247,000</div>
+      <div class="addr">4123 Islington Way · Duluth, GA 30096</div>
+      <div class="brow">
+        <div class="specs"><span>2 bd</span><i></i><span>3 ba</span><i></i><span>1,280 sqft</span></div>
+        <div class="cta">Explore ${svg.arrow}</div>
+      </div>
+    </div>
+  </div>`;
+}
+function communityCard(kind, o={}){
+  return `<div class="card">
+    <img class="media" src="${IMG.c3}">
+    <div class="badge ${o.darkBadge?'dark':''}">Community</div>
+    <div class="filmLabel"><span class="pin">${svg.pin}</span>Ashley Crossing · 2.4 mi</div>
+    ${corner(kind,{...o,save:false,community:true})}
+    <div class="cscrim"></div>
+    <div class="cname">Ashley Crossing</div>
+    <div class="csub">Alpharetta, GA · 34 restaurants nearby · Highly walkable</div>
+    <div class="tiles">
+      <div class="tile"><b>Restaurants</b><span>34 restaurants</span></div>
+      <div class="tile"><b>Walkability</b><span>#4 resident interest</span></div>
+      <div class="tile"><b>Trees</b><span>#3 resident interest</span></div>
+    </div>
+    <div class="ccta">Why people love it ${svg.arrow}</div>
+    <div class="dash"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div>
+  </div>`;
+}
+function mag(kind, o={}){
+  if(!o.zoom) return '';
+  return `<div class="mag" style="background-image:url(${o.img||IMG.l1})"><div class="band"><div class="badge ${o.darkBadge?'dark':''}">Listing</div>${corner(kind,{...o,community:false})}</div><span class="tag">2× · BADGE AND CONTROL AT THE SAME SCALE</span></div>`;
+}
+function feed(kind, o={}){
+  const card = o.community ? communityCard(kind,o) : listingCard(kind,o);
+  const note = o.note ? `<div class="note">${o.note}</div>` : '';
+  return `<div class="phone">${statusBar()}<div class="chrome"><span class="wordmark">Percho</span></div>${crumb()}
+    <div class="stage"><div class="stack">${card}${note}</div></div>${tabbar()}</div>`;
+}
+
+const FRAMES = {
+  H0:{title:'H0 · What ships today (the thing that looks off)',sub:'37pt capsule next to a 26pt badge, hairline in the middle, and both glyphs drawn from rectangles: the speaker’s box collapses into a blob, the bookmark’s notch is two rotated bars with a seam.',html:(m)=>(m?mag:feed)('h0',{zoom:true})},
+  H1:{title:'H1 · One pill, badge height, real glyphs ★ recommended',sub:'The corner becomes the badge’s twin: same 26pt height, same frosted white, same radius. Two Phosphor glyphs at 15pt, no divider — the bookmark is the Saved tab’s own icon, so the card and the tab bar finally match.',html:(m)=>(m?mag:feed)('pill',{zoom:true})},
+  H1b:{title:'H1 · muted + saved state',sub:'Mute is the slashed speaker; saved fills the bookmark in the redline green — the one colour reserved for interactive state, so the fill reads as “yours” rather than as a darker icon.',html:(m)=>(m?mag:feed)('pill',{on:false,saved:true,zoom:true})},
+  H1d:{title:'H1 · one step larger (30pt, 17pt glyphs)',sub:'If 26 feels too quiet as a tap target: 30pt pill, glyphs at 17. Sits 2pt proud of the badge top and bottom — still one family, a little more present.',html:(m)=>(m?mag:feed)('pill',{big:true,zoom:true})},
+  H1c:{title:'H1 · with a hairline (if you want the two taps visibly split)',sub:'Same pill, 12pt hairline between the glyphs. Slightly busier; shown so the choice is explicit.',html:(m)=>(m?mag:feed)('pill',{sep:true,zoom:true})},
+  H2:{title:'H2 · Dark glass, controls only',sub:'Same badge-height pill in the scrim’s own material (45% ink, white glyphs). Label stays white, controls go dark — the eye separates “what this is” from “what I can do”. Recedes on bright skies.',html:(m)=>(m?mag:feed)('pill',{dark:true,zoom:true})},
+  H2b:{title:'H2 · dark glass on both',sub:'Badge and controls share the dark material. One voice across the top row; the photo’s highlights come through un-fogged.',html:(m)=>(m?mag:feed)('pill',{dark:true,darkBadge:true,zoom:true})},
+  H3:{title:'H3 · No container at all',sub:'White 20pt glyphs with a soft shadow, straight on the photo — how Reels / TikTok / YouTube place mute and save on video. Zero chrome, biggest glyphs, weakest on a pale kitchen.',html:(m)=>(m?mag:feed)('bare',{zoom:true})},
+  C1:{title:'C1 · H1 on the community card',sub:'One glyph, so the pill is a 26pt disc, still dropped to 52 under the burned-in place-name label. Same material and size as the label it sits below.',html:(m)=>(m?mag:feed)('pill',{community:true})},
+  C2:{title:'C2 · H2 on the community card',sub:'Dark disc under the white place label — the label is the film’s, the control is the app’s.',html:(m)=>(m?mag:feed)('pill',{community:true,dark:true})},
+};
+function fit(){const w=Number(new URLSearchParams(location.search).get('w'))||window.innerWidth; const k=Math.min(1,(w-16)/393); document.querySelectorAll('.frame, body.only .phone').forEach(el=>{el.style.zoom=String(k);});}
+window.addEventListener('resize',fit);
+const q = new URLSearchParams(location.search);
+const only = q.get('only');
+const root = document.getElementById('root');
+if(only && FRAMES[only]){ document.body.classList.add('only'); root.innerHTML = FRAMES[only].html(false); }
+else {
+  const keys = Object.keys(FRAMES);
+  const nav = `<div class="nav"><h1>Card corner — sound + save, redesign frames</h1>
+    <p>What is wrong today (H0): the control is 37pt tall beside a 26pt badge, so the top row has two different sizes of white; and both glyphs are hand-built from rectangles because neither icon font had a speaker. Every frame below uses Phosphor glyphs — the same library as the tab bar — which the font pipeline can subset in one run.</p>
+    <div>Jump: ${keys.map(k=>`<a href="#${k}">${k}</a>`).join('')} <a href="?only=H1">H1 full-screen</a></div></div>`;
+  root.innerHTML = nav + `<div class="gallery">${keys.map(k=>`<div class="frame" id="${k}"><div class="cap">${FRAMES[k].title}<small>${FRAMES[k].sub}</small></div>${FRAMES[k].html(true)}${FRAMES[k].html(false)}</div>`).join('')}</div>`;
+}
+fit();
+</script>
+</body>
+</html>
