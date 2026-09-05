@@ -16,13 +16,24 @@
  * "not enough data" grades is not a destination worth pushing a screen for.
  *
  * What IS real is the material the button names: what residents said, and the
- * evidence under it. So this screen is the film with its places as a strip to
- * jump between (the listing hero's pattern — owner, 2026-09-04), then the
- * card's three tiles expanded, then every other reason the neighbourhood
- * stated, then the interest ranking that backs the "#N resident interest"
- * sub-lines, then the demographic figures. The blurb paragraph came off with
- * that change: the strip already says what the place has, and the owner asked
- * for less prose under it. Server rules live in `apps/web/lib/communities/detail.ts`.
+ * evidence under it. Server rules live in `apps/web/lib/communities/detail.ts`.
+ *
+ * ── Structure, top to bottom (owner's redesign notes, 2026-09-04/05) ────────
+ *
+ *   TourHero      the film + one chip per CATEGORY it visits (listing pattern)
+ *   Headline      name left, city/state right, on one baseline
+ *   StatBand      residents / owner-occupied / median age, as numerals
+ *   NearbyChart   counts of real places by kind, bars, biggest first
+ *   WHY PEOPLE…   the card's three reasons, WITH their evidence lines
+ *   ALSO SAID     every other stated reason, as labels only
+ *   INTO          the interest ranking, chips, no ordinals
+ *   REVIEWS       score, four dimension bars, the reviews themselves
+ *
+ * The through-line of the 2026-09-05 pass is "text is not preferred, numbers
+ * are, except for the key insights": the blurb paragraph is gone, the reason
+ * sentences survive only on the top three, and everything that was a
+ * `label ——— value` row is now a numeral or a bar. Nothing was deleted for
+ * space that is not still on the page as a figure.
  *
  * When a pillar gets a source, §3.3 is the target and this becomes its Vibe
  * section. It is not a placeholder in the meantime — every row on it is a real
@@ -46,13 +57,13 @@ import {
 	RedlineIcon,
 	type RedlineIconName,
 } from "../../components/cards/redline/RedlineChrome";
-import {
-	TourHero,
-	type TourSegment,
-} from "../../components/community/TourHero";
+import { NearbyChart } from "../../components/community/NearbyChart";
+import { RatingBars } from "../../components/community/RatingBars";
+import { StatBand } from "../../components/community/StatBand";
+import { TourHero } from "../../components/community/TourHero";
 import { apiBase } from "../../lib/api/base";
+import type { TourSegment } from "../../lib/community/tour-buckets";
 import {
-	REVIEW_DIMENSION_LABELS,
 	type ReviewDimension,
 	type ReviewStatus,
 	fetchMyReview,
@@ -86,6 +97,12 @@ interface CommunityDetailDTO {
 	topReasons: ReasonDTO[];
 	moreReasons: ReasonDTO[];
 	stats: { label: string; value: string }[];
+	/**
+	 * Counts of real places by kind, biggest first. Charted, not narrated.
+	 * Optional because a phone can be newer than the deployed API — this
+	 * shipped 2026-09-05 and a build in the field must not crash without it.
+	 */
+	nearby?: { bucket: string; count: number }[];
 	interests: string[];
 	/** Approved resident reviews (phase E). Absent until one is approved. */
 	reviews?: {
@@ -228,18 +245,42 @@ export default function CommunityWhyScreen() {
 				/>
 
 				<View style={styles.body}>
-					{/* Headline under the media, where the listing page puts its own. */}
-					<Text style={styles.name}>{data.name}</Text>
-					{!!place && <Text style={styles.place}>{place}</Text>}
+					{/*
+					 * Headline under the media, where the listing page puts its own.
+					 * City and state sit to the RIGHT of the name on the same
+					 * baseline (owner 2026-09-05), like the listing's price / specs row.
+					 */}
+					<View style={styles.headline}>
+						<Text style={styles.name} numberOfLines={2}>
+							{data.name}
+						</Text>
+						{!!place && <Text style={styles.place}>{place}</Text>}
+					</View>
+
+					{/* Three figures as numerals — the old label/value rows charted. */}
+					<View style={styles.bandWrap}>
+						<StatBand stats={data.stats} />
+					</View>
+
+					{/* Counts of real places, biggest first. The page's densest
+					    numbers, and the evidence under half the reasons below. */}
+					{(data.nearby?.length ?? 0) > 0 && (
+						<>
+							<Text style={styles.sectionHead}>WHAT'S NEARBY</Text>
+							<NearbyChart nearby={data.nearby ?? []} />
+						</>
+					)}
 
 					{/*
 					 * The card's three, in the card's order — `communityReasonsAll` is
 					 * the one ranking both surfaces use, so these are the exact tiles
-					 * the user just tapped.
+					 * the user just tapped. These keep their evidence lines: they are
+					 * the key insights the owner's 2026-09-05 note exempts from
+					 * "text is not preferred".
 					 */}
 					{data.topReasons.length > 0 && (
 						<>
-							<Text style={styles.sectionHead}>ON THE CARD</Text>
+							<Text style={styles.sectionHead}>WHY PEOPLE LOVE IT</Text>
 							<View style={styles.card}>
 								{data.topReasons.map((r) => (
 									<ReasonRow key={r.label} reason={r} />
@@ -248,14 +289,22 @@ export default function CommunityWhyScreen() {
 						</>
 					)}
 
-					{/* The reason this screen exists: the card holds three, most
-					    communities state more. */}
+					{/*
+					 * Everything else the neighbourhood stated, as labels only. It was
+					 * an icon + label + sentence row each, which on a community stating
+					 * ten attributes is ten paragraphs of the page. The numbers those
+					 * sentences carried are charted above — no evidence left the page,
+					 * it stopped being narrated one line at a time.
+					 */}
 					{data.moreReasons.length > 0 && (
 						<>
 							<Text style={styles.sectionHead}>ALSO SAID BY RESIDENTS</Text>
-							<View style={styles.card}>
+							<View style={styles.chips}>
 								{data.moreReasons.map((r) => (
-									<ReasonRow key={r.label} reason={r} />
+									<View key={r.label} style={styles.chip}>
+										<RedlineIcon name={r.icon} size={13} color={colors.ink2} />
+										<Text style={styles.chipTxt}>{r.label}</Text>
+									</View>
 								))}
 							</View>
 						</>
@@ -265,29 +314,15 @@ export default function CommunityWhyScreen() {
 						<>
 							<Text style={styles.sectionHead}>WHAT RESIDENTS ARE INTO</Text>
 							{/*
-							 * The evidence behind every "#N resident interest" above,
-							 * shown in Nextdoor's own per-neighbourhood order so the
-							 * ordinal can be checked rather than believed.
+							 * Nextdoor's own per-neighbourhood order, so the ranking is
+							 * still readable off the row. The ordinal badges are gone
+							 * (owner 2026-09-05, "no need to show numbers") — position
+							 * already says what they said.
 							 */}
 							<View style={styles.chips}>
-								{data.interests.map((it, i) => (
+								{data.interests.map((it) => (
 									<View key={it} style={styles.chip}>
-										<Text style={styles.chipRank}>{i + 1}</Text>
 										<Text style={styles.chipTxt}>{it}</Text>
-									</View>
-								))}
-							</View>
-						</>
-					)}
-
-					{data.stats.length > 0 && (
-						<>
-							<Text style={styles.sectionHead}>THE NEIGHBOURHOOD</Text>
-							<View style={styles.card}>
-								{data.stats.map((s) => (
-									<View key={s.label} style={styles.statRow}>
-										<Text style={styles.statLabel}>{s.label}</Text>
-										<Text style={styles.statValue}>{s.value}</Text>
 									</View>
 								))}
 							</View>
@@ -304,24 +339,17 @@ export default function CommunityWhyScreen() {
 					{data.reviews ? (
 						<View style={styles.card}>
 							<View style={styles.statRow}>
+								<Text style={styles.scoreValue}>
+									{data.reviews.avgRating.toFixed(1)}
+									<Text style={styles.scoreOf}> / 5</Text>
+								</Text>
 								<Text style={styles.statLabel}>
 									{data.reviews.count}{" "}
 									{data.reviews.count === 1 ? "review" : "reviews"}
 								</Text>
-								<Text style={styles.statValue}>
-									{data.reviews.avgRating.toFixed(1)} / 5
-								</Text>
 							</View>
-							{Object.entries(data.reviews.dimensionAvgs).length > 0 && (
-								<Text style={styles.dimLine}>
-									{Object.entries(data.reviews.dimensionAvgs)
-										.map(
-											([k, v]) =>
-												`${REVIEW_DIMENSION_LABELS[k as ReviewDimension]} ${v.toFixed(1)}`,
-										)
-										.join("  ·  ")}
-								</Text>
-							)}
+							{/* The four dimensions as bars — they were one run-on line. */}
+							<RatingBars dimensionAvgs={data.reviews.dimensionAvgs} />
 							{data.reviews.items.map((r) => (
 								<View key={r.id} style={styles.review}>
 									<View style={styles.reviewHead}>
@@ -419,8 +447,16 @@ const styles = StyleSheet.create({
 	backTxt: { ...textStyles.footnote, color: colors.surface },
 
 	body: { paddingHorizontal: 18, paddingTop: 20 },
-	name: { ...textStyles.title1, color: colors.ink },
-	place: { ...textStyles.footnote, color: colors.ink2, marginTop: 6 },
+	/** Name left, place right, on one baseline — the listing headline's row. */
+	headline: {
+		flexDirection: "row",
+		alignItems: "baseline",
+		justifyContent: "space-between",
+		gap: 10,
+	},
+	name: { ...textStyles.title1, color: colors.ink, flexShrink: 1 },
+	place: { ...textStyles.footnote, color: colors.ink2 },
+	bandWrap: { marginTop: 16 },
 	sectionHead: {
 		...textStyles.caption,
 		color: colors.accent,
@@ -466,29 +502,24 @@ const styles = StyleSheet.create({
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: colors.border,
 	},
-	chipRank: { ...textStyles.caption, color: colors.accent },
 	chipTxt: { ...textStyles.footnote, color: colors.ink },
 
 	statRow: {
 		flexDirection: "row",
-		alignItems: "center",
+		alignItems: "baseline",
 		justifyContent: "space-between",
 		paddingVertical: 13,
 		borderBottomWidth: StyleSheet.hairlineWidth,
 		borderBottomColor: colors.border,
 	},
 	statLabel: { ...textStyles.footnote, color: colors.ink2 },
-	statValue: { ...textStyles.headline, color: colors.ink },
-
-	dimLine: {
-		...textStyles.caption,
-		color: colors.ink2,
-		textTransform: "none",
-		letterSpacing: 0,
-		paddingVertical: 10,
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
+	/** The reviews score, printed like a price rather than like a field. */
+	scoreValue: {
+		...textStyles.title1,
+		color: colors.ink,
+		fontVariant: ["tabular-nums"],
 	},
+	scoreOf: { ...textStyles.footnote, color: colors.ink2 },
 	review: {
 		paddingVertical: 13,
 		borderBottomWidth: StyleSheet.hairlineWidth,

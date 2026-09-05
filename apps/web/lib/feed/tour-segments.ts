@@ -45,6 +45,16 @@ export interface TourSegment {
   name: string;
   /** Where the stretch ENDS, as a fraction (0..1] of the finished film. */
   endFraction: number;
+  /** `community_pois.poi_id`, so a caller can resolve the place's category. */
+  poiId?: string;
+  /**
+   * `community_pois.intent_bucket` — the place's CATEGORY, which is what the
+   * community page's jump strip groups by (owner 2026-09-05: "dont say the poi
+   * name, just group them by tag or category, it is too long to show all of
+   * them"). Filled by `fetchVerticalVideos` from the join, or from the clip's
+   * own `bucket` when the assembly recorded one. Absent when neither knows.
+   */
+  bucket?: string;
 }
 
 interface ParsedClip {
@@ -52,6 +62,12 @@ interface ParsedClip {
   key: string;
   name: string;
   seconds: number;
+  poiId: string;
+  /**
+   * The assembly's own category for the clip. Ken Burns assemblies write it;
+   * Seedance ones do not, which is why the `community_pois` join exists.
+   */
+  bucket: string;
 }
 
 function parseClips(orderedClips: unknown): ParsedClip[] {
@@ -68,7 +84,14 @@ function parseClips(orderedClips: unknown): ParsedClip[] {
     const id = typeof c.poi_id === 'string' ? c.poi_id : '';
     // `poi_id` groups; the name is only what we would show. A tour with
     // neither cannot be grouped, so each clip stands alone.
-    out.push({ key: id || name || `clip-${out.length}`, name, seconds });
+    const bucket = typeof c.bucket === 'string' ? c.bucket : '';
+    out.push({
+      key: id || name || `clip-${out.length}`,
+      name,
+      seconds,
+      poiId: id,
+      bucket,
+    });
   }
   return out;
 }
@@ -106,7 +129,12 @@ export function tourSegments(orderedClips: unknown, xfade = TOUR_XFADE_S): TourS
     if (next && next.key === clip.key) continue; // same place, keep accumulating
     // The place ends where the next one starts; the last runs to the end.
     const end = k + 1 < clips.length ? (starts[k + 1] ?? total) : total;
-    segments.push({ name: clip.name, endFraction: Math.min(end / total, 1) });
+    segments.push({
+      name: clip.name,
+      endFraction: Math.min(end / total, 1),
+      ...(clip.poiId ? { poiId: clip.poiId } : {}),
+      ...(clip.bucket ? { bucket: clip.bucket } : {}),
+    });
   }
 
   // Float drift must not leave the bar a hair short of full.

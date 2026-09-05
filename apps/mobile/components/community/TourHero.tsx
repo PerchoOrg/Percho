@@ -6,10 +6,19 @@
  * The listing hero pages through a video and photos, with a room strip at its
  * foot that jumps between them. A community has ONE film — the assembled tour
  * the feed card plays — so the strip's parts are the film's own: one chip per
- * PLACE the tour visits, in film order, the same rows as the card's dashed
- * bar. The lit chip follows playback; tapping one seeks the film to where that
- * place's clips start. The strip hides itself when the film's structure is
- * unknown (a legacy AI video, or no tour at all) — no empty chrome.
+ * CATEGORY the tour visits ("Schools 2", "Shopping 3"), in film order, with
+ * the count of places in it. The lit chip follows playback; tapping one seeks
+ * the film to where that category's first place starts. Grouping and labels
+ * are `lib/community/tour-buckets.ts` — the listing's `rooms.ts` for a film.
+ *
+ * Categories, not place names, and no rank numbers on the chips: owner
+ * 2026-09-05, "no need to show numbers" and "dont say the poi name, just group
+ * them by tag or category, it is too long to show all of them". The count IS a
+ * number and it stays — it measures the neighbourhood, where an ordinal only
+ * counted the chips.
+ *
+ * The strip hides itself when the film's structure is unknown (a legacy AI
+ * video, or no tour at all) — no empty chrome.
  *
  * Chrome is the listing hero's: ← / ↑ / ♡ glass discs, the global sound
  * toggle, a top cap and a foot wash. The page's cream/amber body palette
@@ -28,16 +37,13 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+	type TourSegment,
+	buildTourGroups,
+} from "../../lib/community/tour-buckets";
 import { useSoundStore } from "../../state/sound";
 import { explore, fonts, radii } from "../../theme/tokens";
 import { SoundToggle } from "../SoundToggle";
-
-/** One place the tour's film visits — same rows as the card's dashed bar. */
-export interface TourSegment {
-	name: string;
-	/** 0..1 — where in the film this place's clips END. */
-	endFraction: number;
-}
 
 export interface TourHeroProps {
 	width: number;
@@ -159,32 +165,37 @@ export function TourHero(props: TourHeroProps) {
 	const [activeIndex, setActiveIndex] = useState(0);
 	const seekRef = useRef<((index: number) => void) | null>(null);
 
+	const { groups, keyByIndex } = buildTourGroups(segments);
+	/** The lit chip: the group the place now on screen belongs to. */
+	const activeKey = keyByIndex[activeIndex] ?? null;
+
 	const strip =
-		videoUrl && segments.length > 0 ? (
+		videoUrl && groups.length > 0 ? (
 			<ScrollView
 				horizontal
 				showsHorizontalScrollIndicator={false}
 				style={styles.jumpWrap}
 				contentContainerStyle={styles.jumpRow}
 			>
-				{segments.map((seg, i) => {
-					const active = i === activeIndex;
+				{groups.map((g) => {
+					const active = g.key === activeKey;
 					return (
 						<Pressable
-							// A film may revisit a place, so the name alone can repeat.
-							key={`${i}-${seg.name}`}
+							key={g.key}
 							accessibilityRole="button"
-							accessibilityLabel={`Play the tour from ${seg.name}`}
-							onPress={() => seekRef.current?.(i)}
+							accessibilityLabel={`Play the tour from ${g.label}`}
+							onPress={() => seekRef.current?.(g.firstSegmentIndex)}
 							style={[styles.chip, active && styles.chipActive]}
 						>
 							<Text
 								style={[styles.chipLabel, active && styles.chipLabelActive]}
 							>
-								<Text style={active ? styles.chipRankActive : styles.chipRank}>
-									{`${i + 1}  `}
+								{g.label}
+								<Text
+									style={active ? styles.chipCountActive : styles.chipCount}
+								>
+									{`  ${g.count}`}
 								</Text>
-								{seg.name}
 							</Text>
 						</Pressable>
 					);
@@ -310,6 +321,6 @@ const styles = StyleSheet.create({
 		fontFamily: fonts.ui,
 	},
 	chipLabelActive: { color: explore.ink },
-	chipRank: { color: explore.onMediaDim, fontWeight: "400" },
-	chipRankActive: { color: explore.muted, fontWeight: "400" },
+	chipCount: { color: explore.onMediaDim, fontWeight: "400" },
+	chipCountActive: { color: explore.muted, fontWeight: "400" },
 });
