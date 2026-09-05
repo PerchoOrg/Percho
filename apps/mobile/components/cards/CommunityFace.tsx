@@ -392,7 +392,15 @@ export function CommunityFace({
 	 * on the UI thread at display rate, and only crossing into a new place has
 	 * anything new to say to React. A 90-second film crosses ~20 times.
 	 */
-	const [placeIndex, setPlaceIndex] = useState(0);
+	// Stored WITH the card it belongs to, for the reason `measured` above is:
+	// a face is reused across cards at the same deck index, so a bare number
+	// would name the PREVIOUS community's place on this one until the next
+	// frame moved it. Falling back to 0 is not a guess — a card that has not
+	// played yet is showing its first clip.
+	const [playing, setPlaying] = useState<{ id: string; index: number } | null>(
+		null,
+	);
+	const placeIndex = playing?.id === card.id ? playing.index : 0;
 	useAnimatedReaction(
 		() => {
 			const ratio = progress.value;
@@ -403,9 +411,9 @@ export function CommunityFace({
 		},
 		(index, previous) => {
 			if (index === previous) return;
-			runOnJS(setPlaceIndex)(index);
+			runOnJS(setPlaying)({ id: card.id, index });
 		},
-		[bounds],
+		[bounds, card.id],
 	);
 	const place = segments[placeIndex];
 

@@ -217,8 +217,8 @@ interface StackCardProps {
 	dragX: SharedValue<number>;
 	exitX: SharedValue<number>;
 	cardWidth: number;
-	/** The FIXED stage height (points) this card centres within. */
-	stageHeight: number;
+	/** The y of the top card at rest (see `restTop` in `SwipeStack`). */
+	restTop: number;
 	/** The card frame's height in points (see `CARD_FRAME_RATIO`). */
 	frameHeight: number;
 	/**
@@ -246,7 +246,7 @@ function StackCard({
 	dragX,
 	exitX,
 	cardWidth,
-	stageHeight,
+	restTop,
 	frameHeight,
 	peekAnchor,
 	zIndex,
@@ -260,24 +260,24 @@ function StackCard({
 	// what the owner saw as the page jumping (2026-08-17).
 	//
 	// Vertical position by stack depth:
-	//   depth ≤ 0 (top, or flying out) — centred in the stage.
+	//   depth ≤ 0 (top, or flying out) — at `restTop` (the stage's top edge
+	//     since 2026-09-05; it was centred before, see `SwipeStack`).
 	//   depth = 1 (the behind card) — its BOTTOM sits AT the top card's bottom
 	//     (PEEK_PT = 0, Tia 2026-08-19), so its edge hides exactly behind the
 	//     top card's lower edge.
 	// Between depths the position interpolates with `advance`, in lockstep
 	// with the card's scale — so a card rising to top eases from peeked to
-	// centred, no jump.
+	// rest, no jump.
 	const cardStyle = useAnimatedStyle(() => {
 		const height = frameHeight;
 		const rel = absIndex - topAbs.value;
 		const depth = rel - advance.value;
-		const centred = (stageHeight - height) / 2;
 		const peeked = peekAnchor - height;
 		const t = Math.max(0, Math.min(1, 1 - depth));
 		return {
 			width: cardWidth,
 			height,
-			top: peeked + (centred - peeked) * t,
+			top: peeked + (restTop - peeked) * t,
 		};
 	});
 	const style = useAnimatedStyle(() => {
@@ -306,13 +306,12 @@ function StackCard({
 		const height = frameHeight;
 		const rel = absIndex - topAbs.value;
 		const depth = rel - advance.value;
-		const centred = (stageHeight - height) / 2;
 		const peeked = peekAnchor - height;
 		const t = Math.max(0, Math.min(1, 1 - depth));
 		return {
 			width: cardWidth,
 			height,
-			top: peeked + (centred - peeked) * t,
+			top: peeked + (restTop - peeked) * t,
 		};
 	});
 
@@ -435,14 +434,20 @@ export function SwipeStack<T>({
 				// land the frame they will keep as soon as it arrives.
 				stageHeight * CARD_FRAME_RATIO;
 	const topHeight = top === undefined || stageHeight === 0 ? 0 : frameHeight;
-	const topOffset =
-		top === undefined || stageHeight === 0 ? 0 : (stageHeight - topHeight) / 2;
+	/**
+	 * Where the top card rests: the stage's top edge. It was centred —
+	 * `(stageHeight - topHeight) / 2` — until 2026-09-05, which put half the
+	 * stage's slack (~50pt on an iPhone 15) between the scope crumb and the
+	 * card, and the owner read that as a hole in the page. All the slack now
+	 * sits under the card, where the trade-off echo already lives.
+	 */
+	const restTop = 0;
 	// The peeked card's bottom sits just below the top card's bottom (clamped
 	// to the stage so a behind card never spills past the stage's bottom edge).
 	const peekAnchor =
 		stageHeight === 0
 			? 0
-			: Math.min(stageHeight, topOffset + topHeight + PEEK_PT);
+			: Math.min(stageHeight, restTop + topHeight + PEEK_PT);
 
 	const argsFor = (role: CardRole): CardRenderArgs => ({
 		role,
@@ -479,7 +484,7 @@ export function SwipeStack<T>({
 					 * this is what keeps its top edge and its elevation glow
 					 * off the paper above the top card. */}
 					<View
-						style={[styles.stageClip, { height: topOffset + CLIP_OVERFLOW_PT }]}
+						style={[styles.stageClip, { height: restTop + CLIP_OVERFLOW_PT }]}
 						pointerEvents="none"
 					/>
 					{mounted.map(({ item, absIndex }) => {
@@ -495,7 +500,7 @@ export function SwipeStack<T>({
 								dragX={tx}
 								exitX={exitX}
 								cardWidth={cardWidth}
-								stageHeight={stageHeight}
+								restTop={restTop}
 								frameHeight={frameHeight}
 								peekAnchor={peekAnchor}
 								// A card that has already been swiped must stay UNDER the
@@ -525,8 +530,9 @@ const styles = StyleSheet.create({
 	 * and the container's own padding — and it is the SAME box for every card
 	 * kind, so nothing a card does can move the page skeleton.
 	 *
-	 * `justifyContent: "center"` is what keeps a short card (trade-off, 62%)
-	 * vertically centred in it rather than top-aligned.
+	 * Where the card sits inside it is `restTop`, not this box's alignment —
+	 * the frame stretches to the whole stage and the cards are absolutely
+	 * positioned within it.
 	 */
 	stack: { flex: 1, alignItems: "center", justifyContent: "center" },
 	/**

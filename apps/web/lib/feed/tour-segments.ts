@@ -47,7 +47,7 @@ export interface TourSegment {
   endFraction: number;
   /**
    * How far the place is from the community — "0 mi" for the community's own
-   * amenities, "" when it is genuinely unknown.
+   * amenities, absent when it is genuinely unknown.
    *
    * Formatted server-side by `tour-orchestrator/clip-label.ts` and stored on
    * the clip as `label_distance`; this only carries it through. It is the
@@ -56,6 +56,16 @@ export interface TourSegment {
    * name that was burned beside it.
    */
   distance?: string;
+  /** `community_pois.poi_id`, so a caller can resolve the place's category. */
+  poiId?: string;
+  /**
+   * `community_pois.intent_bucket` — the place's CATEGORY, which is what the
+   * community page's jump strip groups by (owner 2026-09-05: "dont say the poi
+   * name, just group them by tag or category, it is too long to show all of
+   * them"). Filled by `fetchVerticalVideos` from the join, or from the clip's
+   * own `bucket` when the assembly recorded one. Absent when neither knows.
+   */
+  bucket?: string;
 }
 
 interface ParsedClip {
@@ -64,6 +74,12 @@ interface ParsedClip {
   name: string;
   seconds: number;
   distance: string;
+  poiId: string;
+  /**
+   * The assembly's own category for the clip. Ken Burns assemblies write it;
+   * Seedance ones do not, which is why the `community_pois` join exists.
+   */
+  bucket: string;
 }
 
 function parseClips(orderedClips: unknown): ParsedClip[] {
@@ -81,7 +97,15 @@ function parseClips(orderedClips: unknown): ParsedClip[] {
     const distance = typeof c.label_distance === 'string' ? c.label_distance : '';
     // `poi_id` groups; the name is only what we would show. A tour with
     // neither cannot be grouped, so each clip stands alone.
-    out.push({ key: id || name || `clip-${out.length}`, name, seconds, distance });
+    const bucket = typeof c.bucket === 'string' ? c.bucket : '';
+    out.push({
+      key: id || name || `clip-${out.length}`,
+      name,
+      seconds,
+      distance,
+      poiId: id,
+      bucket,
+    });
   }
   return out;
 }
@@ -127,6 +151,8 @@ export function tourSegments(orderedClips: unknown, xfade = TOUR_XFADE_S): TourS
       // after it. Consecutive clips of one place carry the same distance, so
       // taking the last of the group is taking the place's.
       ...(clip.distance ? { distance: clip.distance } : {}),
+      ...(clip.poiId ? { poiId: clip.poiId } : {}),
+      ...(clip.bucket ? { bucket: clip.bucket } : {}),
     });
   }
 

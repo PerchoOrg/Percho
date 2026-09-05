@@ -45,6 +45,7 @@ body.only{padding:0;background:var(--bg)} body.only .cap{display:none} body.only
 /* CardCorner — disc when one control, capsule when two */
 .disc{position:absolute;right:12px;width:40px;height:40px;border-radius:20px;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;z-index:2}
 .capsule{position:absolute;top:12px;right:12px;height:37px;border-radius:18.5px;background:rgba(255,255,255,.85);z-index:2;display:flex;align-items:center;overflow:hidden}
+.corner26{position:absolute;top:12px;right:12px;height:26px;border-radius:13px;background:rgba(255,255,255,.92);z-index:2;display:flex;align-items:center;gap:12px;padding:0 9px;overflow:hidden}
 .capsule .u{width:37px;height:37px;display:flex;align-items:center;justify-content:center}
 .capsule .line{width:1px;align-self:stretch;background:rgba(24,27,24,.16);margin:8px 0}
 /* the pill the render worker BURNS into the tour video (top-right) */
@@ -152,7 +153,7 @@ function listingCard(o={}){
   return `<div class="card">
     <img class="media" src="${IMG.l1}">
     ${o.noBadge?'':'<div class="badgeSlot"><div class="badge">Listing</div></div>'}
-    <div class="capsule"><div class="u">${svg.vol}</div><div class="line"></div><div class="u">${svg.bookmark}</div></div>
+    ${o.corner26?`<div class="corner26">${svg.vol}${svg.bookmark}</div>`:`<div class="capsule"><div class="u">${svg.vol}</div><div class="line"></div><div class="u">${svg.bookmark}</div></div>`}
     <div class="scrim"></div>
     ${guides(o.guides)}
     <div class="linfo">
@@ -184,7 +185,7 @@ function communityCard(o={}){
     <img class="media" src="${img}">
     <div class="badgeSlot">${topLeft}</div>
     ${topRight}
-    ${o.capsule?`<div class="capsule"><div class="u">${svg.vol}</div><div class="line"></div><div class="u">${svg.bookmark}</div></div>`:`<div class="disc" style="top:${o.mute??12}px">${svg.vol}</div>`}
+    ${o.corner26?`<div class="corner26">${svg.vol}${svg.bookmark}</div>`:o.capsule?`<div class="capsule"><div class="u">${svg.vol}</div><div class="line"></div><div class="u">${svg.bookmark}</div></div>`:`<div class="disc" style="top:${o.mute??12}px">${svg.vol}</div>`}
     <div class="scrim"></div>
     ${guides(o.guides)}
     <div class="info">
@@ -218,6 +219,9 @@ const FRAMES = {
   M6:{group:'owner',title:'M6 · The long-name fix — tag drops under the name',sub:'Same tag; when the name needs two lines the tag moves beneath it (left-aligned) instead of stealing width. One-word names keep M2 exactly. This is what I would build.',html:o=>phone(communityCard({label:'corner',capsule:true,tag:'tagPill',tagUnder:true,name:'Apremont – Highcroft',img:IMG.c1,...o}))},
   M7:{group:'owner',title:'M7 · COMMUNITY above the name — short name ✓ RECOMMENDED',sub:'The tag is an eyebrow over the name, so it never competes for the row’s width. One rule for every name length — no conditional layout. The two signal glyphs come BACK to the name row (M2–M6 had to drop them).',html:o=>phone(communityCard({label:'corner',capsule:true,tag:'tagPill',tagAbove:true,...o}))},
   M8:{group:'owner',title:'M8 · COMMUNITY above the name — long name',sub:'Same rule, Apremont – Highcroft. The name keeps the full row width and still wraps to two lines without ellipsizing — the case that broke M5.',html:o=>phone(communityCard({label:'corner',capsule:true,tag:'tagPill',tagAbove:true,name:'Apremont – Highcroft',img:IMG.c1,...o}))},
+  Z1:{group:'built',title:'Z1 · AS BUILT — community card',sub:'On main. Place pill top-left (follows the film), sound+save top-right in phase175’s 26pt pill, COMMUNITY above the name, signal glyphs back on the name row. The tour videos were re-rendered without their burned-in pill.',html:o=>phone(communityCard({label:'corner',corner26:true,tag:'tagPill',tagAbove:true,...o}))},
+  Z2:{group:'built',title:'Z2 · AS BUILT — long name',sub:'Apremont – Highcroft, two lines, no ellipsis. The tag is an eyebrow so it takes none of the row’s width.',html:o=>phone(communityCard({label:'corner',corner26:true,tag:'tagPill',tagAbove:true,name:'Apremont – Highcroft',img:IMG.c1,...o}))},
+  Z3:{group:'built',title:'Z3 · AS BUILT — listing card, no LISTING badge',sub:'Top-left is empty. The corner control is unchanged.',html:o=>phone(listingCard({noBadge:true,corner26:true,...o}))},
   L5:{group:'proposal',title:'L5 · Top-right, but drawn by the app',sub:'Keeps today’s placement and fixes only the alignment (app-drawn = exactly on the badge line). The mute still has to live at 52, so the corners stay unlike the listing card.',html:o=>phone(communityCard({label:'topright',mute:52,...o}))},
 };
 
@@ -243,7 +247,7 @@ if(only){ document.body.classList.add('only'); root.innerHTML = FRAMES[only].htm
 else {
   const keys = Object.keys(FRAMES).filter(k=>!group||FRAMES[k].group===group);
   const nav = `<div class="nav"><h1>Community card — where the place label goes</h1>
-    <div><b>Owner’s direction: <a href="?group=owner">M1–M8</a></b> &nbsp;·&nbsp; Reference: <a href="?group=ref">R · L0</a> Proposals: <a href="?group=proposal">L1–L5</a> <a href="./">All</a> <a href="?guides=1">Show alignment guides</a></div>
+    <div><b>AS BUILT: <a href="?group=built">Z1–Z3</a></b> &nbsp;·&nbsp; Owner’s direction: <a href="?group=owner">M1–M8</a> &nbsp;·&nbsp; Reference: <a href="?group=ref">R · L0</a> Proposals: <a href="?group=proposal">L1–L5</a> <a href="./">All</a> <a href="?guides=1">Show alignment guides</a></div>
     <p>Every frame plays the same 20-second Windward tour: the dashes fill and the place label follows the film, exactly as the phone would drive it from the tour’s own segment data. In L1–L5 the label is drawn by the app, not burned into the video; in L0 it is the video’s.</p>
     <div>Jump: ${Object.keys(FRAMES).map(k=>`<a href="#${k}">${k}</a>`).join('')}</div></div>`;
   root.innerHTML = nav + `<div class="gallery">${keys.map(k=>`<div class="frame" id="${k}"><div class="cap">${FRAMES[k].title}<small>${FRAMES[k].sub}</small></div>${FRAMES[k].html({guides:guidesOn})}</div>`).join('')}</div>`;

@@ -61,3 +61,39 @@ describe('projectCommunityDetail tour segments', () => {
     expect(out?.tourSegments).toBeUndefined();
   });
 });
+
+describe('projectCommunityDetail nearby counts', () => {
+  it('charts every countable bucket, biggest first', () => {
+    // Peachtree Corners' live counts, 2026-09-05.
+    const out = projectCommunityDetail(ROW, {
+      dining: 39,
+      fitness: 40,
+      schools: 22,
+      shopping: 31,
+    });
+    expect(out?.nearby).toEqual([
+      { bucket: 'fitness', count: 40 },
+      { bucket: 'dining', count: 39 },
+      { bucket: 'shopping', count: 31 },
+      { bucket: 'schools', count: 22 },
+    ]);
+  });
+
+  it('drops the buckets the page will not name', () => {
+    const out = projectCommunityDetail(ROW, {
+      other: 9,
+      asian_community: 3,
+      outdoor: 4,
+    });
+    expect(out?.nearby).toEqual([{ bucket: 'outdoor', count: 4 }]);
+  });
+
+  it('drops zero counts rather than charting an empty bar', () => {
+    const out = projectCommunityDetail(ROW, { transit: 0, pets: 2 });
+    expect(out?.nearby).toEqual([{ bucket: 'pets', count: 2 }]);
+  });
+
+  it('is an empty list for the communities with no POI rows', () => {
+    expect(projectCommunityDetail(ROW, undefined)?.nearby).toEqual([]);
+  });
+});

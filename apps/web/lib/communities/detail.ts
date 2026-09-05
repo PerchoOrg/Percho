@@ -55,6 +55,26 @@ export interface CommunityStatDTO {
   value: string;
 }
 
+/** How many real places of one kind this community has near it. */
+export interface CommunityNearbyDTO {
+  /** `community_pois.intent_bucket`; the phone owns the display label. */
+  bucket: string;
+  count: number;
+}
+
+/**
+ * Buckets the page will NOT chart, and why. Everything else is charted.
+ *
+ * `other` is the tagger's shrug — a bar labelled "Other 3" measures nothing.
+ * `asian_community` is left out on the same reasoning `community-reasons.ts`
+ * refuses `avg_income`: a demographic-sounding label on a neighbourhood page
+ * steers buyers by proxy, and unlike "39 restaurants" it is not obvious from
+ * the label what was counted. It is 3 rows across the whole table today. If a
+ * future seed makes these places legible (Asian grocers, say), chart them
+ * under that name rather than under a community's name.
+ */
+const NEARBY_BUCKET_DENYLIST = new Set(['other', 'asian_community']);
+
 export interface CommunityDetailDTO {
   id: string;
   slug: string;
@@ -94,6 +114,14 @@ export interface CommunityDetailDTO {
    * `median_home_value` is NULL on all 8,679 rows and so is never in this list.
    */
   stats: CommunityStatDTO[];
+  /**
+   * Counts of real places by kind, biggest first — "39 restaurants, 31 shops,
+   * 22 schools". Already fetched for the reason tiles' evidence; sent whole so
+   * the page can chart it (owner 2026-09-05: "with numbers as much as
+   * possible, text is not preferred"). Empty for the 8,678 communities with no
+   * POI rows, which is a section the page simply does not draw.
+   */
+  nearby: CommunityNearbyDTO[];
   /**
    * Nextdoor's per-neighbourhood interest ranking, verbatim and in order. This is
    * the evidence behind every "#N resident interest" sub-line on the reasons
@@ -231,6 +259,14 @@ export function projectCommunityDetail(
    * because of a rule. If a future seed populates it, it belongs here.
    */
 
+  const nearby: CommunityNearbyDTO[] = Object.entries(poiCounts ?? {})
+    .filter(
+      (e): e is [string, number] =>
+        typeof e[1] === 'number' && e[1] > 0 && !NEARBY_BUCKET_DENYLIST.has(e[0]),
+    )
+    .map(([bucket, count]) => ({ bucket, count }))
+    .sort((a, b) => b.count - a.count || a.bucket.localeCompare(b.bucket));
+
   return {
     id: r.id,
     slug: r.slug,
@@ -245,6 +281,7 @@ export function projectCommunityDetail(
     topReasons,
     moreReasons,
     stats,
+    nearby,
     interests: (r.interests ?? []).filter((x: unknown): x is string => typeof x === 'string'),
   };
 }
