@@ -114,14 +114,14 @@ const FRAMES = {
   A1:{title:'A1 · Split the slack again (what it was before this morning)',
       sub:'59 pt above, 69 pt below. This is the version you called a hole in the page, so it is here for reference, not as a proposal.',
       html:()=>phone({cardTop:STAGE_TOP + Math.round((STAGE-CARD_H)/2), cardH:CARD_H})},
-  A2:{title:'A2 · Card fills the stage ★ recommended',
+  A2:{title:'A2 · Card fills the stage — no band, but the film pays',
       sub:`No band at all: the card takes the whole stage (693 pt), so the page is header · card · tab bar and nothing else. Cost is real and worth seeing — the film is cut <em>17%</em> on the sides (8.5% each edge — the frame below is composited from your own tour, so this is the real loss), because the card gets taller than the 1080×1576 canvas.`,
       html:()=>phone({cardTop:STAGE_TOP, cardH:STAGE, art:'card-693.jpg'})},
   A2b:{title:'A2b · Card fills most of it — the middle setting',
       sub:`Card 640 pt: a 53 pt band left under it (enough to breathe, not a hole), and the film loses only <em>10%</em>. If A2 crops too hard on a real tour, this is the same idea one notch back.`,
       html:()=>phone({cardTop:STAGE_TOP, cardH:640, art:'card-640.jpg'})},
-  A3:{title:'A3 · Give the band a job: the scope moves under the card',
-      sub:'Card and crop unchanged. "Atlanta metro › Dallas" leaves the header and sits in the band — where your thumb is — and the header shrinks to the wordmark. The empty space stops being empty without the film losing a pixel.',
+  A3:{title:'A3 · Give the band a job: the scope moves under the card ★ recommended',
+      sub:'Card and crop unchanged — <b>the film keeps every pixel</b>, which is why this is the pick. "Atlanta metro › Dallas" leaves the header and sits in the band, where your thumb already is, with the swipe hint under it; the header shrinks to the wordmark alone. The space stops being empty instead of being removed.',
       html:()=>phone({cardTop:STAGE_TOP, cardH:CARD_H, rulers:false, extra:
         `<div class="crumb" style="top:${STAGE_TOP+CARD_H}px;height:${TABTOP-(STAGE_TOP+CARD_H)}px">
            <div class="l1"><span class="root">Atlanta metro</span><span class="sep">›</span><span class="cur">Dallas</span><span style="color:var(--ink3);display:flex">${svg.chev}</span></div>
