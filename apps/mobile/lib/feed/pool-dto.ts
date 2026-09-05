@@ -123,9 +123,13 @@ function strings(v: unknown): string[] {
  * positive number. Anything else yields `[]` and the card draws a plain bar,
  * which needs no structure to be correct.
  */
-function tourSegments(v: unknown): { name: string; endFraction: number }[] {
+function tourSegments(v: unknown): {
+	name: string;
+	endFraction: number;
+	distance?: string;
+}[] {
 	if (!Array.isArray(v)) return [];
-	const out: { name: string; endFraction: number }[] = [];
+	const out: { name: string; endFraction: number; distance?: string }[] = [];
 	let prev = 0;
 	for (const raw of v) {
 		const r = rec(raw);
@@ -134,7 +138,15 @@ function tourSegments(v: unknown): { name: string; endFraction: number }[] {
 		if (endFraction === undefined || endFraction <= prev || endFraction > 1)
 			return [];
 		prev = endFraction;
-		out.push({ name: str(r.name) ?? "", endFraction });
+		// The distance is a free string the server formats ("0.9 mi"); unlike
+		// `endFraction` a bad one costs a wrong word on the label, not a wrong
+		// bar, so it is dropped on its own rather than failing the whole tour.
+		const distance = str(r.distance);
+		out.push({
+			name: str(r.name) ?? "",
+			endFraction,
+			...(distance ? { distance } : {}),
+		});
 	}
 	return out;
 }

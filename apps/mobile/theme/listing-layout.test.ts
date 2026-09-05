@@ -59,8 +59,13 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 		expect(COMMUNITY).toContain("locations={[0.55, 0.78, 1]}");
 	});
 
-	it("keeps the LISTING badge and the bookmark", () => {
-		expect(LISTING).toContain("LISTING");
+	/**
+	 * phase174: the badge is GONE from this face — owner 2026-09-05, "remove the
+	 * listing tag from top left of the card, since it is obvious". The bookmark
+	 * is untouched.
+	 */
+	it("drops the LISTING badge and keeps the bookmark", () => {
+		expect(LISTING).not.toMatch(/styles\.badge/);
 		expect(LISTING).toContain("SAVE_TAP_TARGET");
 		// The bookmark is drawn by the shared corner control since phase140 —
 		// the listing face mounts it and passes the saved state.
@@ -96,17 +101,20 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 	});
 
 	/**
-	 * The community face gets the mute but NOT at the badge's height: its tour
-	 * video burns a place-name pill into that corner (see `_render_label_png`
-	 * in the render worker), which is why the bookmark was removed from it on
-	 * 2026-08-20. The control drops below the pill instead of moving to a third
-	 * corner.
+	 * phase174: the community face carries the SAME corner object as the listing
+	 * face, at the same inset. Its mute used to hang at `top: 52` to clear the place
+	 * pill the tour video burned into that corner, and it had no bookmark at all
+	 * for the same reason (2026-08-20). The video no longer draws that pill, so
+	 * both reasons are gone — owner 2026-09-05: "keep the sound and saved button
+	 * on the top right to be consistent with listing".
 	 */
-	it("drops the community mute clear of the film's burned-in label", () => {
-		expect(COMMUNITY).toContain("COMMUNITY_SOUND_TOP");
+	it("gives the community face the listing card's corner", () => {
 		expect(COMMUNITY).toContain("<CardCorner");
-		// Still no bookmark on this face.
-		expect(COMMUNITY).not.toContain("save={{");
+		expect(COMMUNITY).toContain("save={{");
+		expect(COMMUNITY).not.toContain("COMMUNITY_SOUND_TOP");
+		// The control's inset belongs to the control now — no per-face override.
+		expect(CORNER).not.toContain("top?: number");
+		expect(CORNER).toContain("top: 12,");
 	});
 
 	it("renders price, specs and address on the photo — no white container", () => {
@@ -120,24 +128,26 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 	});
 
 	it("unifies the three fixed elements across City / Community / Listing", () => {
+		// The 7/10 frosted pill is still the shared shape, but the LISTING face
+		// no longer draws one (phase174) — on the community face it is the place
+		// pill that inherited the geometry, in the same corner.
 		const badge = "paddingVertical: 7,\n\t\tpaddingHorizontal: 10";
-		expect(LISTING).toContain(badge);
 		expect(AREA).toContain(badge);
 		expect(COMMUNITY).toContain(badge);
 
 		// The save disc: AreaFace still draws its own (that face has not been in
 		// the deck since 2026-08-22 and phase140 left it untouched), while the
-		// listing card's moved into the shared corner control when the mute
-		// joined it. Community has never had one — it dropped the bookmark on
-		// 2026-08-20 because the disc sat where the tour video draws its place
-		// name and distance.
+		// listing and community cards both take theirs from the shared corner
+		// control.
 		const disc =
 			'width: 40,\n\t\theight: 40,\n\t\tborderRadius: 20,\n\t\tbackgroundColor: "rgba(255,255,255,0.75)"';
 		expect(AREA).toContain(disc);
 		// The shared corner wears the BADGE's fill since phase175 — the two sit
-		// on one row, so any difference in the white reads as a mistake.
+		// on one row, so any difference in the white reads as a mistake. Since
+		// phase174 the LISTING face draws no white at all up there, so the
+		// community card's place pill is the one that has to match.
 		expect(CORNER).toContain('backgroundColor: "rgba(255,255,255,0.92)"');
-		expect(LISTING).toContain('backgroundColor: "rgba(255,255,255,0.92)"');
+		expect(COMMUNITY).toContain('backgroundColor: "rgba(255,255,255,0.92)"');
 		expect(COMMUNITY).not.toContain(disc);
 
 		// Same explore CTA — label copy, size, weight, colour.

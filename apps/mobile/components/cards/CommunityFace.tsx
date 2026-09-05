@@ -84,6 +84,38 @@ import type { CardIconName } from "@percho/shared/icons";
  *     deliberately TOLERANT rather than frame-accurate — see `applySeek`
  *     there for why a precise seek on HLS can simply never happen.
  *
+ * ── 2026-09-05 (phase174): the corners become the listing card's ────────────
+ *
+ * Owner: "Community card top right has poi name, this is not aligned with top
+ * left community label, and it pushes the sound and saved icons below, it is
+ * not consistent with listing, can you redesign this?" Then, on the layout:
+ * "move it down to the right side of the community name, make it a cute label
+ * here instead top… we can show poi and distance on the top left, and keep the
+ * sound and saved button on the top right", and finally "put community label on
+ * top of the community name".
+ *
+ * What that resolves to, and why each part:
+ *
+ *   · The place label was never THIS FILE's. The render worker BURNED it into
+ *     every tour (`_render_label_png`), scaled from a fixed 361pt reference
+ *     card while the card plays with `fit="cover"` — so its size followed the
+ *     video's crop rather than the card and it could not sit on the badge's
+ *     line on any device. It is drawn here now, from `tourSegments`, which the
+ *     card already had for the dashed bar. The five rendered films were
+ *     re-assembled without it (scripts/admin/reassemble-community-tours.ts).
+ *   · Top-LEFT is that place pill: the COMMUNITY badge's own shape and inset,
+ *     carrying the place name and its distance. A community with no film shows
+ *     NOTHING there — the corner is simply empty, which is what it was before
+ *     any of this and what ~all 8,679 communities will render.
+ *   · Top-RIGHT is `CardCorner` with BOTH controls at 12/12, the listing card's
+ *     capsule verbatim. The bookmark comes back after 2026-08-20 removed it;
+ *     the reason it was removed (the burned pill under it) is gone.
+ *   · COMMUNITY moves to an EYEBROW above the name. Beside the name it would
+ *     have cost the two signal glyphs, and on a long name the name itself —
+ *     "Apremont – Highcroft" ellipsized at the ~125pt the tag left it, which
+ *     the 2026-08-22 no-truncation rule forbids. Above it, the tag competes for
+ *     no width at all, so ONE rule serves every name length and the glyphs stay.
+ *
  * ── Data, not sample copy ────────────────────────────────────────────────────
  *
  * Three sources for the chip row, in descending confidence, exactly one of
@@ -131,13 +163,14 @@ import Animated, {
 } from "react-native-reanimated";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
 import { SOUND_TAP_TARGET, type TapSlot } from "../../lib/gesture/tap-slot";
+import { useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
 import { redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import { CardCorner } from "./CardCorner";
-import { EXPLORE_TAP_TARGET } from "./ListingFace";
+import { EXPLORE_TAP_TARGET, SAVE_TAP_TARGET } from "./ListingFace";
 import { RedlineIcon } from "./redline/RedlineChrome";
 
 /**
@@ -236,13 +269,6 @@ interface CommunityFaceProps {
 	deckGesture?: GestureType;
 }
 
-/**
- * How far down the mute sits on this face. The tour video's burned-in
- * place-name pill occupies the corner at the COMMUNITY badge's height (~12-40
- * in card space), so 52 clears it with room rather than fighting it.
- */
-const COMMUNITY_SOUND_TOP = 52;
-
 export function CommunityFace({
 	card,
 	isTop,
@@ -253,11 +279,10 @@ export function CommunityFace({
 }: CommunityFaceProps) {
 	const icons = signalIcons(card);
 
+	const saved = useSavedStore((s) => s.isSaved(card.id));
+	const toggleSaved = useSavedStore((s) => s.toggle);
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const toggleSound = useSoundStore((s) => s.toggle);
-	const armSound = () => {
-		if (tapSlot) tapSlot.value = { target: SOUND_TAP_TARGET };
-	};
 
 	/* ── The name's true width ────────────────────────────────────────────── */
 
@@ -353,6 +378,44 @@ export function CommunityFace({
 		},
 		[segments],
 	);
+
+	/**
+	 * Which place the film is ON — the top-left pill's content (phase174).
+	 *
+	 * Derived from `progress` rather than tracked separately, so the pill, the
+	 * bar's fill and the video are the same one number and cannot disagree. It
+	 * follows a SCRUB too, because a scrub writes `progress`: dragging the bar
+	 * renames the pill under your finger, which is the honest answer to "where
+	 * am I now".
+	 *
+	 * The comparison is on the derived INDEX, not on `progress`: the mapper runs
+	 * on the UI thread at display rate, and only crossing into a new place has
+	 * anything new to say to React. A 90-second film crosses ~20 times.
+	 */
+	// Stored WITH the card it belongs to, for the reason `measured` above is:
+	// a face is reused across cards at the same deck index, so a bare number
+	// would name the PREVIOUS community's place on this one until the next
+	// frame moved it. Falling back to 0 is not a guess — a card that has not
+	// played yet is showing its first clip.
+	const [playing, setPlaying] = useState<{ id: string; index: number } | null>(
+		null,
+	);
+	const placeIndex = playing?.id === card.id ? playing.index : 0;
+	useAnimatedReaction(
+		() => {
+			const ratio = progress.value;
+			for (let i = 0; i < bounds.length; i++) {
+				if (ratio <= (bounds[i] ?? 1)) return i;
+			}
+			return bounds.length - 1;
+		},
+		(index, previous) => {
+			if (index === previous) return;
+			runOnJS(setPlaying)({ id: card.id, index });
+		},
+		[bounds, card.id],
+	);
+	const place = segments[placeIndex];
 
 	/**
 	 * Drag the bar to move through the film.
@@ -525,35 +588,53 @@ export function CommunityFace({
 				<CardPhoto url={card.heroUrl} fit="cover" />
 			)}
 
-			{/* COMMUNITY pill — the frosted badge, kept (owner: 保留 label). */}
-			<View style={styles.badgeSlot}>
-				<View style={styles.badge}>
-					<Text style={styles.badgeLabel}>COMMUNITY</Text>
+			{/* Top-LEFT: the place the film is on, in the COMMUNITY badge's old
+			    slot and its exact shape (phase174). The render worker used to
+			    burn this into the video; drawing it here is what lets it line up
+			    with the card instead of with the video's crop.
+
+			    Only when the film HAS structure. A community with no tour, or a
+			    tour whose clip list could not be read, shows nothing — an empty
+			    corner, not a placeholder. */}
+			{place && !!place.name && (
+				<View style={styles.badgeSlot}>
+					<View style={styles.placePill}>
+						<PinIcon />
+						<Text style={styles.placeName} numberOfLines={1}>
+							{place.name}
+						</Text>
+						{!!place.distance && (
+							<>
+								<View style={styles.placeRule} />
+								<Text style={styles.placeDistance}>{place.distance}</Text>
+							</>
+						)}
+					</View>
 				</View>
-			</View>
+			)}
 
-			{/* No bookmark here. The tour video draws its place name and distance
-			    in the top-right corner (see `_render_label_png` in the render
-			    worker), and a 40px disc at top:12/right:12 sat on top of it —
-			    owner 2026-08-20: "remove the save button on the top right for
-			    cards - this is where the location and distance will display".
-
-			    The MUTE is a different case and does render (phase140): a
-			    community tour plays with music and, since phase119 deleted the
-			    explore hero's toggle, the app had no in-context control at all.
-			    It sits at `top: 52` — the same right-hand side as the listing
-			    card's capsule, dropped clear of the burned-in label rather than
-			    moved to a third corner. */}
-			{card.videoUrl ? (
-				<CardCorner
-					top={COMMUNITY_SOUND_TOP}
-					sound={{
-						on: soundOn,
-						onPress: toggleSound,
-						...(tapSlot ? { onTouchStart: armSound } : {}),
-					}}
-				/>
-			) : null}
+			{/* Top-RIGHT: the listing card's capsule, both controls, at 12/12
+			    (owner 2026-09-05: "keep the sound and saved button on the top
+			    right to be consistent with listing"). The bookmark was removed
+			    from this face on 2026-08-20 because the burned-in place pill was
+			    underneath it; that pill is gone, so it comes back. A community
+			    with no film passes no `sound` and renders the plain disc. */}
+			<CardCorner
+				{...(card.videoUrl
+					? {
+							sound: {
+								on: soundOn,
+								onPress: toggleSound,
+								...(tapSlot ? { onTouchStart: arm(SOUND_TAP_TARGET) } : {}),
+							},
+						}
+					: {})}
+				save={{
+					saved,
+					onPress: () => toggleSaved(card.id, "community"),
+					...(tapSlot ? { onTouchStart: arm(SAVE_TAP_TARGET) } : {}),
+				}}
+			/>
 
 			{/* Bottom scrim — transparent until ~55% down, then darkening to a
 			    deep 0.92 at the bottom (owner 2026-08-19: 底部渐变 + 信息文字条,
@@ -579,55 +660,67 @@ export function CommunityFace({
 			    the glyphs off its own line: owner 2026-08-23, "dont put icons
 			    below the community name... if overlaps with explore, then use
 			    two line for community name, but still put icons to the right
-			    side" (see `infoLeft`). */}
+			    side" (see `infoLeft`).
+
+			    ABOVE that row sits the COMMUNITY tag (owner 2026-09-05: "put
+			    community label on top of the community name"). It came down from
+			    the top-left corner, which the place pill now owns. As an eyebrow
+			    it takes no width from the row, so the name keeps all of it and
+			    the glyphs keep their place — beside the name, the tag cost the
+			    glyphs on a short name and the name itself on a long one. */}
 			<View style={styles.info}>
-				<View style={styles.infoLeft}>
-					{/* Two lines, not one. A name that did not fit used to ellipsize
+				<View style={styles.tagRow}>
+					<Text style={styles.badgeLabel}>COMMUNITY</Text>
+				</View>
+				<View style={styles.infoRow}>
+					<View style={styles.infoLeft}>
+						{/* Two lines, not one. A name that did not fit used to ellipsize
 					    — "Hidden Lakes at Sug…" — which is the one thing on this
 					    card a buyer cannot afford to be guessing at (owner
 					    2026-08-22: "if community name is long, it can be truncated,
 					    fix that"). Wrapping spends card height, which this card has;
 					    truncation spent the name, which it does not. */}
-					<Text
-						style={[styles.name, nameWidth !== null && { width: nameWidth }]}
-						numberOfLines={2}
-						onTextLayout={onNameLayout}
-					>
-						{card.name}
-					</Text>
-					{icons.length > 0 && (
-						<View style={styles.icons}>
-							{icons.map((name) => (
-								<RedlineIcon
-									key={name}
-									name={name}
-									size={SIGNAL_ICON_SIZE}
-									color="rgba(255,255,255,0.85)"
-								/>
-							))}
-						</View>
+						<Text
+							style={[styles.name, nameWidth !== null && { width: nameWidth }]}
+							numberOfLines={2}
+							onTextLayout={onNameLayout}
+						>
+							{card.name}
+						</Text>
+						{icons.length > 0 && (
+							<View style={styles.icons}>
+								{icons.map((name) => (
+									<RedlineIcon
+										key={name}
+										name={name}
+										size={SIGNAL_ICON_SIZE}
+										color="rgba(255,255,255,0.85)"
+									/>
+								))}
+							</View>
+						)}
+					</View>
+					{!!onExplore && (
+						<Animated.View style={[styles.ctaRow, breathing]}>
+							<Pressable
+								onTouchStart={arm(EXPLORE_TAP_TARGET)}
+								onPress={tapSlot ? undefined : onExplore}
+								accessibilityRole="link"
+								accessibilityLabel={`Explore ${card.name}`}
+								hitSlop={12}
+								style={({ pressed }) => [
+									styles.ctaLink,
+									pressed && styles.ctaPressed,
+								]}
+							>
+								<Text style={styles.ctaLabel} numberOfLines={1}>
+									Explore
+								</Text>
+								<ArrowRightIcon />
+							</Pressable>
+						</Animated.View>
 					)}
 				</View>
-				{!!onExplore && (
-					<Animated.View style={[styles.ctaRow, breathing]}>
-						<Pressable
-							onTouchStart={arm(EXPLORE_TAP_TARGET)}
-							onPress={tapSlot ? undefined : onExplore}
-							accessibilityRole="link"
-							accessibilityLabel={`Explore ${card.name}`}
-							hitSlop={12}
-							style={({ pressed }) => [
-								styles.ctaLink,
-								pressed && styles.ctaPressed,
-							]}
-						>
-							<Text style={styles.ctaLabel} numberOfLines={1}>
-								Explore
-							</Text>
-							<ArrowRightIcon />
-						</Pressable>
-					</Animated.View>
-				)}
 			</View>
 
 			{/* Tour progress — one dash per PLACE when the film's structure came
@@ -733,6 +826,34 @@ function ArrowRightIcon() {
 	);
 }
 
+/**
+ * The map pin in the place pill.
+ *
+ * The burned-in label drew Phosphor's `map-pin-fill` from `brand/icons`, and
+ * the app CAN reach that font — `RedlineIcon` renders it. But its 14-glyph
+ * subset (`redline/icon-font.ts`) carries no pin, so this is composed from two
+ * `View`s at Lucide's geometry, the technique the arrow and the bookmark
+ * already use: a ring for the head (x 4..20, y 2..18) and a rotated square for
+ * the point that hangs below it. Filled, not outlined — at 11pt an outlined
+ * pin's hole closes up into a dot.
+ */
+const PIN_SIZE = 11;
+const PIN_HEAD = PIN_SIZE * 0.82;
+/** The tail: a square rotated 45°, half-buried in the head. */
+const PIN_TAIL = PIN_SIZE * 0.44;
+/** `redline.accent` — the one accent on these faces, same as the burned pin. */
+const PIN_INK = "#0E6B57";
+
+function PinIcon() {
+	return (
+		<View style={styles.pinBox}>
+			<View style={styles.pinTail} />
+			<View style={styles.pinHead} />
+			<View style={styles.pinHole} />
+		</View>
+	);
+}
+
 /** The listing card's bookmark, recoloured dark like the CITY card's (saved
  * state fills the body). */
 const BOOKMARK_SIZE = 16;
@@ -751,15 +872,60 @@ const BOOKMARK_INK = "#181B18";
 
 const styles = StyleSheet.create({
 	face: { flex: 1, backgroundColor: redline.card, overflow: "hidden" },
-	badgeSlot: { position: "absolute", top: 12, left: 12, zIndex: 2 },
-	/** Frosted COMMUNITY badge — the listing card's badge, relabelled. */
-	badge: {
+	/**
+	 * Top-left. It held the COMMUNITY badge until phase174 and now holds the
+	 * PLACE the film is on — same corner, same inset, so nothing about the
+	 * card's frame moved when the content did.
+	 *
+	 * `right` bounds it: place names run long ("Publix Super Market at The
+	 * Village at Flynn Crossing" is 54 characters) and the pill has to stop
+	 * before the top-right capsule rather than slide under it. 68 = the
+	 * capsule's 12 inset + its ~74 width at two cells, halved to leave the pill
+	 * the majority of the card and a real gap.
+	 */
+	badgeSlot: { position: "absolute", top: 12, left: 12, right: 68, zIndex: 2 },
+	/**
+	 * The place pill — the COMMUNITY badge's fill, radius and padding, because
+	 * it is the same object in the same slot with different words in it.
+	 *
+	 * `alignSelf: flex-start` keeps it hugging its text inside the bounded slot;
+	 * without it the pill would stretch to `right: 68` on every short name.
+	 */
+	placePill: {
 		alignSelf: "flex-start",
+		maxWidth: "100%",
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 5,
 		backgroundColor: "rgba(255,255,255,0.92)",
 		borderRadius: redlineRadii.badge,
 		paddingVertical: 7,
 		paddingHorizontal: 10,
 		overflow: "hidden",
+	},
+	/**
+	 * The name. `flexShrink: 1` + `minWidth: 0` so a long one ellipsizes INSIDE
+	 * the pill rather than pushing the distance out of it — unlike the community
+	 * name below, this string changes every few seconds and the distance beside
+	 * it is the half a buyer cannot infer.
+	 */
+	placeName: {
+		...redlineText.listingCard.tag,
+		color: "#181B18",
+		flexShrink: 1,
+		minWidth: 0,
+	},
+	/** Hairline between the place and its distance — the burned pill's rule. */
+	placeRule: {
+		width: 1,
+		height: 12,
+		backgroundColor: "rgba(111,107,101,0.45)",
+	},
+	/** The distance, one step quieter than the name it qualifies. */
+	placeDistance: {
+		...redlineText.listingCard.tag,
+		fontWeight: "400",
+		color: redline.ink2,
 	},
 	/** Neutral ink, not green — green is reserved for interactive state. */
 	badgeLabel: { ...redlineText.listingCard.badge, color: "#181B18" },
@@ -771,12 +937,38 @@ const styles = StyleSheet.create({
 		...StyleSheet.absoluteFill,
 		zIndex: 1,
 	},
+	/**
+	 * The bottom block: the COMMUNITY eyebrow, then the name row. A COLUMN
+	 * since phase174 — it was the name row itself until the tag moved in above
+	 * it.
+	 */
 	info: {
 		position: "absolute",
 		left: 24,
 		right: 24,
 		bottom: 24,
 		zIndex: 2,
+	},
+	/**
+	 * The COMMUNITY tag, above the name (owner 2026-09-05). `flex-start` so the
+	 * pill hugs the word instead of stretching the block's full width.
+	 *
+	 * Same fill and ink as the badge it replaces, one size down (9px/20 tall
+	 * against the badge's 9.5/25): up here it is a label on the card's own
+	 * information, not a chip floating on the photograph, and the serif name
+	 * directly under it is what the eye should land on first.
+	 */
+	tagRow: {
+		alignSelf: "flex-start",
+		backgroundColor: "rgba(255,255,255,0.92)",
+		borderRadius: redlineRadii.badge,
+		paddingVertical: 4,
+		paddingHorizontal: 8,
+		marginBottom: 9,
+		overflow: "hidden",
+	},
+	/** The name + glyphs + Explore line — what `info` used to be. */
+	infoRow: {
 		flexDirection: "row",
 		// `center`, not `flex-end`: this is what puts the name and the link on
 		// one line rather than on a shared bottom edge (owner: "community and
@@ -927,6 +1119,38 @@ const styles = StyleSheet.create({
 	dashFill: {
 		height: PROGRESS_H,
 		borderRadius: PROGRESS_H / 2,
+		backgroundColor: "#FFFFFF",
+	},
+
+	// ─── Pin art (see `PinIcon`) ──────────────────────────────────────────
+	pinBox: { width: PIN_SIZE, height: PIN_SIZE },
+	pinHead: {
+		position: "absolute",
+		left: (PIN_SIZE - PIN_HEAD) / 2,
+		top: 0,
+		width: PIN_HEAD,
+		height: PIN_HEAD,
+		borderRadius: PIN_HEAD / 2,
+		backgroundColor: PIN_INK,
+	},
+	/** Rotated square under the head; the head is drawn over its top half. */
+	pinTail: {
+		position: "absolute",
+		left: (PIN_SIZE - PIN_TAIL) / 2,
+		top: PIN_SIZE - PIN_TAIL,
+		width: PIN_TAIL,
+		height: PIN_TAIL,
+		backgroundColor: PIN_INK,
+		transform: [{ rotate: "45deg" }],
+	},
+	/** The hole. Opaque white, not transparent: the pill behind it is 0.92. */
+	pinHole: {
+		position: "absolute",
+		left: (PIN_SIZE - PIN_HEAD * 0.36) / 2,
+		top: (PIN_HEAD - PIN_HEAD * 0.36) / 2,
+		width: PIN_HEAD * 0.36,
+		height: PIN_HEAD * 0.36,
+		borderRadius: (PIN_HEAD * 0.36) / 2,
 		backgroundColor: "#FFFFFF",
 	},
 

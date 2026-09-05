@@ -16,6 +16,84 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-05 17:10 UTC — phase174: the community card's place label leaves the video and joins the app
+
+**Objective**: build the owner's pick (M7 on `/demos/community-label-v1`) from
+this morning's demo round. See the 07:40 entry for the diagnosis and the frame
+set that got here.
+
+**What shipped**:
+- `scripts/render-worker/worker.py` — `_render_label_png`, `_label_overlay`,
+  `_ui_font`, `_wrap_to_width` and the whole `CARD_REF_WIDTH_PT` / `BADGE_*`
+  block are DELETED, along with the `clip_labels` collection and the overlay
+  call. `_label_font` + `LABEL_FONTS` stay: the end card still uses them. A
+  note in their place records what was drawn there and why it could not stay.
+  `card_idx` for the end card is now just `len(clip_paths)` — it was
+  `+ len(label_inputs) // 2`.
+- `scripts/admin/reassemble-community-tours.ts` (new) — copies a community's
+  latest READY `tour_assemblies` row into a fresh `pending` one, verbatim
+  (`ordered_clips`, `photos_dropped`, `narration`, `bgm`). Same cut, same
+  length, no re-plan, no clip touched, no Seedance call. `--slug` / `--all`.
+- `apps/web/lib/feed/tour-segments.ts` — `TourSegment.distance`, read from the
+  clip's `label_distance`. Omitted rather than empty. (Merge note: `poiId` /
+  `bucket` landed on the same lines from phase176 while this branch was open;
+  both sides kept.)
+- `apps/mobile/lib/feed/pool-dto.ts` + `card-types.ts` — parse and type it. A
+  bad distance is dropped alone; unlike `endFraction` it cannot mislay the bar.
+- `apps/mobile/components/cards/CommunityFace.tsx` — the real change. A
+  `useAnimatedReaction` on `progress` derives WHICH place is on screen and a
+  top-left pill names it; the pill is the COMMUNITY badge's own geometry in the
+  badge's own slot. `CardCorner` gains `save` and sits at 12/12.
+  `COMMUNITY_SOUND_TOP` is gone. COMMUNITY is now an eyebrow above the name.
+- `apps/mobile/components/cards/CardCorner.tsx` — `top` prop deleted, inset
+  moved into `slot`.
+- `apps/mobile/components/cards/ListingFace.tsx` — the LISTING badge is gone.
+- The five communities with a tour were re-assembled: Windward, Bellmoore Park,
+  Ashley Crossing, Apremont – Highcroft, Aberdeen. ffmpeg only.
+
+**Decisions**:
+- *The eyebrow, not a tag beside the name.* The owner's first instruction put
+  COMMUNITY to the right of the name. Built and demoed as M2–M4, it costs the
+  two signal glyphs on a short name (the row cannot hold name + tag + glyphs +
+  Explore) and the name itself on a long one — M5 shows "Apremont – Highcroft"
+  ellipsizing at the ~125pt left over, which the 2026-08-22 no-truncation rule
+  forbids. M6 fixed it with a conditional layout; the owner then said "put
+  community label on top of the community name", which removes the condition
+  and gives the glyphs back. One rule, every name length.
+- *Re-render before shipping the app change*, not after: an old film plus a new
+  card would draw the label twice. Windward went first and was diffed against
+  its predecessor at the same timestamp before the other four were queued.
+- *A narrow re-assembly script rather than `pnpm tour --steps assemble`.* The
+  latter re-plans; this had to reproduce the cut the owner already reviewed.
+
+**Issues**:
+- The demo's own long-name frame is what caught the M2 truncation. It would not
+  have been visible on Windward, and Windward is the community I would have
+  tested on.
+- `origin/main` moved from `4925e8cf` to `eb57e118` mid-phase (phases 175-180
+  from another agent). Merged in; two conflicts, both additive:
+  `tour-segments.ts` (`distance` vs `poiId`/`bucket`) and `CardCorner.tsx`,
+  which phase175 had rebuilt to 26pt with Phosphor glyphs — took that version
+  and re-applied the two phase174 edits on top.
+- One bug of my own, found before it shipped: `placeIndex` as a bare number
+  would name the PREVIOUS community's place for a frame when a face is reused
+  at the same deck index. Stored with `card.id` and read back only for it, the
+  way `measured` in the same file already handles this.
+
+**Verification**: mobile 538 tests / 51 files pass, web 869 / 83, render-worker
+133. `pnpm typecheck` clean. `pnpm lint`: mobile green; web unchanged from main
+(2 errors / 185 warnings, all pre-existing a11y in `app/(public)`). The new
+Windward film was checked frame-by-frame against the old one — the burned pill
+is in the old at 8s and absent from the new.
+
+**Not verified by me**: how it looks on the phone. The owner runs Metro from
+`~/Workspace/Percho`; that worktree needs `git pull` AND `pnpm install`.
+
+**Next steps**: owner review in Expo Go. Two things I would look at with him:
+the scrub label above the progress bar now duplicates the top-left pill while a
+finger is down (kept — it is at the thumb, where the eye is), and a community
+with no tour shows an empty top-left corner, which is most of them.
+
 ## 2026-09-05 16:05 UTC — phase177: the new tab bar ships — new glyphs, duotone active, and the centring bug deleted
 
 **Objective**: implement the owner's picks from `/demos/tabbar-redesign`:

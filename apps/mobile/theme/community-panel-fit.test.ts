@@ -41,7 +41,10 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		// ONE absolutely-filled media layer with the info overlaid. The white
 		// container (geo.block / textBlock) must be gone — from the STYLES,
 		// not from the history notes in the header.
-		expect(SRC).not.toMatch(/styles\.(block|row1|divider|blurb|tile|place)/);
+		// `place\b` — the white block's city/state LINE, not phase174's
+		// `placePill` in the top-left corner, which is a different thing that
+		// happens to start with the same six letters.
+		expect(SRC).not.toMatch(/styles\.(block|row1|divider|blurb|tile|place\b)/);
 		expect(SRC).not.toMatch(/\.\.\.(textBlock|mediaGeo)/);
 		expect(SRC).not.toContain("textBlock as geo");
 		expect(SRC).not.toContain("media as mediaGeo");
@@ -56,14 +59,32 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		expect(AREA).toContain("locations={[0.55, 0.78, 1]}");
 	});
 
-	it("keeps the COMMUNITY badge, and NO bookmark", () => {
+	/**
+	 * phase174. The COMMUNITY tag came DOWN to sit above the community name, the
+	 * top-left corner went to the place the film is on, and the bookmark came
+	 * back beside the mute — it had been removed on 2026-08-20 only because the
+	 * tour video burned its place pill under that disc, and the video does not
+	 * draw one any more.
+	 */
+	it("puts COMMUNITY above the name and the place pill top-left", () => {
 		expect(SRC).toContain("COMMUNITY");
-		// The bookmark is gone from this face alone (2026-08-20). Its disc sat
-		// at top:12/right:12, which is where the tour video draws the place
-		// name and distance — see `_render_label_png` in the render worker. The
-		// City and Listing faces keep theirs; neither plays a labelled video.
-		expect(SRC).not.toContain("BookmarkIcon");
-		expect(SRC).not.toContain("SAVE_TAP_TARGET");
+		// The tag is an eyebrow in the bottom block, not a badge in the corner.
+		expect(SRC).toContain("styles.tagRow");
+		expect(SRC).toContain("styles.badgeLabel");
+		// Top-left draws the place, from the tour's own segments.
+		expect(SRC).toContain("styles.placePill");
+		expect(SRC).toContain("place.distance");
+		// It is absent, not blank, when the film has no structure to name.
+		expect(SRC).toContain("{place && !!place.name && (");
+	});
+
+	it("carries BOTH corner controls, at the badge's own inset", () => {
+		expect(SRC).toContain("<CardCorner");
+		expect(SRC).toContain("SAVE_TAP_TARGET");
+		expect(SRC).toContain('toggleSaved(card.id, "community")');
+		// No community-specific offset survives: the control sits where the
+		// listing card's does, which is the whole point of the change.
+		expect(SRC).not.toContain("COMMUNITY_SOUND_TOP");
 	});
 
 	it("caps the signal glyphs at TWO", () => {
