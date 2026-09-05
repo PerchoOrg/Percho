@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho feed — what goes in the band under the card</title>
+<style>
+:root{
+  --bg:#F7F5F0; --ink:#2B2116; --ink2:#6F6B65; --ink3:#96918A; --accent:#B45309;
+  --green:#0E6B57; --mint:#E7F1ED; --neg:#B3402A;
+  --ui:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:20px}
+.nav{max-width:1240px;margin:0 auto 18px;font:400 14px/1.6 var(--ui)}
+.nav h1{font:600 22px var(--ui);color:#086B5B;margin-bottom:6px}
+.nav p{max-width:840px;color:#5A4E40;margin:4px 0}
+.nav b{color:#2B2116}
+.nav a{color:#B45309;font-weight:600;text-decoration:none;margin-right:10px}
+.gallery{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start;justify-content:center}
+.frame{width:428px}
+.cap{min-height:96px;padding:6px 2px;font:600 15px/1.3 var(--ui)}
+.cap small{display:block;font:400 12.5px/1.4 var(--ui);color:#6F6B65;margin-top:3px}
+.cap em{font-style:normal;color:var(--green)}
+.cap u{text-decoration:none;color:#B3402A}
+.phone{position:relative;width:428px;height:926px;background:var(--bg);overflow:hidden;border-radius:44px;box-shadow:0 18px 44px rgba(0,0,0,.25)}
+.hdr{position:absolute;left:0;top:0;width:428px;display:block}
+.tab{position:absolute;left:0;bottom:0;width:428px;display:block}
+.card{position:absolute;left:16px;top:127px;width:396px;height:575px;border-radius:28px;overflow:hidden;
+  background:url("/demos/feed-page-v2/card.jpg") center/100% 100% no-repeat;
+  box-shadow:0 3px 10px rgba(32,28,22,.05),0 16px 38px rgba(32,28,22,.085)}
+/* the band: y 702 -> 830 */
+.band{position:absolute;left:0;right:0;top:702px;height:128px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:9px;padding:0 20px}
+.row{display:flex;align-items:center;justify-content:center;gap:8px}
+.crumbLine{display:flex;align-items:center;gap:6px;font:600 15px var(--ui);color:var(--ink)}
+.crumbLine .root{color:var(--ink2);font-weight:500}
+.crumbLine .sep{color:var(--ink3);font-weight:400}
+.crumbLine .cur{color:var(--green)}
+.hint{font:400 12px var(--ui);color:var(--ink3)}
+.eyebrow{font:600 10px var(--ui);letter-spacing:1.3px;color:var(--ink3);text-transform:uppercase}
+.chip{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 12px;border-radius:15px;
+  background:var(--mint);color:var(--green);font:600 13px var(--ui)}
+.chip.ghost{background:transparent;border:1px solid rgba(23,23,21,.12);color:var(--ink2);font-weight:500}
+.thumbs{display:flex;align-items:center;gap:8px}
+.thumbs img{width:52px;height:52px;border-radius:13px;object-fit:cover;background:#EFE9DE}
+.thumbs .more{width:52px;height:52px;border-radius:13px;background:#EFE9DE;display:flex;align-items:center;
+  justify-content:center;font:600 13px var(--ui);color:var(--ink2)}
+.verdict{display:flex;align-items:center;gap:10px}
+.verdict .tag{font:600 13px var(--ui);color:var(--neg)}
+.verdict .nm{font:600 15px var(--ui);color:var(--ink)}
+.btn{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:17px;
+  border:1px solid rgba(23,23,21,.14);font:600 13px var(--ui);color:var(--ink)}
+.bar{width:220px;height:4px;border-radius:2px;background:#E6E0D6;position:relative}
+.bar i{position:absolute;left:0;top:0;bottom:0;width:40%;border-radius:2px;background:var(--green)}
+.disc{width:56px;height:56px;border-radius:28px;background:#fff;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(32,28,22,.10),0 8px 20px rgba(32,28,22,.08)}
+.disc.sm{width:44px;height:44px;border-radius:22px}
+.src{position:absolute;left:20px;right:20px;top:836px;font:400 10.5px/1.35 var(--ui);color:var(--ink3);text-align:center}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const IMG={
+  a:'https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/bellmoore-park.jpg',
+  b:'https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/listing-photos/fmls-import/584585849/00.jpg',
+  c:'https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/apremont-highcroft.jpg',
+};
+const svg={
+  chev:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  spark:'<svg width="13" height="13" viewBox="0 0 256 256" fill="currentColor"><path d="M208,144a15.78,15.78,0,0,1-10.42,14.94l-51.65,19-19,51.61a15.92,15.92,0,0,1-29.88,0L78.07,178l-51.65-19a15.92,15.92,0,0,1,0-29.88l51.65-19,19-51.61a15.92,15.92,0,0,1,29.88,0l19,51.61,51.65,19A15.78,15.78,0,0,1,208,144Z"/></svg>',
+  undo:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A7358" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3.5 13a9 9 0 1 0 2.1-6.4L3 9"/></svg>',
+  x:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B3402A" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  heart:'<svg width="24" height="24" viewBox="0 0 256 256" fill="#0E6B57"><path d="M178,40c-20.65,0-38.73,8.88-50,23.89C116.73,48.88,98.65,40,78,40a62.07,62.07,0,0,0-62,62c0,70,103.79,126.66,108.21,129a8,8,0,0,0,7.58,0C136.21,228.66,240,172,240,102A62.07,62.07,0,0,0,178,40Z"/></svg>',
+};
+const crumb = `<div class="crumbLine"><span class="root">Atlanta metro</span><span class="sep">›</span><span class="cur">Dallas</span><span style="color:var(--ink3);display:flex">${svg.chev}</span></div>`;
+
+function phone(band, source){
+  return `<div class="phone">
+    <img class="hdr" src="/demos/feed-page-v2/header.png">
+    <div class="card"></div>
+    <div class="band">${band}</div>
+    ${source?`<div class="src">${source}</div>`:''}
+    <img class="tab" src="/demos/feed-page-v2/tabbar.png">
+  </div>`;
+}
+
+const FRAMES={
+ B1:{title:'B1 · Scope + swipe hint (what you already saw as A3)',
+     sub:'The baseline. Honest and quiet, but it only moves an existing line down — the band is doing the least work it could.',
+     html:()=>phone(`${crumb}<div class="hint">Swipe right to keep · left to pass</div>`)},
+
+ B2:{title:'B2 · What Percho is learning ★ my pick',
+     sub:'The band becomes the product\'s second half: the film sells the place, this says what the swiping is <em>for</em>. Chips are the top dims by weight and they visibly change as you swipe — the You tab\'s "what Percho knows", surfaced where the learning happens instead of two taps away.',
+     html:()=>phone(`<div class="eyebrow">Percho is learning</div>
+       <div class="row"><span class="chip">${svg.spark} Walkable streets</span><span class="chip">Move-in ready</span></div>
+       <div class="hint">3 more swipes and it can name your type</div>`,
+       'Real: rankedDims + DIM_LABELS (state/signals), DIM_NAME_THRESHOLD for the countdown.')},
+
+ B3:{title:'B3 · Your shortlist, building',
+     sub:'Everything you kept this session, as thumbnails that grow left to right. Turns swiping into visible progress and gives the Saved tab a reason to be opened — tap any to open it, tap the count for Compare.',
+     html:()=>phone(`<div class="eyebrow">Kept today · 3</div>
+       <div class="thumbs"><img src="${IMG.a}"><img src="${IMG.b}"><img src="${IMG.c}"><div class="more">+2</div></div>`,
+       'Real: state/saved (kind + id + savedAt). Compare already exists in the Saved tab.')},
+
+ B4:{title:'B4 · The last verdict, undoable',
+     sub:'What you just did and one tap to take it back — the Undo you killed as a toast, living in the quiet band instead of covering the card. The You tab keeps the full history either way.',
+     html:()=>phone(`<div class="verdict"><span class="tag">Passed</span><span class="nm">Bellmoore Park</span></div>
+       <div class="btn">Bring it back</div>`,
+       'Real: lib/feed/recent.ts (recentEntryFor / bringBack already ship for the You tab).')},
+
+ B5:{title:'B5 · Where you are in this deck',
+     sub:'Scope on top, a thin progress bar under it. Answers "how much more is there?" — the question that makes people stop swiping. The two numbers come from different places, so the line has to be worded to match.',
+     html:()=>phone(`${crumb}
+       <div class="bar"><i></i></div>
+       <div class="hint">9 seen here today · 40 communities in Dallas</div>`,
+       'Real: session deck index (9) and city communityCount (40). NOT one ratio — they are different counts.')},
+
+ B6:{title:'B6 · Scope on top, learning under it',
+     sub:'The 128 pt is tall enough for both: the tappable scope line where the header used to have it, and the learning chips under it. Uses the whole band instead of centring one thing in it — but it is two ideas in one strip, so it needs the type discipline the demo shows.',
+     html:()=>phone(`${crumb}
+       <div class="row"><span class="chip">${svg.spark} Walkable streets</span><span class="chip ghost">Move-in ready</span></div>`,
+       'Real: scope + rankedDims. Nothing new on the wire.')},
+
+ B7:{title:'B7 · Controls (for comparison)',
+     sub:'The version from the last demo, kept here so you can weigh it against the six above: it makes the deck obvious to a first-timer, but it adds permanent chrome and says nothing about the place or about you.',
+     html:()=>phone(`<div class="row" style="gap:26px"><div class="disc sm">${svg.undo}</div><div class="disc">${svg.x}</div><div class="disc">${svg.heart}</div></div>`)},
+};
+
+const q=new URLSearchParams(location.search), only=q.get('only'), root=document.getElementById('root');
+function fit(){const w=Number(q.get('w'))||window.innerWidth;const k=Math.min(1,(w-14)/428);document.querySelectorAll('.frame').forEach(el=>{el.style.zoom=String(k)});}
+if(only&&FRAMES[only]){document.body.style.padding='0';root.innerHTML=FRAMES[only].html();}
+else{
+  const keys=Object.keys(FRAMES);
+  root.innerHTML=`<div class="nav"><h1>The band under the card — what to put in it</h1>
+    <p>Card untouched in every frame: <b>396×575</b>, the tour's own aspect, no crop. The band is the <b>128 pt</b> between it and the tab bar — taller than the tab bar itself, and sitting where your thumb already rests.</p>
+    <p>Each frame names the data behind it. Nothing here needs a new field on the wire; where two numbers come from different sources, the frame says so rather than blending them into one fake ratio.</p>
+    <div>Jump: ${keys.map(k=>`<a href="#${k}">${k}</a>`).join('')}</div></div>
+    <div class="gallery">${keys.map(k=>`<div class="frame" id="${k}"><div class="cap">${FRAMES[k].title}<small>${FRAMES[k].sub}</small></div>${FRAMES[k].html()}</div>`).join('')}</div>`;
+  fit();window.addEventListener('resize',fit);
+}
+</script>
+</body>
+</html>
