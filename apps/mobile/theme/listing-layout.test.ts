@@ -66,25 +66,30 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 		// the listing face mounts it and passes the saved state.
 		expect(LISTING).toContain("<CardCorner");
 		expect(LISTING).toContain("save={{");
-		expect(CORNER).toContain("function BookmarkIcon");
+		expect(CORNER).toContain('name="bookmark"');
 	});
 
 	/**
 	 * phase140 (owner pick "G2"): the corner holds ONE object. Two stacked
 	 * discs — a mute above the bookmark — was the shape the owner rejected
-	 * (「右上两个 button 很奇怪」), so a capsule with a hairline between two
-	 * cells replaced them, and a face with only one control keeps the plain
-	 * 40pt disc.
+	 * (「右上两个 button 很奇怪」), so one container replaced them, and a face
+	 * with only one control renders it as a disc.
+	 *
+	 * phase175 (owner pick "H1") kept the one-object rule and fixed the two
+	 * things that made it look wrong: the container is now the LISTING badge's
+	 * height and fill instead of a 37pt / 0.85 capsule, and both glyphs come
+	 * from the Phosphor subset instead of being drawn from bordered `View`s.
 	 */
-	it("puts the mute and the bookmark in ONE capsule", () => {
-		// Both cells, one container.
-		expect(CORNER).toContain("function SpeakerIcon");
-		expect(CORNER).toContain("function BookmarkIcon");
-		expect(CORNER).toContain("both ? styles.capsule : styles.disc");
-		// The lone-control form is still the disc every face drew before.
-		expect(CORNER).toContain(
-			"disc: { width: 40, height: 40, borderRadius: 20 }",
-		);
+	it("puts the mute and the bookmark in ONE object, at the badge's height", () => {
+		// Both cells, one container — a pill for two, a disc for one.
+		expect(CORNER).toContain("both ? styles.pill : styles.disc");
+		expect(CORNER).toContain("const CORNER_HEIGHT = 26");
+		expect(CORNER).toContain("disc: { width: CORNER_HEIGHT");
+		// Real glyphs, no hand-built art: a `View`-drawn speaker is what the
+		// owner saw as "weird" at 17pt.
+		expect(CORNER).toContain('name={sound.on ? "soundOn" : "soundOff"}');
+		expect(CORNER).not.toContain("function SpeakerIcon");
+		expect(CORNER).not.toContain("function BookmarkIcon");
 		// A photo-only card gets no speaker: the control must not promise audio
 		// the card does not have.
 		expect(LISTING).toContain("card.videoUrl");
@@ -129,7 +134,10 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 		const disc =
 			'width: 40,\n\t\theight: 40,\n\t\tborderRadius: 20,\n\t\tbackgroundColor: "rgba(255,255,255,0.75)"';
 		expect(AREA).toContain(disc);
-		expect(CORNER).toContain('backgroundColor: "rgba(255,255,255,0.85)"');
+		// The shared corner wears the BADGE's fill since phase175 — the two sit
+		// on one row, so any difference in the white reads as a mistake.
+		expect(CORNER).toContain('backgroundColor: "rgba(255,255,255,0.92)"');
+		expect(LISTING).toContain('backgroundColor: "rgba(255,255,255,0.92)"');
 		expect(COMMUNITY).not.toContain(disc);
 
 		// Same explore CTA — label copy, size, weight, colour.
