@@ -16,21 +16,22 @@
  * "not enough data" grades is not a destination worth pushing a screen for.
  *
  * What IS real is the material the button names: what residents said, and the
- * evidence under it. So this screen is the card's three tiles expanded, then
- * every other reason the neighbourhood stated, then the interest ranking that
- * backs the "#N resident interest" sub-lines, then the demographic figures.
- * Server rules live in `apps/web/lib/community/detail.ts`.
+ * evidence under it. So this screen is the film with its places as a strip to
+ * jump between (the listing hero's pattern — owner, 2026-09-04), then the
+ * card's three tiles expanded, then every other reason the neighbourhood
+ * stated, then the interest ranking that backs the "#N resident interest"
+ * sub-lines, then the demographic figures. The blurb paragraph came off with
+ * that change: the strip already says what the place has, and the owner asked
+ * for less prose under it. Server rules live in `apps/web/lib/communities/detail.ts`.
  *
  * When a pillar gets a source, §3.3 is the target and this becomes its Vibe
  * section. It is not a placeholder in the meantime — every row on it is a real
  * row.
  */
 import { router, useLocalSearchParams } from "expo-router";
-import { VideoView, useVideoPlayer } from "expo-video";
-import { type MutableRefObject, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	ActivityIndicator,
-	Image,
 	Linking,
 	Pressable,
 	ScrollView,
@@ -38,12 +39,17 @@ import {
 	StyleSheet,
 	Text,
 	View,
+	useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
 	RedlineIcon,
 	type RedlineIconName,
 } from "../../components/cards/redline/RedlineChrome";
+import {
+	TourHero,
+	type TourSegment,
+} from "../../components/community/TourHero";
 import { apiBase } from "../../lib/api/base";
 import {
 	REVIEW_DIMENSION_LABELS,
@@ -54,7 +60,6 @@ import {
 } from "../../lib/reviews/reviews";
 import { useAuthStore } from "../../state/auth";
 import { useSavedStore } from "../../state/saved";
-import { useSoundStore } from "../../state/sound";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -63,13 +68,6 @@ interface ReasonDTO {
 	icon: RedlineIconName;
 	/** Present only when a DB row is evidence for THIS reason. */
 	fact?: string;
-}
-
-/** One place the tour's film visits — same rows as the card's dashed bar. */
-interface TourSegmentDTO {
-	name: string;
-	/** 0..1 — where in the film this place's clips END. */
-	endFraction: number;
 }
 
 interface CommunityDetailDTO {
@@ -82,7 +80,8 @@ interface CommunityDetailDTO {
 	/** The community's film — the SAME one the feed card plays. */
 	videoUrl?: string;
 	/** Present only when `videoUrl` is the assembled tour. */
-	tourSegments?: TourSegmentDTO[];
+	tourSegments?: TourSegment[];
+	/** Prose description. Fetched but no longer shown — see the header. */
 	blurb?: string;
 	topReasons: ReasonDTO[];
 	moreReasons: ReasonDTO[];
@@ -124,58 +123,15 @@ function ReasonRow({ reason }: { reason: ReasonDTO }) {
 	);
 }
 
-/**
- * The community's film replacing the static hero — the SAME one the feed card
- * plays (HLS manifest for an assembled tour, mp4 for a legacy AI video).
- * Autoplays looped like feed cards; audio follows the global soundOn store, so
- * a buyer on the feed hears the tour here too. `nativeControls` gives a way
- * back if the phone's silent switch is on.
- *
- * `seekRef` hands the parent a seek-by-fraction without lifting the player:
- * `useVideoPlayer` ties the player's lifecycle to the component that renders
- * it, and the only caller is the tour-visits chips below.
- */
-function CommunityTourVideo({
-	url,
-	seekRef,
-}: {
-	url: string;
-	seekRef: MutableRefObject<((fraction: number) => void) | null>;
-}) {
-	const soundOn = useSoundStore((s) => s.soundOn);
-	const player = useVideoPlayer(url, (p) => {
-		p.loop = true;
-		p.muted = !soundOn;
-		p.play();
-	});
-	useEffect(() => {
-		seekRef.current = (fraction) => {
-			// duration is 0 until the source loads; a seek then would be a no-op
-			// anyway, so make it one explicitly.
-			const d = player.duration;
-			if (d > 0) player.currentTime = fraction * d;
-		};
-		return () => {
-			seekRef.current = null;
-		};
-	}, [player, seekRef]);
-	return (
-		<VideoView
-			player={player}
-			style={styles.heroImg}
-			contentFit="cover"
-			nativeControls
-		/>
-	);
-}
-
 export default function CommunityWhyScreen() {
 	const { slug } = useLocalSearchParams<{ slug: string }>();
 	const insets = useSafeAreaInsets();
+	const { width, height: screenH } = useWindowDimensions();
 	const [data, setData] = useState<CommunityDetailDTO | null>(null);
 	const [error, setError] = useState<string | null>(null);
-	const scrollRef = useRef<ScrollView>(null);
-	const seekRef = useRef<((fraction: number) => void) | null>(null);
+
+	// The listing hero's height rule (reference §3.1): clamp(340, 46vh, 460).
+	const heroH = Math.min(Math.max(340, screenH * 0.46), 460);
 
 	// The community's save entry point lives HERE, not on the card face — the
 	// card's top-right corner belongs to the tour video's place/distance label
@@ -243,101 +199,38 @@ export default function CommunityWhyScreen() {
 	return (
 		<View style={styles.root}>
 			<ScrollView
-				ref={scrollRef}
 				contentContainerStyle={{ paddingBottom: insets.bottom + 28 }}
 				showsVerticalScrollIndicator={false}
 			>
-				<View style={styles.hero}>
-					{data.videoUrl ? (
-						<CommunityTourVideo url={data.videoUrl} seekRef={seekRef} />
-					) : (
-						<Image source={{ uri: data.heroUrl }} style={styles.heroImg} />
-					)}
-					<View style={styles.heroScrim} />
-					<View style={[styles.heroText, { paddingTop: insets.top + 40 }]}>
-						<Text style={styles.eyebrow}>WHY PEOPLE LOVE IT</Text>
-						<Text style={styles.name}>{data.name}</Text>
-						{!!place && <Text style={styles.place}>{place}</Text>}
-					</View>
-				</View>
-
-				<Pressable
-					onPress={() => router.back()}
-					hitSlop={12}
-					accessibilityRole="button"
-					accessibilityLabel="Back"
-					style={[styles.close, { top: insets.top + 8 }]}
-				>
-					<Text style={styles.closeTxt}>✕</Text>
-				</Pressable>
-
-				<Pressable
-					onPress={() => toggleSaved(data.id, "community")}
-					hitSlop={12}
-					accessibilityRole="button"
-					accessibilityLabel={saved ? "Saved" : "Save"}
-					style={[styles.save, { top: insets.top + 8 }]}
-				>
-					<Text style={styles.saveTxt}>{saved ? "Saved ✓" : "Save"}</Text>
-				</Pressable>
-
-				{/* Share (phase D) — the public web page for this community. */}
-				<Pressable
-					onPress={() => {
+				{/*
+				 * The film with its places as a strip — the listing hero's pattern.
+				 * Same film the feed card plays (HLS for an assembled tour, mp4 for
+				 * a legacy AI video); the strip appears only when the film's
+				 * structure is known.
+				 */}
+				<TourHero
+					width={width}
+					height={heroH}
+					{...(data.videoUrl ? { videoUrl: data.videoUrl } : {})}
+					heroUrl={data.heroUrl}
+					segments={data.tourSegments ?? []}
+					saved={saved}
+					onBack={() => router.back()}
+					onToggleSave={() => toggleSaved(data.id, "community")}
+					// Share (phase D) — the public web page for this community.
+					onShare={() => {
 						const url = `https://www.percho.co/c/${data.slug}`;
 						void Share.share({
 							message: `${data.name} — ${url}`,
 							url,
 						}).catch(() => {});
 					}}
-					hitSlop={12}
-					accessibilityRole="button"
-					accessibilityLabel="Share"
-					style={[styles.close, styles.share, { top: insets.top + 8 }]}
-				>
-					<Text style={styles.closeTxt}>↑</Text>
-				</Pressable>
+				/>
 
 				<View style={styles.body}>
-					{!!data.blurb && <Text style={styles.blurb}>{data.blurb}</Text>}
-
-					{/*
-					 * The film's own table of contents — one chip per place, in film
-					 * order, numbered to match the card's dashed bar. Tapping one
-					 * seeks the hero to where that place's clips START (the previous
-					 * place's endFraction) and scrolls back up so the seek is seen.
-					 *
-					 * No category glyphs: segments carry only a name, and guessing a
-					 * glyph from it would assert a category the film never recorded —
-					 * the same rule that keeps unmapped signals glyphless on the card.
-					 */}
-					{!!data.videoUrl && (data.tourSegments?.length ?? 0) > 0 && (
-						<>
-							<Text style={styles.sectionHead}>THE TOUR VISITS</Text>
-							<View style={styles.chips}>
-								{data.tourSegments?.map((seg, i) => (
-									<Pressable
-										// A film may revisit a place, so the name alone can repeat.
-										key={`${i}-${seg.name}`}
-										accessibilityRole="button"
-										accessibilityLabel={`Play the tour from ${seg.name}`}
-										style={styles.chip}
-										onPress={() => {
-											seekRef.current?.(
-												i === 0
-													? 0
-													: (data.tourSegments?.[i - 1]?.endFraction ?? 0),
-											);
-											scrollRef.current?.scrollTo({ y: 0, animated: true });
-										}}
-									>
-										<Text style={styles.chipRank}>{i + 1}</Text>
-										<Text style={styles.chipTxt}>{seg.name}</Text>
-									</Pressable>
-								))}
-							</View>
-						</>
-					)}
+					{/* Headline under the media, where the listing page puts its own. */}
+					<Text style={styles.name}>{data.name}</Text>
+					{!!place && <Text style={styles.place}>{place}</Text>}
 
 					{/*
 					 * The card's three, in the card's order — `communityReasonsAll` is
@@ -502,8 +395,6 @@ export default function CommunityWhyScreen() {
 	);
 }
 
-const HERO_H = 260;
-
 const styles = StyleSheet.create({
 	root: { flex: 1, backgroundColor: colors.bg },
 	center: {
@@ -527,45 +418,9 @@ const styles = StyleSheet.create({
 	},
 	backTxt: { ...textStyles.footnote, color: colors.surface },
 
-	hero: { height: HERO_H, backgroundColor: colors.cardPlainTo },
-	heroImg: { ...StyleSheet.absoluteFill, resizeMode: "cover" },
-	/** The name sits on the photo, so the photo needs a floor to sit it on. */
-	heroScrim: {
-		...StyleSheet.absoluteFill,
-		backgroundColor: "rgba(0,0,0,0.42)",
-	},
-	heroText: { flex: 1, justifyContent: "flex-end", padding: 20 },
-	eyebrow: { ...textStyles.caption, color: colors.onCardDim, marginBottom: 8 },
-	name: { ...textStyles.title1, color: colors.onCard },
-	place: { ...textStyles.footnote, color: colors.onCardDim, marginTop: 6 },
-	close: {
-		position: "absolute",
-		right: 14,
-		width: 34,
-		height: 34,
-		borderRadius: radii.pill,
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: colors.glass,
-	},
-	closeTxt: { fontSize: 15, color: colors.ink },
-	/** Second glass disc, left of the close. */
-	share: { right: 56 },
-	/** The close disc's mirror — same glass, left corner, sized by its label. */
-	save: {
-		position: "absolute",
-		left: 14,
-		height: 34,
-		paddingHorizontal: 14,
-		borderRadius: radii.pill,
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: colors.glass,
-	},
-	saveTxt: { ...textStyles.footnote, color: colors.ink },
-
-	body: { paddingHorizontal: 18, paddingTop: 18 },
-	blurb: { ...textStyles.body, color: colors.ink, lineHeight: 22 },
+	body: { paddingHorizontal: 18, paddingTop: 20 },
+	name: { ...textStyles.title1, color: colors.ink },
+	place: { ...textStyles.footnote, color: colors.ink2, marginTop: 6 },
 	sectionHead: {
 		...textStyles.caption,
 		color: colors.accent,

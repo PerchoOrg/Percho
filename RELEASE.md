@@ -8,6 +8,9 @@
 
 ## v1.3 — Opening a home now answers "does this fit me?"
 
+### 2026-09-05
+- **A neighbourhood's page now opens like a home's.** The film fills the top of the page, and along its foot is one chip per place the tour visits — the chip for the place on screen stays lit as the film plays, and tapping another jumps the film there. The same ← / share / ♡ and sound buttons as on a home's page. The paragraph of description that used to sit under the film is gone; the chips say what the place has
+
 ### 2026-09-04
 - **The privacy policy and terms now describe the real app.** Both pages were placeholders; they now explain accounts (Sign in with Apple or an emailed code), what happens to a tour request, how resident reviews are moderated and shown without names, what usage information the app records, and how to delete your account from the You tab. Every review in the app also has a Report link that emails us with the review reference
 - **Residents can now review their neighbourhood.** Every community page has a Resident Reviews section: an overall rating, a few optional specifics (quiet, walkable, neighbourly, value) and a paragraph in the reviewer's own words. You need to be signed in to write one, each person gets one review per neighbourhood, and nothing appears until a member of the team has read it — reviews are shown without names. Until a neighbourhood has an approved review, the section simply says so and invites the first one; there is no filler
