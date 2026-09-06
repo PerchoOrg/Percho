@@ -9,21 +9,25 @@
  * directly」 — the page is about where you are looking, and the app already
  * says its name on the launch screen and in the tab bar.
  *
- * So the page opens on the place. Two rows of type, settled over three passes
- * with the owner on 2026-09-06:
+ * So the page opens on the place. One line of type, settled over several
+ * passes with the owner on 2026-09-06:
  *
- *     line 1  Atlanta Metro ⌄   ·   40 communities · median $594K
- *     line 2  Dallas, GA ⌄
- *     line 3  community squares
- *     line 4  card — never cropped
- *     line 5  what is left over
- *     line 6  tabs
+ *     line 1  Atlanta metro › Dallas ▾  ·  40 communities · median $594K
+ *     line 2  card — never cropped
+ *     line 3  what is left over
+ *     line 4  tabs
  *
  * The metro moved onto the stats row (「Make Atlanta Metro and Community stuff
  * in one line」) and became a control in its own right (「Atlanta metro
- * dropdown similar to community name」): both rows open the same scope sheet,
+ * dropdown similar to community name」): the line opens the scope sheet,
  * whose first row is "Anywhere in metro Atlanta" — which is what tapping the
  * metro is asking for.
+ *
+ * phase182 (owner, same day: the strip 「makes the page not well organized and
+ * immersive」): the community-squares row between the line and the card is
+ * gone, and the line itself became the card ↔ place connection — given a
+ * `trail`, it reads the TOP CARD's parent chain and updates as the buyer
+ * swipes: `Atlanta metro › Johns Creek › Bellmoore Park ▾` over a home.
  *
  * The city keeps the serif the wordmark used to own, alone on its line, and
  * that is deliberate: it is the answer to "where am I", and the numbers beside
@@ -32,12 +36,14 @@
  * ── Why a bigger header makes the page SHORTER ──────────────────────────────
  *
  * Counter-intuitive, and it is the whole reason this shape was picked. The
- * stage below is `flex: 1` and the card is anchored to its top (phase179), so
- * every point this header does NOT use ends up as empty paper under the card —
+ * stage below is `flex: 1` and the card was anchored to its top (phase179), so
+ * every point this header did NOT use ended up as empty paper under the card —
  * 128pt of it on the owner's iPhone, which is what he reported. Deleting the
  * wordmark alone made that 172. The header taking the space back is what
- * closes the hole, and `theme/card-frame.ts` had to stop sizing the card as a
- * share of the stage for that to work.
+ * closed the hole, and `theme/card-frame.ts` had to stop sizing the card as a
+ * share of the stage for that to work. (History as of phase182: the card is
+ * CENTRED in the stage now — 「balance the empty space above and under card」
+ * — so the slack splits evenly instead of pooling below.)
  *
  * The demo this was picked from: `percho.co/demos/feed-header-v2` (R3).
  */
@@ -58,20 +64,40 @@ interface PlaceHeaderProps {
 	unit: GeoUnit | undefined;
 	/** Every city unit in the pool, for the metro-level numbers. */
 	units: readonly GeoUnit[];
+	/**
+	 * The TOP CARD's parent chain below the metro (`placeTrail`) — phase182,
+	 * what replaced the community strip's card ↔ place connection. Non-null,
+	 * the line reads the card's place: metro › city › community for a home,
+	 * metro › city for a community, the metro alone for a city card. Null (a
+	 * trade-off, or no card yet), the line falls back to the scope + stats.
+	 */
+	trail: readonly string[] | null;
 	onPress: () => void;
-	/** The community strip, mounted by the feed (it owns the deck). */
-	children?: React.ReactNode;
 }
 
 export function PlaceHeader({
 	scopeName,
 	unit,
 	units,
+	trail,
 	onPress,
-	children,
 }: PlaceHeaderProps) {
 	/** Scoped, the city's numbers; unscoped, the metro's. Never nothing. */
 	const stats = scopeName ? scopeStatsLine(unit) : metroStatsLine(units);
+
+	/**
+	 * The runs the line draws when the top card gives it a place: the metro
+	 * root, then the card's parents. The LAST link is the one in ink — the
+	 * card's nearest parent; with an empty trail (a city card) that is the
+	 * metro itself. Two runs, not a mapped list: everything above the leaf
+	 * shares the muted style, so it can be one joined string.
+	 */
+	const leaf =
+		trail === null ? null : (trail[trail.length - 1] ?? SCOPE_ROOT_LABEL);
+	const parents =
+		trail === null || trail.length === 0
+			? null
+			: [SCOPE_ROOT_LABEL, ...trail.slice(0, -1)].join(" › ");
 
 	return (
 		<View style={styles.wrap}>
@@ -90,6 +116,12 @@ export function PlaceHeader({
 			 * `minimumFontScale` 0.6 is the floor; below that the line would be
 			 * smaller than the numbers beside it and unreadable, and the right
 			 * answer at that point is a shorter string, not smaller type.
+			 *
+			 * With a trail (phase182) the same line reads the TOP CARD's parent
+			 * chain instead of the scope — the ink lands on the card's nearest
+			 * parent, everything above it steps back a colour. The stats ride only
+			 * the scope line: appended to a three-deep chain they would scale the
+			 * whole line below legibility.
 			 */}
 			<Pressable
 				onPress={onPress}
@@ -104,18 +136,33 @@ export function PlaceHeader({
 					minimumFontScale={0.6}
 					style={styles.line}
 				>
-					{scopeName ? (
+					{leaf !== null ? (
 						<>
-							<Text style={styles.metro}>{SCOPE_ROOT_LABEL}</Text>
-							<Text style={styles.sep}> › </Text>
+							{parents !== null ? (
+								<>
+									<Text style={styles.metro}>{parents}</Text>
+									<Text style={styles.sep}> › </Text>
+								</>
+							) : null}
+							<Text style={styles.city}>{leaf}</Text>
 						</>
-					) : null}
-					<Text style={styles.city}>{scopeName ?? SCOPE_ROOT_LABEL}</Text>
+					) : (
+						<>
+							{scopeName ? (
+								<>
+									<Text style={styles.metro}>{SCOPE_ROOT_LABEL}</Text>
+									<Text style={styles.sep}> › </Text>
+								</>
+							) : null}
+							<Text style={styles.city}>{scopeName ?? SCOPE_ROOT_LABEL}</Text>
+						</>
+					)}
 					<Text style={styles.chevron}> ▾</Text>
-					{stats ? <Text style={styles.stats}>{`  ·  ${stats}`}</Text> : null}
+					{leaf === null && stats ? (
+						<Text style={styles.stats}>{`  ·  ${stats}`}</Text>
+					) : null}
 				</Text>
 			</Pressable>
-			{children}
 		</View>
 	);
 }
@@ -174,15 +221,3 @@ const styles = StyleSheet.create({
 		color: redline.ink3,
 	},
 });
-
-/**
- * The height of the two type rows — everything this header draws except the
- * strip its child renders.
- *
- * 4 padding + a 30pt line box. The feed needs it BEFORE layout to
- * work out what height is left for the squares (`coverSize`), and measuring it
- * would make that circular: the strip's size would feed back into the height
- * being measured. Fixed type, so a constant is honest here — and
- * `theme/card-aspect.test.ts` computes the whole page from it.
- */
-export const PLACE_HEADER_TEXT_HEIGHT = 4 + 30;

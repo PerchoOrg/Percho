@@ -8,6 +8,10 @@
 
 ## v1.3 — Opening a home now answers "does this fit me?"
 
+### 2026-09-06
+- **The row of neighbourhood squares above the card is gone.** It crowded the page rather than organising it. What it was there to say now lives in the top line itself, which follows the card you're on: over a home it reads the metro, the city and — where we know it — the neighbourhood it belongs to; over a neighbourhood's film, the metro and its city. It updates as you swipe, and tapping it still opens the city picker
+- **The card now sits centred on the page**, with the spare paper split evenly above and below it instead of pooling underneath
+
 ### 2026-09-05
 - **The feed now opens on the place, not on our name.** Where "Percho" used to sit at the top there is now the city you're looking at — Atlanta metro above it, how many neighbourhoods are there and what homes typically cost below — and under that, a row of the neighbourhoods we've filmed nearby. Tap any of them to jump straight to that neighbourhood's film; the one you're watching is ringed. The card itself is unchanged and the films are shown whole, and the empty stretch of paper that had appeared under the card is now the neighbourhood row instead
 - **The tab bar's icons are whole again.** Each one was being cut down its right-hand side — the heart lost part of its lobe, the waving hand its thumb — because the drawing was given a box narrower than itself

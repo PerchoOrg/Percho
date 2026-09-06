@@ -22,7 +22,6 @@
  * `See on map →`).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { LayoutChangeEvent } from "react-native";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import { router, useFocusEffect } from "expo-router";
@@ -42,26 +41,18 @@ import {
 import { SwipeLabels } from "../../components/cards/SwipeLabels";
 import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
-import { CommunityStrip } from "../../components/feed/CommunityStrip";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { OfflineBar } from "../../components/feed/OfflineBar";
-import {
-	PLACE_HEADER_TEXT_HEIGHT,
-	PlaceHeader,
-} from "../../components/feed/PlaceHeader";
+import { PlaceHeader } from "../../components/feed/PlaceHeader";
 import { ScopeSheet } from "../../components/feed/ScopeSheet";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
-import type { CommunityCardV3, FeedCardV3 } from "../../lib/feed/card-types";
-import {
-	communityStripItems,
-	stripLayout,
-} from "../../lib/feed/community-strip";
+import type { FeedCardV3 } from "../../lib/feed/card-types";
 import { deckKey } from "../../lib/feed/deck-key";
 import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
 import { generateFeed, movedUpCount } from "../../lib/feed/generate-feed";
-import { jumpToCommunity } from "../../lib/feed/jump";
+import { placeTrail } from "../../lib/feed/place-trail";
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
 import { preferScope } from "../../lib/feed/scope";
 import { CARD_TAP_TARGET, SOUND_TAP_TARGET } from "../../lib/gesture/tap-slot";
@@ -71,7 +62,6 @@ import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
 import { useSwipeHintStore } from "../../state/swipe-hint";
-import { CANVAS_ASPECT } from "../../theme/card-frame";
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -119,19 +109,14 @@ import { textStyles } from "../../theme/typography";
  * ~1.13, which their 2.7-4.5 Mbps top rendition absorbs without a visible
  * change. Going wider than this needs a bigger canvas first.
  *
- * 2026-09-06: `top` 12 → 24 — the owner's space between the community squares
- * and the card, which (like the strip's own margin) is taken out of the band
- * under the card rather than out of the film.
- *
- * 2026-09-06: `bottom` 10 → 40 → 16. It was briefly a declared 40pt band, and
- * the card paid for it — pinned between a taller header and a fixed gap, it
- * came off the tour's shape and `cover` cropped the film's sides by up to 7%.
- * The owner's rule settled it: 「Don't cut film」, 「40 pt empty is flexible」.
- * So this is a FLOOR. The card is drawn at the tour's aspect, the squares take
- * what the page can spare (`coverSize`), and the leftover lands here — 16 at
- * worst, ~35 on a 428pt phone.
+ * 2026-09-06 (phase182): `top` 24 → 16, equal to `bottom`. The community strip
+ * is gone (owner: it made the page 「not well organized and immersive」), so
+ * these are FLOORS on either side of the card, symmetric on purpose — the
+ * card is drawn at the tour's aspect (「Don't cut film」) and `SwipeStack`
+ * centres it in the stage, so whatever the page has spare splits evenly
+ * above and below (owner: 「balance the empty space above and under card」).
  */
-const CARD_INSET = { horizontal: 16, top: 24, bottom: 16 };
+const CARD_INSET = { horizontal: 16, top: 16, bottom: 16 };
 const GUTTER = 16;
 
 /**
@@ -279,59 +264,10 @@ export default function FeedScreen() {
 
 	const cardWidth = width - GUTTER * 2;
 
-	/**
-	 * The page's own height, measured once.
-	 *
-	 * This is the box between the safe-area top and the tab bar — what the
-	 * header and the stage share. It is measured on the SafeAreaView rather
-	 * than derived from `useWindowDimensions`, because the tab bar's height is
-	 * the navigator's business, not this screen's.
-	 *
-	 * It does NOT depend on anything below it, which is the property that makes
-	 * the square-size budget non-circular: the strip's height is computed FROM
-	 * this, so measuring anything that already includes the strip would feed
-	 * back into itself.
-	 */
-	const [contentHeight, setContentHeight] = useState(0);
-	const onContentLayout = useCallback((e: LayoutChangeEvent) => {
-		setContentHeight(e.nativeEvent.layout.height);
-	}, []);
-
-	/**
-	 * The square size, solved from what the page can spare — and the reason
-	 * the film is never cropped (owner, 2026-09-06: 「Don't cut film」).
-	 *
-	 * The card's height is not negotiable: it is the tour canvas's aspect at
-	 * the card's width. Everything else is fitted around it, so on a short
-	 * screen the SQUARES shrink and, if there is nothing left, the strip does
-	 * not render at all.
-	 */
-	const stripLayoutFit = useMemo(() => {
-		if (contentHeight === 0) return null;
-		const spare =
-			contentHeight -
-			PLACE_HEADER_TEXT_HEIGHT -
-			CARD_INSET.top -
-			cardWidth / CANVAS_ASPECT -
-			CARD_INSET.bottom;
-		return stripLayout(cardWidth, spare);
-	}, [contentHeight, cardWidth]);
-
 	/** The scoped city's row, for the numbers on the header's title line. */
 	const scopedUnit = useMemo(
 		() => pool.geoUnits.find((u) => u.id === scope?.unitId),
 		[pool.geoUnits, scope?.unitId],
-	);
-
-	/**
-	 * The header strip's faces (phase181 "R3"). Built from the pool rather than
-	 * from the deck: the deck is a sampled sequence and a city's third
-	 * neighbourhood may not be in it yet, while the strip has to show the place
-	 * before the buyer has swiped that far.
-	 */
-	const stripCommunities = useMemo(
-		() => communityStripItems(pool.communities, scope?.unitId ?? null),
-		[pool.communities, scope?.unitId],
 	);
 
 	const poolRef = useRef(scopedPool);
@@ -457,26 +393,17 @@ export default function FeedScreen() {
 		appendPage();
 	}, [remaining, deck.length, exhausted, fetchMore, appendPage]);
 
-	/** The community the deck is showing, so the strip can ring its face. */
-	const topCard = deck[activeIndex];
-	const topCommunityId = topCard?.kind === "community" ? topCard.id : null;
-
 	/**
-	 * Tapping a face in the strip goes to that card (owner, 2026-09-05:
-	 * 「点击一个社区应该可以跳到那张卡片」).
-	 *
-	 * No verdict is recorded for the card being left — a tap on the strip is
-	 * navigation, not a judgement of what happened to be on screen, so nothing
-	 * reaches `signals`. `jumpToCommunity` decides the deck arithmetic.
+	 * The top card's parent chain, for the header line (phase182). This is the
+	 * card ↔ place connection the community strip used to carry: the line
+	 * updates as the buyer swipes — metro › city › community over a home,
+	 * metro › city over a community — and falls back to the scope + stats when
+	 * the card has no place (a trade-off) or the deck is empty.
 	 */
-	const jumpTo = useCallback(
-		(community: CommunityCardV3) => {
-			const next = jumpToCommunity(deck, activeIndex, community);
-			if (next.deck === deck) return;
-			setDeck(next.deck);
-			setActiveIndex(next.activeIndex);
-		},
-		[deck, activeIndex],
+	const topCard = deck[activeIndex];
+	const trail = useMemo(
+		() => placeTrail(topCard, pool.geoUnits, pool.communities),
+		[topCard, pool.geoUnits, pool.communities],
 	);
 
 	/**
@@ -775,11 +702,7 @@ export default function FeedScreen() {
 	const showExhausted = atEnd && (engineExhausted || exhausted) && !loading;
 
 	return (
-		<SafeAreaView
-			style={styles.screen}
-			edges={["top"]}
-			onLayout={onContentLayout}
-		>
+		<SafeAreaView style={styles.screen} edges={["top"]}>
 			{offline && <OfflineBar />}
 			{/*
 			 * The page's header is the PLACE (owner, 2026-09-05: 「remove Percho
@@ -791,28 +714,18 @@ export default function FeedScreen() {
 			 * app names itself on the launch screen and in the tab bar; this page
 			 * names the city instead, and the serif moves onto it.
 			 *
-			 * What it buys: the stage below is `flex: 1` and the card is anchored to
-			 * its top, so anything the header does NOT use becomes empty paper under
-			 * the card — the 128pt hole the owner reported. Deleting the wordmark on
-			 * its own made that 172; the header taking the space back is what closes
-			 * it, which is also why `theme/card-frame.ts` stopped sizing the card as
-			 * a share of the stage.
+			 * Since phase182 the card is CENTRED in the stage below (owner:
+			 * 「balance the empty space above and under card」), so the header's
+			 * height no longer decides where the page's slack lands — it splits
+			 * evenly around the card.
 			 */}
 			<PlaceHeader
 				scopeName={scope?.name ?? null}
 				unit={scopedUnit}
 				units={pool.geoUnits}
+				trail={trail}
 				onPress={() => setScopeOpen(true)}
-			>
-				<CommunityStrip
-					communities={stripCommunities}
-					activeId={topCommunityId}
-					layout={stripLayoutFit}
-					cardWidth={cardWidth}
-					cardInset={CARD_INSET.horizontal}
-					onPick={jumpTo}
-				/>
-			</PlaceHeader>
+			/>
 			<View style={styles.stackWrap}>
 				{deck.length === 0 && loading ? (
 					<View style={styles.cardContainer}>
