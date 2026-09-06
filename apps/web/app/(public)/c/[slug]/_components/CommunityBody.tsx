@@ -28,7 +28,7 @@ import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid
 import { HeroControl } from '@/app/dashboard/_components/HeroControl';
 import { track } from '@/lib/analytics/track';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
-import { dedupeLabels } from '@/lib/communities/detail';
+import { dedupeLabels } from '@/lib/communities/labels';
 import type { BrowseCard } from '@/lib/feed/browse-card';
 import { linkForCard } from '@/lib/feed/link-for-card';
 import type { GeoJsonPolygonLike } from '@/lib/geo/point-in-polygon';

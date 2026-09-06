@@ -5,7 +5,8 @@
  * worth asserting here is that segments never ship without a film to seek.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
-import { dedupeLabels, projectCommunityDetail } from './detail';
+import { projectCommunityDetail } from './detail';
+import { dedupeLabels } from './labels';
 
 beforeAll(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL ??= 'https://test.supabase.co';
