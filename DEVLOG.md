@@ -16,6 +16,83 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-05 11:20 UTC — phase181: the feed opens on the place — wordmark out, city + community strip in
+
+**Objective**: owner picked **R3** off `percho.co/demos/feed-header-v2` —
+「remove Percho app name, starts with area-city directly」 — plus
+「点击一个社区应该可以跳到那张卡片」.
+
+**The finding that shaped the implementation**: R3 could not be built as
+drawn without changing how the card is SIZED. `CARD_FRAME_RATIO` made the
+card 0.83 of the stage, and the stage is what is left after the header. A
+taller header would therefore have shrunk the CARD and kept the hole —
+the opposite of the point. Worse, deleting the wordmark alone moves the
+card UP and grows the gap from 128pt to 172 (frame R1 in the demo exists
+to show exactly this).
+
+**Actions** (`apps/mobile`):
+- `theme/card-frame.ts` — rewritten. `CARD_FRAME_RATIO` is gone; the frame
+  is now `cardFrameHeight(stage, width) = min(stage, width / CANVAS_ASPECT)`
+  with `CANVAS_ASPECT = 1080/1576`. The card is the FILM's shape whenever
+  there is room and never taller than its stage. The old rule needed two
+  constants (`GUTTER` + ratio) kept in step by hand to land on 0.685; this
+  one lands there by construction.
+- `components/SwipeStack.tsx` — uses it.
+- `components/feed/PlaceHeader.tsx` (new, replaces `ScopeCrumb.tsx`) —
+  metro as an eyebrow, the CITY as a 30pt DM Serif title (the serif the
+  wordmark used to own), the city's stats line, and a slot for the strip.
+  Tapping the title opens the same scope sheet. `SCOPE_ROOT_LABEL` and
+  `scopeStatsLine` moved here with it; `ScopeSheet` imports updated.
+- `components/feed/CommunityStrip.tsx` (new) — the toured communities as
+  56pt covers; the one the deck is on is ringed in `redline.accent`.
+- `lib/feed/community-strip.ts` (new) — which faces, in what order:
+  toured only (a photo-only community would land on a card that plays
+  nothing), scoped city first but nothing filtered (§1.3: scope ranks),
+  de-duplicated, capped at 12.
+- `lib/feed/jump.ts` (new) — the deck arithmetic for a tap. The card is
+  INSERTED after the top card and becomes the new top; a re-tap on the
+  ringed face is a no-op returning the same deck reference. A copy rather
+  than a move, because moving an entry from before `activeIndex` would
+  renumber what the stack has already animated past. No verdict is
+  recorded for the card left behind — a strip tap is navigation, not a
+  judgement.
+- `app/(tabs)/feed.tsx` — the wordmark row and its two styles deleted,
+  `PlaceHeader` + `CommunityStrip` mounted, `scopedUnit` / `stripCommunities`
+  / `topCommunityId` / `jumpTo` derived.
+- Tests: `lib/feed/jump.test.ts` (5) and a rewritten
+  `theme/card-aspect.test.ts` (6) — it used to assert the two constants
+  agreed; it now measures what actually matters, the film's SIDE CROP per
+  device, and pins the SE's documented exception.
+  `theme/feed-chrome-layout.test.ts` follows the rename and gains two
+  cases: the strip must stay inside the header (so it rides its z-index),
+  and the wordmark must not come back.
+
+**Decisions**:
+- **The strip is built from the POOL, not the deck.** The deck is a sampled
+  sequence and a city's third neighbourhood may not be in it yet; the strip
+  has to show the place before the buyer has swiped that far.
+- **Toured communities only.** The strip's promise is "tap to see this
+  neighbourhood".
+- **The serif survives, the wordmark does not.** The owner's 2026-08-14
+  rule was 「只有 Percho logo 使用 serif」; with the logo gone the page
+  would have had no serif anchor at all, so the city title inherits it at
+  30pt (the wordmark was 34).
+
+**Verification**: `tsc --noEmit` clean; `vitest run` 52 files / **548
+tests** pass; `biome check .` — **0 errors**, 8 warnings (the same 8 that
+are on `origin/main`; main also carries 1 error this branch does not).
+
+**Issues / not verifiable here**: the exact leftover under the card is RN's
+layout, not arithmetic — the model in `card-aspect.test.ts` puts it near
+zero on the modern lineup, but the number on the owner's iPhone is a device
+check. The SE's crop grows with this header (~18% by the model) and is
+asserted, not fixed.
+
+**Next steps**: owner reloads Expo Go. If the strip reads as too much
+furniture, T5/R5 in the demo is the same header with learning chips instead
+of faces, and is a component swap.
+
+
 ## 2026-09-05 09:40 UTC — phase181: the tab bar's icons were being clipped; the band under the card gets a demo
 
 **Objective**: owner, testing build on device: (1) 「too much empty under

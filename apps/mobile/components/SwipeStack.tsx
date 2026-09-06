@@ -71,7 +71,7 @@ import {
 } from "../lib/gesture/capability";
 import { cardStackVisual } from "../lib/gesture/stack-layer";
 import type { TapSlot, TapStatus } from "../lib/gesture/tap-slot";
-import { CARD_FRAME_RATIO } from "../theme/card-frame";
+import { cardFrameHeight } from "../theme/card-frame";
 import { colors, radii } from "../theme/tokens";
 
 /** Cards visible at rest: top + 1 behind (owner cut the third, 2026-08-15). */
@@ -219,7 +219,7 @@ interface StackCardProps {
 	cardWidth: number;
 	/** The y of the top card at rest (see `restTop` in `SwipeStack`). */
 	restTop: number;
-	/** The card frame's height in points (see `CARD_FRAME_RATIO`). */
+	/** The card frame's height in points (see `cardFrameHeight`). */
 	frameHeight: number;
 	/**
 	 * The y position of a behind card's BOTTOM — aligned with the top card's
@@ -254,7 +254,7 @@ function StackCard({
 	overlay,
 }: StackCardProps) {
 	// `frameHeight` is read straight, with no tween: every card kind is the
-	// same box now (`CARD_FRAME_RATIO`), so the only thing that can change it
+	// same box now (`cardFrameHeight`), so the only thing that can change it
 	// is the stage itself resizing. The 240ms height cross-fade that used to
 	// live here existed to soften a KIND change, and softening it is exactly
 	// what the owner saw as the page jumping (2026-08-17).
@@ -414,25 +414,30 @@ export function SwipeStack<T>({
 	 * 高度」). `flex: 1` inside the padded container makes it deterministic —
 	 * page height minus the wordmark row, the tab bar and the container's own
 	 * padding — and it is the SAME box for every card kind, so nothing a card
-	 * does can move the page skeleton. Every card takes `CARD_FRAME_RATIO` of
-	 * it and centres inside it.
+	 * does can move the page skeleton. Every card is the FILM's shape inside
+	 * it (`cardFrameHeight`), capped by the stage.
 	 */
 	const [stageHeight, setStageHeight] = useState(0);
 	const onStageLayout = useCallback((e: LayoutChangeEvent) => {
 		setStageHeight(e.nativeEvent.layout.height);
 	}, []);
 
-	// EVERY card is the same box: `CARD_FRAME_RATIO` of the stage (owner
-	// 2026-08-17 — one frame height for all four kinds), or the caller's fixed
-	// `cardHeight` (dev-foundation). So this is one number for the whole deck,
-	// not a per-kind lookup, and a swipe can no longer change the frame height
-	// at all — which is the jump the owner reported.
+	// EVERY card is the same box (owner 2026-08-17 — one frame height for all
+	// four kinds): the tour canvas's own aspect, capped by the stage, or the
+	// caller's fixed `cardHeight` (dev-foundation). One number for the whole
+	// deck, not a per-kind lookup, so a swipe cannot change the frame height —
+	// which is the jump the owner reported.
+	//
+	// Since 2026-09-05 this is derived from the card's WIDTH rather than as a
+	// share of the stage: the header above the stage now carries the place and
+	// varies in height, and a share-of-stage rule shrank the card instead of
+	// closing the gap under it (see `theme/card-frame.ts`).
 	const frameHeight =
 		cardHeight !== undefined
 			? cardHeight
 			: // Pre-layout there is no stage yet, so no height either; the cards
 				// land the frame they will keep as soon as it arrives.
-				stageHeight * CARD_FRAME_RATIO;
+				cardFrameHeight(stageHeight, cardWidth);
 	const topHeight = top === undefined || stageHeight === 0 ? 0 : frameHeight;
 	/**
 	 * Where the top card rests: the stage's top edge. It was centred —

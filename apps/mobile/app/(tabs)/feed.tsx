@@ -41,17 +41,20 @@ import {
 import { SwipeLabels } from "../../components/cards/SwipeLabels";
 import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
+import { CommunityStrip } from "../../components/feed/CommunityStrip";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { OfflineBar } from "../../components/feed/OfflineBar";
-import { ScopeCrumb } from "../../components/feed/ScopeCrumb";
+import { PlaceHeader } from "../../components/feed/PlaceHeader";
 import { ScopeSheet } from "../../components/feed/ScopeSheet";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
-import type { FeedCardV3 } from "../../lib/feed/card-types";
+import type { CommunityCardV3, FeedCardV3 } from "../../lib/feed/card-types";
+import { communityStripItems } from "../../lib/feed/community-strip";
 import { deckKey } from "../../lib/feed/deck-key";
 import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
 import { generateFeed, movedUpCount } from "../../lib/feed/generate-feed";
+import { jumpToCommunity } from "../../lib/feed/jump";
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
 import { preferScope } from "../../lib/feed/scope";
 import { CARD_TAP_TARGET, SOUND_TAP_TARGET } from "../../lib/gesture/tap-slot";
@@ -61,7 +64,6 @@ import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
 import { useSwipeHintStore } from "../../state/swipe-hint";
-import { DM_SERIF_FONT } from "../../theme/fonts";
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -78,7 +80,7 @@ import { textStyles } from "../../theme/typography";
  *
  * 2026-08-14 owner revision: the card should not read as full-bleed at all —
  * horizontal 24 (was 16) so a clear band of paper shows down BOTH sides, and
- * top 12 (was 8) to seat it under the new wordmark row. This is the card
+ * top 12 (was 8) to seat it under the header row. This is the card
  * FRAME's inset — the frame, not the media; since 2026-08-18 every face is
  * full-bleed inside it.
  *
@@ -255,6 +257,23 @@ export default function FeedScreen() {
 		[pool, scope?.unitId],
 	);
 
+	/** The scoped city's row, for the header's numbers. */
+	const scopedUnit = useMemo(
+		() => pool.geoUnits.find((u) => u.id === scope?.unitId),
+		[pool.geoUnits, scope?.unitId],
+	);
+
+	/**
+	 * The header strip's faces (phase181 "R3"). Built from the pool rather than
+	 * from the deck: the deck is a sampled sequence and a city's third
+	 * neighbourhood may not be in it yet, while the strip has to show the place
+	 * before the buyer has swiped that far.
+	 */
+	const stripCommunities = useMemo(
+		() => communityStripItems(pool.communities, scope?.unitId ?? null),
+		[pool.communities, scope?.unitId],
+	);
+
 	const poolRef = useRef(scopedPool);
 	poolRef.current = scopedPool;
 
@@ -377,6 +396,28 @@ export default function FeedScreen() {
 		if (!exhausted) fetchMore();
 		appendPage();
 	}, [remaining, deck.length, exhausted, fetchMore, appendPage]);
+
+	/** The community the deck is showing, so the strip can ring its face. */
+	const topCard = deck[activeIndex];
+	const topCommunityId = topCard?.kind === "community" ? topCard.id : null;
+
+	/**
+	 * Tapping a face in the strip goes to that card (owner, 2026-09-05:
+	 * 「点击一个社区应该可以跳到那张卡片」).
+	 *
+	 * No verdict is recorded for the card being left — a tap on the strip is
+	 * navigation, not a judgement of what happened to be on screen, so nothing
+	 * reaches `signals`. `jumpToCommunity` decides the deck arithmetic.
+	 */
+	const jumpTo = useCallback(
+		(community: CommunityCardV3) => {
+			const next = jumpToCommunity(deck, activeIndex, community);
+			if (next.deck === deck) return;
+			setDeck(next.deck);
+			setActiveIndex(next.activeIndex);
+		},
+		[deck, activeIndex],
+	);
 
 	/**
 	 * The one line a trade-off answer earns back.
@@ -679,39 +720,33 @@ export default function FeedScreen() {
 		<SafeAreaView style={styles.screen} edges={["top"]}>
 			{offline && <OfflineBar />}
 			{/*
-			 * The wordmark row (owner, 2026-08-14): "Percho" centred at the very
-			 * top, and the two top CORNERS stay empty — no features up here.
+			 * The page's header is the PLACE (owner, 2026-09-05: 「remove Percho
+			 * app name, starts with area-city directly」 — demo pick "R3" off
+			 * `percho.co/demos/feed-header-v2`).
 			 *
-			 * That rule is what evicted the mute control, which used to be the
-			 * feed's only chrome besides the tab bar. It is NOT deleted: audio is
-			 * still global state (`state/sound.ts`) and the toggle now lives at the
-			 * top-right of the listing explore hero (`app/listing/[id].tsx`), which
-			 * is a tour-playing surface and not a top corner of the feed. Deleting
-			 * it outright would re-create the 2026-07-28 bug where a buyer had no
-			 * way to unmute a tour at all.
+			 * What went: the "Percho" wordmark row (2026-08-14), the only serif on
+			 * this screen and the reason the two top corners had to stay empty. The
+			 * app names itself on the launch screen and in the tab bar; this page
+			 * names the city instead, and the serif moves onto it.
 			 *
-			 * 2026-08-14 follow-up: the wordmark is DM Serif Display 34/400/−0.5
-			 * in #086B5B — the ONLY serif face on this screen (owner: 「只有
-			 * Percho logo 使用 serif」). See `theme/fonts.ts`.
+			 * What it buys: the stage below is `flex: 1` and the card is anchored to
+			 * its top, so anything the header does NOT use becomes empty paper under
+			 * the card — the 128pt hole the owner reported. Deleting the wordmark on
+			 * its own made that 172; the header taking the space back is what closes
+			 * it, which is also why `theme/card-frame.ts` stopped sizing the card as
+			 * a share of the stage.
 			 */}
-			<View style={styles.chromeRow}>
-				<Text style={styles.wordmark}>Percho</Text>
-			</View>
-			{/*
-			 * The scope line (owner pick "S3"). This reverses the 2026-07-25
-			 * "卡外零常驻 chrome" rule, on the owner's own grounds that a
-			 * community-first product has to say which place it is showing:
-			 * 「顶部显示 scope 这个想法好 符合我们 community first 的理念」.
-			 * The two top CORNERS are still empty.
-			 *
-			 * One line since 2026-09-05 — its name comes from `scope` (persisted,
-			 * so it paints on the first frame); the stats line it used to carry
-			 * is gone from the feed (see `ScopeCrumb`).
-			 */}
-			<ScopeCrumb
+			<PlaceHeader
 				scopeName={scope?.name ?? null}
+				unit={scopedUnit}
 				onPress={() => setScopeOpen(true)}
-			/>
+			>
+				<CommunityStrip
+					communities={stripCommunities}
+					activeId={topCommunityId}
+					onPick={jumpTo}
+				/>
+			</PlaceHeader>
 			<View style={styles.stackWrap}>
 				{deck.length === 0 && loading ? (
 					<View style={styles.cardContainer}>
@@ -839,42 +874,6 @@ const styles = StyleSheet.create({
 		borderTopColor: "transparent",
 		borderBottomColor: "transparent",
 		borderLeftColor: colors.ink,
-	},
-	/**
-	 * Status-bar row — the "Percho" wordmark, centred, nothing in either corner
-	 * (owner 2026-08-14). 44pt tall so the row reads as chrome rather than as a
-	 * masthead band.
-	 */
-	chromeRow: {
-		height: 44,
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		paddingHorizontal: 16,
-		zIndex: 100,
-	},
-	/**
-	 * `textStyles.title1` is the 28pt serif — the spec's "~28-32, display".
-	 *
-	 * Painted `redline.accent` (owner, 2026-08-14: 「深墨绿 + 优雅衬线」). This
-	 * is the one place the redline's forest green crosses into app CHROME — the
-	 * tokens file reserves it for the four card faces so the amber and the green
-	 * never share a surface. The wordmark is the app's name, not chrome that
-	 * competes with a card, and the feed is a green-card surface; the amber
-	 * accent stays out of this row.
-	 *
-	 * 2026-08-14 follow-up: DM Serif Display 34/400/−0.5 in #086B5B (owner
-	 * spec). The family is bundled + registered (`theme/fonts.ts`), so this
-	 * is the only font change on the screen — the card faces keep their own
-	 * `serif` (New York) and the UI keeps SF Pro.
-	 */
-	wordmark: {
-		...textStyles.title1,
-		fontFamily: DM_SERIF_FONT,
-		fontSize: 34,
-		fontWeight: "400",
-		letterSpacing: -0.5,
-		color: "#086B5B",
 	},
 	sheet: { paddingHorizontal: 20, paddingTop: 8, gap: 8 },
 	sheetEyebrow: { ...textStyles.caption, color: colors.accent },

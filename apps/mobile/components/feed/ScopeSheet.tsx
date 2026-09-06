@@ -1,5 +1,5 @@
 /**
- * The scope picker (phase140, the sheet behind the `ScopeCrumb`).
+ * The scope picker (phase140, the sheet behind the header's city title).
  *
  * ── A soft scope, and the copy says so ──────────────────────────────────────
  *
@@ -32,7 +32,7 @@ import { scopeChoices } from "../../lib/feed/scope";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 import { BottomSheet } from "../BottomSheet";
-import { SCOPE_ROOT_LABEL, scopeStatsLine } from "./ScopeCrumb";
+import { SCOPE_ROOT_LABEL, scopeStatsLine } from "./PlaceHeader";
 
 /** How many cities the sheet offers. The pool holds 109; this is the head. */
 const MAX_CHOICES = 40;
