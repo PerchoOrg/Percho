@@ -140,14 +140,19 @@ const styles = StyleSheet.create({
 	 * city's line box — the smaller runs sit on the same baseline.
 	 */
 	line: { textAlign: "center", lineHeight: 30 },
-	/** The metro, ahead of the city and quieter than it. */
+	/**
+	 * The metro — the city's own size and face (owner, 2026-09-06: 「Atlanta
+	 * metro should be bigger size」, and earlier 「dropdown similar to community
+	 * name」). It carries the muted ink instead, which is the whole hierarchy
+	 * now: same weight of voice, one step back in colour.
+	 */
 	metro: {
-		fontFamily: fonts.ui,
-		fontSize: 13,
-		fontWeight: "600",
+		fontFamily: DM_SERIF_FONT,
+		fontSize: 24,
+		letterSpacing: -0.4,
 		color: redline.ink2,
 	},
-	sep: { fontFamily: fonts.ui, fontSize: 13, color: redline.ink3 },
+	sep: { fontFamily: DM_SERIF_FONT, fontSize: 20, color: redline.ink3 },
 	/**
 	 * The place. 24pt serif — the wordmark's face, stepped down twice: it now
 	 * shares a line with two runs of UI type, and at 30 the whole line was

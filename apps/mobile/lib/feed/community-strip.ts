@@ -63,8 +63,16 @@ export function communityStripItems(
  */
 export const STRIP_GAP = 10;
 export const STRIP_ACROSS = 4.5;
-/** Space above the row, and the name row under each square. */
-export const STRIP_MARGIN_TOP = 10;
+/**
+ * Space above the row, and the name row under each square.
+ *
+ * 10 → 24 on 2026-09-06 (owner: 「Add some space between text and
+ * communities, communities and card, so we can reduce the empty space under
+ * the card」). It comes straight out of the gap below the card: the squares
+ * are already at their width ceiling on a big phone, so every point added here
+ * is a point that band loses.
+ */
+export const STRIP_MARGIN_TOP = 24;
 export const STRIP_NAME_ROW = 4 + 13;
 /**
  * Below this a cover is a smudge, not a photograph of a neighbourhood — the
@@ -73,19 +81,44 @@ export const STRIP_NAME_ROW = 4 + 13;
 export const STRIP_MIN_COVER = 52;
 
 /**
- * The square's size, or null when the page has no room for the strip at all.
+ * How the strip fits — its square size, and whether the names fit under them.
  *
- * `maxHeight` is what is left for the whole strip once the header's type, the
- * card at its uncropped height and the minimum gap are taken out.
+ * `maxHeight` is what is left once the header's line, the card at its
+ * uncropped height and the minimum gap are taken out. The degradation order
+ * matters and is the point of this function:
+ *
+ *   1. squares at the width rule, with names under them;
+ *   2. squares without names, if the names are what does not fit;
+ *   3. no strip at all.
+ *
+ * Step 2 exists because step 3 is a cliff: on a 13 mini the name row was the
+ * last 2pt, and dropping the whole strip for it left a 107pt hole where a row
+ * of 67pt covers would have fitted. The film is never in this list — it is
+ * pinned to the tour's aspect and everything here bends around it.
  */
-export function coverSize(cardWidth: number, maxHeight: number): number | null {
-	const byWidth = (cardWidth - 4 * STRIP_GAP) / STRIP_ACROSS;
-	const byHeight = maxHeight - STRIP_MARGIN_TOP - STRIP_NAME_ROW;
-	const size = Math.floor(Math.min(byWidth, byHeight));
-	return size >= STRIP_MIN_COVER ? size : null;
+export interface StripLayout {
+	cover: number;
+	withNames: boolean;
 }
 
-/** The height the strip occupies at that size — 0 when it does not render. */
-export function stripHeight(cover: number | null): number {
-	return cover === null ? 0 : STRIP_MARGIN_TOP + cover + STRIP_NAME_ROW;
+export function stripLayout(
+	cardWidth: number,
+	maxHeight: number,
+): StripLayout | null {
+	const byWidth = (cardWidth - 4 * STRIP_GAP) / STRIP_ACROSS;
+	const named = Math.floor(
+		Math.min(byWidth, maxHeight - STRIP_MARGIN_TOP - STRIP_NAME_ROW),
+	);
+	if (named >= STRIP_MIN_COVER) return { cover: named, withNames: true };
+	const bare = Math.floor(Math.min(byWidth, maxHeight - STRIP_MARGIN_TOP));
+	if (bare >= STRIP_MIN_COVER) return { cover: bare, withNames: false };
+	return null;
+}
+
+/** The height the strip occupies — 0 when it does not render. */
+export function stripHeight(layout: StripLayout | null): number {
+	if (layout === null) return 0;
+	return (
+		STRIP_MARGIN_TOP + layout.cover + (layout.withNames ? STRIP_NAME_ROW : 0)
+	);
 }

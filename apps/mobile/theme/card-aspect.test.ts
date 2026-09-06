@@ -16,7 +16,7 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { coverSize, stripHeight } from "../lib/feed/community-strip";
+import { stripHeight, stripLayout } from "../lib/feed/community-strip";
 import { CANVAS_ASPECT, cardAspect, cardFrameHeight } from "./card-frame";
 
 const FEED = readFileSync("app/(tabs)/feed.tsx", "utf8");
@@ -24,7 +24,7 @@ const FEED = readFileSync("app/(tabs)/feed.tsx", "utf8");
 /** The feed's fixed chrome below the stage, in points. */
 const TAB_BAR = 62;
 /** `CARD_INSET.top`, and `.bottom` — which is a FLOOR now, not a band. */
-const PAD_TOP = 12;
+const PAD_TOP = 24;
 const GAP_MIN = 16;
 
 /**
@@ -41,10 +41,10 @@ function pageOf(w: number, h: number, top: number, bottom: number) {
 	const content = h - top - (TAB_BAR + bottom);
 	const ideal = cardWidth / CANVAS_ASPECT;
 	const spare = content - HEADER_TEXT - PAD_TOP - ideal - GAP_MIN;
-	const cover = coverSize(cardWidth, spare);
-	const stage = content - HEADER_TEXT - stripHeight(cover) - PAD_TOP - GAP_MIN;
+	const fit = stripLayout(cardWidth, spare);
+	const stage = content - HEADER_TEXT - stripHeight(fit) - PAD_TOP - GAP_MIN;
 	const gap = stage - Math.min(stage, ideal) + GAP_MIN;
-	return { cardWidth, cover, stage, ideal, gap };
+	return { cardWidth, cover: fit?.cover ?? null, fit, stage, ideal, gap };
 }
 
 /** width, height, top safe inset, bottom safe inset — points. */
@@ -134,8 +134,27 @@ describe("the shipping lineup", () => {
 			expect(cover as number, `${name}: square`).toBeLessThanOrEqual(
 				Math.ceil(byWidth),
 			);
+			expect(cover as number, `${name}: square`).toBeGreaterThanOrEqual(52);
 			expect(gap, `${name}: gap under the card`).toBeGreaterThanOrEqual(16);
 		}
+	});
+
+	/**
+	 * The degradation has a middle step, and it exists because the cliff was
+	 * real: with the 2026-09-06 spacing the 13 mini missed the named layout by
+	 * 2pt, and dropping the whole strip for that left a 107pt hole where a row
+	 * of 67pt covers fits. Names go first; the strip goes only when even bare
+	 * covers do not fit; the film never goes.
+	 */
+	it("drops the square's names before it drops the strip", () => {
+		const mini = pageOf(375, 812, 50, 34);
+		expect(mini.fit?.withNames).toBe(false);
+		expect(mini.fit?.cover).toBeGreaterThanOrEqual(52);
+		expect(mini.gap).toBeLessThan(40);
+
+		// A big phone keeps them.
+		const max = pageOf(430, 932, 59, 34);
+		expect(max.fit?.withNames).toBe(true);
 	});
 
 	/**

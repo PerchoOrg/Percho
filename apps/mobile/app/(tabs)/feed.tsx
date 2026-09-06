@@ -53,7 +53,10 @@ import { ScopeSheet } from "../../components/feed/ScopeSheet";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
 import type { CommunityCardV3, FeedCardV3 } from "../../lib/feed/card-types";
-import { communityStripItems, coverSize } from "../../lib/feed/community-strip";
+import {
+	communityStripItems,
+	stripLayout,
+} from "../../lib/feed/community-strip";
 import { deckKey } from "../../lib/feed/deck-key";
 import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
@@ -116,6 +119,10 @@ import { textStyles } from "../../theme/typography";
  * ~1.13, which their 2.7-4.5 Mbps top rendition absorbs without a visible
  * change. Going wider than this needs a bigger canvas first.
  *
+ * 2026-09-06: `top` 12 → 24 — the owner's space between the community squares
+ * and the card, which (like the strip's own margin) is taken out of the band
+ * under the card rather than out of the film.
+ *
  * 2026-09-06: `bottom` 10 → 40 → 16. It was briefly a declared 40pt band, and
  * the card paid for it — pinned between a taller header and a fixed gap, it
  * came off the tour's shape and `cover` cropped the film's sides by up to 7%.
@@ -124,7 +131,7 @@ import { textStyles } from "../../theme/typography";
  * what the page can spare (`coverSize`), and the leftover lands here — 16 at
  * worst, ~35 on a 428pt phone.
  */
-const CARD_INSET = { horizontal: 16, top: 12, bottom: 16 };
+const CARD_INSET = { horizontal: 16, top: 24, bottom: 16 };
 const GUTTER = 16;
 
 /**
@@ -299,7 +306,7 @@ export default function FeedScreen() {
 	 * screen the SQUARES shrink and, if there is nothing left, the strip does
 	 * not render at all.
 	 */
-	const stripCover = useMemo(() => {
+	const stripLayoutFit = useMemo(() => {
 		if (contentHeight === 0) return null;
 		const spare =
 			contentHeight -
@@ -307,7 +314,7 @@ export default function FeedScreen() {
 			CARD_INSET.top -
 			cardWidth / CANVAS_ASPECT -
 			CARD_INSET.bottom;
-		return coverSize(cardWidth, spare);
+		return stripLayout(cardWidth, spare);
 	}, [contentHeight, cardWidth]);
 
 	/** The scoped city's row, for the numbers on the header's title line. */
@@ -800,7 +807,7 @@ export default function FeedScreen() {
 				<CommunityStrip
 					communities={stripCommunities}
 					activeId={topCommunityId}
-					cover={stripCover}
+					layout={stripLayoutFit}
 					cardWidth={cardWidth}
 					cardInset={CARD_INSET.horizontal}
 					onPick={jumpTo}
