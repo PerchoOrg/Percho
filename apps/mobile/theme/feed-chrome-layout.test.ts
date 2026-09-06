@@ -62,9 +62,14 @@ describe("feed chrome sits above the stage's paper band", () => {
 		);
 	});
 
-	/** The wordmark is gone (owner, 2026-09-05) — the page opens on the place. */
-	it("has no wordmark row left to rank", () => {
-		expect(FEED).not.toContain("chromeRow");
+	/**
+	 * The wordmark is back (owner, phase182.1) — but INSIDE the header, so it
+	 * rides `wrap`'s zIndex. This fails if someone moves it out to the screen
+	 * as a sibling of the stage without giving it a rank of its own — the
+	 * exact 2026-08-31 bug, one row higher.
+	 */
+	it("the wordmark rides the header, not the screen", () => {
+		expect(HEADER).toContain(">Percho<");
 		expect(FEED).not.toContain(">Percho<");
 	});
 });

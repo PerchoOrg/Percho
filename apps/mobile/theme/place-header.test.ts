@@ -93,10 +93,18 @@ describe("the header is one line", () => {
 		expect(HEADER.match(/<Pressable/g) ?? []).toHaveLength(1);
 	});
 
-	it("falls back to the metro's numbers when nothing is scoped", () => {
-		expect(HEADER).toContain(
-			"scopeName ? scopeStatsLine(unit) : metroStatsLine(units)",
-		);
+	/**
+	 * phase182.1 (owner: 「second line is area and city and communities
+	 * count」): the count closes EVERY state of the line. A trail with a city
+	 * leaf reads that city's unit (`trailUnit`); a metro leaf and the unscoped
+	 * fallback read the metro's sum; a scoped fallback reads the scoped unit.
+	 */
+	it("always closes the line with the leaf's own numbers", () => {
+		expect(HEADER).toContain("scopeStatsLine(trailUnit)");
+		expect(HEADER).toContain("scopeStatsLine(unit)");
+		expect(HEADER).toContain("metroStatsLine(units)");
+		// The count is not gated on the fallback any more.
+		expect(HEADER).not.toContain("leaf === null && stats");
 	});
 
 	/** Unscoped, the metro IS the place — it must not also precede itself. */
