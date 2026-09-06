@@ -34,7 +34,7 @@ const GAP_MIN = 16;
  * real values the screen uses, not copies — the only thing modelled here is
  * the tab bar, which belongs to the navigator.
  */
-const HEADER_TEXT = 4 + 19 + 1 + 34;
+const HEADER_TEXT = 4 + 30;
 
 function pageOf(w: number, h: number, top: number, bottom: number) {
 	const cardWidth = w - gutter() * 2;
