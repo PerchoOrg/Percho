@@ -16,6 +16,39 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-06 05:00 UTC — phase181.2: the header is one line — and the gap it was closing comes back
+
+**Objective**: owner, hours after R3 shipped: 「too many lines of text, can
+you make them in one line then follow with communities and cards」.
+
+**Actions**: `components/feed/PlaceHeader.tsx` — the metro eyebrow, the
+30pt serif city title and the stats line collapse into one row:
+`Atlanta metro › Dallas ⌄`, metro muted, city 17/700 in the redline green
+(a step up from the 14pt crumb it replaces — with the wordmark gone it is
+the first thing on the page). Then the strip, then the deck.
+`app/(tabs)/feed.tsx` drops the now-unused `scopedUnit`;
+`theme/card-aspect.test.ts`'s `HEADER_MODEL` 155 → 108.
+
+**Decisions**: **the stats do not fold into the line.** They were cut from
+the feed once already ("no need to show xxx communities in this page",
+2026-09-05) and putting `40 communities · median $594K` back onto a line
+whose job is to say WHERE you are re-creates the row this edit removes.
+`scopeStatsLine` stays exported for the scope sheet.
+
+**Issue — flagged, not fixed**: the three rows were what closed the gap
+under the card. One line is 47pt shorter, so by the same model that matched
+the owner's device to the point (`card-aspect.test.ts`), the empty band
+goes from ~37pt back to **~85pt** on a 428×926 screen. The card cannot take
+it: at 396 wide it is already the film's exact shape (578pt) and growing it
+crops the tour. The knobs, all in this file's own components: bigger covers
+(56 → 72 buys 16pt), a second row of communities (~82pt, closes it), or
+accept 85. Not chosen unilaterally — the owner has moved this space three
+times today and the next move is his.
+
+**Verification**: `tsc --noEmit` clean; `vitest run` 52 files / 548 tests;
+`biome check .` 0 errors / 8 warnings (main's baseline).
+
+
 ## 2026-09-06 04:10 UTC — phase181.1: duplicate interest chips — a React key crash on the community page
 
 **Objective**: owner on device: LogBox, `Encountered two children with the

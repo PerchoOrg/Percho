@@ -28,13 +28,15 @@ const STACK_PAD_V = 12 + 10;
  * The place header's height, modelled from its own type metrics
  * (`components/feed/PlaceHeader.tsx` + `CommunityStrip.tsx`):
  *
- *   4 padding + 12 eyebrow + 2 + 34 title + 2 + 19 stats
- *   + 10 strip margin + 56 cover + 4 + 12 name  =  155
+ *   4 padding + 22 place line
+ *   + 10 strip margin + 56 cover + 4 + 12 name  =  108
  *
- * A model, not a measurement — RN does the real layout. The assertions below
- * are written with enough slack that ±10pt here cannot flip them.
+ * It was 155 for the few hours the header carried three rows of type; the
+ * owner cut it to one line on 2026-09-06. A model, not a measurement — RN does
+ * the real layout. The assertions below are written with enough slack that
+ * ±10pt here cannot flip them.
  */
-const HEADER_MODEL = 155;
+const HEADER_MODEL = 108;
 
 /** width, height, top safe inset, bottom safe inset — points. */
 const DEVICES: readonly [string, number, number, number, number][] = [
