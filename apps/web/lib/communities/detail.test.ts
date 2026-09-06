@@ -5,7 +5,7 @@
  * worth asserting here is that segments never ship without a film to seek.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
-import { projectCommunityDetail } from './detail';
+import { dedupeLabels, projectCommunityDetail } from './detail';
 
 beforeAll(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL ??= 'https://test.supabase.co';
@@ -95,5 +95,44 @@ describe('projectCommunityDetail nearby counts', () => {
 
   it('is an empty list for the communities with no POI rows', () => {
     expect(projectCommunityDetail(ROW, undefined)?.nearby).toEqual([]);
+  });
+});
+
+/**
+ * The duplicate that reached the owner's phone on 2026-09-06: Aberdeen's
+ * `interests` carries "Home Improvement & DIY" twice, so React logged
+ * `Encountered two children with the same key` and the page drew the chip
+ * twice.
+ */
+describe('dedupeLabels', () => {
+  it("drops a repeated label and keeps Nextdoor's order", () => {
+    expect(
+      dedupeLabels(['Home Improvement & DIY', 'Gardening', 'Home Improvement & DIY', 'Pets']),
+    ).toEqual(['Home Improvement & DIY', 'Gardening', 'Pets']);
+  });
+
+  it('treats casing and surrounding space as the same label', () => {
+    // The first spelling wins — the ranking is the evidence, so position is
+    // what must survive, not whichever copy is tidier.
+    expect(dedupeLabels(['Gardening', ' gardening ', 'GARDENING'])).toEqual(['Gardening']);
+  });
+
+  it('drops blanks and non-strings without dropping the rest', () => {
+    expect(dedupeLabels(['Pets', '', '   ', null, 7, 'Gardening'])).toEqual(['Pets', 'Gardening']);
+  });
+
+  it('is empty for a missing column', () => {
+    expect(dedupeLabels(null)).toEqual([]);
+    expect(dedupeLabels(undefined)).toEqual([]);
+  });
+
+  it('de-duplicates what the DTO ships', () => {
+    const out = projectCommunityDetail(
+      { ...ROW, interests: ['Home Improvement & DIY', 'Home Improvement & DIY', 'Pets'] },
+      undefined,
+      undefined,
+      undefined,
+    );
+    expect(out?.interests).toEqual(['Home Improvement & DIY', 'Pets']);
   });
 });

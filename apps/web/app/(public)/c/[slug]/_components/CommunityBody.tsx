@@ -28,6 +28,7 @@ import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid
 import { HeroControl } from '@/app/dashboard/_components/HeroControl';
 import { track } from '@/lib/analytics/track';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import { dedupeLabels } from '@/lib/communities/detail';
 import type { BrowseCard } from '@/lib/feed/browse-card';
 import { linkForCard } from '@/lib/feed/link-for-card';
 import type { GeoJsonPolygonLike } from '@/lib/geo/point-in-polygon';
@@ -309,8 +310,11 @@ function CommunityStats({
   if (income) stats.push({ icon: '💵', label: 'Avg income', value: income });
   if (age) stats.push({ icon: '🎂', label: 'Median age', value: `${age} yrs` });
 
-  const attrs = (attributes ?? []).slice(0, 10);
-  const ints = (interests ?? []).slice(0, 10);
+  // De-duplicated for the same reason the mobile DTO is: some neighbourhoods
+  // carry the same scraped label twice, which React reports as a duplicate key
+  // and draws as two identical chips (see `dedupeLabels`).
+  const attrs = dedupeLabels(attributes).slice(0, 10);
+  const ints = dedupeLabels(interests).slice(0, 10);
   const nrb = nearby.slice(0, 6);
 
   const hasAnything = stats.length > 0 || attrs.length > 0 || ints.length > 0 || nrb.length > 0;

@@ -40,7 +40,7 @@
  * row.
  */
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
 	Linking,
@@ -192,6 +192,31 @@ export default function CommunityWhyScreen() {
 		};
 	}, [slug]);
 
+	/**
+	 * The interest chips, de-duplicated.
+	 *
+	 * `communities.interests` is scraped from Nextdoor verbatim and some
+	 * neighbourhoods list the same interest twice — Aberdeen carries "Home
+	 * Improvement & DIY" twice, which React reported as `Encountered two
+	 * children with the same key` and drew as two identical chips
+	 * (owner's device, 2026-09-06). The API de-duplicates now too
+	 * (`dedupeLabels` in `apps/web/lib/communities/detail.ts`); this stays
+	 * because the app talks to whatever version of the API is deployed, and a
+	 * duplicate on the wire must not be able to break this screen again.
+	 *
+	 * First occurrence wins: the order is Nextdoor's own ranking, which is the
+	 * evidence behind the "#N resident interest" sub-lines above.
+	 */
+	const interests = useMemo(() => {
+		const seen = new Set<string>();
+		return (data?.interests ?? []).filter((label) => {
+			const key = label.trim().toLowerCase();
+			if (key === "" || seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		});
+	}, [data?.interests]);
+
 	if (error) {
 		return (
 			<View style={[styles.center, { paddingTop: insets.top }]}>
@@ -310,7 +335,7 @@ export default function CommunityWhyScreen() {
 						</>
 					)}
 
-					{data.interests.length > 0 && (
+					{interests.length > 0 && (
 						<>
 							<Text style={styles.sectionHead}>WHAT RESIDENTS ARE INTO</Text>
 							{/*
@@ -320,7 +345,7 @@ export default function CommunityWhyScreen() {
 							 * already says what they said.
 							 */}
 							<View style={styles.chips}>
-								{data.interests.map((it) => (
+								{interests.map((it) => (
 									<View key={it} style={styles.chip}>
 										<Text style={styles.chipTxt}>{it}</Text>
 									</View>
