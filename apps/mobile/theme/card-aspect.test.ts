@@ -16,27 +16,31 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { coverSize } from "../lib/feed/community-strip";
 import { CANVAS_ASPECT, cardAspect, cardFrameHeight } from "./card-frame";
 
 const FEED = readFileSync("app/(tabs)/feed.tsx", "utf8");
 
 /** The feed's fixed chrome below the stage, in points. */
 const TAB_BAR = 62;
-const STACK_PAD_V = 12 + 10;
+/** `CARD_INSET.top` + `.bottom` — the 40 is the owner's "line 5, 40pt empty". */
+const STACK_PAD_V = 12 + 40;
 
 /**
  * The place header's height, modelled from its own type metrics
- * (`components/feed/PlaceHeader.tsx` + `CommunityStrip.tsx`):
+ * (`components/feed/PlaceHeader.tsx` + `CommunityStrip.tsx`) for the layout the
+ * owner specified on 2026-09-06:
  *
- *   4 padding + 22 place line
- *   + 10 strip margin + 56 cover + 4 + 12 name  =  108
+ *   4 padding + 12 eyebrow + 2 + 34 title-and-stats row
+ *   + 10 strip margin + coverSize(width) + 4 + 13 name
  *
- * It was 155 for the few hours the header carried three rows of type; the
- * owner cut it to one line on 2026-09-06. A model, not a measurement — RN does
- * the real layout. The assertions below are written with enough slack that
- * ±10pt here cannot flip them.
+ * The square is the only part that moves with the screen, and it is the real
+ * rule rather than a copy of it. A model, not a measurement — RN does the
+ * actual layout.
  */
-const HEADER_MODEL = 108;
+function headerModel(width: number): number {
+	return 4 + 12 + 2 + 34 + 10 + coverSize(width) + 4 + 13;
+}
 
 /** width, height, top safe inset, bottom safe inset — points. */
 const DEVICES: readonly [string, number, number, number, number][] = [
@@ -54,8 +58,8 @@ function gutter(): number {
 	return Number(m[1]);
 }
 
-function stageFor(h: number, top: number, bottom: number): number {
-	return h - top - HEADER_MODEL - (TAB_BAR + bottom) - STACK_PAD_V;
+function stageFor(w: number, h: number, top: number, bottom: number): number {
+	return h - top - headerModel(w) - (TAB_BAR + bottom) - STACK_PAD_V;
 }
 
 /** What `cover` throws away horizontally, as a share of the film's width. */
@@ -85,14 +89,34 @@ describe("cardFrameHeight", () => {
 });
 
 describe("the shipping lineup", () => {
-	it("keeps the film's side crop under 3% on every current iPhone", () => {
+	/**
+	 * ── What the 2026-09-06 layout costs the film ───────────────────────────
+	 *
+	 * The owner set the page's rhythm: metro / city + stats / community squares
+	 * / card / 40pt empty / tabs. Two of those — the bigger squares and the
+	 * deliberate 40pt — are height the card no longer has, and the card cannot
+	 * give it back without leaving the tour's shape. So on every screen except
+	 * the biggest the stage caps the card and `cover` crops the film's SIDES.
+	 *
+	 * Measured, per device, with the numbers this file models:
+	 *
+	 *   iPhone 13 mini    ~7.3%      iPhone 16 Pro       ~5.9%
+	 *   iPhone 14 / 13    ~5.1%      iPhone 15 Pro Max   ~3.1%
+	 *   iPhone 15 / 16    ~6.8%      iPhone 16 Pro Max   ~2.3%
+	 *
+	 * 8% is the ceiling this layout is allowed, not a target: it fails if
+	 * another row is added up there, which is the point. The knobs, in order of
+	 * how little they cost: drop the square's name (17pt), 5.5 squares across
+	 * instead of 4.5, or shrink the 40pt.
+	 */
+	it("keeps the film's side crop under 8% on every current iPhone", () => {
 		for (const [name, w, h, top, bottom] of DEVICES) {
 			const width = w - gutter() * 2;
-			const aspect = cardAspect(stageFor(h, top, bottom), width);
+			const aspect = cardAspect(stageFor(w, h, top, bottom), width);
 			expect(
 				sideCrop(aspect),
 				`${name}: card aspect ${aspect.toFixed(3)} crops ${(sideCrop(aspect) * 100).toFixed(1)}% of the film`,
-			).toBeLessThan(0.03);
+			).toBeLessThan(0.08);
 		}
 	});
 
@@ -104,9 +128,9 @@ describe("the shipping lineup", () => {
 	 * if the header grows enough to make it worse.
 	 */
 	it("accepts the iPhone SE's wider frame, within its documented crop", () => {
-		const aspect = cardAspect(stageFor(667, 20, 0), 375 - gutter() * 2);
+		const aspect = cardAspect(stageFor(375, 667, 20, 0), 375 - gutter() * 2);
 		expect(aspect).toBeGreaterThan(CANVAS_ASPECT);
-		expect(sideCrop(aspect)).toBeLessThan(0.2);
+		expect(sideCrop(aspect)).toBeLessThan(0.25);
 	});
 
 	/**

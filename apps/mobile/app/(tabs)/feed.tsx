@@ -110,8 +110,16 @@ import { textStyles } from "../../theme/typography";
  * source. 16 puts the common phones at exactly 1.00 and the Max phones at
  * ~1.13, which their 2.7-4.5 Mbps top rendition absorbs without a visible
  * change. Going wider than this needs a bigger canvas first.
+ *
+ * 2026-09-06: `bottom` 10 → 40. The owner set the page's rhythm — metro /
+ * city + stats / community squares / card / "40pt empty" / tabs — and this is
+ * that band, declared rather than left over. The card takes what remains
+ * (`theme/card-frame.ts` caps it at the stage), so the 40 is exact on every
+ * screen and the cost lands on the film instead: 1.5% of its width cropped on
+ * a 428pt phone, ~7% on a 13 mini. Measured per device in
+ * `theme/card-aspect.test.ts`.
  */
-const CARD_INSET = { horizontal: 16, top: 12, bottom: 10 };
+const CARD_INSET = { horizontal: 16, top: 12, bottom: 40 };
 const GUTTER = 16;
 
 /**
@@ -255,6 +263,12 @@ export default function FeedScreen() {
 	const scopedPool = useMemo(
 		() => preferScope(pool, scope?.unitId ?? null),
 		[pool, scope?.unitId],
+	);
+
+	/** The scoped city's row, for the numbers on the header's title line. */
+	const scopedUnit = useMemo(
+		() => pool.geoUnits.find((u) => u.id === scope?.unitId),
+		[pool.geoUnits, scope?.unitId],
 	);
 
 	/**
@@ -732,6 +746,7 @@ export default function FeedScreen() {
 			 */}
 			<PlaceHeader
 				scopeName={scope?.name ?? null}
+				unit={scopedUnit}
 				onPress={() => setScopeOpen(true)}
 			>
 				<CommunityStrip
