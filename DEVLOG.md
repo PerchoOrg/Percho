@@ -16,6 +16,56 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-06 07:20 UTC — phase181.5: the header printed "Atlanta Metro" twice and no numbers at all
+
+**Objective**: owner: 「Atlanta metro and community info still not in one
+line fix it」.
+
+**What he was actually looking at**: with NO city scoped — the default, and
+where you land after tapping "Anywhere in metro Atlanta" — the header
+rendered the metro's name on both rows and no numbers on either:
+
+    Atlanta Metro          ← the control on row 1
+    Atlanta Metro          ← the title on row 2, falling back to the same string
+
+`scopeStatsLine` takes a `GeoUnit` and there is no unit for "the whole
+metro", so row 1's numbers were null and row 1 collapsed to just the metro
+label. From the outside that reads exactly as "the metro and the community
+info are not on one line" — the community info was nowhere.
+
+**Actions**:
+- `lib/feed/place-stats.ts` (new) — `SCOPE_ROOT_LABEL`, `scopeStatsLine`
+  and the new `metroStatsLine(units)` lifted out of the component. Not
+  cosmetic: anything reachable from a `.tsx` that imports `react-native`
+  can only be asserted as source text in this suite, and these are the
+  numbers on the page. `ScopeSheet` follows the move.
+- `components/feed/PlaceHeader.tsx` — row 1 is the NUMBERS row, always:
+  the city's when scoped, the metro's (8,678 across the pool's 109 units)
+  when not. The metro CONTROL renders only when a city is scoped, where it
+  means "back up a level"; unscoped it is the title and is not repeated.
+- `theme/place-header.test.ts` (new, 6 cases) — the sums, the singular, the
+  absent-rather-than-zero rule, and the two wiring assertions.
+
+**Two facts off the live wire** (`/api/mobile/feed`, 2026-09-06), worth
+recording because the demos implied otherwise:
+- **No city carries a median list price.** 0 of 109 units populate
+  `stats.medianListPrice`, so the stats line renders a count and nothing
+  else today. The `median $594K` clause in every mockup this week was the
+  demo's invention; the code path is real but the column is empty.
+- Dallas, the owner's current scope, has **188 communities**; the metro
+  totals 8,678.
+
+**Measured, before choosing**: the other reading of his line — metro, city
+AND numbers all on ONE row — does not survive real city names. At the 26pt
+serif the row needs 390pt for "Dallas, GA" but **522pt for "Peachtree
+Corners, GA"**, against a 428pt screen. Measured in a browser at the same
+type metrics rather than guessed, which is why the fix is the missing
+numbers rather than a third re-flow.
+
+**Verification**: `tsc --noEmit` clean; `vitest run` 53 files / **555
+tests**; `biome check .` 0 errors / 8 warnings.
+
+
 ## 2026-09-06 06:30 UTC — phase181.4: the film stops paying — the squares give instead
 
 **Objective**: owner, after seeing 181.3 on device: 「Don't cut film」,

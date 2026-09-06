@@ -28,11 +28,11 @@ import {
 	View,
 } from "react-native";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
+import { SCOPE_ROOT_LABEL, scopeStatsLine } from "../../lib/feed/place-stats";
 import { scopeChoices } from "../../lib/feed/scope";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 import { BottomSheet } from "../BottomSheet";
-import { SCOPE_ROOT_LABEL, scopeStatsLine } from "./PlaceHeader";
 
 /** How many cities the sheet offers. The pool holds 109; this is the head. */
 const MAX_CHOICES = 40;
