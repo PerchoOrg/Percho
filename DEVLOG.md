@@ -16,6 +16,47 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-06 08:00 UTC — phase181.6: one line, and it shrinks itself
+
+**Objective**: owner, after three passes that each kept two rows:
+「Why so hard talking to you? Make all text in one line, ok? If too big to
+fit in, just use smaller size」.
+
+**Actions**: `components/feed/PlaceHeader.tsx` — the header is now a single
+`<Text>` with nested runs:
+
+    Atlanta metro › Dallas ▾  ·  188 communities
+
+`numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}` is what
+makes "just use smaller size" real: iOS scales every run by ONE factor
+until the line fits, so "Peachtree Corners" — 522pt at full size against a
+428pt screen — shrinks rather than wrapping or truncating. Two consequences
+that are not obvious:
+- the chevron had to become a CHARACTER (`▾`); a `View` cannot ride inside
+  a Text that is being scaled;
+- the city dropped 30pt → 24pt. At 30 the scaler kicked in on every
+  long-named city and shrank the SMALL runs to keep the big one big, which
+  made the numbers unreadable to protect a size nobody asked for.
+
+One `Pressable` now: the whole line is the control, so the metro and the
+city open the same scope sheet — which is where both "go up a level" and
+"pick another city" live anyway.
+
+`PLACE_HEADER_TEXT_HEIGHT` 58 → 34, so ~24pt flows back to the squares and
+the gap; the card is untouched (still pinned to the film's aspect).
+
+**Verification**: `tsc --noEmit` clean; `vitest run` 53 files / **556
+tests** — `theme/place-header.test.ts` gains a case that fails if the header
+ever splits into two rows again (one Pressable, one Text, no View chevron);
+`biome check .` 0 errors / 8 warnings.
+
+**Learnings**: three passes were spent re-reading one sentence instead of
+changing the thing it named. The owner said "one line" the first time; each
+pass moved which two things shared a row. `adjustsFontSizeToFit` was
+available from the start and removes the constraint that made "one line"
+look impossible on long city names.
+
+
 ## 2026-09-06 07:20 UTC — phase181.5: the header printed "Atlanta Metro" twice and no numbers at all
 
 **Objective**: owner: 「Atlanta metro and community info still not in one

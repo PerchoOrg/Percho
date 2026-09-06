@@ -76,16 +76,32 @@ describe("metroStatsLine", () => {
 	});
 });
 
-describe("the header never says the same place twice", () => {
-	it("shows the metro control only when a city is scoped", () => {
-		// Unscoped, the metro IS the title; the row above it must not repeat it.
-		expect(HEADER).toContain("{scopeName ? (");
-		expect(HEADER).toContain("styles.metroLabel");
+describe("the header is one line", () => {
+	/**
+	 * Owner, 2026-09-06: 「Make all text in one line, ok? If too big to fit in,
+	 * just use smaller size」. Three earlier passes split this across two rows;
+	 * this fails if it happens again.
+	 */
+	it("draws every run inside a single auto-shrinking Text", () => {
+		expect(HEADER).toContain("adjustsFontSizeToFit");
+		expect(HEADER).toContain("numberOfLines={1}");
+		expect(HEADER).toContain("minimumFontScale");
+		// A View chevron cannot ride inside a Text that is being scaled, so the
+		// chevron has to be a character.
+		expect(HEADER).not.toContain("<View style={styles.chevron}");
+		// One Pressable: the whole line is the control.
+		expect(HEADER.match(/<Pressable/g) ?? []).toHaveLength(1);
 	});
 
 	it("falls back to the metro's numbers when nothing is scoped", () => {
 		expect(HEADER).toContain(
 			"scopeName ? scopeStatsLine(unit) : metroStatsLine(units)",
 		);
+	});
+
+	/** Unscoped, the metro IS the place — it must not also precede itself. */
+	it("does not print the metro twice", () => {
+		expect(HEADER).toContain("{scopeName ? (");
+		expect(HEADER).toContain("{scopeName ?? SCOPE_ROOT_LABEL}");
 	});
 });

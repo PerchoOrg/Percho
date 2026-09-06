@@ -49,8 +49,7 @@ import {
 	scopeStatsLine,
 } from "../../lib/feed/place-stats";
 import { DM_SERIF_FONT } from "../../theme/fonts";
-import { redline } from "../../theme/tokens";
-import { redlineText } from "../../theme/typography";
+import { fonts, redline } from "../../theme/tokens";
 
 interface PlaceHeaderProps {
 	/** The picked scope's display name, or null for the whole metro. */
@@ -71,59 +70,50 @@ export function PlaceHeader({
 	onPress,
 	children,
 }: PlaceHeaderProps) {
-	/**
-	 * Row 1 is the NUMBERS row, always. Scoped, they are the city's; unscoped,
-	 * the metro's — never nothing, and the metro's name never printed twice.
-	 */
+	/** Scoped, the city's numbers; unscoped, the metro's. Never nothing. */
 	const stats = scopeName ? scopeStatsLine(unit) : metroStatsLine(units);
 
 	return (
 		<View style={styles.wrap}>
 			{/*
-			 * Line 1 — one level up, and how much is in where you are.
+			 * ONE line, all of it (owner, 2026-09-06: 「Make all text in one line,
+			 * ok? If too big to fit in, just use smaller size」).
 			 *
-			 * The metro shows here only when a CITY is scoped: then it is the way
-			 * back up and the title below is the city. Unscoped, the metro IS the
-			 * title, so this row carries the numbers alone instead of printing
-			 * "Atlanta Metro" on both rows with no numbers on either.
+			 * It is a single `<Text>` with nested runs rather than a row of Views,
+			 * and that is what makes "just use smaller size" work:
+			 * `adjustsFontSizeToFit` scales every run by ONE factor until the line
+			 * fits, so "Peachtree Corners" — which needs 522pt at full size against
+			 * a 428pt screen — shrinks instead of wrapping or truncating. The
+			 * chevron is a character for the same reason: a `View` cannot ride
+			 * inside a Text that is being scaled.
+			 *
+			 * `minimumFontScale` 0.6 is the floor; below that the line would be
+			 * smaller than the numbers beside it and unreadable, and the right
+			 * answer at that point is a shorter string, not smaller type.
 			 */}
-			<View style={styles.metaRow}>
-				{scopeName ? (
-					<>
-						<Pressable
-							onPress={onPress}
-							accessibilityRole="button"
-							accessibilityLabel={`Region: ${SCOPE_ROOT_LABEL}. Change`}
-							hitSlop={{ top: 12, bottom: 12, left: 10, right: 6 }}
-							style={({ pressed }) => [styles.metro, pressed && styles.pressed]}
-						>
-							<Text style={styles.metroLabel}>{SCOPE_ROOT_LABEL}</Text>
-							<View style={styles.chevronSm} />
-						</Pressable>
-						{stats ? <Text style={styles.dot}>·</Text> : null}
-					</>
-				) : null}
-				{/* The numbers truncate before anything else on this row. */}
-				{stats ? (
-					<Text style={styles.stats} numberOfLines={1}>
-						{stats}
-					</Text>
-				) : null}
-			</View>
-
-			{/* Line 2 — the city, alone. With no city scoped the metro IS the
-			    place, so the title falls back to it rather than sitting empty. */}
 			<Pressable
 				onPress={onPress}
 				accessibilityRole="button"
 				accessibilityLabel={`Scope: ${scopeName ?? SCOPE_ROOT_LABEL}. Change`}
-				hitSlop={{ top: 6, bottom: 8, left: 8, right: 8 }}
-				style={({ pressed }) => [styles.titleRow, pressed && styles.pressed]}
+				hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+				style={({ pressed }) => [styles.lineWrap, pressed && styles.pressed]}
 			>
-				<Text style={styles.title} numberOfLines={1}>
-					{scopeName ?? SCOPE_ROOT_LABEL}
+				<Text
+					numberOfLines={1}
+					adjustsFontSizeToFit
+					minimumFontScale={0.6}
+					style={styles.line}
+				>
+					{scopeName ? (
+						<>
+							<Text style={styles.metro}>{SCOPE_ROOT_LABEL}</Text>
+							<Text style={styles.sep}> › </Text>
+						</>
+					) : null}
+					<Text style={styles.city}>{scopeName ?? SCOPE_ROOT_LABEL}</Text>
+					<Text style={styles.chevron}> ▾</Text>
+					{stats ? <Text style={styles.stats}>{`  ·  ${stats}`}</Text> : null}
 				</Text>
-				<View style={styles.chevron} />
 			</Pressable>
 			{children}
 		</View>
@@ -142,66 +132,41 @@ const styles = StyleSheet.create({
 	 * the feed puts above the stage has to out-rank that band; 100 is the
 	 * number the old wordmark row used.
 	 */
-	wrap: { zIndex: 100, paddingTop: 4, alignItems: "center" },
+	wrap: { zIndex: 100, paddingTop: 4 },
+	lineWrap: { paddingHorizontal: 20 },
 	pressed: { opacity: 0.6 },
-	/** Line 1 — metro dropdown · the city's numbers. */
-	metaRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 6,
-		paddingHorizontal: 20,
-		maxWidth: "100%",
-	},
-	metro: { flexDirection: "row", alignItems: "center", gap: 4 },
-	/** The metro reads as a control, so it takes ink rather than the muted grey. */
-	metroLabel: {
-		...redlineText.story,
+	/**
+	 * The line's own box. `textAlign: center` centres it, and the height is the
+	 * city's line box — the smaller runs sit on the same baseline.
+	 */
+	line: { textAlign: "center", lineHeight: 30 },
+	/** The metro, ahead of the city and quieter than it. */
+	metro: {
+		fontFamily: fonts.ui,
+		fontSize: 13,
 		fontWeight: "600",
 		color: redline.ink2,
 	},
-	dot: { ...redlineText.story, color: redline.ink3 },
-	/** Line 2 — the city and its chevron. */
-	titleRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 8,
-		marginTop: 1,
-		paddingHorizontal: 20,
-		maxWidth: "100%",
-	},
+	sep: { fontFamily: fonts.ui, fontSize: 13, color: redline.ink3 },
 	/**
-	 * The city, in the serif the wordmark used to own. 30pt is the wordmark's
-	 * 34 stepped down: the page keeps a serif anchor at the top, but it now
-	 * names the place instead of the app.
+	 * The place. 24pt serif — the wordmark's face, stepped down twice: it now
+	 * shares a line with two runs of UI type, and at 30 the whole line was
+	 * being scaled down by `adjustsFontSizeToFit` on every city with a long
+	 * name, which made the SMALL runs unreadable to keep the big one big.
 	 */
-	title: {
+	city: {
 		fontFamily: DM_SERIF_FONT,
-		fontSize: 30,
-		lineHeight: 34,
-		letterSpacing: -0.6,
+		fontSize: 24,
+		letterSpacing: -0.4,
 		color: redline.ink,
-		flexShrink: 0,
 	},
-	/** The numbers. First to go when the row runs out of width. */
-	stats: { ...redlineText.story, color: redline.ink3, flexShrink: 1 },
-	/** The metro's chevron — the city's, one step down. Same two-border trick. */
-	chevronSm: {
-		width: 6,
-		height: 6,
-		marginTop: -3,
-		borderRightWidth: 1.5,
-		borderBottomWidth: 1.5,
-		borderColor: redline.ink2,
-		transform: [{ rotate: "45deg" }],
-	},
-	chevron: {
-		width: 8,
-		height: 8,
-		marginTop: -4,
-		borderRightWidth: 1.8,
-		borderBottomWidth: 1.8,
-		borderColor: redline.ink3,
-		transform: [{ rotate: "45deg" }],
+	/** A character, not a View — see the note on the line above. */
+	chevron: { fontFamily: fonts.ui, fontSize: 12, color: redline.ink3 },
+	/** The numbers, closing the line. */
+	stats: {
+		fontFamily: fonts.ui,
+		fontSize: 12.5,
+		color: redline.ink3,
 	},
 });
 
@@ -209,10 +174,10 @@ const styles = StyleSheet.create({
  * The height of the two type rows — everything this header draws except the
  * strip its child renders.
  *
- * 4 padding + 19 meta row + 1 + 34 title. The feed needs it BEFORE layout to
+ * 4 padding + a 30pt line box. The feed needs it BEFORE layout to
  * work out what height is left for the squares (`coverSize`), and measuring it
  * would make that circular: the strip's size would feed back into the height
  * being measured. Fixed type, so a constant is honest here — and
  * `theme/card-aspect.test.ts` computes the whole page from it.
  */
-export const PLACE_HEADER_TEXT_HEIGHT = 4 + 19 + 1 + 34;
+export const PLACE_HEADER_TEXT_HEIGHT = 4 + 30;
