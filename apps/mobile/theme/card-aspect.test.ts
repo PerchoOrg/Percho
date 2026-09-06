@@ -16,30 +16,35 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { coverSize } from "../lib/feed/community-strip";
+import { coverSize, stripHeight } from "../lib/feed/community-strip";
 import { CANVAS_ASPECT, cardAspect, cardFrameHeight } from "./card-frame";
 
 const FEED = readFileSync("app/(tabs)/feed.tsx", "utf8");
 
 /** The feed's fixed chrome below the stage, in points. */
 const TAB_BAR = 62;
-/** `CARD_INSET.top` + `.bottom` — the 40 is the owner's "line 5, 40pt empty". */
-const STACK_PAD_V = 12 + 40;
+/** `CARD_INSET.top`, and `.bottom` — which is a FLOOR now, not a band. */
+const PAD_TOP = 12;
+const GAP_MIN = 16;
 
 /**
- * The place header's height, modelled from its own type metrics
- * (`components/feed/PlaceHeader.tsx` + `CommunityStrip.tsx`) for the layout the
- * owner specified on 2026-09-06:
- *
- *   4 padding + 12 eyebrow + 2 + 34 title-and-stats row
- *   + 10 strip margin + coverSize(width) + 4 + 13 name
- *
- * The square is the only part that moves with the screen, and it is the real
- * rule rather than a copy of it. A model, not a measurement — RN does the
- * actual layout.
+ * The page, modelled the way the screen builds it (2026-09-06, final shape):
+ * the card is pinned to the tour's aspect, the squares take what is spare, and
+ * the leftover is the gap. `PLACE_HEADER_TEXT_HEIGHT` and `coverSize` are the
+ * real values the screen uses, not copies — the only thing modelled here is
+ * the tab bar, which belongs to the navigator.
  */
-function headerModel(width: number): number {
-	return 4 + 12 + 2 + 34 + 10 + coverSize(width) + 4 + 13;
+const HEADER_TEXT = 4 + 19 + 1 + 34;
+
+function pageOf(w: number, h: number, top: number, bottom: number) {
+	const cardWidth = w - gutter() * 2;
+	const content = h - top - (TAB_BAR + bottom);
+	const ideal = cardWidth / CANVAS_ASPECT;
+	const spare = content - HEADER_TEXT - PAD_TOP - ideal - GAP_MIN;
+	const cover = coverSize(cardWidth, spare);
+	const stage = content - HEADER_TEXT - stripHeight(cover) - PAD_TOP - GAP_MIN;
+	const gap = stage - Math.min(stage, ideal) + GAP_MIN;
+	return { cardWidth, cover, stage, ideal, gap };
 }
 
 /** width, height, top safe inset, bottom safe inset — points. */
@@ -56,10 +61,6 @@ function gutter(): number {
 	const m = FEED.match(/^const GUTTER = (\d+);$/m);
 	if (!m?.[1]) throw new Error("GUTTER not found in app/(tabs)/feed.tsx");
 	return Number(m[1]);
-}
-
-function stageFor(w: number, h: number, top: number, bottom: number): number {
-	return h - top - headerModel(w) - (TAB_BAR + bottom) - STACK_PAD_V;
 }
 
 /** What `cover` throws away horizontally, as a share of the film's width. */
@@ -90,47 +91,64 @@ describe("cardFrameHeight", () => {
 
 describe("the shipping lineup", () => {
 	/**
-	 * ── What the 2026-09-06 layout costs the film ───────────────────────────
+	 * ── The rule the owner set on 2026-09-06 ────────────────────────────────
 	 *
-	 * The owner set the page's rhythm: metro / city + stats / community squares
-	 * / card / 40pt empty / tabs. Two of those — the bigger squares and the
-	 * deliberate 40pt — are height the card no longer has, and the card cannot
-	 * give it back without leaving the tour's shape. So on every screen except
-	 * the biggest the stage caps the card and `cover` crops the film's SIDES.
+	 * 「Don't cut film」. An earlier cut of this layout pinned the card between
+	 * a taller header and a declared 40pt band, and the card came off the
+	 * tour's shape — up to 7.3% of the film's width gone on a 13 mini. The
+	 * priority is now inverted: the card is drawn at the canvas's aspect, the
+	 * SQUARES take whatever height is spare, and the gap is the remainder
+	 * (「40 pt empty is flexible」).
 	 *
-	 * Measured, per device, with the numbers this file models:
-	 *
-	 *   iPhone 13 mini    ~7.3%      iPhone 16 Pro       ~5.9%
-	 *   iPhone 14 / 13    ~5.1%      iPhone 15 Pro Max   ~3.1%
-	 *   iPhone 15 / 16    ~6.8%      iPhone 16 Pro Max   ~2.3%
-	 *
-	 * 8% is the ceiling this layout is allowed, not a target: it fails if
-	 * another row is added up there, which is the point. The knobs, in order of
-	 * how little they cost: drop the square's name (17pt), 5.5 squares across
-	 * instead of 4.5, or shrink the 40pt.
+	 * So this asserts the film is whole on every shipping screen, and the next
+	 * assertion shows where the give went.
 	 */
-	it("keeps the film's side crop under 8% on every current iPhone", () => {
+	it("never crops the film on a current iPhone", () => {
 		for (const [name, w, h, top, bottom] of DEVICES) {
-			const width = w - gutter() * 2;
-			const aspect = cardAspect(stageFor(w, h, top, bottom), width);
+			const { cardWidth, stage } = pageOf(w, h, top, bottom);
+			const aspect = cardAspect(stage, cardWidth);
 			expect(
 				sideCrop(aspect),
 				`${name}: card aspect ${aspect.toFixed(3)} crops ${(sideCrop(aspect) * 100).toFixed(1)}% of the film`,
-			).toBeLessThan(0.08);
+			).toBeLessThan(0.005);
 		}
 	});
 
 	/**
-	 * The SE is the one screen this cannot hold: its short body gives the fixed
-	 * chrome a much larger share of the height, so the stage caps the card well
-	 * before the film's shape is reached. Asserted so the number is a decision
-	 * on record rather than something nobody measured — and so it fails loudly
-	 * if the header grows enough to make it worse.
+	 * Where the give went: the squares shrink screen by screen, and the gap
+	 * under the card is whatever is left over — 16 at worst.
+	 *
+	 *   iPhone 13 mini    58pt squares      iPhone 16 Pro       ~66
+	 *   iPhone 14 / 13    ~64               iPhone 15 Pro Max   ~79
+	 *   iPhone 15 / 16    ~63               iPhone 16 Pro Max   ~79
+	 *
+	 * The width rule (4.5 across the CARD's width, owner: 「it should not
+	 * exceed card width」) is the ceiling; the height budget is what actually
+	 * binds on the smaller bodies.
 	 */
-	it("accepts the iPhone SE's wider frame, within its documented crop", () => {
-		const aspect = cardAspect(stageFor(375, 667, 20, 0), 375 - gutter() * 2);
-		expect(aspect).toBeGreaterThan(CANVAS_ASPECT);
-		expect(sideCrop(aspect)).toBeLessThan(0.25);
+	it("shrinks the squares instead, and never below the legible floor", () => {
+		for (const [name, w, h, top, bottom] of DEVICES) {
+			const { cover, cardWidth, gap } = pageOf(w, h, top, bottom);
+			expect(cover, `${name}: no strip`).not.toBeNull();
+			const byWidth = (cardWidth - 4 * 10) / 4.5;
+			expect(cover as number, `${name}: square`).toBeLessThanOrEqual(
+				Math.ceil(byWidth),
+			);
+			expect(gap, `${name}: gap under the card`).toBeGreaterThanOrEqual(16);
+		}
+	});
+
+	/**
+	 * The SE has no room for both the film and a strip, and the film wins: the
+	 * squares drop out entirely (`coverSize` returns null below the legible
+	 * floor) rather than the card being squeezed. Asserted so the behaviour is
+	 * a decision on record — a phone that quietly loses the strip is correct
+	 * here, a phone that quietly crops the tour is not.
+	 */
+	it("drops the strip before it crops the film, on an SE", () => {
+		const { cover, stage, cardWidth } = pageOf(375, 667, 20, 0);
+		expect(cover).toBeNull();
+		expect(sideCrop(cardAspect(stage, cardWidth))).toBeLessThan(0.005);
 	});
 
 	/**

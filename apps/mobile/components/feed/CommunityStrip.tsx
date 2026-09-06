@@ -12,54 +12,47 @@
  * still card that plays nothing — the same reason the feed's community pool is
  * video-only.
  *
- * ── The size of a square (owner, 2026-09-06) ────────────────────────────────
- *
- * 「make squares bigger to account for reducing one line, maybe 4.5 squares
- * making full width, and we swipe for more」. So the size is not a constant:
- * it is solved per screen so that four and a HALF squares span the width. The
- * half is the affordance — a row that ends flush at the edge looks finished,
- * and nobody swipes a finished row.
+ * The square's size is not this component's decision — the feed solves it
+ * (`coverSize` in `lib/feed/community-strip.ts`) because it depends on the
+ * height the card leaves over, and the card is never allowed to shrink for it.
+ * This just draws at the size it is handed.
  */
 import { memo } from "react";
-import {
-	Image,
-	Pressable,
-	ScrollView,
-	StyleSheet,
-	Text,
-	useWindowDimensions,
-} from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
-import {
-	STRIP_GAP,
-	STRIP_PAD,
-	coverSize,
-} from "../../lib/feed/community-strip";
+import { STRIP_GAP, STRIP_MARGIN_TOP } from "../../lib/feed/community-strip";
 import { redline } from "../../theme/tokens";
-
-/** The size rule lives in `lib/feed/community-strip.ts` — the layout tests need it. */
 
 interface CommunityStripProps {
 	communities: readonly CommunityCardV3[];
 	/** The community the deck is on, if it is on one. */
 	activeId: string | null;
+	/** Solved by the feed; null when the page has no room for the strip. */
+	cover: number | null;
+	/** The card's width — the run must not exceed it (owner, 2026-09-06). */
+	cardWidth: number;
+	/** The card's inset from the screen edge, so the row starts on its edge. */
+	cardInset: number;
 	onPick: (community: CommunityCardV3) => void;
 }
 
 export const CommunityStrip = memo(function CommunityStrip({
 	communities,
 	activeId,
+	cover,
+	cardWidth,
+	cardInset,
 	onPick,
 }: CommunityStripProps) {
-	const { width } = useWindowDimensions();
-	const cover = coverSize(width);
-	if (communities.length === 0) return null;
+	if (communities.length === 0 || cover === null) return null;
 	return (
 		<ScrollView
 			horizontal
 			showsHorizontalScrollIndicator={false}
-			contentContainerStyle={styles.row}
-			style={styles.scroll}
+			contentContainerStyle={[styles.row, { paddingLeft: cardInset }]}
+			// The run ends on the card's right edge, not the screen's: the strip
+			// belongs to the card's column (owner, 2026-09-06).
+			style={[styles.scroll, { width: cardWidth + cardInset }]}
 		>
 			{communities.map((c) => {
 				const active = c.id === activeId;
@@ -105,9 +98,9 @@ export const CommunityStrip = memo(function CommunityStrip({
 
 const styles = StyleSheet.create({
 	/** `overflow: visible` would let the ring clip; the row scrolls instead. */
-	scroll: { marginTop: 10, flexGrow: 0 },
-	/** No right padding: the half square must reach the screen's edge. */
-	row: { paddingLeft: STRIP_PAD, paddingRight: 0, gap: STRIP_GAP },
+	scroll: { marginTop: STRIP_MARGIN_TOP, flexGrow: 0, alignSelf: "flex-start" },
+	/** No right padding: the half square must reach the card's right edge. */
+	row: { paddingRight: 0, gap: STRIP_GAP },
 	item: { alignItems: "center" },
 	pressed: { opacity: 0.6 },
 	cover: { backgroundColor: redline.surface },

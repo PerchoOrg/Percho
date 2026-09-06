@@ -38,22 +38,54 @@ export function communityStripItems(
 }
 
 /**
- * The size of one square, solved from the screen (owner, 2026-09-06:
- * 「maybe 4.5 squares making full width, and we swipe for more」).
+ * The size of one square (owner, 2026-09-06, twice).
  *
- *     PAD + 4 × (size + GAP) + size / 2 = width
+ * First: 「maybe 4.5 squares making full width, and we swipe for more」 — the
+ * half square is the affordance, because a row that ends flush at the edge
+ * looks finished and nobody swipes a finished row.
  *
- * The half square is the affordance: a row that ends flush at the edge looks
- * finished, and nobody swipes a finished row. 393pt gives 75, 428 gives 83.
+ * Then, on seeing it: 「4.5 communities preview full width is not accurate, it
+ * should not exceed card width」 and 「Don't cut film」 — so the run is the
+ * CARD's width, not the screen's:
+ *
+ *     4 × (size + GAP) + size / 2 = cardWidth
+ *
+ * and the answer is capped by the height the page can actually spare. That cap
+ * is the whole point of this function: the card is pinned to the tour's shape
+ * (`theme/card-frame.ts`) and must never be squeezed, so when a screen is short
+ * it is the SQUARES that give, not the film. On a 428pt phone the width rule
+ * wins (79pt squares); on a 393 the height rule does (~63); on an SE there is
+ * nothing left and the strip does not render at all.
  *
  * Lives here rather than in the component because the layout tests
  * (`theme/card-aspect.test.ts`) need it and the mobile vitest suite imports no
  * RN runtime.
  */
-export const STRIP_PAD = 16;
 export const STRIP_GAP = 10;
 export const STRIP_ACROSS = 4.5;
+/** Space above the row, and the name row under each square. */
+export const STRIP_MARGIN_TOP = 10;
+export const STRIP_NAME_ROW = 4 + 13;
+/**
+ * Below this a cover is a smudge, not a photograph of a neighbourhood — the
+ * strip is dropped rather than drawn uselessly small.
+ */
+export const STRIP_MIN_COVER = 52;
 
-export function coverSize(width: number): number {
-	return Math.round((width - STRIP_PAD - 4 * STRIP_GAP) / STRIP_ACROSS);
+/**
+ * The square's size, or null when the page has no room for the strip at all.
+ *
+ * `maxHeight` is what is left for the whole strip once the header's type, the
+ * card at its uncropped height and the minimum gap are taken out.
+ */
+export function coverSize(cardWidth: number, maxHeight: number): number | null {
+	const byWidth = (cardWidth - 4 * STRIP_GAP) / STRIP_ACROSS;
+	const byHeight = maxHeight - STRIP_MARGIN_TOP - STRIP_NAME_ROW;
+	const size = Math.floor(Math.min(byWidth, byHeight));
+	return size >= STRIP_MIN_COVER ? size : null;
+}
+
+/** The height the strip occupies at that size — 0 when it does not render. */
+export function stripHeight(cover: number | null): number {
+	return cover === null ? 0 : STRIP_MARGIN_TOP + cover + STRIP_NAME_ROW;
 }
