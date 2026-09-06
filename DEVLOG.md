@@ -16,6 +16,41 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-06 17:30 UTC — phase181.8: Vercel build broken — client island imported the server Supabase module
+
+**Objective**: main stopped deploying. Vercel failed at commit `a1f6125`
+(and every commit since) with: `lib/supabase/server.ts` — "You're importing
+a component that needs next/headers", import trace
+`lib/supabase/server.ts ← lib/communities/detail.ts ← CommunityBody.tsx`.
+
+**Cause**: phase181.1 (`359d6f24`, the duplicate-chips fix) put the pure
+helper `dedupeLabels` in `lib/communities/detail.ts` and imported it from
+`CommunityBody.tsx`. That component is `'use client'`, and `detail.ts` also
+imports `createAnonClient` from `lib/supabase/server.ts`, which uses
+`next/headers` — server-only code pulled into the client bundle. Local
+typecheck/tests pass (tsc and vitest don't enforce the server/client
+boundary); only `next build` catches it, which is why it surfaced on Vercel
+first.
+
+**Actions**:
+- New `apps/web/lib/communities/labels.ts` — `dedupeLabels` moved there
+  verbatim (doc comment included, plus a note on WHY it has its own file).
+- `lib/communities/detail.ts` imports it from there; re-export removed.
+- `CommunityBody.tsx` and `detail.test.ts` import from the new path.
+
+**Verification**: `pnpm typecheck` 0 errors; changed files biome-clean (the
+repo's 2 pre-existing lint errors are untouched, per CLAUDE.md §0.3);
+874/874 vitest pass; **`pnpm build` compiles successfully** — the exact
+command that failed on Vercel.
+
+**Learnings**: a `'use client'` file must never import from a module that
+touches `lib/supabase/server.ts`, even for a pure function or a type that
+happens to live there. Client-safe helpers shared with server code belong
+in their own file. Worth a glance at any future import of `detail.ts`.
+(Numbered phase181.8 — a parallel agent's phase181.7 merged first.)
+
+**Next steps**: none — merge to main redeploys and clears the failure.
+
 ## 2026-09-06 08:40 UTC — phase181.7: the metro gets the city's size; the spacing comes out of the hole
 
 **Objective**: owner: 「I said, Atlanta metro should be bigger size. Add
