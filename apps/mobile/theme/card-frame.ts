@@ -1,46 +1,64 @@
 /**
- * The swipe feed's ONE card frame height, as a share of the fixed stage.
+ * The swipe feed's ONE card frame — sized by the FILM's shape, not by a share
+ * of the stage.
  *
- * Owner, 2026-08-17: every card kind is the same box. Before this there were
- * three heights — listing 0.95, trade-off 0.62, and area/community sized to
- * `width × 1.2` — so an alternating deck cross-faded the frame height on every
- * commit and the page visibly jumped.
+ * ── The rule, and why it changed (owner pick "R3", 2026-09-05) ──────────────
  *
- * 0.78 was the midpoint of the two heights it replaced (0.62 and 0.95 → 0.785,
- * rounded down for a hair more paper): taller than the old trade-off card,
- * shorter than the old listing card, and never the ~2:1 portrait the 0.95
- * listing frame drew on a tall phone.
+ * Until this date the frame was `stage × CARD_FRAME_RATIO` (0.83, last moved
+ * 2026-08-23). That worked while the page above the card was fixed — a 44pt
+ * wordmark row and one line of scope — because a constant share of a constant
+ * stage is a constant rectangle, and 0.83 was chosen with the feed's `GUTTER`
+ * to land the card on the tour canvas's 0.685 aspect.
  *
- * 0.73 since 2026-08-17 (owner: shrink the frame another ~5–8%). The same pass
- * deleted a row from every kind — the city card's vibe line, the listing card's
- * tag pills and hairline — so the shorter frame is not a squeeze: each card
- * carries less content in it than the 0.78 frame did. −6.4% off the height,
- * which on an iPhone SE is ~24pt of paper back around the deck.
+ * The feed header is no longer fixed: it carries the place (eyebrow, city,
+ * stats, the community strip), so the stage's height now varies with content.
+ * Under the old rule a taller header shrank the stage AND the card, and the
+ * 17% of slack came back as a hole under it — the card would have shrunk
+ * instead of the hole closing, which is the opposite of what the header is
+ * for.
  *
- * It is a fraction of the STAGE, not of the card's width, on purpose: the stage
- * is the same box for every card (see `SwipeStack`), so a fixed fraction of it
- * is the only way every kind lands on exactly the same rectangle on every
- * device. A width-derived aspect (what area/community used) does not — it
- * drifts against the stage as the screen gets taller.
+ * So the frame is derived from what it draws. Both tour pipelines render a
+ * 1080x1576 canvas; the card plays it `fit="cover"`. A card at exactly that
+ * aspect crops nothing. Hence:
  *
- * 0.83 since 2026-08-23 (owner: the cards read small, with spare room around
- * them). This number is NOT a free choice — it is paired with the feed's
- * `GUTTER` of 16 to hold the card's ASPECT where it already was.
+ *     height = min(stage, width / CANVAS_ASPECT)
  *
- * The card plays its tour with `fit="cover"` against a 1080x1576 canvas
- * (aspect 0.685), so the card's own aspect is what decides how much of the
- * video gets cropped. At 0.73/37 the card measured 0.682-0.693 across the
- * fleet; at 0.83/16 it measures 0.672-0.689 — the same frame, so the crop is
- * unchanged and only the size moved. Widening the card WITHOUT raising this
- * ratio is the thing to avoid: it would push the aspect toward 0.79 and start
- * eating the video's height, which is the whole reason the canvas is 0.685 and
- * not 9:16 in the first place.
+ * The card is the film's shape whenever there is room, and never taller than
+ * the stage it sits in. Widening the card still costs height, but now it does
+ * so by construction rather than by two constants being kept in step by hand
+ * (`theme/card-aspect.test.ts` used to guard exactly that pairing).
  *
- * Leaves ~107pt of stage slack on an iPhone 15 (was ~170), i.e. the card still
- * floats on paper rather than filling the stage.
+ * ── What the cap means when it binds ────────────────────────────────────────
  *
- * This module is deliberately react-native-free so `theme/listing-layout.test.ts`
- * can compute the real card height from it (the mobile vitest suite imports no
- * RN runtime — see `vitest.config.ts`).
+ * On a short screen (the SE, or any phone once the header grows) the stage is
+ * the binding constraint: the card comes out WIDER than 0.685 and `CardVideo`
+ * crops the film's top and bottom instead of its sides. That is the trade the
+ * owner rejected on 2026-09-05 for the tall-card option A2 — it is accepted
+ * here only where the screen leaves no alternative, and the amount is visible
+ * (`cardAspect` is exported so the test can measure it per device).
+ *
+ * This module is deliberately react-native-free so `theme/*.test.ts` can
+ * compute the real card height from it (the mobile vitest suite imports no RN
+ * runtime — see `vitest.config.ts`).
  */
-export const CARD_FRAME_RATIO = 0.83;
+
+/** The canvas both tour pipelines render, as `w / h`. */
+export const CANVAS_ASPECT = 1080 / 1576;
+
+/**
+ * The card's height for a given stage and width.
+ *
+ * `stage` 0 means "not measured yet" (pre-layout), and returns 0 so the cards
+ * land their real frame on the first laid-out frame rather than flashing a
+ * wrong one.
+ */
+export function cardFrameHeight(stage: number, width: number): number {
+	if (stage <= 0 || width <= 0) return 0;
+	return Math.min(stage, width / CANVAS_ASPECT);
+}
+
+/** The resulting aspect (`w / h`) — 0.685 unless the stage capped the height. */
+export function cardAspect(stage: number, width: number): number {
+	const height = cardFrameHeight(stage, width);
+	return height > 0 ? width / height : 0;
+}

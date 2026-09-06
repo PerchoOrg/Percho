@@ -1,42 +1,40 @@
 /**
- * The feed card's aspect must stay on the tour canvas, on every iPhone.
+ * The feed card's shape against the tour canvas.
  *
- * Both tour pipelines render 1080x1576 — aspect 0.685 — and every card face
- * plays that film with `fit="cover"`, so the card's own aspect is what decides
- * how much of the video is thrown away. The canvas was CHOSEN to match the
- * card (see `tour-orchestrator/scheduler.ts`), which makes the card's aspect a
- * cross-repo contract rather than a layout detail.
+ * Both tour pipelines render 1080x1576 (aspect 0.685) and the card plays it
+ * `fit="cover"`, so the card's own aspect decides how much of the film is
+ * thrown away. Since phase181 the height is DERIVED from that canvas
+ * (`theme/card-frame.ts`: `min(stage, width / CANVAS_ASPECT)`) instead of being
+ * a share of the stage kept in step with `GUTTER` by hand — so the interesting
+ * question moved. It is no longer "do two constants still agree"; it is "on
+ * which screens is the stage too short for the film's shape, and how much does
+ * that cost".
  *
- * Two constants set it, and they are in different files:
- *
- *   · `GUTTER`            — `app/(tabs)/feed.tsx`, sets the card's WIDTH
- *   · `CARD_FRAME_RATIO`  — `theme/card-frame.ts`, sets the card's HEIGHT
- *
- * Moving either one alone moves the aspect. That is exactly what this file
- * exists to catch: on 2026-08-23 the card grew (gutter 37→16) and the ratio
- * had to go 0.73→0.83 in the same pass to hold the frame still. A future
- * "just make the cards a bit wider" that touches only the gutter would
- * silently start cropping the tour's height, and nothing else would fail.
- *
- * Read as text, like `listing-layout.test.ts` — `feed.tsx` pulls in the RN
- * runtime and this suite is deliberately RN-free (see `vitest.config.ts`).
+ * The header above the stage is now content (city, stats, community strip), so
+ * its height is modelled here rather than read from a constant — see
+ * `HEADER_MODEL`.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { CARD_FRAME_RATIO } from "./card-frame";
+import { CANVAS_ASPECT, cardAspect, cardFrameHeight } from "./card-frame";
 
 const FEED = readFileSync("app/(tabs)/feed.tsx", "utf8");
 
-/** The canvas both tour pipelines render, as `w / h`. */
-const CANVAS_ASPECT = 1080 / 1576;
-
-/** `CardVideo`'s own slack before it treats a source as a different shape. */
-const TOLERANCE = 0.05;
-
-/** The feed's fixed chrome, in points — everything the stage is NOT. */
-const CHROME_ROW = 44;
+/** The feed's fixed chrome below the stage, in points. */
 const TAB_BAR = 62;
 const STACK_PAD_V = 12 + 10;
+
+/**
+ * The place header's height, modelled from its own type metrics
+ * (`components/feed/PlaceHeader.tsx` + `CommunityStrip.tsx`):
+ *
+ *   4 padding + 12 eyebrow + 2 + 34 title + 2 + 19 stats
+ *   + 10 strip margin + 56 cover + 4 + 12 name  =  155
+ *
+ * A model, not a measurement — RN does the real layout. The assertions below
+ * are written with enough slack that ±10pt here cannot flip them.
+ */
+const HEADER_MODEL = 155;
 
 /** width, height, top safe inset, bottom safe inset — points. */
 const DEVICES: readonly [string, number, number, number, number][] = [
@@ -54,35 +52,59 @@ function gutter(): number {
 	return Number(m[1]);
 }
 
-function cardAspect(w: number, h: number, top: number, bottom: number): number {
-	const stage = h - top - CHROME_ROW - (TAB_BAR + bottom) - STACK_PAD_V;
-	return (w - gutter() * 2) / (stage * CARD_FRAME_RATIO);
+function stageFor(h: number, top: number, bottom: number): number {
+	return h - top - HEADER_MODEL - (TAB_BAR + bottom) - STACK_PAD_V;
 }
 
-describe("feed card aspect vs the tour canvas", () => {
-	it("keeps GUTTER and CARD_FRAME_RATIO in step across the lineup", () => {
+/** What `cover` throws away horizontally, as a share of the film's width. */
+function sideCrop(aspect: number): number {
+	return aspect <= CANVAS_ASPECT ? 0 : 1 - CANVAS_ASPECT / aspect;
+}
+
+describe("cardFrameHeight", () => {
+	it("draws the canvas's own shape when the stage allows", () => {
+		// 396 wide with room to spare: the card is exactly 0.685, no crop.
+		expect(cardFrameHeight(700, 396)).toBeCloseTo(396 / CANVAS_ASPECT, 5);
+		expect(cardAspect(700, 396)).toBeCloseTo(CANVAS_ASPECT, 5);
+	});
+
+	it("never grows past the stage", () => {
+		// A short stage caps the height; the card is then WIDER than the canvas
+		// and `cover` crops the film's sides.
+		expect(cardFrameHeight(400, 396)).toBe(400);
+		expect(cardAspect(400, 396)).toBeGreaterThan(CANVAS_ASPECT);
+	});
+
+	it("returns 0 before the stage is measured", () => {
+		// Pre-layout: the cards must not paint a wrong frame and then jump.
+		expect(cardFrameHeight(0, 396)).toBe(0);
+		expect(cardFrameHeight(700, 0)).toBe(0);
+	});
+});
+
+describe("the shipping lineup", () => {
+	it("keeps the film's side crop under 3% on every current iPhone", () => {
 		for (const [name, w, h, top, bottom] of DEVICES) {
-			const aspect = cardAspect(w, h, top, bottom);
-			const drift = Math.abs(aspect - CANVAS_ASPECT) / CANVAS_ASPECT;
+			const width = w - gutter() * 2;
+			const aspect = cardAspect(stageFor(h, top, bottom), width);
 			expect(
-				drift,
-				`${name}: card aspect ${aspect.toFixed(3)} is ${(drift * 100).toFixed(1)}% off the 0.685 canvas — move GUTTER and CARD_FRAME_RATIO together`,
-			).toBeLessThan(TOLERANCE);
+				sideCrop(aspect),
+				`${name}: card aspect ${aspect.toFixed(3)} crops ${(sideCrop(aspect) * 100).toFixed(1)}% of the film`,
+			).toBeLessThan(0.03);
 		}
 	});
 
 	/**
 	 * The SE is the one screen this cannot hold: its short body gives the fixed
-	 * 128pt of chrome a much larger share of the height, so the stage is
-	 * proportionally shorter and the card comes out wider than the canvas. The
-	 * scheduler's header documents the resulting ~14% height crop as accepted,
-	 * and the label sits title-safe to survive it. Asserted so the number is a
-	 * decision on record rather than something nobody measured.
+	 * chrome a much larger share of the height, so the stage caps the card well
+	 * before the film's shape is reached. Asserted so the number is a decision
+	 * on record rather than something nobody measured — and so it fails loudly
+	 * if the header grows enough to make it worse.
 	 */
 	it("accepts the iPhone SE's wider frame, within its documented crop", () => {
-		const aspect = cardAspect(375, 667, 20, 0);
+		const aspect = cardAspect(stageFor(667, 20, 0), 375 - gutter() * 2);
 		expect(aspect).toBeGreaterThan(CANVAS_ASPECT);
-		expect(1 - CANVAS_ASPECT / aspect).toBeLessThan(0.16);
+		expect(sideCrop(aspect)).toBeLessThan(0.2);
 	});
 
 	/**

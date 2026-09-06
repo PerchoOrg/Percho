@@ -148,9 +148,10 @@ describe("tab bar icon font", () => {
 		for (const name of Object.keys(TAB_BAR_GLYPH)) {
 			const scale =
 				TAB_BAR_GLYPH_SCALE[name as keyof typeof TAB_BAR_GLYPH_SCALE];
-			expect(TAB_BAR_OPTICAL_SCALE * scale, `${name} em vs box`).toBeGreaterThan(
-				1,
-			);
+			expect(
+				TAB_BAR_OPTICAL_SCALE * scale,
+				`${name} em vs box`,
+			).toBeGreaterThan(1);
 		}
 	});
 });
