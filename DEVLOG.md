@@ -16,6 +16,67 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-06 06:30 UTC — phase181.4: the film stops paying — the squares give instead
+
+**Objective**: owner, after seeing 181.3 on device: 「Don't cut film」,
+「Make Atlanta Metro and Community stuff in one line, Atlanta metro dropdown
+similar to community name」, 「4.5 communities preview full width is not
+accurate, it should not exceed card width」, 「40 pt empty is flexible,
+don't cut card size」.
+
+**The inversion**: 181.3 fixed the header and the 40pt band and let the
+card absorb the difference, which cropped the tour by up to 7.3%. The
+priority is now the other way round — the card is drawn at the canvas's
+aspect and everything else is fitted around it.
+
+**Actions**:
+- `lib/feed/community-strip.ts` — `coverSize(cardWidth, maxHeight)`. The
+  run is 4.5 squares across the **card's** width, not the screen's
+  (`4×(size+GAP) + size/2 = cardWidth`), and the answer is capped by the
+  height the page can spare. Below `STRIP_MIN_COVER` (52) it returns null
+  and the strip does not render — a cover smaller than that is a smudge,
+  not a photograph. `stripHeight()` alongside it.
+- `app/(tabs)/feed.tsx` — measures the SafeAreaView's own box (`onLayout`)
+  and solves the budget: `content − header type − 12 − cardWidth/0.685 −
+  16`. That measurement is deliberately of a box that does NOT contain the
+  strip; measuring anything that did would feed the strip's height back
+  into its own input. `CARD_INSET.bottom` 40 → **16**, a floor rather than
+  a band.
+- `components/feed/CommunityStrip.tsx` — draws at the size it is handed and
+  is clipped to the card's column, so the half square lands on the card's
+  right edge instead of the screen's.
+- `components/feed/PlaceHeader.tsx` — two rows: `Atlanta Metro ⌄ · 40
+  communities · median $594K`, then `Dallas, GA ⌄` alone in the serif. The
+  metro is a control now, not an eyebrow — both rows open the scope sheet,
+  whose first row is "Anywhere in metro Atlanta", which is what tapping the
+  metro is asking for. `PLACE_HEADER_TEXT_HEIGHT` exported for the budget.
+
+**What it produces** (same formulas as the screen, in the test):
+
+    device            square   card / wants   crop    gap
+    iPhone 13 mini      52      501 / 501      0%      16
+    iPhone 14 / 13      65      522 / 522      0%      17
+    iPhone 15 / 16      57      527 / 527      0%      16
+    iPhone 16 Pro       63      540 / 540      0%      16
+    iPhone 15 Pro Max   79      581 / 581      0%      20
+    iPhone 16 Pro Max   81      595 / 595      0%      25
+    owner's 428x926     79      578 / 578      0%      29
+    iPhone SE          none     499 / 501     0.3%     16
+
+On the owner's phone the WIDTH rule binds — 79pt squares, exactly 4.5
+across the card — and the gap lands at 29. On the smaller bodies the height
+budget binds and the squares shrink. On the SE the strip drops out
+entirely rather than the film being cropped.
+
+**Decisions**: **the strip disappears before the film is touched.** A phone
+that quietly loses the strip is correct; one that quietly crops the tour is
+not. Asserted, so it stays a decision rather than an accident.
+
+**Verification**: `tsc --noEmit` clean; `vitest run` 52 files / **549
+tests** (card-aspect rewritten around the no-crop rule: never crops, squares
+shrink instead, SE drops the strip); `biome check .` 0 errors / 8 warnings.
+
+
 ## 2026-09-06 05:40 UTC — phase181.3: the owner sets the page's rhythm, and the film pays for it
 
 **Objective**: owner, after seeing the one-line header: keep the big city

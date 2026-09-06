@@ -22,6 +22,7 @@
  * `See on map →`).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { LayoutChangeEvent } from "react-native";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import { router, useFocusEffect } from "expo-router";
@@ -44,12 +45,15 @@ import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { CommunityStrip } from "../../components/feed/CommunityStrip";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { OfflineBar } from "../../components/feed/OfflineBar";
-import { PlaceHeader } from "../../components/feed/PlaceHeader";
+import {
+	PLACE_HEADER_TEXT_HEIGHT,
+	PlaceHeader,
+} from "../../components/feed/PlaceHeader";
 import { ScopeSheet } from "../../components/feed/ScopeSheet";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
 import type { CommunityCardV3, FeedCardV3 } from "../../lib/feed/card-types";
-import { communityStripItems } from "../../lib/feed/community-strip";
+import { communityStripItems, coverSize } from "../../lib/feed/community-strip";
 import { deckKey } from "../../lib/feed/deck-key";
 import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
@@ -64,6 +68,7 @@ import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
 import { useSwipeHintStore } from "../../state/swipe-hint";
+import { CANVAS_ASPECT } from "../../theme/card-frame";
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -111,15 +116,15 @@ import { textStyles } from "../../theme/typography";
  * ~1.13, which their 2.7-4.5 Mbps top rendition absorbs without a visible
  * change. Going wider than this needs a bigger canvas first.
  *
- * 2026-09-06: `bottom` 10 → 40. The owner set the page's rhythm — metro /
- * city + stats / community squares / card / "40pt empty" / tabs — and this is
- * that band, declared rather than left over. The card takes what remains
- * (`theme/card-frame.ts` caps it at the stage), so the 40 is exact on every
- * screen and the cost lands on the film instead: 1.5% of its width cropped on
- * a 428pt phone, ~7% on a 13 mini. Measured per device in
- * `theme/card-aspect.test.ts`.
+ * 2026-09-06: `bottom` 10 → 40 → 16. It was briefly a declared 40pt band, and
+ * the card paid for it — pinned between a taller header and a fixed gap, it
+ * came off the tour's shape and `cover` cropped the film's sides by up to 7%.
+ * The owner's rule settled it: 「Don't cut film」, 「40 pt empty is flexible」.
+ * So this is a FLOOR. The card is drawn at the tour's aspect, the squares take
+ * what the page can spare (`coverSize`), and the leftover lands here — 16 at
+ * worst, ~35 on a 428pt phone.
  */
-const CARD_INSET = { horizontal: 16, top: 12, bottom: 40 };
+const CARD_INSET = { horizontal: 16, top: 12, bottom: 16 };
 const GUTTER = 16;
 
 /**
@@ -264,6 +269,46 @@ export default function FeedScreen() {
 		() => preferScope(pool, scope?.unitId ?? null),
 		[pool, scope?.unitId],
 	);
+
+	const cardWidth = width - GUTTER * 2;
+
+	/**
+	 * The page's own height, measured once.
+	 *
+	 * This is the box between the safe-area top and the tab bar — what the
+	 * header and the stage share. It is measured on the SafeAreaView rather
+	 * than derived from `useWindowDimensions`, because the tab bar's height is
+	 * the navigator's business, not this screen's.
+	 *
+	 * It does NOT depend on anything below it, which is the property that makes
+	 * the square-size budget non-circular: the strip's height is computed FROM
+	 * this, so measuring anything that already includes the strip would feed
+	 * back into itself.
+	 */
+	const [contentHeight, setContentHeight] = useState(0);
+	const onContentLayout = useCallback((e: LayoutChangeEvent) => {
+		setContentHeight(e.nativeEvent.layout.height);
+	}, []);
+
+	/**
+	 * The square size, solved from what the page can spare — and the reason
+	 * the film is never cropped (owner, 2026-09-06: 「Don't cut film」).
+	 *
+	 * The card's height is not negotiable: it is the tour canvas's aspect at
+	 * the card's width. Everything else is fitted around it, so on a short
+	 * screen the SQUARES shrink and, if there is nothing left, the strip does
+	 * not render at all.
+	 */
+	const stripCover = useMemo(() => {
+		if (contentHeight === 0) return null;
+		const spare =
+			contentHeight -
+			PLACE_HEADER_TEXT_HEIGHT -
+			CARD_INSET.top -
+			cardWidth / CANVAS_ASPECT -
+			CARD_INSET.bottom;
+		return coverSize(cardWidth, spare);
+	}, [contentHeight, cardWidth]);
 
 	/** The scoped city's row, for the numbers on the header's title line. */
 	const scopedUnit = useMemo(
@@ -495,8 +540,6 @@ export default function FeedScreen() {
 		],
 	);
 
-	const cardWidth = width - GUTTER * 2;
-
 	const capability = useCallback(
 		(card: FeedCardV3) => cardBehavior(card).capability,
 		[],
@@ -725,7 +768,11 @@ export default function FeedScreen() {
 	const showExhausted = atEnd && (engineExhausted || exhausted) && !loading;
 
 	return (
-		<SafeAreaView style={styles.screen} edges={["top"]}>
+		<SafeAreaView
+			style={styles.screen}
+			edges={["top"]}
+			onLayout={onContentLayout}
+		>
 			{offline && <OfflineBar />}
 			{/*
 			 * The page's header is the PLACE (owner, 2026-09-05: 「remove Percho
@@ -752,6 +799,9 @@ export default function FeedScreen() {
 				<CommunityStrip
 					communities={stripCommunities}
 					activeId={topCommunityId}
+					cover={stripCover}
+					cardWidth={cardWidth}
+					cardInset={CARD_INSET.horizontal}
 					onPick={jumpTo}
 				/>
 			</PlaceHeader>

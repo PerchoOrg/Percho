@@ -9,22 +9,25 @@
  * directly」 — the page is about where you are looking, and the app already
  * says its name on the launch screen and in the tab bar.
  *
- * So the page opens on the place. It shipped as three rows (metro eyebrow,
- * serif city title, stats on their own line), the owner cut it to one line,
- * then set the shape exactly (2026-09-06):
+ * So the page opens on the place. Two rows of type, settled over three passes
+ * with the owner on 2026-09-06:
  *
- *     line 1  Atlanta Metro
- *     line 2  Dallas, GA   40 communities · median $594K
+ *     line 1  Atlanta Metro ⌄   ·   40 communities · median $594K
+ *     line 2  Dallas, GA ⌄
  *     line 3  community squares
- *     line 4  card
- *     line 5  40pt empty
+ *     line 4  card — never cropped
+ *     line 5  what is left over
  *     line 6  tabs
  *
- * So the big serif title is back and the stats ride WITH it rather than under
- * it — two rows of type, not three. Tapping the row opens the same scope sheet
- * the old crumb did. The 40pt under the card is `stackWrap`'s own
- * `paddingBottom` in `app/(tabs)/feed.tsx`; the squares are sized by
- * `CommunityStrip`.
+ * The metro moved onto the stats row (「Make Atlanta Metro and Community stuff
+ * in one line」) and became a control in its own right (「Atlanta metro
+ * dropdown similar to community name」): both rows open the same scope sheet,
+ * whose first row is "Anywhere in metro Atlanta" — which is what tapping the
+ * metro is asking for.
+ *
+ * The city keeps the serif the wordmark used to own, alone on its line, and
+ * that is deliberate: it is the answer to "where am I", and the numbers beside
+ * it were competing with it for the same glance.
  *
  * ── Why a bigger header makes the page SHORTER ──────────────────────────────
  *
@@ -104,37 +107,49 @@ export function PlaceHeader({
 	onPress,
 	children,
 }: PlaceHeaderProps) {
-	/** With no city scoped, the metro IS the title — never an empty eyebrow. */
-	const title = scopeName ?? SCOPE_ROOT_LABEL;
 	const stats = scopeStatsLine(unit);
 
 	return (
 		<View style={styles.wrap}>
-			{scopeName ? (
-				<Text style={styles.eyebrow}>{SCOPE_ROOT_LABEL}</Text>
-			) : null}
+			{/* Line 1 — the metro, as its own dropdown, and the city's numbers. */}
+			<View style={styles.metaRow}>
+				<Pressable
+					onPress={onPress}
+					accessibilityRole="button"
+					accessibilityLabel={`Region: ${SCOPE_ROOT_LABEL}. Change`}
+					hitSlop={{ top: 12, bottom: 12, left: 10, right: 6 }}
+					style={({ pressed }) => [styles.metro, pressed && styles.pressed]}
+				>
+					<Text style={styles.metroLabel}>{SCOPE_ROOT_LABEL}</Text>
+					<View style={styles.chevronSm} />
+				</Pressable>
+				{/*
+				 * The numbers shrink and truncate before anything else on this row:
+				 * a narrow screen should lose "median $594K", not the place.
+				 */}
+				{stats ? (
+					<>
+						<Text style={styles.dot}>·</Text>
+						<Text style={styles.stats} numberOfLines={1}>
+							{stats}
+						</Text>
+					</>
+				) : null}
+			</View>
+
+			{/* Line 2 — the city, alone. With no city scoped the metro IS the
+			    place, so the title falls back to it rather than sitting empty. */}
 			<Pressable
 				onPress={onPress}
 				accessibilityRole="button"
-				accessibilityLabel={`Scope: ${title}. Change`}
-				hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+				accessibilityLabel={`Scope: ${scopeName ?? SCOPE_ROOT_LABEL}. Change`}
+				hitSlop={{ top: 6, bottom: 8, left: 8, right: 8 }}
 				style={({ pressed }) => [styles.titleRow, pressed && styles.pressed]}
 			>
 				<Text style={styles.title} numberOfLines={1}>
-					{title}
+					{scopeName ?? SCOPE_ROOT_LABEL}
 				</Text>
 				<View style={styles.chevron} />
-				{/*
-				 * The stats sit ON the title's row (owner, 2026-09-06). They
-				 * shrink and truncate before the city does: the place is what the
-				 * row is for, and a narrow screen should lose "median $594K"
-				 * rather than the second half of the city's name.
-				 */}
-				{stats ? (
-					<Text style={styles.stats} numberOfLines={1}>
-						{stats}
-					</Text>
-				) : null}
 			</Pressable>
 			{children}
 		</View>
@@ -155,14 +170,28 @@ const styles = StyleSheet.create({
 	 */
 	wrap: { zIndex: 100, paddingTop: 4, alignItems: "center" },
 	pressed: { opacity: 0.6 },
-	/** Line 1 — the metro. 10/700/1pt, the redline's own label style. */
-	eyebrow: { ...redlineText.label, color: redline.ink3 },
-	/** Line 2 — the city, its chevron, and the city's numbers. */
+	/** Line 1 — metro dropdown · the city's numbers. */
+	metaRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 6,
+		paddingHorizontal: 20,
+		maxWidth: "100%",
+	},
+	metro: { flexDirection: "row", alignItems: "center", gap: 4 },
+	/** The metro reads as a control, so it takes ink rather than the muted grey. */
+	metroLabel: {
+		...redlineText.story,
+		fontWeight: "600",
+		color: redline.ink2,
+	},
+	dot: { ...redlineText.story, color: redline.ink3 },
+	/** Line 2 — the city and its chevron. */
 	titleRow: {
 		flexDirection: "row",
-		alignItems: "baseline",
+		alignItems: "center",
 		gap: 8,
-		marginTop: 2,
+		marginTop: 1,
 		paddingHorizontal: 20,
 		maxWidth: "100%",
 	},
@@ -179,20 +208,38 @@ const styles = StyleSheet.create({
 		color: redline.ink,
 		flexShrink: 0,
 	},
-	/** The numbers, riding the title's baseline. First to go when space runs out. */
-	stats: {
-		...redlineText.story,
-		color: redline.ink2,
-		flexShrink: 1,
-	},
+	/** The numbers. First to go when the row runs out of width. */
+	stats: { ...redlineText.story, color: redline.ink3, flexShrink: 1 },
 	/** A chevron-down from two borders — the same trick as the card's arrow. */
+	/** The metro's chevron — the city's, one step down. */
+	chevronSm: {
+		width: 6,
+		height: 6,
+		marginTop: -3,
+		borderRightWidth: 1.5,
+		borderBottomWidth: 1.5,
+		borderColor: redline.ink2,
+		transform: [{ rotate: "45deg" }],
+	},
 	chevron: {
 		width: 8,
 		height: 8,
-		alignSelf: "center",
+		marginTop: -4,
 		borderRightWidth: 1.8,
 		borderBottomWidth: 1.8,
 		borderColor: redline.ink3,
 		transform: [{ rotate: "45deg" }],
 	},
 });
+
+/**
+ * The height of the two type rows — everything this header draws except the
+ * strip its child renders.
+ *
+ * 4 padding + 19 meta row + 1 + 34 title. The feed needs it BEFORE layout to
+ * work out what height is left for the squares (`coverSize`), and measuring it
+ * would make that circular: the strip's size would feed back into the height
+ * being measured. Fixed type, so a constant is honest here — and
+ * `theme/card-aspect.test.ts` computes the whole page from it.
+ */
+export const PLACE_HEADER_TEXT_HEIGHT = 4 + 19 + 1 + 34;
