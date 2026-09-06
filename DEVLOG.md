@@ -16,6 +16,55 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-06 08:40 UTC — phase181.7: the metro gets the city's size; the spacing comes out of the hole
+
+**Objective**: owner: 「I said, Atlanta metro should be bigger size. Add
+some space between text and communities, communities and card, so we can
+reduce the empty space under the card」.
+
+**Actions**:
+- `components/feed/PlaceHeader.tsx` — the metro run is now the CITY's face
+  and size (24pt DM Serif, was 13pt UI), one step back in colour
+  (`ink2` vs `ink`) instead of a step down in size. That is the whole
+  hierarchy now, and it is what 「dropdown similar to community name」 was
+  asking for two passes ago.
+- `lib/feed/community-strip.ts` — `STRIP_MARGIN_TOP` 10 → **24** (text ↔
+  squares).
+- `app/(tabs)/feed.tsx` — `CARD_INSET.top` 12 → **24** (squares ↔ card).
+
+Both land where he asked: the squares are already at their width ceiling on
+a big phone, so every point added above comes straight out of the band under
+the card. On his 428×926 that band goes **53pt → 27pt**.
+
+**The cliff this exposed, and the fix**: with the new spacing the 13 mini
+missed the named layout by 2pt and `coverSize` returned null — the whole
+strip vanished and left a **107pt** hole where a row of 67pt covers fits.
+So the degradation grew a middle step (`stripLayout`, replacing
+`coverSize`):
+
+    1. squares at the width rule, names under them
+    2. squares with NO names, if the names are what does not fit
+    3. no strip at all
+
+The film is not in that list — it stays pinned to the tour's aspect.
+
+**The page, per device** (same formulas as the screen):
+
+    device            square  names   crop   gap
+    iPhone 13 mini      67     no      0%     16
+    iPhone 14 / 13      63     yes     0%     17
+    iPhone 15 / 16      55     yes     0%     16
+    iPhone 16 Pro       61     yes     0%     16
+    iPhone 15 Pro Max   79     yes     0%     18
+    iPhone 16 Pro Max   81     yes     0%     23
+    owner's 428x926     79     yes     0%     27
+    iPhone SE           —      —       0%     26
+
+**Verification**: `tsc --noEmit` clean; `vitest run` 53 files / **557
+tests** (a new case pins the names-before-strip order and that the mini
+keeps a strip); `biome check .` 0 errors / 8 warnings.
+
+
 ## 2026-09-06 08:00 UTC — phase181.6: one line, and it shrinks itself
 
 **Objective**: owner, after three passes that each kept two rows:

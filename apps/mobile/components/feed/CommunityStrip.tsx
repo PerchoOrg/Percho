@@ -20,7 +20,11 @@
 import { memo } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
-import { STRIP_GAP, STRIP_MARGIN_TOP } from "../../lib/feed/community-strip";
+import {
+	STRIP_GAP,
+	STRIP_MARGIN_TOP,
+	type StripLayout,
+} from "../../lib/feed/community-strip";
 import { redline } from "../../theme/tokens";
 
 interface CommunityStripProps {
@@ -28,7 +32,7 @@ interface CommunityStripProps {
 	/** The community the deck is on, if it is on one. */
 	activeId: string | null;
 	/** Solved by the feed; null when the page has no room for the strip. */
-	cover: number | null;
+	layout: StripLayout | null;
 	/** The card's width — the run must not exceed it (owner, 2026-09-06). */
 	cardWidth: number;
 	/** The card's inset from the screen edge, so the row starts on its edge. */
@@ -39,12 +43,13 @@ interface CommunityStripProps {
 export const CommunityStrip = memo(function CommunityStrip({
 	communities,
 	activeId,
-	cover,
+	layout,
 	cardWidth,
 	cardInset,
 	onPick,
 }: CommunityStripProps) {
-	if (communities.length === 0 || cover === null) return null;
+	if (communities.length === 0 || layout === null) return null;
+	const { cover, withNames } = layout;
 	return (
 		<ScrollView
 			horizontal
@@ -79,16 +84,18 @@ export const CommunityStrip = memo(function CommunityStrip({
 								active && styles.coverActive,
 							]}
 						/>
-						<Text
-							style={[
-								styles.name,
-								{ width: cover },
-								active && styles.nameActive,
-							]}
-							numberOfLines={1}
-						>
-							{c.name}
-						</Text>
+						{withNames ? (
+							<Text
+								style={[
+									styles.name,
+									{ width: cover },
+									active && styles.nameActive,
+								]}
+								numberOfLines={1}
+							>
+								{c.name}
+							</Text>
+						) : null}
 					</Pressable>
 				);
 			})}
