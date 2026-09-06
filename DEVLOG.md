@@ -16,6 +16,51 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-06 04:10 UTC — phase181.1: duplicate interest chips — a React key crash on the community page
+
+**Objective**: owner on device: LogBox, `Encountered two children with the
+same key, \`Home Improvement & DIY\`` from `app/community/[slug].tsx:324`.
+
+**Cause**: `communities.interests` is scraped from Nextdoor verbatim and
+some neighbourhoods list the same interest twice — Aberdeen carries "Home
+Improvement & DIY" twice. The chip row keys by the label, so React warned
+AND the page drew the same chip twice. Not cosmetic: with a non-unique key
+React may drop or duplicate a child on the next render.
+
+**Actions**:
+- `apps/web/lib/communities/detail.ts` — `dedupeLabels()` (exported,
+  documented) replaces the plain `typeof === 'string'` filter in
+  `projectCommunityDetail`. Order-preserving, first occurrence wins, and
+  the key is trimmed + case-folded (the same interest with different
+  capitalisation is one interest). Order is Nextdoor's own ranking and is
+  the evidence behind the "#N resident interest" sub-lines, so nothing is
+  re-sorted.
+- `apps/web/app/(public)/c/[slug]/_components/CommunityBody.tsx` — the
+  public page had the same latent bug on BOTH chip rows (`key={a}` /
+  `key={i}`); both now go through `dedupeLabels`.
+- `apps/mobile/app/community/[slug].tsx` — the chips render from a
+  de-duplicated `useMemo`. Kept even though the API now de-duplicates: the
+  app talks to whatever version is deployed, and this is what fixes the
+  owner's device on a Metro reload rather than after a Vercel deploy.
+- `apps/web/lib/communities/detail.test.ts` — 5 cases: repeated label,
+  casing/whitespace, blanks and non-strings, missing column, and the DTO
+  end-to-end.
+
+**Decisions**: **the DB is not touched.** The duplicates are in the scraped
+rows; cleaning them is a backfill over scraped data and needs its own
+decision (CLAUDE.md §10). Every read path is correct meanwhile, and the
+fix is where the data is projected rather than at 3 render sites.
+
+**Verification**: `tsc --noEmit` clean in both apps; mobile `vitest` 52
+files / 548 tests; web `vitest` `detail.test.ts` 12 tests; `biome check .`
+— web 2 errors / 185 warnings, byte-identical to a `git archive` of
+`origin/main` (none in a touched file), mobile 0 errors / 8 warnings.
+
+**Next steps**: none. If the duplicates should also be cleaned in the DB,
+that is a one-off script over `communities.interests` and needs the owner's
+go-ahead.
+
+
 ## 2026-09-05 11:20 UTC — phase181: the feed opens on the place — wordmark out, city + community strip in
 
 **Objective**: owner picked **R3** off `percho.co/demos/feed-header-v2` —
