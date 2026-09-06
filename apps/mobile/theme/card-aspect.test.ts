@@ -10,41 +10,36 @@
  * which screens is the stage too short for the film's shape, and how much does
  * that cost".
  *
- * The header above the stage is now content (city, stats, community strip), so
- * its height is modelled here rather than read from a constant — see
- * `HEADER_MODEL`.
+ * phase182: the community strip is gone (owner, 2026-09-06: it made the page
+ * 「not well organized and immersive」), so the page is one header line, the
+ * card at the film's shape, and the slack CENTRED around the card
+ * (`SwipeStack`'s `restTop`; owner: 「balance the empty space above and under
+ * card」). The model here is that page.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { stripHeight, stripLayout } from "../lib/feed/community-strip";
 import { CANVAS_ASPECT, cardAspect, cardFrameHeight } from "./card-frame";
 
 const FEED = readFileSync("app/(tabs)/feed.tsx", "utf8");
+const STACK = readFileSync("components/SwipeStack.tsx", "utf8");
 
 /** The feed's fixed chrome below the stage, in points. */
 const TAB_BAR = 62;
-/** `CARD_INSET.top`, and `.bottom` — which is a FLOOR now, not a band. */
-const PAD_TOP = 24;
-const GAP_MIN = 16;
-
-/**
- * The page, modelled the way the screen builds it (2026-09-06, final shape):
- * the card is pinned to the tour's aspect, the squares take what is spare, and
- * the leftover is the gap. `PLACE_HEADER_TEXT_HEIGHT` and `coverSize` are the
- * real values the screen uses, not copies — the only thing modelled here is
- * the tab bar, which belongs to the navigator.
- */
+/** `CARD_INSET.top` / `.bottom` — symmetric FLOORS since phase182. */
+const PAD_TOP = 16;
+const PAD_BOTTOM = 16;
+/** `PlaceHeader`'s one type row: 4 padding + a 30pt line box. */
 const HEADER_TEXT = 4 + 30;
 
 function pageOf(w: number, h: number, top: number, bottom: number) {
 	const cardWidth = w - gutter() * 2;
 	const content = h - top - (TAB_BAR + bottom);
+	const stage = content - HEADER_TEXT - PAD_TOP - PAD_BOTTOM;
 	const ideal = cardWidth / CANVAS_ASPECT;
-	const spare = content - HEADER_TEXT - PAD_TOP - ideal - GAP_MIN;
-	const fit = stripLayout(cardWidth, spare);
-	const stage = content - HEADER_TEXT - stripHeight(fit) - PAD_TOP - GAP_MIN;
-	const gap = stage - Math.min(stage, ideal) + GAP_MIN;
-	return { cardWidth, cover: fit?.cover ?? null, fit, stage, ideal, gap };
+	// What the stage has left once the card takes the film's shape — split
+	// evenly above and below the card by `SwipeStack`'s centred `restTop`.
+	const slack = stage - Math.min(stage, ideal);
+	return { cardWidth, stage, ideal, slack };
 }
 
 /** width, height, top safe inset, bottom safe inset — points. */
@@ -91,20 +86,16 @@ describe("cardFrameHeight", () => {
 
 describe("the shipping lineup", () => {
 	/**
-	 * ── The rule the owner set on 2026-09-06 ────────────────────────────────
-	 *
-	 * 「Don't cut film」. An earlier cut of this layout pinned the card between
-	 * a taller header and a declared 40pt band, and the card came off the
-	 * tour's shape — up to 7.3% of the film's width gone on a 13 mini. The
-	 * priority is now inverted: the card is drawn at the canvas's aspect, the
-	 * SQUARES take whatever height is spare, and the gap is the remainder
-	 * (「40 pt empty is flexible」).
-	 *
-	 * So this asserts the film is whole on every shipping screen, and the next
-	 * assertion shows where the give went.
+	 * 「Don't cut film」 (owner, 2026-09-06). The card is drawn at the canvas's
+	 * aspect and everything else bends around it. With the strip gone the
+	 * budget only got looser, so this now holds on the SE too — the screen
+	 * that used to have nothing left.
 	 */
-	it("never crops the film on a current iPhone", () => {
-		for (const [name, w, h, top, bottom] of DEVICES) {
+	it("never crops the film on a current iPhone, nor on an SE", () => {
+		for (const [name, w, h, top, bottom] of [
+			...DEVICES,
+			["iPhone SE", 375, 667, 20, 0] as const,
+		]) {
 			const { cardWidth, stage } = pageOf(w, h, top, bottom);
 			const aspect = cardAspect(stage, cardWidth);
 			expect(
@@ -115,59 +106,17 @@ describe("the shipping lineup", () => {
 	});
 
 	/**
-	 * Where the give went: the squares shrink screen by screen, and the gap
-	 * under the card is whatever is left over — 16 at worst.
-	 *
-	 *   iPhone 13 mini    58pt squares      iPhone 16 Pro       ~66
-	 *   iPhone 14 / 13    ~64               iPhone 15 Pro Max   ~79
-	 *   iPhone 15 / 16    ~63               iPhone 16 Pro Max   ~79
-	 *
-	 * The width rule (4.5 across the CARD's width, owner: 「it should not
-	 * exceed card width」) is the ceiling; the height budget is what actually
-	 * binds on the smaller bodies.
+	 * The slack is what is left over, and the page's balance is that it splits
+	 * evenly — asserted as source because the split lives in `SwipeStack`'s
+	 * `restTop`, which the RN-free suite cannot execute. The model above shows
+	 * every shipping screen has real slack to split.
 	 */
-	it("shrinks the squares instead, and never below the legible floor", () => {
+	it("centres the slack around the card", () => {
+		expect(STACK).toContain("(stageHeight - frameHeight) / 2");
 		for (const [name, w, h, top, bottom] of DEVICES) {
-			const { cover, cardWidth, gap } = pageOf(w, h, top, bottom);
-			expect(cover, `${name}: no strip`).not.toBeNull();
-			const byWidth = (cardWidth - 4 * 10) / 4.5;
-			expect(cover as number, `${name}: square`).toBeLessThanOrEqual(
-				Math.ceil(byWidth),
-			);
-			expect(cover as number, `${name}: square`).toBeGreaterThanOrEqual(52);
-			expect(gap, `${name}: gap under the card`).toBeGreaterThanOrEqual(16);
+			const { slack } = pageOf(w, h, top, bottom);
+			expect(slack, `${name}: slack`).toBeGreaterThanOrEqual(0);
 		}
-	});
-
-	/**
-	 * The degradation has a middle step, and it exists because the cliff was
-	 * real: with the 2026-09-06 spacing the 13 mini missed the named layout by
-	 * 2pt, and dropping the whole strip for that left a 107pt hole where a row
-	 * of 67pt covers fits. Names go first; the strip goes only when even bare
-	 * covers do not fit; the film never goes.
-	 */
-	it("drops the square's names before it drops the strip", () => {
-		const mini = pageOf(375, 812, 50, 34);
-		expect(mini.fit?.withNames).toBe(false);
-		expect(mini.fit?.cover).toBeGreaterThanOrEqual(52);
-		expect(mini.gap).toBeLessThan(40);
-
-		// A big phone keeps them.
-		const max = pageOf(430, 932, 59, 34);
-		expect(max.fit?.withNames).toBe(true);
-	});
-
-	/**
-	 * The SE has no room for both the film and a strip, and the film wins: the
-	 * squares drop out entirely (`coverSize` returns null below the legible
-	 * floor) rather than the card being squeezed. Asserted so the behaviour is
-	 * a decision on record — a phone that quietly loses the strip is correct
-	 * here, a phone that quietly crops the tour is not.
-	 */
-	it("drops the strip before it crops the film, on an SE", () => {
-		const { cover, stage, cardWidth } = pageOf(375, 667, 20, 0);
-		expect(cover).toBeNull();
-		expect(sideCrop(cardAspect(stage, cardWidth))).toBeLessThan(0.005);
 	});
 
 	/**

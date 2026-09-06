@@ -17,8 +17,8 @@
  * the new scope crumb invisible while tapping the blank space still opened the
  * community list. The wordmark row never had the problem only because it set
  * `zIndex: 100`; phase181 replaced both with `PlaceHeader`, which inherits the
- * same requirement — and inherits MORE of it, since the header now carries the
- * community strip and is the tallest thing above the stage it has ever been.
+ * same requirement. (The community strip the header briefly carried is gone —
+ * phase182 — but the header line itself still has to out-rank the band.)
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -60,21 +60,6 @@ describe("feed chrome sits above the stage's paper band", () => {
 		expect(zIndexOf(HEADER, "wrap")).toBeGreaterThan(
 			zIndexOf(STACK, "stageClip"),
 		);
-	});
-
-	/**
-	 * The strip is the header's child, so it rides the header's z-index — but
-	 * only while it stays inside it. This fails if someone lifts it out to the
-	 * screen as a sibling of the stage without giving it a rank of its own.
-	 */
-	it("the community strip rides the header, not the screen", () => {
-		expect(FEED).toContain("<CommunityStrip");
-		const header = FEED.indexOf("<PlaceHeader");
-		const strip = FEED.indexOf("<CommunityStrip");
-		const close = FEED.indexOf("</PlaceHeader>");
-		expect(header).toBeGreaterThan(-1);
-		expect(strip).toBeGreaterThan(header);
-		expect(strip).toBeLessThan(close);
 	});
 
 	/** The wordmark is gone (owner, 2026-09-05) — the page opens on the place. */

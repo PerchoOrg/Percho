@@ -440,13 +440,16 @@ export function SwipeStack<T>({
 				cardFrameHeight(stageHeight, cardWidth);
 	const topHeight = top === undefined || stageHeight === 0 ? 0 : frameHeight;
 	/**
-	 * Where the top card rests: the stage's top edge. It was centred —
-	 * `(stageHeight - topHeight) / 2` — until 2026-09-05, which put half the
-	 * stage's slack (~50pt on an iPhone 15) between the scope crumb and the
-	 * card, and the owner read that as a hole in the page. All the slack now
-	 * sits under the card, where the trade-off echo already lives.
+	 * Where the top card rests: centred in the stage, so the slack splits
+	 * evenly above and below the card (owner, 2026-09-06 with the community
+	 * strip's removal: 「balance the empty space above and under card」).
+	 *
+	 * It was the stage's top edge (`0`) from 2026-09-05 — the header was tall
+	 * then and half the slack above the card read as a hole. With the strip
+	 * gone the header is one line and the owner asked for the balance back.
 	 */
-	const restTop = 0;
+	const restTop =
+		stageHeight === 0 ? 0 : Math.max(0, (stageHeight - frameHeight) / 2);
 	// The peeked card's bottom sits just below the top card's bottom (clamped
 	// to the stage so a behind card never spills past the stage's bottom edge).
 	const peekAnchor =

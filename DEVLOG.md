@@ -16,6 +16,53 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-06 10:35 UTC — phase182: strip removed; the header line becomes the card's place trail; the card centres
+
+**Objective**: owner, on seeing phase181's community strip: 「don't like it.
+It makes the page not well organized and immersive. Let's remove that
+section」. But keep the thing it was for — 「a connection between card and
+area and city and community (for home)」 — and 「balance the empty space
+above and under card」.
+
+**Actions**:
+- **Strip removed**: `components/feed/CommunityStrip.tsx`,
+  `lib/feed/community-strip.ts`, `lib/feed/jump.ts` (+ its test) deleted;
+  `feed.tsx` loses the `contentHeight` measurement, `stripLayoutFit`,
+  `stripCommunities` and the strip-tap `jumpTo` — all existed only for it.
+- **The connection moves into the header line**: new pure
+  `lib/feed/place-trail.ts` (`placeTrail`, 6 tests) reads the TOP CARD's
+  parent chain from the pool, and `PlaceHeader` gets a `trail` prop. As the
+  buyer swipes, the one line updates: `Atlanta metro › Johns Creek ›
+  Bellmoore Park ▾` over a home, `Atlanta metro › Johns Creek ▾` over a
+  community, the metro alone over a city card. The ink lands on the card's
+  nearest parent; everything above it steps back to `ink2` as one joined
+  run. Trade-off / empty deck fall back to the scope + stats line
+  (unchanged). The line still opens the scope sheet.
+- **Balance**: `SwipeStack`'s `restTop` is centred again —
+  `(stageHeight - frameHeight) / 2`, the pre-2026-09-05 rule — and
+  `CARD_INSET.top` 24 → 16, symmetric with `bottom`. The slack the strip
+  used to absorb now splits evenly above and below the card, which the
+  owner pre-approved (「if the proposed solution above still leaves a lot
+  of room, which is fine」).
+- Tests: `theme/card-aspect.test.ts` re-modelled without the strip (film
+  never cropped now holds on the SE too; a source assertion pins the
+  centring), strip test dropped from `theme/feed-chrome-layout.test.ts`.
+
+**Decisions**: the trail shows metro › city for MOST homes, not the
+community — `listings.community_id` is almost entirely unpopulated (per
+`apps/web/lib/feed/listing-gate.ts`), and the chain shows real segments or
+none, per the GeoStats rule. When the backfill lands the community link
+appears with no client change. Stats ride only the scope line: appended to
+a three-deep chain, `adjustsFontSizeToFit` would scale the whole line
+below legibility.
+
+**Verification**: `tsc --noEmit` clean; vitest 53 files / **555 tests**
+(557 − 5 jump − 3 strip-layout + 6 place-trail); `biome check .` 0 errors /
+8 warnings (baseline).
+
+**Next steps**: owner reviews the trail on device — if he wants the stats
+back beside short chains, that is one conditional in `PlaceHeader`.
+
 ## 2026-09-06 17:30 UTC — phase181.8: Vercel build broken — client island imported the server Supabase module
 
 **Objective**: main stopped deploying. Vercel failed at commit `a1f6125`
