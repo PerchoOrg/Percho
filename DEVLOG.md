@@ -16,6 +16,66 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-06 05:40 UTC — phase181.3: the owner sets the page's rhythm, and the film pays for it
+
+**Objective**: owner, after seeing the one-line header: keep the big city
+title, and lay the page out exactly —
+
+    line 1  Atlanta Metro
+    line 2  Dallas, GA   40 communities · median $594K
+    line 3  community squares, bigger — "maybe 4.5 squares making full
+            width, and we swipe for more"
+    line 4  card
+    line 5  40pt empty
+    line 6  tabs
+
+**Actions**:
+- `components/feed/PlaceHeader.tsx` — the 30pt serif title is back, and
+  the stats now ride ON its row instead of under it: two rows of type, not
+  three. The stats `flexShrink` and truncate before the city does — a
+  narrow screen should lose "median $594K", not half the city's name.
+- `lib/feed/community-strip.ts` — `coverSize(width)` solves the square from
+  the screen: `PAD + 4×(size+GAP) + size/2 = width`, i.e. four and a half
+  across. 393pt → 75, 428 → 83. The half square IS the affordance; a row
+  that ends flush at the edge looks finished and nobody swipes it. The rule
+  lives in the RN-free module because `theme/card-aspect.test.ts` needs it.
+- `components/feed/CommunityStrip.tsx` — sizes from that rule at runtime
+  (`useWindowDimensions`), and the row's right padding is 0 so the half
+  square reaches the edge.
+- `app/(tabs)/feed.tsx` — `CARD_INSET.bottom` 10 → **40**: line 5 declared
+  rather than left over.
+
+**What it costs, measured** (`theme/card-aspect.test.ts` models it per
+device from the same formulas): the two new heights come out of the card,
+and the card cannot give them back without leaving the tour's shape — so
+the stage caps it and `cover` crops the film's SIDES.
+
+    device            square   card (wants)   film crop   empty
+    iPhone 13 mini      71     464 (501)        7.3%       40
+    iPhone 14 / 13      74     496 (522)        5.1%       40
+    iPhone 15 / 16      75     491 (527)        6.8%       40
+    iPhone 16 Pro       77     508 (540)        5.9%       40
+    iPhone 15 Pro Max   83     563 (581)        3.1%       40
+    iPhone 16 Pro Max   85     582 (595)        2.2%       40
+    owner's 428x926     83     569 (578)        1.5%       40
+
+The 40pt lands exactly on every screen; the film absorbs the difference.
+On the owner's own phone that is 1.5% — invisible. On a 13 mini it is 7.3%.
+
+**Decisions**: the test's ceiling moved 3% → **8%**, documented as a
+ceiling for THIS layout rather than a target — it fails if another row is
+added up there, which is the point of keeping it. Not silently softened:
+the per-device table is in the test. The knobs, cheapest first: drop the
+square's name (17pt), 5.5 squares across, or shrink the 40.
+
+**Verification**: `tsc --noEmit` clean; `vitest run` 52 files / 548 tests;
+`biome check .` 0 errors / 8 warnings (main's baseline).
+
+**Next steps**: owner reloads. If the crop shows on a smaller phone, the
+height-aware version of `coverSize` (cap the square by what the stage can
+spare) keeps 4.5-across on big screens and shrinks it on short ones.
+
+
 ## 2026-09-06 05:00 UTC — phase181.2: the header is one line — and the gap it was closing comes back
 
 **Objective**: owner, hours after R3 shipped: 「too many lines of text, can

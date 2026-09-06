@@ -36,3 +36,24 @@ export function communityStripItems(
 	}
 	return [...scoped, ...rest].slice(0, cap);
 }
+
+/**
+ * The size of one square, solved from the screen (owner, 2026-09-06:
+ * 「maybe 4.5 squares making full width, and we swipe for more」).
+ *
+ *     PAD + 4 × (size + GAP) + size / 2 = width
+ *
+ * The half square is the affordance: a row that ends flush at the edge looks
+ * finished, and nobody swipes a finished row. 393pt gives 75, 428 gives 83.
+ *
+ * Lives here rather than in the component because the layout tests
+ * (`theme/card-aspect.test.ts`) need it and the mobile vitest suite imports no
+ * RN runtime.
+ */
+export const STRIP_PAD = 16;
+export const STRIP_GAP = 10;
+export const STRIP_ACROSS = 4.5;
+
+export function coverSize(width: number): number {
+	return Math.round((width - STRIP_PAD - 4 * STRIP_GAP) / STRIP_ACROSS);
+}
