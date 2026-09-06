@@ -43,59 +43,22 @@
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
+import {
+	SCOPE_ROOT_LABEL,
+	metroStatsLine,
+	scopeStatsLine,
+} from "../../lib/feed/place-stats";
 import { DM_SERIF_FONT } from "../../theme/fonts";
 import { redline } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 
-/**
- * The root of the scope. Every one of the pool's 109 city units is in metro
- * Atlanta, so this is a fact about the inventory rather than a placeholder —
- * but it IS the one string here that no row supplies, and it is the line to
- * change on the day a second metro launches.
- */
-export const SCOPE_ROOT_LABEL = "Atlanta metro";
-
-/** "$594K" — a full `$594,450` crowds the stats line. */
-function shortPrice(value: number): string {
-	if (value >= 1_000_000) {
-		const m = value / 1_000_000;
-		return `$${m >= 10 ? Math.round(m) : m.toFixed(1)}M`;
-	}
-	return `$${Math.round(value / 1000)}K`;
-}
-
-/**
- * The stats line for a unit, built only from what the unit carries — used here
- * and by `ScopeSheet` for each city's subtitle. A city with no median must
- * produce one clause, not a dangling separator; a city with neither produces
- * null and the line does not render (`every emitted number is real or absent`,
- * see `lib/feed/geo-units.ts`).
- *
- * The approved demo also showed "12 with tours". It has never shipped: the
- * wire has no such number — `city_geo_units` aggregates `community_count` and
- * a median list price, and a per-city count of communities WITH a finished
- * tour would need the view changed.
- */
-export function scopeStatsLine(unit: GeoUnit | undefined): string | null {
-	if (!unit) return null;
-	const parts: string[] = [];
-	if (unit.communityCount > 0) {
-		parts.push(
-			`${unit.communityCount.toLocaleString()} ${
-				unit.communityCount === 1 ? "community" : "communities"
-			}`,
-		);
-	}
-	const median = unit.stats.medianListPrice;
-	if (median) parts.push(`median ${shortPrice(median.value)}`);
-	return parts.length > 0 ? parts.join(" · ") : null;
-}
-
 interface PlaceHeaderProps {
 	/** The picked scope's display name, or null for the whole metro. */
 	scopeName: string | null;
-	/** The scoped unit, for its numbers. Absent → the stats are omitted. */
+	/** The scoped unit, for its numbers. Absent → the metro's are used. */
 	unit: GeoUnit | undefined;
+	/** Every city unit in the pool, for the metro-level numbers. */
+	units: readonly GeoUnit[];
 	onPress: () => void;
 	/** The community strip, mounted by the feed (it owns the deck). */
 	children?: React.ReactNode;
@@ -104,36 +67,47 @@ interface PlaceHeaderProps {
 export function PlaceHeader({
 	scopeName,
 	unit,
+	units,
 	onPress,
 	children,
 }: PlaceHeaderProps) {
-	const stats = scopeStatsLine(unit);
+	/**
+	 * Row 1 is the NUMBERS row, always. Scoped, they are the city's; unscoped,
+	 * the metro's — never nothing, and the metro's name never printed twice.
+	 */
+	const stats = scopeName ? scopeStatsLine(unit) : metroStatsLine(units);
 
 	return (
 		<View style={styles.wrap}>
-			{/* Line 1 — the metro, as its own dropdown, and the city's numbers. */}
+			{/*
+			 * Line 1 — one level up, and how much is in where you are.
+			 *
+			 * The metro shows here only when a CITY is scoped: then it is the way
+			 * back up and the title below is the city. Unscoped, the metro IS the
+			 * title, so this row carries the numbers alone instead of printing
+			 * "Atlanta Metro" on both rows with no numbers on either.
+			 */}
 			<View style={styles.metaRow}>
-				<Pressable
-					onPress={onPress}
-					accessibilityRole="button"
-					accessibilityLabel={`Region: ${SCOPE_ROOT_LABEL}. Change`}
-					hitSlop={{ top: 12, bottom: 12, left: 10, right: 6 }}
-					style={({ pressed }) => [styles.metro, pressed && styles.pressed]}
-				>
-					<Text style={styles.metroLabel}>{SCOPE_ROOT_LABEL}</Text>
-					<View style={styles.chevronSm} />
-				</Pressable>
-				{/*
-				 * The numbers shrink and truncate before anything else on this row:
-				 * a narrow screen should lose "median $594K", not the place.
-				 */}
-				{stats ? (
+				{scopeName ? (
 					<>
-						<Text style={styles.dot}>·</Text>
-						<Text style={styles.stats} numberOfLines={1}>
-							{stats}
-						</Text>
+						<Pressable
+							onPress={onPress}
+							accessibilityRole="button"
+							accessibilityLabel={`Region: ${SCOPE_ROOT_LABEL}. Change`}
+							hitSlop={{ top: 12, bottom: 12, left: 10, right: 6 }}
+							style={({ pressed }) => [styles.metro, pressed && styles.pressed]}
+						>
+							<Text style={styles.metroLabel}>{SCOPE_ROOT_LABEL}</Text>
+							<View style={styles.chevronSm} />
+						</Pressable>
+						{stats ? <Text style={styles.dot}>·</Text> : null}
 					</>
+				) : null}
+				{/* The numbers truncate before anything else on this row. */}
+				{stats ? (
+					<Text style={styles.stats} numberOfLines={1}>
+						{stats}
+					</Text>
 				) : null}
 			</View>
 
@@ -210,8 +184,7 @@ const styles = StyleSheet.create({
 	},
 	/** The numbers. First to go when the row runs out of width. */
 	stats: { ...redlineText.story, color: redline.ink3, flexShrink: 1 },
-	/** A chevron-down from two borders — the same trick as the card's arrow. */
-	/** The metro's chevron — the city's, one step down. */
+	/** The metro's chevron — the city's, one step down. Same two-border trick. */
 	chevronSm: {
 		width: 6,
 		height: 6,

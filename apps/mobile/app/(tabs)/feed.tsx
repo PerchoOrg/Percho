@@ -794,6 +794,7 @@ export default function FeedScreen() {
 			<PlaceHeader
 				scopeName={scope?.name ?? null}
 				unit={scopedUnit}
+				units={pool.geoUnits}
 				onPress={() => setScopeOpen(true)}
 			>
 				<CommunityStrip
