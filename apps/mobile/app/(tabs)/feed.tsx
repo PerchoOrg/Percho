@@ -405,6 +405,18 @@ export default function FeedScreen() {
 		() => placeTrail(topCard, pool.geoUnits, pool.communities),
 		[topCard, pool.geoUnits, pool.communities],
 	);
+	/**
+	 * The top card's own city unit, for the count that closes the header line
+	 * (phase182.1). Only a listing or community names a city in its trail; an
+	 * area card's leaf is the metro and the header uses the metro's number.
+	 */
+	const trailUnit = useMemo(
+		() =>
+			topCard?.kind === "listing" || topCard?.kind === "community"
+				? pool.geoUnits.find((u) => u.id === topCard.geoUnitId)
+				: undefined,
+		[topCard, pool.geoUnits],
+	);
 
 	/**
 	 * The one line a trade-off answer earns back.
@@ -724,6 +736,7 @@ export default function FeedScreen() {
 				unit={scopedUnit}
 				units={pool.geoUnits}
 				trail={trail}
+				trailUnit={trailUnit}
 				onPress={() => setScopeOpen(true)}
 			/>
 			<View style={styles.stackWrap}>

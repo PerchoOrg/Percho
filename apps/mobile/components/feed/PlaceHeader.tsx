@@ -9,13 +9,14 @@
  * directly」 — the page is about where you are looking, and the app already
  * says its name on the launch screen and in the tab bar.
  *
- * So the page opens on the place. One line of type, settled over several
- * passes with the owner on 2026-09-06:
+ * So the page opens on the place. Settled over several passes with the owner
+ * on 2026-09-06 (phase182.1 brought the wordmark back — see below):
  *
- *     line 1  Atlanta metro › Dallas ▾  ·  40 communities · median $594K
- *     line 2  card — never cropped
- *     line 3  what is left over
- *     line 4  tabs
+ *     line 1  Percho
+ *     line 2  Atlanta metro › Dallas ▾  ·  40 communities
+ *     line 3  card — never cropped
+ *     line 4  what is left over
+ *     line 5  tabs
  *
  * The metro moved onto the stats row (「Make Atlanta Metro and Community stuff
  * in one line」) and became a control in its own right (「Atlanta metro
@@ -29,9 +30,12 @@
  * `trail`, it reads the TOP CARD's parent chain and updates as the buyer
  * swipes: `Atlanta metro › Johns Creek › Bellmoore Park ▾` over a home.
  *
- * The city keeps the serif the wordmark used to own, alone on its line, and
- * that is deliberate: it is the answer to "where am I", and the numbers beside
- * it were competing with it for the same glance.
+ * phase182.1 (owner: 「Being the Percho title back and second line is area
+ * and city and communities count」): the wordmark row returns ABOVE the place
+ * line, in the exact face it wore before 2026-09-05 (DM Serif 34 in the
+ * forest green), and the communities count now rides EVERY state of the
+ * line, not just the scope fallback — the trail's leaf city brings its own
+ * number (`trailUnit`).
  *
  * ── Why a bigger header makes the page SHORTER ──────────────────────────────
  *
@@ -72,6 +76,12 @@ interface PlaceHeaderProps {
 	 * trade-off, or no card yet), the line falls back to the scope + stats.
 	 */
 	trail: readonly string[] | null;
+	/**
+	 * The TOP CARD's own city unit, for the count beside a trail (phase182.1).
+	 * Absent when the card's `geoUnitId` resolves to nothing — the line then
+	 * shows no number rather than a wrong one.
+	 */
+	trailUnit: GeoUnit | undefined;
 	onPress: () => void;
 }
 
@@ -80,10 +90,24 @@ export function PlaceHeader({
 	unit,
 	units,
 	trail,
+	trailUnit,
 	onPress,
 }: PlaceHeaderProps) {
-	/** Scoped, the city's numbers; unscoped, the metro's. Never nothing. */
-	const stats = scopeName ? scopeStatsLine(unit) : metroStatsLine(units);
+	/**
+	 * The count on the line (owner, phase182.1: 「second line is area and city
+	 * and communities count」) — always the leaf's own number. A trail whose
+	 * leaf is a city (or a community in one) carries that city's count; a
+	 * metro leaf (a city card, or the unscoped fallback) carries the metro's;
+	 * the scope fallback keeps the scoped city's. Real or absent throughout.
+	 */
+	const stats =
+		trail !== null
+			? trail.length > 0
+				? scopeStatsLine(trailUnit)
+				: metroStatsLine(units)
+			: scopeName
+				? scopeStatsLine(unit)
+				: metroStatsLine(units);
 
 	/**
 	 * The runs the line draws when the top card gives it a place: the metro
@@ -102,6 +126,15 @@ export function PlaceHeader({
 	return (
 		<View style={styles.wrap}>
 			{/*
+			 * The wordmark row, back by owner request (phase182.1) in the face it
+			 * wore from 2026-08-14 to 2026-09-05: "Percho" centred at the very
+			 * top, DM Serif Display 34/400/−0.5 in #086B5B, and the two top
+			 * CORNERS stay empty — no features up here.
+			 */}
+			<View style={styles.chromeRow}>
+				<Text style={styles.wordmark}>Percho</Text>
+			</View>
+			{/*
 			 * ONE line, all of it (owner, 2026-09-06: 「Make all text in one line,
 			 * ok? If too big to fit in, just use smaller size」).
 			 *
@@ -119,9 +152,9 @@ export function PlaceHeader({
 			 *
 			 * With a trail (phase182) the same line reads the TOP CARD's parent
 			 * chain instead of the scope — the ink lands on the card's nearest
-			 * parent, everything above it steps back a colour. The stats ride only
-			 * the scope line: appended to a three-deep chain they would scale the
-			 * whole line below legibility.
+			 * parent, everything above it steps back a colour. Since phase182.1
+			 * the communities count closes the line in every state; on the rare
+			 * three-deep chain the whole line simply scales a step further.
 			 */}
 			<Pressable
 				onPress={onPress}
@@ -158,9 +191,7 @@ export function PlaceHeader({
 						</>
 					)}
 					<Text style={styles.chevron}> ▾</Text>
-					{leaf === null && stats ? (
-						<Text style={styles.stats}>{`  ·  ${stats}`}</Text>
-					) : null}
+					{stats ? <Text style={styles.stats}>{`  ·  ${stats}`}</Text> : null}
 				</Text>
 			</Pressable>
 		</View>
@@ -180,6 +211,29 @@ const styles = StyleSheet.create({
 	 * number the old wordmark row used.
 	 */
 	wrap: { zIndex: 100, paddingTop: 4 },
+	/**
+	 * The wordmark's row — 44pt tall so it reads as chrome rather than as a
+	 * masthead band (its pre-2026-09-05 box, restored by phase182.1).
+	 */
+	chromeRow: {
+		height: 44,
+		alignItems: "center",
+		justifyContent: "center",
+		paddingHorizontal: 16,
+	},
+	/**
+	 * DM Serif Display 34/400/−0.5 in #086B5B (owner spec, 2026-08-14: 「深墨
+	 * 绿 + 优雅衬线」). The one place the redline's forest green crosses into
+	 * app CHROME — the wordmark is the app's name, not chrome competing with a
+	 * card, so the amber accent stays out of this row.
+	 */
+	wordmark: {
+		fontFamily: DM_SERIF_FONT,
+		fontSize: 34,
+		fontWeight: "400",
+		letterSpacing: -0.5,
+		color: "#086B5B",
+	},
 	lineWrap: { paddingHorizontal: 20 },
 	pressed: { opacity: 0.6 },
 	/**

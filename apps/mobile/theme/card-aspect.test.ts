@@ -28,8 +28,11 @@ const TAB_BAR = 62;
 /** `CARD_INSET.top` / `.bottom` — symmetric FLOORS since phase182. */
 const PAD_TOP = 16;
 const PAD_BOTTOM = 16;
-/** `PlaceHeader`'s one type row: 4 padding + a 30pt line box. */
-const HEADER_TEXT = 4 + 30;
+/**
+ * `PlaceHeader`: 4 padding + the 44pt wordmark row (back in phase182.1) + the
+ * 30pt place line.
+ */
+const HEADER_TEXT = 4 + 44 + 30;
 
 function pageOf(w: number, h: number, top: number, bottom: number) {
 	const cardWidth = w - gutter() * 2;
@@ -87,15 +90,11 @@ describe("cardFrameHeight", () => {
 describe("the shipping lineup", () => {
 	/**
 	 * 「Don't cut film」 (owner, 2026-09-06). The card is drawn at the canvas's
-	 * aspect and everything else bends around it. With the strip gone the
-	 * budget only got looser, so this now holds on the SE too — the screen
-	 * that used to have nothing left.
+	 * aspect and everything else bends around it, on every screen in the
+	 * shipping lineup.
 	 */
-	it("never crops the film on a current iPhone, nor on an SE", () => {
-		for (const [name, w, h, top, bottom] of [
-			...DEVICES,
-			["iPhone SE", 375, 667, 20, 0] as const,
-		]) {
+	it("never crops the film on a current iPhone", () => {
+		for (const [name, w, h, top, bottom] of DEVICES) {
 			const { cardWidth, stage } = pageOf(w, h, top, bottom);
 			const aspect = cardAspect(stage, cardWidth);
 			expect(
@@ -103,6 +102,19 @@ describe("the shipping lineup", () => {
 				`${name}: card aspect ${aspect.toFixed(3)} crops ${(sideCrop(aspect) * 100).toFixed(1)}% of the film`,
 			).toBeLessThan(0.005);
 		}
+	});
+
+	/**
+	 * The SE is the one body that pays for the wordmark's return (phase182.1):
+	 * its stage caps the card below the film's shape and `cover` shaves ~5%
+	 * off the sides. On record as a decision, not a regression — the lineup
+	 * starts at the 13 mini, and the alternative (a header that hides the
+	 * wordmark on short screens) is layout the page does not otherwise need.
+	 * This fails if the cost ever grows past ~6%.
+	 */
+	it("keeps the SE's crop under ~6%", () => {
+		const { cardWidth, stage } = pageOf(375, 667, 20, 0);
+		expect(sideCrop(cardAspect(stage, cardWidth))).toBeLessThan(0.06);
 	});
 
 	/**

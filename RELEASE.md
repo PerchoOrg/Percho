@@ -9,6 +9,7 @@
 ## v1.3 — Opening a home now answers "does this fit me?"
 
 ### 2026-09-06
+- **Percho's name is back at the top of the feed**, in its deep-green serif, with the place line sitting just under it — the metro, the city you're on, and how many neighbourhoods it has. The count now shows for whichever city the current card belongs to, not only when you've picked one from the list
 - **The row of neighbourhood squares above the card is gone.** It crowded the page rather than organising it. What it was there to say now lives in the top line itself, which follows the card you're on: over a home it reads the metro, the city and — where we know it — the neighbourhood it belongs to; over a neighbourhood's film, the metro and its city. It updates as you swipe, and tapping it still opens the city picker
 - **The card now sits centred on the page**, with the spare paper split evenly above and below it instead of pooling underneath
 

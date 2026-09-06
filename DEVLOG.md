@@ -16,6 +16,43 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-06 11:06 UTC — phase182.1: the wordmark returns; the count closes every header line
+
+**Objective**: owner, on phase182's header: 「Being the Percho title back and
+second line is area and city and communities count」.
+
+**Actions**:
+- `PlaceHeader.tsx` — the wordmark row is back ABOVE the place line, in the
+  exact face it wore 2026-08-14 → 2026-09-05 (44pt row, DM Serif Display
+  34/400/−0.5 in #086B5B, recovered from `bcbb89f1~1`). Header is now:
+  line 1 `Percho`, line 2 `Atlanta metro › <city> ▾ · N communities`.
+- The communities count rides EVERY state of the line now, not just the
+  scope fallback (phase182 had cut it from trail states). New `trailUnit`
+  prop: a trail whose leaf is a city carries THAT city's `scopeStatsLine`;
+  a metro leaf (city card / unscoped) carries `metroStatsLine`; the scoped
+  fallback keeps the scoped unit's. `feed.tsx` resolves the top card's
+  `geoUnitId` against `pool.geoUnits`. Real or absent throughout.
+- Tests: `theme/card-aspect.test.ts` header model 34 → 78pt;
+  `theme/place-header.test.ts` stats-wiring assertion updated;
+  `theme/feed-chrome-layout.test.ts` asserts the wordmark rides the
+  header's zIndex (the 2026-08-31 stageClip bug, one row higher).
+
+**Decisions / tradeoffs**: the 44pt row has to come from somewhere. The
+shipping lineup (13 mini and up) still fits the film uncropped — worst case
+the mini keeps ~24pt of centred slack — but the **iPhone SE now crops ~5%**
+of the film's sides (stage 475pt vs the film's 500pt): the strip used to be
+the thing that gave way on that body and there is nothing left to give. On
+record in `card-aspect.test.ts` as a pinned decision (< 6%), flagged to the
+owner. The alternative — hiding the wordmark on short screens — is layout
+the page does not otherwise need.
+
+**Verification**: `tsc --noEmit` clean; vitest 54 files / **556 tests**;
+`biome check .` 0 errors / 8 warnings (baseline).
+
+**Next steps**: owner reviews on device. If the 24pt serif place line reads
+too heavy under the 34pt wordmark, stepping `metro`/`city` down a size is a
+two-number change in `PlaceHeader`'s styles.
+
 ## 2026-09-06 10:35 UTC — phase182: strip removed; the header line becomes the card's place trail; the card centres
 
 **Objective**: owner, on seeing phase181's community strip: 「don't like it.
