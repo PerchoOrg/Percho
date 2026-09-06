@@ -257,12 +257,6 @@ export default function FeedScreen() {
 		[pool, scope?.unitId],
 	);
 
-	/** The scoped city's row, for the header's numbers. */
-	const scopedUnit = useMemo(
-		() => pool.geoUnits.find((u) => u.id === scope?.unitId),
-		[pool.geoUnits, scope?.unitId],
-	);
-
 	/**
 	 * The header strip's faces (phase181 "R3"). Built from the pool rather than
 	 * from the deck: the deck is a sampled sequence and a city's third
@@ -738,7 +732,6 @@ export default function FeedScreen() {
 			 */}
 			<PlaceHeader
 				scopeName={scope?.name ?? null}
-				unit={scopedUnit}
 				onPress={() => setScopeOpen(true)}
 			>
 				<CommunityStrip

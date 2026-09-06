@@ -9,10 +9,19 @@
  * directly」 — the page is about where you are looking, and the app already
  * says its name on the launch screen and in the tab bar.
  *
- * So the header is now: the metro as an eyebrow, the CITY as the page's title,
- * the city's own numbers, and the neighbourhoods Percho has filmed there
- * (`CommunityStrip`). Tapping the title opens the same scope sheet the crumb
- * did.
+ * So the page opens on the place. It shipped as three rows — metro eyebrow,
+ * a 30pt serif city title, the city's stats — and the owner cut it back the
+ * same day: 「too many lines of text, can you make them in one line then
+ * follow with communities and cards」. One line now, then the neighbourhoods
+ * (`CommunityStrip`), then the deck. Tapping the line opens the same scope
+ * sheet the old crumb did.
+ *
+ * The stats (`40 communities · median $594K`) are NOT on that line. They had
+ * already been cut from the feed once, on 2026-09-05 ("no need to show xxx
+ * communities in this page"), and folding them back into a line whose job is
+ * to say WHERE you are would re-create the row this edit removed.
+ * `scopeStatsLine` stays exported — the scope sheet prints it under each city,
+ * where the numbers are the point.
  *
  * ── Why a bigger header makes the page SHORTER ──────────────────────────────
  *
@@ -28,8 +37,7 @@
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
-import { DM_SERIF_FONT } from "../../theme/fonts";
-import { redline } from "../../theme/tokens";
+import { fonts, redline } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 
 /**
@@ -79,8 +87,6 @@ export function scopeStatsLine(unit: GeoUnit | undefined): string | null {
 interface PlaceHeaderProps {
 	/** The picked scope's display name, or null for the whole metro. */
 	scopeName: string | null;
-	/** The scoped unit, for its numbers. Absent → the stats line is omitted. */
-	unit: GeoUnit | undefined;
 	onPress: () => void;
 	/** The community strip, mounted by the feed (it owns the deck). */
 	children?: React.ReactNode;
@@ -88,32 +94,33 @@ interface PlaceHeaderProps {
 
 export function PlaceHeader({
 	scopeName,
-	unit,
 	onPress,
 	children,
 }: PlaceHeaderProps) {
-	/** With no city scoped, the metro IS the title — never an empty eyebrow. */
-	const title = scopeName ?? SCOPE_ROOT_LABEL;
-	const eyebrow = scopeName ? SCOPE_ROOT_LABEL : null;
-	const stats = scopeStatsLine(unit);
-
 	return (
 		<View style={styles.wrap}>
 			<Pressable
 				onPress={onPress}
 				accessibilityRole="button"
-				accessibilityLabel={`Scope: ${title}. Change`}
-				hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-				style={({ pressed }) => [styles.head, pressed && styles.pressed]}
+				accessibilityLabel={`Scope: ${scopeName ?? SCOPE_ROOT_LABEL}. Change`}
+				// The line is ~22pt; 11 each side restores §0.5's 44pt target.
+				hitSlop={{ top: 11, bottom: 11, left: 8, right: 8 }}
+				style={({ pressed }) => [styles.line, pressed && styles.pressed]}
 			>
-				{eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
-				<View style={styles.titleRow}>
-					<Text style={styles.title} numberOfLines={1}>
-						{title}
-					</Text>
-					<View style={styles.chevron} />
-				</View>
-				{stats ? <Text style={styles.stats}>{stats}</Text> : null}
+				{/* With no city scoped the metro IS the place, and it takes the
+				    ink the city would rather than sitting next to an empty crumb. */}
+				<Text style={scopeName ? styles.root : styles.city} numberOfLines={1}>
+					{SCOPE_ROOT_LABEL}
+				</Text>
+				{scopeName ? (
+					<>
+						<Text style={styles.sep}>›</Text>
+						<Text style={styles.city} numberOfLines={1}>
+							{scopeName}
+						</Text>
+					</>
+				) : null}
+				<View style={styles.chevron} />
 			</Pressable>
 			{children}
 		</View>
@@ -133,37 +140,39 @@ const styles = StyleSheet.create({
 	 * number the old wordmark row used.
 	 */
 	wrap: { zIndex: 100, paddingTop: 4 },
-	head: { alignItems: "center", paddingHorizontal: 24 },
-	pressed: { opacity: 0.6 },
-	/** The metro, above the city — 10/700/1pt, the redline's own label style. */
-	eyebrow: { ...redlineText.label, color: redline.ink3 },
-	titleRow: {
+	/** One row: metro › city ⌄, centred, on paper — no bar, no background. */
+	line: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 8,
-		marginTop: 2,
+		justifyContent: "center",
+		gap: 6,
+		paddingHorizontal: 24,
 	},
+	pressed: { opacity: 0.6 },
+	/** The metro, muted when a city is scoped under it. */
+	root: { ...redlineText.subtitle, fontWeight: "500", color: redline.ink2 },
+	sep: { ...redlineText.subtitle, color: redline.ink3 },
 	/**
-	 * The city, in the serif the wordmark used to own. 30pt is the wordmark's
-	 * 34 stepped down: the page keeps a serif anchor at the top, but it now
-	 * names the place instead of the app.
+	 * The place itself. 17/700 in the redline green — a step up from the 14pt
+	 * crumb this replaced, because with the wordmark gone it is the first thing
+	 * on the page and has to hold that position on its own.
 	 */
-	title: {
-		fontFamily: DM_SERIF_FONT,
-		fontSize: 30,
-		lineHeight: 34,
-		letterSpacing: -0.6,
-		color: redline.ink,
+	city: {
+		fontFamily: fonts.ui,
+		fontSize: 17,
+		lineHeight: 22,
+		fontWeight: "700",
+		letterSpacing: -0.2,
+		color: redline.accent,
 		flexShrink: 1,
 	},
-	stats: { ...redlineText.story, color: redline.ink2, marginTop: 2 },
 	/** A chevron-down from two borders — the same trick as the card's arrow. */
 	chevron: {
-		width: 8,
-		height: 8,
-		marginTop: -4,
-		borderRightWidth: 1.8,
-		borderBottomWidth: 1.8,
+		width: 7,
+		height: 7,
+		marginTop: -3,
+		borderRightWidth: 1.7,
+		borderBottomWidth: 1.7,
 		borderColor: redline.ink3,
 		transform: [{ rotate: "45deg" }],
 	},
