@@ -21,6 +21,53 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-07 05:46 UTC — phase185.1: competitor market research, delivered as a hosted page
+
+**Objective**: owner asked for market research on Percho's competitors, run
+through the local `codex` CLI, and then asked to see the full report as a web
+page.
+
+**Actions**:
+- Ran `codex exec` non-interactively with `-c tools.web_search=true`, read-only
+  sandbox, `-C /tmp`. Report written to `/tmp/percho-competitor-research.md`
+  (562 lines). Not committed — the HTML page is the artifact.
+- Added `apps/web/public/demos/competitor-report/index.html` — the full report
+  rendered as a static page, matching the `buyer-study-summary` design system
+  (same CSS custom properties, light/dark toggle, `noindex,nofollow`).
+
+**Decisions**:
+- Owner asked for GPT-6. It is not available: `gpt-6`, `gpt-6-codex`,
+  `gpt-6-thinking`, `gpt-6-mini` and `gpt-5.2-codex` all return HTTP 400
+  `"not supported when using Codex with a ChatGPT account"`. The only model
+  this account can reach is the default `gpt-5.6-sol`, which is what produced
+  the report. Told the owner rather than silently substituting.
+- Threat level is encoded as a **four-pip ordinal meter with the written label
+  always present**, not as status colors. Running the four status hexes through
+  `validate_palette.js` failed the categorical gate — `#fab219` (warning) vs
+  `#ec835a` (serious) measure ΔE 13.6 normal-vision, below the 15 floor, and
+  both sit under 3:1 on the light surface. Filled-pip count carries the value,
+  so hue carries nothing alone. Single-hue series (`#2a78d6` light /
+  `#3987e5` dark) passes all checks in both modes.
+- Pricing chart covers only vendors that publish list prices; quote-based
+  vendors are named in the caption as excluded, so the gaps are not read as
+  "free".
+
+**Issues**: headless-Chrome screenshots ignored the `#pricing` fragment jump
+(smooth scrolling never settled), so section-level verification was done by
+rendering temp copies with the other sections hidden.
+
+**Learnings**: the substantive finding is that no reviewed US product combines
+neighborhood-led film + culturally adapted (not translated) multilingual
+variants + Rednote/WeChat packaging + agent lead attribution in one workflow.
+Homes.com owns most ingredients but confines community video to paid
+new-construction packages. Redfin's Nov-2025 multilingual conversational search
+means "multilingual discovery is unserved" is no longer a defensible claim on
+its own.
+
+**Next steps**: none pending. Page is at `/demos/competitor-report/`.
+
+---
+
 ## 2026-09-07 05:10 UTC — phase183.3: the header's five decisions, and the final demo for them
 
 **Objective**: owner picked from `/demos/feed-header-v3` and asked for a final
