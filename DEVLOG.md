@@ -21,6 +21,52 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-07 19:15 UTC — phase188: community coverage audit + map (Metro Atlanta MSA)
+
+**Objective**: owner asked for a cold-start strategy to reach 100% community
+coverage across Metro Atlanta (wiki/OMB definition: 29-county MSA) so every
+listing links to a community, with builder/subdivision communities as the
+preferred quality tier — plus a map of current coverage.
+
+**Actions**:
+- Audited the live DB (service-role REST, read-only): 8,680 communities
+  (8,678 active; 8,679 `source='nextdoor'`, 1 agent), `kind='subdivision'`
+  only 3, with video 1, with photos 0. `county`/`zip`/`builder` columns still
+  100% NULL. Listings are down to 18 active (post-FMLS cleanup), all with
+  lat/lng, only 4 with `community_id`.
+- Point-in-polygon'd all 8,679 centroids against the 29 MSA county polygons
+  (Census cartographic boundaries via plotly's counties GeoJSON): every county
+  has ≥1 community (min: Jasper 2), 8,026 in-MSA, **652 outside the MSA**
+  (the 2026-07 Nextdoor city list included outer towns). Core 5 hold 4,856.
+- Tested the 14 unlinked listings against same-city boundaries: **8 fall
+  inside an existing polygon** (never matched — the PIP path only runs on
+  dashboard address-save, and the Redfin importer scopes by city string),
+  **6 are true polygon gaps**. MLS `neighborhood` string is null on 13/14, so
+  name-matching can't rescue this batch.
+- Built `apps/web/public/demos/community-coverage/` (static MapLibre page,
+  Carto basemap, light+dark): county choropleth by community count, 8.7k
+  seed dots, subdivision diamonds, listing pins ✓/✕ by linked state, county
+  table + stat tiles. Data snapshot embedded (`data.js`, 499 KB).
+
+**Decisions**: proposals delivered in chat as a coverage pyramid — (1) free
+pipeline fix first: PIP backfill + nearest/city/county fallback guarantees
+100% link coverage with zero new data; (2) county GIS platted-subdivision
+polygons (`boundary_source='arcgis'` already in the check constraint) as the
+subdivision backbone, core-5 pilot first; (3) listing-driven stub creation
+from the MLS subdivision field (FMLS legality caveat); (4) curated builder
+directory as the quality tier. County backfill for all 8,679 rows can be done
+free with local PIP against Census boundaries — the $40 Google Geocoding
+estimate in the old spec is unnecessary.
+
+**Learnings**: even 8,679 polygons don't tessellate — Nextdoor neighborhoods
+leave gaps that ~1/3 of real listings fall into; 100% coverage must come from
+a fallback hierarchy, not more polygons alone. Also `preserveDrawingBuffer`
+is required for headless screenshots of MapLibre canvases.
+
+**Next steps**: owner picks which proposals to green-light; quick wins
+available immediately (backfill `communities.county`, re-run PIP matching for
+the 8 linkable listings, decide fate of the 652 out-of-MSA rows).
+
 ## 2026-09-07 12:40 UTC — phase187: Saved tab loses its segment chips
 
 **Objective**: owner: 「Saved tab - remove home and community filtering sub
