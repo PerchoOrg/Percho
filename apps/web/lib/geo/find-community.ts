@@ -4,9 +4,10 @@
  * One RPC, `match_community(lat, lng)` (migration 20260907200000), does the
  * work in Postgres with PostGIS: the containing polygon if there is one
  * (subdivision beats neighbourhood, then the smaller polygon), otherwise the
- * nearest active community with the distance in metres. It always returns a
- * community, so the caller must look at `match` before presenting a
- * `nearest` result as "this home is in X".
+ * nearest active community if it is within 250 m, with the distance in
+ * metres. Farther than that the point is in no community and this returns
+ * null — a forced link would be wrong data. Look at `match` before
+ * presenting a `nearest` result as "this home is in X".
  *
  * This used to load every boundary into the function and ray-cast in JS.
  * supabase-js caps an unpaged select at 1,000 rows, so past the first 1,000

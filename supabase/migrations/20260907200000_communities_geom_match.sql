@@ -9,9 +9,11 @@
 --
 -- Same pattern as k12_attendance_zones (20260718020000): geography columns
 -- kept by trigger, GIST-indexed, and one RPC that prefers a boundary hit and
--- otherwise returns the NEAREST community with its distance — so every point
--- in the metro gets a community, and the caller can tell a real containment
--- from a fallback. Owner rule 2026-09-07: when a subdivision and a Nextdoor
+-- otherwise returns the NEAREST community within 250 m with its distance —
+-- so a point just outside a hand-drawn edge still gets its community, the
+-- caller can tell a real containment from a fallback, and a point far from
+-- everything gets nothing rather than a wrong link. Owner rule 2026-09-07:
+-- when a subdivision and a Nextdoor
 -- neighbourhood both contain the point, the subdivision wins; among equals
 -- the smaller polygon wins (the nested one).
 
@@ -60,9 +62,13 @@ create index if not exists communities_boundary_geom_gist on public.communities 
 create index if not exists communities_anchor_geom_gist   on public.communities using gist (anchor_geom);
 
 -- ============ match_community(lat, lng) RPC ============
--- One row, always (unless the table is empty): the containing community if
--- there is one (subdivision > neighbourhood, then smallest polygon), else the
--- nearest active community by boundary edge, with the distance in metres.
+-- At most one row: the containing community if there is one (subdivision >
+-- neighbourhood, then smallest polygon), else the nearest active community
+-- by boundary edge IF it is within 250 m, with the distance in metres. Past
+-- 250 m the point is not in any community and no row comes back — owner
+-- rule 2026-09-07: an uncapped nearest link is wrong data. 250 m covers the
+-- slivers between hand-drawn Nextdoor polygons (the two unlinked listings
+-- today sit 1 m and 13 m outside an edge), not a house in open country.
 -- The nearest pass shortlists 25 by anchor KNN (index-backed) before paying
 -- for edge distances.
 create or replace function public.match_community(p_lat double precision, p_lng double precision)
@@ -102,6 +108,7 @@ as $$
     select c.id, c.slug, c.name, c.city, c.state, c.kind, 'nearest'::text as match,
       st_distance(coalesce(c.boundary_geom, c.anchor_geom), pt.g)::integer as distance_m
     from shortlist c, pt
+    where st_dwithin(coalesce(c.boundary_geom, c.anchor_geom), pt.g, 250)
     order by st_distance(coalesce(c.boundary_geom, c.anchor_geom), pt.g)
     limit 1
   )
