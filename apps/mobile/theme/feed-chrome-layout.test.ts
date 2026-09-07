@@ -16,16 +16,18 @@
  * tappable, which is not a subtle failure mode: on 2026-08-31 the owner found
  * the new scope crumb invisible while tapping the blank space still opened the
  * community list. The wordmark row never had the problem only because it set
- * `zIndex: 100`; phase181 replaced both with `PlaceHeader`, which inherits the
- * same requirement. (The community strip the header briefly carried is gone —
- * phase182 — but the header line itself still has to out-rank the band.)
+ * `zIndex: 100`; every header since has inherited the requirement —
+ * `PlaceHeader` (phase181) and now `FeedHeader` (phase183), which raises the
+ * stakes: its Map pill is the first real BUTTON the feed has drawn above the
+ * stage, so an unranked header would leave a control that cannot be seen but
+ * can be pressed.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const STACK = readFileSync("components/SwipeStack.tsx", "utf8");
 const FEED = readFileSync("app/(tabs)/feed.tsx", "utf8");
-const HEADER = readFileSync("components/feed/PlaceHeader.tsx", "utf8");
+const HEADER = readFileSync("components/feed/FeedHeader.tsx", "utf8");
 
 /**
  * The `zIndex: N` DECLARED inside a named style block.
@@ -56,20 +58,24 @@ describe("feed chrome sits above the stage's paper band", () => {
 		expect(STACK).toContain('pointerEvents="none"');
 	});
 
-	it("the place header out-ranks it", () => {
+	it("the feed header out-ranks it", () => {
 		expect(zIndexOf(HEADER, "wrap")).toBeGreaterThan(
 			zIndexOf(STACK, "stageClip"),
 		);
 	});
 
 	/**
-	 * The wordmark is back (owner, phase182.1) — but INSIDE the header, so it
-	 * rides `wrap`'s zIndex. This fails if someone moves it out to the screen
-	 * as a sibling of the stage without giving it a rank of its own — the
-	 * exact 2026-08-31 bug, one row higher.
+	 * Every row rides that one rank, because the header has a single ranked
+	 * root and the screen draws nothing of its own up there. This fails if
+	 * someone lifts a row out to the feed as a sibling of the stage without
+	 * giving it a rank — the exact 2026-08-31 bug, one row higher.
 	 */
-	it("the wordmark rides the header, not the screen", () => {
-		expect(HEADER).toContain(">Percho<");
-		expect(FEED).not.toContain(">Percho<");
+	it("every header row rides that one rank", () => {
+		expect(HEADER).toContain("<View style={styles.wrap}>");
+		expect(FEED).toContain("<FeedHeader");
+		expect(FEED.indexOf("<FeedHeader")).toBeLessThan(
+			FEED.indexOf("styles.stackWrap"),
+		);
+		expect(FEED).not.toContain("zIndex: 100");
 	});
 });

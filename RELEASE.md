@@ -8,6 +8,11 @@
 
 ## v1.3 — Opening a home now answers "does this fit me?"
 
+### 2026-09-07
+- **The top of the feed now tells you where the card is, and lets you see it on a map.** Above every film: the area and city it belongs to on one quiet line, then the place itself in large type — the neighbourhood for a home or a neighbourhood tour, the city for a city card — and under that what you're watching: HOME TOUR, COMMUNITY TOUR, CITY TOUR. Tap a neighbourhood's name to open its page. Beside it, a new **Map** button opens the map on that place. A "what matters more to you" card reads "Your preferences / Find your balance" and has no map, because it isn't about anywhere in particular
+- **Percho's name and the neighbourhood count have come off the feed's top line** to make room for the above. The count is still in the city picker, which the area line still opens
+- The card itself is untouched — same size, same position, same film shown whole on every current iPhone
+
 ### 2026-09-06
 - **Percho's name is back at the top of the feed**, in its deep-green serif, with the place line sitting just under it — the metro, the city you're on, and how many neighbourhoods it has. The count now shows for whichever city the current card belongs to, not only when you've picked one from the list
 - **The row of neighbourhood squares above the card is gone.** It crowded the page rather than organising it. What it was there to say now lives in the top line itself, which follows the card you're on: over a home it reads the metro, the city and — where we know it — the neighbourhood it belongs to; over a neighbourhood's film, the metro and its city. It updates as you swipe, and tapping it still opens the city picker
