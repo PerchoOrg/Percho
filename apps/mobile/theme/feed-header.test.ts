@@ -174,9 +174,14 @@ describe("map control B", () => {
 	 * rounding is what makes it a pin rather than a rotated square, and the
 	 * ONE sharp corner is what makes it a pin rather than a circle.
 	 */
-	it("draws an 18-wide teardrop pin with a 1.75 stroke", () => {
-		expect(n("PIN_HEAD")).toBe(18);
-		expect(n("PIN_STROKE")).toBe(1.75);
+	it("draws an 18-TALL teardrop pin", () => {
+		// 18 is the whole icon, not its head: the tip hangs below the head's
+		// centre, so sizing the head at 18 drew a 21.7pt icon — 20% over the
+		// handoff, and what the owner reported as too big on 2026-09-07.
+		expect(n("PIN_SIZE")).toBe(18);
+		expect(CODE).toContain("const PIN_HEAD = PIN_SIZE / PIN_TIP_RATIO;");
+		expect(CODE).toContain("height: PIN_SIZE * k");
+		expect(n("PIN_STROKE")).toBeLessThan(1.75);
 		expect(CODE).toContain("borderTopLeftRadius: (PIN_HEAD / 2) * k");
 		expect(CODE).toContain("borderBottomRightRadius: 0");
 		expect(CODE).toContain('transform: [{ rotate: "45deg" }]');
