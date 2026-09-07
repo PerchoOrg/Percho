@@ -16,6 +16,7 @@ The home page has been rebuilt from the ground up. Instead of a list of MLS fiel
 - **The essentials in one compact card** — days on market, lot size, HOA, year built, ZIP and MLS number where we have them — and the page ends with this home beside your own saved homes. A built-in "ask anything about this home" is coming next.
 
 ### 2026-09-07
+- **Saved is one list again.** The Homes / Communities tabs at the top of the Saved page are gone — everything you've saved, homes, neighbourhoods and areas alike, now sits in a single list. Compare still appears once you've saved enough homes
 - **Your journey now lives on the You tab.** The "Your journey" switch on the map is gone; how well you know each area — the same scores it showed — sits on the You tab under a section now titled "Your journey". The map still lists the areas you know best first
 - **The Map button now appears on neighbourhood films too.** It was missing on every neighbourhood card: those cards were never told which city they belong to, so there was nowhere for the button to send you. They are now — which also means liking a neighbourhood finally counts towards that city in your journey
 - **The place name sits closer to the card.** A line naming the card type sat under it for part of the day; it is gone — the card itself already says what it is — and the room went into moving the name down and closing the gap below it

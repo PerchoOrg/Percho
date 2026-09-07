@@ -2,10 +2,10 @@
  * Saved tab (spec-v3 05 §5.2) — the bookmark's shelf.
  *
  * ── v1 scope vs §5.2 ────────────────────────────────────────────────────────
- * Segments: Homes and Communities (owner 2026-08-23: "saved is for both"),
- * plus Areas when the buyer has bookmarked a CITY card — that face has drawn
- * a bookmark since 2026-08-15 and it now lands here. What §5.2 wants beyond
- * this and CAN'T ship yet:
+ * One flat list: homes, communities, and bookmarked CITY cards (areas) all
+ * land here together (owner 2026-09-07: segment chips removed — "saved is
+ * for both" still holds, it just no longer needs tabs). What §5.2 wants
+ * beyond this and CAN'T ship yet:
  *
  *   · Must-haves — Explore-side feature saving does not exist anywhere
  *     (no save affordance, no `saved_features` table on the wire), so the
@@ -53,14 +53,6 @@ type Row =
 	  }
 	| { status: "gone" }
 	| { status: "error" };
-
-type Segment = "listing" | "community" | "area";
-
-const SEGMENT_LABEL: Record<Segment, string> = {
-	listing: "Homes",
-	community: "Communities",
-	area: "Areas",
-};
 
 /** Resolve one saved listing/community id to a row via its detail endpoint. */
 async function fetchRow(item: SavedItem): Promise<Row> {
@@ -131,17 +123,10 @@ export default function SavedTab() {
 	});
 
 	const [rows, setRows] = useState<Record<string, Row>>({});
-	const [segment, setSegment] = useState<Segment>("listing");
 	// Compare picker: null = off; otherwise the ticked listing ids.
 	const [picking, setPicking] = useState<string[] | null>(null);
 
-	const counts: Record<Segment, number> = {
-		listing: items.filter((i) => i.kind === "listing").length,
-		community: items.filter((i) => i.kind === "community").length,
-		area: items.filter((i) => i.kind === "area").length,
-	};
-	const segments: Segment[] = ["listing", "community"];
-	if (counts.area > 0) segments.push("area");
+	const listingCount = items.filter((i) => i.kind === "listing").length;
 
 	const load = useCallback(async (item: SavedItem) => {
 		setRows((r) => ({ ...r, [item.id]: { status: "loading" } }));
@@ -156,8 +141,6 @@ export default function SavedTab() {
 			if (!(item.id in rows)) void load(item);
 		}
 	}, [items, load]);
-
-	const active = items.filter((i) => i.kind === segment);
 
 	if (hydrated && items.length === 0) {
 		// §5.5's Saved empty state — always a way back to the main loop. Signed
@@ -196,32 +179,12 @@ export default function SavedTab() {
 		<View style={[styles.screen, { paddingTop: insets.top + 12 }]}>
 			<Text style={styles.title}>Saved</Text>
 
-			{/* Segment chips — Homes · N / Communities · N (/ Areas · N). */}
-			<View style={styles.chipRow}>
-				{segments.map((s) => {
-					const on = segment === s;
-					return (
-						<Pressable
-							key={s}
-							style={[styles.chip, on && styles.chipOn]}
-							onPress={() => setSegment(s)}
-							accessibilityRole="tab"
-							accessibilityState={{ selected: on }}
-						>
-							<Text style={[styles.chipLabel, on && styles.chipLabelOn]}>
-								{SEGMENT_LABEL[s]} · {counts[s]}
-							</Text>
-						</Pressable>
-					);
-				})}
-			</View>
-
 			<ScrollView
 				style={styles.list}
 				contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
 			>
 				{/* Compare (05 §5.2): pick 2–3 homes, then open the side-by-side. */}
-				{segment === "listing" && counts.listing >= COMPARE_MIN && (
+				{listingCount >= COMPARE_MIN && (
 					<View style={styles.compare}>
 						{picking ? (
 							<>
@@ -272,15 +235,7 @@ export default function SavedTab() {
 					</View>
 				)}
 
-				{active.length === 0 && (
-					<Text style={styles.segmentEmpty}>
-						{segment === "listing"
-							? "Tap the bookmark on a home to keep it here."
-							: "Tap Save on a neighbourhood's page to keep it here."}
-					</Text>
-				)}
-
-				{active.map((item) =>
+				{items.map((item) =>
 					item.kind === "area" ? (
 						<AreaRow
 							key={item.id}
@@ -447,23 +402,7 @@ const styles = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 20 },
 	center: { alignItems: "center", justifyContent: "center", gap: 16 },
 	title: { ...textStyles.title1, color: colors.ink, marginBottom: 12 },
-	chipRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
-	chip: {
-		backgroundColor: colors.surface2,
-		borderRadius: radii.pill,
-		paddingHorizontal: 14,
-		paddingVertical: 7,
-	},
-	chipOn: { backgroundColor: colors.cta },
-	chipLabel: { ...textStyles.caption, color: colors.ink },
-	chipLabelOn: { color: colors.surface },
 	list: { flex: 1 },
-	segmentEmpty: {
-		...textStyles.body,
-		color: colors.ink2,
-		paddingVertical: 24,
-		textAlign: "center",
-	},
 	row: {
 		flexDirection: "row",
 		alignItems: "center",
