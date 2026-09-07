@@ -259,11 +259,13 @@ export type Database = {
       }
       communities: {
         Row: {
+          anchor_geom: unknown | null
           attributes: string[] | null
           avg_age: string | null
           avg_income: string | null
           boundary: Json | null
           boundary_source: string | null
+          boundary_geom: unknown | null
           builder: string | null
           city: string | null
           county: string | null
@@ -304,11 +306,13 @@ export type Database = {
           zip: string | null
         }
         Insert: {
+          anchor_geom?: unknown | null
           attributes?: string[] | null
           avg_age?: string | null
           avg_income?: string | null
           boundary?: Json | null
           boundary_source?: string | null
+          boundary_geom?: unknown | null
           builder?: string | null
           city?: string | null
           county?: string | null
@@ -349,11 +353,13 @@ export type Database = {
           zip?: string | null
         }
         Update: {
+          anchor_geom?: unknown | null
           attributes?: string[] | null
           avg_age?: string | null
           avg_income?: string | null
           boundary?: Json | null
           boundary_source?: string | null
+          boundary_geom?: unknown | null
           builder?: string | null
           city?: string | null
           county?: string | null
@@ -1847,6 +1853,8 @@ export type Database = {
           beds: number | null
           city: string
           community_id: string | null
+          community_distance_m: number | null
+          community_match: string | null
           cover_url: string | null
           created_at: string
           description: string[]
@@ -1884,6 +1892,8 @@ export type Database = {
           beds?: number | null
           city: string
           community_id?: string | null
+          community_distance_m?: number | null
+          community_match?: string | null
           cover_url?: string | null
           created_at?: string
           description?: string[]
@@ -1921,6 +1931,8 @@ export type Database = {
           beds?: number | null
           city?: string
           community_id?: string | null
+          community_distance_m?: number | null
+          community_match?: string | null
           cover_url?: string | null
           created_at?: string
           description?: string[]
@@ -3382,6 +3394,19 @@ export type Database = {
           level: string
           name: string
           school_id: string
+        }[]
+      }
+      match_community: {
+        Args: { p_lat: number; p_lng: number }
+        Returns: {
+          city: string | null
+          community_id: string
+          distance_m: number
+          kind: string
+          match: string
+          name: string
+          slug: string
+          state: string
         }[]
       }
       gettransactionid: { Args: never; Returns: unknown }

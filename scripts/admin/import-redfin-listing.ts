@@ -48,7 +48,6 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
-import { pointInPolygon } from '../../apps/web/lib/geo/point-in-polygon.js';
 import { imageSizeOf } from '../../apps/web/lib/poi/image-size.js';
 import {
   LISTING_PHOTOS_BUCKET,
@@ -299,24 +298,19 @@ function parse(html: string): Parsed {
 }
 
 /**
- * The community whose boundary contains the point — the same rule
- * `lib/geo/find-community.ts` applies in the app, run here over the
- * boundaries in the listing's city.
+ * Same rule as `lib/geo/find-community.ts`: the containing polygon
+ * (subdivision first), else the nearest community with its distance.
  */
 async function findCommunity(
   lat: number,
   lng: number,
-  city: string,
-): Promise<{ id: string; name: string } | null> {
-  const { data } = await sb
-    .from('communities')
-    .select('id, name, boundary')
-    .not('boundary', 'is', null)
-    .eq('city', city);
-  for (const c of data ?? []) {
-    if (pointInPolygon(lng, lat, c.boundary)) return { id: c.id, name: c.name };
-  }
-  return null;
+): Promise<{ id: string; name: string; match: string; distance_m: number } | null> {
+  const { data, error } = await sb.rpc('match_community', { p_lat: lat, p_lng: lng });
+  if (error) throw new Error(`match_community: ${error.message}`);
+  const row = data?.[0];
+  return row
+    ? { id: row.community_id, name: row.name, match: row.match, distance_m: row.distance_m }
+    : null;
 }
 
 async function main() {
@@ -348,9 +342,14 @@ async function main() {
     .maybeSingle();
   if (!agent) throw new Error(`no agent with slug "${agentSlug}"`);
 
-  const community =
-    parsed.lat && parsed.lng ? await findCommunity(parsed.lat, parsed.lng, parsed.city) : null;
-  console.log(`  community: ${community ? community.name : 'no boundary match'}`);
+  const community = parsed.lat && parsed.lng ? await findCommunity(parsed.lat, parsed.lng) : null;
+  console.log(
+    `  community: ${
+      community
+        ? `${community.name} (${community.match}${community.match === 'nearest' ? ` ${community.distance_m} m` : ''})`
+        : 'no match'
+    }`,
+  );
 
   const fields = {
     address: parsed.address,
@@ -369,6 +368,8 @@ async function main() {
     style: parsed.style,
     neighborhood: parsed.neighborhood,
     community_id: community?.id ?? null,
+    community_match: community?.match ?? null,
+    community_distance_m: community?.distance_m ?? null,
     description: parsed.description,
   };
 
