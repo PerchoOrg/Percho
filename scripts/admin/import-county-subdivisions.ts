@@ -76,6 +76,36 @@ const LAYERS: Record<string, CountyLayer> = {
     // Mobilehome and the 138 uncoded rows: 8,796 → 8,492 phases.
     residential: { codeField: 'LCODE', keep: ['SUBDIV', 'TOWNHOME', 'CONDO'] },
   },
+  // 8,719 polygons. No land-use code; the junk is names like '1ST FLOOR' and
+  // '2ND FLOOR', condo floors recorded as subdivisions, which `cleanName`
+  // drops for being under three characters of real name — they are caught by
+  // the numeric-name guard instead.
+  cobb: {
+    county: 'Cobb',
+    url: 'https://gis.cobbcounty.gov/gisserver/rest/services/cobbpublic/Parcels/MapServer/2',
+    nameField: 'SUBDIVNAME',
+  },
+  // 6,281 polygons, phase inside the name ('CREEK PARK HILLS UNIT 9').
+  dekalb: {
+    county: 'DeKalb',
+    url: 'https://dcgis.dekalbcountyga.gov/mapping/rest/services/Subdivision/FeatureServer/0',
+    nameField: 'SUBDIV_NAME',
+  },
+  // 3,964 polygons, mostly whole subdivisions already. Its service says the
+  // data is for 'your personal use'; owner accepted that wording 2026-09-07.
+  fulton: {
+    county: 'Fulton',
+    url: 'https://services1.arcgis.com/AQDHTHDrZzfsFsB5/arcgis/rest/services/LandBase_Subdivisions/FeatureServer/0',
+    nameField: 'SubdivName',
+  },
+  // 2,743 polygons, phase inside the name.
+  forsyth: {
+    county: 'Forsyth',
+    url: 'https://geo.forsythco.com/gisworkflow/rest/services/Public/Subdivisions/FeatureServer/0',
+    nameField: 'CNVYNAME',
+  },
+  // NOT Cherokee: its polygon layer has 1,011 rows against 94,657 parcels
+  // carrying a subdivision name, so it needs a parcel dissolve, not this.
 };
 
 const APPLY = process.argv.includes('--apply');
@@ -207,14 +237,88 @@ const normalize = (s: string) => s.trim().replace(/\s+/g, ' ').toUpperCase();
 /**
  * Plats for places nobody lives, which the land-use code misses.
  *
- * Gwinnett codes "GWINNETT PLACE COMMERCIAL CENTER" and "NORCROSS SOUTHERN
- * INDUSTRIAL DISTRICT" as LCODE=SUBDIV — the code says "this is a platted
- * development", not "this is housing". 136 of 4,366 names say so themselves.
- * Deliberately conservative: it matches the industrial/retail words only, so
- * "Village at …" and "Towne Center …" residential names survive.
+ * Gwinnett codes "GWINNETT PLACE COMMERCIAL CENTER" and "KILLIAN HILL OFFICE
+ * CONDOMINIUMS" as LCODE=SUBDIV — the code says "this is a platted
+ * development", not "this is housing". `LP` is a limited partnership, i.e.
+ * the developer entity got recorded as the plat name ("GWINRAY LP").
+ * Deliberately conservative: it matches the industrial/retail/office words
+ * only, so "Village at …" and "Towne Center …" residential names survive.
  */
 const NOT_A_PLACE_TO_LIVE =
-  /\b(COMMERCIAL|BUSINESS PARK|SHOPPING|OFFICE PARK|INDUSTRIAL|RETAIL|WAREHOUSE|CORPORATE)\b/;
+  /\b(COMMERCIAL|BUSINESS PARK|SHOPPING|OFFICE|PROFESSIONAL|PRFSNL|INDUSTRIAL|RETAIL|WAREHOUSE|CORPORATE|STORAGE|FLOORS?|BANK|PROPERTY OF|APTS?|APARTMENTS?|LP|INC|LLC|LTD|CORP)\b/;
+
+/**
+ * A plat recorded under a person's name — one owner splitting one parcel, not
+ * a community. DeKalb is full of them ("ROBERT Q. CASSELS", "GARY E. &
+ * TERESAM. KENNEDY"). The tell is a middle initial: a letter, a full stop, a
+ * space. "N.DRUID WOODS" survives because its full stop has no space after
+ * it, which is the difference between an abbreviation and an initial.
+ */
+const A_PERSONS_NAME = /\b[A-Z]\.\s|^[A-Z]\.\s?[A-Z]\./;
+
+/**
+ * Phase and plat-ese suffixes, stripped off the END of a plat name.
+ *
+ * Owner, 2026-09-07: 「我不要期数」. Gwinnett keeps the phase in its own column,
+ * but DeKalb and Forsyth bury it in the name — "CREEK PARK HILLS UNIT 9",
+ * "Woodlands At Riverstone Plantation Phase 3" — and those are the same
+ * community as their other phases, not separate ones. `S/D`, `SUB` and the
+ * condominium suffixes are the recorder's vocabulary, not the buyer's:
+ * nobody says they live in Apple Valley Condominiums.
+ *
+ * Applied repeatedly and in both orders, because a name can carry two of
+ * them ("GLENLEAF A CONDOMINIUM PHASE 2").
+ */
+const SUFFIXES = [
+  // "UNIT 5", "SEC.3", "UNIT#1", "UNIT-1", "NO.9", "PHASE 4 & 5", "PH 2A" —
+  // the number is joined to the word by a space, a dot, a hash or a hyphen
+  // depending on who typed the plat in, and DeKalb alone has all four.
+  /\s*\b(?:UNITS?|PHASES?|PH|SECTIONS?|SEC|PODS?|PARCELS?|TRACTS?|REVISIONS?|REV|NO)\b[\s.#-]*[0-9IVX]+[A-Z]?(?:\s*(?:&|AND|-)\s*[0-9IVX]+[A-Z]?)*$/,
+  // "PHASES 1,2,3", "BLK2,3" — a list of phases, comma- or ampersand-joined,
+  // with or without a space before the number.
+  /\s*\b(?:PHASES?|UNITS?|BLKS?|BLOCKS?|SECTIONS?|LOTS?)\b[\s.#-]*[0-9]+(?:\s*[,&]\s*[0-9]+)*[A-Z]?$/,
+  /\s*#\s*[0-9]+$/,
+  // A bare trailing roman numeral is a phase everywhere in this data
+  // ("OAKS ON WOODLAWN II"); a lone "I" is not, so it is left out.
+  /\s+(?:II|III|IV|V|VI|VII|VIII|IX|X)$/,
+  /\s+(?:A\s+)?CONDOMINIUMS?(?:\s+ASSOC(?:IATION)?)?$/,
+  /\s+(?:SUBDIVISION|SUB)$/,
+  // Forsyth labels its pods with letters, not numbers ("POD S3 C"), and
+  // parenthesises the marketing name after them ("(SEVEN OAKS PHASE 2)").
+  /\s*\([^)]*\)$/,
+  /\s*\bPODS?\b\s*[A-Z0-9][A-Z0-9-]*(?:\s+[A-Z])?$/,
+  /\s*\/\s*(?:TWNHS|TH|SFR|CONDOS?)$/,
+];
+
+/**
+ * The plat name as a person would say it, or null if it names no home.
+ *
+ * Runs on the RAW name so the grouping key is the cleaned form — which is the
+ * point: "CREEK PARK HILLS UNIT 9" and "CREEK PARK HILLS UNIT 10" have to
+ * collapse into one community before their polygons are unioned.
+ */
+function cleanName(raw: string): string | null {
+  let s = normalize(raw);
+  if (!s || NOT_A_PLACE_TO_LIVE.test(s) || A_PERSONS_NAME.test(s)) return null;
+  // DeKalb writes "CREEK PARK HILLS S/D UNIT 5" — the recorder's abbreviation
+  // for "subdivision" sits in the middle, not at the end.
+  s = s
+    .replace(/\bS\s*\/\s*D\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  for (let pass = 0; pass < 5; pass++) {
+    const before = s;
+    // Plat names arrive with trailing debris — "GLYNBROOK UNIT 2,",
+    // "BRIARCLIFF WOODS EAST #6 &" — which has to come off before and after
+    // each suffix strip, or the suffix no longer sits at the end.
+    s = s.replace(/[\s,&.\-#]+$/, '');
+    for (const re of SUFFIXES) s = s.replace(re, '');
+    if (s === before) break;
+  }
+  s = s.trim();
+  // A name that was nothing but its suffix, or a bare plat-book reference.
+  return s.length < 3 ? null : s;
+}
 
 type Existing = {
   id: string;
@@ -283,14 +387,14 @@ async function main() {
     if (!f.geometry) continue;
     const raw = String(f.properties[layer.nameField] ?? '').trim();
     if (!raw) continue;
-    const key = normalize(raw);
-    if (NOT_A_PLACE_TO_LIVE.test(key)) {
-      commercial.add(key);
+    const key = cleanName(raw);
+    if (!key) {
+      commercial.add(normalize(raw));
       continue;
     }
     let g = groups.get(key);
     if (!g) {
-      g = { raw, phases: 0, polys: [] };
+      g = { raw: key, phases: 0, polys: [] };
       groups.set(key, g);
     }
     g.phases++;
@@ -301,7 +405,10 @@ async function main() {
   const existing = await fetchExisting(layer.county);
   const byName = new Map<string, Existing[]>();
   for (const e of existing) {
-    const key = normalize(e.name);
+    // Keyed on the CLEANED name so a row this importer wrote before the
+    // naming rules changed still matches the plat it came from, instead of
+    // being left behind as an orphan while a duplicate is inserted.
+    const key = cleanName(e.name) ?? normalize(e.name);
     const list = byName.get(key);
     if (list) list.push(e);
     else byName.set(key, [e]);
@@ -340,23 +447,52 @@ async function main() {
       sameName?.find((e) => e.source === 'county_gis') ??
       sameName?.find((e) => pointInPolygon(centroid.lng, centroid.lat, e.boundary));
     const name = titleCase(g.raw);
-    let slug = upgradeOf?.slug ?? slugify(name, { fallback: 'subdivision' });
-    if (!upgradeOf) {
-      let n = 2;
-      const base = slug;
-      while (usedSlugs.has(slug)) slug = `${base}-${n++}`;
+    const city = upgradeOf?.city ?? inside?.city ?? null;
+    // A numbered slug is a URL nobody can read (owner on `berkeley-park-2`,
+    // 2026-09-07). Subdivision names repeat across the metro — there is a
+    // Berkeley Park in two counties — so disambiguate with the place, which
+    // is the thing that actually differs, and keep the counter as a last
+    // resort for two of the same name in one town.
+    // A row this importer owns is re-derived in full, so a naming fix lands
+    // on the next run. An upgraded Nextdoor row keeps its slug: a shared
+    // /community/<slug> link points at it.
+    const ownRow = upgradeOf?.source === 'county_gis';
+    if (upgradeOf && ownRow) usedSlugs.delete(upgradeOf.slug);
+    let slug = ownRow ? undefined : upgradeOf?.slug;
+    if (!slug) {
+      const base = slugify(name, { fallback: 'subdivision' });
+      const tries = [
+        base,
+        city ? `${base}-${slugify(city)}` : '',
+        `${base}-${slugify(layer.county)}`,
+      ].filter(Boolean);
+      slug = tries.find((s) => !usedSlugs.has(s));
+      if (!slug) {
+        let n = 2;
+        const last = tries[tries.length - 1] as string;
+        slug = `${last}-${n}`;
+        while (usedSlugs.has(slug)) slug = `${last}-${++n}`;
+      }
       usedSlugs.add(slug);
     }
     plans.push({
       name,
       slug,
-      city: upgradeOf?.city ?? inside?.city ?? null,
+      city,
       phases: g.phases,
       centroid,
       boundary: { type: 'MultiPolygon', coordinates: g.polys },
       ...(upgradeOf ? { upgradeOf } : {}),
     });
   }
+
+  // Rows this importer owns that the layer no longer yields — a plat that was
+  // withdrawn, or (more often) a name the cleaning rules now reject. Left in
+  // place they would keep matching listings to a community with no plat behind
+  // it, so the import is declarative: after a run, this county's county_gis
+  // rows are exactly what the layer says.
+  const claimed = new Set(plans.map((p) => p.upgradeOf?.id).filter(Boolean));
+  const stale = existing.filter((e) => e.source === 'county_gis' && !claimed.has(e.id));
 
   const refreshes = plans.filter((p) => p.upgradeOf?.source === 'county_gis');
   const upgrades = plans.filter((p) => p.upgradeOf && p.upgradeOf.source !== 'county_gis');
@@ -370,6 +506,8 @@ async function main() {
   console.log(`  ${upgrades.length} upgrade an existing community in place (keeps its photo)`);
   console.log(`  ${inserts.length} are new rows`);
   if (refreshes.length) console.log(`  ${refreshes.length} refresh a row a previous run wrote`);
+  if (stale.length)
+    console.log(`  ${stale.length} rows a previous run wrote are no longer in the layer`);
   console.log(`  ${noCity} have no city — no existing polygon contains their centre`);
   console.log('\nupgrades, first 8:');
   for (const p of upgrades.slice(0, 8)) {
@@ -385,41 +523,85 @@ async function main() {
     return;
   }
 
-  let done = 0;
-  for (const p of plans) {
-    const row = {
-      name: p.name,
-      slug: p.slug,
-      city: p.city,
+  // One request per row is ~4 rows/second against PostgREST, which is hours
+  // for a county. Batch instead — but a batch must carry EVERY not-null
+  // column, because PostgREST turns a bulk upsert into one INSERT ... ON
+  // CONFLICT and the not-null check runs on the tuple before the conflict is
+  // resolved. A partial-column upsert fails even when every row exists.
+  //
+  // So an update carries the full row too, and the fields that must survive an
+  // upgrade — an existing community's name, slug, city and its `source`, which
+  // is what marks it as somebody else's row — are read back off the row rather
+  // than re-derived.
+  const rowOf = (p: Plan) => {
+    const e = p.upgradeOf;
+    const own = !e || e.source === 'county_gis';
+    return {
+      ...(e ? { id: e.id } : {}),
+      name: own ? p.name : e.name,
+      slug: own ? p.slug : e.slug,
+      city: own ? p.city : e.city,
       state: 'GA',
       county: layer.county,
       kind: 'subdivision',
       status: 'active',
-      source: 'county_gis',
+      source: e ? e.source : 'county_gis',
       boundary: p.boundary,
       boundary_source: 'arcgis',
       lat: p.centroid.lat,
       lng: p.centroid.lng,
     };
-    const { error } = p.upgradeOf
-      ? await sb
-          .from('communities')
-          .update({
-            kind: row.kind,
-            boundary: row.boundary,
-            boundary_source: row.boundary_source,
-            lat: row.lat,
-            lng: row.lng,
-          })
-          .eq('id', p.upgradeOf.id)
-      : await sb.from('communities').insert(row);
-    if (error) throw new Error(`${p.slug}: ${error.message}`);
-    done++;
-    if (done % 200 === 0) process.stderr.write(`\rwrote ${done}/${plans.length}`);
-  }
+  };
+  const updates = plans.filter((p) => p.upgradeOf).map(rowOf);
+  const fresh = inserts.map(rowOf);
+
+  let done = 0;
+  const total = updates.length + fresh.length;
+  const write = async (rows: object[], mode: 'upsert' | 'insert') => {
+    for (let i = 0; i < rows.length; i += 200) {
+      const chunk = rows.slice(i, i + 200);
+      const { error } =
+        mode === 'upsert'
+          ? await sb.from('communities').upsert(chunk)
+          : await sb.from('communities').insert(chunk);
+      if (error) throw new Error(`${mode} batch at ${i}: ${error.message}`);
+      done += chunk.length;
+      process.stderr.write(`\rwrote ${done}/${total}`);
+    }
+  };
+  await write(updates, 'upsert');
+  await write(fresh, 'insert');
   process.stderr.write('\n');
+
+  // Never delete a row a listing points at — that would null the listing's
+  // community. Deactivate it instead: `match_community` only considers active
+  // rows, so the next `relink-listings` moves the listing onto whichever plat
+  // replaced this one, and the run after that finds the row unheld and
+  // removes it. Two runs, no orphaned listing, nothing irreversible in
+  // between.
+  let removed = 0;
+  let parked = 0;
+  for (const e of stale) {
+    const { count } = await sb
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('community_id', e.id);
+    if (count && count > 0) {
+      const { error } = await sb.from('communities').update({ status: 'inactive' }).eq('id', e.id);
+      if (error) throw new Error(`deactivate ${e.slug}: ${error.message}`);
+      parked++;
+      console.log(
+        `  parked ${e.slug} — ${count} listing(s) still point at it; run relink then re-run`,
+      );
+      continue;
+    }
+    const { error } = await sb.from('communities').delete().eq('id', e.id);
+    if (error) throw new Error(`delete ${e.slug}: ${error.message}`);
+    removed++;
+  }
   console.log(
-    `${upgrades.length} upgraded, ${inserts.length} inserted, ${refreshes.length} refreshed.`,
+    `${upgrades.length} upgraded, ${inserts.length} inserted, ${refreshes.length} refreshed, ` +
+      `${removed} stale removed${parked ? `, ${parked} parked` : ''}.`,
   );
   console.log('Now re-run relink-listings.ts so listings move to the new polygons.');
 }

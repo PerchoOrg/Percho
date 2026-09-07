@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Subdivision coverage — Metro Atlanta</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="/demos/subdivision-coverage/data.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --border: rgba(11, 11, 11, 0.10);
+    --sub-fill: rgba(235, 104, 52, 0.32);
+    --sub-line: #c8471a;
+    --sub-swatch: #eb6834;
+    --status-good: #0ca30c;
+    --status-warn: #b8860b;
+    --dot: rgba(11, 11, 11, 0.40);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --border: rgba(255, 255, 255, 0.10);
+      --sub-fill: rgba(235, 104, 52, 0.34);
+      --sub-line: #f08050;
+      --dot: rgba(255, 255, 255, 0.40);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--text-primary); background: var(--page); display: flex;
+  }
+  #panel {
+    width: 350px; flex: none; overflow-y: auto;
+    background: var(--surface-1); border-right: 1px solid var(--border);
+    padding: 20px 18px 28px;
+  }
+  #map { flex: 1; min-width: 0; }
+  h1 { font-size: 17px; margin: 0 0 2px; }
+  .sub { color: var(--text-secondary); font-size: 12.5px; margin: 0 0 16px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+  .tile { border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; }
+  .tile .v { font-size: 21px; font-weight: 650; }
+  .tile .l { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+  h2 { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
+  .legend-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 12.5px; color: var(--text-secondary); }
+  .legend-row input { margin: 0; }
+  .sw { width: 14px; height: 14px; border-radius: 3px; flex: none; }
+  .sw.poly { background: var(--sub-fill); border: 1.5px solid var(--sub-line); }
+  .sw.dot { border-radius: 50%; width: 8px; height: 8px; margin: 0 3px; background: var(--dot); }
+  .pinled { width: 15px; height: 15px; border-radius: 50%; color: #fff; font-size: 10px; line-height: 15px; text-align: center; flex: none; font-weight: 700; }
+  .ramp { display: flex; height: 12px; border-radius: 3px; overflow: hidden; margin: 4px 0 2px; }
+  .ramp div { flex: 1; }
+  .ramp-labels { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; font-weight: 600; color: var(--muted); font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; padding: 4px 6px 4px 0; border-bottom: 1px solid var(--grid); }
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; padding-right: 0; }
+  td { padding: 3px 6px 3px 0; border-bottom: 1px solid var(--grid); color: var(--text-secondary); }
+  td:first-child { color: var(--text-primary); }
+  .note { font-size: 11.5px; color: var(--muted); margin-top: 14px; }
+  .maplibregl-popup-content {
+    font: 12.5px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--surface-1); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 11px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18); max-width: 250px;
+  }
+  .maplibregl-popup-tip { display: none; }
+  .pin {
+    width: 18px; height: 18px; border-radius: 50%;
+    color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
+    border: 2px solid var(--surface-1); box-shadow: 0 1px 4px rgba(0,0,0,0.35); cursor: default;
+  }
+  .pin.sq { border-radius: 4px; }
+  .hint { font-size: 11.5px; color: var(--muted); margin: 6px 0 0; }
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #panel { width: 100%; max-height: 45%; border-right: 0; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div id="panel">
+  <h1>Subdivision coverage</h1>
+  <p class="sub">Recorded-plat subdivisions imported from county GIS, against the Nextdoor neighbourhood seeds they supersede. Live <code>communities</code> table.</p>
+
+  <div class="tiles">
+    <div class="tile"><div class="v" id="t-sub">—</div><div class="l">subdivisions (plat)</div></div>
+    <div class="tile"><div class="v" id="t-nd">—</div><div class="l">neighbourhood seeds</div></div>
+    <div class="tile"><div class="v" id="t-counties">—</div><div class="l">counties with plats</div></div>
+    <div class="tile"><div class="v" id="t-listings">—</div><div class="l">listings inside one</div></div>
+  </div>
+  <p class="hint" id="hint"></p>
+
+  <h2>Counties — subdivisions per county</h2>
+  <div class="ramp" id="ramp"></div>
+  <div class="ramp-labels"><span>0</span><span>≤500</span><span>≤2k</span><span>≤3.5k</span><span>3.5k+</span></div>
+
+  <h2>Layers</h2>
+  <label class="legend-row"><input type="checkbox" id="ly-choro" checked /><span class="sw" id="sw-choro"></span> County choropleth</label>
+  <label class="legend-row"><input type="checkbox" id="ly-sub" checked /><span class="sw poly"></span> Subdivision plats</label>
+  <label class="legend-row"><input type="checkbox" id="ly-dots" /><span class="sw dot"></span> Neighbourhood seeds</label>
+  <label class="legend-row"><input type="checkbox" id="ly-listings" checked />
+    <span class="pinled" style="background: var(--status-good)">✓</span> listing in a plat
+    <span class="pinled sq" style="background: var(--status-warn); border-radius: 3px;">~</span> nearest / seed only
+  </label>
+
+  <h2>By county</h2>
+  <table id="county-table">
+    <thead><tr><th>County</th><th class="num">Plats</th><th class="num">Seeds</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <p class="note">Zoom in to read the plat shapes — every orange outline is one recorded subdivision, its phases already merged into one boundary. Hover any of them for the name we show a buyer.</p>
+</div>
+<div id="map"></div>
+
+<script>
+(function () {
+  const D = window.__SUBDIV__;
+  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  // Sequential single-hue ramp, light to dark — magnitude, not identity.
+  const RAMP = dark
+    ? ['#1e2a33', '#20415c', '#1f5c88', '#1c79b5', '#2e9fe0']
+    : ['#e8eef4', '#c3d7e8', '#8fb8d8', '#4f8ec1', '#1f6ba5'];
+  const STOPS = [0, 500, 2000, 3500];
+  function tier(n) {
+    let i = 0;
+    while (i < STOPS.length && n > STOPS[i]) i++;
+    return i;
+  }
+
+  document.getElementById('ramp').innerHTML =
+    RAMP.map((c) => '<div style="background:' + c + '"></div>').join('');
+  document.getElementById('sw-choro').style.background = RAMP[3];
+
+  const counties = D.counties.features;
+  const totalSubs = D.totals.subdivisions;
+  const withPlats = counties.filter((f) => f.properties.subs > 0).length;
+  const inPlat = D.listings.filter((l) => l.m === 'boundary' && l.inPlat).length;
+
+  document.getElementById('t-sub').textContent = totalSubs.toLocaleString();
+  document.getElementById('t-nd').textContent = D.totals.neighborhoods.toLocaleString();
+  document.getElementById('t-counties').textContent = withPlats;
+  document.getElementById('t-listings').textContent = inPlat + ' / ' + D.listings.length;
+  document.getElementById('hint').textContent =
+    D.totals.dropped > 0
+      ? D.totals.dropped + ' plats had geometry too small to draw at this simplification and are not shown.'
+      : '';
+
+  const tbody = document.querySelector('#county-table tbody');
+  counties
+    .slice()
+    .sort((a, b) => b.properties.subs - a.properties.subs || b.properties.nd - a.properties.nd)
+    .forEach((f) => {
+      const p = f.properties;
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + p.name + '</td><td class="num">' +
+        (p.subs ? p.subs.toLocaleString() : '—') +
+        '</td><td class="num">' + p.nd.toLocaleString() + '</td>';
+      tbody.appendChild(tr);
+    });
+
+  for (const f of counties) f.properties.tier = tier(f.properties.subs);
+
+  const map = new maplibregl.Map({
+    container: 'map',
+    style: dark
+      ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+      : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+    center: [-84.32, 33.88],
+    zoom: 8.4,
+    preserveDrawingBuffer: true,
+  });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+
+  const pop = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
+
+  map.on('load', () => {
+    map.addSource('counties', { type: 'geojson', data: D.counties });
+    map.addLayer({
+      id: 'county-fill',
+      type: 'fill',
+      source: 'counties',
+      paint: {
+        'fill-color': ['at', ['get', 'tier'], ['literal', RAMP]],
+        'fill-opacity': 0.55,
+      },
+    });
+    map.addLayer({
+      id: 'county-line',
+      type: 'line',
+      source: 'counties',
+      paint: {
+        'line-color': dark ? 'rgba(255,255,255,0.35)' : 'rgba(11,11,11,0.30)',
+        'line-width': 1,
+      },
+    });
+
+    map.addSource('seeds', {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: D.nextdoorPoints.map((c) => ({
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'Point', coordinates: c },
+        })),
+      },
+    });
+    map.addLayer({
+      id: 'seed-dots',
+      type: 'circle',
+      source: 'seeds',
+      layout: { visibility: 'none' },
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 1.3, 12, 3.4],
+        'circle-color': dark ? 'rgba(255,255,255,0.45)' : 'rgba(11,11,11,0.45)',
+      },
+    });
+
+    map.addSource('subs', { type: 'geojson', data: D.subdivisions });
+    map.addLayer({
+      id: 'sub-fill',
+      type: 'fill',
+      source: 'subs',
+      paint: {
+        'fill-color': dark ? '#eb6834' : '#eb6834',
+        'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.22, 12, 0.34],
+      },
+    });
+    map.addLayer({
+      id: 'sub-line',
+      type: 'line',
+      source: 'subs',
+      paint: {
+        'line-color': dark ? '#f08050' : '#c8471a',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.3, 13, 1.4],
+      },
+    });
+
+    for (const l of D.listings) {
+      const el = document.createElement('div');
+      const good = l.inPlat;
+      el.className = 'pin' + (good ? '' : ' sq');
+      el.style.background = good ? 'var(--status-good)' : 'var(--status-warn)';
+      el.textContent = good ? '✓' : '~';
+      el.title = l.a;
+      const html =
+        '<strong>' + l.a + '</strong><br>' + l.c + '<br>' +
+        (l.cn ? '→ ' + l.cn : 'no community') +
+        (l.m === 'nearest' ? ' <em>(nearest, ' + l.d + ' m)</em>' : '');
+      const m = new maplibregl.Marker({ element: el }).setLngLat(l.ll).addTo(map);
+      el.addEventListener('mouseenter', () => pop.setLngLat(l.ll).setHTML(html).addTo(map));
+      el.addEventListener('mouseleave', () => pop.remove());
+      m.getElement().dataset.listing = '1';
+    }
+
+    map.on('mousemove', 'sub-fill', (e) => {
+      const p = e.features && e.features[0] && e.features[0].properties;
+      if (!p) return;
+      map.getCanvas().style.cursor = 'default';
+      pop
+        .setLngLat(e.lngLat)
+        .setHTML(
+          '<strong>' + p.n + '</strong><br>' +
+            (p.c ? p.c + ', ' : '') + p.co + ' County<br>' +
+            (p.g ? 'recorded plat' : 'seed, upgraded to plat') +
+            (p.p ? ' · has a photo' : ' · no photo yet'),
+        )
+        .addTo(map);
+    });
+    map.on('mouseleave', 'sub-fill', () => {
+      map.getCanvas().style.cursor = '';
+      pop.remove();
+    });
+
+    map.on('mousemove', 'county-fill', (e) => {
+      if (map.queryRenderedFeatures(e.point, { layers: ['sub-fill'] }).length) return;
+      const p = e.features && e.features[0] && e.features[0].properties;
+      if (!p) return;
+      pop
+        .setLngLat(e.lngLat)
+        .setHTML(
+          '<strong>' + p.name + ' County</strong><br>' +
+            p.subs.toLocaleString() + ' plat subdivisions<br>' +
+            p.nd.toLocaleString() + ' neighbourhood seeds',
+        )
+        .addTo(map);
+    });
+    map.on('mouseleave', 'county-fill', () => pop.remove());
+
+    const toggle = (id, layers) => {
+      document.getElementById(id).addEventListener('change', (ev) => {
+        for (const l of layers) {
+          map.setLayoutProperty(l, 'visibility', ev.target.checked ? 'visible' : 'none');
+        }
+      });
+    };
+    toggle('ly-choro', ['county-fill', 'county-line']);
+    toggle('ly-sub', ['sub-fill', 'sub-line']);
+    toggle('ly-dots', ['seed-dots']);
+    document.getElementById('ly-listings').addEventListener('change', (ev) => {
+      for (const el of document.querySelectorAll('[data-listing]')) {
+        el.style.display = ev.target.checked ? '' : 'none';
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
