@@ -4,8 +4,9 @@
  * Until phase189 the matcher only ran when an agent saved an address in the
  * dashboard, and it only saw the first 1,000 of 8,679 communities — so most
  * listings never got a community_id. This calls `match_community(lat, lng)`
- * (containing polygon, subdivision first; else nearest) for each listing and
- * writes community_id + community_match + community_distance_m.
+ * (containing polygon, subdivision first; else nearest within 250 m) for
+ * each listing and writes community_id + community_match + community_distance_m
+ * — null when the point is in no community.
  *
  * Listings whose community_match is 'manual' (the agent picked from the
  * dropdown) are reported but never overwritten.
@@ -89,24 +90,27 @@ async function main() {
   let changed = 0;
   let manual = 0;
   let nearest = 0;
+  let none = 0;
   for (const l of listings as Listing[]) {
     const { data, error } = await sb.rpc('match_community', { p_lat: l.lat, p_lng: l.lng });
     if (error) throw new Error(`match_community: ${error.message}`);
     const m = data?.[0];
     const before = await nameOf(l.community_id);
     const label = `${l.address}, ${l.city}`.padEnd(48);
-    if (!m) {
-      console.log(`${label} ${before} → (no community at all)`);
-      continue;
-    }
-    const after = `${m.slug} [${m.match}${m.match === 'nearest' ? ` ${m.distance_m} m` : ''}]`;
-    if (m.match === 'nearest') nearest++;
+    // No polygon contains the point and nothing is within the RPC's 250 m
+    // cap: the listing is in no community, so a stale auto-link is cleared.
+    const after = m
+      ? `${m.slug} [${m.match}${m.match === 'nearest' ? ` ${m.distance_m} m` : ''}]`
+      : '— (no community within 250 m)';
+    if (m?.match === 'nearest') nearest++;
+    if (!m) none++;
     if (l.community_match === 'manual') {
       manual++;
       console.log(`${label} ${before} (manual, kept) — matcher says ${after}`);
       continue;
     }
-    const same = l.community_id === m.community_id && l.community_match === m.match;
+    const same =
+      l.community_id === (m?.community_id ?? null) && l.community_match === (m?.match ?? null);
     console.log(`${label} ${before} → ${after}${same ? ' (unchanged)' : ''}`);
     if (same) continue;
     changed++;
@@ -114,9 +118,9 @@ async function main() {
     const { error: upErr } = await sb
       .from('listings')
       .update({
-        community_id: m.community_id,
-        community_match: m.match,
-        community_distance_m: m.distance_m,
+        community_id: m?.community_id ?? null,
+        community_match: m?.match ?? null,
+        community_distance_m: m?.distance_m ?? null,
       })
       .eq('id', l.id);
     if (upErr) throw new Error(`update ${l.id}: ${upErr.message}`);
@@ -124,7 +128,7 @@ async function main() {
 
   console.log(
     `\n${listings.length} listings with coordinates · ${changed} ${APPLY ? 'updated' : 'would change'} · ` +
-      `${nearest} on the nearest-community fallback · ${manual} manual picks kept`,
+      `${nearest} on the nearest-community fallback · ${none} in no community · ${manual} manual picks kept`,
   );
   if (!APPLY) console.log('--- dry run, nothing written ---');
 }

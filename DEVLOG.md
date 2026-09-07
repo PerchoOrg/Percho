@@ -21,6 +21,31 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-07 20:15 UTC — phase189.1: the nearest fallback stops at 250 m
+
+**Objective**: owner, on reading phase189: "nearest always finds something —
+set a distance; past it, don't link, or the data is wrong."
+
+**Actions**: `match_community` (same migration file, still unapplied, so
+edited in place — no second migration) filters the nearest pass with
+`st_dwithin(…, 250)`; past 250 m the RPC returns no row and
+`findCommunityForPoint` returns null, so the listing stays unlinked.
+`relink-listings.ts` now clears a stale non-manual link when the RPC
+returns nothing (reports "no community within 250 m"), and counts them.
+Doc comments in the migration and `find-community.ts` no longer claim
+"always returns a community".
+
+**Decisions**: 250 m. Measured against production first: 16/18 listings
+are inside a polygon outright, and the two that are not sit **1 m** and
+**13 m** outside an edge — Nextdoor polygons are hand-drawn and leave
+slivers along roads. 250 m (a block or two) absorbs that drawing error
+without linking a house in open country; a point in the middle of Lake
+Lanier is 830 m from its nearest community and correctly gets nothing.
+The number is a literal in the RPC; change it there.
+
+**Next steps**: unchanged — owner runs `pnpm db:push`, then
+`relink-listings.ts` dry-run → `--apply`.
+
 ## 2026-09-07 20:10 UTC — phase189: community matching in PostGIS, every listing gets a community
 
 **Objective**: owner green-lit the phase188 proposals with one rule —
