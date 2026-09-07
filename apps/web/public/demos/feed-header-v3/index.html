@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — above-card header v3 · the name and Map on one line</title>
+<style>
+@font-face{font-family:DMSerif;src:url("DMSerifDisplay-Regular.ttf") format("truetype");font-display:block}
+:root{
+  --bg:#F7F5F0; --ink:#181D1A; --ctx:#6B726D; --green:#08685D;
+  --mint:#E0E9E3; --serif:DMSerif,Georgia,serif;
+  --ui:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:22px 22px 60px}
+.nav{max-width:1320px;margin:0 auto 10px}
+.nav h1{font:600 23px var(--ui);color:#086B5B;margin-bottom:7px}
+.nav p{max-width:960px;font:400 14px/1.65 var(--ui);color:#5A4E40;margin:6px 0}
+.nav b{color:#2B2116}
+.ask{max-width:960px;margin-top:14px;padding:13px 16px;background:#EFEAE0;
+  border-left:3px solid #086B5B;border-radius:4px}
+.ask li{font:400 13.5px/1.75 var(--ui);color:#3E362C;margin-left:18px}
+h2{max-width:1320px;margin:38px auto 10px;font:600 17px var(--ui);color:#2B2116;
+  border-top:1px solid rgba(43,33,22,.14);padding-top:16px}
+h2 span{font:400 13.5px var(--ui);color:#6F6B65;margin-left:8px}
+.gallery{max-width:1320px;margin:0 auto;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+.frame{background:#E7E2D8;border-radius:16px;padding:12px}
+.unit + .unit{margin-top:12px}
+.geo{padding:5px 2px 0;font:500 11px/1.4 var(--ui);color:#8A7358}
+.cap{padding:10px 3px 2px;font:600 14px/1.4 var(--ui);max-width:428px}
+.cap small{display:block;font:400 12.5px/1.55 var(--ui);color:#6F6B65;margin-top:5px}
+.cap em{font-style:normal;color:#086B5B;font-weight:600}
+.cap u{text-decoration:none;color:#B3402A;font-weight:600}
+
+/* ── the phone ─────────────────────────────────────────────── */
+.phone{position:relative;background:var(--bg);overflow:hidden;border-radius:42px;
+  box-shadow:0 14px 34px rgba(0,0,0,.22)}
+.status{position:absolute;left:0;top:0;width:100%;overflow:hidden}
+.status img{width:100%;display:block}
+.tabimg{position:absolute;left:0;bottom:0;width:100%;display:block}
+.card{position:absolute;border-radius:28px;overflow:hidden;background-color:#EFE9DE;
+  background-repeat:no-repeat;
+  box-shadow:0 3px 10px rgba(32,28,22,.05),0 16px 38px rgba(32,28,22,.085)}
+/* Two kinds of placeholder art. `photo` is a bare photograph filling the card
+   the way a film would (used wherever the card's own chrome would contradict
+   the header, e.g. a HOME TOUR frame); `render` is a real screenshot of a
+   community card, which only belongs under a COMMUNITY TOUR header. The card
+   is not what is under review here either way. */
+.card.photo{background-size:cover;background-position:center}
+.card.render{background-size:100% 100%;background-position:center}
+.band{position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:center;
+  font:600 10.5px var(--ui);color:#B45309}
+.band i{position:absolute;left:20px;right:20px;height:1px;background:currentColor;opacity:.28}
+.band span{position:relative;background:var(--bg);padding:0 7px}
+
+/* ── the header under test ─────────────────────────────────── */
+/* Every number is × --k, so one frame can be the redline's absolute sizes
+   (k = 1) and the next the same picture scaled to its own screen (k = W/390). */
+.hdr{position:absolute;left:0;right:0;padding:0 calc(24px * var(--k))}
+.ctx{min-height:calc(18px * var(--k));display:flex;align-items:center;
+  font:400 calc(13px * var(--k))/calc(18px * var(--k)) var(--ui);color:var(--ctx);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.main{min-height:calc(44px * var(--k));margin-top:calc(4px * var(--k));display:flex;align-items:center}
+.name{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font:400 calc(36px * var(--k))/calc(42px * var(--k)) var(--serif);color:var(--ink)}
+.chev{flex:0 0 auto;width:calc(14px * var(--k));height:calc(14px * var(--k));
+  margin-left:calc(6px * var(--k));display:flex;align-items:center;justify-content:center}
+.chev i{display:block;width:calc(9px * var(--k));height:calc(9px * var(--k));
+  border-top:calc(1.5px * var(--k)) solid var(--ctx);
+  border-right:calc(1.5px * var(--k)) solid var(--ctx);transform:rotate(45deg)}
+.grow{flex:1 1 auto}
+.map{flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+  gap:calc(6px * var(--k));margin-left:calc(12px * var(--k));
+  min-width:calc(84px * var(--k));height:calc(44px * var(--k));padding:0 calc(12px * var(--k));
+  border-radius:calc(22px * var(--k));background:var(--mint)}
+.map b{font:600 calc(14px * var(--k))/1 var(--ui);color:var(--green)}
+/* the pin: one box, three corners at 50%, the fourth sharp, turned 45° */
+.pin{position:relative;flex:0 0 auto;width:calc(18px * var(--k));height:calc(21.7px * var(--k))}
+.pin u{position:absolute;left:0;top:0;width:calc(18px * var(--k));height:calc(18px * var(--k));
+  border:calc(1.75px * var(--k)) solid var(--green);
+  border-radius:calc(9px * var(--k)) calc(9px * var(--k)) 0 calc(9px * var(--k));
+  transform:rotate(45deg)}
+.pin s{position:absolute;left:calc(6.75px * var(--k));top:calc(6.75px * var(--k));
+  width:calc(4.5px * var(--k));height:calc(4.5px * var(--k));border-radius:50%;background:var(--green)}
+.type{min-height:calc(16px * var(--k));margin-top:calc(4px * var(--k));display:flex;align-items:center;
+  font:600 calc(11px * var(--k))/calc(16px * var(--k)) var(--ui);
+  letter-spacing:calc(1px * var(--k));color:var(--green)}
+/* option C — the pill drawn at the text line's height, tap target kept at 44 */
+.hdr.tight .map{height:calc(38px * var(--k));border-radius:calc(19px * var(--k));
+  min-width:calc(80px * var(--k))}
+
+/* ── a trade-off card, since there is no photo of one ──────── */
+.tocard{display:flex;flex-direction:column;align-items:center;padding:26px 14px;
+  background-color:#F7F6F2}
+.tocard h3{font:400 25px/1.15 var(--serif);color:#181D1A;text-align:center;max-width:215px}
+.doors{display:flex;gap:11px;margin-top:20px}
+.door{width:128px;border-radius:15px;overflow:hidden;background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.door u{display:block;height:132px;background:#E4DED4}
+.door span{display:block;padding:9px 6px;font:600 12.5px var(--ui);color:#2B2116;text-align:center}
+.skips{display:flex;gap:9px;margin-top:15px}
+.skips b{padding:9px 15px;border-radius:999px;background:#fff;
+  border:1px solid rgba(23,23,21,.10);font:600 12px var(--ui);color:#5A5550}
+</style>
+</head>
+<body>
+<div class="nav">
+  <h1>Above-card header v3 — the name and Map as one line</h1>
+  <p>Settled, and not in question here: line one is <b>area › city</b>, line two is the
+     <b>community</b>, line three is the card type. A home with no community on its row shows its
+     <b>city</b> on line two until the backfill lands — every frame marked <em>city fallback</em> is
+     that case, and it is most homes today. The card, its media crop, its controls and the tab bar
+     are untouched.</p>
+  <p>These are real geometry, not drawings. Each phone is its own logical size, the header's height is
+     <b>measured</b> after it renders, then the card is dropped 16 pt below it at the film's own shape
+     (1080×1576) and the leftover paper is split evenly above and below — the same three rules the app
+     uses. The amber lines report the real leftover; the grey line under each phone reports the real
+     numbers. The serif is the app's own DM Serif Display. Card art is a placeholder — a bare
+     photograph where a film would play — except on the community-tour frame, which is a real
+     screenshot of that card; the trade-off card is drawn.</p>
+  <div class="ask">
+    <b>Three things to approve, or send back:</b>
+    <li>1 · <b>How Map sits beside the name</b> — A, B or C in row 1. Each is shown with a long
+        community name and with the short city fallback, because that is where they differ.</li>
+    <li>2 · <b>The room above “Atlanta metro”</b> — 8, 12 or 16 pt in row 2.</li>
+    <li>3 · <b>Whether the header scales with the screen</b> — row 3. Fixed keeps 36 pt everywhere;
+        scaled keeps this demo's <i>proportions</i> everywhere.</li>
+  </div>
+</div>
+
+<h2>1 · Where the Map button sits <span>iPhone 15 Pro Max · 428 × 926 · your phone · 12 pt above · fixed type</span></h2>
+<div class="gallery" id="row1"></div>
+
+<h2>2 · How much room above the area line <span>428 · option A · fixed type</span></h2>
+<div class="gallery" id="row2"></div>
+
+<h2>3 · The same header on three screens <span>option A · 12 pt above</span></h2>
+<div class="gallery" id="row3"></div>
+
+<h2>4 · Every state the feed can show <span>428 · option A · 12 pt above · fixed type</span></h2>
+<div class="gallery" id="row4"></div>
+
+<script>
+/* ── devices: width, height, safe top. Tab bar is 62 + a 34 bottom inset. */
+const DEVICES = {
+  mini: {name:'iPhone 13 mini',     W:375, H:812, top:50},
+  std:  {name:'iPhone 14 / 15',     W:390, H:844, top:47},
+  max:  {name:'iPhone 15 Pro Max',  W:428, H:926, top:47},
+};
+const TAB = 62, BOTTOM = 34, GAP = 16, GUTTER = 16;
+const FILM = 1080/1576;                       // 0.685 — the tour canvas
+/* A rendered community card (its own chrome included), and two bare
+   photographs standing in for a film. */
+const CARD_RENDER = '/demos/feed-page-v2/card.jpg';
+const COVERS = 'https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/';
+const HOME_ART = COVERS + 'ashley-crossing.jpg';
+
+const PIN = '<span class="pin"><u></u><s></s></span>';
+const MAP = `<div class="map">${PIN}<b>Map</b></div>`;
+const CHEV = '<span class="chev"><i></i></span>';
+
+/* One header. `map:false` drops the button (a general trade-off has no place
+   to show it for); `chev:false` drops the title chevron (a city has no
+   overview page to open). `right:true` pins Map to the header's right edge. */
+function header(o){
+  const k = o.k || 1;
+  return `<div class="hdr ${o.tight ? 'tight' : ''}" style="--k:${k};top:${o.dev.top}px;padding-top:${(o.pad ?? 12) * k}px">
+    <div class="ctx">${o.ctx || '&nbsp;'}</div>
+    <div class="main">
+      <div class="name">${o.name}</div>
+      ${o.chev === false ? '' : CHEV}
+      ${o.right ? '<div class="grow"></div>' : ''}
+      ${o.map === false ? '' : MAP}
+    </div>
+    <div class="type">${o.type || ''}</div>
+  </div>`;
+}
+
+const TRADEOFF_CARD = `<h3>Which would you prioritize?</h3>
+  <div class="doors">
+    <div class="door"><u></u><span>More living space</span></div>
+    <div class="door"><u></u><span>A shorter commute</span></div>
+  </div>
+  <div class="skips"><b>It depends</b><b>Skip for now</b></div>`;
+
+/* `tradeoff:true` → the drawn card. `render:true` → the art is a screenshot of
+   a card and is laid in whole; otherwise the art is a bare photograph and
+   fills the frame the way a film does. */
+function phone(o){
+  const d = o.dev;
+  const card = o.tradeoff
+    ? `<div class="card tocard">${TRADEOFF_CARD}</div>`
+    : `<div class="card ${o.render ? 'render' : 'photo'}" style="background-image:url('${o.art || HOME_ART}')"></div>`;
+  return `<div class="unit">
+    <div class="phone" data-dev="${o.devKey}" style="width:${d.W}px;height:${d.H}px">
+      <div class="status" style="height:${d.top}px"><img src="/demos/feed-page-v2/header.png"></div>
+      ${header(o)}
+      ${card}
+      <img class="tabimg" src="/demos/feed-page-v2/tabbar.png">
+    </div>
+    <div class="geo"></div>
+  </div>`;
+}
+
+/** One card in the gallery: one or more phones, then the caption. */
+function frame(phones, cap, zoom){
+  return `<div class="frame" style="${zoom ? `zoom:${zoom}` : ''}">
+    ${phones.map(phone).join('')}
+    <div class="cap">${cap}</div>
+  </div>`;
+}
+
+/* The card's box is computed, never typed — measure the header, drop 16,
+   take the film's shape unless the stage is too short, split what is left.
+   (`theme/card-frame.ts` + `SwipeStack`'s centred restTop.) */
+function place(){
+  document.querySelectorAll('.phone').forEach(p => {
+    const d = DEVICES[p.dataset.dev];
+    const z = parseFloat(p.closest('.frame').style.zoom) || 1;
+    const hdr = p.querySelector('.hdr'), card = p.querySelector('.card');
+    const hdrH = hdr.getBoundingClientRect().height / z;
+    const cardW = d.W - GUTTER * 2;
+    const stage = d.H - d.top - hdrH - GAP * 2 - (TAB + BOTTOM);
+    const cardH = Math.min(stage, cardW / FILM);
+    const slack = stage - cardH;
+    const top = d.top + hdrH + GAP + slack / 2;
+    Object.assign(card.style,
+      {left: GUTTER + 'px', width: cardW + 'px', height: cardH + 'px', top: top + 'px'});
+
+    p.querySelectorAll('.band').forEach(b => b.remove());
+    if (slack / 2 > 12) {
+      const label = Math.round(slack / 2) + ' pt';
+      p.insertAdjacentHTML('beforeend',
+        `<div class="band" style="top:${d.top + hdrH + GAP}px;height:${slack / 2}px"><i></i><span>${label}</span></div>` +
+        `<div class="band" style="top:${top + cardH}px;height:${slack / 2}px"><i></i><span>${label}</span></div>`);
+    }
+    const crop = cardW / cardH > FILM ? (1 - FILM / (cardW / cardH)) * 100 : 0;
+    p.parentElement.querySelector('.geo').textContent =
+      `${d.W}×${d.H} · header ${hdrH.toFixed(0)} · card ${cardW}×${cardH.toFixed(0)}` +
+      (crop > 0.5 ? ` · film cropped ${crop.toFixed(1)}%` : ' · film whole');
+  });
+}
+
+/* ── the two names every option is judged on ────────────────── */
+const LONG  = {ctx:'Atlanta metro › Canton', name:'River Green', type:'HOME TOUR'};
+const SHORT = {ctx:'Atlanta metro', name:'Canton', chev:false, type:'HOME TOUR'};
+const MAXD  = {dev:DEVICES.max, devKey:'max'};
+
+document.getElementById('row1').innerHTML = [
+  frame([{...LONG, ...MAXD}, {...SHORT, ...MAXD}],
+    `A · Map follows the name <em>(my recommendation)</em>
+     <small>Name, chevron, then the pill 12 pt later — one object, read left to right. The second
+     phone is why: on the city fallback the button stays beside the word it belongs to instead of
+     sailing off to the far edge.</small>`, 0.72),
+  frame([{...LONG, ...MAXD, right:true}, {...SHORT, ...MAXD, right:true}],
+    `B · Map pinned to the right edge <u>(what is on your phone now)</u>
+     <small>What the redline sheet drew. It reads as one line while the name is long — the top phone
+     is nearly identical to A — and falls apart on the short one: ~150 pt of nothing between the city
+     and the button. That is the “two unrelated parts” you saw.</small>`, 0.72),
+  frame([{...LONG, ...MAXD, tight:true}, {...SHORT, ...MAXD, tight:true}],
+    `C · Follows the name, pill at the text line's height
+     <small>38 pt tall instead of 44, so it sits inside the line rather than beside it; the tap target
+     stays 44 with invisible padding. The quietest of the three, and the least obviously a
+     button.</small>`, 0.72),
+].join('');
+
+document.getElementById('row2').innerHTML = [8, 12, 16].map(pad =>
+  frame([{...LONG, ...MAXD, pad}],
+    `${pad} pt above “Atlanta metro”${pad === 12 ? ' <em>(my recommendation)</em>' : ''}
+     <small>${pad === 8 ? 'Tightest — the line clears the status bar and no more.'
+       : pad === 12 ? 'A clear breath that still reads as one block with the name under it.'
+       : 'Roomiest; at this point the gap starts reading as a band of its own.'}
+     Every point spent here comes out of the paper around the card, not out of the card.</small>`,
+    0.72)).join('');
+
+document.getElementById('row3').innerHTML =
+  ['mini','std','max'].map(key => {
+    const d = DEVICES[key];
+    return frame([{...LONG, dev:d, devKey:key}],
+      `${d.name} · <b>fixed</b>
+       <small>${d.W} pt wide, title 36, pill 84×44. Absolute sizes everywhere, so on the narrow phone
+       the name and button take a bigger share of the row than they do on yours.</small>`, 0.72);
+  }).concat(['mini','std','max'].map(key => {
+    const d = DEVICES[key], k = +(d.W / 390).toFixed(3);
+    return frame([{...LONG, dev:d, devKey:key, k}],
+      `${d.name} · <b>scaled ×${k}</b>
+       <small>Title ${(36 * k).toFixed(1)}, pill ${(84 * k).toFixed(0)}×${(44 * k).toFixed(0)}, every
+       gap and inset multiplied too — the same picture at three sizes. Costs the narrow phone a little
+       card height and gives yours a little back.</small>`, 0.72);
+  })).join('');
+
+document.getElementById('row4').innerHTML = [
+  frame([{...LONG, ...MAXD}],
+    `Home tour, community known
+     <small>The card already says which house this is; the header says where it sits. The name opens
+     River Green's page, Map opens the map on it.</small>`, 0.72),
+  frame([{...SHORT, ...MAXD}],
+    `Home tour, <em>city fallback</em> — today's common case
+     <small>No community on the row, so the city takes line two and line one keeps the area alone. No
+     chevron, because there is no city page to open; Map still works.</small>`, 0.72),
+  frame([{ctx:'Atlanta metro › Canton', name:'Canton', chev:false, type:'HOME TOUR', ...MAXD}],
+    `The other way to spell the fallback <u>— I would not ship this</u>
+     <small>If line one must always read “area › city”, this is what happens when line two has to
+     borrow the same word: Canton, twice, 20 pt apart.</small>`, 0.72),
+  frame([{ctx:'Atlanta metro › Johns Creek', name:'Bellmoore Park', type:'COMMUNITY TOUR',
+          art:CARD_RENDER, render:true, ...MAXD}],
+    `Community tour
+     <small>Same three rows, same geometry, and the card below is the community's own film. Fourteen
+     characters still leaves the pill its full width.</small>`, 0.72),
+  frame([{ctx:'Your preferences', name:'Find your balance', chev:false, map:false,
+          type:'TRADE-OFF', tradeoff:true, ...MAXD}],
+    `General trade-off — no place, no Map
+     <small>No location is invented and nothing replaces the missing button. The row keeps its 44 pt
+     so the card does not move, and the title gets the whole width.</small>`, 0.72),
+  frame([{ctx:'Atlanta metro › Peachtree Corners', name:'Amberfield at Peachtree', type:'HOME TOUR',
+          ...MAXD}],
+    `A name that does not fit
+     <small>The name gives up its tail before the button gives up a point of width — the pill and the
+     chevron are laid out first. If you would rather it shrank the type instead, say so and it
+     shrinks.</small>`, 0.72),
+].join('');
+
+document.fonts.ready.then(place);
+window.addEventListener('resize', place);
+</script>
+</body>
+</html>

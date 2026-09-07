@@ -21,6 +21,66 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-07 04:40 UTC — phase183.2: a demo for the header's three open questions (no app change)
+
+**Objective**: owner, after phase183.1: 「community name和map占的比例参考demo 如果
+需要可以等比例放大一些在不同的设备上 map button应该和community name在同一行呼应
+而不是不相干的两个部分display 给我做个demo看看我批准后再实现在ios上」 — plus a
+restatement of the content rule (line 1 area › city, line 2 community, city as
+the stand-in until the backfill) and 「area和city上面有些空间 不是完全顶头 但是也
+不要太大」.
+
+**Actions**: `apps/web/public/demos/feed-header-v3/index.html` (+ a copy of
+DM Serif Display, the folder convention). **No `apps/mobile` change** — he
+asked to approve first.
+
+The page is not a drawing. Each phone is its own logical size, the header's
+height is MEASURED after it renders, the card is dropped 16pt under it at the
+film's own shape and the leftover paper is split evenly — `card-frame.ts` +
+`SwipeStack`'s `restTop`, reimplemented in ~20 lines of JS — and every frame
+prints its real numbers (`428×926 · header 98 · card 396×578 · film whole`).
+That is the same trick `feed-header-v2` used and it is why the demo can be
+trusted about geometry rather than only about looks.
+
+**The three questions it asks**:
+1. **Where Map sits.** A: it follows the name (12pt after the chevron, one
+   left-to-right object). B: pinned to the header's right edge — what the
+   redline sheet drew and what is on his phone. C: follows the name with the
+   pill drawn at 38 instead of 44 so it sits inside the text line. Each is
+   shown twice, with "River Green" and with the bare "Canton", because that
+   is the whole point: with a long name A and B are nearly identical, and on
+   the CITY FALLBACK — most homes today — B leaves ~150pt of nothing between
+   the word and the button. That gap is the 「不相干的两个部分」 he reported.
+   Recommending A.
+2. **Room above the area line**: 8 / 12 / 16. Recommending 12. Every point
+   comes out of the paper around the card, not out of the card.
+3. **Fixed vs scaled type**: 36pt everywhere, or every header number × screen
+   ÷ 390 so the proportions hold on the mini and the Max. His 「等比例放大」
+   is the second; shown on 375 / 390 / 428 both ways.
+
+Row 4 draws every state the feed can actually produce, including the two ways
+to spell the city fallback (line 1 area alone, vs line 1 keeping "› Canton"
+and line 2 repeating it — the second is on the page precisely so he can
+reject it), the trade-off with no Map, and a name too long to fit.
+
+**Decisions / learnings**: card art in a header demo has to be a BARE
+photograph. The first pass reused `feed-page-v2/card.jpg`, which is a
+screenshot of a community card — so a frame captioned HOME TOUR had
+"COMMUNITY / Aberdeen" burned into the art under it, and cropping past the
+foot clipped the card's own place pill. A raw community cover from Storage
+fills the frame the way a film does and says nothing.
+
+**Verification**: rendered headless at 1400×6200 and read back row by row —
+the header clears the status bar (the first pass had `.hdr` with no `top` and
+it landed on the clock), the amber slack bands and per-frame numbers agree
+with `theme/card-aspect.test.ts`'s model, and the SE-class mini still draws
+the film whole at header 98.
+
+**Next steps**: he picks 1/2/3 (or sends them back), then it is a small edit
+to `components/feed/FeedHeader.tsx`: option A is dropping the `flex: 1` from
+the title slot, the top space is one `paddingTop`, and scaling is one factor
+applied to the header's constants from `useWindowDimensions`.
+
 ## 2026-09-07 04:05 UTC — phase183.1: the header measured off the demo, not off the table
 
 **Objective**: owner on phase183: 「The content is there but layout and size
