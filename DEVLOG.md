@@ -16,6 +16,63 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-07 05:10 UTC — phase183.3: the header's five decisions, and the final demo for them
+
+**Objective**: owner picked from `/demos/feed-header-v3` and asked for a final
+demo of the three card types before anything lands on iOS.
+
+**His decisions, verbatim** (these are the spec now):
+1. 「Map follows the name (my recommendation)」 — option A. The pill sits 12pt
+   after the chevron at any name length; it is no longer pinned to the right
+   edge.
+2. 「for home tour without community, show city twice for now」 — line one
+   keeps `area › city` and line two borrows the same city until the community
+   backfill lands. This REVERSES phase183's suppress-the-duplicate rule
+   (`feed-header.ts` currently drops the city from line one and promotes it).
+3. 「12 pt above "Atlanta metro"」.
+4. 「Don't cut the community name if it is too long, use smaller size
+   instead」 — shrink-to-fit comes back, which reverses phase183.1's removal
+   of `adjustsFontSizeToFit`. See the floor below.
+5. 「Others use your recommendations as well」 — so the open question (fixed
+   vs proportional type) resolves to **scaled**: every header number × screen
+   ÷ 390, clamped to 0.94–1.10. That is what holds the name-to-Map proportion
+   he approved on the mini and the Max instead of only at 390.
+
+**Actions**: `apps/web/public/demos/feed-header-v4/index.html` — the final
+demo. Three card types, then the states inside them (city-twice fallback, a
+name that has to shrink, a home with no resolvable place, and the city card as
+the fourth type the deck can serve), then the same header on 375 / 390 / 428.
+Same measured-geometry machinery as v3, plus a `fit()` that computes the
+name's size the way the phone will: measure at full size against the room the
+row actually leaves after the chevron and the pill, scale down, never past the
+floor. **Still no `apps/mobile` change** — he approves this page first.
+
+**The shrink floor, picked off real data**: 0.5 (18pt at 390). At full size
+the row fits about 13 characters, so almost every real name shrinks a little —
+"Bellmoore Park" lands at 36.2 of 39.5 on his phone. The longest community
+name the mobile feed serves today is **24 characters** ("1250 West Powder
+Springs", sampled live off `/api/mobile/feed` — 21 unique communities in the
+served pool, median 13, p90 19), which needs 54% and so clears the floor.
+"Amberfield at Peachtree" (23) renders whole at 23.2pt where the previous 0.6
+floor truncated it. Below 50% an ellipsis is still the answer — an 18pt title
+under a 14pt breadcrumb has stopped being a title.
+
+**Learnings**: two demo bugs worth remembering. `zoom` on a frame scales
+`getBoundingClientRect()` but not `getComputedStyle()`, so a measured layout
+has to divide only the rects. And a header demo must not borrow a rendered
+CARD as placeholder art — a screenshot of the Aberdeen community card sat
+under a "Bellmoore Park / COMMUNITY TOUR" header and read as a data bug; bare
+Storage cover photos say nothing and are the right stand-in for a film.
+
+**Next steps**: on his go, `components/feed/FeedHeader.tsx` +
+`lib/feed/feed-header.ts`: drop `flex: 1` from the title slot (1), keep the
+city on both lines (2 — a change in the pure model, and its tests), add
+`paddingTop` (3), restore `adjustsFontSizeToFit` with `minimumFontScale`
+0.5 (4), and multiply the header's constants by a `useWindowDimensions`
+factor (5). `theme/feed-header.test.ts` and `theme/card-aspect.test.ts` both
+move with it — the header becomes 98 at 390 and 107 on his 428, so the
+SE-class crop needs re-measuring before that lands.
+
 ## 2026-09-07 04:40 UTC — phase183.2: a demo for the header's three open questions (no app change)
 
 **Objective**: owner, after phase183.1: 「community name和map占的比例参考demo 如果
