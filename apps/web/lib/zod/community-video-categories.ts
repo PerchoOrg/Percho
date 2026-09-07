@@ -121,7 +121,7 @@ export type CommunityVideoCategoryMeta = (typeof COMMUNITY_VIDEO_CATEGORIES)[num
 export type CommunityVideoCategoryId = CommunityVideoCategoryMeta['id'];
 export type CommunityVideoBucket = 'a' | 'b';
 
-export const COMMUNITY_VIDEO_CATEGORY_IDS = COMMUNITY_VIDEO_CATEGORIES.map(
+const COMMUNITY_VIDEO_CATEGORY_IDS = COMMUNITY_VIDEO_CATEGORIES.map(
   (c) => c.id,
 ) as readonly CommunityVideoCategoryId[];
 
@@ -138,10 +138,6 @@ export function getCategoryMeta(id: CommunityVideoCategoryId): CommunityVideoCat
   const meta = COMMUNITY_VIDEO_CATEGORIES.find((c) => c.id === id);
   if (!meta) throw new Error(`unknown community video category: ${id}`);
   return meta;
-}
-
-export function categoryBucket(id: CommunityVideoCategoryId): CommunityVideoBucket {
-  return getCategoryMeta(id).bucket;
 }
 
 /**

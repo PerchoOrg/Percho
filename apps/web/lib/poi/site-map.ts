@@ -137,7 +137,7 @@ const BOILERPLATE_PREFIXES = ['about-', 'mortgage', 'buying-', 'home-buying'];
 export type LinkVerdict = 'follow' | 'offer' | 'skip';
 
 /** The community's own slug — the last segment of its site path. */
-export function communitySlugOf(sitePrefix: string): string | null {
+function communitySlugOf(sitePrefix: string): string | null {
   const segs = sitePrefix.split('/').filter(Boolean);
   return segs.length > 0 ? segs[segs.length - 1]!.toLowerCase() : null;
 }
@@ -153,7 +153,7 @@ export function communitySlugOf(sitePrefix: string): string | null {
  * - this is gallery i am talking about". A plain prefix rule cannot see it,
  * because it is not under `/bellmoore-park` at all.
  */
-export function depthPastSlug(path: string, slug: string): number | null {
+function depthPastSlug(path: string, slug: string): number | null {
   const segs = path
     .split('/')
     .filter(Boolean)

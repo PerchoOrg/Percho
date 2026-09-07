@@ -19,22 +19,22 @@ const swallow = (p: Promise<unknown>) => {
 };
 
 /** Swipe crossed the commit threshold (direction decided). */
-export function swipeThreshold(): void {
+function swipeThreshold(): void {
 	swallow(Haptics.selectionAsync());
 }
 
 /** Card settled after flying out, flip completed, or a sheet popped. */
-export function cardSettle(): void {
+function cardSettle(): void {
 	swallow(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
 }
 
 /** Milestone card, insight achieved, persona change toast, or save. */
-export function milestone(): void {
+function milestone(): void {
 	swallow(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
 }
 
 /** Left-swipe pass — intentionally emits no haptic (§0.5). */
-export function pass(): void {
+function pass(): void {
 	// no-op by design — do not add feedback here.
 }
 

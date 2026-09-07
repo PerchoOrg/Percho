@@ -69,7 +69,7 @@ export function AvatarPicker({
   );
 }
 
-export function AvatarCircle({
+function AvatarCircle({
   url,
   fallbackLetter,
   size = 64,

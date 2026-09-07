@@ -55,17 +55,15 @@ export async function POST(req: Request) {
   // id is minted here instead and handed to the client.
   const id = crypto.randomUUID();
   const supabase = createAnonClient();
-  const { error } = await supabase
-    .from('research_responses')
-    .insert({
-      id,
-      study,
-      lang,
-      answers,
-      contact: contact && contact.length > 0 ? contact : null,
-      duration_ms: durationMs ?? null,
-      user_agent: req.headers.get('user-agent')?.slice(0, 300) ?? null,
-    });
+  const { error } = await supabase.from('research_responses').insert({
+    id,
+    study,
+    lang,
+    answers,
+    contact: contact && contact.length > 0 ? contact : null,
+    duration_ms: durationMs ?? null,
+    user_agent: req.headers.get('user-agent')?.slice(0, 300) ?? null,
+  });
   if (error) {
     return NextResponse.json(
       { error: 'could not save', code: error.code },

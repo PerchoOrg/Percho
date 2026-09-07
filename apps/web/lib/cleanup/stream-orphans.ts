@@ -48,14 +48,14 @@ export type OrphanReport = {
 };
 
 /** Cloudflare Stream storage: $5 per 1000 minutes stored per month. */
-export const USD_PER_MINUTE_MONTH = 5 / 1000;
+const USD_PER_MINUTE_MONTH = 5 / 1000;
 
 /**
  * A cut uploaded seconds ago may not have been written to its video row yet —
  * the assembly step uploads, waits for Stream to finish encoding, then patches
  * the row. Anything younger than this is left alone whatever it looks like.
  */
-export const MIN_AGE_HOURS = 24;
+const MIN_AGE_HOURS = 24;
 
 export function classifyStreamAssets(input: {
   assets: StreamAsset[];

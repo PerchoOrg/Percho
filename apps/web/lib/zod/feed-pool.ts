@@ -15,7 +15,7 @@ import { z } from 'zod';
  * most restrictive stage — failing closed, so a malformed request can never
  * unlock listings it should not see.
  */
-export const feedPoolQuerySchema = z.object({
+const feedPoolQuerySchema = z.object({
   stage: z.coerce.number().int().min(0).max(4).catch(0),
   offset: z.coerce.number().int().min(0).catch(0),
   limit: z.coerce.number().int().min(1).max(40).catch(12),

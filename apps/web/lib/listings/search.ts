@@ -19,7 +19,7 @@ import { publicCoverImageUrl } from '@/lib/communities/cover';
 import type { Database } from '@/lib/supabase/database.types';
 import { createClient as createPlainClient } from '@supabase/supabase-js';
 
-export const SEARCH_LIMIT = 24;
+const SEARCH_LIMIT = 24;
 
 export interface SearchListingDTO {
   id: string;

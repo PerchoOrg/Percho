@@ -26,14 +26,6 @@ export function HeartIcon({ filled }: { filled?: boolean }) {
   );
 }
 
-export function NearbyIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" width={22} height={22} fill="currentColor">
-      <path d="M11 17a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM12 2a8 8 0 0 0-8 8c0 5.5 8 12 8 12s8-6.5 8-12a8 8 0 0 0-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" />
-    </svg>
-  );
-}
-
 export function ShareIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" width={22} height={22} fill="currentColor">
@@ -101,25 +93,6 @@ export function PlayIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" width={36} height={36} fill="currentColor">
       <path d="M8 5v14l11-7z" />
-    </svg>
-  );
-}
-
-export function HouseIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      width={22}
-      height={22}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 11.5 12 4l9 7.5" />
-      <path d="M5 10v10h14V10" />
     </svg>
   );
 }

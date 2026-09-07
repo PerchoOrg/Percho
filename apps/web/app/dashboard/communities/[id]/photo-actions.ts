@@ -3,7 +3,7 @@
 /**
  * Server actions for community photos.
  *
- * Mirrors listing-photo-actions.ts shape:
+ * Mirrors `app/dashboard/listings/[id]/edit/photo-actions.ts` shape:
  *   1. Browser uploads to private Supabase Storage `community-photos`
  *      bucket at `{communityId}/{uuid}.{ext}` via supabase-js. Storage
  *      RLS enforces "authenticated agent + valid community_id".

@@ -19,7 +19,7 @@ export type DeleteListingResult = { ok: true } | { ok: false; error: string };
  * agent's own listings. Cascades to listing_videos / listing_photos /
  * photos via FK on delete cascade.
  */
-export async function deleteListing(listingId: string): Promise<DeleteListingResult> {
+async function deleteListing(listingId: string): Promise<DeleteListingResult> {
   const supabase = await createClient();
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { error } = await (supabase as any).from('listings').delete().eq('id', listingId);

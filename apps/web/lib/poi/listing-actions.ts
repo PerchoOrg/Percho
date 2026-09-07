@@ -26,9 +26,8 @@ import {
   fetchPhotosForPoi,
   loadNearbyPois,
   setPhotoStatus,
-  setPoiStatus,
 } from './poi-actions-core';
-import type { PhotoStatus, PoiStatus } from './types';
+import type { PhotoStatus } from './types';
 
 export type ListingDiscoverResult = DiscoverResult;
 export type ListingPhotoFetchResult = PhotoFetchResult;
@@ -47,10 +46,6 @@ export async function fetchPhotosForListingPoi(
   opts: { max?: number; maxHeightPx?: number } = {},
 ): Promise<ListingPhotoFetchResult> {
   return fetchPhotosForPoi(SCOPE, listingId, poiId, opts);
-}
-
-export async function setListingPoiStatus(listingId: string, poiId: string, status: PoiStatus) {
-  return setPoiStatus(SCOPE, listingId, poiId, status);
 }
 
 export async function setListingPhotoStatus(

@@ -68,9 +68,3 @@ export async function restQuery<T>(
   const rows = (await res.json()) as T[];
   return { count: parseContentRange(res.headers.get('content-range')), rows };
 }
-
-/** Count only — asks for a single column and one row, reads the header. */
-export async function restCount(table: string, params: Record<string, string>): Promise<number> {
-  const { count } = await restQuery(table, { ...params, select: 'id', limit: '1' });
-  return count;
-}

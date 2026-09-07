@@ -8,326 +8,261 @@
 
 ## v1.3 — Opening a home now answers "does this fit me?"
 
-### 2026-09-06
-- **Percho's name is back at the top of the feed**, in its deep-green serif, with the place line sitting just under it — the metro, the city you're on, and how many neighbourhoods it has. The count now shows for whichever city the current card belongs to, not only when you've picked one from the list
-- **The row of neighbourhood squares above the card is gone.** It crowded the page rather than organising it. What it was there to say now lives in the top line itself, which follows the card you're on: over a home it reads the metro, the city and — where we know it — the neighbourhood it belongs to; over a neighbourhood's film, the metro and its city. It updates as you swipe, and tapping it still opens the city picker
-- **The card now sits centred on the page**, with the spare paper split evenly above and below it instead of pooling underneath
-
-### 2026-09-05
-- **The feed now opens on the place, not on our name.** Where "Percho" used to sit at the top there is now the city you're looking at — Atlanta metro above it, how many neighbourhoods are there and what homes typically cost below — and under that, a row of the neighbourhoods we've filmed nearby. Tap any of them to jump straight to that neighbourhood's film; the one you're watching is ringed. The card itself is unchanged and the films are shown whole, and the empty stretch of paper that had appeared under the card is now the neighbourhood row instead
-- **The tab bar's icons are whole again.** Each one was being cut down its right-hand side — the heart lost part of its lobe, the waving hand its thumb — because the drawing was given a box narrower than itself
-- **Neighbourhood cards now tell you where you are in the film.** As a neighbourhood's tour plays, the top-left corner names the place on screen and how far it is from the neighbourhood — the clubhouse, the greenway, the high school — and changes as the film moves. It used to be printed into the video itself, which meant it never quite lined up with the card and crowded out the buttons beside it. The sound and save buttons now sit in the same place they do on a home card, and you can save a neighbourhood from the feed again. The neighbourhood's name is bigger and clearer, with a small "Community" label above it
-- **Home cards have lost the "Listing" tag in the corner.** A photo of a house with a price on it was never in danger of being mistaken for anything else, and the corner is better spent on the photograph
-- **The four tabs along the bottom have been redrawn.** Feed, Search, Saved and You now use friendlier icons — a house, a compass, a heart and a waving hand — drawn a little larger than before, with the tab you're on sitting on a soft green pill and giving a small bounce as you switch to it. The old Saved icon also sat slightly off-centre; it doesn't any more
-- **The feed's header is one tidy line and the card sits right under it.** "Atlanta metro › Dallas" no longer carries a "188 communities" line beneath it (those numbers still show in the city picker), and the card no longer floats with a band of empty paper above it — it now starts just below the header, with the spare room at the bottom instead
-- **A neighbourhood's page is now mostly numbers.** Under the film: how many people are on Nextdoor there, what share own their home, the median age — printed as figures rather than as a list of fields. Below that, a chart of how many real places of each kind are near the neighbourhood, biggest first: 40 gyms and studios, 39 restaurants, 31 shops, 22 schools. Tap to see the rest. Resident ratings for quiet, walkable, neighbourly and value are now four bars you can compare at a glance instead of one run-on line. The neighbourhood's top three reasons keep their evidence in words; everything else it said is now a row of tags
-- **The chips on a neighbourhood's film name what kind of place it is, not which one.** They used to list every stop by name — "Forsyth County Public Library - Sharon Forks Library" — which ran off the screen. Now it's Schools 2, Shopping 3, Parks 2, and tapping one jumps the film to that part
-- **A neighbourhood's page now opens like a home's.** The film fills the top of the page, and along its foot is one chip per place the tour visits — the chip for the place on screen stays lit as the film plays, and tapping another jumps the film there. The same ← / share / ♡ and sound buttons as on a home's page. The paragraph of description that used to sit under the film is gone; the chips say what the place has
-- **The sound and save buttons on a card look like they belong there.** They now sit in one small pill the same height and colour as the LISTING label opposite them, instead of a taller, paler capsule, and both icons are properly drawn at last — the speaker in particular used to smudge into a blob at that size. The save mark is a bookmark, and it fills in green once a home is saved
-
-### 2026-09-04
-- **The privacy policy and terms now describe the real app.** Both pages were placeholders; they now explain accounts (Sign in with Apple or an emailed code), what happens to a tour request, how resident reviews are moderated and shown without names, what usage information the app records, and how to delete your account from the You tab. Every review in the app also has a Report link that emails us with the review reference
-- **Residents can now review their neighbourhood.** Every community page has a Resident Reviews section: an overall rating, a few optional specifics (quiet, walkable, neighbourly, value) and a paragraph in the reviewer's own words. You need to be signed in to write one, each person gets one review per neighbourhood, and nothing appears until a member of the team has read it — reviews are shown without names. Until a neighbourhood has an approved review, the section simply says so and invites the first one; there is no filler
-- **Every tab now does what its buttons say.** Search finds real homes, communities and cities by address, name or zip, with pins on the map and a tap-through to each page — the decorative "For sale" chip is gone. Saved has a working Compare: pick two or three homes and see price, monthly cost, size, year, HOA, typical rent and nearby schools side by side. The feed's end-of-deck card actually opens the scope sheet. The You tab links to the privacy policy, terms and support, and shows the app version
-- **A home's page now shows what it really costs, what it could earn, and where the kids would go.** The monthly figure uses this week's national mortgage rate and adds upkeep; a new "If you rented it out" block estimates cash flow, cap rate and yield from a typical rent for the ZIP that you can edit; nearest public elementary, middle and high schools appear with the state's own test-proficiency percentage. Every figure names its source, and there is no invented rating anywhere
-- **Share a home or a neighbourhood** from the ↑ button — it sends the public web page
-- **"Request a tour" now actually requests a tour.** The button on a home's page opens a short form — name, email, phone if you like — and the request lands with an agent, who gets an email about it. Before this, the app's most prominent button did nothing at all
-- **Percho now has accounts on the phone.** Sign in with Apple or with a 6-digit code sent to your email. Your saved homes and neighbourhoods now belong to your account and follow you across devices, instead of living on one phone. Browsing never requires signing in — only saving does — and you can sign out or permanently delete your account from the You tab
-
-### 2026-09-03
-- **Tours stop reaching for the same few pieces of music.** Which track a film gets was narrowing to a handful of options for a large share of homes — lower-priced homes shared three tracks between them, and newer builds shared three. Now the whole library is in play and the least-used piece wins, so the music spreads evenly across the catalogue instead of clustering. A film that already went out keeps the music it has
-
-### 2026-09-01
-- **The buyer study is closed and its page has been taken down.** It ran for two days and collected 10 responses
-
-### 2026-08-31
-- **The buyer study asks one more thing at the end: what you'd actually do right now.** After the "what else would it need" question, the form asks whether you'd pass it to a friend who's house-hunting, whether you'd like to be told when it launches, or neither — and if you ask to be notified, it now asks for a contact so the notice can actually reach you
-
-### 2026-08-30
-- **The feed now tells you where you're looking, and lets you change it.** A line under the Percho wordmark reads "Atlanta metro › Peachtree Corners" with the number of communities there and what homes typically cost. Tap it to pick a different city — communities there come first, and everything else still shows further down. Nothing is hidden from you; it's a preference, not a filter
-- **You can mute a tour from the feed again.** Dragging a card left or right now shows what it means — LIKE or PASS — before you let go, and the home card's top-right corner holds one small control with the sound and the bookmark side by side, instead of two separate buttons. Community tours get the same mute, placed clear of the name the film draws in that corner. Turning sound off anywhere turns it off everywhere, and it stays off
-- **Changed your mind about a card you already swiped?** The You tab now lists your recent likes and passes, with the price and place you actually saw at the time. "Bring back" undoes the verdict and puts the home or community back into your feed
-- **"You've seen everything in your area" now offers the map.** That card's second button had never been connected
-
-### 2026-08-29
-- **Your either/or answers now actually change the feed.** Pick "newer build" and newer homes move up next — with a line under the card telling you how many did. Until now those answers were recorded and nothing happened; they never reordered anything. Answers you've already given start counting the moment we have the data behind a question, and what you swipe right on still outweighs anything you answered
-
-- **The buyer study can now be answered on the page.** The questionnaire at percho.co/research is a real form: tap the options, rate the four features, leave a WeChat name for the thank-you, and submit — answers are saved for analysis, and a half-finished page survives a refresh
-- **The either/or cards swipe smoothly again, and both sides now show the same number of photos.** They were downloading full-size images for every thumbnail — about seven times more than they needed — which made those cards stutter. One side showing three photos against the other's one was a bug, not a hint about which to pick
-
-- **The four scores on a neighborhood's page (Schools · Safety · Convenience · Growth) are gone, and so are the city card's.** They were placeholder numbers while the tour pipeline was being built, not real ratings, and a made-up score on a page that otherwise cites its sources isn't honest. They'll come back when there's real data behind them
-- **"After you move in."** A home's page now carries a row of small cards you swipe through — the things you'd only find out after living there, researched per home from public records, city and school-district pages and the listing's own history: the listing says 2,366 sq ft but the county record says 1,820; the assigned middle school is on the district's replacement list; your Alpharetta address is actually governed by Roswell; the street is a cul-de-sac with no through traffic. Each card is marked as something to watch, an upside, or good to know, weighted by how much it could change your decision, with a go-and-see suggestion when a visit can settle it and the sources behind a tap. Cards appear on a home once its research has been reviewed; homes are being covered in batches.
-- **The either/or cards are all new — 32 questions instead of 7.** They only ask about things you genuinely cannot have both of: newer build or older character, another bedroom or bigger rooms, a yard or your Saturdays, a quiet street or walking distance to everything. Each one asks about the house itself, and the same question never comes back twice. Questions we can't yet back with data still get asked — you just won't see counts under them until the numbers arrive
-- **Photos across the app are noticeably sharper.** Every home photo now shows in its enhanced, higher-resolution version by default — twice the detail — in the feed, in the photo gallery, and on the either/or card
-- **"What matters more to you?" is back in the feed, and it finally looks like the rest of it.** Every ninth card asks you to choose between two things — room to grow or nothing to fix, a bigger yard or a shorter drive. Each side shows **three** rooms that make the point: three different kitchens under "Move-in ready", so you're choosing between kinds of home rather than judging one person's cabinets. Every photo is shown whole, at its own shape, instead of cropped to a narrow strip. Under them, how many homes in your feed are on that side and what they typically cost. Choices about a neighbourhood show the neighbourhood instead; a side we have no honest photo for stays plain rather than borrowing an unrelated one. Swipe toward the one you want — the side you're picking opens up and the other steps back
-
-### 2026-08-25
-- **Tap a card to pause its tour; tap again to resume.** A play mark appears while it's paused, and it picks up exactly where you stopped. Swiping on to the next card always starts that one playing. Tapping the community tour's progress bar still just jumps the film — it doesn't pause
-- **Opening a home or community page no longer plays two soundtracks at once.** The card you tapped kept playing underneath the page, so its music overlapped with the page's own tour. The card now goes quiet the moment a page covers it, and picks up where it left off when you come back
-
-### 2026-08-23
-- Bigger cards in the feed. Homes and communities now fill noticeably more of the screen — about a third more card, with less empty space around the edges — so the video tours are easier to actually see. Video quality is unchanged.
-- The place name shown on community tour videos now matches the size of the labels on the card, instead of sitting slightly small.
-
-
 The home page has been rebuilt from the ground up. Instead of a list of MLS fields, opening a home now walks you through one question — whether this home fits the way you've been searching.
 
-- **One swipeable reel of everything.** The home's video tour plays first, then every photo, in one strip. Room chips (Kitchen · 7, Backyard · 2 …) show where you are and jump you straight to the room you care about. Tap any photo to see it full-screen and uncropped, or open the grid to see every photo grouped by room.
-- **"How it fits you."** The page compares this home against the homes you've actually saved and swiped — "More space than the homes you save: 6 of your 9 saves are under 2,800 sqft" — and is honest about the trade-offs, with the receipts for each claim. When a home costs more than your usual but gives you something back, it asks you directly: worth it, or not? One tap answers.
-- **What you'd actually pay.** The big number is the estimated monthly payment, not the sticker price, broken into loan, property tax, insurance and HOA — with the assumptions spelled out underneath. Not a lending offer.
-- **Days on market, lot size, and the MLS number** now appear on homes where we have them.
-- **Next to what you've saved.** The page ends with this home side by side with your saved homes — your own shortlist, never someone else's recommendations.
-- The essentials (lot, HOA, year built, ZIP, MLS#) sit in one compact card. Anything you'd still want to ask is coming next: a built-in "ask anything about this home".
+- **One swipeable reel of everything.** The video tour plays first, then every photo; room chips (Kitchen · 7, Backyard · 2 …) jump you to a room, and any photo opens full-screen and uncropped or in a grid grouped by room.
+- **"How it fits you."** The page compares this home against what you've saved and swiped — "More space than the homes you save: 6 of your 9 saves are under 2,800 sqft" — with the receipts for each claim, and asks "worth it, or not?" when a home costs more but gives something back.
+- **What you'd actually pay.** The big number is the estimated monthly payment, broken into loan, property tax, insurance and HOA with the assumptions spelled out. Not a lending offer.
+- **The essentials in one compact card** — days on market, lot size, HOA, year built, ZIP and MLS number where we have them — and the page ends with this home beside your own saved homes. A built-in "ask anything about this home" is coming next.
+
+### 2026-09-07
+- **A neighbourhood's photo-review page no longer breaks on an unusual place.** Opening the nearby-places panel for a home could take the whole page down whenever one of the places had been filed under a category that panel didn't recognise — a riverside spot, a civic building. The neighbourhood version of the same panel was fixed for this three weeks ago; the home version was a separate copy and never got the fix. The two are now one panel, so a fix lands once.
+- **Housekeeping with no user-visible change:** unused screens and files removed across the app, the developer log and release notes trimmed to a readable size, and the automated checks that run before anything ships are passing again — they had been failing for a week.
+
+### 2026-09-06
+- **Percho's name is back at the top of the feed**, in its deep-green serif, with the metro, the current city and its neighbourhood count under it — shown for whichever city the current card belongs to.
+- **The row of neighbourhood squares above the card is gone.** The top line now follows the card you're on — metro, city and (where known) neighbourhood over a home; metro and city over a neighbourhood's film — and tapping it still opens the city picker.
+- **The card now sits centred on the page**, with the spare space split evenly above and below.
+
+### 2026-09-05
+- **The feed opens on the place, not on our name.** The top shows the city you're looking at, the Atlanta metro above it, neighbourhood count and typical home cost below, and a row of nearby filmed neighbourhoods — tap one to jump to its film; the one playing is ringed.
+- **The tab bar's icons are whole again** — each was being clipped on its right-hand side.
+- **Neighbourhood cards tell you where you are in the film.** The top-left corner names the place on screen and its distance from the neighbourhood as the film moves; sound and save sit where they do on a home card, saving a neighbourhood from the feed works again, and the name is bigger with a small "Community" label above it.
+- **Home cards have lost the "Listing" tag** in the corner.
+- **The four bottom tabs have been redrawn.** Feed, Search, Saved and You use a house, a compass, a heart and a waving hand, a little larger, with the active tab on a soft green pill that bounces as you switch; the Saved icon is no longer off-centre.
+- **The feed's header is one tidy line** — "Atlanta metro › Dallas" without the communities count beneath it (the city picker still shows it) — and the card starts right under it.
+- **A neighbourhood's page is now mostly numbers.** Nextdoor members, share who own, median age as figures; a chart of nearby places by kind, biggest first (40 gyms and studios, 39 restaurants, 31 shops, 22 schools), tap for the rest; resident ratings for quiet, walkable, neighbourly and value as four bars; the top three reasons keep their evidence in words, the rest become tags.
+- **The chips on a neighbourhood's film name the kind of place, not which one** — Schools 2, Shopping 3, Parks 2 — and tapping one jumps the film there.
+- **A neighbourhood's page opens like a home's.** The film fills the top with one chip per place the tour visits along its foot (the current one lit; tap another to jump), the same ← / share / ♡ and sound buttons, and no description paragraph.
+- **The sound and save buttons on a card look like they belong.** They share one small pill matching the LISTING label, both icons are properly drawn, and the save mark is a bookmark that fills green once saved.
+
+### 2026-09-04
+- **The privacy policy and terms describe the real app** — accounts, tour requests, how reviews are moderated and shown without names, what usage is recorded, how to delete your account — and every review has a Report link that emails us with its reference.
+- **Residents can review their neighbourhood.** Every community page has a Resident Reviews section: an overall rating, optional specifics (quiet, walkable, neighbourly, value) and a paragraph; sign-in required, one review per person per neighbourhood, shown nameless only after the team has read it. With none approved yet, the section invites the first.
+- **Every tab does what its buttons say.** Search finds real homes, communities and cities by address, name or zip with map pins; Saved has a working Compare for two or three homes (price, monthly cost, size, year, HOA, typical rent, nearby schools); the feed's end-of-deck card opens the scope sheet; the You tab links to privacy, terms and support and shows the app version.
+- **A home's page shows what it really costs, what it could earn, and where the kids would go.** Monthly cost uses this week's national mortgage rate plus upkeep; "If you rented it out" estimates cash flow, cap rate and yield from an editable typical rent for the ZIP; the nearest public elementary, middle and high schools show the state's test-proficiency percentage. Every figure names its source.
+- **Share a home or a neighbourhood** from the ↑ button — it sends the public web page.
+- **"Request a tour" now actually requests a tour.** A short form (name, email, optional phone) sends the request to an agent, who is emailed about it.
+- **Percho has accounts on the phone.** Sign in with Apple or a 6-digit emailed code; saves follow you across devices; browsing never needs sign-in, and you can sign out or permanently delete your account from the You tab.
+
+### 2026-09-03
+- **Tours stop reaching for the same few pieces of music.** The whole library is in play and the least-used track wins; a film that already went out keeps its music.
+
+### 2026-09-01
+- **The buyer study is closed and its page taken down.** It ran two days and collected 10 responses.
+
+### 2026-08-31
+- **The buyer study asks one more thing at the end** — pass it to a house-hunting friend, be told when it launches, or neither — and asks for a contact if you want notifying.
+
+### 2026-08-30
+- **The feed tells you where you're looking, and lets you change it.** A line under the wordmark reads "Atlanta metro › Peachtree Corners" with community count and typical cost; tap it to pick another city, whose communities come first while everything else still shows further down.
+- **You can mute a tour from the feed again.** Dragging a card shows LIKE or PASS before you let go, sound and bookmark share one control in the home card's corner, community tours get the same mute, and sound off anywhere stays off everywhere.
+- **Changed your mind about a card you swiped?** The You tab lists recent likes and passes with the price and place you saw; "Bring back" returns it to your feed.
+- **"You've seen everything in your area" now offers the map** — its second button had never been connected.
+
+### 2026-08-29
+- **Your either/or answers now change the feed.** Pick "newer build" and newer homes move up next, with a line saying how many did; what you swipe right on still outweighs what you answered.
+- **The buyer study can be answered on the page** at percho.co/research — tap options, rate four features, leave a WeChat name, submit — and a half-finished page survives a refresh.
+- **The either/or cards swipe smoothly again, and both sides show the same number of photos.**
+- **The four scores on a neighborhood's page (Schools · Safety · Convenience · Growth) are gone, and so are the city card's.** They were placeholders; they'll return when real data backs them.
+- **"After you move in."** A home's page carries swipeable cards of things you'd only learn after living there, researched from public records, city and school-district pages and the listing's history — the listing says 2,366 sq ft but the county says 1,820; the assigned middle school is on the replacement list; your Alpharetta address is governed by Roswell. Each is marked to watch, an upside or good to know, with a go-and-see suggestion and sources behind a tap; homes are covered in reviewed batches.
+- **The either/or cards are all new — 32 questions instead of 7**, each about things you cannot have both of (newer build or older character, a yard or your Saturdays), never repeated; questions without data yet are still asked, just without counts.
+- **Photos across the app are noticeably sharper** — twice the detail in the feed, the gallery and the either/or card.
+- **"What matters more to you?" is back in the feed, and looks like the rest of it.** Every ninth card offers two choices, each side showing three whole, uncropped photos (three different kitchens under "Move-in ready"), with how many homes in your feed are on that side and their typical cost; swipe toward the one you want.
+
+### 2026-08-25
+- **Tap a card to pause its tour; tap again to resume.** A play mark shows while paused, it resumes where you stopped, and swiping on always starts the next card playing.
+- **Opening a home or community page no longer plays two soundtracks at once** — the card goes quiet under the page and picks up when you return.
+
+### 2026-08-23
+- **Bigger cards in the feed** — about a third more card, less empty space at the edges; video quality unchanged.
+- **The place name on community tour videos** now matches the size of the card's labels.
+
+---
 
 ## v1.2 — A community tour now shows the community, not just what surrounds it
 
-Until now a community film could show you everything *around* a neighborhood — its schools, its parks, the coffee shop down the road — but never the neighborhood itself. The gate, the pool, the clubhouse, the tennis courts: the things residents pay dues for, and among the first things a buyer asks about, were the one thing missing.
+A community film used to show everything *around* a neighborhood — schools, parks, the coffee shop — but never the neighborhood itself: the gate, the pool, the clubhouse, the courts residents pay dues for. Community films now open on the community, its own amenities leading and the surrounding area as context.
 
-Community films now open on the community. Its own amenities lead the film and run through it, with the surrounding area playing as context around them.
+- **Amenities are their own category** — pool, clubhouse, courts, playground and grounds are grouped rather than scattered among nearby businesses.
+- **A community's own photography can be used**, since amenity photos rarely exist in map listings.
+- **Softer photos are rescued rather than discarded** — older or smaller photos are sharpened and enlarged before the film is cut, everywhere photos are used.
 
-- **Amenities are their own category.** A community's pool, clubhouse, courts, playground and grounds are grouped together rather than scattered among nearby businesses.
-- **A community's own photography can be used.** Amenity photos rarely exist in map listings — nobody reviews an HOA pool — so photos supplied by the community can now be brought in directly.
-- **Softer photos are rescued rather than discarded.** Older or smaller photos are sharpened and enlarged before the film is cut, so a good photo is no longer dropped for being small. This applies everywhere photos are used, not only to community films.
-
-Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
+Aberdeen in Suwanee is the first: a 58-second film that opens on its clubhouse and takes in the pool, courts and grounds before heading out into Suwanee.
 
 ### 2026-08-23
-- **The Saved tab is real now — and it holds neighborhoods, not just homes.** Everything you bookmark lands there: homes with their current price, specs and address, neighborhoods you saved from their page, and cities. Prices are looked up fresh every time you open the tab, a home that has left the market says so instead of showing stale numbers, and an empty shelf points you back to the feed. Comparing saved homes side-by-side is previewed there and coming next
-- **Neighborhoods can be saved from their own page.** A Save button now sits on the neighborhood page — the card in the feed keeps its corner for the tour's place labels
-- **Saving a city works now.** The bookmark on city cards used to do nothing when tapped; a saved city now appears in the Saved tab and jumps you to it on the map
-- **The You tab now shows what Percho has learned about you.** A persona card names your buyer type once your swipes add up to one ("Trail-Runner Suburbanite"), an area list shows how well you know each place you've been swiping through — tap one to see it on the map — and every preference Percho has picked up is listed with its strength. Tap any of them to correct it: "Still true? No, remove" and it's gone. A Start-fresh button clears your history, and it tells you exactly what it's about to clear first — saved homes always stay
-- **The map now goes where you point.** Tapping a city pin or a list row on the Search tab flies the map to it instead of leaving you to pan there yourself, and arriving from the You tab or a saved city lands focused on that place
-- **Exploring a community keeps its film playing, and shows where it goes.** Tapping Explore on a community used to land on a still photo even while that community's tour was playing on the card — the page didn't know the film existed. It now plays the same tour at the top, and underneath lists every place the film visits, in order and numbered to match the progress bar. Tapping a place jumps the film straight to it
-- **Counts of one read correctly.** A community with a single dog park said "1 pet places"; it now says "1 pet place"
-- **A home tour's music is now chosen for the home, and it stays chosen.** Every home tour drew a track at random from one folder, so the same few pieces kept coming round while half the library was never heard, and re-rendering a tour changed its music for no reason. The music now follows the house — newer builds get the piano palette, and how restrained the track is follows where the home sits in its own local market — and once a tour has a track it keeps it across re-renders. Which track a tour used is also recorded now, so it can be looked up instead of guessed at
-- **Tapping a community film's progress bar now moves the film there.** Dragging the bar worked; tapping it lit up the bar and named the place, then left the film playing where it was — and afterwards the bar stopped following along until you dragged it again. A tap now jumps the film to the spot you touched, landing within a second of it
-- **The phone feed keeps going once you have seen everything.** It used to run out and start showing the same handful of communities over and over, because a home you had already swiped past could never come back while a community could. Both come back now, in the same rotation the feed uses normally, so you can keep swiping through everything that is ready
-- **Community card: the signal icons stay beside the community's name.** On longer names they were dropping onto their own line underneath, or drifting across towards the Explore link. The name now takes a second line if it needs one and the icons stay next to it
-- **The last two narration lines no longer talk over each other.** On a longer film the closing lines could end up spoken simultaneously — one voice on top of the other, both unintelligible. Two things were wrong: the script was written against the total length of all the clips, which is about fifteen seconds longer than the film actually runs once the fades between shots are counted, so short sections were given more words than fit; and the step that spaces the lines out gave up in exactly the case where two of them had already collided. Lines are now laid out one after another with a guaranteed gap, and a line with nowhere left to fit is left unsaid rather than spoken over the one before it
-- **A community film is labelled with its own community again.** Films briefly came back with another community's name on the amenity captions
-- **A community film now shows the community's amenities, not three pictures of its houses.** When all of a community's photos come from one gallery page — which is how a builder's site publishes them — the film had room for three of them in total, and the three it picked were street views of houses: no pool, no clubhouse, no courts, no gym, on a community that had good photographs of all four. Photos are now grouped by what they show, so the community section covers each amenity in turn — the gate, then the clubhouse, the pool, the courts, the fitness room — and a street of houses closes it out rather than opening it. Each clip is labelled with the amenity it shows instead of repeating the community's name
-- **You can now choose a home tour's opening shot yourself.** The opening few seconds are picked automatically and are usually right, but there was no way to overrule it — the only way to move on from a photo you didn't want leading the film was to throw that photo out of the film altogether. Any photo can now be starred as the opening shot, and the tour is rebuilt around it the next time you plan
-- **A narration line is never cut off mid-sentence any more.** When a line ran longer than the shots it plays over, the end was chopped off wherever it happened to land — "Further out, H Mart stands as a massive specialty" was read out exactly like that. Lines are shortened a whole sentence at a time now, and if nothing fits, that stretch simply plays without narration
-- **Very short stretches of film no longer fall back to reciting a distance.** With only six or seven words to work with, "Life Time fitness is under a mile" was the easiest thing to say; those lines now say what the place is instead
-- **Narration no longer spends most of its lines on distances.** Two lines in every three were telling you how far something was, and several said nothing else at all — "Life Time sits under a mile from home". How far things are still matters and is still used; it now has to come attached to something about the place rather than standing in for it, and it is capped at a third of the lines. The Soundtrack panel says so when a script leans too hard on it
-- **Lines that only say a place exists are gone too.** "The library sits nearby" takes a slot and tells you nothing; the film now lets the pictures run instead
-- **Community films no longer all share one narrator.** A choice of voices was meant to be made per community and had in fact been returning the same voice every time since it was built, so every film shipped in the same one. Communities now get different narrators, and the same community keeps its own for good, so re-running a tour still sounds like the same film
-- **You can now pick the narrator yourself.** The Soundtrack panel has a voice list — thirty voices, each with a short description of how it reads, with the ones best suited to a property film listed first. Pick one and re-run Assemble to hear it; the script itself is not rewritten, so nothing else about the film changes
-- **A home's opening shot now shows the whole house.** On some homes the opening few seconds moved in on the front door until the door filled the screen — a good-looking shot that never showed the buyer the house. When the lead photo shows the complete front of the home, the opening shot now takes the whole house in first, and only then moves toward the entry. Townhouses and photos that only ever showed part of a home are unchanged
-- **Fetching from a community's website no longer drags in the builder's whole site.** For a new-build community the "community website" is often one page on the builder's corporate site, and every page it linked to was being read — careers, the blog, award photos, the mortgage timeline, and the listing pages for individual houses for sale. Bellmoore Park came back with 221 photos of which almost none were of the community. Only the community's own pages are read now; everything else on that site is listed in the Photo Sources panel unticked, so you can still reach a page we guessed wrong about
-- **The community's photo gallery is now found even when nothing links to it.** On a builder's site the gallery sits on the community's sales page, which is often reachable only through the individual homes below it — so it was being missed entirely while the houses underneath it were fetched
-- **Photos of a single house are kept out of community films.** A film about a neighborhood is not a listing: one house shot on its own, and anything shot inside a house — kitchens, bathrooms, model-home styling — is now set aside for review rather than used. Several houses together, a streetscape, still counts as the neighborhood and is kept
-- **Tagging and filtering are one step again — “Tag & Filter”.** Filtering photos that have not been described yet does nothing, so a separate Filter button could only ever tell you to go and finish tagging first. The chip now reports both halves: how many were described, how many were dropped and how many were kept
-- **A photo that cannot be described no longer holds up the review.** If an image will not download, or comes back in a form the describer cannot read, it used to keep the step permanently unfinished — nothing could move past it. Those photos now land in Pending for you to judge yourself, and the count is shown so you know they are there
-- **The list of candidate web pages now appears before you fetch anything.** It was only being built as part of the fetch itself, so the pages you were meant to choose between showed up after the choice had already been made. The Photo Sources panel now lists them as soon as research has run — the community's own site ticked, everything else waiting for you. Communities researched before this change get their list too, without anything needing to be re-run
-- **"Fetch & Tag" is now four separate steps**: Fetch POIs, Fetch Sites, Tag and Filter. Each one can be run, watched and re-run on its own, and each one now gets the full time allowance that the four of them used to share — tagging alone went from about 15 photos per click to around 60. A step that runs out of time says how far it got and picks up where it left off when you click it again, instead of finishing silently half-done
-- **Pulling photos from community websites is now part of the pipeline.** It used to be a box you pasted one page URL into, by hand, outside the process — so a community's best photography only arrived if someone remembered to go and get it. The community's own website is now fetched automatically, along with every page one click away from it: the amenities page, the gallery, the floor plans. Other sites the research step found — a school's page, a county park's — are listed but left switched off until you tick them
-- **A new Photo Sources panel** shows every page in three groups: the community's own site, pages you added, and other sites research found. Ticking a page schedules it; the counts tell you how many are ticked and how many have not been read yet. Pages already read are skipped, so running the step again continues rather than starting over
-- **Photos in modern web formats are no longer thrown away.** Any image saved as WebP — the format most sites built in the last few years use — was being discarded as unreadable, which meant a fetch from those sites could come back with nothing at all
-- **A step that cannot run yet now says so.** "Run resolve first", or "12 photos are still untagged" used to be returned silently and looked exactly like a step that had run and done nothing. The message now appears on screen and stops the sequence
-- **Filtering will not judge photos that have not been described yet**, so the review you are asked to do is never over a pile that nothing has actually looked at
-- When a community has more good places than a film has room for, the choice between them is now made on how well each place scored — it was being made on database row order, because the score the research step works out was never being handed to the step that picks. On Apremont - Highcroft that had sent the three school places to the first three schools in the list while the high school the research agent picked missed the film
-- The Worker page can now clean up video storage. Every time a tour is re-run, the previous version of the film stays on the video host forever — 233 of the 282 videos in the account were copies nothing can reach any more. The page lists exactly what it would remove, with dates and lengths, before you delete anything, and never offers a video that is still in use or less than a day old
-- Tours that stopped halfway can now be closed from the same place, so they stop showing up as though something were still running
-- The home tour list no longer counts up how many times a home has been through the pipeline — the row says where it got to and whether something is still running, which is what you act on
-- The home tour list's photo count now says how many photos are actually in the film — a home with 75 photos whose film uses 20 said "75 / 75", which read as though all 75 were used. Before a film exists it says how many the plan picked, or how many have been tagged
-- A home's stage now shows how far it actually got, not how far the latest attempt got. A home with a finished film was showing "Plan" because someone had started a re-run that stopped early; the unfinished re-run is now a note underneath instead of the headline
-- Planning a community film now only considers the places that community's tour actually works on — the ones the research agent picked, the ones whose photos were fetched from the community's own website, and any place you have ruled on by hand. Adding nearby places to a community used to also hand them to the film: on Apremont - Highcroft, ten of the fifteen places in the cut had never had their photos looked at by anything, and nine shots were photos the pipeline had never examined at all — including three of a place whose only examined photo had just been excluded under fair-housing rules. Those places are out, and the film now visits Peachtree Corners Town Green, Trader Joe's, H Mart, Publix and Duluth High School instead
-- Photos left approved by an earlier, wider plan are now stood down when a new plan does not pick them, so "approved" keeps meaning "in the film"
-- Pipeline step status now comes from the work itself rather than from your browser tab. Clicking Plan and refreshing the page used to show the previous run's green tick while planning was still going; the step now reads "running" with a timer for as long as it is running, whichever tab or device you look from, and says "no response — re-run" instead of spinning forever if a step is cut short. Steps cannot be started on top of one another while one is in flight
-- The third photo section in the review table is now called **Pending Photos** rather than "Other Photos" — that is what those photos are
+- **The Saved tab is real now — and holds neighborhoods, not just homes.** Homes with current price, specs and address, neighborhoods and cities all land there; prices refresh on every open, a home that has left the market says so, and an empty shelf points back to the feed. Compare is previewed and coming next.
+- **Neighborhoods can be saved from their own page** with a new Save button.
+- **Saving a city works now** — it appears in Saved and jumps you to it on the map.
+- **The You tab shows what Percho has learned about you.** A persona card names your buyer type ("Trail-Runner Suburbanite"), an area list shows how well you know each place (tap to see it on the map), and every preference is listed with its strength and removable with a tap; Start fresh clears your history after saying what it will clear — saved homes always stay.
+- **The map goes where you point.** Tapping a city pin or list row on Search flies the map there; arriving from the You tab or a saved city lands focused on that place.
+- **Exploring a community keeps its film playing, and shows where it goes.** The page plays the same tour at the top and lists every place it visits, numbered to match the progress bar; tap one to jump there.
+- **Counts of one read correctly** — "1 pet place", not "1 pet places".
+- **A home tour's music is chosen for the home, and stays chosen.** Newer builds get the piano palette, restraint follows the home's place in its local market, a tour keeps its track across re-renders, and the track used is recorded.
+- **Tapping a community film's progress bar moves the film there**, within a second of the spot you touched.
+- **The phone feed keeps going once you have seen everything** — homes and communities both come back in the normal rotation.
+- **Community card: the signal icons stay beside the name**, which wraps to a second line if needed.
+- **The last two narration lines no longer talk over each other.** Lines are laid out with a guaranteed gap, and one with nowhere to fit is left unsaid.
+- **A community film is labelled with its own community again** — amenity captions briefly carried another's name.
+- **A community film shows the community's amenities, not three pictures of its houses.** Photos are grouped by what they show, so the film covers the gate, clubhouse, pool, courts and fitness room in turn, each clip labelled with its amenity, and a street of houses closes rather than opens it.
+- **You can choose a home tour's opening shot yourself** — star any photo and the tour is rebuilt around it at the next plan.
+- **A narration line is never cut off mid-sentence** — lines are shortened a sentence at a time; if nothing fits, the stretch plays without narration.
+- **Very short stretches no longer fall back to reciting a distance**; they say what the place is.
+- **Narration no longer spends most of its lines on distances** — distance must attach to something about the place and is capped at a third of lines; the Soundtrack panel flags a script that leans on it.
+- **Lines that only say a place exists are gone** — the pictures run instead.
+- **Community films no longer all share one narrator.** Communities get different voices, and each keeps its own for good.
+- **You can pick the narrator yourself** from thirty voices in the Soundtrack panel, best-suited first; re-run Assemble to hear it — the script is not rewritten.
+- **A home's opening shot shows the whole house** before moving toward the entry when the lead photo shows the complete front; townhouses and partial shots are unchanged.
+- **Fetching from a community's website no longer drags in the builder's whole site.** Only the community's own pages are read; the rest are listed unticked in Photo Sources.
+- **The community's photo gallery is found even when nothing links to it.**
+- **Photos of a single house are kept out of community films** — one house alone, or any interior, goes to review; a streetscape still counts as the neighborhood.
+- **Tagging and filtering are one step again — "Tag & Filter"** — reporting how many were described, dropped and kept.
+- **A photo that cannot be described no longer holds up the review** — it lands in Pending for you to judge, with a count shown.
+- **The list of candidate web pages appears before you fetch anything**, in Photo Sources as soon as research has run — the community's own site ticked, everything else waiting; earlier communities get their list too.
+- **"Fetch & Tag" is now four separate steps** — Fetch POIs, Fetch Sites, Tag and Filter — each re-runnable with its own full time allowance (tagging went from about 15 photos per click to around 60); a step that runs out of time says how far it got and resumes.
+- **Pulling photos from community websites is part of the pipeline.** The community's site and every page one click away is fetched automatically; other sites research found are listed but off until ticked.
+- **A new Photo Sources panel** groups every page as the community's own site, pages you added, or other sites research found, with ticked and unread counts; pages already read are skipped.
+- **Photos in modern web formats are no longer thrown away.**
+- **A step that cannot run yet says so** on screen — "Run resolve first", "12 photos are still untagged" — and stops the sequence.
+- **Filtering will not judge photos that have not been described yet.**
+- When a film has room for fewer places than a community has, the pick is made on each place's score rather than list order.
+- The Worker page can clean up video storage — 233 of the 282 videos in the account were unreachable copies. It lists what it would remove, with dates and lengths, and never offers a video in use or under a day old.
+- Tours that stopped halfway can be closed from the same place.
+- The home tour list says where a home got to and whether something is running, not how many times it has been through the pipeline.
+- The home tour list's photo count says how many photos are actually in the film (or planned, or tagged, before one exists).
+- A home's stage shows how far it actually got; an unfinished re-run is a note underneath, not the headline.
+- Planning a community film only considers places the tour actually works on — research picks, the community's own website, and places you ruled on by hand. Apremont - Highcroft now visits Peachtree Corners Town Green, Trader Joe's, H Mart, Publix and Duluth High School.
+- Photos approved by an earlier plan are stood down when a new plan does not pick them, so "approved" means "in the film".
+- Pipeline step status comes from the work itself — "running" with a timer from any tab or device, "no response — re-run" if cut short, and no starting steps on top of one another.
+- The third photo section in the review table is now **Pending Photos**, not "Other Photos".
 
 ### 2026-08-22
-- The admin home tour list now shows where each home's tour actually is — the stage it reached, how many of its photos have been tagged, whether the web and phone cuts of the film are finished, and how long ago anything happened to it
-- Homes are now ordered by when the tour pipeline last worked on them, so whatever was processed most recently is at the top. Homes that have never been through the pipeline follow, newest first
-- The photo count in that list was wrong for most homes — anything past the first thousand photos in the library counted as zero, so homes with a finished film could show "no photos". It now counts every photo
-- The film column used to show a single word for the whole home, which could say "ready" while the phone version was still rendering. Each version is now shown on its own
-- Pulling photos from a community's website now brings in the whole gallery. Sites that offer each picture in several sizes were being read as though every size were a separate photo, which filled up the limit long before the good pictures were reached — and the small preview version was the one being taken, so it was then thrown out for being too small. One fetch also now takes up to 80 photos from a page instead of 40. Bellmoore Park went from 6 photos, none of them amenities, to 71 including the pool, clubhouse, fitness center and tennis courts. The panel now also says when a page has more photos than one fetch will take.
-- The admin community list now shows where each community's tour actually is — the stage it reached, how many places it has, how many finished films it has, and how long ago anything happened to it. The video count it showed before was reading the wrong pipeline and said "0 / 0" for every community, including ones with dozens of finished films
-- Communities are now ordered by when anything last happened to them, whether that was an edit or the tour pipeline running, so whatever you touched most recently is at the top. A community that has been rendering all morning no longer disappears down the list because nobody edited its record
-- Communities waiting on your photo review are flagged in amber, so the list doubles as a to-do list
-- Searching the admin community list now actually returns matches — it was failing silently and reporting "no communities found" for every search
-- The community list now shows the most recently added or edited communities first, with the date each was last touched, so a community you just created is at the top instead of buried alphabetically
-- The list now says how many communities it is showing out of the total, rather than looking like the whole table
-- A home tour's opening shot now gets its own tailored camera direction, chosen per home from a reviewed set of moves — a locked "living photo", a slow reveal, a rise, a glide toward the front door, and more — instead of the same slow push used for every home
-- When a listing has real drone photography, the opening shot can now begin high above the home and settle onto its front — or lift off from the front into the aerial view. Both ends of that shot are the listing's own photos; homes without clean aerial photos never get an invented one
-- All 15 existing home tours were re-rendered from the improved (sharpened and enlarged) photos
-- Neighborhood cards now show the community film's progress as a row of segments, one per place the film visits — so a card tells you how many stops a tour has and which one you are watching, instead of leaving you to guess how long it runs
-- That progress row can be dragged to move through the film, forward or back, and the place you are dragging to is named above it as you go
-- The **Explore** link on a neighborhood card gives a gentle pulse as the film nears its end, as an invitation to read more about the place you have just been shown
-- The four-figure summary bar (Schools, Safety, Convenience, Growth) has moved off the neighborhood card and onto the neighborhood's own Explore screen, so the card is the film and nothing else
-- With it gone, the neighborhood's name now sits in the bottom-left corner with **Explore** opposite it on the same line, at a larger size, and the card reads as balanced again
-- A neighborhood's lifestyle tags are now small icons to the right of its name rather than word pills, which gives the name room to breathe
-- A long neighborhood name now wraps onto a second line instead of being cut off mid-word
+- The admin home tour list shows each home's stage, tagged-photo count, whether web and phone cuts are finished, and how long ago anything happened; homes are ordered by when the pipeline last touched them, never-processed ones after, newest first.
+- The photo count in that list now counts every photo — anything past the first thousand had counted as zero.
+- Each film version (web, phone) is shown on its own rather than one word for the whole home.
+- Pulling photos from a community's website brings in the whole gallery — the full-size picture, not the preview, and up to 80 photos per page instead of 40. Bellmoore Park went from 6 photos to 71 including the pool, clubhouse, fitness center and tennis courts; the panel says when a page holds more than one fetch takes.
+- The admin community list shows each community's stage, place count, finished films and last activity (the old count read "0 / 0" everywhere); communities are ordered by last activity, those awaiting photo review are flagged amber, and it says how many it shows out of the total.
+- Searching the admin community list actually returns matches.
+- A home tour's opening shot gets its own camera direction, chosen per home from a reviewed set — a locked "living photo", a slow reveal, a rise, a glide toward the front door, and more.
+- With real drone photography, the opening shot can begin high above the home and settle onto its front, or lift off into the aerial view — both ends the listing's own photos.
+- All 15 existing home tours were re-rendered from the sharpened, enlarged photos.
+- Neighborhood cards show the film's progress as a row of segments, one per place, draggable to move through the film with the place named as you go.
+- The **Explore** link on a neighborhood card pulses gently as the film nears its end.
+- The four-figure summary bar (Schools, Safety, Convenience, Growth) moved off the neighborhood card onto its Explore screen; the name now sits bottom-left with **Explore** opposite, larger, lifestyle tags are small icons beside it, and long names wrap instead of being cut off.
 
 ### 2026-08-21
-- Every photo is now sharpened and enlarged automatically before a home tour is made, rather than only when someone happened to have the admin photo table open. Most photos were never being improved at all
-- The iPhone feed now always plays the phone version of a home tour. In some cases it was falling back to the widescreen version, which is cut for a different shape
-- The iPhone feed now shows only homes and neighborhoods that have a video, so every card in the deck plays
-- When a photo doesn't make it into a home tour, the table now says exactly why — which room was already full and how many it holds, which better shot it duplicated, or that the film simply ran out of room — instead of listing every rule it might have broken
-- The phone cut and the widescreen cut now sit side by side on the home tour screen, so both can be checked at a glance
-- The photo table now has an iOS column and a Web column side by side, so both versions of a shot are visible on the same row whichever motion each one uses
-- The finished web version can be watched on the home tour screen — the player switches between the phone cut and the widescreen cut
-- Long steps now show how long they've been running, so a job that takes minutes no longer looks like one that has died
-- A step that fails to complete now says so instead of quietly doing nothing
-- Work interrupted by a restart of the video machine is now picked back up automatically. Previously a clip caught mid-render was stuck forever, which could leave a tour permanently one shot short
-- When a shot is missing from a home tour, the warning now names it — which shot, which version, and whether it's still being made, failed, or was never started — instead of just counting them. Each case says what to actually do
-- A filter on the photo table jumps straight to shots that are missing a clip
-- The Worker screen now opens with the essentials: what the machine is doing on the left, what just happened across every queue on the right, the full table below
-- The AI generation cost is on that screen, split by what it was spent on, with the day's and the week's total. It's the figure the provider billed, and local renders don't add to it
-- The log panel says what it is, and explains itself rather than looking broken when it's viewed somewhere the logs don't exist
-- An AI-generated clip is now always used in the film when one exists, whatever engine the running order had settled on for that shot. Previously a clip you generated by hand could be quietly left out
-- The admin Worker screen is now one table you read top to bottom: each worker, then the queues that worker is responsible for directly underneath it, so a backed-up queue and the worker to blame sit together
-- Warnings appear on the row they concern rather than in a list at the top
-- Machine load, memory, disk and the day's AI spend moved into a single line, so the whole picture fits one screen
-- Home tours now produce both the phone version and the widescreen web version, from the same reviewed photos and the same running order
-- Both versions sit on one row per photo in the review table, instead of doubling the number of columns
-- The AI hero shot is now planned automatically as the opening shot of every home tour. Reject it and it stays rejected — it won't come back on the next run
-- A listing's own photos start out approved. Reviewing a home tour is now about dropping the few that shouldn't be in it, rather than approving every one
-- The home tour screen shows a single player at the top, matching the community tour screen, instead of two stacked previews
-- Home tour clips and films now appear on the Video Jobs screen alongside every other queue, instead of being invisible while they ran
-- An AI hero shot requested for a home tour is now actually picked up and made. Before, the request was recorded and nothing ever collected it
-- A home tour step that fails now says so, with the reason, instead of showing as still running. A step that stops making progress is called out rather than spinning forever
-- Home tour videos are now built the same way community films are — one stage at a time, with a stop for review in the middle. Photos are labelled, then you go through them and keep or drop each one, then the running order is worked out, then each shot is made, then the film is stitched
-- The running order is visible before anything is rendered. Which photos the film will use, what order they play in, how long each one lasts and how the camera moves across it — all of it can be read and changed while the film still costs nothing to redo
-- Photos can be approved or rejected for a home tour. A rejected photo is left out of the running order
-- Each shot is now made on its own, so a single room can be re-done without rebuilding the whole film
-- Home tour videos now fill the card properly on iPhone. They were being made square, which meant almost a third of every frame was cut off the sides on the feed card
-- An AI-generated opening or closing shot can be requested for a home tour. It's limited to those two positions
-- The admin Worker screen is now a full console for the machine that makes the videos: whether each worker is running, how long it has been up, how hard the machine is working, and how much disk is left
-- Every queue is visible in one table — not just video renders, but photo clips, enhancement, reframing and the paid AI queues — with what's waiting, how long it has been waiting, and what finished or failed in the last day
-- A plain-language verdict sits at the top. It stays quiet while work is simply in progress and speaks up when something has genuinely stalled, rather than showing a number and leaving you to judge
-- Worker logs can be read on the screen, filtered, and followed live, with the video-encoder noise hidden by default
-- What the paid AI video queues cost is shown by day, so a week's spend is visible without opening a bill
-- A worker can be restarted from the screen — including when it is still running code from before a fix was merged, which the screen now points out
+- Every photo is sharpened and enlarged automatically before a home tour is made, not only when the admin photo table happened to be open.
+- The iPhone feed always plays the phone version of a home tour, and shows only homes and neighborhoods that have a video.
+- When a photo doesn't make a home tour, the table says exactly why — which room was full, which better shot it duplicated, or that the film ran out of room.
+- The phone cut and widescreen cut sit side by side on the home tour screen, with iOS and Web columns on the same row of the photo table and a player that switches between the two.
+- Long steps show how long they've been running, a step that fails says so with the reason, and one that stops making progress is called out rather than spinning forever.
+- Work interrupted by a restart of the video machine is picked back up automatically.
+- A missing shot is named — which shot, which version, whether it's still being made, failed or never started — with what to do; a photo-table filter jumps to shots missing a clip.
+- An AI-generated clip is always used in the film when one exists, and an AI hero shot requested for a home tour is actually picked up and made.
+- The AI hero shot is planned automatically as every home tour's opening; reject it and it stays rejected. An AI-generated opening or closing shot can be requested, limited to those two positions.
+- A listing's own photos start out approved — reviewing means dropping the few that shouldn't be in.
+- Home tours produce both the phone version and the widescreen web version from the same reviewed photos and running order, on one row per photo in the review table.
+- The home tour screen shows a single player at the top, matching the community tour screen, and home tour clips and films appear on the Video Jobs screen alongside every other queue.
+- Home tour videos are built the same way community films are — photos labelled, kept or dropped by you, running order worked out, each shot made, film stitched. The running order (which photos, what order, how long each holds, how the camera moves) can be read and changed before anything is rendered, and each shot is made on its own so a single room can be redone.
+- Home tour videos fill the card properly on iPhone — they were square, losing a third of every frame.
+- The admin Worker screen is a full console for the video machine: whether each worker is running and for how long, load, memory and disk, every queue (video renders, photo clips, enhancement, reframing, paid AI) with what's waiting and what finished or failed in the last day, a plain-language verdict that speaks up only when something has stalled, live filterable logs, and a restart button that flags a worker still running pre-fix code.
+- That screen opens with the essentials — the machine's activity, what just happened across every queue, the full table below — as one table with each worker's queues directly beneath it and warnings on the row they concern; AI generation cost is shown by purpose with day and week totals, and the log panel explains itself where logs don't exist.
 
 ### 2026-08-20
-- Community films are now narrated. A voice walks you through the neighbourhood — what it has, what's nearby, what's worth the drive — instead of the film running on music alone
-- The narration is written against the film's own cut, so what you hear matches what you see. Each stretch of the film gets its own line, spoken while those shots are on screen
-- Every community gets its own telling. The narrator's voice suits the community's character and stays the same for that community every time; the opening comes from what makes the place distinctive rather than a fixed formula
-- The music steps back under the narration and comes forward again between lines, at a consistent level whichever track is playing
-- The script can be read on the community tour screen before the film is made, so it can be checked rather than discovered on playback
-- Narration never describes which school anyone attends, or how residents get there. School shots name the schools and describe the campuses
-- A film that can't get a script still renders, with music as before
+- Community films are now narrated — a voice walks you through what the neighbourhood has, what's nearby and what's worth the drive.
+- The narration is written against the film's own cut, one line per stretch, spoken while those shots are on screen.
+- Every community gets its own telling — a narrator that suits its character and stays the same every time, with an opening drawn from what makes the place distinctive.
+- The music steps back under the narration and returns between lines, at a consistent level.
+- The script can be read on the community tour screen before the film is made.
+- Narration never describes which school anyone attends or how residents get there; school shots name the schools and describe the campuses.
+- A film that can't get a script still renders with music.
 
 ### 2026-08-19
-- A community film now visits about a dozen places, picked to cover different kinds — a park, a school, somewhere to eat, somewhere to shop — instead of whatever happened to be nearest
-- The research step finds far more of what is actually around a community: for Aberdeen it went from 5 places across 4 kinds to 14 across 9, including restaurants, a gym and parks it had never surfaced
-- Every shot in a community film now names the place on screen, with how far it is from the community when it isn't one of the community's own amenities
-- A film shows at most three shots of any one place, so a pool or a park no longer dominates
-- Places of worship no longer appear in any generated film, and existing ones have been removed from every community and listing. Religion is a protected class in housing, so a film that presents a neighbourhood's religious character is a risk we don't take
-- A film visits each place once, as a single stretch, instead of returning to it later — the same school or shop no longer turns up twice
-- Photos with people in them are used again: a pool with swimmers or a park with families now counts in a film's favour rather than being thrown out. Photos where a person is the subject, and any photo where a child is recognisable, are still excluded
-- Decorative graphics from a website's own theme are no longer mistaken for photos when pulling images from a page
-- The photo table shows where each photo came from — the community's own website, Google, or Street View
-- A place added to a community by hand now gets its photos pulled and reaches the film, instead of only places the research step proposed
-- Community films visit one amenity at a time, in the order someone being shown around would see them — the entrance, then the clubhouse, the pool, the courts — instead of cutting back and forth
-- Films can now run up to 90 seconds, enough for the community and its surroundings to each get real time
-- A community film now opens with the community itself — its entrance, pool, clubhouse and grounds play as one opening stretch, and the neighbourhood follows
-- Each step of the community tour screen now says when it last ran, so results left over from an earlier setup are obvious instead of looking current
-- The research step lists the places it proposed with their distances, and the resolve step shows how far each place actually is — both sorted nearest first
-- Community films stay local: places more than four miles away no longer appear, so a city's downtown or town square stops turning up in a film about a neighbourhood several suburbs over
-- Nearer places now rank above further ones when both would fit, and the research step is briefed to look for the daily orbit — the assigned schools, the everyday grocery, the parks residents walk to
-- Photos from a community's own website are all used and take precedence over generic map photos of the same place
+- A community film now visits about a dozen places, picked to cover different kinds — a park, a school, somewhere to eat, somewhere to shop — instead of whatever is nearest.
+- The research step finds far more: Aberdeen went from 5 places across 4 kinds to 14 across 9, including restaurants, a gym and parks.
+- Every shot names the place on screen, with its distance from the community when it isn't one of the community's own amenities.
+- A film shows at most three shots of any one place, and visits each place once as a single stretch.
+- Places of worship no longer appear in any generated film and have been removed from every community and listing — religion is a protected class in housing.
+- Photos with people in them count again (a pool with swimmers, a park with families); photos where a person is the subject, or a child is recognisable, are still excluded.
+- Decorative graphics from a website's own theme are no longer mistaken for photos.
+- The photo table shows where each photo came from — the community's website, Google, or Street View.
+- A place added to a community by hand now gets its photos pulled and reaches the film.
+- Community films open with the community itself — entrance, clubhouse, pool, courts, one amenity at a time in walk-through order — and the neighbourhood follows.
+- Films can now run up to 90 seconds.
+- Each step of the community tour screen says when it last ran; research lists proposed places with distances and resolve shows how far each actually is, both nearest first.
+- Community films stay local — nothing more than four miles away — with nearer places ranking above further ones, and research briefed to find the daily orbit: assigned schools, the everyday grocery, parks residents walk to.
+- Photos from a community's own website are all used and take precedence over generic map photos of the same place.
 
 ### 2026-08-18
-- Fix: the Resolve & Merge step could blank the community tour screen instead of showing its results
-- Photos can be pulled straight from a community's own website: paste the page address on the community's tour screen and everything on it arrives in the photo table to approve or reject
-- Communities are now classified as either a formally-planned subdivision or an informal neighborhood, so curated communities can be told apart from map data
+- Fix: the Resolve & Merge step could blank the community tour screen.
+- Photos can be pulled from a community's own website by pasting the page address on its tour screen; everything on it arrives in the photo table to approve or reject.
+- Communities are classified as a formally-planned subdivision or an informal neighborhood, so curated communities can be told apart from map data.
 
 ---
 
 ## v1.1 — Neighborhood tours are now planned shot by shot, not assembled by rule of thumb
 
-A neighborhood tour used to be built from a simple lookup: a photo tagged "landscape" always got the same treatment, for the same number of seconds, in the same place in the film. Every tour therefore looked a little like every other one, and a photo that happened to be tagged wrong got a clip that fought it.
+A neighborhood tour used to be built by lookup — a photo tagged "landscape" always got the same treatment for the same seconds in the same place — so every tour looked like every other. Tours are now planned: each approved photo is described once (what it shows, whether anything really moves, whether people or signs are visible, time of day, how long a viewer would linger), and the plan decides which photos get real motion, depth or a slow camera move, their order, how long each holds, and what the narration says.
 
-Tours are now planned. Each approved photo is looked at once and described — what it shows, whether anything in it really moves, whether people or shop signs are visible, what time of day it is, how long a viewer would want to linger. The plan is then worked out from those descriptions: which photos get real motion, which get depth, which get a slow camera move; what order they play in; how long each one holds; and what the narration says.
-
-What that changes on screen:
-
-- **Fewer identical-looking clips.** Camera moves are picked per photo and checked against the clip before them, so the same move never lands twice in a row.
-- **Films land at a consistent length.** Every tour is planned to run 45–50 seconds, with the seconds spent on the shots worth lingering on.
-- **Panoramas are no longer cropped to ribbons.** A wide plaza shot keeps its whole frame instead of losing three quarters of it to the portrait format.
-- **AI motion is used sparingly and only where it is safe.** At most four clips per tour use generative motion, never on a frame with a readable shop or school sign, never on one with people in the foreground, and never to invent anything that was not already in the photo. Each of those clips is labelled as AI-generated.
-- **Narration reads as one script.** Lines are written per photo, then rewritten as a continuous voiceover script paced to the film. Nothing about school assignment is ever stated or implied.
+- **Fewer identical-looking clips.** Camera moves are picked per photo and checked against the previous clip, so the same move never lands twice in a row.
+- **Films land at a consistent length** — every tour runs 45–50 seconds, spending the time on shots worth lingering on.
+- **Panoramas are no longer cropped to ribbons.** A wide plaza shot keeps its whole frame.
+- **AI motion is used sparingly and only where safe.** At most four clips per tour, never on a readable shop or school sign, never with people in the foreground, never inventing what wasn't in the photo — each labelled as AI-generated.
+- **Narration reads as one script**, a continuous voiceover paced to the film. Nothing about school assignment is ever stated or implied.
 
 ### 2026-08-19
-- Community pages load slightly faster — a database lookup that fed nothing was removed
-- Groundwork: the automated checks that run before any change ships were not actually running, and are now fixed. Two problems they immediately caught have been fixed as well.
+- Community pages load slightly faster.
+- Groundwork: the automated checks that run before any change ships were not actually running and are now fixed, along with two problems they immediately caught.
 
 ### 2026-08-17
-- Neighborhood tour videos are planned end to end (photo description → shot list → compliance check → narration)
-- Every AI-generated clip in a tour now carries an AI-generated label
-- The photo review table shows each photo's plan — its place in the film, how it will be animated, how long it holds, and whether it still needs rendering
-- Photos carrying a camera watermark or date stamp are kept out of neighborhood tours
+- Neighborhood tour videos are planned end to end: photo description → shot list → compliance check → narration.
+- Every AI-generated clip in a tour carries an AI-generated label.
+- The photo review table shows each photo's plan — its place in the film, how it will be animated, how long it holds, whether it still needs rendering.
+- Photos carrying a camera watermark or date stamp are kept out of neighborhood tours.
 
 ---
 
 ## v1.0 — Percho is a swipe-feed home discovery product for US buyers, with an AI-native hub for listing agents
 
-Percho is a mobile-first home discovery app for the whole US buyer pool. Buyers scroll a TikTok-style vertical feed of homes and the neighborhoods around them — real listings, real photos and video, plus short clips of the parks, restaurants, schools, and shops actually nearby. Listing agents get a single hub that turns their photos into a home-tour video, drafts social copy in five languages across nine platforms, routes leads, and reports on what's working. Operators get an admin console that watches every pipeline behind it.
+Percho is a mobile-first home discovery app for the whole US buyer pool. Buyers scroll a TikTok-style vertical feed of homes and the neighborhoods around them — real listings, real photos and video, plus short clips of the parks, restaurants, schools and shops actually nearby. Listing agents get a single hub that turns their photos into a home-tour video, drafts social copy in five languages across nine platforms, routes leads, and reports on what's working. Operators get an admin console that watches every pipeline behind it.
 
 ### For buyers
-- **Swipe feed** — one continuous vertical stream of homes for sale. Autoplay with sound, phone-native volume control, full-viewport frame, and a right-rail of Like / Save / Contact / Share on every card.
-- **Neighborhoods** — tap a badge on any listing to open the neighborhood: description, preview videos, and a fullscreen swipe through the whole community. From any neighborhood, a "🏠 Live here" chip flips into the list of homes for sale there.
-- **Nearby videos** — every listing carries a 🏘️ Nearby button that opens short clips of what's actually around the home, organized into 14 buyer-persona buckets (dining, groceries, parks, schools, coffee, commute, and more). Photos are sourced from real POIs, reviewed for quality, and rendered into Ken Burns walkthroughs with music.
-- **Community as anchor** — Nearby content lives at the subdivision level, so every home in the same neighborhood shares the same trustworthy set of clips instead of a thin per-listing sample.
-- **Grids everywhere** — Explore, Saved, Search, per-community, and agent pages all use the same TikTok-style card (cover fills, price/beds/baths/address on a soft gradient, two rows peek onto every screen).
-- **Saved, My Activity, Me** — buyers can favorite homes and neighborhoods, come back to what they've watched, and manage their profile with a clean two-button Me page (Change password / Sign out).
-- **Multilingual reach** — the buyer surface is English, but marketing copy generated by agents reaches Spanish, Simplified Chinese, Vietnamese, and Korean buyers on the platforms they actually use, including Rednote and WeChat Moments.
+- **Swipe feed** — one continuous vertical stream of homes for sale, autoplaying with sound, full-viewport, with Like / Save / Contact / Share on every card.
+- **Neighborhoods** — tap a badge on any listing to open its neighborhood (description, preview videos, a fullscreen swipe through the community); a "🏠 Live here" chip flips into the homes for sale there.
+- **Nearby videos** — every listing's 🏘️ Nearby button opens short clips of what's around the home in 14 buyer-persona buckets (dining, groceries, parks, schools, coffee, commute and more), rendered from reviewed real-place photos with music.
+- **Community as anchor** — Nearby content lives at the subdivision level, so every home in a neighborhood shares the same trustworthy clips.
+- **Grids everywhere** — Explore, Saved, Search, per-community and agent pages all use the same card (cover fills, price/beds/baths/address on a soft gradient, two rows peeking onto every screen).
+- **Saved, My Activity, Me** — favorite homes and neighborhoods, revisit what you've watched, and a two-button Me page (Change password / Sign out).
+- **Multilingual reach** — the buyer surface is English, but agent-generated marketing copy reaches Spanish, Simplified Chinese, Vietnamese and Korean buyers on the platforms they use, including Rednote and WeChat Moments.
 
 ### For listing agents
-- **Unified hub** for every listing and every community — Details · Media · Marketing · Leads · Analytics, one shared shell, hero-cover on top, sticky sub-tabs, auto-save, deep-linkable.
-- **Auto-generated home-tour videos** — one click on the Media tab turns a listing's photos into a ~2-minute Ken Burns walkthrough with a background track from a curated HGTV/vlog music library. Text-free frames (the photos speak for themselves) and full-bleed rendering with a blurred backdrop so nothing gets cropped.
-- **Marketing copy generator** — nine platforms (Facebook, Instagram, Email, TikTok, X, LinkedIn, Threads, Rednote, WeChat Moments) × five languages, grounded in the listing's real description, photo captions, and video titles. Drafts save per listing, "Refine from your edits" seeds the next pass with your own words, and repeat generations return instantly from cache.
-- **Leads inbox** — sortable table with source-aware routing (a listing lead sends you back to that listing; a community lead sends you back to that community), separate Email / SMS buttons per row that auto-mark follow-up, and a per-listing leads panel using the same pattern.
-- **Analytics** — Views, Leads, and Conversion cards, a 7-day sparkline, a watch-through ring, and a 4-step drop-off funnel (Page views → Card views → Video completes → Leads), scoped per listing and per community.
-- **One-tap creation** — a single tap makes a stub listing or community and drops the agent on its edit page. Publishing is gated on address, price, beds, baths, and at least one ready photo or video.
-- **Instant Active ↔ Inactive** — one toggle. No draft/published/archived states. Permanent delete is the only destructive action, isolated in a red Danger zone.
-- **Shared communities** — when multiple agents post videos to the same neighborhood, each can only edit or delete their own uploads; other agents' videos are visible with a "by @uploader" tag.
+- **Unified hub** for every listing and community — Details · Media · Marketing · Leads · Analytics, one shell with hero cover, sticky sub-tabs, auto-save and deep links.
+- **Auto-generated home-tour videos** — one click on the Media tab turns a listing's photos into a ~2-minute walkthrough with a track from a curated music library, text-free and full-bleed so nothing is cropped.
+- **Marketing copy generator** — nine platforms (Facebook, Instagram, Email, TikTok, X, LinkedIn, Threads, Rednote, WeChat Moments) × five languages, grounded in the listing's real description, captions and video titles; drafts save per listing, "Refine from your edits" seeds the next pass with your words, and repeats return instantly.
+- **Leads inbox** — a sortable table that routes each lead back to its listing or community, with Email / SMS buttons per row that auto-mark follow-up, plus a per-listing leads panel.
+- **Analytics** — Views, Leads and Conversion cards, a 7-day sparkline, a watch-through ring and a 4-step funnel (Page views → Card views → Video completes → Leads), per listing and per community.
+- **One-tap creation** — a single tap makes a stub listing or community and opens its edit page; publishing requires address, price, beds, baths and one ready photo or video.
+- **Instant Active ↔ Inactive** — one toggle, no draft/published/archived states; permanent delete is isolated in a red Danger zone.
+- **Shared communities** — several agents can post videos to one neighborhood; each edits or deletes only their own, and others' show a "by @uploader" tag.
 
 ### For admins and operators
-- **Admin console** with pipeline observability across seven tabs (Home Tour, Home Nearby, Neighborhood Nearby, POI, Video Jobs, Music, and more). Every list view has search, sortable columns, and pagination.
-- **BGM library management** — import from a web catalog or upload local mp3s per vibe, dual-button Approve/Reject, soft-reject with undo, and a Purge button to hard-delete rejected tracks.
-- **POI photo review** — fetch photos per POI in parallel, review at the individual photo level (approving photos implicitly approves the POI), and filter POIs by whether they already have photos.
-- **Home-tour job monitoring** — per-listing hub view, not a flat render queue, so operators can see the full state of any home's tour without touching agent ownership.
+- **Admin console** with pipeline observability across seven tabs (Home Tour, Home Nearby, Neighborhood Nearby, POI, Video Jobs, Music and more); every list has search, sortable columns and pagination.
+- **BGM library management** — import from a web catalog or upload local tracks per vibe, Approve/Reject with undo, and Purge to hard-delete rejected tracks.
+- **POI photo review** — fetch photos per place in parallel, approve at the photo level (which approves the place), and filter places by whether they already have photos.
+- **Home-tour job monitoring** — a per-listing hub view rather than a flat render queue, so operators see the full state of any home's tour.
 
 ### Under the hood (still non-technical)
-- Fast page transitions across the whole app — placeholders paint immediately and the next page pre-fetches in the background.
-- Multi-agent-safe editing on shared communities — no one can accidentally overwrite another agent's uploads.
-- Full mobile viewport on every feed, comfortable 44×44 tap targets, and consistent right-rail placement across every video and photo surface.
+- Fast page transitions everywhere — placeholders paint immediately and the next page pre-fetches in the background.
+- Multi-agent-safe editing on shared communities — no one can overwrite another agent's uploads.
+- Full mobile viewport on every feed, comfortable 44×44 tap targets, and consistent right-rail placement on every video and photo surface.
 
 ### 2026-08-14
-- The bottom tab bar has icons again — a house, a magnifying glass, a bookmark, and a person, drawn as light outlines above each label.
-- Home cards are a little narrower, with more of the paper background on each side, and now cast a soft shadow so they lift off the page.
-- The feed's background is a slightly deeper warm off-white, so the near-white card reads as paper laid on top of it.
-- The video inside a home card has gently rounded corners rather than fully rounded ones.
-- Less empty space between the rule and the "Explore home" link.
-- The save button on a photo is slightly smaller again.
-- The Percho name now sits at the top of the feed, with both top corners left clear.
-- Home cards sit further in from the edges, so the paper background frames each one.
-- Calmer card typography — a lighter price, softer address and spec greys, and a hairline rule above the "Explore home" link.
-- Feature tags are now light tinted rectangles instead of candy-coloured capsules.
-- Green is reserved for things you can tap or have selected: the LISTING label is plain ink again.
-- The save button on a photo is a smaller frosted disc that reads clearly over any image.
-- The sound on/off control moved off the feed's top bar and onto the home detail screen, where the guided tour plays.
-- Home cards are a touch shorter, so the paper background shows above and below each one.
-- The video inside a home card now has an even margin on all sides.
-- The address under the price is darker and easier to read.
-- Price, address, and tags read as one group, set apart from the "Explore home" link.
-- Lighter, thinner icons: the explore arrow and the save bookmark are outlines now. A saved home fills its bookmark in white instead of turning it green.
-- The line above the bottom tab bar is fainter.
-- The Percho name at the top of the feed is now deep forest green.
-
-<!--
-Add new dated bullets below as bug fixes / small polish land under v1.0.
-Only bump the version (v1.1, v2.0, …) for a new pitchable capability
-or a big product step. Example:
-
-### 2026-07-20
-- Fix upload issue for photos over 12 MB
-- Neighborhood grid loads twice as fast on repeat visits
--->
+- **Tab bar** — icons are back (a house, a magnifying glass, a bookmark and a person as light outlines above each label), and the line above the bar is fainter.
+- **Cards as paper on a page** — home cards are a little narrower and shorter, sit further in from the edges on a slightly deeper warm off-white background with a soft shadow, and the video inside has gently rounded corners and an even margin on all sides.
+- **Calmer card typography** — a lighter price, a darker, more readable address, softer spec greys, and a hairline rule with less space above the "Explore home" link, so price, address and tags read as one group.
+- **Colour reserved for meaning** — feature tags are light tinted rectangles instead of candy-coloured capsules, the LISTING label is plain ink since green now means tappable or selected, and the Percho name at the top of the feed (both corners clear) is deep forest green.
+- **Lighter, thinner icons** — the explore arrow and save bookmark are outlines, a saved home fills its bookmark white rather than green, and the photo save button is a smaller frosted disc that reads over any image.
+- **Sound control** moved off the feed's top bar onto the home detail screen, where the guided tour plays.
 
 ---
 

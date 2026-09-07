@@ -12,8 +12,8 @@ export const metadata: Metadata = {
  * /agents — public agent-waitlist landing page.
  *
  * Built for the KW Atlanta meetup (2026-07). Agents scan a QR code on the
- * table sign, land here on their phone, and drop email + phone. Copy is
- * verbatim from docs/meetup-kw-atlanta/landing-page-copy.md.
+ * table sign, land here on their phone, and drop email + phone. Copy was
+ * lifted verbatim from the meetup packet, which is no longer in the repo.
  */
 export default function AgentsLandingPage() {
   return (

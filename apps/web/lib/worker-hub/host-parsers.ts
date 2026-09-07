@@ -137,7 +137,7 @@ export interface LogLine {
  * carries no state, so the viewer hides it by default rather than making the
  * owner scroll past `frame= 2736 fps=877 …` to find `[assembly …] ready`.
  */
-export const NOISE_PATTERNS: RegExp[] = [
+const NOISE_PATTERNS: RegExp[] = [
   /^\s*frame=\s*\d/,
   /^\s*size=\s*\d/,
   /^\[out#/,

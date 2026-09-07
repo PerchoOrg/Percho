@@ -21,7 +21,6 @@ import {
   generateBucketVideo,
   getBucketEligiblePhotoCount,
   getBucketVideoStatus,
-  listBucketVideos,
   regenerateBucketVideoNarrative,
 } from './bucket-video-core';
 import {
@@ -41,10 +40,6 @@ export async function generateListingBucketVideo(
   bucket: IntentBucket,
 ): Promise<GenerateListingBucketVideoResult> {
   return generateBucketVideo<'listing_not_found'>(SCOPE, listingId, bucket);
-}
-
-export async function listListingBucketVideos(listingId: string): Promise<ListingBucketVideoRow[]> {
-  return listBucketVideos(SCOPE, listingId);
 }
 
 export async function getListingBucketVideoStatus(

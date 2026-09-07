@@ -25,7 +25,7 @@
 
 import type { BgmEnergy, BgmVibe } from './storage';
 
-export const LYRIA_MODEL = process.env.GEMINI_MUSIC_MODEL ?? 'lyria-3-pro-preview';
+const LYRIA_MODEL = process.env.GEMINI_MUSIC_MODEL ?? 'lyria-3-pro-preview';
 const INTERACTIONS_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
 
 /** Roughly $0.08 a track at the published rate — shown in the admin before generating. */

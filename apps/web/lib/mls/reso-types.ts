@@ -3,7 +3,7 @@
  *
  * Only the ~30 fields Percho actually needs are modeled here. Full RESO
  * Data Dictionary has hundreds of fields — we intentionally do not import
- * them all. See docs/mls-integration/data-model.md for the shortlist and
+ * them all. See docs/mls-integration/go-live.md for the shortlist and
  * the reasoning.
  *
  * Two shapes are exported:

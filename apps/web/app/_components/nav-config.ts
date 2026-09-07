@@ -121,7 +121,7 @@ export function isSubTabActive(pathname: string, sub: SubTab, all: SubTab[]): bo
  * Routes where chrome (BottomNav + DesktopSidebar + TopBar) hides itself
  * entirely: the swipe feed, auth screens, and the landing hero.
  */
-export const CHROME_HIDDEN_PREFIXES = [
+const CHROME_HIDDEN_PREFIXES = [
   '/v/',
   '/browse/feed',
   '/login',

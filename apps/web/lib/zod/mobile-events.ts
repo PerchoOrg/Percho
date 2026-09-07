@@ -17,7 +17,7 @@ import { z } from 'zod';
 
 const MAX_EVENT_JSON_BYTES = 4096;
 
-export const mobileEventSchema = z
+const mobileEventSchema = z
   .object({
     type: z.string().trim().min(1).max(48),
     seq: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),

@@ -376,8 +376,12 @@ These are the rules that, if broken, the user will be very unhappy:
 - **No barrel files** (see §4).
 - **No `any` casts** to silence errors. Fix the type.
 - **No** `eslint-disable` / `biome-ignore` without a comment explaining why.
-- **No** committing `console.log` in code paths that run in production. Dev-only
-  logs go through a `logger` helper that no-ops in prod (build it in Phase 1).
+- **No** committing `console.log` in code paths that run in production.
+  `console.warn` / `console.error` are fine — they are what the code actually
+  uses. (A `lib/log.ts` wrapper was specified here and shipped, but nothing
+  ever imported it; it was deleted in phase184. Don't re-add one without
+  converting the ~118 existing call sites in the same change.)
+- **Never** log full PII. Mask or hash first — see §3 rule 6.
 - **No** inline secrets. Even in tests. Use env vars or fixtures.
 - **No** generated/AI-written copy committed as static fixtures unless reviewed
   by the owner.

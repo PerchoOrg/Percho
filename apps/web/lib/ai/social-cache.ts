@@ -23,7 +23,7 @@
 
 import { createHash } from 'node:crypto';
 
-export function normalizeHighlights(values: readonly string[] | undefined | null): string[] {
+function normalizeHighlights(values: readonly string[] | undefined | null): string[] {
   if (!values) return [];
   const seen = new Set<string>();
   for (const v of values) {

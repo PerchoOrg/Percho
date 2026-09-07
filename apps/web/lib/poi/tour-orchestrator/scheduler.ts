@@ -48,10 +48,10 @@ import type {
  */
 export const DEPTHFLOW_MAX_OVERFLOW = 0.3;
 
-export const DEPTHFLOW_TARGET_SHARE = 0.4;
-export const DEPTHFLOW_MIN_SHARE = 1 / 3;
-export const DEPTHFLOW_MAX_SHARE = 1 / 2;
-export const DEPTHFLOW_MIN_CLIPS = 2;
+const DEPTHFLOW_TARGET_SHARE = 0.4;
+const DEPTHFLOW_MIN_SHARE = 1 / 3;
+const DEPTHFLOW_MAX_SHARE = 1 / 2;
+const DEPTHFLOW_MIN_CLIPS = 2;
 
 /** Cost gate: Seedance is ~$0.05/clip and the only paid engine here. */
 export const SEEDANCE_MAX_CLIPS = 4;
@@ -59,9 +59,9 @@ export const SEEDANCE_MAX_CLIPS = 4;
 export const SEEDANCE_MIN_DURATION = 4.0;
 
 /** At/above this aspect a photo is a panorama: letterbox it, never crop it. */
-export const PANORAMA_MIN_ASPECT = 2.0;
+const PANORAMA_MIN_ASPECT = 2.0;
 
-export const DURATION_BASE = 3.0;
+const DURATION_BASE = 3.0;
 export const DURATION_MIN = 2.0;
 export const DURATION_MAX = 4.5;
 /**
@@ -84,7 +84,7 @@ export const TOUR_TARGET_MAX_S = 90;
 /** Durations move in half seconds; anything finer is invisible on screen. */
 const DURATION_STEP = 0.5;
 /** Short side at/above which resolution stops shortening a clip. */
-export const FULL_RES_SHORT_SIDE = 1080;
+const FULL_RES_SHORT_SIDE = 1080;
 
 /**
  * Ken Burns catalogue — every name here has a branch in `kenburns_filter_v2`
@@ -122,15 +122,6 @@ export const DEPTHFLOW_MOVES = [
   'orbit_left',
   'tilt_parallax',
   'static',
-] as const;
-
-/** Seedance "move" is a camera clause, not a render mode — see seedance-prompt. */
-export const SEEDANCE_MOVES = [
-  'camera_fixed',
-  'drift_in',
-  'pull_back',
-  'tilt_up',
-  'handheld_in',
 ] as const;
 
 /**
@@ -243,7 +234,7 @@ export function upscaleFactor(widthPx: number, heightPx: number): number {
  * nothing better. At 1.5x it would be 20% and 9 POIs — more coverage lost than
  * sharpness gained.
  */
-export const MAX_UPSCALE = 2.0;
+const MAX_UPSCALE = 2.0;
 
 /** Too soft for a full-frame clip, whatever the camera move. */
 export function isTooLowRes(widthPx: number, heightPx: number): boolean {
@@ -334,7 +325,7 @@ export function depthflowAmplitude(clipOverflow: number): number {
  * Stable hash of a photo id. UUIDs use the same first-8-hex-chars rotation the
  * render worker already applies, so a photo keeps the move it had.
  */
-export function stableHash(photoId: string): number {
+function stableHash(photoId: string): number {
   const hex = photoId.replace(/-/g, '').slice(0, 8);
   if (/^[0-9a-f]{8}$/i.test(hex)) return Number.parseInt(hex, 16);
   let h = 0x811c9dc5;
@@ -446,7 +437,7 @@ const AMENITY_SEQUENCE: Array<[RegExp, number]> = [
 ];
 const AMENITY_SEQUENCE_DEFAULT = 3.5;
 
-export function amenityRank(poiName: string): number {
+function amenityRank(poiName: string): number {
   for (const [pattern, rank] of AMENITY_SEQUENCE) {
     if (pattern.test(poiName)) return rank;
   }

@@ -12,7 +12,7 @@ import { CardSurface } from "./CardSurface";
 import { SAVE_TAP_TARGET } from "./ListingFace";
 
 /** The circular arrow CTA's tap target id (feed.tsx `onTapTarget`). */
-export const CITY_EXPLORE_TAP_TARGET = "city-explore";
+const CITY_EXPLORE_TAP_TARGET = "city-explore";
 
 interface AreaFaceProps {
 	card: AreaCardV3;

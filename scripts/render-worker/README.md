@@ -43,7 +43,7 @@ page → `POST /api/listings/[id]/generate-tour` inserts a placeholder
   Without either piece it silently falls back to FSRCNN_x2 and keeps working;
   `enhance.py --self-check` prints which backend is live.
   `ENHANCE_THREADS` overrides the intra-op thread count (defaults to all cores).
-- Repo checked out at `/home/ubuntu/Percho` with `.env.local` containing
+- Repo checked out at `~/Percho` with `.env.local` containing
   `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
   `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_STREAM_API_TOKEN`.
 
@@ -104,29 +104,27 @@ One listing by hand (exposure matched across the group):
 ## Manual run (for testing)
 
 ```bash
-cd /home/ubuntu/Percho
+cd ~/Percho
 python3 scripts/render-worker/worker.py
 ```
 
 Ctrl-C to stop. Idle polls every 5s.
 
-## Install as systemd service
+## Running as a launchd agent
+
+The worker runs as the launchd agent `com.percho.render-worker` on the Mac
+mini (`~/Library/LaunchAgents/com.percho.render-worker.plist`, not checked
+in — the plist is the source of truth for working directory, interpreter and
+log path; `apps/web/lib/worker-hub/host.ts` reads it). Extra instances are
+`com.percho.render-worker-2`, `-3`.
 
 ```bash
-sudo cp scripts/render-worker/percho-render-worker.service \
-        /etc/systemd/system/percho-render-worker.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now percho-render-worker
-sudo systemctl status percho-render-worker
+launchctl kickstart -k gui/$(id -u)/com.percho.render-worker   # restart
+launchctl print gui/$(id -u)/com.percho.render-worker          # status
 ```
 
-Logs:
-
-```bash
-sudo tail -f /var/log/percho-render-worker.log
-# or
-journalctl -u percho-render-worker -f
-```
+Logs: the `StandardOutPath` named in the plist; the `/admin/pipeline/worker-health`
+hub tails it.
 
 ## What a job does
 

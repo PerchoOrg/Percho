@@ -277,8 +277,8 @@ export function buildDatapointFocusEvent(
  * §2.6 row 6. Returns null when the stop cited nothing: an `evidence_cited` with
  * an empty array would be indistinguishable from "this stop's evidence was
  * never rendered", which is the exact question the event exists to answer.
- * (`lib/listing/tour.ts` already refuses to emit an evidence-free stop, so this
- * is a second guard, not the primary one.)
+ * (The tour builder already refuses to emit an evidence-free stop, so this is
+ * a second guard, not the primary one.)
  */
 export function buildEvidenceCitedEvent(
 	ctx: Ctx,
@@ -345,13 +345,6 @@ export function buildTradeoffVoteEvent(
 	input: { axis: string; value: TradeoffVoteEvent["value"] },
 ): TradeoffVoteEvent {
 	return { ...ctx, type: "tradeoff_vote", ...input };
-}
-
-export function buildCostAdjustEvent(
-	ctx: Ctx,
-	input: { downPct: number; ratePct: number },
-): CostAdjustEvent {
-	return { ...ctx, type: "cost_adjust", ...input };
 }
 
 export function buildDockActionEvent(

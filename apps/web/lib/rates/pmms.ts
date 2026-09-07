@@ -13,7 +13,7 @@
  * Dates are M/D/YYYY; the newest row is last. Rows may be blank-padded.
  */
 
-export const PMMS_URL = 'https://www.freddiemac.com/pmms/docs/PMMS_history.csv';
+const PMMS_URL = 'https://www.freddiemac.com/pmms/docs/PMMS_history.csv';
 
 export interface MortgageRates {
   /** 30-yr fixed, annual fraction (0.0671 = 6.71%). */

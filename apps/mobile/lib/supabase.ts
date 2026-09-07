@@ -11,8 +11,8 @@
  *   2. `app.json` → `expo.extra.supabaseUrl` / `supabaseAnonKey` — committed
  *      production values. The anon key is the PUBLISHABLE key: it ships in
  *      every web page bundle already and RLS is the access control, so
- *      committing it here is by design (unlike the Google Maps key —
- *      see `components/CardMap.tsx` for that story).
+ *      committing it here is by design (unlike the Google Maps key, which
+ *      is not committed).
  *   3. Hardcoded production fallback.
  *
  * Session storage is AsyncStorage (the supabase-js default for RN); tokens

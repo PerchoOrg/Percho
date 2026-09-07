@@ -15,7 +15,7 @@
  * than two surgical handlers.
  */
 
-import { COMMUNITY_MARKETING_LANGUAGES, type CommunityMarketingLanguage } from '@/lib/ai/gemini';
+import { type CommunityMarketingLanguage, SOCIAL_LANGUAGES } from '@/lib/ai/gemini';
 import { checkAndRecord } from '@/lib/ai/rate-limit';
 import { socialDraftHash } from '@/lib/ai/social-cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
@@ -25,10 +25,7 @@ import { z } from 'zod';
 export const runtime = 'nodejs';
 
 const LanguageEnum = z.enum(
-  COMMUNITY_MARKETING_LANGUAGES as readonly [
-    CommunityMarketingLanguage,
-    ...CommunityMarketingLanguage[],
-  ],
+  SOCIAL_LANGUAGES as readonly [CommunityMarketingLanguage, ...CommunityMarketingLanguage[]],
 );
 
 const SaveInput = z.object({

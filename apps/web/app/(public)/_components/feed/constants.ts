@@ -14,10 +14,6 @@
 // has been using inline since phase 68.1. Was 6rem pre-phase-69.
 export const FEED_RAIL_BOTTOM = 'max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem))';
 
-// Caption block bottom inset — leaves space for the mobile home indicator
-// without burying the price/title under it.
-export const FEED_CAPTION_BOTTOM = 'max(1rem, env(safe-area-inset-bottom))';
-
 // Z-stack constants. Modal is z-[70]. Keep modal
 // above every overlay layer; nothing else here ever exceeds 40.
 export const FEED_Z = {

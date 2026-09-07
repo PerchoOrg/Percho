@@ -145,11 +145,6 @@ export function emptyBgmState(): BgmState {
   };
 }
 
-/** A track the render worker may use: present, reviewed, and not rejected. */
-export function isPlayable(path: string, state: BgmState): boolean {
-  return !state.rejected.includes(path) && !(state.pending ?? []).includes(path);
-}
-
 /** Public streaming URL for a track in the `bgm` bucket. */
 export function bgmPublicUrl(vibe: string, file: string): string {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '') ?? '';

@@ -20,9 +20,9 @@
  */
 
 import {
-  COMMUNITY_MARKETING_LANGUAGES,
   type CommunityMarketingLanguage,
   type CommunityMarketingVideo,
+  SOCIAL_LANGUAGES,
   generateCommunityMarketing,
 } from '@/lib/ai/gemini';
 import { checkAndRecord } from '@/lib/ai/rate-limit';
@@ -34,10 +34,7 @@ import { z } from 'zod';
 export const runtime = 'nodejs';
 
 const LanguageEnum = z.enum(
-  COMMUNITY_MARKETING_LANGUAGES as readonly [
-    CommunityMarketingLanguage,
-    ...CommunityMarketingLanguage[],
-  ],
+  SOCIAL_LANGUAGES as readonly [CommunityMarketingLanguage, ...CommunityMarketingLanguage[]],
 );
 
 const Input = z.object({

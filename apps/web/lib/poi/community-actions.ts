@@ -25,9 +25,8 @@ import {
   fetchPhotosForPoi,
   loadNearbyPois,
   setPhotoStatus,
-  setPoiStatus,
 } from './poi-actions-core';
-import type { PhotoStatus, PoiStatus, ReviewAction } from './types';
+import type { PhotoStatus, ReviewAction } from './types';
 
 export type CommunityDiscoverResult = DiscoverResult;
 export type CommunityPhotoFetchResult = PhotoFetchResult;
@@ -49,10 +48,6 @@ export async function fetchPhotosForCommunityPoi(
   opts: { max?: number; maxHeightPx?: number; actor?: PoiActor } = {},
 ): Promise<CommunityPhotoFetchResult> {
   return fetchPhotosForPoi(SCOPE, communityId, poiId, opts);
-}
-
-export async function setCommunityPoiStatus(communityId: string, poiId: string, status: PoiStatus) {
-  return setPoiStatus(SCOPE, communityId, poiId, status);
 }
 
 export async function setCommunityPhotoStatus(

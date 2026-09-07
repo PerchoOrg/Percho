@@ -19,7 +19,7 @@
 export const DEFAULT_DOWN_FRACTION = 0.2;
 
 /** Standard US fixed term. The calculator exposes it; the row uses this. */
-export const DEFAULT_TERM_YEARS = 30;
+const DEFAULT_TERM_YEARS = 30;
 
 export interface MonthlyInput {
 	priceUsd: number;

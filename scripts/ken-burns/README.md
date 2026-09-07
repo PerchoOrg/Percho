@@ -92,8 +92,8 @@ await new Promise((res, rej) =>
 
 ## Deploying
 
-Production runs on the EC2 `percho-render-worker` systemd service. See
-`scripts/render-worker/README.md` for the worker loop.
+Production runs inside the `com.percho.render-worker` launchd agent on the
+Mac mini. See `scripts/render-worker/README.md` for the worker loop.
 
 ## Notes
 

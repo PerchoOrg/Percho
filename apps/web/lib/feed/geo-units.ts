@@ -39,7 +39,7 @@ import { publicCoverImageUrl } from '@/lib/communities/cover';
 import { createAnonClient } from '@/lib/supabase/server';
 import { unstable_cache } from 'next/cache';
 
-export const GEO_UNITS_TAG = 'geo-units';
+const GEO_UNITS_TAG = 'geo-units';
 
 /** Mirrors `apps/mobile/lib/feed/geo-unit.ts` — keep the two in sync. */
 export type GeoLevel = 'area' | 'city' | 'zip';

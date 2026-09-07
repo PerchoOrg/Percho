@@ -23,7 +23,7 @@
  */
 
 /** Google Places types that identify a place of worship. */
-export const RELIGIOUS_PLACE_TYPES: readonly string[] = [
+const RELIGIOUS_PLACE_TYPES: readonly string[] = [
   'church',
   'mosque',
   'synagogue',

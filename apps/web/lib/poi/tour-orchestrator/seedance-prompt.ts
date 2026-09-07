@@ -23,7 +23,7 @@ export const CLAUSE_RIGID_GEOMETRY =
   'Straight lines and repeating structures stay straight and evenly spaced.';
 export const CLAUSE_SIGNAGE = 'Storefront signage stays unchanged.';
 
-export const MANDATORY_CLAUSES = [
+const MANDATORY_CLAUSES = [
   CLAUSE_NO_PEOPLE,
   CLAUSE_KEEP_PEOPLE,
   CLAUSE_RIGID_GEOMETRY,
@@ -47,10 +47,6 @@ export const SEEDANCE_CAMERA: Record<string, string> = {
   tilt_up: 'Camera tilts up slowly and steadily, holding a level horizon.',
   handheld_in: 'Camera drifts forward very slowly with a subtle handheld feel.',
 };
-
-/** Fixed provider params. Audio is off: the timeline belongs to the tour. */
-export const SEEDANCE_RESOLUTION = '720p';
-export const SEEDANCE_GENERATE_AUDIO = false;
 
 /** Stable per-photo seed so a re-render of a clip is the same clip. */
 export function seedanceSeed(photoId: string): number {

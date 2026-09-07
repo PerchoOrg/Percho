@@ -25,7 +25,7 @@ export function formatDuration(sec: number | null | undefined): string {
   return `${Math.floor(h / 24)}d ${h % 24}h`;
 }
 
-export function ageSeconds(iso: string | null | undefined, now = Date.now()): number | null {
+function ageSeconds(iso: string | null | undefined, now = Date.now()): number | null {
   if (!iso) return null;
   const t = new Date(iso).getTime();
   return Number.isFinite(t) ? (now - t) / 1000 : null;

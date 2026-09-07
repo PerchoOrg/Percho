@@ -231,7 +231,7 @@ async function assembleCards(
       : Promise.resolve({ data: [] }),
     // listing-scoped nearby bucket videos so
     // community-less listings (external FMLS imports) still surface the
-    // Nearby rail on /browse/feed. Mirrors listing-feed/load.ts.
+    // Nearby rail on /browse/feed. Mirrors `lib/listings/feed-load.ts`.
     supabase
       .from('generated_videos')
       .select('listing_id, cf_stream_uid, intent_bucket, narrative')

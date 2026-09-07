@@ -146,7 +146,7 @@ export interface ListingDetailDTO {
 }
 
 /** Share links are canonical (www) so a preview deploy never leaks its own host. */
-export const SITE_ORIGIN = 'https://www.percho.co';
+const SITE_ORIGIN = 'https://www.percho.co';
 
 export function listingShareUrl(input: {
   slug: string;
@@ -369,7 +369,7 @@ export function projectComps(rows: CompRow[], cohortLabel: string): CompsCohortD
 
   const cohort: CompsCohortDTO = { cohortLabel, pricesUsd };
 
-  // Same 5-sample floor the histogram uses (`lib/listing/histogram.ts`). A
+  // Same 5-sample floor the price histogram uses. A
   // "$241/sqft" derived from two homes reads as authoritative and is not.
   if (perSqft.length >= 5) {
     const mid = perSqft.length >> 1;

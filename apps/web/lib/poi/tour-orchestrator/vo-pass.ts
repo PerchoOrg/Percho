@@ -29,9 +29,9 @@ const GENERATE_URL = (model: string) =>
 export const WORDS_PER_SECOND_MIN = 2.1;
 export const WORDS_PER_SECOND_MAX = 2.6;
 /** The rate a single line must fit its own clip at. */
-export const WORDS_PER_SECOND_FIT = 2.4;
+const WORDS_PER_SECOND_FIT = 2.4;
 
-export const VO_PROMPT = `You are polishing the narration for a real-estate community tour video.
+const VO_PROMPT = `You are polishing the narration for a real-estate community tour video.
 The shot order, durations, and engines are already fixed and must not change.
 
 Below is the final ordered clip list with a draft narration line for each.
@@ -63,7 +63,7 @@ export function countWords(text: string): number {
   return trimmed === '' ? 0 : trimmed.split(/\s+/).length;
 }
 
-export function renderOrderedClips(clips: GuardedClip[]): string {
+function renderOrderedClips(clips: GuardedClip[]): string {
   return clips
     .map((c, i) => {
       // The per-clip word budget is arithmetic the model should not have to do

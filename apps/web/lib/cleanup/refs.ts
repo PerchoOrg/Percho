@@ -26,7 +26,7 @@ export type StalledRun = {
 /** Statuses a run can sit in forever without anything noticing. */
 const IN_FLIGHT = ['tagging', 'review', 'planning', 'generating', 'assembling'];
 
-export const STALLED_AFTER_HOURS = 6;
+const STALLED_AFTER_HOURS = 6;
 
 export async function loadStreamRefs(sb: Db): Promise<Map<string, RefKind>> {
   const [videos, communityVideos, generated, covers, listingAsm, communityAsm] = await Promise.all([

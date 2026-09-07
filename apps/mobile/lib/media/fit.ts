@@ -41,7 +41,7 @@
  */
 
 /** The card's own aspect is `width / height`, measured, not the layout constant. */
-export const FIT_TOLERANCE = 0.05;
+const FIT_TOLERANCE = 0.05;
 
 export type MediaFit = "contain" | "cover";
 

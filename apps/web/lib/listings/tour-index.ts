@@ -170,7 +170,7 @@ function progress(run: IndexRun): number {
  * attempt can be shown as what it is. The two cuts follow the same rule as
  * before — a surface re-rendered after a failure must show the re-render.
  */
-export function foldTourActivity(input: {
+function foldTourActivity(input: {
   runs: IndexRun[];
   assemblies: IndexAssembly[];
 }): Map<string, Activity> {

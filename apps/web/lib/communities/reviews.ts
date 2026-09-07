@@ -14,7 +14,7 @@
 import type { Database } from '@/lib/supabase/database.types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export const REVIEW_DIMENSIONS = ['quiet', 'walkable', 'friendly', 'value'] as const;
+const REVIEW_DIMENSIONS = ['quiet', 'walkable', 'friendly', 'value'] as const;
 export type ReviewDimension = (typeof REVIEW_DIMENSIONS)[number];
 
 export const REVIEW_DIMENSION_LABELS: Record<ReviewDimension, string> = {

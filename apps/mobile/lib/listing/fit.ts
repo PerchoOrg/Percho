@@ -22,9 +22,9 @@
  */
 
 /** Fewest saves that make "most of your saves…" an honest phrase. */
-export const MIN_SAVES = 3;
+const MIN_SAVES = 3;
 /** Fewest same-city swipes that make a locality claim. */
-export const MIN_CITY_SWIPES = 3;
+const MIN_CITY_SWIPES = 3;
 /** Price within ±this fraction of the saves' median reads as "in your range". */
 const PRICE_BAND = 0.08;
 /** Sqft beyond ±this fraction of the saves' median is a real difference. */

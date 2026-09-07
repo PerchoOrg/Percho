@@ -122,7 +122,8 @@ async function main() {
 
   const { runResearch } = await import('../../apps/web/lib/poi/tour-steps/research.js');
   const { runResolve } = await import('../../apps/web/lib/poi/tour-steps/resolve.js');
-  const { runPhotos, runPlan } = await import('../../apps/web/lib/poi/tour-steps/photos.js');
+  const { runPhotos } = await import('../../apps/web/lib/poi/tour-steps/photos.js');
+  const { runPlan } = await import('../../apps/web/lib/poi/tour-steps/plan.js');
   const { runTag } = await import('../../apps/web/lib/poi/tour-steps/tag.js');
   const { runGenerate } = await import('../../apps/web/lib/poi/tour-steps/generate.js');
   const { runAssemble } = await import('../../apps/web/lib/poi/tour-steps/assemble.js');

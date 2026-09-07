@@ -31,7 +31,7 @@ import type { KindCount } from "../../../lib/listing/insights";
 import { explore, exploreRadii, fonts } from "../../../theme/tokens";
 
 /** Card width; the rail shows one card and the edge of the next. */
-export const CARD_W = 284;
+const CARD_W = 284;
 const GAP = 10;
 /** The explore page's horizontal section padding — the rail bleeds into it. */
 const EDGE = 18;

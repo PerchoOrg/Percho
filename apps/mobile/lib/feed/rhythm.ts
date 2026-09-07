@@ -19,8 +19,9 @@
  *
  * §1.7's mix table is a RATIO, and a ratio implies spacing: `trade-off ×3` per 10
  * means roughly every third card, never three in a row. So a candidate is
- * rejected when it would exceed `MAX_RUN` of its own kind, and the composer tries
- * the next candidate. If everything is rejected the guard yields rather than
+ * rejected when it would exceed the stage's run limit for its own kind, and the
+ * composer tries the next candidate. If everything is rejected the guard yields
+ * rather than
  * emitting nothing — a repeat is bad, a blank card is worse.
  *
  * This is deliberately about the KIND the buyer perceives, not the slot the
@@ -59,24 +60,8 @@ export function kindForFill(fill: string): FeedCardV3["kind"] | null {
  * reads as intentional); the ceiling stops a mix that is nearly all one fill from
  * licensing an unbounded run.
  */
-export const MIN_RUN_LIMIT = 2;
+const MIN_RUN_LIMIT = 2;
 export const MAX_RUN_LIMIT = 3;
-
-/**
- * The hard stop. A run this long is never acceptable regardless of inventory: the
- * composer ends the page and the screen shows §1.9's terminal card instead.
- *
- * One above `MAX_RUN_LIMIT`, deliberately. The per-stage limit is a spacing
- * PREFERENCE and is outranked by two harder rules — never recycle while fresh
- * content exists (§1.9: looping is the last resort) and never emit nothing — so a
- * single over-run is correct at the moment a finite table empties. A wall is not.
- */
-export const RUN_WALL = MAX_RUN_LIMIT + 1;
-
-/**
- * Back-compat alias for the floor. Prefer `runLimitFor(mix)`.
- */
-export const MAX_RUN = MIN_RUN_LIMIT;
 
 /**
  * The run limit implied by a stage's own mix, **per kind**.
@@ -162,7 +147,7 @@ export function rhythmAllows(
  * Returns null when this stage's mix has no slot for that kind at all — which
  * means the card only exists here as a loop, so the floor applies.
  */
-export function limitForKind(
+function limitForKind(
 	limits: ReadonlyMap<string, number>,
 	kind: FeedCardV3["kind"],
 ): number | null {
