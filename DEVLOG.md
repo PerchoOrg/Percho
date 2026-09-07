@@ -21,6 +21,33 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-07 12:40 UTC — phase187: Saved tab loses its segment chips
+
+**Objective**: owner: 「Saved tab - remove home and community filtering sub
+tabs」.
+
+**Actions**: `apps/mobile/app/(tabs)/saved.tsx` only. The Homes · N /
+Communities · N (/ Areas · N) chip row is gone, along with the `Segment`
+type, `SEGMENT_LABEL`, the `segment` state, the per-segment counts and the
+per-segment empty text. The tab now renders every saved item — homes,
+communities, bookmarked city cards — as one flat list in store order. The
+Compare card keeps its own gate (`listingCount >= COMPARE_MIN`) and now shows
+whenever enough homes are saved, since there is no Homes segment to scope it
+to; the compare picker still ticks listing rows only (`picked` stays
+`undefined` for community/area rows, which keep navigating on tap).
+
+**Decisions**: read the ask as *remove the segmentation entirely*, not "hide
+two chips and keep Areas" — a single remaining chip would be a label, not a
+filter. The whole-tab empty state (sign-in prompt / "Back to feed") already
+covers the zero-items case, so the per-segment empty strings had no caller
+left and went with the chips.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` clean (8 pre-existing
+warnings in other files), `pnpm test` 582/582 in `apps/mobile`.
+
+**Next steps**: owner reviews on the phone via Metro from the reference
+worktree.
+
 ## 2026-09-07 11:27 UTC — phase186: the journey moves off the Search tab and onto You
 
 **Objective**: owner: 「Search tab - move your journey to you tab」.
