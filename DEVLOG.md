@@ -16,6 +16,35 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-07 06:55 UTC — phase183.6: the Map pin was 20% over its own spec
+
+**Objective**: owner: 「Map icon is too big, make it a bit smaller?」
+
+**Cause**: the pin was sized by its HEAD, not by the icon. `PIN_HEAD = 18`
+matched the handoff's "18 × 18", but the teardrop's tip hangs √½ of the head's
+width below the head's centre — so the drawing came out **21.7 tall**, 20%
+over the spec. On a real 3× screen an outlined teardrop that size also reads
+heavier than it did in the mockup it was measured against.
+
+**Actions** (`components/feed/FeedHeader.tsx` only):
+- `PIN_SIZE = 18` is now the whole icon and `PIN_HEAD = PIN_SIZE /
+  PIN_TIP_RATIO` (14.9) is derived from it. The icon is 15 × 18 where it was
+  18 × 21.7.
+- Stroke **1.75 → 1.6**, dot **4.5 → 3.75**. Holding 1.75 while the drawing
+  shrank would have made the stroke 9.7% of the icon's height instead of 8% —
+  i.e. *heavier*, which is the opposite of the ask.
+- `theme/feed-header.test.ts` now asserts the 18 is the icon's HEIGHT
+  (`height: PIN_SIZE * k`, and `PIN_HEAD` derived), which is the mistake worth
+  pinning: it is invisible in the constant and only shows on a device.
+
+Nothing else moved — the pill is still 84 × 44 (the group inside it is 76 wide
+at the new size, so `minWidth` still governs) and the header's height is
+untouched, so the card did not move.
+
+**Verification**: `tsc --noEmit` clean; vitest 55 files / **582 tests**;
+`biome check .` 0 errors / 8 warnings (baseline). Rendered the old and new
+pills side by side in WebKit at 8× before committing.
+
 ## 2026-09-07 06:30 UTC — phase183.5: the type row goes, the band closes, and communities get their map back
 
 **Objective**: owner on device: 「Remove the community, home and tradeoff text

@@ -167,12 +167,25 @@ const MAP_PAD = 12;
 //
 // `borderBottomRightRadius: 0` is the sharp corner and a clockwise 45° is
 // what puts it at the bottom (checked by rendering the same box model before
-// writing it). The tip hangs √½ of the head's width below its centre, so the
-// whole pin is 1.207 × the head.
-const PIN_HEAD = 18;
-const PIN_STROKE = 1.75;
-const PIN_HEIGHT = PIN_HEAD * 1.207;
-const PIN_DOT = 4.5;
+// writing it).
+//
+// ── Sized by the ICON, not by its head (owner, 2026-09-07) ──────────────────
+//
+// 「Map icon is too big, make it a bit smaller?」 — and he was right twice
+// over. The head was set to the handoff's 18 and the tip hangs √½ of the
+// head's width below its centre, so the drawing came out 21.7 tall: 20% over
+// the 18 × 18 the handoff actually specifies, and on a real 3× screen an
+// outlined teardrop that size reads heavier than it did in the mockup.
+//
+// So `PIN_SIZE` is the whole icon now and the head is derived from it. The
+// stroke comes down with it — 1.75 on a 21.7pt drawing is 8% of its height,
+// and holding 1.75 while the drawing shrank would have made it *heavier*,
+// which is the opposite of the ask.
+const PIN_SIZE = 18;
+const PIN_TIP_RATIO = 1.207;
+const PIN_HEAD = PIN_SIZE / PIN_TIP_RATIO;
+const PIN_STROKE = 1.6;
+const PIN_DOT = 3.75;
 
 /**
  * Title chevron — 1.5 stroke (handoff §3). The box is 14 rather than the
@@ -462,7 +475,7 @@ function sheet(k: number) {
 		},
 
 		// ─── Pin art (see the block above the constants) ─────────────────
-		pinBox: { width: PIN_HEAD * k, height: PIN_HEIGHT * k },
+		pinBox: { width: PIN_HEAD * k, height: PIN_SIZE * k },
 		/** The teardrop: one outlined box, three corners round, rotated. */
 		pinDrop: {
 			position: "absolute",
