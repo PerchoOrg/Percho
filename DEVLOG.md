@@ -21,6 +21,75 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-07 20:10 UTC — phase189: community matching in PostGIS, every listing gets a community
+
+**Objective**: owner green-lit the phase188 proposals with one rule —
+"if Nextdoor and subdivision conflict, subdivision takes higher priority" —
+and asked whether they reach 100%. This is proposal 1 (the free pipeline
+fix), which is what actually guarantees 100% link coverage; the county
+backfill quick win rides along.
+
+**Actions**:
+- Migration `20260907200000_communities_geom_match.sql`: `communities`
+  gains `boundary_geom geography(MultiPolygon)` + `anchor_geom
+  geography(Point)` kept by a `before insert or update of boundary, lat, lng`
+  trigger (`st_makevalid` + `st_collectionextract(…, 3)` for the 11 Nextdoor
+  seeds that are not valid OGC polygons), GIST-indexed, backfilled directly
+  (not via the trigger, so `updated_at` is untouched). New RPC
+  `match_community(p_lat, p_lng)` → the containing active polygon ordered by
+  `kind = 'subdivision'` first then smallest `st_area`; if none, the nearest
+  active community by boundary edge (KNN shortlist of 25 on `anchor_geom`)
+  with `distance_m`. `listings` gains `community_match` (`boundary` /
+  `nearest` / `manual`) + `community_distance_m` so the UI can tell a
+  containment from a fallback. **Not yet applied** — `pnpm db:push` /
+  `supabase db push` are blocked by the session's permission classifier;
+  logic was validated read-only against production before writing the file.
+- `lib/geo/find-community.ts` rewritten around the RPC (~40 lines, was
+  ~150 of unstable_cache + JS ray-cast). Returns `{ …, match, distanceM }`.
+  `(supabase as any)` cast kept — `@supabase/ssr`'s `createServerClient<Database>`
+  collapses to `never` in this repo (the existing "stub generated types"
+  convention); `database.types.ts` hand-edited for the new columns + RPC.
+- `dashboard/listings/[id]/edit/actions.ts`: `updateListingAddress` writes
+  `community_match` / `community_distance_m` with the auto-link;
+  `updateListing` writes `community_match='manual'` only when the agent
+  actually CHANGED `community_id` (the form always posts it back, so a
+  blanket 'manual' would have relabelled every auto-link on first save).
+- `scripts/admin/import-redfin-listing.ts` calls the RPC instead of a
+  city-scoped JS PIP (that city filter was why in-polygon listings stayed
+  unlinked).
+- New `scripts/admin/relink-listings.ts` (dry-run default, `--apply`):
+  re-matches every listing with coordinates, prints before → after with the
+  match kind, skips `manual` picks. Re-run after any subdivision import.
+- New `scripts/admin/backfill-community-county.ts` + `data/ga-counties.geojson`
+  (159 Georgia counties, Census 500k, 75 KB): local PIP, no geocoding.
+  **Ran with `--apply`: 8,679 / 8,679 communities with coordinates now have
+  `county`** (52 distinct; Fulton 1,349, Cobb 1,310, Gwinnett 1,182, DeKalb
+  771 …). The one row left null is `untitled-o5tela`, inactive, no lat/lng.
+- `apps/web/biome.json` ignores `public/demos/**` — phase188's `data.js`
+  was failing `biome check` on main (format).
+
+**Decisions**: nearest-fallback over city/county stubs — a listing outside
+every polygon links to the closest real community with the distance stored,
+rather than to a synthetic "Fulton County" community that would never have
+photos or amenities. The `nearest` label + distance is the honesty hook: the
+UI can render "near X" instead of "in X" (not done in this phase — flagged).
+Subdivision-first ordering is in the RPC, so a future county-GIS import
+wins automatically wherever it overlaps a Nextdoor seed; no re-tagging.
+
+**Learnings**: `supabase db query "<sql>" --linked` from `apps/web` works
+for read-only SQL in this sandbox (stdin must be `/dev/null`); `db push`
+does not. The worktree needed its own `pnpm install` before `tsx` ran.
+Phase188's "6 true polygon gaps" was an artifact of the city-scoped
+lookup — a full-table PostGIS test puts those points inside
+`peachtree-corners-sunburst` / `st-ives`; the real gap count is smaller.
+
+**Next steps**: owner (or an allowed shell) runs `pnpm db:push` from the
+reference worktree; then `relink-listings.ts` dry-run → `--apply` and
+report 18/18 linked with the boundary/nearest split. Then proposal 2
+pilot: Fulton County GIS subdivision polygons → `kind='subdivision'`,
+`boundary_source='arcgis'`, dry-run before any insert. Decide UI treatment
+for `community_match='nearest'`.
+
 ## 2026-09-07 19:15 UTC — phase188: community coverage audit + map (Metro Atlanta MSA)
 
 **Objective**: owner asked for a cold-start strategy to reach 100% community

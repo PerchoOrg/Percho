@@ -103,14 +103,24 @@ export async function updateListingAddress(
 
   const baseSlug = slugify(data.address, { fallback: 'listing' });
 
-  // auto-associate to a seeded community by
-  // point-in-polygon. Runs before the update loop so we can write
+  // auto-associate to a community (containing polygon, else nearest — see
+  // lib/geo/find-community.ts). Runs before the update loop so we can write
   // community_id in the same UPDATE. Errors here are non-fatal — leaving
   // community_id null is fine, the agent can still pick manually.
-  let matchedCommunityId: string | null = null;
+  let matched: {
+    community_id: string;
+    community_match: string;
+    community_distance_m: number;
+  } | null = null;
   try {
     const match = await findCommunityForPoint(data.lat, data.lng);
-    if (match) matchedCommunityId = match.id;
+    if (match) {
+      matched = {
+        community_id: match.id,
+        community_match: match.match,
+        community_distance_m: match.distanceM,
+      };
+    }
   } catch (e) {
     console.warn('[updateListingAddress] community match failed', e);
   }
@@ -129,7 +139,7 @@ export async function updateListingAddress(
         lat: data.lat,
         lng: data.lng,
         slug,
-        ...(matchedCommunityId ? { community_id: matchedCommunityId } : {}),
+        ...(matched ?? {}),
       })
       .eq('id', id)
       .select('id, slug')
@@ -177,6 +187,16 @@ export async function updateListing(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'unauthorized' };
 
+  // The form always sends community_id back, so only a CHANGED value is the
+  // agent's pick; an unchanged auto-match keeps its boundary/nearest record.
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: current } = (await (supabase as any)
+    .from('listings')
+    .select('community_id')
+    .eq('id', id)
+    .maybeSingle()) as { data: { community_id: string | null } | null };
+  const communityChanged = current !== null && current.community_id !== data.community_id;
+
   // RLS policy "agent manages own listings" enforces ownership; if the caller
   // can't see the row, the update silently affects zero rows. We detect that
   // by requesting the updated row back via .select().maybeSingle() — null
@@ -200,6 +220,9 @@ export async function updateListing(
       style: emptyToNull(data.style),
       description: descriptionToParagraphs(data.description),
       community_id: data.community_id,
+      ...(communityChanged
+        ? { community_match: data.community_id ? 'manual' : null, community_distance_m: null }
+        : {}),
     })
     .eq('id', id)
     .select('id')
