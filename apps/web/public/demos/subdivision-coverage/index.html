@@ -140,11 +140,6 @@
     ? ['#1e2a33', '#20415c', '#1f5c88', '#1c79b5', '#2e9fe0']
     : ['#e8eef4', '#c3d7e8', '#8fb8d8', '#4f8ec1', '#1f6ba5'];
   const STOPS = [0, 500, 2000, 3500];
-  function tier(n) {
-    let i = 0;
-    while (i < STOPS.length && n > STOPS[i]) i++;
-    return i;
-  }
 
   document.getElementById('ramp').innerHTML =
     RAMP.map((c) => '<div style="background:' + c + '"></div>').join('');
@@ -178,8 +173,6 @@
       tbody.appendChild(tr);
     });
 
-  for (const f of counties) f.properties.tier = tier(f.properties.subs);
-
   const map = new maplibregl.Map({
     container: 'map',
     style: dark
@@ -200,7 +193,19 @@
       type: 'fill',
       source: 'counties',
       paint: {
-        'fill-color': ['at', ['get', 'tier'], ['literal', RAMP]],
+        // A `step` on the raw count, not an index into a literal array:
+        // MapLibre types `['literal', [...strings]]` as array<string> and
+        // refuses it where a colour is expected, which silently kills the
+        // whole layer.
+        'fill-color': [
+          'step',
+          ['get', 'subs'],
+          RAMP[0],
+          1, RAMP[1],
+          STOPS[1] + 1, RAMP[2],
+          STOPS[2] + 1, RAMP[3],
+          STOPS[3] + 1, RAMP[4],
+        ],
         'fill-opacity': 0.55,
       },
     });
