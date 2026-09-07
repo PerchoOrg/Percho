@@ -84,30 +84,69 @@ describe("the header's height budget", () => {
 	 * `flex: 1` stage below gives up the difference; nothing overlaps.
 	 */
 	it("lets the rows grow rather than clip", () => {
-		expect(CODE).toContain("minHeight: CONTEXT_ROW");
-		expect(CODE).toContain("minHeight: MAIN_ROW");
-		expect(CODE).toContain("minHeight: TYPE_ROW");
+		expect(CODE).toContain("minHeight: CONTEXT_ROW * k");
+		expect(CODE).toContain("minHeight: MAIN_ROW * k");
+		expect(CODE).toContain("minHeight: TYPE_ROW * k");
 		expect(CODE).not.toContain("allowFontScaling={false}");
+	});
+
+	/**
+	 * Decision 3 (owner, 2026-09-07): 「area和city上面有些空间 不是完全顶头 但是
+	 * 也不要太大」. Spent out of the paper around the card, not out of the card —
+	 * `theme/card-aspect.test.ts` is where that bill is measured.
+	 */
+	it("leaves 12 above the context row", () => {
+		expect(n("PAD_TOP")).toBe(12);
+		expect(CODE).toContain("paddingTop: PAD_TOP * k");
+	});
+
+	/**
+	 * Decision 5: every dimension is × the screen's own factor, so the
+	 * proportion approved at 390 holds everywhere. The sheet is therefore a
+	 * factory, and a number that forgot its `* k` is the failure this catches.
+	 */
+	it("scales every dimension with the screen", () => {
+		expect(CODE).toContain("function sheet(k: number)");
+		expect(CODE).toContain("headerScale(width)");
+		expect(CODE).toContain("useMemo(() => sheet(k), [k])");
+		// Every numeric style value in the sheet reads `<CONST> * k`, or is a
+		// zero / an opacity / a zIndex. Anything else is a size that will not
+		// scale — the one mistake this factory makes easy.
+		const body = CODE.slice(CODE.indexOf("function sheet(k: number)"));
+		const bare = [
+			...body.matchAll(
+				/\b(width|height|minWidth|minHeight|fontSize|lineHeight|margin\w*|padding\w*|borderRadius|border\w*Width|letterSpacing|gap|top|left):\s*([\d.]+)\s*[,}]/g,
+			),
+		].filter((m) => Number(m[2]) !== 0);
+		expect(bare.map((m) => `${m[1]}: ${m[2]}`)).toEqual([]);
 	});
 
 	/**
 	 * Never a second line and never a taller header from a long name: every
 	 * text in here is one line, and the title is the only run that gives
-	 * anything up — its tail (the Map pill and the chevron are
-	 * `flexShrink: 0` and are laid out first).
+	 * anything up — first its SIZE, then (below the floor) its tail. The Map
+	 * pill and the chevron are `flexShrink: 0` and are laid out first, so
+	 * neither can be pushed off by a long name.
 	 *
-	 * `adjustsFontSizeToFit` is asserted ABSENT (phase183.1): inside a
-	 * shrinking flex row iOS measures it twice and a title with room to spare
-	 * still comes out near the floor, which read as the wrong size against
-	 * the owner's demo.
+	 * Decision 4 (owner, 2026-09-07): 「Don't cut the community name if it is
+	 * too long, use smaller size instead」. `adjustsFontSizeToFit` was removed
+	 * in phase183.1 and is back for that; the floor is 0.5, which clears the
+	 * longest community name the feed serves today (24 characters, needing
+	 * 54%). An explicit `lineHeight` on the title would defeat it — iOS clips
+	 * auto-shrunk text against one — and the row's `minHeight` holds the
+	 * header's height instead.
 	 */
-	it("never wraps, and truncates the title rather than resizing it", () => {
+	it("never wraps, and shrinks the title before cutting it", () => {
 		expect(CODE.match(/numberOfLines=\{1\}/g) ?? []).toHaveLength(4);
-		expect(CODE).toContain("flexShrink: 1");
-		expect(CODE.match(/flexShrink: 0/g) ?? []).toHaveLength(2);
+		expect(CODE).toContain("adjustsFontSizeToFit");
+		expect(CODE).toContain("minimumFontScale={TITLE_MIN_SCALE}");
+		expect(n("TITLE_MIN_SCALE")).toBe(0.5);
 		expect(CODE).toContain('ellipsizeMode="tail"');
-		expect(CODE).not.toContain("adjustsFontSizeToFit");
-		expect(CODE).not.toContain("minimumFontScale");
+		expect(CODE.match(/flexShrink: 1/g) ?? []).toHaveLength(2);
+		expect(CODE.match(/flexShrink: 0/g) ?? []).toHaveLength(2);
+		// The title is the one text with no lineHeight of its own.
+		const title = CODE.slice(CODE.indexOf("\t\ttitle: {"));
+		expect(title.slice(0, title.indexOf("},"))).not.toContain("lineHeight");
 	});
 });
 
@@ -132,7 +171,7 @@ describe("map control B", () => {
 	it("draws an 18-wide teardrop pin with a 1.75 stroke", () => {
 		expect(n("PIN_HEAD")).toBe(18);
 		expect(n("PIN_STROKE")).toBe(1.75);
-		expect(CODE).toContain("borderTopLeftRadius: PIN_HEAD / 2");
+		expect(CODE).toContain("borderTopLeftRadius: (PIN_HEAD / 2) * k");
 		expect(CODE).toContain("borderBottomRightRadius: 0");
 		expect(CODE).toContain('transform: [{ rotate: "45deg" }]');
 	});
@@ -163,7 +202,25 @@ describe("what the handoff forbids", () => {
 	 */
 	it("wraps no shared button around the header", () => {
 		expect(CODE.match(/<Pressable/g) ?? []).toHaveLength(3);
-		expect(CODE).toContain("height: MAIN_ROW");
+		expect(CODE).toContain("height: MAIN_ROW * k");
+	});
+
+	/**
+	 * Decision 1 (owner, 2026-09-07): 「map button应该和community name在同一行
+	 * 呼应 而不是不相干的两个部分display」. The title slot SHRINKS but never
+	 * GROWS, so the pill sits beside the name at any name length instead of on
+	 * the header's right edge — where a short city fallback left ~150pt of
+	 * nothing between the two. `flex: 1` would undo it in one word, and Yoga
+	 * defaults `flexShrink` to 0, so both halves have to be explicit.
+	 */
+	it("lets Map follow the name instead of the right edge", () => {
+		const slot = CODE.slice(CODE.indexOf("titleSlot: {"));
+		const block = slot.slice(0, slot.indexOf("},"));
+		expect(block).toContain("flexShrink: 1");
+		expect(block).not.toContain("flex: 1");
+		expect(block).not.toContain("flexGrow");
+		// No spacer between the name and the pill, either.
+		expect(CODE).not.toContain("styles.grow");
 	});
 
 	/** No panel, no border, no shadow — the header is on the page's paper. */

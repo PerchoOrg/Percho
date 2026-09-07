@@ -67,6 +67,78 @@ its own.
 **Next steps**: none pending. Page is at `/demos/competitor-report/`.
 
 ---
+## 2026-09-07 05:35 UTC — phase183.4: the five decisions land on iOS
+
+**Objective**: owner on `/demos/feed-header-v4`: 「Go ahead and implement
+this」. The five decisions recorded in phase183.3, in the app.
+
+**Actions**:
+- **`lib/feed/feed-header.ts`** (decision 2) — line one is now ALWAYS
+  `area › city`. A home whose community the pool cannot resolve keeps the city
+  on line one AND promotes it to line two: `Atlanta metro › Canton` over
+  `Canton`. Same rule applied to the city card and to the scope fallback, so
+  there is one spelling of the trail in the app rather than three. Reverses
+  phase183's suppress-the-duplicate rule; temporary by design — the backfill
+  turns line two into the community with nothing else moving.
+  `titleAccessibilityLabel` collapses the repeat so VoiceOver does not read
+  "Canton, Atlanta metro › Canton".
+- **New `theme/header-scale.ts`** (decision 5) — `headerScale(width)` =
+  `clamp(width / 390, 0.94, 1.10)`, rounded to three places. Pure and
+  RN-free on purpose: `theme/card-aspect.test.ts` executes it to model the
+  header's real height per device, and `theme/header-scale.test.ts` unit-tests
+  the clamp (6 tests). The clamp is the point — unbounded, an iPad in
+  compatibility width would carry a 70pt serif.
+- **`components/feed/FeedHeader.tsx`** — decisions 1, 3, 4, 5:
+  · the title slot is `flexShrink: 1` with NO grow, so the Map pill follows
+    the name instead of sitting on the header's right edge (Yoga defaults
+    `flexShrink` to 0, so both halves are explicit);
+  · `paddingTop: 12 * k`;
+  · `adjustsFontSizeToFit` + `minimumFontScale={0.5}` back on the title, and
+    its explicit `lineHeight` removed — iOS clips auto-shrunk text against
+    one, and the row's `minHeight` is what fixes the header's height, so a
+    name at 18pt leaves the card exactly where a name at 36 does;
+  · the `StyleSheet` became a `sheet(k)` factory memoised per scale, since
+    every dimension is now × k.
+- Tests: `feed-header.test.ts` re-expects the city on both lines (+1 for the
+  VoiceOver collapse); `theme/feed-header.test.ts` gains three assertions —
+  `PAD_TOP` is 12, the title slot shrinks but never grows, and **every numeric
+  style value in the sheet reads `<CONST> * k`** (a regex over the factory's
+  body with a whitelist for 0 / opacity / zIndex — a number that forgot its
+  `* k` is the one mistake this shape makes easy). `card-aspect.test.ts` now
+  models the header per device through `headerScale`.
+
+**The geometry that results** (computed from the shipped modules, not typed):
+
+    13 mini    k 0.962  header  94  title 34.6  pill 81×42  card 343×501  whole
+    14 / 13    k 1.000  header  98  title 36.0  pill 84×44  card 358×522  whole
+    15 / 16    k 1.008  header  99  title 36.3  pill 85×44  card 361×527  whole
+    16 Pro     k 1.031  header 101  title 37.1  pill 87×45  card 370×540  whole
+    15 Pro Max k 1.100  header 108  title 39.6  pill 92×48  card 398×581  whole
+    16 Pro Max k 1.100  header 108  title 39.6  pill 92×48  card 408×595  whole
+
+Every shipping body still draws the film uncropped, with 20–31pt of slack on
+each side of the card.
+
+**Issues**: the **iPhone SE (375×667) now crops 8.4%** of the film's sides, up
+from 6.7% — the 12pt of room plus the scale. Flagged to the owner with the
+number before he approved, and the guard in `card-aspect.test.ts` moves 7% →
+8.5%. The SE is not in the shipping lineup (it starts at the 13 mini, which is
+unaffected); the escape hatch, if it ever matters, is dropping `PAD_TOP` on
+short screens.
+
+Second, smaller: at k < 1 the 44pt rows become 42, under the §0.5 touch floor.
+Rather than break the proportion the owner approved at one width, the points
+come back as `hitSlop` on the title and the Map pill.
+
+**Verification**: `tsc --noEmit` clean; vitest 55 files / **581 tests**;
+`biome check .` 0 errors / 8 warnings (baseline). Per-device geometry above
+computed by running `card-frame.ts` + `header-scale.ts` directly, and it
+matches `/demos/feed-header-v4`'s measured frames to the point.
+
+**Next steps**: owner reviews on device — this is the first build where the
+Map pill is tappable, so the two destinations (community page, Search map
+focused on the city) are worth a tap each. If a name at the 0.5 floor reads
+too small, the honest next move is a narrower pill rather than a lower floor.
 
 ## 2026-09-07 05:10 UTC — phase183.3: the header's five decisions, and the final demo for them
 

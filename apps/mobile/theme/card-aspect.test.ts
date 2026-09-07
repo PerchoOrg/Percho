@@ -16,12 +16,16 @@
  * `restTop`; owner: 「balance the empty space above and under card」).
  *
  * phase183: the header became the handoff's three-row block over the card —
- * 86pt where the old wordmark + place line were 78. The model here is that
- * page, and the SE case below is the bill for the extra 8.
+ * 86pt where the old wordmark + place line were 78. phase183.4 added the
+ * owner's 12pt of room above it and made the whole block scale with the
+ * screen (`theme/header-scale.ts`), so the header is 94 on a 13 mini, 98 at
+ * 390 and 107 on a 428. The model here is that page, and the SE case below is
+ * the bill.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CANVAS_ASPECT, cardAspect, cardFrameHeight } from "./card-frame";
+import { headerScale } from "./header-scale";
 
 const FEED = readFileSync("app/(tabs)/feed.tsx", "utf8");
 const STACK = readFileSync("components/SwipeStack.tsx", "utf8");
@@ -32,20 +36,24 @@ const TAB_BAR = 62;
 const PAD_TOP = 16;
 const PAD_BOTTOM = 16;
 /**
- * `FeedHeader` (phase183): the handoff's 86 — an 18pt context row, a 44pt main
- * row carrying the title and the Map pill, a 16pt card-type row, and the two
- * 4pt gaps between them. `theme/feed-header.test.ts` pins those five numbers
- * at the component; this is what they cost the film.
+ * `FeedHeader`: 12 of room above (phase183.4, owner decision 3) plus the
+ * handoff's 86 — an 18pt context row, a 44pt main row carrying the title and
+ * the Map pill, a 16pt card-type row, and the two 4pt gaps between them.
+ * `theme/feed-header.test.ts` pins those numbers at the component; this is
+ * what they cost the film.
  *
- * It replaced 78 (4 padding + a 44pt wordmark row + a 30pt place line), so the
- * page above the card grew by 8.
+ * Since phase183.4 the header also SCALES with the screen (owner decision 5),
+ * so its height is per-device — `headerScale` is the same function the
+ * component uses. It replaced 78 (4 padding + a 44pt wordmark row + a 30pt
+ * place line).
  */
-const HEADER_TEXT = 18 + 4 + 44 + 4 + 16;
+const HEADER_BASE = 12 + 18 + 4 + 44 + 4 + 16;
+const headerHeight = (w: number) => HEADER_BASE * headerScale(w);
 
 function pageOf(w: number, h: number, top: number, bottom: number) {
 	const cardWidth = w - gutter() * 2;
 	const content = h - top - (TAB_BAR + bottom);
-	const stage = content - HEADER_TEXT - PAD_TOP - PAD_BOTTOM;
+	const stage = content - headerHeight(w) - PAD_TOP - PAD_BOTTOM;
 	const ideal = cardWidth / CANVAS_ASPECT;
 	// What the stage has left once the card takes the film's shape — split
 	// evenly above and below the card by `SwipeStack`'s centred `restTop`.
@@ -115,17 +123,19 @@ describe("the shipping lineup", () => {
 	/**
 	 * The SE is the one body that pays for a taller header: its stage caps the
 	 * card below the film's shape and `cover` shaves the sides. ~5% under
-	 * phase182.1's 78pt header, ~6.7% under phase183's 86.
+	 * phase182.1's 78pt header, ~6.7% under phase183's 86, **~8.3% under
+	 * phase183.4's 12 + 86** (× 0.962 on that screen).
 	 *
-	 * On record as a decision, not a regression — the shipping lineup starts at
-	 * the 13 mini, and the alternative (a header that drops a row on short
-	 * screens) is layout the page does not otherwise need. This fails if the
-	 * cost ever grows past ~7%, which is the point at which the next row added
-	 * up there needs the owner's say-so.
+	 * On record as a decision, not a regression, and flagged to the owner with
+	 * the number when he approved the 12pt: the shipping lineup starts at the
+	 * 13 mini — which still draws the film whole — and the alternative (a
+	 * header that drops its top padding on short screens) is layout the page
+	 * does not otherwise need. This fails past ~8.5%, which is the point at
+	 * which the next thing added up there needs his say-so.
 	 */
-	it("keeps the SE's crop under ~7%", () => {
+	it("keeps the SE's crop under ~8.5%", () => {
 		const { cardWidth, stage } = pageOf(375, 667, 20, 0);
-		expect(sideCrop(cardAspect(stage, cardWidth))).toBeLessThan(0.07);
+		expect(sideCrop(cardAspect(stage, cardWidth))).toBeLessThan(0.085);
 	});
 
 	/**

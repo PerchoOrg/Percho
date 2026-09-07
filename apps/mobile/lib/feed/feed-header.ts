@@ -17,10 +17,25 @@
  *
  * So the parent chain and the leaf are computed together, here, and the
  * component draws three rows from one object. Same rule as before: every
- * segment is REAL or absent (the `GeoStats` rule) — a home whose community
- * the pool cannot resolve promotes its city to the title rather than guessing
- * a community from the address, and a card with no place at all says
- * "Explore this home" with an empty (but full-height) context row.
+ * segment is REAL or absent (the `GeoStats` rule) — a card with no place at
+ * all says "Explore this home" with an empty (but full-height) context row,
+ * and nothing is ever guessed from an address.
+ *
+ * ── Line one is ALWAYS area › city (owner, 2026-09-07) ──────────────────────
+ *
+ * 「for home tour without community, show city twice for now」. A home whose
+ * community the pool cannot resolve promotes its CITY to the title — and
+ * since phase183.4 line one keeps that same city rather than dropping back to
+ * the metro alone. So the common case today reads:
+ *
+ *     Atlanta metro › Canton
+ *     Canton
+ *
+ * The duplication is deliberate and temporary: `listings.community_id` is
+ * almost entirely unpopulated, and when the backfill lands line two becomes
+ * the community with nothing else changing. phase183 suppressed the duplicate
+ * instead (line one fell back to the metro); the owner picked the other
+ * reading after seeing both on `/demos/feed-header-v3`.
  *
  * ── Why the targets are DATA, not closures ──────────────────────────────────
  *
@@ -160,7 +175,7 @@ export function feedHeaderModel({
 		return {
 			activeCardId: null,
 			kind: "scope",
-			contextText: scopeName ? SCOPE_ROOT_LABEL : "",
+			contextText: scopeName ? context(scopeName) : "",
 			title: scopeName ?? SCOPE_ROOT_LABEL,
 			typeLabel: null,
 			titleSlug: null,
@@ -177,7 +192,7 @@ export function feedHeaderModel({
 			return {
 				activeCardId: card.id,
 				kind: "city-tour",
-				contextText: SCOPE_ROOT_LABEL,
+				contextText: context(card.unit.name),
 				title: card.unit.name,
 				typeLabel: TYPE_LABEL["city-tour"],
 				titleSlug: null,
@@ -205,21 +220,17 @@ export function feedHeaderModel({
 			 *
 			 * `listings.community_id` is still almost entirely unpopulated
 			 * (`apps/web/lib/feed/listing-gate.ts`), so the city fallback is
-			 * the common case today and the community appears with no client
-			 * change once the backfill lands. `card.locality` ("Peachtree
-			 * Corners, GA") is deliberately NOT parsed for a third fallback —
-			 * splitting a formatted display string is how a header starts
-			 * printing places that are not in the data.
+			 * the common case today — the city on BOTH lines, per the owner's
+			 * call (see the file header) — and the community appears with no
+			 * client change once the backfill lands. `card.locality`
+			 * ("Peachtree Corners, GA") is deliberately NOT parsed for a third
+			 * fallback: splitting a formatted display string is how a header
+			 * starts printing places that are not in the data.
 			 */
 			return {
 				activeCardId: card.id,
 				kind: "home-tour",
-				contextText:
-					community !== undefined
-						? context(unit?.name)
-						: unit !== undefined
-							? SCOPE_ROOT_LABEL
-							: "",
+				contextText: unit !== undefined ? context(unit.name) : "",
 				title: community?.name ?? unit?.name ?? PLACELESS_HOME_TITLE,
 				typeLabel: TYPE_LABEL["home-tour"],
 				titleSlug: community?.slug ?? null,
@@ -250,9 +261,10 @@ export function feedHeaderModel({
  * in the accessibility label".
  */
 export function titleAccessibilityLabel(model: FeedHeaderModel): string {
-	return model.contextText === ""
-		? model.title
-		: `${model.title}, ${model.contextText}`;
+	if (model.contextText === "") return model.title;
+	// The city fallback puts the same word on both lines; read it once.
+	if (model.contextText.endsWith(model.title)) return model.contextText;
+	return `${model.title}, ${model.contextText}`;
 }
 
 /** The Map button's one label. Named after what the map actually shows. */
