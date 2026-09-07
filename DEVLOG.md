@@ -21,6 +21,71 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-07 21:49 UTC — phase191: county plat subdivisions, importer + Gwinnett dry run
+
+**Objective**: proposal 2. Owner green-lit it and asked two framing questions:
+does county contain city, and is a builder community 1:1 with a subdivision.
+
+**Answers (measured, not assumed)**:
+- **county ⊅ city.** 70 of 109 cities in the table span more than one county,
+  covering 7,041 of 8,680 communities. Atlanta alone spans 6 (Fulton 509,
+  DeKalb 162, Cobb 30, Clayton 27, …). Two causes stacked: municipal limits
+  genuinely cross county lines, and `city` here is the POSTAL city — "Atlanta,
+  GA" is the mailing address for large unincorporated parts of Fulton, DeKalb,
+  Cobb and Clayton. Neither is derived from the other anywhere in the code:
+  county comes from the row's own lat/lng by PIP. Also surfaced two bad seeds
+  (`colony-square` sits in Catoosa, `lincolnton` in Lincoln County) — the
+  county is right for the coordinate; the coordinate is wrong.
+- **Not 1:1, in both directions.** Plats are filed per phase, so a builder
+  community is many subdivisions; one plat can host several builders; and
+  most platted subdivisions predate any builder brand. {subdivisions} ⊃
+  {builder communities}, so subdivision-first covers builders automatically.
+  **No county in the metro publishes a builder/developer field**, so
+  `communities.builder` stays null and builder becomes a later attribute.
+
+**Actions**:
+- Surveyed and curl-verified subdivision layers for all six ARC counties:
+  Gwinnett 8,796 (`.../agis_gwinnett/MapServer/23`), Cobb 8,719, DeKalb
+  6,281, Fulton 3,964, Forsyth 2,743, Cherokee 1,011 — ~33,500 polygons, all
+  ArcGIS REST serving WGS84 GeoJSON with `resultOffset` paging. **No
+  region-wide layer exists**: ARC's hub returns 0 for subdivisions and the
+  state clearinghouse has none, so six per-county imports are unavoidable.
+  Cherokee's polygon layer is badly incomplete (1,011 polygons vs 94,657
+  parcels carrying a subdivision name) and should be a parcel dissolve.
+- Migration `20260907220000`: `communities.source` gains `county_gis`.
+- `scripts/admin/import-county-subdivisions.ts` (dry-run default): fetch and
+  cache the layer, filter to residential land-use codes, drop 136
+  commercial/industrial names the code misses ("GWINNETT PLACE COMMERCIAL
+  CENTER" is LCODE=SUBDIV), group phases by name into one MultiPolygon,
+  area-weighted centroid, and borrow the postal city from the containing
+  Nextdoor polygon.
+
+**Decisions**: where a plat name equals an existing community's AND the plat
+centroid falls inside that community, **upgrade the row in place** rather
+than insert. Every Gwinnett community already has a cover photo and 96% a
+description; a second row for the same place would win the match (subdivisions
+sort first) and hand the buyer a community with no photo. A name that matches
+elsewhere in the county is a different place and gets its own row.
+
+**Gwinnett dry run**: 8,492 residential plat polygons → **4,227
+subdivisions**; 536 upgrade in place, 3,691 new rows, 317 with no city.
+Against the current listings the win is concrete: all 6 Gwinnett listings
+land inside a plat, and the plat is the better answer every time —
+`5122 Lower Creek Street` moves from the broad `peachtree-corners-sunburst`
+to **Waterside**, `2229 Saint Kennedy Lane` from the landmark `buford-dam` to
+**Windsor at Lanier**, and `3525 Berkeley Park Court` — a 1 m `nearest`
+fallback onto the wrongly-named `berkeley-woods` — becomes a real containment
+in **Berkeley Park**.
+
+**Issues**: Fulton's service `copyrightText` says the data is for *"your
+personal use"*, which is not obviously a commercial licence. Gwinnett's is
+empty and Forsyth's is a plain attribution line. Flagged to the owner before
+Fulton is imported; Gwinnett is unaffected.
+
+**Next steps**: owner's go/no-go on writing 4,227 rows to Gwinnett. Nothing
+has been written — the migration is committed but unapplied and the script
+has only ever run dry.
+
 ## 2026-09-07 21:11 UTC — phase190: the county was wrong, then it went in the header
 
 **Objective**: owner, on the feed header: 「community card header 现在有重复的
