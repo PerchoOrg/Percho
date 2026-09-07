@@ -21,6 +21,43 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-07 11:27 UTC — phase186: the journey moves off the Search tab and onto You
+
+**Objective**: owner: 「Search tab - move your journey to you tab」.
+
+**Actions**: `apps/mobile/app/(tabs)/search.tsx` loses the "Your journey"
+layer chip and everything it drove — the `journeyOn` state, the green
+familiarity pins, the per-row `score%` / unknown-dims suffixes, and the
+sheet title's "Your journey" mode (it now reads "All areas" or the query).
+`apps/mobile/app/(tabs)/you.tsx`'s area-familiarity section — which already
+draws the SAME `familiarityFor` data — is retitled from "HOW WELL YOU KNOW
+EACH AREA" to **"YOUR JOURNEY"**, so the journey now has exactly one face and
+it is on the You tab. Header comments in `search.tsx`, `you.tsx` and
+`lib/area-familiarity.ts` updated to match.
+
+**Decisions**:
+- Read "move" as *remove from Search + name the existing You-tab section
+  after it*, not as building a map into the You tab — the You tab section
+  has shown the identical familiarity data (score, cards seen, unknown dims)
+  since phase D, and each row already deep-links to the Search map via
+  `?focus=`. Nothing needed porting; the chip was a second face of the same
+  data on a surface that should just search.
+- The familiar-first sort of the Search sheet's city list STAYS. It's the
+  §4.3 "in your journey first" rule and doesn't paint any journey UI; it
+  just orders the list, so `familiarityFor` is still imported there.
+- `unknownDimsLabel` import, chip styles (`chipRow/chip/chipOn/chipLabel/
+  chipLabelOn`) and `rowFam` removed as orphans of this change.
+
+**Verification**: mobile `tsc --noEmit` clean, vitest 55 files / 582 tests
+green, `biome check .` 0 errors / 8 warnings — and the 2 warnings in
+`search.tsx` were confirmed present on the origin/main version of the file
+(both `useExhaustiveDependencies`), so the baseline is untouched. Web not
+touched.
+
+**Next steps**: none — owner reviews on device.
+
+---
+
 ## 2026-09-07 06:30 UTC — phase183.5: the type row goes, the band closes, and communities get their map back
 
 **Objective**: owner on device: 「Remove the community, home and tradeoff text

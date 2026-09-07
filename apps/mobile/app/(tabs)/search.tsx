@@ -1,5 +1,5 @@
 /**
- * Search tab (spec-v3 `04-search.md`) — map + collapsible list + journey layer.
+ * Search tab (spec-v3 `04-search.md`) — map + collapsible list.
  *
  * ── v1 scope vs §4.1 ────────────────────────────────────────────────────────
  * The spec's full version wants: 3-detent sheet, pin↔row two-way sync,
@@ -7,19 +7,21 @@
  * honest subset that ships for the store launch (phase D):
  *
  *   · no query → map renders CITY pins from the feed pool; the sheet lists
- *     the city units, familiar ones first when the journey layer is on
+ *     the city units, familiar ones first (§4.3 "in your journey first")
  *   · ≥2 characters → `/api/mobile/search` (`hooks/use-search.ts`) returns
  *     communities + homes; the sheet shows them grouped, plus any city whose
  *     name matches, and the map fits to the hits that have coordinates
  *   · community / home row tap → its detail page; city row tap → fly to it
  *     (city/zip "don't leave the surface" per §4.4)
- *   · "Your journey" layer chip on → familiarity from the same
- *     `areaFamiliarity` source the You tab uses (05 §5.3), so the two faces
- *     cannot disagree
+ *
+ * The "Your journey" layer chip moved OFF this screen (owner, 2026-09-07):
+ * familiarity is the You tab's story (05 §5.3, "Your journey" section there),
+ * and this surface just searches. The familiar-first sort stays because it
+ * reads the same `areaFamiliarity` source, so the two faces cannot disagree.
  *
  * ── No filter UI anywhere ───────────────────────────────────────────────────
- * The only narrowing affordances are the search box, the viewport, and the
- * layer chip (§4.1 铁律). There is no price/bed/bath picker on this screen.
+ * The only narrowing affordances are the search box and the viewport
+ * (§4.1 铁律). There is no price/bed/bath picker on this screen.
  */
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -38,7 +40,7 @@ import MapView, { Marker } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { MIN_QUERY_LEN, useSearch } from "../../hooks/use-search";
-import { familiarityFor, unknownDimsLabel } from "../../lib/area-familiarity";
+import { familiarityFor } from "../../lib/area-familiarity";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
 import { formatPrice, specsLine } from "../../lib/saved/rows";
 import { useFeedSession } from "../../state/feed-session";
@@ -60,7 +62,6 @@ export default function SearchTab() {
 	});
 
 	const [query, setQuery] = useState("");
-	const [journeyOn, setJourneyOn] = useState(false);
 	// v1: the sheet is one expanded panel (half) or collapsed (peek).
 	const [expanded, setExpanded] = useState(false);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -104,8 +105,8 @@ export default function SearchTab() {
 		const list = q
 			? pool.geoUnits.filter((u) => u.name.toLowerCase().includes(q))
 			: pool.geoUnits;
-		// Familiar units float to the top so the journey layer is the
-		// natural first read, matching the §4.3 "in your journey first" rule.
+		// Familiar units float to the top, matching the §4.3 "in your
+		// journey first" rule.
 		return [...list].sort((a, b) => fam(b).score - fam(a).score);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [pool.geoUnits, query, signals]);
@@ -176,13 +177,7 @@ export default function SearchTab() {
 							}}
 							title={u.name}
 							onPress={() => select(u)}
-							pinColor={
-								selectedId === u.id
-									? colors.accent
-									: journeyOn
-										? colors.pos
-										: colors.ink2
-							}
+							pinColor={selectedId === u.id ? colors.accent : colors.ink2}
 						/>
 					))}
 					{hits?.communities.map((c) =>
@@ -233,18 +228,6 @@ export default function SearchTab() {
 						</Pressable>
 					)}
 				</View>
-
-				{/* Layer chip (§4.1) */}
-				<View style={[styles.chipRow, { top: insets.top + 56 }]}>
-					<Pressable
-						style={[styles.chip, journeyOn && styles.chipOn]}
-						onPress={() => setJourneyOn((v) => !v)}
-					>
-						<Text style={[styles.chipLabel, journeyOn && styles.chipLabelOn]}>
-							Your journey
-						</Text>
-					</Pressable>
-				</View>
 			</View>
 
 			{/* Collapsible list sheet */}
@@ -258,11 +241,7 @@ export default function SearchTab() {
 					<View style={styles.grabber} />
 				</Pressable>
 				<Text style={styles.sheetTitle}>
-					{searching
-						? `"${query.trim()}"`
-						: journeyOn
-							? "Your journey"
-							: "All areas"}
+					{searching ? `"${query.trim()}"` : "All areas"}
 					{poolLoading || search.loading ? "" : ` · ${hitCount}`}
 				</Text>
 				{expanded && (
@@ -345,35 +324,23 @@ export default function SearchTab() {
 						{hits && units.length > 0 && (
 							<Text style={styles.groupTitle}>Areas</Text>
 						)}
-						{units.map((u) => {
-							const f = fam(u);
-							return (
-								<Pressable
-									key={u.id}
-									style={[
-										styles.row,
-										selectedId === u.id && styles.rowSelected,
-									]}
-									onPress={() => select(u)}
-								>
-									<Image source={{ uri: u.heroUrl }} style={styles.rowThumb} />
-									<View style={styles.rowText}>
-										<Text style={styles.rowName}>
-											{u.name}
-											{journeyOn && (
-												<Text style={styles.rowFam}> · {f.score}%</Text>
-											)}
-										</Text>
-										<Text style={styles.rowSub}>
-											{u.communityCount > 0
-												? `${u.communityCount} communities`
-												: "no communities yet"}
-											{journeyOn ? ` · ${unknownDimsLabel(f.unknownDims)}` : ""}
-										</Text>
-									</View>
-								</Pressable>
-							);
-						})}
+						{units.map((u) => (
+							<Pressable
+								key={u.id}
+								style={[styles.row, selectedId === u.id && styles.rowSelected]}
+								onPress={() => select(u)}
+							>
+								<Image source={{ uri: u.heroUrl }} style={styles.rowThumb} />
+								<View style={styles.rowText}>
+									<Text style={styles.rowName}>{u.name}</Text>
+									<Text style={styles.rowSub}>
+										{u.communityCount > 0
+											? `${u.communityCount} communities`
+											: "no communities yet"}
+									</Text>
+								</View>
+							</Pressable>
+						))}
 					</ScrollView>
 				)}
 			</View>
@@ -402,21 +369,6 @@ const styles = StyleSheet.create({
 	},
 	searchInput: { flex: 1, ...textStyles.body, color: colors.ink },
 	searchClear: { ...textStyles.title2, color: colors.ink2 },
-	chipRow: {
-		position: "absolute",
-		left: 16,
-		flexDirection: "row",
-		gap: 8,
-	},
-	chip: {
-		backgroundColor: colors.glass,
-		borderRadius: radii.pill,
-		paddingHorizontal: 14,
-		paddingVertical: 7,
-	},
-	chipOn: { backgroundColor: colors.cta },
-	chipLabel: { ...textStyles.caption, color: colors.ink },
-	chipLabelOn: { color: "#FFFFFF" },
 	sheet: {
 		backgroundColor: colors.surface,
 		borderTopLeftRadius: radii.sheet,
@@ -480,6 +432,5 @@ const styles = StyleSheet.create({
 	},
 	rowText: { flex: 1, gap: 2 },
 	rowName: { ...textStyles.headline, color: colors.ink },
-	rowFam: { ...textStyles.footnote, color: colors.accent },
 	rowSub: { ...textStyles.footnote, color: colors.ink2 },
 });
