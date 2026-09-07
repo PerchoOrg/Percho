@@ -9,9 +9,12 @@
 ## v1.3 — Opening a home now answers "does this fit me?"
 
 ### 2026-09-07
-- **The top of the feed now tells you where the card is, and lets you see it on a map.** Above every film: the area and city it belongs to on one quiet line, then the place itself in large type — the neighbourhood for a home or a neighbourhood tour, the city for a city card — and under that what you're watching: HOME TOUR, COMMUNITY TOUR, CITY TOUR. Tap a neighbourhood's name to open its page. Beside it, a new **Map** button opens the map on that place. A "what matters more to you" card reads "Your preferences / Find your balance" and has no map, because it isn't about anywhere in particular
+- **The top of the feed now tells you where the card is, and lets you see it on a map.** Above every film: the area and the city on one quiet line, then the place itself in large type — the neighbourhood for a home or a neighbourhood tour, the city for a city card — and under that what you're watching: HOME TOUR, COMMUNITY TOUR, CITY TOUR. Tap a neighbourhood's name to open its page. A new **Map** button sits right beside that name and opens the map on that place. A "what matters more to you" card reads "Your preferences / Find your balance" and has no map, because it isn't about anywhere in particular
+- **A home we haven't matched to a neighbourhood yet shows its city instead**, on both lines, until we finish filling those in. Nothing is guessed from an address: a home whose location we can't place at all simply says "Explore this home" and offers no map rather than the last card's
+- **A long neighbourhood name is set a little smaller rather than cut short.** Every letter shows, and the card below never moves however long the name is
 - **Percho's name and the neighbourhood count have come off the feed's top line** to make room for the above. The count is still in the city picker, which the area line still opens
-- The card itself is untouched — same size, same position, same film shown whole on every current iPhone
+- **The header keeps its proportions on every iPhone** — a little bigger on a large phone, a little smaller on a small one — so the name and the Map button always take the same share of the line
+- The card itself is untouched: same size, same position, same film shown whole on every current iPhone
 
 ### 2026-09-06
 - **Percho's name is back at the top of the feed**, in its deep-green serif, with the place line sitting just under it — the metro, the city you're on, and how many neighbourhoods it has. The count now shows for whichever city the current card belongs to, not only when you've picked one from the list

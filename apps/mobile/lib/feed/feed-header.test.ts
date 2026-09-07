@@ -121,13 +121,17 @@ describe("home tour", () => {
 	/**
 	 * `listings.community_id` is almost entirely unpopulated today
 	 * (`apps/web/lib/feed/listing-gate.ts`), so this is the COMMON case: the
-	 * city is promoted to the title and the context row keeps the metro. Never
-	 * a guessed community.
+	 * city is promoted to the title and line one KEEPS it — the owner's call
+	 * on 2026-09-07 (「for home tour without community, show city twice for
+	 * now」) after seeing both spellings on `/demos/feed-header-v3`. phase183
+	 * suppressed the duplicate; this is the reversal, and it is temporary —
+	 * the backfill turns line two into the community and line one does not
+	 * move. Never a guessed community either way.
 	 */
-	it("promotes the city when no community resolves", () => {
+	it("shows the city on BOTH lines when no community resolves", () => {
 		const m = model({ card: listing({ geoUnitId: CANTON.id }) });
 		expect(m.title).toBe("Canton");
-		expect(m.contextText).toBe("Atlanta metro");
+		expect(m.contextText).toBe("Atlanta metro › Canton");
 		expect(m.titleSlug).toBeNull();
 		expect(m.mapUnitId).toBe(CANTON.id);
 	});
@@ -137,6 +141,7 @@ describe("home tour", () => {
 			card: listing({ geoUnitId: CANTON.id, communityId: "not-in-pool" }),
 		});
 		expect(m.title).toBe("Canton");
+		expect(m.contextText).toBe("Atlanta metro › Canton");
 		expect(m.titleSlug).toBeNull();
 	});
 
@@ -185,10 +190,12 @@ describe("city tour", () => {
 	 * the same geometry rather than an exception — and no chevron, because the
 	 * app has no city overview page for one to open.
 	 */
-	it("is the metro over the city, with a map and no chevron", () => {
+	it("is area › city over the city, with a map and no chevron", () => {
 		const m = model({ card: area() });
 		expect(m.kind).toBe("city-tour");
-		expect(m.contextText).toBe("Atlanta metro");
+		// Same rule as the home-tour fallback: line one always reads the full
+		// chain, so the city card carries its own name twice.
+		expect(m.contextText).toBe("Atlanta metro › Canton");
 		expect(m.title).toBe("Canton");
 		expect(m.typeLabel).toBe("CITY TOUR");
 		expect(m.titleSlug).toBeNull();
@@ -222,7 +229,7 @@ describe("no card", () => {
 		const scoped = model({ scopeName: "Canton", scopedUnitId: CANTON.id });
 		expect(scoped.kind).toBe("scope");
 		expect(scoped.activeCardId).toBeNull();
-		expect(scoped.contextText).toBe("Atlanta metro");
+		expect(scoped.contextText).toBe("Atlanta metro › Canton");
 		expect(scoped.title).toBe("Canton");
 		expect(scoped.typeLabel).toBeNull();
 		expect(scoped.mapUnitId).toBe(CANTON.id);
@@ -272,5 +279,17 @@ describe("accessibility labels", () => {
 		expect(titleAccessibilityLabel(model({ card: listing() }))).toBe(
 			"Explore this home",
 		);
+	});
+
+	/**
+	 * The city fallback puts the same word on both lines, which VoiceOver
+	 * would otherwise read as "Canton, Atlanta metro › Canton".
+	 */
+	it("does not read the city twice", () => {
+		expect(
+			titleAccessibilityLabel(
+				model({ card: listing({ geoUnitId: CANTON.id }) }),
+			),
+		).toBe("Atlanta metro › Canton");
 	});
 });
