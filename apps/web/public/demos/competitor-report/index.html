@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Percho competitive market report</title>
+<style>
+  :root{
+    --plane:#f9f9f7; --surface:#fcfcfb;
+    --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10);
+    --series-1:#2a78d6; --track:#eeeeea;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:where(:not([data-theme="light"])){
+      --plane:#0d0d0d; --surface:#1a1a19;
+      --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+      --series-1:#3987e5; --track:#232322;
+    }
+  }
+  :root[data-theme="dark"]{
+    --plane:#0d0d0d; --surface:#1a1a19;
+    --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+    --series-1:#3987e5; --track:#232322;
+  }
+  *{box-sizing:border-box}
+  html{color-scheme:light dark; scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--plane); color:var(--ink);
+    font:15px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:940px;margin:0 auto;padding:40px 20px 110px}
+
+  /* ---------- header ---------- */
+  header.top{margin-bottom:8px}
+  .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+  h1{font-size:29px;line-height:1.22;margin:0 0 12px;font-weight:640;letter-spacing:-.015em}
+  .lede{color:var(--ink2);margin:0;max-width:66ch}
+  .note{color:var(--muted);font-size:12.5px;margin:14px 0 0;max-width:66ch;line-height:1.55}
+  .toggle{
+    position:absolute;top:20px;right:20px;background:var(--surface);color:var(--ink2);
+    border:1px solid var(--ring);border-radius:999px;padding:6px 13px;font:inherit;font-size:13px;cursor:pointer;
+  }
+  .toggle:hover{color:var(--ink)}
+
+  /* ---------- toc ---------- */
+  nav.toc{background:var(--surface);border:1px solid var(--ring);border-radius:12px;padding:15px 18px;margin:28px 0 0}
+  nav.toc p{margin:0 0 9px;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:28px}
+  nav.toc li{font-size:13.5px;margin-bottom:5px;break-inside:avoid}
+  nav.toc a{color:var(--ink2);text-decoration:none}
+  nav.toc a:hover{color:var(--series-1);text-decoration:underline}
+
+  /* ---------- sections ---------- */
+  section{margin-top:52px;scroll-margin-top:20px}
+  h2{font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);
+     margin:0 0 18px;padding-bottom:9px;border-bottom:1px solid var(--grid);font-weight:600}
+  h3{font-size:19px;font-weight:640;letter-spacing:-.01em;margin:0 0 4px}
+  h4{font-size:13px;font-weight:640;color:var(--ink2);margin:16px 0 7px}
+  p{margin:0 0 12px;max-width:70ch}
+  ul{margin:0 0 12px;padding-left:19px;max-width:70ch}
+  li{margin-bottom:5px}
+  strong{font-weight:640}
+  a{color:var(--series-1)}
+
+  .card{background:var(--surface);border:1px solid var(--ring);border-radius:12px;padding:20px 20px 17px;margin-bottom:16px}
+  .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+  .card-head .who{min-width:0}
+  .cat{font-size:12.5px;color:var(--muted);margin:0}
+  .assess{border-top:1px solid var(--grid);margin-top:14px;padding-top:12px;font-size:14px;color:var(--ink2)}
+  .assess strong{color:var(--ink)}
+
+  /* ---------- threat meter (ordinal: filled pip count = level; label always shown) ---------- */
+  .threat{display:flex;align-items:center;gap:8px;white-space:nowrap}
+  .pips{display:flex;gap:3px}
+  .pip{width:7px;height:14px;border-radius:2px;background:var(--track)}
+  .pip.on{background:var(--series-1)}
+  .threat .lab{font-size:12.5px;color:var(--ink2);font-weight:600}
+  .threat .cap{font-size:12px;color:var(--muted);font-weight:400}
+
+  /* ---------- landscape table ---------- */
+  .tablewrap{background:var(--surface);border:1px solid var(--ring);border-radius:12px;overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:720px}
+  th{text-align:left;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+     font-weight:600;padding:13px 14px;border-bottom:1px solid var(--grid);white-space:nowrap}
+  td{padding:11px 14px;border-bottom:1px solid var(--grid);vertical-align:middle;color:var(--ink2)}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:color-mix(in srgb,var(--series-1) 6%,transparent)}
+  td.name{color:var(--ink);font-weight:600;white-space:nowrap}
+  td.price{font-variant-numeric:tabular-nums;white-space:nowrap}
+  tr.group td{background:color-mix(in srgb,var(--ink) 4%,transparent);font-size:11.5px;letter-spacing:.06em;
+     text-transform:uppercase;color:var(--muted);font-weight:600;padding:8px 14px}
+
+  /* ---------- pricing chart ---------- */
+  .figure{background:var(--surface);border:1px solid var(--ring);border-radius:12px;padding:20px 20px 16px}
+  .figure .ftitle{font-size:15px;font-weight:640;margin:0 0 3px}
+  .figure .fsub{font-size:12.5px;color:var(--muted);margin:0 0 20px;max-width:70ch}
+  .prows{display:flex;flex-direction:column;gap:11px}
+  .prow{display:grid;grid-template-columns:132px minmax(0,1fr);align-items:center;gap:14px}
+  .prow .plabel{font-size:13px;color:var(--ink2);text-align:right;overflow-wrap:anywhere}
+  .ptrack{position:relative;height:20px}
+  .ptrack::before{content:"";position:absolute;left:0;right:0;top:9px;height:2px;background:var(--track);border-radius:999px}
+  .prange{position:absolute;top:5px;height:10px;background:var(--series-1);border-radius:4px}
+  .pdot{position:absolute;top:5px;width:10px;height:10px;border-radius:999px;background:var(--series-1);
+        box-shadow:0 0 0 2px var(--surface)}
+  .pval{position:absolute;top:1px;font-size:11.5px;color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .paxis{display:grid;grid-template-columns:132px minmax(0,1fr);gap:14px;margin-top:14px;padding-top:10px;border-top:1px solid var(--grid)}
+  .pticks{position:relative;height:15px}
+  .ptick{position:absolute;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;transform:translateX(-50%)}
+  .pfoot{font-size:12px;color:var(--muted);margin:14px 0 0}
+
+  /* ---------- callout ---------- */
+  .callout{background:var(--surface);border:1px solid var(--ring);border-left:3px solid var(--series-1);
+           border-radius:9px;padding:16px 18px;margin:0 0 16px}
+  .callout p{margin:0;max-width:66ch}
+  .callout p + p{margin-top:9px}
+  blockquote{margin:18px 0;padding:16px 20px;background:var(--surface);border:1px solid var(--ring);
+             border-left:3px solid var(--series-1);border-radius:9px}
+  blockquote p{margin:0;font-size:17px;line-height:1.5;font-weight:600;color:var(--ink);max-width:60ch}
+
+  .srcline{font-size:12px;color:var(--muted);margin:10px 0 0}
+  .srcline a{color:var(--muted)}
+  footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--grid);font-size:12.5px;color:var(--muted)}
+  footer p{max-width:70ch;margin:0 0 8px}
+
+  @media (max-width:620px){
+    nav.toc ol{columns:1}
+    .prow,.paxis{grid-template-columns:96px minmax(0,1fr);gap:9px}
+    .prow .plabel{font-size:12px}
+    h1{font-size:24px}
+  }
+  @media print{ .toggle,nav.toc{display:none} }
+</style>
+</head>
+<body data-palette="#2a78d6">
+<button class="toggle" id="themeToggle" type="button">Dark</button>
+<div class="wrap">
+
+<header class="top">
+  <p class="eyebrow">Market research · Percho</p>
+  <h1>Percho competitive market report</h1>
+  <p class="lede">Percho sits at the intersection of four markets: AI-generated real-estate video, automated
+  listing-marketing suites, multilingual agent marketing, and buyer-facing neighborhood discovery. Most
+  competitors cover only one or two of them.</p>
+  <p class="note">Research current as of September 6, 2026. Prices in USD, may reflect annual-billing discounts.
+  Produced by Codex (<code>gpt-5.6-sol</code>) with web search. Percho's own positioning is taken from the product
+  description supplied; percho.co was not reliably reachable during the research run.</p>
+</header>
+
+<nav class="toc">
+  <p>Contents</p>
+  <ol>
+    <li><a href="#summary">Executive summary</a></li>
+    <li><a href="#landscape">Landscape at a glance</a></li>
+    <li><a href="#pricing">Where the money sits</a></li>
+    <li><a href="#direct">Direct competitors</a></li>
+    <li><a href="#adjacent">Adjacent competitors</a></li>
+    <li><a href="#portals">Big-portal threats</a></li>
+    <li><a href="#multilingual">The multilingual gap</a></li>
+    <li><a href="#opportunities">Strategic opportunities</a></li>
+    <li><a href="#conclusion">Overall conclusion</a></li>
+  </ol>
+</nav>
+
+<!-- ============ SUMMARY ============ -->
+<section id="summary">
+  <h2>Executive summary</h2>
+  <p>The closest broad product competitor is <strong>ListingAI</strong>, because it combines listing videos, AI
+  copy, social campaigns, listing websites, market data and an agent workspace in one suite. The most focused
+  video competitors are <strong>Reel-E</strong>, <strong>Consul</strong>, <strong>Tour Estate AI</strong>,
+  <strong>VideoEstate.ai</strong> and <strong>BetterSpace</strong>. <strong>Matterport</strong> competes for
+  virtual-tour budget but delivers spatial exploration rather than narrative community storytelling.</p>
+
+  <p>The larger strategic threat comes from the portals:</p>
+  <ul>
+    <li><strong>Zillow</strong> owns enormous buyer reach and increasingly proprietary immersive media.</li>
+    <li><strong>Homes.com</strong> is already combining neighborhood information, community videos, Matterport
+      tours, retargeting and multilingual conversational AI.</li>
+    <li><strong>Realtor.com</strong> is making lifestyle and neighborhood reasoning central to AI search.</li>
+    <li><strong>Redfin</strong> now supports multilingual conversational discovery and can suggest neighborhoods
+      from stated buyer preferences.</li>
+  </ul>
+
+  <div class="callout">
+    <p>However, none of the reviewed U.S. agent tools appears to make a locally grounded, multilingual
+    <strong>neighborhood film</strong> — distributed through both U.S. and Asian social channels — the primary
+    listing experience. That remains Percho's clearest defensible opening.</p>
+  </div>
+</section>
+
+<!-- ============ LANDSCAPE ============ -->
+<section id="landscape">
+  <h2>Landscape at a glance</h2>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Competitor</th>
+          <th>Category</th>
+          <th>Core user</th>
+          <th>Public pricing</th>
+          <th>Threat to Percho</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="group"><td colspan="5">Direct — AI listing video</td></tr>
+        <tr>
+          <td class="name">ListingAI</td>
+          <td>Video + copy + listing sites + social</td>
+          <td>Agent</td>
+          <td class="price">Free; $19–150/mo</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i></span><span class="lab">Very high</span><span class="cap">product overlap</span></span></td>
+        </tr>
+        <tr>
+          <td class="name">Reel-E</td>
+          <td>AI photo-to-video</td>
+          <td>Agent / media pro</td>
+          <td class="price">$59–599/mo</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">High</span><span class="cap">video production</span></span></td>
+        </tr>
+        <tr>
+          <td class="name">Consul</td>
+          <td>AI photo-to-video</td>
+          <td>Agent</td>
+          <td class="price">Free trial; $39–249/mo</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">High</span><span class="cap">simple listing films</span></span></td>
+        </tr>
+        <tr>
+          <td class="name">Tour Estate AI</td>
+          <td>AI walkthrough / video</td>
+          <td>Agent, photographer</td>
+          <td class="price">Free; from $29/mo</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">High</span><span class="cap">low-cost video</span></span></td>
+        </tr>
+        <tr>
+          <td class="name">BetterSpace</td>
+          <td>Video + staging + social workflow</td>
+          <td>Agent / team</td>
+          <td class="price">Free; $29–159/mo</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">Medium-high</span></span></td>
+        </tr>
+        <tr>
+          <td class="name">VideoEstate.ai</td>
+          <td>Video + image editing + descriptions</td>
+          <td>Agent / agency</td>
+          <td class="price">Free; $23–237/mo</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip"></i><i class="pip"></i></span><span class="lab">Medium</span></span></td>
+        </tr>
+        <tr>
+          <td class="name">Matterport</td>
+          <td>3D digital twins, guided tours</td>
+          <td>Agent, photographer, buyer</td>
+          <td class="price">Free tier; quoted</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip"></i><i class="pip"></i></span><span class="lab">Medium</span><span class="cap">competes for budget</span></span></td>
+        </tr>
+
+        <tr class="group"><td colspan="5">Adjacent — agent marketing &amp; distribution</td></tr>
+        <tr>
+          <td class="name">Xara</td>
+          <td>MLS-triggered marketing automation</td>
+          <td>Agent / brokerage</td>
+          <td class="price">$49; $129 per 5 agents</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">High</span><span class="cap">automated campaigns</span></span></td>
+        </tr>
+        <tr>
+          <td class="name">Back At You Social</td>
+          <td>MLS-to-social / video / ad automation</td>
+          <td>Brokerage / agent</td>
+          <td class="price">Quote required</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">High</span><span class="cap">distribution</span></span></td>
+        </tr>
+        <tr>
+          <td class="name">Agent Crate</td>
+          <td>Social content and automation</td>
+          <td>Agent</td>
+          <td class="price">$59–199/mo</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip"></i><i class="pip"></i></span><span class="lab">Medium</span></span></td>
+        </tr>
+        <tr>
+          <td class="name">Luxury Presence</td>
+          <td>Website, CRM, ads, AI content</td>
+          <td>Top agent / team</td>
+          <td class="price">Quote; annual contract</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">Medium-high</span><span class="cap">premium end</span></span></td>
+        </tr>
+
+        <tr class="group"><td colspan="5">Portals</td></tr>
+        <tr>
+          <td class="name">Zillow</td>
+          <td>Portal + proprietary rich media</td>
+          <td>Buyer and agent</td>
+          <td class="price">Showcase, quoted</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i></span><span class="lab">Very high</span><span class="cap">platform threat</span></span></td>
+        </tr>
+        <tr>
+          <td class="name">Redfin</td>
+          <td>Multilingual AI search, neighborhood discovery</td>
+          <td>Buyer</td>
+          <td class="price">Free to consumers</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">High</span><span class="cap">buyer discovery</span></span></td>
+        </tr>
+        <tr>
+          <td class="name">Realtor.com</td>
+          <td>AI lifestyle and neighborhood search</td>
+          <td>Buyer</td>
+          <td class="price">Free to consumers</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">High</span><span class="cap">buyer context</span></span></td>
+        </tr>
+        <tr>
+          <td class="name">Homes.com</td>
+          <td>Neighborhood content, community video, AI</td>
+          <td>Buyer, agent, builder</td>
+          <td class="price">Quote / property-dependent</td>
+          <td><span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i></span><span class="lab">Very high</span><span class="cap">neighborhood content</span></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="srcline">Threat level is a four-step ordinal judgement from the research pass, not a measured score.
+  Filled segments and the written label carry the same value.</p>
+</section>
+
+<!-- ============ PRICING ============ -->
+<section id="pricing">
+  <h2>Where the money sits</h2>
+  <div class="figure">
+    <p class="ftitle">Published monthly price bands, entry tier to top tier</p>
+    <p class="fsub">Only vendors that publish list prices. Bars span the cheapest paid tier to the most expensive
+    named tier; a single dot means one published price or an open-ended "from" price. Enterprise and
+    quote-based tiers are excluded, which is why Back At You, Luxury Presence and the portals do not appear.</p>
+
+    <div class="prows" id="prows"></div>
+
+    <div class="paxis">
+      <div></div>
+      <div class="pticks" id="pticks"></div>
+    </div>
+    <p class="pfoot">The direct-video cluster starts between $19 and $59 a month. Percho is being priced against
+    a market where "make a video from my listing photos" is close to a commodity.</p>
+  </div>
+</section>
+
+<!-- ============ DIRECT ============ -->
+<section id="direct">
+  <h2>1 · Direct competitors — AI listing video</h2>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>ListingAI</h3><p class="cat">Video + copy + listing sites + social · Agent</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i></span><span class="lab">Very high</span></span>
+    </div>
+    <h4>What it offers</h4>
+    <p>The broadest direct comparison. It turns one property record into MLS-ready descriptions with Fair Housing
+    checks, listing videos built from photographs, virtual staging and photo edits, single-property websites,
+    coordinated Posts / Stories / Reels with captions, social scheduling to Facebook, Instagram and LinkedIn, CMA
+    and market reports, seller-performance reports, and agent websites with QR/NFC lead tracking.</p>
+    <p>Its public site says it operates in more than 20 languages. Pricing starts with a free listing; paid plans
+    are roughly <strong>$19/mo Essential, $36 Professional and $150 Expert</strong>, with annual discounts.</p>
+    <h4>How Percho differs</h4>
+    <p>ListingAI is optimized around the listing lifecycle and agent productivity. Its videos remain
+    property-tour assets generated from listing photos. Percho differentiates by making the surrounding community
+    the narrative lead and presenting the result as a buyer-discovery experience.</p>
+    <p>ListingAI is a real multilingual threat at the content-generation level. Its public materials do not,
+    however, demonstrate culturally adapted distribution to Rednote or WeChat, or a specialized workflow for
+    Spanish-, Chinese-, Vietnamese- and Korean-speaking U.S. buyers.</p>
+    <p class="assess"><strong>Assessment:</strong> Closest feature-suite competitor; the strongest benchmark for
+    dashboard, copy, microsites and campaign completeness.</p>
+    <p class="srcline">Sources: <a href="https://www.listingai.co/features">features</a> ·
+      <a href="https://www.listingai.co/pricing?currency=USD&amp;interval=yearly">pricing</a> ·
+      <a href="https://www.listingai.co/faq/what-is-included">language availability</a></p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>Reel-E</h3><p class="cat">AI photo-to-video · Agent, team, media professional</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">High</span></span>
+    </div>
+    <h4>What it offers</h4>
+    <p>Turns listing photos into cinematic property videos using simulated camera motion, licensed music,
+    branding and multiple aspect ratios. Every property project includes horizontal, vertical, square, branded
+    and unbranded formats, plus a listing website. Generation is advertised at roughly two minutes.</p>
+    <ul>
+      <li>Essential — <strong>$59/mo</strong>, three listings ($44 billed annually)</li>
+      <li>Growth — <strong>$129/mo</strong>, ten listings ($97 annually)</li>
+      <li>Pro — <strong>$599/mo</strong>, fifty listings ($449 annually)</li>
+      <li>Enterprise — custom</li>
+    </ul>
+    <h4>How Percho differs</h4>
+    <p>Reel-E animates the supplied property photography. Percho's core object is the community story around a
+    property. Reel-E also does not publicly position itself as a buyer destination, a multilingual marketing
+    system, or a channel-localization product.</p>
+    <p class="assess"><strong>Assessment:</strong> Strong production and price competitor, but not yet a
+    neighborhood-discovery competitor.</p>
+    <p class="srcline">Source: <a href="https://www.reel-e.ai/pricing">Reel-E pricing and inclusions</a></p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>Consul</h3><p class="cat">AI photo-to-video · Agent</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">High</span></span>
+    </div>
+    <h4>What it offers</h4>
+    <p>Imports a Zillow, Realtor.com or MLS link — or accepts uploaded photos — and generates an AI-planned
+    property tour with motion, virtual twilight, text and licensed music. Users can alter shots, text, music and
+    format.</p>
+    <ul>
+      <li>First 30-second watermarked video — free</li>
+      <li>Starter — <strong>$39/mo</strong>, about two videos</li>
+      <li>Agent — <strong>$99/mo</strong>, about five</li>
+      <li>Pro — <strong>$249/mo</strong>, about sixteen</li>
+    </ul>
+    <h4>How Percho differs</h4>
+    <p>Consul sells convenience: existing listing assets in, conventional house-tour video out. It lacks the
+    broader community-media proposition, the buyer-facing app, the multilingual copy suite and the
+    Asian-platform workflow.</p>
+    <p class="assess"><strong>Assessment:</strong> A simple, easy-to-understand substitute when an agent thinks
+    the job is merely "make my photos into a video."</p>
+    <p class="srcline">Source: <a href="https://www.consulrealestate.com/">Consul product and pricing</a></p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>Tour Estate AI</h3><p class="cat">AI walkthrough / video · Agent, photographer, small agency</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">High</span></span>
+    </div>
+    <h4>What it offers</h4>
+    <p>Converts listing photos into cinematic room-to-room walkthroughs with real-estate-specific image motion,
+    AI-selected sequencing, editable narration, music and virtual hosts, horizontal and vertical social formats,
+    and imports from Zillow and Airbnb. It claims a roughly five-minute workflow and advertises plans
+    <strong>from $29/mo</strong> across Free, Starter, Studio and custom Enterprise tiers, though exact live tier
+    prices vary by country and billing period.</p>
+    <h4>How Percho differs</h4>
+    <p>Tour Estate AI focuses on interiors and room layout. Percho's differentiation is exterior context:
+    culture, local routines, places and neighborhood identity. It also does not present an end-to-end
+    multilingual listing and community-marketing destination.</p>
+    <p class="assess"><strong>Assessment:</strong> Important low-cost substitute for video, but a different
+    storytelling frame.</p>
+    <p class="srcline">Sources: <a href="https://www.tourestateai.com/en">overview</a> ·
+      <a href="https://www.tourestateai.com/en/help/how-much-does-tourestateai-cost">pricing explanation</a></p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>BetterSpace</h3><p class="cat">Video + staging + social workflow · Agent, team, agency</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">Medium-high</span></span>
+    </div>
+    <h4>What it offers</h4>
+    <p>Combines AI listing videos, virtual staging, AI avatar presenters and lifestyle actors, listing sync,
+    social scheduling on team plans, Claude and ChatGPT integrations, and shared team workspaces. Pricing runs
+    from a continuing free tier with two videos a month to <strong>$29 Lite, $49 Starter, $89 Growth and $159
+    Pro</strong>. Enterprise plans add brokerage administration and larger credit pools.</p>
+    <h4>How Percho differs</h4>
+    <p>BetterSpace increasingly resembles an AI media studio. Its differentiation is breadth of synthetic
+    production, not proprietary neighborhood knowledge or culturally localized buyer acquisition. Percho should
+    avoid competing solely on image animation, because products such as BetterSpace can rapidly commoditize it.</p>
+    <p class="assess"><strong>Assessment:</strong> Medium-to-high threat, especially if Percho's videos can be
+    mistaken for ordinary photo animation.</p>
+    <p class="srcline">Source: <a href="https://betterspace.ai/pricing">BetterSpace pricing</a></p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>VideoEstate.ai</h3><p class="cat">Video + image editing + descriptions · Agent, agency</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip"></i><i class="pip"></i></span><span class="lab">Medium</span></span>
+    </div>
+    <h4>What it offers</h4>
+    <p>Generates 4K horizontal and vertical videos, AI photo edits and listing descriptions. Credit-based plans:
+    Free, Lite <strong>$23/mo</strong>, Starter <strong>$57</strong>, Standard <strong>$117</strong>, Premium
+    <strong>$237</strong>, Enterprise custom.</p>
+    <h4>How Percho differs</h4>
+    <p>VideoEstate.ai bundles high-volume creative utilities but remains property-asset-first. It does not
+    publicly present community film generation, buyer discovery, cultural adaptation, or specialized U.S.
+    multilingual segments as the central product.</p>
+    <p class="assess"><strong>Assessment:</strong> Price and production competitor; limited strategic overlap
+    beyond video and descriptions.</p>
+    <p class="srcline">Source: <a href="https://videoestate.ai/en/pricing">VideoEstate.ai pricing</a></p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>Matterport</h3><p class="cat">3D digital twins · Agent, photographer, property operator, buyer</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip"></i><i class="pip"></i></span><span class="lab">Medium</span></span>
+    </div>
+    <h4>What it offers</h4>
+    <p>Creates navigable 3D digital twins from phone, tablet or 360-camera captures: interactive 3D tours and
+    measurements, AI defurnishing, automated galleries, video clips and guided highlights, Property Intelligence
+    and MLS-ready reports, embedding and publishing to Google Street View and CoStar-owned portals, and
+    marketing analytics. A free tier supports one active space; Starter through Business pricing depends on
+    active-space volume and is shown dynamically; Enterprise is quote-based.</p>
+    <h4>How Percho differs</h4>
+    <p>Matterport answers "what is it like to move through this building?" Percho answers "what is it like to
+    live here?" Those experiences can be complementary, although they compete for the same agent marketing
+    budget.</p>
+    <p class="assess"><strong>Assessment:</strong> A budget competitor and potential integration partner rather
+    than a pure head-to-head rival.</p>
+    <p class="srcline">Sources: <a href="https://matterport.com/plans?lang=en">plans</a> ·
+      <a href="https://matterport.com/industries/real-estate">real-estate capabilities</a></p>
+  </div>
+</section>
+
+<!-- ============ ADJACENT ============ -->
+<section id="adjacent">
+  <h2>2 · Adjacent competitors — copy, syndication, distribution</h2>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>Xara</h3><p class="cat">MLS-triggered marketing automation · Agent, brokerage</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">High</span></span>
+    </div>
+    <p>Uses MLS events to generate entire marketing campaigns, including branded print materials, emails, listing
+    posts and automated social content, and can auto-post agent content to Facebook, Instagram and LinkedIn.
+    Public pricing: <strong>$49/mo</strong> for an individual agent; <strong>$129/mo for five agents</strong> at
+    brokerage level, with MLS sync, automated social management and email tools.</p>
+    <p class="assess"><strong>Percho difference:</strong> Xara automates collateral and publishing around the
+    property. Percho can provide a much richer media centerpiece and multilingual buyer experience. Xara is
+    nevertheless a strong benchmark for MLS-triggered automation and brokerage economics.</p>
+    <p class="srcline">Source: <a href="https://www.xara.com/pricing/real-estate/">Xara real-estate pricing</a></p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>Back At You Social</h3><p class="cat">MLS-to-social automation · Brokerage, agent</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">High</span></span>
+    </div>
+    <p>Turns MLS status changes into social posts across Facebook, Instagram, LinkedIn, X, TikTok and YouTube,
+    branded listing videos, paid Meta and web campaigns, single-property landing pages, seller reports and
+    postcards, Fair Housing-compliant targeting, and lead capture with CRM handoff. Pricing is sales-led rather
+    than publicly posted.</p>
+    <p class="assess"><strong>Percho difference:</strong> Back At You has greater conventional distribution
+    automation, but no visible Rednote/WeChat or Asian-language specialization, and its videos are branded
+    listing-photo compilations rather than neighborhood documentary products.
+    <br><strong>Strategic implication:</strong> Percho should match or integrate with MLS-status triggers;
+    otherwise agents may prefer a less differentiated product that requires no manual setup.</p>
+    <p class="srcline">Source: <a href="https://www.backatyou.com/products/social">Back At You Social</a></p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>Agent Crate</h3><p class="cat">Social content and automation · Agent</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip"></i><i class="pip"></i></span><span class="lab">Medium</span></span>
+    </div>
+    <p>Provides real-estate content calendars, more than 500 templates, Reels, carousels, neighborhood-tour
+    templates, automatic Instagram and Facebook publishing, CRM, websites and funnels. Plans: Create
+    <strong>$59/mo</strong>, Automate <strong>$99</strong>, Grow <strong>$149</strong>, Branded
+    <strong>$199</strong>.</p>
+    <p class="assess"><strong>Percho difference:</strong> Agent Crate helps agents maintain a social presence
+    using templates and recurring content. Percho generates listing-specific, geographically grounded films and
+    localized buyer journeys. Agent Crate's "neighborhood tour" templates indicate real market demand — but
+    templates are not the same as automated, evidence-based community films.</p>
+    <p class="srcline">Source: <a href="https://www.agentcrate.com/">Agent Crate plans</a></p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>Luxury Presence</h3><p class="cat">Website, CRM, ads, AI content · Top agent, team</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">Medium-high</span></span>
+    </div>
+    <p>Combines high-end agent websites, IDX, AI CRM, lead scoring, CMAs, hyperlocal content, advertising, social
+    management and branded apps. In 2026 it added weekly campaigns containing static posts, carousels and
+    <strong>AI-generated video Reels based on an agent's listings and brand</strong>. Pricing is quote-based,
+    includes a setup fee, and generally requires a 12-month agreement.</p>
+    <p class="assess"><strong>Percho difference:</strong> Luxury Presence sells a full premium-growth platform to
+    top performers and teams. Percho is narrower and potentially far easier to adopt per listing, and its
+    multilingual and neighborhood-film proposition is more buyer-specific.</p>
+    <p class="srcline">Sources: <a href="https://www.luxurypresence.com/plans-and-pricing/">plans and pricing</a> ·
+      <a href="https://www.luxurypresence.com/blogs/product-update-social-media-management/">2026 social-video release</a></p>
+  </div>
+</section>
+
+<!-- ============ PORTALS ============ -->
+<section id="portals">
+  <h2>3 · Big-portal threats</h2>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>Zillow</h3><p class="cat">Portal + proprietary rich media · Buyer and agent</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i></span><span class="lab">Very high</span></span>
+    </div>
+    <h4>Current activity</h4>
+    <p>Zillow's primary immersive product is <strong>Showcase</strong>, which gives listings premium placement
+    and AI-powered rich media, interactive floor plans, virtual tours, room-by-room layouts and agent branding.
+    In 2025 Zillow launched <strong>SkyTour</strong>, an interactive drone-like exterior experience created from
+    drone footage using Gaussian splatting, which can show the lot and the area immediately around a Showcase
+    property. Zillow says Showcase is intentionally limited to no more than 10% of listings in a market.</p>
+    <p>Zillow also reports that Showcase and 3D-floor-plan technology are on nearly 10% of new for-sale listings,
+    and describes that rich-media corpus as proprietary training data for future AI experiences. Natural-language
+    search and an AI assistant are part of its broader strategy.</p>
+    <h4>Threat to Percho</h4>
+    <ul>
+      <li>Enormous distribution advantage</li>
+      <li>Proprietary listing and consumer-behavior data</li>
+      <li>Ability to bundle immersive media into the dominant portal experience</li>
+      <li>Strong agent-facing proof metrics for views, saves, shares and sale outcomes</li>
+    </ul>
+    <p class="assess">SkyTour moves beyond the walls of the house, but it is still largely parcel and exterior
+    <strong>visualization</strong> — not a narrated neighborhood story or a culturally localized guide.</p>
+    <p class="srcline">Sources: <a href="https://investors.zillowgroup.com/news-and-events/news/news-details/2025/Summer-just-got-hotter-Zillow-debuts-five-powerful-new-features/default.aspx">SkyTour announcement</a> ·
+      <a href="https://www.zillow.com/news/more-than-50-brokerages-adopt-zillow-showcase-as-go-to-tool-for-listing-marketing-innovation/">Showcase adoption</a> ·
+      <a href="https://investors.zillowgroup.com/news-and-events/news/news-details/2026/Zillows-Structural-AI-Advantage---Our-Thoughts-2026-V-Blqi8WAt/default.aspx">2026 AI strategy</a></p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>Redfin</h3><p class="cat">Multilingual AI search · Buyer</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">High</span></span>
+    </div>
+    <h4>Current activity</h4>
+    <p>Redfin launched multilingual conversational search in November 2025. Buyers can describe preferences in
+    any language, refine them conversationally, and discover neighborhoods beyond the boundaries they initially
+    considered. Redfin says early users viewed nearly twice as many listings and were 47% more likely to request
+    a tour or service. It also operates Ask Redfin for questions about listing details, local conditions, schools
+    and zoning. Redfin accepts listing and 3D-tour media supplied through participating MLSs, but no proprietary
+    neighborhood-film production product was found.</p>
+    <h4>Threat to Percho</h4>
+    <p>Redfin directly weakens any broad claim that "multilingual neighborhood discovery is unserved." It can
+    already interpret multilingual preferences and suggest suitable homes or neighborhoods at national scale.</p>
+    <p class="assess">Percho's distinction must therefore be <strong>emotionally compelling, shareable media and
+    agent-owned lead capture</strong> — not simply multilingual search or neighborhood information.</p>
+    <p class="srcline">Sources: <a href="https://www.redfin.com/news/press-releases/redfin-debuts-conversational-search-to-reinvent-how-people-find-homes/">conversational search</a> ·
+      <a href="https://investors.redfin.com/news-events/press-releases/detail/1061/introducing-ask-redfin-an-ai-powered-tool-to-quickly">Ask Redfin</a></p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>Realtor.com</h3><p class="cat">AI lifestyle and neighborhood search · Buyer</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip"></i></span><span class="lab">High</span></span>
+    </div>
+    <h4>Current activity</h4>
+    <p>Realtor.com launched visual AI search in 2025, analyzing both listing language and photographs. In June
+    2026 it introduced <strong>RealAssist AI</strong>, built with Gemini, to reason about affordability,
+    properties and neighborhoods. RealAssist can:</p>
+    <ul>
+      <li>Compare homes and neighborhoods</li>
+      <li>Identify community character and investment</li>
+      <li>Map a buyer's commute and daily routine</li>
+      <li>Highlight parks and nearby businesses</li>
+      <li>Visualize streets after dark or in other seasons</li>
+      <li>Remember buyer preferences across sessions</li>
+    </ul>
+    <h4>Threat to Percho</h4>
+    <p>Realtor.com is moving aggressively into the underlying job Percho addresses: helping buyers understand
+    whether a location fits their life. Its experience is conversational, analytical and map-based rather than an
+    agent-branded neighborhood film.</p>
+    <p class="assess">Treat Realtor.com as a likely future entrant into auto-generated neighborhood video, even
+    though no such product was confirmed in the reviewed materials.</p>
+    <p class="srcline">Sources: <a href="https://mediaroom.realtor.com/2025-10-09-Search-It%2C-How-You-Say-It-Realtor-com-R-Launches-New-AI-Powered-Search">2025 AI search</a> ·
+      <a href="https://mediaroom.realtor.com/2026-06-02-Realtor-com-R-Launches-RealAssist-TM-AI-A-Completely-Reimagined-Way-to-Find-A-Home">RealAssist AI</a></p>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="who"><h3>Homes.com</h3><p class="cat">Neighborhood content and community video · Buyer, agent, builder</p></div>
+      <span class="threat"><span class="pips"><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i><i class="pip on"></i></span><span class="lab">Very high</span></span>
+    </div>
+    <h4>Current activity</h4>
+    <p>The portal closest to Percho's neighborhood emphasis:</p>
+    <ul>
+      <li>Neighborhood, school, condo and community pages</li>
+      <li>Professionally produced community videos for boosted new developments</li>
+      <li>Matterport 3D tours and floor plans</li>
+      <li>AI-powered retargeting video ads across the web, Facebook and Instagram</li>
+      <li>Priority placement on relevant neighborhood and school pages</li>
+      <li>"Your Listing, Your Lead" positioning that sends inquiries to the listing agent</li>
+    </ul>
+    <p>Boost pricing depends on the property and is not publicly standardized. <strong>Homes AI</strong> adds an
+    important multilingual threat: it compares listings using neighborhood dynamics, amenities, schools and
+    pricing, and can converse in more than 50 languages while guiding users through Matterport tours.</p>
+    <h4>Threat to Percho</h4>
+    <p>Homes.com already owns most of the ingredients — neighborhood editorial content, community videos,
+    agent-aligned lead routing, portal distribution, multilingual AI, and listing and retargeting
+    infrastructure.</p>
+    <p class="assess">Its principal gap is that community films appear concentrated in <strong>paid
+    new-construction packages</strong> rather than automatically produced for ordinary resale listings. It also
+    does not publicly demonstrate culturally adapted Rednote/WeChat campaign creation.
+    <br><strong>Assessment:</strong> The most important portal competitor, and the clearest validation of
+    Percho's neighborhood-first thesis.</p>
+    <p class="srcline">Sources: <a href="https://www.homes.com/advertise/community/">Community Boost</a> ·
+      <a href="https://www.homes.com/advertise/boost/">listing Boost</a> ·
+      <a href="https://www.homes.com/product-release/">Homes AI</a></p>
+  </div>
+</section>
+
+<!-- ============ MULTILINGUAL ============ -->
+<section id="multilingual">
+  <h2>4 · The multilingual and cross-cultural gap</h2>
+
+  <h3 style="margin-bottom:10px">What is already served</h3>
+  <ul>
+    <li>ListingAI supports content in more than 20 languages.</li>
+    <li>Redfin conversational search accepts any language.</li>
+    <li>Homes AI claims more than 50 languages.</li>
+    <li>Generic AI, video-dubbing and translation products can cheaply translate scripts.</li>
+    <li>Specialist agencies already market U.S. brands through Rednote and WeChat.</li>
+  </ul>
+  <div class="callout"><p><strong>Translation alone is not defensible.</strong></p></div>
+
+  <h3 style="margin:30px 0 10px">What remains weakly served</h3>
+  <p>No reviewed U.S. listing-marketing platform publicly demonstrated all of the following in one workflow:</p>
+  <ol style="margin:0 0 12px;padding-left:20px;max-width:70ch">
+    <li>Import a residential resale listing.</li>
+    <li>Generate a neighborhood-led film rather than an interior-photo slideshow.</li>
+    <li>Produce culturally natural Spanish, Chinese, Vietnamese and Korean variants.</li>
+    <li>Adapt — not merely translate — the caption, length, tags, tone and call to action for each channel.</li>
+    <li>Publish or package content for Rednote and WeChat as well as U.S. networks.</li>
+    <li>Send buyers to a multilingual listing/community page.</li>
+    <li>Attribute engagement and leads back to the listing agent.</li>
+  </ol>
+  <p>Search results surfaced general Chinese-market agencies such as BIYA and overseas portals, but no
+  comparable automated U.S. agent product. BIYA, for example, provides bilingual Rednote account management to
+  U.S. brands — a service agency, not a listing-to-film SaaS workflow.</p>
+  <div class="callout"><p>The strongest gap is <strong>cross-cultural real-estate distribution</strong>, not
+  machine translation.</p></div>
+  <p class="srcline">Source: <a href="https://www.biyauniversalmedia.com/">BIYA</a></p>
+</section>
+
+<!-- ============ OPPORTUNITIES ============ -->
+<section id="opportunities">
+  <h2>5 · Strategic opportunities for Percho</h2>
+
+  <div class="card">
+    <h3>1 · Define a category competitors cannot easily blur</h3>
+    <p>"AI real-estate video" is rapidly commoditizing. Percho should consistently describe its output as a
+    neighborhood film, a community story, a buyer orientation film — a "live here" film rather than a "tour this
+    house" video. The opening seconds should prove that distinction: streets, routines, transit, businesses,
+    parks, culture and lived experience before interiors.</p>
+  </div>
+
+  <div class="card">
+    <h3>2 · Build cultural adaptation, not a translation toggle</h3>
+    <p>For each supported buyer segment, adapt:</p>
+    <ul>
+      <li>Narrative order and decision criteria</li>
+      <li>Terminology and units</li>
+      <li>Subtitle density and voice style</li>
+      <li>Platform-specific title, cover image, hashtags and duration</li>
+      <li>Calls to action and preferred contact channel</li>
+      <li>Community institutions and amenities relevant to that audience</li>
+    </ul>
+    <p>This is a more credible moat than supporting a large raw language count.</p>
+  </div>
+
+  <div class="card">
+    <h3>3 · Own Rednote and WeChat operationally</h3>
+    <p>Facebook, Instagram, LinkedIn, TikTok and YouTube distribution is well served by Back At You, Xara and
+    similar products. Rednote and WeChat are the less crowded wedge. Percho should provide channel-aware export
+    packages even where direct API publishing is unavailable:</p>
+    <ul>
+      <li>Correct dimensions and duration</li>
+      <li>Chinese cover and title variants</li>
+      <li>Suggested tags and compliant disclosures</li>
+      <li>WeChat article, Moments and chat-sharing variants</li>
+      <li>QR codes and deep links to localized listing pages</li>
+      <li>Approval workflows for bilingual agents or reviewers</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>4 · Make provenance and factual safety visible</h3>
+    <p>Neighborhood films create Fair Housing and accuracy risks. Percho should show agents sources for factual
+    statements, last-updated dates, editable scripts and place selections, Fair Housing warnings, clear
+    identification of AI-generated or altered visuals, and controls that prevent demographic steering or
+    protected-class proxies.</p>
+    <p>A trustworthy neighborhood story is worth more than an aesthetically impressive but unverifiable one.</p>
+  </div>
+
+  <div class="card">
+    <h3>5 · Connect films to measurable agent outcomes</h3>
+    <p>Competitors sell efficiency; portals sell reach. Percho should sell buyer intelligence — film completion
+    rate, language selected, places or chapters replayed, shares by platform, listing-page conversion, tour
+    requests and agent contacts, buyer interest by neighborhood theme, and seller-ready campaign reports. That
+    makes the dashboard a retention product instead of merely a content library.</p>
+  </div>
+
+  <div class="card">
+    <h3>6 · Automate the listing lifecycle</h3>
+    <p>To compete with ListingAI, Xara and Back At You, Percho should trigger campaigns from MLS events: coming
+    soon, new listing, open house, price change, under contract, sold. The neighborhood film can stay stable
+    while copy, calls to action and social cuts update automatically.</p>
+  </div>
+
+  <div class="card">
+    <h3>7 · Treat portals as both threats and distribution channels</h3>
+    <p>Percho is unlikely to out-distribute Zillow or Homes.com. It can instead ensure every film ships with
+    MLS-safe/unbranded and agent-branded variants, portal-compatible video files and links, embeddable players,
+    vertical cuts, a reusable neighborhood-film library, and clear licensing for agents, brokerages and
+    portals.</p>
+  </div>
+
+  <div class="card">
+    <h3>8 · Accumulate reusable neighborhood assets</h3>
+    <p>The most promising structural moat is a verified media and knowledge library for U.S. neighborhoods. Each
+    new listing should reuse and refresh local footage and place assets, geographic facts, transit and amenity
+    modules, pronunciations and localized names, language-specific narration, seasonal variants, and engagement
+    data showing what matters to different buyer cohorts.</p>
+    <p>This changes unit economics: the first film builds the neighborhood; subsequent listings become
+    inexpensive, customized editions.</p>
+  </div>
+</section>
+
+<!-- ============ CONCLUSION ============ -->
+<section id="conclusion">
+  <h2>Overall conclusion</h2>
+  <p>Percho has a credible open position, but only if it avoids being perceived as another photo-to-video
+  generator.</p>
+  <p>The direct-video market is already crowded and price competitive. ListingAI and BetterSpace are expanding
+  horizontally, while Back At You and Xara are stronger at automated agent distribution. At the portal level,
+  Homes.com, Realtor.com, Redfin and Zillow are rapidly improving neighborhood reasoning, immersive media and
+  multilingual search.</p>
+
+  <blockquote><p>Percho's most defensible position: the agent-owned, multilingual "what it is like to live here"
+  media layer for every U.S. listing.</p></blockquote>
+
+  <p>The key differentiation is the combination of:</p>
+  <ul>
+    <li>Neighborhood-film-first storytelling</li>
+    <li>Culturally adapted multilingual content</li>
+    <li>Rednote and WeChat readiness</li>
+    <li>Agent-owned landing pages and leads</li>
+    <li>Verifiable local information</li>
+    <li>Cross-channel engagement analytics</li>
+    <li>Reusable neighborhood-media infrastructure</li>
+  </ul>
+  <p>Neither neighborhood storytelling nor multilingual support is unique by itself. The opportunity lies in
+  operationalizing both — at resale-listing scale — and making the result easy for agents to distribute and
+  measure.</p>
+</section>
+
+<footer>
+  <p>Internal research artifact. Competitor claims and prices are as published by each vendor at the time of the
+  research pass and were not independently verified; re-check pricing before using any figure in a deck.</p>
+  <p>Generated 2026-09-06 by Codex (<code>gpt-5.6-sol</code>) with web search, at the owner's request.</p>
+</footer>
+
+</div>
+
+<script>
+/* ---- theme toggle ---- */
+(function(){
+  var root=document.documentElement, btn=document.getElementById('themeToggle');
+  function label(){ btn.textContent = root.getAttribute('data-theme')==='dark' ? 'Light' : 'Dark'; }
+  label();
+  btn.addEventListener('click',function(){
+    root.setAttribute('data-theme', root.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
+    label();
+  });
+})();
+
+/* ---- pricing range chart ---- */
+(function(){
+  // min = cheapest paid tier, max = most expensive named tier; max null = open-ended "from"
+  var DATA=[
+    {name:'ListingAI',      min:19,  max:150},
+    {name:'VideoEstate.ai', min:23,  max:237},
+    {name:'Tour Estate AI', min:29,  max:null},
+    {name:'BetterSpace',    min:29,  max:159},
+    {name:'Consul',         min:39,  max:249},
+    {name:'Xara',           min:49,  max:129},
+    {name:'Reel-E',         min:59,  max:599},
+    {name:'Agent Crate',    min:59,  max:199}
+  ];
+  var MAX=600, TICKS=[0,150,300,450,600];
+  var pct=function(v){ return (v/MAX)*100; };
+
+  var rows=DATA.map(function(d){
+    var lo=pct(d.min), hi=d.max?pct(d.max):null;
+    var bar = d.max
+      ? '<span class="prange" style="left:'+lo+'%;width:'+Math.max(hi-lo,1.2)+'%"></span>'
+      : '<span class="pdot" style="left:calc('+lo+'% - 5px)"></span>';
+    var text = d.max ? '$'+d.min+'–'+d.max : 'from $'+d.min;
+    // keep the value label inside the plot: right of the mark, or left of it when it would overflow
+    var labelHtml = (d.max && hi>78)
+      ? '<span class="pval" style="right:'+(100-lo)+'%;padding-right:8px">'+text+'</span>'
+      : '<span class="pval" style="left:'+(d.max?hi:lo)+'%;padding-left:9px">'+text+'</span>';
+    return '<div class="prow"><div class="plabel">'+d.name+'</div>'+
+           '<div class="ptrack">'+bar+labelHtml+'</div></div>';
+  }).join('');
+  document.getElementById('prows').innerHTML=rows;
+
+  document.getElementById('pticks').innerHTML=TICKS.map(function(t){
+    var style='left:'+pct(t)+'%';
+    if(t===0) style='left:0;transform:none';
+    if(t===MAX) style='left:100%;transform:translateX(-100%)';
+    return '<span class="ptick" style="'+style+'">$'+t+'</span>';
+  }).join('');
+})();
+</script>
+</body>
+</html>
