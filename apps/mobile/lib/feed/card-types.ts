@@ -182,6 +182,12 @@ export interface CommunityCardV3 {
 	name: string;
 	city: string;
 	state: string;
+	/**
+	 * The county, bare ("Gwinnett", not "Gwinnett County") — the header adds
+	 * the word. Absent for a community the server has no county for, and then
+	 * the context row simply reads metro › city as it did before.
+	 */
+	county?: string;
 	heroUrl: string;
 	videoUrl?: string;
 	geoUnitId?: string;

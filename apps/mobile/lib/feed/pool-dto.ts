@@ -340,6 +340,7 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 	const heroUrl = str(raw.heroUrl);
 	if (!id || !slug || !name || !city || !state || !heroUrl) return null;
 
+	const county = str(raw.county);
 	const videoUrl = str(raw.videoUrl);
 	const geoUnitId = str(raw.geoUnitId);
 	const priceLabel = str(raw.priceLabel);
@@ -359,6 +360,7 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 		name,
 		city,
 		state,
+		...(county ? { county } : {}),
 		heroUrl,
 		...(videoUrl ? { videoUrl } : {}),
 		...(geoUnitId ? { geoUnitId } : {}),

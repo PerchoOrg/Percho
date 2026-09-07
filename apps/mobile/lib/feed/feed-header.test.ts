@@ -41,6 +41,7 @@ const RIVER_GREEN: CommunityCardV3 = {
 	name: "River Green",
 	city: "Canton",
 	state: "GA",
+	county: "Cherokee",
 	heroUrl: "https://example.test/rg.jpg",
 	geoUnitId: CANTON.id,
 };
@@ -91,12 +92,12 @@ describe("home tour", () => {
 	 * says which property this is, and the one thing it does not say is where
 	 * that property sits.
 	 */
-	it("names the community, with the city in the context row", () => {
+	it("names the community, with the county and city in the context row", () => {
 		const m = model({
 			card: listing({ geoUnitId: CANTON.id, communityId: RIVER_GREEN.slug }),
 		});
 		expect(m.kind).toBe("home-tour");
-		expect(m.contextText).toBe("Atlanta metro › Canton");
+		expect(m.contextText).toBe("Atlanta metro › Cherokee County › Canton");
 		expect(m.title).toBe("River Green");
 		expect(m.titleSlug).toBe("river-green");
 		expect(m.mapUnitId).toBe(CANTON.id);
@@ -118,14 +119,12 @@ describe("home tour", () => {
 	});
 
 	/**
-	 * `listings.community_id` is almost entirely unpopulated today
-	 * (`apps/web/lib/feed/listing-gate.ts`), so this is the COMMON case: the
-	 * city is promoted to the title and line one KEEPS it — the owner's call
-	 * on 2026-09-07 (「for home tour without community, show city twice for
-	 * now」) after seeing both spellings on `/demos/feed-header-v3`. phase183
-	 * suppressed the duplicate; this is the reversal, and it is temporary —
-	 * the backfill turns line two into the community and line one does not
-	 * move. Never a guessed community either way.
+	 * Rare since phase189 linked every listing with coordinates to a
+	 * community, but still reachable: the city is promoted to the title and
+	 * line one keeps it (the owner's call on 2026-09-07 after seeing both
+	 * spellings on `/demos/feed-header-v3`; phase183 suppressed the duplicate
+	 * instead). No county either — the county comes off the community, and
+	 * there is no community here to take it from. Never a guessed one.
 	 */
 	it("shows the city on BOTH lines when no community resolves", () => {
 		const m = model({ card: listing({ geoUnitId: CANTON.id }) });
@@ -169,7 +168,7 @@ describe("community tour", () => {
 	it("names the community and always has an overview to open", () => {
 		const m = model({ card: RIVER_GREEN });
 		expect(m.kind).toBe("community-tour");
-		expect(m.contextText).toBe("Atlanta metro › Canton");
+		expect(m.contextText).toBe("Atlanta metro › Cherokee County › Canton");
 		expect(m.title).toBe("River Green");
 		expect(m.titleSlug).toBe("river-green");
 		expect(m.mapUnitId).toBe(CANTON.id);
@@ -178,7 +177,30 @@ describe("community tour", () => {
 	/** A missing level is suppressed, not printed as an empty segment. */
 	it("drops the city level when the card carries none", () => {
 		const m = model({ card: { ...RIVER_GREEN, city: "" } });
-		expect(m.contextText).toBe("Atlanta metro");
+		expect(m.contextText).toBe("Atlanta metro › Cherokee County");
+	});
+
+	/**
+	 * The county is the segment a buyer acts on here — it names the school
+	 * district and the tax rate — and it is what stops line one from being a
+	 * restatement of line two. The word is added by the header; the column
+	 * holds the bare name.
+	 */
+	it("spells the bare county column as `X County`", () => {
+		expect(
+			model({ card: { ...RIVER_GREEN, county: "Gwinnett" } }).contextText,
+		).toBe("Atlanta metro › Gwinnett County › Canton");
+	});
+
+	/** Real or absent, never guessed from the city. */
+	it("drops the county level when the card carries none", () => {
+		const { county: _drop, ...noCounty } = RIVER_GREEN;
+		expect(model({ card: noCounty }).contextText).toBe(
+			"Atlanta metro › Canton",
+		);
+		expect(model({ card: { ...RIVER_GREEN, county: "" } }).contextText).toBe(
+			"Atlanta metro › Canton",
+		);
 	});
 });
 
@@ -191,8 +213,9 @@ describe("city tour", () => {
 	it("is area › city over the city, with a map and no chevron", () => {
 		const m = model({ card: area() });
 		expect(m.kind).toBe("city-tour");
-		// Same rule as the home-tour fallback: line one always reads the full
-		// chain, so the city card carries its own name twice.
+		// No county: a city can straddle two (Atlanta is in Fulton and DeKalb)
+		// and no row says which, so this is the one card that still prints its
+		// own name twice.
 		expect(m.contextText).toBe("Atlanta metro › Canton");
 		expect(m.title).toBe("Canton");
 		expect(m.titleSlug).toBeNull();
@@ -265,7 +288,7 @@ describe("accessibility labels", () => {
 			card: listing({ geoUnitId: CANTON.id, communityId: RIVER_GREEN.slug }),
 		});
 		expect(titleAccessibilityLabel(m)).toBe(
-			"River Green, Atlanta metro › Canton",
+			"River Green, Atlanta metro › Cherokee County › Canton",
 		);
 		expect(mapAccessibilityLabel(m)).toBe("Show River Green on the map");
 	});

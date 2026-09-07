@@ -21,6 +21,61 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-07 21:11 UTC — phase190: the county was wrong, then it went in the header
+
+**Objective**: owner, on the feed header: 「community card header 现在有重复的
+city 信息，不好。对于 community card 在 area 后加一个 county 如何，然后再 city」.
+Putting county on screen first required the county to be right, and it was not.
+
+**Issues**: phase189.2's `communities.county` came from plotly/datasets'
+counties GeoJSON — the choropleth-fill dataset, where **Fulton has 53
+vertices** (TIGER has 4,700). Assignment near a county line is a coin flip:
+Peachtree Corners landed in Fulton (it is Gwinnett), Dunwoody Village in
+Fulton (DeKalb), a string of Duluth and Marietta communities likewise.
+Measured against the unsimplified source, **198 of 8,679 were wrong**.
+
+**Actions**:
+- Refetched from Census TIGERweb (`State_County` layer 13, `STATE='13'`,
+  GeoJSON, EPSG:4326): 442k vertices, 18 MB. Swept Douglas-Peucker
+  tolerances against that as ground truth over all 8,679 anchors and picked
+  3e-4° (~33 m) at 5 decimals — 46k vertices, 0.95 MB, **3 disagreements**,
+  all communities whose centroid is within ~33 m of a county line and which
+  straddle it anyway. (1e-4°/1.8 MB buys back exactly one of the three.)
+  Replaced `scripts/admin/data/ga-counties.geojson`.
+- `backfill-community-county.ts` is now idempotent: it recomputes every row
+  with coordinates and writes only the ones that disagree, printing each
+  `slug (city): old → new`. **Ran `--apply`: 195 corrected**; the immediate
+  re-run reports 0.
+- Header: `communities.county` now rides the pool DTO
+  (`community-pool.ts` select + `PoolCommunityDTO`), through the mobile feed
+  route (which spreads the DTO), `parseCommunity`, and `CommunityCardV3`.
+  `feed-header.ts` inserts it between the metro and the city for community
+  cards and for home cards (whose county comes off the community that
+  contains them): `Atlanta metro › Gwinnett County › Duluth`.
+
+**Decisions**: the bare column plus a `countySegment()` that appends the
+word — half the counties here are also town names (Douglas, Henry, Newton,
+Walton), so "Gwinnett" alone would read as a place. **City cards get no
+county**: a city can straddle two (Atlanta is Fulton + DeKalb) and no row
+says which, so the `GeoStats` real-or-absent rule keeps it out; that one
+card still prints its own name on both lines. Longest realistic line
+("… › Gwinnett County › Peachtree Corners", ~345 px) just exceeds the 342 px
+context row on a 390 pt phone and tail-truncates; the VoiceOver label reads
+the full string.
+
+**Learnings**: a GeoJSON built for choropleth fill is not a point-in-polygon
+dataset, and nothing about using it fails loudly — the counts looked
+plausible for a whole phase. TIGERweb's ArcGIS REST endpoint returns real
+TIGER geometry as GeoJSON in one GET, no shapefile tooling and no new
+dependency; its `NAME` carries the " County" suffix, which has to be
+stripped. Also: `grep -v 'boundary"'` on `supabase db query` output eats
+real rows, because the CLI's untrusted-data fence line contains that word.
+
+**Next steps**: proposal 2 pilot (Fulton County GIS platted subdivisions) —
+now that county is trustworthy it can scope the import. Open question for
+the owner: whether the city card should show a county too, which needs a
+rule for cities that straddle one.
+
 ## 2026-09-07 20:41 UTC — phase189.2: migration applied, 18/18 listings linked
 
 **Objective**: owner cleared `db push`; apply 20260907200000 and run the

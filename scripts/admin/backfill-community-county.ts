@@ -1,20 +1,31 @@
 /**
- * Fill `communities.county` from lat/lng by point-in-polygon against the 159
- * Georgia county boundaries in `data/ga-counties.geojson` (US Census
- * cartographic boundaries, 500k, via plotly/datasets). No geocoding API, no
- * spend — runs in a few seconds locally.
+ * Set `communities.county` from lat/lng by point-in-polygon against the 159
+ * Georgia county boundaries in `data/ga-counties.geojson`. No geocoding API,
+ * no spend — runs in a few seconds locally.
  *
- * Every community imported so far has county = null (phase188 audit), which
- * is what blocks per-county coverage work (county GIS subdivision imports,
- * the coverage map's county tiles). Non-Georgia points (a handful of seeds
- * across the Alabama/Tennessee line) stay null and are listed.
+ * The boundaries are Census TIGERweb (State_County layer 13, `STATE='13'`,
+ * EPSG:4326), Douglas-Peucker-simplified at 3e-4° (~33 m) and rounded to 5
+ * decimals to fit in the repo: 442k vertices / 18 MB down to 46k / 0.95 MB.
+ * Measured against the unsimplified source over all 8,679 anchors, that
+ * costs 3 assignments — communities whose centroid sits within ~33 m of a
+ * county line, which straddle it either way.
+ *
+ * Do NOT go back to plotly/datasets' counties GeoJSON. It is built for
+ * choropleth fill (Fulton has 53 vertices there, 4,700 in TIGER) and put
+ * 198 of 8,679 communities in the wrong county — Peachtree Corners in
+ * Fulton, Dunwoody in Fulton, Marietta in Fulton. County is user-visible
+ * (it names school districts and tax rates for a buyer), so it has to come
+ * from real boundaries.
+ *
+ * Idempotent: every row with coordinates is recomputed and only the ones
+ * that disagree are written, so re-run it after any community import.
+ * Non-Georgia points stay null and are listed.
  *
  * Usage (repo-root .env.local: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY):
  *   pnpm --filter @percho/web exec tsx ../../scripts/admin/backfill-community-county.ts
  *   pnpm --filter @percho/web exec tsx ../../scripts/admin/backfill-community-county.ts --apply
  *
- * DRY RUN BY DEFAULT. Nothing is written without --apply. Rows that already
- * have a county are left alone.
+ * DRY RUN BY DEFAULT. Nothing is written without --apply.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -82,13 +93,19 @@ function countyOf(lat: number, lng: number, counties: County[]): string | null {
 async function main() {
   const counties = loadCounties();
 
-  type Row = { id: string; slug: string; lat: number; lng: number };
+  type Row = {
+    id: string;
+    slug: string;
+    city: string | null;
+    county: string | null;
+    lat: number;
+    lng: number;
+  };
   const rows: Row[] = [];
   for (let from = 0; ; from += 1000) {
     const { data, error } = await sb
       .from('communities')
-      .select('id, slug, lat, lng')
-      .is('county', null)
+      .select('id, slug, city, county, lat, lng')
       .not('lat', 'is', null)
       .not('lng', 'is', null)
       .order('id')
@@ -98,21 +115,30 @@ async function main() {
     if (data.length < 1000) break;
   }
 
+  // Group the rows that need writing by their new county, so the update runs
+  // one statement per county rather than one per row.
   const byCounty = new Map<string, string[]>();
   const outside: Row[] = [];
+  const changes: string[] = [];
+  const total = new Map<string, number>();
   for (const r of rows) {
     const county = countyOf(r.lat, r.lng, counties);
-    if (!county) {
-      outside.push(r);
-      continue;
-    }
+    if (county) total.set(county, (total.get(county) ?? 0) + 1);
+    else outside.push(r);
+    if (county === r.county) continue;
+    changes.push(`  ${r.slug} (${r.city ?? '—'}): ${r.county ?? '—'} → ${county ?? '—'}`);
+    if (!county) continue;
     const ids = byCounty.get(county) ?? [];
     ids.push(r.id);
     byCounty.set(county, ids);
   }
 
-  for (const [county, ids] of [...byCounty.entries()].sort((a, b) => b[1].length - a[1].length)) {
-    console.log(`${county.padEnd(14)} ${String(ids.length).padStart(5)}`);
+  for (const [county, n] of [...total.entries()].sort((a, b) => b[1] - a[1])) {
+    console.log(`${county.padEnd(14)} ${String(n).padStart(5)}`);
+  }
+  if (changes.length) {
+    console.log(`\n${changes.length} rows disagree with the stored county:`);
+    for (const c of changes) console.log(c);
   }
   if (outside.length) {
     console.log(`\n${outside.length} not in any Georgia county (left null):`);
@@ -132,8 +158,8 @@ async function main() {
   }
 
   console.log(
-    `\n${rows.length} communities without a county · ${byCounty.size} counties matched · ` +
-      `${APPLY ? `${written} updated` : `${rows.length - outside.length} would be updated`}`,
+    `\n${rows.length} communities with coordinates · ${total.size} counties · ` +
+      `${APPLY ? `${written} updated` : `${changes.length} would change`}`,
   );
   if (!APPLY) console.log('--- dry run, nothing written ---');
 }
