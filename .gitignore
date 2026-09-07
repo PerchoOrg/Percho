@@ -79,3 +79,11 @@ AuthKey_*.p8
 *.p12
 *.cer
 *.mobileprovision
+
+# Local render output from folders whose SOURCE was deleted in phase184
+# (scripts/prototypes/photo-motion/, docs/ken-burns/). The generated media —
+# ~122 MB of mp4s, frames and demo photos — is still sitting on the machines
+# that produced it, and without these lines it shows up untracked in every
+# `git status`. Safe to delete by hand; nothing regenerates it any more.
+docs/ken-burns/
+scripts/prototypes/
