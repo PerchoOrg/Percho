@@ -39,6 +39,11 @@
  *
  * The row is NOT the control on a trade-off ("Your preferences" is not a
  * place) or on a home with no resolvable location (the row is empty).
+ *
+ * phase183.1: the ▾ it carried is gone. The owner's demo draws that row as
+ * plain grey text and 「you should follow this」 settles it, so the row keeps
+ * the job and loses the marker — the same tap the header line has had since
+ * phase140, now with nothing advertising it.
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { FeedHeaderModel } from "../../lib/feed/feed-header";
@@ -78,32 +83,37 @@ const MAP_RADIUS = 22;
 /** Pin → "Map". */
 const MAP_GAP = 6;
 
-// ─── The pin (handoff §4: outlined, 18 × 18, 1.75 stroke) ───────────
+// ─── The pin (handoff §4: outlined, 18 wide, 1.75 stroke) ───────────
 //
-// Composed from `View`s at a real pin's geometry — the technique
-// `CommunityFace`'s place pill and bookmark already use. The app bundles no
-// SVG renderer (`react-native-svg` is not a dependency, and adding one is a
-// CLAUDE.md §8 conversation), and the 14-glyph icon-font subset carries no
-// pin: `components/cards/redline/icon-font.ts`.
+// Composed from `View`s — the technique `CommunityFace`'s place pill and
+// bookmark already use. The app bundles no SVG renderer (`react-native-svg`
+// is not a dependency, and adding one is a CLAUDE.md §8 conversation), and
+// the 14-glyph icon-font subset carries no pin
+// (`components/cards/redline/icon-font.ts`).
 //
-// A ring for the head, a dot in it, and two capped bars for the tail. The
-// bars lean 20° off vertical, not 45°: from the apex a 45° arm never reaches
-// a ring this size (the tangent is at 29°), so a rotated-square "V" would
-// stick out past the head instead of meeting it. `PIN_ARM` is the distance
-// from the apex to the point where that lean meets the ring's stroke
-// centreline — shorter and it floats, longer and it crosses into the head.
-const PIN = 18;
+// ONE box, not four: a square with three corners rounded to 50% and the
+// fourth left sharp, rotated 45° so the sharp corner points down. That is a
+// teardrop — the drawing in the owner's demo — and it is one continuous
+// outline, so there is no seam where a head meets a tail. The first pass drew
+// a ring plus two legs and had a visible notch between them at this size.
+//
+// `borderBottomRightRadius: 0` is the sharp corner and a clockwise 45° is
+// what puts it at the bottom (checked by rendering the same box model before
+// writing it). The tip hangs √½ of the head's width below its centre, so the
+// whole pin is 1.207 × the head.
+const PIN_HEAD = 18;
 const PIN_STROKE = 1.75;
-const PIN_RING = 13;
-const PIN_DOT = 4;
-const PIN_ARM = 6.8;
-const PIN_ARM_TILT = 20;
-const PIN_ARM_DX = (PIN_ARM * Math.sin((PIN_ARM_TILT * Math.PI) / 180)) / 2;
-const PIN_ARM_DY = (PIN_ARM * Math.cos((PIN_ARM_TILT * Math.PI) / 180)) / 2;
+const PIN_HEIGHT = PIN_HEAD * 1.207;
+const PIN_DOT = 4.5;
 
-/** Title chevron — 12 × 12, 1.5 stroke (handoff §3). */
-const CHEVRON_BOX = 12;
-const CHEVRON_ARM = 7;
+/**
+ * Title chevron — 1.5 stroke (handoff §3). The box is 14 rather than the
+ * table's 12: the demo draws it about 9 wide by 14 tall beside the bigger
+ * title, and a rotated square spans half its height in width, so a 9pt arm
+ * gives both.
+ */
+const CHEVRON_BOX = 14;
+const CHEVRON_ARM = 9;
 const CHEVRON_STROKE = 1.5;
 /** Text → chevron. */
 const CHEVRON_GAP = 6;
@@ -142,7 +152,6 @@ export function FeedHeader({
 			accessible={false}
 		>
 			{model.contextText}
-			{scopeControl ? <Text style={styles.scopeCaret}>{"  ▾"}</Text> : null}
 		</Text>
 	);
 
@@ -215,25 +224,28 @@ export function FeedHeader({
  * the Map button and the chevron are both laid out first (`flexShrink: 0`),
  * so a long community name can never push either off the header (handoff §6).
  *
- * It gives up SIZE before it gives up letters. The handoff's rule is a single
- * line with an end ellipsis, and that is still the floor here — but the owner
- * asked for the other order one day earlier, on the line this replaced
- * (2026-09-06: 「If too big to fit in, just use smaller size」), and he is
- * right about which is worse: "Peachtree Corner…" is a name the buyer has to
- * guess at, where the same name a few points smaller is just smaller. So 30
- * is a ceiling, 0.7 of it (21) is the floor, and the ellipsis is what happens
- * below the floor — a name that long is a shorter string's problem, not a
- * smaller type size's.
+ * ── Why it truncates instead of shrinking (phase183.1) ──────────────────────
+ *
+ * The first pass carried `adjustsFontSizeToFit` at `minimumFontScale` 0.7,
+ * because the owner had asked for exactly that on the LINE this replaced
+ * (2026-09-06: 「If too big to fit in, just use smaller size」). Two reasons
+ * it is gone:
+ *
+ *   · That line had to hold metro › city › community AND a count. This holds
+ *     ONE place name at 36pt, and the common ones fit with room to spare —
+ *     "River Green" needs about 200 of the 228 the row gives it.
+ *   · Auto-shrink inside a `flexShrink: 1` row is measured twice on iOS: the
+ *     row shrinks the text box, then the text shrinks to fit the box it was
+ *     just handed. A title with room to spare could still come out near the
+ *     0.7 floor, which is the likeliest reason the owner read the size as
+ *     wrong against his own demo.
+ *
+ * So the size is fixed at the demo's 36 and an end ellipsis is what a
+ * genuinely long name gets — the handoff's own rule.
  */
 function Title({ text }: { text: string }) {
 	return (
-		<Text
-			style={styles.title}
-			numberOfLines={1}
-			adjustsFontSizeToFit
-			minimumFontScale={0.7}
-			ellipsizeMode="tail"
-		>
+		<Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
 			{text}
 		</Text>
 	);
@@ -251,9 +263,7 @@ function ChevronIcon() {
 function PinIcon() {
 	return (
 		<View style={styles.pinBox}>
-			<View style={[styles.pinArm, styles.pinArmLeft]} />
-			<View style={[styles.pinArm, styles.pinArmRight]} />
-			<View style={styles.pinRing} />
+			<View style={styles.pinDrop} />
 			<View style={styles.pinDot} />
 		</View>
 	);
@@ -312,9 +322,6 @@ const styles = StyleSheet.create({
 		fontWeight: "400",
 		color: feedHeader.context,
 	},
-	/** The ▾ that says the row above the title is a control. */
-	scopeCaret: { fontFamily: fonts.ui, fontSize: 10, color: feedHeader.context },
-
 	/**
 	 * The title's 44pt touch target — the main row's full height, and the
 	 * flexible half of it. `minWidth: 0` is what lets the text shrink instead
@@ -328,16 +335,25 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 	},
 	/**
-	 * DM Serif Display 30/36 — the face this slot already wore (the wordmark's,
+	 * DM Serif Display 36/42 — the face this slot already wore (the wordmark's,
 	 * and the place line's before it). The handoff asks for the app's existing
 	 * serif display family at the closest supported weight, and this family
 	 * ships one: 400.
+	 *
+	 * **36, not the handoff table's 30** (phase183.1). The markdown and the
+	 * demo screens disagree, and the owner settled it: 「layout and size
+	 * doesn't look right, attaching the demo, you should follow this」.
+	 * Measured off that demo — which renders one pixel per point at 390 wide,
+	 * so the Map pill in it comes out 86 × 44.5 — the title's CAP height is
+	 * 25pt, and DM Serif's caps are 0.70 em. Hence 36. The same measurement
+	 * puts the two small rows at 12-13 and 11, which is why nothing else in
+	 * here moved.
 	 */
 	title: {
 		flexShrink: 1,
 		fontFamily: DM_SERIF_FONT,
-		fontSize: 30,
-		lineHeight: 36,
+		fontSize: 36,
+		lineHeight: 42,
 		color: feedHeader.title,
 	},
 	chevronBox: {
@@ -394,41 +410,30 @@ const styles = StyleSheet.create({
 	},
 
 	// ─── Pin art (see the block above the constants) ─────────────────
-	pinBox: { width: PIN, height: PIN },
-	pinRing: {
+	pinBox: { width: PIN_HEAD, height: PIN_HEIGHT },
+	/** The teardrop: one outlined box, three corners round, rotated. */
+	pinDrop: {
 		position: "absolute",
-		left: (PIN - PIN_RING) / 2,
+		left: 0,
 		top: 0,
-		width: PIN_RING,
-		height: PIN_RING,
-		borderRadius: PIN_RING / 2,
+		width: PIN_HEAD,
+		height: PIN_HEAD,
 		borderWidth: PIN_STROKE,
 		borderColor: feedHeader.accent,
+		borderTopLeftRadius: PIN_HEAD / 2,
+		borderTopRightRadius: PIN_HEAD / 2,
+		borderBottomLeftRadius: PIN_HEAD / 2,
+		borderBottomRightRadius: 0,
+		transform: [{ rotate: "45deg" }],
 	},
+	/** The hole, on the head's centre — which the rotation leaves put. */
 	pinDot: {
 		position: "absolute",
-		left: (PIN - PIN_DOT) / 2,
-		top: PIN_RING / 2 - PIN_DOT / 2,
+		left: (PIN_HEAD - PIN_DOT) / 2,
+		top: (PIN_HEAD - PIN_DOT) / 2,
 		width: PIN_DOT,
 		height: PIN_DOT,
 		borderRadius: PIN_DOT / 2,
 		backgroundColor: feedHeader.accent,
-	},
-	/** One tail stroke, centred on its own midpoint so `rotate` lands it. */
-	pinArm: {
-		position: "absolute",
-		width: PIN_STROKE,
-		height: PIN_ARM,
-		borderRadius: PIN_STROKE / 2,
-		top: PIN - PIN_ARM_DY - PIN_ARM / 2,
-		backgroundColor: feedHeader.accent,
-	},
-	pinArmLeft: {
-		left: PIN / 2 - PIN_ARM_DX - PIN_STROKE / 2,
-		transform: [{ rotate: `-${PIN_ARM_TILT}deg` }],
-	},
-	pinArmRight: {
-		left: PIN / 2 + PIN_ARM_DX - PIN_STROKE / 2,
-		transform: [{ rotate: `${PIN_ARM_TILT}deg` }],
 	},
 });

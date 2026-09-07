@@ -16,6 +16,69 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-07 04:05 UTC — phase183.1: the header measured off the demo, not off the table
+
+**Objective**: owner on phase183: 「The content is there but layout and size
+doesn't look right, attaching the demo, you should follow this」 — three phone
+screens (home tour / community tour / trade-off) with the header drawn.
+
+**How the demo was read**: the attached PNG is 1284×2778 and holds three 390pt
+phones side by side, so it renders **one pixel per logical point**. Cropped
+the first phone's header at 4× and measured against that: the Map pill comes
+out **86 × 44.5** (spec 84 × 44 ✓), the header's left inset **24.5** (`GUTTER
++ 8` ✓), the context row's cap height 8.75 → **12-13pt** ✓, the type label's
+8.75 → **11pt** ✓. Everything matched except the one thing he noticed.
+
+**Actions** (`components/feed/FeedHeader.tsx` only):
+- **Title 30/36 → 36/42.** The demo's title has a 25pt CAP height; DM Serif
+  Display's caps are 0.70 em, so the face is 36, not the handoff table's 30.
+  Cross-checked by ratio rather than by absolute pixels — title width ÷ header
+  inset is 8.1 in the demo and 8.0 in a render of the new values, which is the
+  one measurement that survives both files' scaling. The ROWS did not change,
+  so the page's 86 + 16 budget above the card is untouched and the card's
+  geometry is exactly where phase183 left it.
+- **`adjustsFontSizeToFit` removed.** Most likely the real cause of "size
+  doesn't look right": inside a `flexShrink: 1` row iOS measures twice — the
+  row shrinks the text box, then the text shrinks to fit the box it was handed
+  — so a title with room to spare can still land near the 0.7 floor (21pt),
+  which is 40% under the demo. Now a fixed 36 with an end ellipsis, which is
+  also what the handoff §6 asked for. Reverses phase183's decision 4.
+  Measured fit: "River Green" is ~200 of the 226pt the row gives it on a 390
+  screen, so the canonical case has room; a name like "Peachtree Corners"
+  truncates.
+- **The pin is one box, not four.** Was a ring + a dot + two 20°-leaning bars,
+  which leaves a visible notch where the legs meet the head. The demo draws a
+  teardrop, and a teardrop is a square with three corners rounded to 50% and
+  the fourth sharp, turned 45° (`borderBottomRightRadius: 0` + clockwise 45°).
+  18 wide, 21.7 tall, 1.75 stroke, dot on the head's centre. Verified by
+  rendering the same box model in WebKit before writing it — the first attempt
+  put the sharp corner on the LEFT, which is worth knowing: CSS corner order
+  is TL, TR, BR, BL.
+- **The ▾ came off the context row.** The demo draws that row as plain grey
+  text. The row still opens `ScopeSheet` (see phase183 decision 2 — it is the
+  feed's only entry to it), so the job stays and the marker goes.
+- Chevron box 12 → 14, arm 7 → 9: the demo draws it ~9 × 14 beside the bigger
+  title.
+- `theme/feed-header.test.ts`: asserts the teardrop's three round corners +
+  one sharp + the 45°, and asserts `adjustsFontSizeToFit` is ABSENT.
+
+**Learnings**: the handoff markdown and the demo screens disagreed, and the
+markdown lost. A rendered mock at 1px-per-point is a measurable artifact —
+crop it at 4× and read cap heights, then convert with the font's own
+cap/em ratio. Anchor on a RATIO between two things visible in both images
+(title width ÷ header inset) rather than on absolute pixel counts, because
+neither file's scale is trustworthy to better than ±5%.
+
+**Verification**: `tsc --noEmit` clean; vitest 54 files / **572 tests**;
+`biome check .` 0 errors / 8 warnings (baseline). Header composition and the
+Map pill rendered in WebKit at the new numbers and compared against the demo
+crop side by side.
+
+**Next steps**: owner reviews on device again. If a long community name
+truncating is the next thing he dislikes, the fix is an `onLayout`-measured
+width for the title rather than `adjustsFontSizeToFit` — the double-measure is
+why the property misbehaves in a flex row.
+
 ## 2026-09-07 03:39 UTC — phase183: the above-card header becomes the card's place, with a Map button
 
 **Objective**: implement the owner's "above-card header" handoff
