@@ -47,6 +47,20 @@ export interface PoolCommunityDTO {
   city: string;
   state: string;
   heroUrl: string;
+  /**
+   * The city unit this community sits in — `city:<city>-<state>`, the id
+   * `city_geo_units` builds. Set by the mobile feed route from `city`/`state`
+   * with the same `citySlug` a listing uses.
+   *
+   * Declared on `CommunityCardV3` since the geo contract landed and never
+   * populated, which had two consequences on the phone: a right-swipe on a
+   * community credited no unit, and (2026-09-07) the new header found no map
+   * target and drew no **Map** button on a community card at all — the owner
+   * reported it as 「Don't see the map button for communities with videos」.
+   * Absent when the row has no city or state, and then there is genuinely
+   * nowhere to send the map.
+   */
+  geoUnitId?: string;
   blurb?: string;
   /**
    * The redline's three "community highlights" tiles, derived from the

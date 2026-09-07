@@ -315,10 +315,19 @@ export async function GET(request: Request) {
     communityRows = [...extra, ...communities.filter((c) => !seen.has(c.id))];
   }
 
+  // The community's city unit, derived exactly as a listing's is above. The
+  // DTO has always declared `geoUnitId` and never carried it, so the phone had
+  // no map target for a community card and the header drew no Map button
+  // (owner, 2026-09-07). It also means a right-swipe on a community credits
+  // its city, which it never did.
+  const communityRowsWithGeo = communityRows.map((c) => {
+    const geoUnitId = citySlug(c.city, c.state);
+    return geoUnitId ? { ...c, geoUnitId } : c;
+  });
   // Attach vertical video to communities too. `CommunityFace` already renders
   // `CardVideo` when `videoUrl` is set; the DTO just never carried the field.
   // AI tour videos (Seedance) attach the same way; vertical wins if both exist.
-  const communitiesWithVideo = communityRows.map((c) => {
+  const communitiesWithVideo = communityRowsWithGeo.map((c) => {
     const uid = verticalVideos.byCommunity.get(c.id);
     if (uid) {
       // The dashed progress bar's structure, and ONLY for the assembly path —

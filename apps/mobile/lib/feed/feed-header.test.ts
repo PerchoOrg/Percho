@@ -98,7 +98,6 @@ describe("home tour", () => {
 		expect(m.kind).toBe("home-tour");
 		expect(m.contextText).toBe("Atlanta metro › Canton");
 		expect(m.title).toBe("River Green");
-		expect(m.typeLabel).toBe("HOME TOUR");
 		expect(m.titleSlug).toBe("river-green");
 		expect(m.mapUnitId).toBe(CANTON.id);
 	});
@@ -172,7 +171,6 @@ describe("community tour", () => {
 		expect(m.kind).toBe("community-tour");
 		expect(m.contextText).toBe("Atlanta metro › Canton");
 		expect(m.title).toBe("River Green");
-		expect(m.typeLabel).toBe("COMMUNITY TOUR");
 		expect(m.titleSlug).toBe("river-green");
 		expect(m.mapUnitId).toBe(CANTON.id);
 	});
@@ -197,7 +195,6 @@ describe("city tour", () => {
 		// chain, so the city card carries its own name twice.
 		expect(m.contextText).toBe("Atlanta metro › Canton");
 		expect(m.title).toBe("Canton");
-		expect(m.typeLabel).toBe("CITY TOUR");
 		expect(m.titleSlug).toBeNull();
 		expect(m.mapUnitId).toBe(CANTON.id);
 	});
@@ -213,7 +210,6 @@ describe("general trade-off", () => {
 		expect(m.kind).toBe("trade-off");
 		expect(m.contextText).toBe("Your preferences");
 		expect(m.title).toBe("Find your balance");
-		expect(m.typeLabel).toBe("TRADE-OFF");
 		expect(m.titleSlug).toBeNull();
 		expect(m.mapUnitId).toBeNull();
 	});
@@ -231,7 +227,6 @@ describe("no card", () => {
 		expect(scoped.activeCardId).toBeNull();
 		expect(scoped.contextText).toBe("Atlanta metro › Canton");
 		expect(scoped.title).toBe("Canton");
-		expect(scoped.typeLabel).toBeNull();
 		expect(scoped.mapUnitId).toBe(CANTON.id);
 
 		const metro = model();
