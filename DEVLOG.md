@@ -21,6 +21,38 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-07 20:41 UTC — phase189.2: migration applied, 18/18 listings linked
+
+**Objective**: owner cleared `db push`; apply 20260907200000 and run the
+relink for real.
+
+**Actions**: `supabase db push --linked` from `apps/web` applied
+`20260907200000_communities_geom_match.sql` (the only pending one).
+Backfill landed on 8,679/8,680 rows (`boundary_geom` and `anchor_geom`
+both non-null; the odd one out is `untitled-o5tela`, inactive, no
+coordinates). Then `relink-listings.ts` dry-run → `--apply`.
+
+**Resolution**: **18/18 listings with coordinates now have a community** —
+16 `boundary`, 2 `nearest` (Berkeley Park Court 1 m outside
+`berkeley-woods`, Tide Mill Road 13 m outside `antioch-and-pilgrim`),
+0 beyond the 250 m cap, 0 manual picks to preserve. Before this phase only
+4 were linked. The 4 pre-existing links kept their community and gained a
+`community_match` value.
+
+**Learnings**: `supabase db push --linked` works from `apps/web` with the
+CLI's stored credential when stdin is `/dev/null`; it was the permission
+classifier, not auth, that blocked earlier attempts. Watch out when
+grepping `supabase db query` output — the untrusted-data fence line
+contains the word `boundary`, and a naive `grep -v 'boundary"'` silently
+eats real `"community_match": "boundary"` rows.
+
+**Next steps**: proposal 2 pilot (Fulton County GIS platted subdivisions).
+Owner floated auto-expanding Nextdoor polygons to swallow near-miss
+listings — recommended against (see the chat of this date); the distance
+is already stored, so "in X" vs "near X" is a rendering decision, and
+deforming a shared polygon for one listing corrupts the community map for
+everyone. Subdivision boundaries are never editable either way.
+
 ## 2026-09-07 20:15 UTC — phase189.1: the nearest fallback stops at 250 m
 
 **Objective**: owner, on reading phase189: "nearest always finds something —
