@@ -42,8 +42,8 @@ import { SwipeLabels } from "../../components/cards/SwipeLabels";
 import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
+import { FeedHeader } from "../../components/feed/FeedHeader";
 import { OfflineBar } from "../../components/feed/OfflineBar";
-import { PlaceHeader } from "../../components/feed/PlaceHeader";
 import { ScopeSheet } from "../../components/feed/ScopeSheet";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
@@ -51,8 +51,8 @@ import type { FeedCardV3 } from "../../lib/feed/card-types";
 import { deckKey } from "../../lib/feed/deck-key";
 import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
+import { feedHeaderModel } from "../../lib/feed/feed-header";
 import { generateFeed, movedUpCount } from "../../lib/feed/generate-feed";
-import { placeTrail } from "../../lib/feed/place-trail";
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
 import { preferScope } from "../../lib/feed/scope";
 import { CARD_TAP_TARGET, SOUND_TAP_TARGET } from "../../lib/gesture/tap-slot";
@@ -264,12 +264,6 @@ export default function FeedScreen() {
 
 	const cardWidth = width - GUTTER * 2;
 
-	/** The scoped city's row, for the numbers on the header's title line. */
-	const scopedUnit = useMemo(
-		() => pool.geoUnits.find((u) => u.id === scope?.unitId),
-		[pool.geoUnits, scope?.unitId],
-	);
-
 	const poolRef = useRef(scopedPool);
 	poolRef.current = scopedPool;
 
@@ -394,28 +388,25 @@ export default function FeedScreen() {
 	}, [remaining, deck.length, exhausted, fetchMore, appendPage]);
 
 	/**
-	 * The top card's parent chain, for the header line (phase182). This is the
-	 * card ↔ place connection the community strip used to carry: the line
-	 * updates as the buyer swipes — metro › city › community over a home,
-	 * metro › city over a community — and falls back to the scope + stats when
-	 * the card has no place (a trade-off) or the deck is empty.
+	 * The above-card header's one read of the ACTIVE card (phase183).
+	 *
+	 * `activeIndex` only moves on a COMMITTED swipe, so context, title, type
+	 * label and both destinations change together and a cancelled swipe
+	 * changes none of them — the handoff's §7 rule, satisfied by where the
+	 * model comes from rather than by a transition. There is no frame in which
+	 * the incoming card's map target sits under the outgoing card's place.
 	 */
 	const topCard = deck[activeIndex];
-	const trail = useMemo(
-		() => placeTrail(topCard, pool.geoUnits, pool.communities),
-		[topCard, pool.geoUnits, pool.communities],
-	);
-	/**
-	 * The top card's own city unit, for the count that closes the header line
-	 * (phase182.1). Only a listing or community names a city in its trail; an
-	 * area card's leaf is the metro and the header uses the metro's number.
-	 */
-	const trailUnit = useMemo(
+	const header = useMemo(
 		() =>
-			topCard?.kind === "listing" || topCard?.kind === "community"
-				? pool.geoUnits.find((u) => u.id === topCard.geoUnitId)
-				: undefined,
-		[topCard, pool.geoUnits],
+			feedHeaderModel({
+				card: topCard,
+				geoUnits: pool.geoUnits,
+				communities: pool.communities,
+				scopeName: scope?.name ?? null,
+				scopedUnitId: scope?.unitId ?? null,
+			}),
+		[topCard, pool.geoUnits, pool.communities, scope?.name, scope?.unitId],
 	);
 
 	/**
@@ -707,6 +698,10 @@ export default function FeedScreen() {
 		[activeIndex, toggleSaved, toggleSound, emitGesture],
 	);
 
+	// Destructured so the two handlers below narrow: TypeScript drops a
+	// property's narrowing inside a closure, but keeps a `const`'s.
+	const { titleSlug, mapUnitId } = header;
+
 	const atEnd = activeIndex >= deck.length;
 	// §1.9's terminal card is for a genuinely dry pool, not for a momentary gap:
 	// the engine reports exhaustion when every slot had to reuse seen content, and
@@ -717,27 +712,37 @@ export default function FeedScreen() {
 		<SafeAreaView style={styles.screen} edges={["top"]}>
 			{offline && <OfflineBar />}
 			{/*
-			 * The page's header is the PLACE (owner, 2026-09-05: 「remove Percho
-			 * app name, starts with area-city directly」 — demo pick "R3" off
-			 * `percho.co/demos/feed-header-v2`).
+			 * The above-card header (phase183, the owner's handoff + map control
+			 * B). Three rows over the card: the place trail, the card's own place
+			 * as a navigable serif title beside the Map pill, and the card type.
 			 *
-			 * What went: the "Percho" wordmark row (2026-08-14), the only serif on
-			 * this screen and the reason the two top corners had to stay empty. The
-			 * app names itself on the launch screen and in the tab bar; this page
-			 * names the city instead, and the serif moves onto it.
+			 * Both destinations are the ones the app already has — the community
+			 * overview a card's `Explore →` opens, and the Search tab's map
+			 * focused on the card's city — and each affordance appears only when
+			 * its target is real: no slug, no chevron; no unit, no Map button.
 			 *
-			 * Since phase182 the card is CENTRED in the stage below (owner:
-			 * 「balance the empty space above and under card」), so the header's
-			 * height no longer decides where the page's slack lands — it splits
-			 * evenly around the card.
+			 * The card below is CENTRED in the stage (owner, phase182: 「balance
+			 * the empty space above and under card」), so this row's height does
+			 * not decide where the page's slack lands — it splits evenly around
+			 * the card.
 			 */}
-			<PlaceHeader
-				scopeName={scope?.name ?? null}
-				unit={scopedUnit}
-				units={pool.geoUnits}
-				trail={trail}
-				trailUnit={trailUnit}
-				onPress={() => setScopeOpen(true)}
+			<FeedHeader
+				model={header}
+				onOpenTitle={
+					titleSlug !== null
+						? () => router.push(`/community/${titleSlug}`)
+						: undefined
+				}
+				onOpenMap={
+					mapUnitId !== null
+						? () =>
+								router.navigate({
+									pathname: "/(tabs)/search",
+									params: { focus: mapUnitId },
+								})
+						: undefined
+				}
+				onOpenScope={() => setScopeOpen(true)}
 			/>
 			<View style={styles.stackWrap}>
 				{deck.length === 0 && loading ? (

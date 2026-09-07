@@ -183,6 +183,35 @@ export const redline = {
 } as const;
 
 /**
+ * The above-card feed header (phase183) — transcribed verbatim from the
+ * owner's implementation handoff and `percho-header-redlines.svg` §03.
+ *
+ * A FOURTH deliberately separate palette, same reasoning as `redline` and
+ * `explore` above: the handoff names six values by hex and they are the visual
+ * truth source for that header. Every one is within a hair of an existing
+ * token (`redline.ink` #171715, `redline.ink2` #6F6B65, `redline.accent`
+ * #0E6B57, `redline.accentSoft` #EAF2EE) — transcribed rather than aliased so
+ * the app and the sheet cannot drift, and so a future revision of the sheet
+ * changes this block and nothing else.
+ *
+ * The header's CANVAS is not here: the handoff keeps it on the screen's own
+ * paper (`colors.bg`), and lists #F7F6F2 only as the value to use if the app
+ * had none.
+ */
+export const feedHeader = {
+	/** The main title — the card's place. */
+	title: "#181D1A",
+	/** The context row, and the title chevron. */
+	context: "#6B726D",
+	/** Map pill label + pin, and the uppercase card-type row. */
+	accent: "#08685D",
+	/** The pill's fill — the only filled control in the header. */
+	mapFill: "#E0E9E3",
+	/** Pressed: the fill DARKENS. A filled control must not fade. */
+	mapPressed: "#D2E0D7",
+} as const;
+
+/**
  * Redline radii the redline names that the app's five-step `radii` scale has no
  * slot for. Kept separate so `radii` stays the chrome's scale rather than growing
  * a step per card.

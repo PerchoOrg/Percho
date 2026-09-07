@@ -16,6 +16,106 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-07 03:39 UTC — phase183: the above-card header becomes the card's place, with a Map button
+
+**Objective**: implement the owner's "above-card header" handoff
+(`percho-header-redlines.svg` + the companion markdown) for home tour,
+community tour and trade-off cards. Map control **B** — an outlined pin and
+"Map" in a pale sage pill — is the selected variant.
+
+**Actions**:
+- New pure `apps/mobile/lib/feed/feed-header.ts` (`feedHeaderModel`, 15
+  tests): ONE read of the active card → context row, title, type label, and
+  the two destinations as DATA (`titleSlug`, `mapUnitId`), not closures, so
+  the §5 mapping rules are unit-testable. It absorbs `place-trail.ts`, which
+  is deleted with its test: the trail left the card as the chain's unwritten
+  last link, and the handoff writes that link as the TITLE.
+- New `components/feed/FeedHeader.tsx` — 18 + 4 + 44 + 4 + 16 = **86**, then
+  `CARD_INSET.top`'s 16, then the card. Inset 8 from each card edge
+  (`GUTTER + 8` = 24). Title DM Serif 30 in #181D1A; context 13/18 in
+  #6B726D; type label 11/16 caps in #08685D; Map pill 84×44 r22 on #E0E9E3,
+  pressed #D2E0D7. New `feedHeader` token block in `theme/tokens.ts`,
+  transcribed verbatim from the sheet (the repo's one-palette-per-redline
+  convention, alongside `redline` and `explore`).
+- `PlaceHeader.tsx` deleted — the wordmark and the communities count go with
+  it, both removed by name in the handoff ("Do not introduce a Percho
+  wordmark, community count, floating overlay on the video, or another
+  map-button variant"). `theme/place-header.test.ts`'s source assertions went
+  with the component; its `metroStatsLine`/`scopeStatsLine` unit tests moved
+  to `lib/feed/place-stats.test.ts`, next to the module they test.
+- `feed.tsx`: one `feedHeaderModel` memo off `deck[activeIndex]` replaces the
+  `trail`/`trailUnit`/`scopedUnit` memos. Title → `/community/[slug]`; Map →
+  `/(tabs)/search?focus=<geoUnitId>`, the Search map's existing param. No new
+  route, no geocoding call, no new dependency.
+- Tests: `theme/feed-header.test.ts` (10, new) pins the row budget, the pill's
+  84/44/22, the pin's 18/1.75, `minHeight` growth, one-line-only, three
+  separate Pressables, and that no wordmark or count comes back;
+  `theme/card-aspect.test.ts` re-modelled at 86; `theme/feed-chrome-layout.
+  test.ts` retargeted at the new component.
+
+**Decisions**:
+1. **The wordmark and the count are gone** — 16 hours after phase182.1 put
+   them back at the owner's request. The handoff forbids both by name and is
+   the newer instruction, so it wins; flagged to the owner in the same breath
+   as the merge, because if the sheet came from the first agent rather than
+   from him, this is the line to reverse. `metroStatsLine` is deliberately
+   left in `place-stats.ts` with no caller for exactly that reason.
+2. **The context row keeps the scope sheet.** The handoff calls that row
+   "explanatory text, not a feed filter", but the line it replaces was the
+   only control that opened `ScopeSheet` anywhere in the feed
+   (`ExhaustedCard`'s "Adjust my scope" only appears on a dry deck). Shipping
+   a build with no way to change scope is worse than one extra ▾, so the row
+   carries the same job and the same glyph it did yesterday. One prop and one
+   glyph to reverse. NOT a control on a trade-off ("Your preferences" is not
+   a place) or on a home with no resolvable location.
+3. **A fourth card kind.** The handoff names three; the feed has four. The
+   CITY card gets the same geometry and a `CITY TOUR` label rather than an
+   exception in the layout. A fifth state, `scope`, covers the empty deck.
+4. **The title shrinks before it truncates.** The handoff says one line with
+   an end ellipsis; the owner said 「If too big to fit in, just use smaller
+   size」 one day earlier about the same slot. So 30 is the ceiling,
+   `minimumFontScale` 0.7 the floor, and the ellipsis is what happens below
+   it.
+5. **The pin is composed from `View`s**, not an SVG or a glyph: the icon
+   font's 14-glyph subset has no pin and `react-native-svg` is not a
+   dependency (adding one is a CLAUDE.md §8 conversation). Ring + dot + two
+   capped bars leaning 20° off vertical — 45° arms never reach a ring this
+   size, so the rotated-square "V" the card's filled pin uses would stick out
+   past the head. Geometry checked by rendering the same box model to SVG
+   before writing it.
+
+**Issues**: two, both real:
+- **The SE crops ~1.6% more film.** The header is 86 where the old one was 78,
+  and the iPhone SE's stage was already the binding constraint: side crop goes
+  ~5.1% → **~6.7%**. `theme/card-aspect.test.ts`'s guard moves 6% → 7%. Every
+  screen in the shipping lineup (13 mini and up) still draws the film
+  uncropped, and the card's WIDTH and the film's crop on those bodies are
+  unchanged; what does move on them is the card's top, by ~4pt, because the
+  stage is 8pt shorter and `SwipeStack` centres the card in it. The handoff's
+  "card top must match before/after" cannot hold literally while the header's
+  height changes at all — the card is derived from the stage, not anchored to
+  a fixed slot.
+- **A latent bug in the community lookup, now fixed.** The wire sends a
+  listing's `communityId` as the community's SLUG
+  (`apps/web/app/api/mobile/feed/route.ts`) while a pool community's own `id`
+  is the row's uuid; `place-trail.ts` compared against `id` alone, so a home's
+  community could never resolve even when the data was there. The new module
+  matches either spelling — the same fix the server already carries for liked
+  community ids. So some home tours may now title the COMMUNITY where
+  phase182 titled the city.
+
+**Verification**: `tsc --noEmit` clean; vitest 54 files / **572 tests**;
+`biome check .` 0 errors / 8 warnings (baseline). The Map pill and the full
+header composition were rendered to SVG at the handoff's own numbers and
+eyeballed before implementation — the pin's tail tilt came out of that. Not
+verified on device: the RN suite runs no renderer, so the owner's phone is the
+first place this is seen.
+
+**Next steps**: owner reviews on device. Three things to look at, in order:
+the wordmark's absence (decision 1), the pin at 18pt in the pill, and whether
+a 30pt serif title over a 13pt trail reads right — stepping the title down is
+a one-number change.
+
 ## 2026-09-06 11:06 UTC — phase182.1: the wordmark returns; the count closes every header line
 
 **Objective**: owner, on phase182's header: 「Being the Percho title back and
