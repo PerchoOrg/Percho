@@ -50,6 +50,9 @@ describe("the header's height budget", () => {
 	 * that file measures what it costs the film.
 	 */
 	it("is the handoff's 86: three rows and two 4pt gaps", () => {
+		// The title grew 30 → 36 in phase183.1 and the ROWS did not, so the
+		// page's budget above the card is unchanged. This is the assertion
+		// that says so.
 		expect(n("CONTEXT_ROW")).toBe(18);
 		expect(n("ROW_GAP")).toBe(4);
 		expect(n("MAIN_ROW")).toBe(44);
@@ -90,15 +93,21 @@ describe("the header's height budget", () => {
 	/**
 	 * Never a second line and never a taller header from a long name: every
 	 * text in here is one line, and the title is the only run that gives
-	 * anything up — first its size, then its tail (the Map pill and the
-	 * chevron are `flexShrink: 0` and are laid out first).
+	 * anything up — its tail (the Map pill and the chevron are
+	 * `flexShrink: 0` and are laid out first).
+	 *
+	 * `adjustsFontSizeToFit` is asserted ABSENT (phase183.1): inside a
+	 * shrinking flex row iOS measures it twice and a title with room to spare
+	 * still comes out near the floor, which read as the wrong size against
+	 * the owner's demo.
 	 */
-	it("never wraps, and shrinks the title first", () => {
+	it("never wraps, and truncates the title rather than resizing it", () => {
 		expect(CODE.match(/numberOfLines=\{1\}/g) ?? []).toHaveLength(4);
 		expect(CODE).toContain("flexShrink: 1");
 		expect(CODE.match(/flexShrink: 0/g) ?? []).toHaveLength(2);
-		expect(CODE).toContain("adjustsFontSizeToFit");
-		expect(CODE).toContain("minimumFontScale={0.7}");
+		expect(CODE).toContain('ellipsizeMode="tail"');
+		expect(CODE).not.toContain("adjustsFontSizeToFit");
+		expect(CODE).not.toContain("minimumFontScale");
 	});
 });
 
@@ -114,9 +123,18 @@ describe("map control B", () => {
 		expect(CODE).toContain("mapPressed: { backgroundColor:");
 	});
 
-	it("draws the pin at 18 x 18 with a 1.75 stroke", () => {
-		expect(n("PIN")).toBe(18);
+	/**
+	 * The pin is a teardrop: one box, three corners rounded to half its width
+	 * and the fourth sharp, turned 45° so the sharp one points down. The
+	 * rounding is what makes it a pin rather than a rotated square, and the
+	 * ONE sharp corner is what makes it a pin rather than a circle.
+	 */
+	it("draws an 18-wide teardrop pin with a 1.75 stroke", () => {
+		expect(n("PIN_HEAD")).toBe(18);
 		expect(n("PIN_STROKE")).toBe(1.75);
+		expect(CODE).toContain("borderTopLeftRadius: PIN_HEAD / 2");
+		expect(CODE).toContain("borderBottomRightRadius: 0");
+		expect(CODE).toContain('transform: [{ rotate: "45deg" }]');
 	});
 
 	/** Exactly the word. Not "MAP", not an icon-only button. */
