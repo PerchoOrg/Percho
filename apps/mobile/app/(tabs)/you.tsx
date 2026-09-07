@@ -6,9 +6,11 @@
  *     "Still taking shape" below the evidence threshold. The subtitle drops
  *     the spec's "Stage X of 5" — the funnel collapsed on 2026-08-15 and the
  *     stage is pinned, so the claim would never move.
- *   · Area familiarity — `familiarityFor`, the SAME source the Search tab's
- *     journey layer reads (§5.3 hard rule: the two faces cannot disagree).
- *     Row tap → Search tab focused on the unit.
+ *   · Area familiarity ("YOUR JOURNEY") — `familiarityFor`, the SAME source
+ *     the Search tab's familiar-first sort reads (§5.3 hard rule: the two
+ *     faces cannot disagree). The Search tab's "Your journey" layer chip
+ *     moved here (owner, 2026-09-07) — this section is now the journey's
+ *     only face. Row tap → Search tab focused on the unit.
  *   · Evidence ("WHAT PERCHO KNOWS") — per-dim strength with the §5.3
  *     correction: tap → "Still true?" → No removes the dim's weight.
  *   · Recent — the swipe history and "Bring back" (phase140). The owner
@@ -215,8 +217,8 @@ export default function YouTab() {
 				</>
 			)}
 
-			{/* Area familiarity — same data the Search journey layer draws. */}
-			<Text style={styles.sectionHead}>HOW WELL YOU KNOW EACH AREA</Text>
+			{/* Area familiarity — same data the Search tab sorts by. */}
+			<Text style={styles.sectionHead}>YOUR JOURNEY</Text>
 			<View style={styles.card}>
 				{areas.length === 0 && (
 					<Text style={styles.emptyLine}>

@@ -1,7 +1,7 @@
 /**
- * Area Familiarity — the shared computation for the You tab (05 §5.3) and the
- * Search tab's "Your journey" layer (04 §4.3). ONE source of truth so the two
- * faces can never disagree.
+ * Area Familiarity — the shared computation for the You tab's "Your journey"
+ * section (05 §5.3) and the Search tab's familiar-first sort (04 §4.3). ONE
+ * source of truth so the two faces can never disagree.
  *
  * Formula (spec-v3 05 §5.3):
  *   coverage 40 pts — cards seen in the unit / "askable" signal count,
