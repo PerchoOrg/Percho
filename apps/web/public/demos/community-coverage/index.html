@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Community coverage — Metro Atlanta MSA</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="./data.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --border: rgba(11, 11, 11, 0.10);
+    --series-2: #eb6834;      /* subdivision */
+    --status-good: #0ca30c;   /* listing linked */
+    --status-critical: #d03b3b; /* listing unlinked */
+    --dot: rgba(11, 11, 11, 0.45); /* neighborhood density dots (ink, not a series) */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --border: rgba(255, 255, 255, 0.10);
+      --series-2: #d95926;
+      --dot: rgba(255, 255, 255, 0.45);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--text-primary);
+    background: var(--page);
+    display: flex;
+  }
+  #panel {
+    width: 340px; flex: none; overflow-y: auto;
+    background: var(--surface-1); border-right: 1px solid var(--border);
+    padding: 20px 18px 28px;
+  }
+  #map { flex: 1; min-width: 0; }
+  h1 { font-size: 17px; margin: 0 0 2px; }
+  .sub { color: var(--text-secondary); font-size: 12.5px; margin: 0 0 16px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .tile {
+    border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px;
+    background: var(--surface-1);
+  }
+  .tile .v { font-size: 21px; font-weight: 650; }
+  .tile .l { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+  h2 { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
+  .legend-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 12.5px; color: var(--text-secondary); }
+  .legend-row input { margin: 0; }
+  .sw { width: 14px; height: 14px; border-radius: 3px; flex: none; }
+  .sw.dot { border-radius: 50%; width: 8px; height: 8px; margin: 0 3px; background: var(--dot); }
+  .sw.diamond { width: 11px; height: 11px; margin: 0 1.5px; transform: rotate(45deg); border-radius: 2px; background: var(--series-2); }
+  .pinled { width: 15px; height: 15px; border-radius: 50%; color: #fff; font-size: 10px; line-height: 15px; text-align: center; flex: none; font-weight: 700; }
+  .ramp { display: flex; height: 12px; border-radius: 3px; overflow: hidden; margin: 4px 0 2px; }
+  .ramp div { flex: 1; }
+  .ramp-labels { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; font-weight: 600; color: var(--muted); font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; padding: 4px 6px 4px 0; border-bottom: 1px solid var(--grid); }
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; padding-right: 0; }
+  td { padding: 3px 6px 3px 0; border-bottom: 1px solid var(--grid); color: var(--text-secondary); }
+  td:first-child { color: var(--text-primary); }
+  .tier { font-size: 10px; color: var(--muted); }
+  .note { font-size: 11.5px; color: var(--muted); margin-top: 14px; }
+  .maplibregl-popup-content {
+    font: 12.5px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--surface-1); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 11px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+  }
+  .maplibregl-popup-tip { display: none; }
+  .pin {
+    width: 18px; height: 18px; border-radius: 50%;
+    color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
+    border: 2px solid var(--surface-1); box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+    cursor: default;
+  }
+  .pin.sq { border-radius: 4px; }
+  .subpin {
+    width: 13px; height: 13px; transform: rotate(45deg); border-radius: 3px;
+    background: var(--series-2); border: 2px solid var(--surface-1);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.35); cursor: default;
+  }
+  @media (max-width: 760px) {
+    body { flex-direction: column; }
+    #panel { width: 100%; max-height: 45%; border-right: 0; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div id="panel">
+  <h1>Community coverage</h1>
+  <p class="sub">Metro Atlanta MSA — 29 counties (OMB definition), live <code>communities</code> + <code>listings</code> tables, 2026-09-07.</p>
+
+  <div class="tiles">
+    <div class="tile"><div class="v" id="t-communities">—</div><div class="l">communities (active)</div></div>
+    <div class="tile"><div class="v" id="t-counties">—</div><div class="l">counties w/ ≥1 community</div></div>
+    <div class="tile"><div class="v" id="t-subdiv">—</div><div class="l">kind = subdivision</div></div>
+    <div class="tile"><div class="v" id="t-linked">—</div><div class="l">listings linked</div></div>
+  </div>
+
+  <h2>Counties — communities per county</h2>
+  <div class="ramp" id="ramp"></div>
+  <div class="ramp-labels"><span>≤25</span><span>≤100</span><span>≤250</span><span>≤600</span><span>600+</span></div>
+
+  <h2>Layers</h2>
+  <label class="legend-row"><input type="checkbox" id="ly-choro" checked /><span class="sw" id="sw-choro"></span> County choropleth (community count)</label>
+  <label class="legend-row"><input type="checkbox" id="ly-dots" checked /><span class="sw dot"></span> Neighborhood seeds (Nextdoor, 8.7k)</label>
+  <label class="legend-row"><input type="checkbox" id="ly-sub" checked /><span class="sw diamond"></span> Subdivisions (curated tier)</label>
+  <label class="legend-row"><input type="checkbox" id="ly-listings" checked />
+    <span class="pinled" style="background: var(--status-good)">✓</span> Listing, linked
+    <span class="pinled sq" style="background: var(--status-critical); border-radius: 3px;">✕</span> unlinked
+  </label>
+
+  <h2>By county</h2>
+  <table id="county-table">
+    <thead><tr><th>County</th><th class="num">Comm.</th><th class="num">Listings</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <p class="note" id="outside-note"></p>
+  <p class="note">County outlines: thick = core 5, medium = ARC 11, thin = outer MSA. Hover a county or a dot for details.</p>
+</div>
+<div id="map"></div>
+
+<script type="module">
+const D = window.__COVERAGE__;
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+
+/* Sequential blue ramp (reference palette, pre-validated). Light mode reads
+   light→dark on the light basemap; dark mode uses the mid steps that clear
+   the dark surface. */
+const RAMP = dark
+  ? ['#184f95', '#256abf', '#3987e5', '#6da7ec', '#9ec5f4']
+  : ['#cde2fb', '#9ec5f4', '#5598e7', '#256abf', '#0d366b'];
+const BINS = [25, 100, 250, 600];
+const binIdx = (n) => BINS.findIndex((b) => n <= b) === -1 ? 4 : BINS.findIndex((b) => n <= b);
+
+document.getElementById('ramp').innerHTML = RAMP.map((c) => `<div style="background:${c}"></div>`).join('');
+
+/* Stat tiles */
+const msaPts = D.pts.filter((p) => p[6] === 1);
+document.getElementById('t-communities').textContent = D.pts.length.toLocaleString();
+const covered = Object.values(D.stats).filter((s) => s.communities > 0).length;
+document.getElementById('t-counties').textContent = `${covered} / 29`;
+document.getElementById('t-subdiv').textContent = D.pts.filter((p) => p[4] === 1).length;
+const linked = D.listings.filter((l) => l[3] === 1).length;
+document.getElementById('t-linked').textContent = `${linked} / ${D.listings.length}`;
+document.getElementById('outside-note').textContent =
+  `${(D.pts.length - msaPts.length).toLocaleString()} seeded communities sit outside the 29-county MSA (the 2026-07 city list included outer towns).`;
+
+/* County table, sorted by count */
+const tbody = document.querySelector('#county-table tbody');
+const TIER_LABEL = { core5: 'core 5', arc11: 'ARC 11', msa29: 'outer' };
+Object.entries(D.stats)
+  .sort((a, b) => b[1].communities - a[1].communities)
+  .forEach(([name, s]) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${name} <span class="tier">${TIER_LABEL[s.tier]}</span></td>` +
+      `<td class="num">${s.communities.toLocaleString()}</td><td class="num">${s.listings || ''}</td>`;
+    tbody.appendChild(tr);
+  });
+
+/* Map */
+const map = new maplibregl.Map({
+  container: 'map',
+  style: dark
+    ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+    : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+  center: [-84.35, 33.85],
+  zoom: 8,
+  attributionControl: { compact: true },
+  preserveDrawingBuffer: true,
+});
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+
+map.on('load', () => {
+  for (const f of D.counties.features) f.properties.fill = RAMP[binIdx(f.properties.communities)];
+  map.addSource('counties', { type: 'geojson', data: D.counties });
+  map.addLayer({
+    id: 'county-fill', type: 'fill', source: 'counties',
+    paint: { 'fill-color': ['get', 'fill'], 'fill-opacity': 0.45 },
+  });
+  map.addLayer({
+    id: 'county-line', type: 'line', source: 'counties',
+    paint: {
+      'line-color': dark ? '#c3c2b7' : '#52514e',
+      'line-width': ['match', ['get', 'tier'], 'core5', 2.2, 'arc11', 1.3, 0.6],
+      'line-opacity': 0.8,
+    },
+  });
+
+  const dotFC = {
+    type: 'FeatureCollection',
+    features: D.pts.filter((p) => p[4] === 0).map((p) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [p[2], p[3]] },
+      properties: { name: p[0], city: p[1] },
+    })),
+  };
+  map.addSource('dots', { type: 'geojson', data: dotFC });
+  map.addLayer({
+    id: 'dots', type: 'circle', source: 'dots',
+    paint: {
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 1.4, 11, 3.5],
+      'circle-color': dark ? '#ffffff' : '#0b0b0b',
+      'circle-opacity': 0.4,
+    },
+  });
+
+  /* Subdivisions + listings as DOM markers (few enough), shape+glyph coded */
+  const subMarkers = [];
+  for (const p of D.pts.filter((q) => q[4] === 1)) {
+    const el = document.createElement('div');
+    el.className = 'subpin';
+    el.title = `${p[0]} — ${p[1]} (subdivision)`;
+    subMarkers.push(new maplibregl.Marker({ element: el }).setLngLat([p[2], p[3]]).addTo(map));
+  }
+  const listingMarkers = [];
+  for (const l of D.listings) {
+    const el = document.createElement('div');
+    el.className = 'pin' + (l[3] ? '' : ' sq');
+    el.style.background = l[3] ? 'var(--status-good)' : 'var(--status-critical)';
+    el.textContent = l[3] ? '✓' : '✕';
+    el.title = `Listing — ${l[0]} — ${l[3] ? 'linked to a community' : 'NOT linked'}`;
+    listingMarkers.push(new maplibregl.Marker({ element: el }).setLngLat([l[1], l[2]]).addTo(map));
+  }
+
+  /* Hover tooltips */
+  const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, maxWidth: '260px' });
+  map.on('mousemove', 'dots', (e) => {
+    const f = e.features[0];
+    popup.setLngLat(e.lngLat).setHTML(`<b>${f.properties.name}</b><br/>${f.properties.city} — neighborhood seed`).addTo(map);
+  });
+  map.on('mouseleave', 'dots', () => popup.remove());
+  map.on('mousemove', 'county-fill', (e) => {
+    if (map.getLayoutProperty('dots', 'visibility') !== 'none' &&
+        map.queryRenderedFeatures(e.point, { layers: ['dots'] }).length) return;
+    const p = e.features[0].properties;
+    popup.setLngLat(e.lngLat).setHTML(
+      `<b>${p.name} County</b> <span style="color:var(--muted)">${TIER_LABEL[p.tier]}</span><br/>` +
+      `${Number(p.communities).toLocaleString()} communities · ${p.listings} listings`
+    ).addTo(map);
+  });
+  map.on('mouseleave', 'county-fill', () => popup.remove());
+
+  /* Layer toggles */
+  const vis = (id, on) => map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+  document.getElementById('ly-choro').addEventListener('change', (e) => vis('county-fill', e.target.checked));
+  document.getElementById('ly-dots').addEventListener('change', (e) => vis('dots', e.target.checked));
+  document.getElementById('ly-sub').addEventListener('change', (e) =>
+    subMarkers.forEach((m) => { m.getElement().style.display = e.target.checked ? '' : 'none'; }));
+  document.getElementById('ly-listings').addEventListener('change', (e) =>
+    listingMarkers.forEach((m) => { m.getElement().style.display = e.target.checked ? '' : 'none'; }));
+});
+</script>
+</body>
+</html>
