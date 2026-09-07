@@ -21,6 +21,64 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-07 23:07 UTC — phase192: five counties of plats, readable names, coverage map
+
+**Objective**: owner on the phase191 result — 「我不要期数，`berkeley-park-2`
+这种名字很奇怪。先做 100% coverage with reasonable names, then show me the
+visualization on map」. Ranking (the Vivian sold-data idea) is deferred.
+
+**Actions — names**:
+- `cleanName()` now owns the grouping key, so phases collapse BEFORE the
+  polygons are unioned. Gwinnett keeps its phase in a column, but DeKalb and
+  Forsyth bury it in the name and each recorder typed it differently:
+  `UNIT 5`, `SEC.3`, `UNIT#1`, `UNIT-1`, `NO.9`, `PHASES 1,2,3`, `BLK2,3`,
+  `REVISION 3`, a trailing roman numeral, a trailing comma or `&`. All are
+  stripped, repeatedly and in both orders, with the trailing debris cleaned
+  between passes. DeKalb collapses 6,281 plats → 3,504 communities as a
+  result (4,178 before the hyphen and comma cases were handled).
+- Also dropped as "not somewhere you buy a home": `OFFICE`, `PROFESSIONAL`,
+  `APTS`/`APARTMENTS`, `INC`/`LLC`/`LTD`/`CORP`/`LP` (the developer entity
+  recorded as the plat name), `BANK`, `PROPERTY OF`, `STORAGE`, Cobb's
+  `1ST FLOOR`/`2ND FLOOR`, and DeKalb's owner plats, which are detectable by
+  a middle initial (`ROBERT Q. CASSELS`) — a full stop FOLLOWED BY A SPACE,
+  which is what separates an initial from an abbreviation like `N.DRUID`.
+- Slugs: `berkeley-park-2` → `berkeley-park-duluth`. The chain is bare name →
+  name + city → name + county → a counter as the last resort, because what
+  actually differs between two Berkeley Parks is where they are.
+
+**Actions — scale**: one PostgREST request per row is ~4 rows/s, i.e. hours
+per county. Batched to 200. The first attempt sent partial-column upserts and
+died on `null value in column "slug"`: PostgREST turns a bulk upsert into one
+`INSERT … ON CONFLICT`, and the not-null check runs on the tuple BEFORE the
+conflict is resolved — so a partial upsert fails even when every row exists.
+Updates now carry the full row, reading name/slug/city/source back off the
+existing row for an upgraded Nextdoor community. Minutes per county now.
+
+**Resolution**: **5 counties imported — Gwinnett 3,592, Cobb 3,627, DeKalb
+3,351, Fulton 2,924, Forsyth 1,039 plat rows**, plus 1,941 Nextdoor rows
+upgraded in place. 23,773 active communities, 17,140 of them subdivisions.
+A second pass over every county reports 0 inserted / 0 removed, so the import
+is stable and idempotent. `relink-listings`: 16 of 18 listings now sit inside
+a recorded plat, and **nothing is on the nearest fallback any more**.
+Name residue: 345 numbered slugs and 418 names with a phase word left, both
+under 3% — rare abbreviations (`U-2`, `Prop`) and bare trailing digits, which
+are deliberately NOT stripped because a wrong strip merges two real
+communities and that is worse than an ugly name.
+
+**Map**: `apps/web/public/demos/subdivision-coverage/` — county choropleth by
+plat count, all 16,228 plat polygons (Douglas-Peucker at ~33 m), the
+neighbourhood seeds as a toggleable dot layer for contrast, and the listings
+as pins that say which subdivision they landed in. 7.0 MB raw, 1.4 MB gzipped.
+
+**Learnings**: the messy part of a plat import is not geometry, it is that
+six county recorders typed the same concept six ways. Measure the collapse
+ratio (plats → communities) per county — Gwinnett 2.4x, DeKalb 1.8x — because
+a ratio near 1 means the phase stripper is not firing.
+
+**Next steps**: Cherokee via a parcel dissolve (its polygon layer has 1,011
+rows against 94,657 named parcels). Then ranking: which of these 17,140
+deserve a photo, from public assessor/deed transfers rather than MLS.
+
 ## 2026-09-07 22:01 UTC — phase191.2: Gwinnett imported, 4,227 subdivisions live
 
 **Objective**: run the phase191 import for real. Owner's three calls: import
