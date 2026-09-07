@@ -20,21 +20,28 @@
  * all says "Explore this home" with an empty (but full-height) context row,
  * and nothing is ever guessed from an address.
  *
- * ── Line one is ALWAYS area › city (owner, 2026-09-07) ──────────────────────
+ * ── Line one is metro › county › city (owner, 2026-09-07) ───────────────────
  *
- * 「for home tour without community, show city twice for now」. A home whose
- * community the pool cannot resolve promotes its CITY to the title — and
- * since phase183.4 line one keeps that same city rather than dropping back to
- * the metro alone. So the common case today reads:
+ * 「对于community card 在area后加一个county 然后再city」. A county sits between
+ * the metro and the city wherever the card has one:
  *
- *     Atlanta metro › Canton
- *     Canton
+ *     Atlanta metro › Gwinnett County › Duluth
+ *     Berkeley Woods
  *
- * The duplication is deliberate and temporary: `listings.community_id` is
- * almost entirely unpopulated, and when the backfill lands line two becomes
- * the community with nothing else changing. phase183 suppressed the duplicate
- * instead (line one fell back to the metro); the owner picked the other
- * reading after seeing both on `/demos/feed-header-v3`.
+ * That is not decoration. In this metro the county names the school district
+ * and the tax rate, so it is the segment a buyer actually acts on — and it
+ * gives line one content of its own, which is what the owner was reacting to:
+ * before the county, the only real thing on that line was the city, and the
+ * cards where line two IS the city (a city card, a home with no community, a
+ * Nextdoor neighbourhood named after its town) printed it twice.
+ *
+ * A city card still has no county — a city can straddle two (Atlanta is in
+ * Fulton and DeKalb) and no row says which, so it keeps metro › city and the
+ * `GeoStats` rule holds: real or absent, never guessed.
+ *
+ * The 「show city twice for now」 case is gone on its own: phase189 linked
+ * every listing to a community, so a home tour's line two is the community
+ * and line one is its county and city.
  *
  * ── Why the targets are DATA, not closures ──────────────────────────────────
  *
@@ -107,7 +114,10 @@ export interface FeedHeaderModel {
 	 * kind of card it is.
 	 */
 	kind: FeedHeaderKind;
-	/** `Atlanta metro › Canton`. Empty string = draw the row, draw no text. */
+	/**
+	 * `Atlanta metro › Gwinnett County › Duluth`. Empty string = draw the row,
+	 * draw no text.
+	 */
 	contextText: string;
 	title: string;
 	/** Community slug for `/community/[slug]`, or null — no chevron then. */
@@ -130,6 +140,17 @@ export interface FeedHeaderInput {
 function context(...segments: readonly (string | undefined)[]): string {
 	const real = segments.filter((s): s is string => s !== undefined && s !== "");
 	return [SCOPE_ROOT_LABEL, ...real].join(" › ");
+}
+
+/**
+ * `Gwinnett` → `Gwinnett County`, and undefined stays undefined.
+ *
+ * The column is the bare name; the word belongs to the display, and without
+ * it half the counties here read as towns (Douglas, Henry, Newton, Walton are
+ * all also place names in this metro).
+ */
+function countySegment(county: string | undefined): string | undefined {
+	return county === undefined || county === "" ? undefined : `${county} County`;
 }
 
 /** The unit an id names, or undefined — an id the pool cannot resolve is no
@@ -199,7 +220,7 @@ export function feedHeaderModel({
 			return {
 				activeCardId: card.id,
 				kind: "community-tour",
-				contextText: context(card.city),
+				contextText: context(countySegment(card.county), card.city),
 				title: card.name,
 				titleSlug: card.slug,
 				mapUnitId: unitOf(card.geoUnitId, geoUnits)?.id ?? null,
@@ -225,7 +246,10 @@ export function feedHeaderModel({
 			return {
 				activeCardId: card.id,
 				kind: "home-tour",
-				contextText: unit !== undefined ? context(unit.name) : "",
+				contextText:
+					unit !== undefined
+						? context(countySegment(community?.county), unit.name)
+						: "",
 				title: community?.name ?? unit?.name ?? PLACELESS_HOME_TITLE,
 				titleSlug: community?.slug ?? null,
 				mapUnitId: unit?.id ?? null,

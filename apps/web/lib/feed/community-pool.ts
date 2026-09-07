@@ -46,6 +46,16 @@ export interface PoolCommunityDTO {
   name: string;
   city: string;
   state: string;
+  /**
+   * The Georgia county, bare ("Gwinnett", not "Gwinnett County"). Set for
+   * every community with coordinates by
+   * `scripts/admin/backfill-community-county.ts`; absent for the handful
+   * without. The header's context row reads `Atlanta metro › Gwinnett County
+   * › Duluth` — a county names a buyer's school district and tax rate, and it
+   * is what gives that row content of its own when the city repeats the
+   * title below it (owner, 2026-09-07).
+   */
+  county?: string;
   heroUrl: string;
   /**
    * The city unit this community sits in — `city:<city>-<state>`, the id
@@ -109,6 +119,7 @@ type CommunityPoolRow = {
   name: string;
   city: string | null;
   state: string | null;
+  county?: string | null;
   description: string | null;
   cover_storage_path: string | null;
   attributes: string[] | null;
@@ -152,7 +163,7 @@ export async function fetchCommunityPool(args: {
     // two figures that qualify as evidence for a resident-stated reason (see
     // `community-reasons.ts`). Still no `boundary` — that is the timeout trap.
     .select(
-      'id, slug, name, city, state, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age',
+      'id, slug, name, city, state, county, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age',
     )
     .eq('status', 'active')
     // A card with no photo is not a card (§1.4 is photo-first).
@@ -197,7 +208,7 @@ export async function fetchCommunityPoolByIds(ids: string[]): Promise<PoolCommun
     .from('communities')
     // Same column list as the paged read, minus `boundary` — see the header.
     .select(
-      'id, slug, name, city, state, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age',
+      'id, slug, name, city, state, county, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age',
     )
     .eq('status', 'active')
     .not('cover_storage_path', 'is', null)
@@ -301,6 +312,7 @@ export function projectCommunityPool(
       name: r.name,
       city: r.city ?? '',
       state: r.state ?? '',
+      ...(r.county ? { county: r.county } : {}),
       heroUrl: publicCoverImageUrl(r.cover_storage_path),
       // Omitted rather than `[]` when there is no usable signal: the card must
       // render no tiles at all instead of three empty glass boxes.

@@ -179,6 +179,24 @@ describe("parseCommunity", () => {
 		expect(parseCommunity({ ...COMMUNITY, state: null })).toBeNull();
 	});
 
+	/**
+	 * The county feeds the header's context row. Unlike city and state it is
+	 * optional — a community the server has no county for still makes a card,
+	 * with one fewer segment above its name.
+	 */
+	it("keeps the county when the server sends one, and never invents it", () => {
+		expect(parseCommunity({ ...COMMUNITY, county: "DeKalb" })?.county).toBe(
+			"DeKalb",
+		);
+		expect(parseCommunity(COMMUNITY)?.county).toBeUndefined();
+		expect(
+			parseCommunity({ ...COMMUNITY, county: "" })?.county,
+		).toBeUndefined();
+		expect(
+			parseCommunity({ ...COMMUNITY, county: 13 })?.county,
+		).toBeUndefined();
+	});
+
 	it("omits an empty pill list rather than carrying []", () => {
 		expect(parseCommunity(COMMUNITY)?.pills).toBeUndefined();
 	});
