@@ -3,13 +3,36 @@
  * (`percho-header-redlines.svg`, map control **B**), settled over three
  * demos and five decisions.
  *
- * Three rows in the area above the card, and nothing else on the page moves:
+ * Two rows in the area above the card, and nothing else on the page moves:
  *
  *     Atlanta metro › Canton           ← context   18 high, 13/18
  *     River Green ›  [◎ Map]           ← main      44 high, serif 36
- *     HOME TOUR                        ← type      16 high, 11/16 caps
  *
- *     12 above, 86 of content, then 16 of paper, then the card.
+ *     20 above, 66 of content, then 12 of paper, then the card.
+ *
+ * ── What went, and why the header moved down (owner, 2026-09-07) ────────────
+ *
+ * 「Remove the community, home and tradeoff text from header - the empty space
+ * between card and header is too big, move header a little down?」
+ *
+ * The uppercase type row (HOME TOUR / COMMUNITY TOUR / CITY TOUR / TRADE-OFF)
+ * is gone — the card's own badge already says what kind of card it is — and
+ * 8 of the 20 points it held went into `PAD_TOP` (12 → 20), which is the
+ * "move header a little down" half of the ask. The header is 86 where it was
+ * 98.
+ *
+ * The other half — the band between the header and the card — could NOT be
+ * closed here, and this is worth knowing before someone tries: the card is
+ * capped at the film's own shape, so every point the header gives back to the
+ * stage returns as SLACK, and under an even split half of it lands straight
+ * back above the card. Handing the whole 20 to the stage would have made his
+ * complaint worse. Closing the band took two changes outside this file:
+ * `CARD_INSET.top` 16 → 12 and `SwipeStack`'s `restTop`, which now puts a
+ * THIRD of the slack above the card and two thirds below it.
+ *
+ * What the owner actually sees, on a Pro Max: the gap from the last line of
+ * text to the card was 64 (title → type row → 16 → half the slack) and is now
+ * 37.
  *
  * ── What this replaced ──────────────────────────────────────────────────────
  *
@@ -72,18 +95,20 @@ import { colors, feedHeader, fonts } from "../../theme/tokens";
 
 // ─── Geometry (handoff §2, logical units at 390) ─────────────────────
 /**
- * Row heights and the two 4pt gaps between them. They sum to 86, and with
- * `PAD_TOP` the header owns 98 above the card's own 16pt gap —
- * `theme/feed-header.test.ts` reads these five declarations and
- * `theme/card-aspect.test.ts` spends the total, per device, through
- * `headerScale`.
+ * The two row heights and the gap between them. With `PAD_TOP` the header owns
+ * 86 above the card's own 12pt gap — `theme/feed-header.test.ts` reads these
+ * declarations and `theme/card-aspect.test.ts` spends the total, per device,
+ * through `headerScale`.
  */
 const CONTEXT_ROW = 18;
 const ROW_GAP = 4;
 const MAIN_ROW = 44;
-const TYPE_ROW = 16;
-/** Decision 3 — clear of the status bar without reading as a band. */
-const PAD_TOP = 12;
+/**
+ * Decision 3 (「area和city上面有些空间 不是完全顶头 但是也不要太大」), then the
+ * 2026-09-07 pass: 12 → 20, 「move header a little down」. Paid for out of the
+ * type row rather than taken from the card.
+ */
+const PAD_TOP = 20;
 
 /**
  * "Header left = existing card left + 8". The card's own margin is `GUTTER`
@@ -116,8 +141,6 @@ const TITLE_SIZE = 36;
  * answer: an 18pt title under a 13pt breadcrumb has stopped being a title.
  */
 const TITLE_MIN_SCALE = 0.5;
-const TYPE_SIZE = 11;
-const TYPE_TRACKING = 1;
 const MAP_LABEL_SIZE = 14;
 
 // ─── Map control B ───────────────────────────────────────────────────
@@ -275,14 +298,6 @@ export function FeedHeader({
 					</Pressable>
 				)}
 			</View>
-
-			<View style={styles.typeRow}>
-				{model.typeLabel !== null && (
-					<Text style={styles.typeLabel} numberOfLines={1}>
-						{model.typeLabel}
-					</Text>
-				)}
-			</View>
 		</View>
 	);
 }
@@ -362,11 +377,6 @@ function sheet(k: number) {
 			marginTop: ROW_GAP * k,
 			flexDirection: "row",
 			alignItems: "center",
-		},
-		typeRow: {
-			minHeight: TYPE_ROW * k,
-			marginTop: ROW_GAP * k,
-			justifyContent: "center",
 		},
 		/** Pressed feedback for the two text controls. The Map pill darkens
 		 * instead (handoff §4) — a filled control must not fade. */
@@ -448,15 +458,6 @@ function sheet(k: number) {
 			fontFamily: fonts.ui,
 			fontSize: MAP_LABEL_SIZE * k,
 			fontWeight: "600",
-			color: feedHeader.accent,
-		},
-
-		typeLabel: {
-			fontFamily: fonts.ui,
-			fontSize: TYPE_SIZE * k,
-			lineHeight: TYPE_ROW * k,
-			fontWeight: "600",
-			letterSpacing: TYPE_TRACKING * k,
 			color: feedHeader.accent,
 		},
 

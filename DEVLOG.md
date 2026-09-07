@@ -16,6 +16,89 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-09-07 06:30 UTC — phase183.5: the type row goes, the band closes, and communities get their map back
+
+**Objective**: owner on device: 「Remove the community, home and tradeoff text
+from header - the empty space between card and header is too big, move header
+a little down?」 and 「Don't see the map button for communities with videos
+why?」
+
+### The Map button on community cards — a server bug, not a header bug
+
+`CommunityCardV3.geoUnitId` has been declared since the geo contract landed
+and **was never populated**: `apps/web/app/api/mobile/feed/route.ts` derives
+`geoUnitId` for LISTINGS (`citySlug(city, state)`) and passes community rows
+through untouched. Confirmed against production — 30 communities in the served
+pool, **0 with a `geoUnitId`** — so `feedHeaderModel` found no map target and
+correctly drew no button. Nothing to do with video; video-bearing communities
+are simply the ones he is looking at.
+
+Fixed at the source: `PoolCommunityDTO` now declares `geoUnitId` and the route
+sets it from the community's own city/state with the same `citySlug`. The
+formula matches `city_geo_units`' SQL id expression exactly (`'city:' ||
+trim(both '-' from regexp_replace(lower(city||'-'||state), '[^a-z0-9]+','-'))`)
+— checked rather than assumed, because a mismatch would have shown a Map
+button that focuses nothing. Side effect worth having: a right-swipe on a
+community card now credits its city, which it never did.
+
+### The header: two rows, moved down, and the band closed
+
+- **The type row is gone** — `typeLabel` and `TYPE_LABEL` are out of
+  `lib/feed/feed-header.ts` entirely, not just hidden. `kind` stays, for the
+  one behavioural branch that reads it (a trade-off's context row is not the
+  scope control).
+- **`PAD_TOP` 12 → 20** — the 「move header a little down」 half.
+- The header is **86** where it was 98.
+
+**The part worth writing down**: removing the row does not close the band by
+itself, it OPENS it. The card is capped at the film's shape, so every point
+the header hands back to the stage returns as slack — and under phase182's
+even split, half of it lands straight back above the card. Handing the type
+row's whole 20 to the stage would have made the complaint worse. So two more
+changes:
+
+- `CARD_INSET.top` **16 → 12** (the 16 came from the handoff, where it sat
+  under an uppercase label; the title's own line wants to be closer), and
+- `SwipeStack`'s `restTop` **/2 → /3** — a third of the slack above the card,
+  two thirds below. That reverses part of the 2026-09-06 「balance the empty
+  space above and under card」 call, deliberately: that balance was decided
+  when the header was ONE line.
+
+Both ends cannot be small. The stage has ~73pt spare on a Pro Max whatever the
+header does, and the only question is where it sits; below the card it lands
+against the tab bar, which is where a page's leftover paper belongs.
+
+**What it comes to** (computed from the shipped modules):
+
+    device              header   above    card       below   crop
+    13 mini                83      30   343×501        52    0.0%
+    14 / 13                86      34   358×522        59    0.0%
+    15 / 16                87      31   361×527        53    0.0%
+    16 Pro                 89      32   370×540        56    0.0%
+    15 Pro Max             95      37   398×581        65    0.0%
+    16 Pro Max             95      39   408×595        69    0.0%
+    SE 3 (unsupported)     83      12   343×474        16    5.2%
+
+On his Pro Max the gap from the **last line of text** to the card was 64
+(title → type row → 16 → half the slack) and is now **37**. The band below
+grew 44 → 65.
+
+**Bonus**: the SE's crop went 8.3% → **5.2%**, the best since the wordmark
+returned, because the header lost 12 points. `card-aspect.test.ts`'s guard is
+tightened back to 6% so it tracks the real value instead of sitting slack.
+
+**Verification**: mobile `tsc --noEmit` clean, vitest 55 files / **582
+tests**, `biome check .` 0 errors / 8 warnings (baseline). Web `tsc --noEmit`
+clean, vitest 83 files / **874 tests**, biome clean on both changed files.
+`theme/feed-header.test.ts` gains an assertion that the type row is gone by
+name (`TYPE_ROW` undeclared, no `typeLabel`, no "HOME TOUR" in the source).
+
+**Next steps**: owner reviews on device. If the top band still reads long,
+`restTop` is one character (`/ 4` → 30 above, `/ 5` → 27); if the band UNDER
+the card reads long instead, the honest lever is a wider card, which costs
+upsampling against the 1080px film (the 15% guard in `card-aspect.test.ts`
+already sits at 1.13 on his phone).
+
 ## 2026-09-07 05:35 UTC — phase183.4: the five decisions land on iOS
 
 **Objective**: owner on `/demos/feed-header-v4`: 「Go ahead and implement

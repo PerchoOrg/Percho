@@ -45,25 +45,33 @@ function n(name: string): number {
 
 describe("the header's height budget", () => {
 	/**
-	 * 18 + 4 + 44 + 4 + 16 = 86, then 16 of paper, then the card. This is the
-	 * number `theme/card-aspect.test.ts` spends against — if a row grows here,
-	 * that file measures what it costs the film.
+	 * 86 (2026-09-07): 20 of room above, an 18pt context row, a 4pt gap and
+	 * the 44pt main row. It was 98 — 12 + 18 + 4 + 44 + 4 + 16 — and the
+	 * uppercase type row went, with 8 of its 20 points moving to the top
+	 * padding and 12 going back to the card's stage.
+	 *
+	 * This is the number `theme/card-aspect.test.ts` spends against: if a row
+	 * grows here, that file measures what it costs the film.
 	 */
-	it("is the handoff's 86: three rows and two 4pt gaps", () => {
-		// The title grew 30 → 36 in phase183.1 and the ROWS did not, so the
-		// page's budget above the card is unchanged. This is the assertion
-		// that says so.
+	it("is 86 — two rows, one gap, and the room above", () => {
+		expect(n("PAD_TOP")).toBe(20);
 		expect(n("CONTEXT_ROW")).toBe(18);
 		expect(n("ROW_GAP")).toBe(4);
 		expect(n("MAIN_ROW")).toBe(44);
-		expect(n("TYPE_ROW")).toBe(16);
-		expect(
-			n("CONTEXT_ROW") +
-				n("ROW_GAP") +
-				n("MAIN_ROW") +
-				n("ROW_GAP") +
-				n("TYPE_ROW"),
-		).toBe(86);
+		expect(n("PAD_TOP") + n("CONTEXT_ROW") + n("ROW_GAP") + n("MAIN_ROW")).toBe(
+			86,
+		);
+	});
+
+	/**
+	 * The type row is gone by name (owner, 2026-09-07: 「Remove the community,
+	 * home and tradeoff text from header」). The card's own badge says what
+	 * kind of card it is; the header saying it again was the third row.
+	 */
+	it("draws no card-type row", () => {
+		expect(C.TYPE_ROW).toBeUndefined();
+		expect(CODE).not.toContain("typeLabel");
+		expect(CODE).not.toContain("HOME TOUR");
 	});
 
 	/**
@@ -86,17 +94,15 @@ describe("the header's height budget", () => {
 	it("lets the rows grow rather than clip", () => {
 		expect(CODE).toContain("minHeight: CONTEXT_ROW * k");
 		expect(CODE).toContain("minHeight: MAIN_ROW * k");
-		expect(CODE).toContain("minHeight: TYPE_ROW * k");
 		expect(CODE).not.toContain("allowFontScaling={false}");
 	});
 
 	/**
-	 * Decision 3 (owner, 2026-09-07): 「area和city上面有些空间 不是完全顶头 但是
-	 * 也不要太大」. Spent out of the paper around the card, not out of the card —
-	 * `theme/card-aspect.test.ts` is where that bill is measured.
+	 * 「area和city上面有些空间 不是完全顶头 但是也不要太大」 (2026-09-06), then
+	 * 「move header a little down」 (2026-09-07) — 12 became 20, out of the type
+	 * row's 20. It is paid for, not borrowed from the card.
 	 */
-	it("leaves 12 above the context row", () => {
-		expect(n("PAD_TOP")).toBe(12);
+	it("puts the room above the context row, not below the header", () => {
 		expect(CODE).toContain("paddingTop: PAD_TOP * k");
 	});
 
@@ -137,7 +143,7 @@ describe("the header's height budget", () => {
 	 * header's height instead.
 	 */
 	it("never wraps, and shrinks the title before cutting it", () => {
-		expect(CODE.match(/numberOfLines=\{1\}/g) ?? []).toHaveLength(4);
+		expect(CODE.match(/numberOfLines=\{1\}/g) ?? []).toHaveLength(3);
 		expect(CODE).toContain("adjustsFontSizeToFit");
 		expect(CODE).toContain("minimumFontScale={TITLE_MIN_SCALE}");
 		expect(n("TITLE_MIN_SCALE")).toBe(0.5);

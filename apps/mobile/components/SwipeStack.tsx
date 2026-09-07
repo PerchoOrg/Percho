@@ -440,16 +440,31 @@ export function SwipeStack<T>({
 				cardFrameHeight(stageHeight, cardWidth);
 	const topHeight = top === undefined || stageHeight === 0 ? 0 : frameHeight;
 	/**
-	 * Where the top card rests: centred in the stage, so the slack splits
-	 * evenly above and below the card (owner, 2026-09-06 with the community
-	 * strip's removal: 「balance the empty space above and under card」).
+	 * Where the top card rests: a THIRD of the stage's slack above it, two
+	 * thirds below.
 	 *
-	 * It was the stage's top edge (`0`) from 2026-09-05 — the header was tall
-	 * then and half the slack above the card read as a hole. With the strip
-	 * gone the header is one line and the owner asked for the balance back.
+	 * ── The three positions this has had, and why ──────────────────────────
+	 *
+	 * `0` (2026-09-05): the card hung off the stage's top edge and every spare
+	 * point pooled underneath — 128pt of it on the owner's phone, which is
+	 * what he reported.
+	 *
+	 * `/ 2` (2026-09-06, phase182): centred, 「balance the empty space above
+	 * and under card」. That was decided when the header was ONE line; the
+	 * three-row header made half the slack above the card read as a gap
+	 * between two unrelated things (owner, 2026-09-07: 「the empty space
+	 * between card and header is too big」).
+	 *
+	 * `/ 3` (now): the compromise the arithmetic forces. The card is capped at
+	 * the film's own shape (`cardFrameHeight`), so the stage has ~80pt spare on
+	 * a Pro Max no matter what the header does — the only question is where it
+	 * goes. A third above keeps the card near the header it belongs to, and the
+	 * two thirds below sit against the tab bar, which is where a page's
+	 * leftover paper belongs. Neither end can be zero without the other
+	 * looking broken.
 	 */
 	const restTop =
-		stageHeight === 0 ? 0 : Math.max(0, (stageHeight - frameHeight) / 2);
+		stageHeight === 0 ? 0 : Math.max(0, (stageHeight - frameHeight) / 3);
 	// The peeked card's bottom sits just below the top card's bottom (clamped
 	// to the stage so a behind card never spills past the stage's bottom edge).
 	const peekAnchor =

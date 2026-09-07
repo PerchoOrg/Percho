@@ -32,13 +32,18 @@ const STACK = readFileSync("components/SwipeStack.tsx", "utf8");
 
 /** The feed's fixed chrome below the stage, in points. */
 const TAB_BAR = 62;
-/** `CARD_INSET.top` / `.bottom` — symmetric FLOORS since phase182. */
-const PAD_TOP = 16;
+/**
+ * `CARD_INSET.top` / `.bottom`. No longer symmetric (2026-09-07): the type row
+ * left the header, so the card hangs from the title's own line and 12 reads
+ * closer than 16 did under an uppercase label.
+ */
+const PAD_TOP = 12;
 const PAD_BOTTOM = 16;
 /**
- * `FeedHeader`: 12 of room above (phase183.4, owner decision 3) plus the
- * handoff's 86 — an 18pt context row, a 44pt main row carrying the title and
- * the Map pill, a 16pt card-type row, and the two 4pt gaps between them.
+ * `FeedHeader`: 20 of room above, an 18pt context row, a 4pt gap and the 44pt
+ * main row carrying the title and the Map pill. Still 86 — the uppercase type
+ * row went on 2026-09-07 and its 20 points moved to the top padding, so the
+ * total is unchanged and the card did not move.
  * `theme/feed-header.test.ts` pins those numbers at the component; this is
  * what they cost the film.
  *
@@ -47,7 +52,7 @@ const PAD_BOTTOM = 16;
  * component uses. It replaced 78 (4 padding + a 44pt wordmark row + a 30pt
  * place line).
  */
-const HEADER_BASE = 12 + 18 + 4 + 44 + 4 + 16;
+const HEADER_BASE = 20 + 18 + 4 + 44;
 const headerHeight = (w: number) => HEADER_BASE * headerScale(w);
 
 function pageOf(w: number, h: number, top: number, bottom: number) {
@@ -55,8 +60,8 @@ function pageOf(w: number, h: number, top: number, bottom: number) {
 	const content = h - top - (TAB_BAR + bottom);
 	const stage = content - headerHeight(w) - PAD_TOP - PAD_BOTTOM;
 	const ideal = cardWidth / CANVAS_ASPECT;
-	// What the stage has left once the card takes the film's shape — split
-	// evenly above and below the card by `SwipeStack`'s centred `restTop`.
+	// What the stage has left once the card takes the film's shape — a third
+	// above the card and two thirds below it, by `SwipeStack`'s `restTop`.
 	const slack = stage - Math.min(stage, ideal);
 	return { cardWidth, stage, ideal, slack };
 }
@@ -121,31 +126,32 @@ describe("the shipping lineup", () => {
 	});
 
 	/**
-	 * The SE is the one body that pays for a taller header: its stage caps the
-	 * card below the film's shape and `cover` shaves the sides. ~5% under
-	 * phase182.1's 78pt header, ~6.7% under phase183's 86, **~8.3% under
-	 * phase183.4's 12 + 86** (× 0.962 on that screen).
+	 * The SE is the one body whose stage caps the card below the film's shape,
+	 * so `cover` shaves its sides. The number has moved with every header
+	 * pass: ~5% at phase182.1's 78, 6.7% at phase183's 86, 8.3% at
+	 * phase183.4's 12 + 86, and **5.2% now** that the type row is gone and the
+	 * header is 86 again (× 0.962 on that screen) — the best it has been since
+	 * the wordmark came back.
 	 *
-	 * On record as a decision, not a regression, and flagged to the owner with
-	 * the number when he approved the 12pt: the shipping lineup starts at the
-	 * 13 mini — which still draws the film whole — and the alternative (a
-	 * header that drops its top padding on short screens) is layout the page
-	 * does not otherwise need. This fails past ~8.5%, which is the point at
-	 * which the next thing added up there needs his say-so.
+	 * On record as a decision, not a regression: the shipping lineup starts at
+	 * the 13 mini, which draws the film whole. The guard tracks the real value
+	 * rather than sitting slack — anything that pushes the SE past ~6% needs
+	 * the owner's say-so, because it means a new row up there.
 	 */
-	it("keeps the SE's crop under ~8.5%", () => {
+	it("keeps the SE's crop under ~6%", () => {
 		const { cardWidth, stage } = pageOf(375, 667, 20, 0);
-		expect(sideCrop(cardAspect(stage, cardWidth))).toBeLessThan(0.085);
+		expect(sideCrop(cardAspect(stage, cardWidth))).toBeLessThan(0.06);
 	});
 
 	/**
-	 * The slack is what is left over, and the page's balance is that it splits
-	 * evenly — asserted as source because the split lives in `SwipeStack`'s
-	 * `restTop`, which the RN-free suite cannot execute. The model above shows
-	 * every shipping screen has real slack to split.
+	 * The slack is what is left over, and since 2026-09-07 a THIRD of it goes
+	 * above the card and two thirds below (owner: 「the empty space between
+	 * card and header is too big」). Asserted as source because the split lives
+	 * in `SwipeStack`'s `restTop`, which the RN-free suite cannot execute. The
+	 * model above shows every shipping screen has real slack to share out.
 	 */
-	it("centres the slack around the card", () => {
-		expect(STACK).toContain("(stageHeight - frameHeight) / 2");
+	it("gives the card a third of the slack above it", () => {
+		expect(STACK).toContain("(stageHeight - frameHeight) / 3");
 		for (const [name, w, h, top, bottom] of DEVICES) {
 			const { slack } = pageOf(w, h, top, bottom);
 			expect(slack, `${name}: slack`).toBeGreaterThanOrEqual(0);

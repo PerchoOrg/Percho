@@ -111,12 +111,17 @@ import { textStyles } from "../../theme/typography";
  *
  * 2026-09-06 (phase182): `top` 24 → 16, equal to `bottom`. The community strip
  * is gone (owner: it made the page 「not well organized and immersive」), so
- * these are FLOORS on either side of the card, symmetric on purpose — the
- * card is drawn at the tour's aspect (「Don't cut film」) and `SwipeStack`
- * centres it in the stage, so whatever the page has spare splits evenly
- * above and below (owner: 「balance the empty space above and under card」).
+ * these are FLOORS on either side of the card, and the card is drawn at the
+ * tour's aspect (「Don't cut film」) with whatever the page has spare shared
+ * out by `SwipeStack`'s `restTop`.
+ *
+ * 2026-09-07: `top` 16 → 12 (owner: 「the empty space between card and header
+ * is too big」). The 16 came from the handoff, where it sat under an uppercase
+ * type row; that row is gone, so the title's own line is what the card now
+ * hangs from and it wants to be closer. The floors are no longer symmetric on
+ * purpose — see `restTop`, which pairs with this.
  */
-const CARD_INSET = { horizontal: 16, top: 16, bottom: 16 };
+const CARD_INSET = { horizontal: 16, top: 12, bottom: 16 };
 const GUTTER = 16;
 
 /**

@@ -12,8 +12,7 @@
  * the city for a city card — and everything above it becomes the context row:
  *
  *     Atlanta metro › Canton          ← context, 13/18
- *     River Green ›            [Map]  ← title, serif 30, + the map control
- *     HOME TOUR                       ← type label, 11/16 uppercase
+ *     River Green ›            [Map]  ← title, big serif, + the map control
  *
  * So the parent chain and the leaf are computed together, here, and the
  * component draws three rows from one object. Same rule as before: every
@@ -82,14 +81,6 @@ export type FeedHeaderKind =
 	| "trade-off"
 	| "scope";
 
-/** The uppercase row under the title. `scope` has no card, so no label. */
-const TYPE_LABEL: Record<Exclude<FeedHeaderKind, "scope">, string> = {
-	"home-tour": "HOME TOUR",
-	"community-tour": "COMMUNITY TOUR",
-	"city-tour": "CITY TOUR",
-	"trade-off": "TRADE-OFF",
-};
-
 /**
  * The general trade-off's two fixed strings.
  *
@@ -107,11 +98,18 @@ const PLACELESS_HOME_TITLE = "Explore this home";
 export interface FeedHeaderModel {
 	/** The card this header is a read of. `null` in the `scope` fallback. */
 	activeCardId: string | null;
+	/**
+	 * Which header this is. Carried for the component's one behavioural
+	 * branch (a trade-off's context row is not the scope control) — NOT for a
+	 * label: the uppercase HOME TOUR / COMMUNITY TOUR / TRADE-OFF row was
+	 * removed on 2026-09-07 at the owner's request 「Remove the community, home
+	 * and tradeoff text from header」. The card's own badge already says what
+	 * kind of card it is.
+	 */
 	kind: FeedHeaderKind;
 	/** `Atlanta metro › Canton`. Empty string = draw the row, draw no text. */
 	contextText: string;
 	title: string;
-	typeLabel: string | null;
 	/** Community slug for `/community/[slug]`, or null — no chevron then. */
 	titleSlug: string | null;
 	/** Geo-unit id for `?focus=`, or null — no Map button then. */
@@ -177,7 +175,6 @@ export function feedHeaderModel({
 			kind: "scope",
 			contextText: scopeName ? context(scopeName) : "",
 			title: scopeName ?? SCOPE_ROOT_LABEL,
-			typeLabel: null,
 			titleSlug: null,
 			mapUnitId: unitOf(scopedUnitId ?? undefined, geoUnits)?.id ?? null,
 		};
@@ -194,7 +191,6 @@ export function feedHeaderModel({
 				kind: "city-tour",
 				contextText: context(card.unit.name),
 				title: card.unit.name,
-				typeLabel: TYPE_LABEL["city-tour"],
 				titleSlug: null,
 				mapUnitId: card.unit.id,
 			};
@@ -205,7 +201,6 @@ export function feedHeaderModel({
 				kind: "community-tour",
 				contextText: context(card.city),
 				title: card.name,
-				typeLabel: TYPE_LABEL["community-tour"],
 				titleSlug: card.slug,
 				mapUnitId: unitOf(card.geoUnitId, geoUnits)?.id ?? null,
 			};
@@ -232,7 +227,6 @@ export function feedHeaderModel({
 				kind: "home-tour",
 				contextText: unit !== undefined ? context(unit.name) : "",
 				title: community?.name ?? unit?.name ?? PLACELESS_HOME_TITLE,
-				typeLabel: TYPE_LABEL["home-tour"],
 				titleSlug: community?.slug ?? null,
 				mapUnitId: unit?.id ?? null,
 			};
@@ -245,7 +239,6 @@ export function feedHeaderModel({
 				kind: "trade-off",
 				contextText: TRADEOFF_CONTEXT,
 				title: TRADEOFF_TITLE,
-				typeLabel: TYPE_LABEL["trade-off"],
 				titleSlug: null,
 				mapUnitId: null,
 			};
