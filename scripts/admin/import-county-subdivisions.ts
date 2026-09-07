@@ -221,6 +221,7 @@ type Existing = {
   slug: string;
   name: string;
   city: string | null;
+  source: string;
   boundary: GeoJsonPolygonLike;
   bbox: [number, number, number, number];
 };
@@ -230,7 +231,7 @@ async function fetchExisting(county: string): Promise<Existing[]> {
   for (let from = 0; ; from += 200) {
     const { data, error } = await sb
       .from('communities')
-      .select('id, slug, name, city, boundary')
+      .select('id, slug, name, city, source, boundary')
       .eq('county', county)
       .not('boundary', 'is', null)
       .order('id')
@@ -241,6 +242,28 @@ async function fetchExisting(county: string): Promise<Existing[]> {
       if (bbox) out.push({ ...row, bbox });
     }
     if (data.length < 200) break;
+  }
+  return out;
+}
+
+/**
+ * Every slug in the table, not just this county's.
+ *
+ * `communities.slug` is globally unique, and subdivision names repeat across
+ * the metro — a Gwinnett "River Club" collided with one that already existed
+ * elsewhere and aborted a run mid-way.
+ */
+async function fetchAllSlugs(): Promise<Set<string>> {
+  const out = new Set<string>();
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb
+      .from('communities')
+      .select('slug')
+      .order('slug')
+      .range(from, from + 999);
+    if (error) throw new Error(error.message);
+    for (const row of data as { slug: string }[]) out.add(row.slug);
+    if (data.length < 1000) break;
   }
   return out;
 }
@@ -283,7 +306,7 @@ async function main() {
     if (list) list.push(e);
     else byName.set(key, [e]);
   }
-  const usedSlugs = new Set(existing.map((e) => e.slug));
+  const usedSlugs = await fetchAllSlugs();
 
   type Plan = {
     name: string;
@@ -305,11 +328,17 @@ async function main() {
     // The plat layer has no city; the containing Nextdoor polygon does, and it
     // is the same POSTAL city convention the rest of the table uses.
     const inside = containing(centroid.lat, centroid.lng, existing);
-    // Same name AND the same place. A name that matches elsewhere in the
-    // county is a different subdivision that happens to share a name.
-    const upgradeOf = byName
-      .get(key)
-      ?.find((e) => pointInPolygon(centroid.lng, centroid.lat, e.boundary));
+    const sameName = byName.get(key);
+    // A row this importer already wrote for this name is the same subdivision
+    // by construction — re-running refreshes its boundary, which is what makes
+    // the script safe to restart after a failure and safe to run again when
+    // the county republishes the layer. No geometry test: an area-weighted
+    // centroid of disjoint phases can legitimately fall outside them all.
+    // Otherwise: same name AND the same place, since a name that repeats
+    // elsewhere in the county is a different subdivision.
+    const upgradeOf =
+      sameName?.find((e) => e.source === 'county_gis') ??
+      sameName?.find((e) => pointInPolygon(centroid.lng, centroid.lat, e.boundary));
     const name = titleCase(g.raw);
     let slug = upgradeOf?.slug ?? slugify(name, { fallback: 'subdivision' });
     if (!upgradeOf) {
@@ -329,7 +358,8 @@ async function main() {
     });
   }
 
-  const upgrades = plans.filter((p) => p.upgradeOf);
+  const refreshes = plans.filter((p) => p.upgradeOf?.source === 'county_gis');
+  const upgrades = plans.filter((p) => p.upgradeOf && p.upgradeOf.source !== 'county_gis');
   const inserts = plans.filter((p) => !p.upgradeOf);
   const noCity = plans.filter((p) => !p.city).length;
   console.log(
@@ -339,6 +369,7 @@ async function main() {
   console.log(`  ${commercial.size} names dropped as commercial or industrial`);
   console.log(`  ${upgrades.length} upgrade an existing community in place (keeps its photo)`);
   console.log(`  ${inserts.length} are new rows`);
+  if (refreshes.length) console.log(`  ${refreshes.length} refresh a row a previous run wrote`);
   console.log(`  ${noCity} have no city — no existing polygon contains their centre`);
   console.log('\nupgrades, first 8:');
   for (const p of upgrades.slice(0, 8)) {
@@ -387,7 +418,9 @@ async function main() {
     if (done % 200 === 0) process.stderr.write(`\rwrote ${done}/${plans.length}`);
   }
   process.stderr.write('\n');
-  console.log(`${upgrades.length} upgraded, ${inserts.length} inserted.`);
+  console.log(
+    `${upgrades.length} upgraded, ${inserts.length} inserted, ${refreshes.length} refreshed.`,
+  );
   console.log('Now re-run relink-listings.ts so listings move to the new polygons.');
 }
 

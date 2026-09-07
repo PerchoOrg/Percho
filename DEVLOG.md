@@ -21,6 +21,54 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-07 22:01 UTC — phase191.2: Gwinnett imported, 4,227 subdivisions live
+
+**Objective**: run the phase191 import for real. Owner's three calls: import
+Gwinnett in full; keep the plat rows out of the buyer-facing city community
+count; import Fulton normally despite its "personal use" copyright wording.
+
+**Actions**:
+- Migration `20260907230000`: `city_geo_units.community_count` and
+  `sample_community_names` now count only communities WITH a cover photo, and
+  a city with none is dropped. Without it the plat rows — boundary and nothing
+  else — would have taken Lawrenceville from 294 to ~1,300 in the city picker.
+  All 8,678 pre-existing communities have a cover, so no count moved.
+- Applied `20260907220000` (`source` gains `county_gis`) and the above, then
+  ran the importer with `--apply`.
+
+**Issues**: the first `--apply` died 20 rows in on
+`communities_slug_key` — `usedSlugs` was seeded from the county's rows, but
+the slug is globally UNIQUE and Gwinnett's "River Club" collided with one
+elsewhere in the metro. Fixed by seeding from every slug in the table. That
+left 13 rows written, so the script also had to become re-runnable: a row this
+importer already wrote for the same name in the same county is now recognised
+by `source='county_gis'` and refreshed rather than re-inserted. No geometry
+test on that path — an area-weighted centroid of disjoint phases can fall
+outside all of them.
+
+**Resolution**: **536 upgraded, 3,691 inserted, Gwinnett now 3,691 county_gis
+subdivisions + 536 upgraded Nextdoor rows + 665 untouched neighbourhoods.**
+Table total 12,371 communities, 4,230 of them subdivisions (was 3).
+`relink-listings --apply` then moved **5 of 18 listings** onto a better
+polygon: `buford-dam` → `windsor-at-lanier`, `peachtree-corners-sunburst` →
+`waterside-2`, `berkeley-woods` → `berkeley-park-2` (which also converts a
+1 m `nearest` fallback into a real containment, and fixes a wrong name),
+`woodehaven` → `woodhaven-at-chattahoochee-crossing`, `landings-at-sugarloaf`
+→ `landings-at-sugarloaf-condominium`. City counts verified unchanged
+afterwards.
+
+**Learnings**: a partially-applied bulk import is the normal case, not the
+exception — write the "already did this one" check before the first `--apply`,
+not after. And check UNIQUE scope against the constraint, not against the
+query you happen to be running.
+
+**Next steps**: Cobb (8,719 polygons, needs the `'1ST FLOOR'` junk filtered),
+then DeKalb and Forsyth (phase suffix is inside the name — needs a
+`UNIT \d+ | PHASE \d+ | S/D` stripper), then Fulton, then Cherokee as a
+parcel dissolve. Still open: nothing gives these 3,691 rows a photo, so they
+are match targets only — the Vivian sold-data idea is the ranking that says
+which of them deserve one.
+
 ## 2026-09-07 21:49 UTC — phase191: county plat subdivisions, importer + Gwinnett dry run
 
 **Objective**: proposal 2. Owner green-lit it and asked two framing questions:
