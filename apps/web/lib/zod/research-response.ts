@@ -26,7 +26,7 @@ export function isStudyClosed(study: string): boolean {
 
 const choice = z.string().trim().min(1).max(200);
 
-export const researchAnswerSchema = z.union([
+const researchAnswerSchema = z.union([
   choice,
   z.array(choice).min(1).max(20),
   z.number().int().min(1).max(5),

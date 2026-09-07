@@ -127,7 +127,7 @@ export function communityLifestyleSignals(
  * "median age 42" fail the shape on purpose — they are not POI counts and
  * must never become "N X nearby".
  */
-export function extractPoiCounts(reasons: readonly CommunityReason[] | null | undefined): string[] {
+function extractPoiCounts(reasons: readonly CommunityReason[] | null | undefined): string[] {
   if (!reasons) return [];
   const out: string[] = [];
   for (const r of reasons) {

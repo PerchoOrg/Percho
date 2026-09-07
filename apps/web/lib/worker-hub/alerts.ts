@@ -36,12 +36,12 @@ export const WAITING_STALL_SEC = 30 * 60;
 export const ACTIVE_STALL_SEC = 90 * 60;
 /** A running worker that hasn't written a line in this long, while work waits. */
 export const LOG_SILENCE_SEC = 15 * 60;
-export const DISK_WARN_PCT = 85;
-export const DISK_ERROR_PCT = 93;
-export const MEM_WARN_PCT = 92;
-export const LOAD_WARN_PER_CORE = 2;
+const DISK_WARN_PCT = 85;
+const DISK_ERROR_PCT = 93;
+const MEM_WARN_PCT = 92;
+const LOAD_WARN_PER_CORE = 2;
 /** Scratch dirs left in /tmp — a few are in flight, dozens are a leak. */
-export const SCRATCH_WARN = 25;
+const SCRATCH_WARN = 25;
 
 export interface AlertInput {
   processes: ProcessSnapshot[];

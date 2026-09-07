@@ -141,7 +141,7 @@ function withoutId(ids: readonly string[], id: string): string[] {
 }
 
 /** Which funnel layer a card's swipe counts against, for fatigue purposes. */
-export function layerOf(card: FeedCardV3): FunnelLayer | null {
+function layerOf(card: FeedCardV3): FunnelLayer | null {
 	switch (card.kind) {
 		case "area":
 			return card.unit.level;

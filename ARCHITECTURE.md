@@ -47,7 +47,7 @@ worker outside Vercel picks it up. Anything slow lives behind that boundary.
 | `packages/shared/` | Types and constants both apps must agree on. The only cross-app import. Keep it dependency-free, and import a module by subpath (`@percho/shared/types`) — there is no barrel. |
 | `scripts/` | Everything that runs outside Vercel: long-running workers, one-shot pipelines, admin utilities, prototypes. |
 | `supabase/` | Schema source of truth. Migrations, RLS policies, edge functions, local config. |
-| `docs/` | Reference material a human reads. Not process logs — those go to `docs/archive/`. |
+| `docs/` | Reference material a human reads. Not process logs — those go to `docs/archive/`, which also collects finished prototypes and campaigns. |
 | `brand/` | Design **source** — the upstream Phosphor font, the 14 chosen SVGs, the glyph selection. Never shipped; `scripts/icon-fonts/` subsets it into the app's fonts. |
 
 **Three places hold files that look like "assets", and they are not
@@ -76,8 +76,7 @@ no URL segment) or underscored (private, never routed).
 | `dashboard/` | The agent's workspace. Listing and community editors, leads, analytics. Everything here assumes an authenticated agent. |
 | `admin/` | Internal pipeline console — POI review, video jobs, BGM, tour runs. Gated by `is_admin`; not a customer surface. |
 | `api/` | Route handlers. `api/mobile/*` is the mobile app's contract; `api/admin/*` requires `requireAdmin()`; webhooks verify signatures before doing anything. |
-| `internal/` | Throwaway internal pages (meetup demos). Not part of the product. |
-| `_components/` | Components used by more than one route subtree. |
+| `_components/` | Components used by more than one route subtree — e.g. `nearby-panel/`, the POI-triage panel both the listing and community editors mount. |
 | `_actions/` | Server actions shared across routes. |
 
 **Where does a component go?** Used by one route subtree → that route's own
@@ -111,7 +110,6 @@ No React in here. If it renders, it belongs in `app/`.
 | `worker-hub/` | What the `/admin` Worker console reads: the queue specs the two local workers drain, the launchd/`ps`/log readers for the box they run on, and the alert rules over both. The host readers answer "not the worker host" everywhere but the Mac mini. |
 | `perf/` | Server timing helpers. |
 | `utils/` | Genuinely generic, domain-free helpers. If it mentions a listing or a community it does not belong here. |
-| `log.ts` | The logger. `console.log` is forbidden in production paths; use this, and `mask()` anything resembling PII. |
 
 ### `lib/poi/` in detail
 
@@ -125,7 +123,7 @@ copied per entity.
 | `bucket-video-core.ts` | Approved photos → shot selection → a `generated_videos` row. |
 | `{listing,community}-actions.ts` | `'use server'` adapters over the two cores. No logic. |
 | `{listing,community}-video-actions.ts` | Same, for the video pipeline. |
-| `tour-steps/` | The seven community-tour steps — research, resolve, photos, tag, generate, assemble, regenerate-all — one module each, plus `shared.ts` and `shots.ts`. The route only dispatches. |
+| `tour-steps/` | The community-tour steps — research, resolve, photos, ingest, tag, filter, plan, generate (which also owns regenerate-all), assemble — one module each, plus `shared.ts` and `shots.ts`. The route only dispatches. |
 | `listing-tour-steps/` | The home tour's four steps — tag, plan, generate, assemble — same shape, same `step_results` persistence. `tag` and `plan` queue work to the render worker because their logic is Python; the other two are database writes. A sibling of `tour-steps/` rather than a merge: the two pipelines run different steps, and only the generic plumbing is shared (imported, not copied). |
 | `tour-orchestrator/` | The planning layer: Curator (describes photos), Scheduler (orders and times them), Guard (compliance), VO Pass (narration). Pure functions, well tested. |
 | `google-places.ts` | The POI pipeline's Places client — nearby/text search, photo binaries. Distinct from `lib/listings/address-autocomplete.ts`, which is the address form's. |
@@ -161,14 +159,11 @@ worker or a one-shot job.
 | `caption-render/` | Burns captions into frames. |
 | `pipelines/` | `nearby_generate.py` — batch nearby-video generation. |
 | `community-tour/` | The agent-research entrypoint, runnable outside the web app. |
-| `fmls-scrape/` | One-shot FMLS (Atlanta MLS) scrape. |
-| `nextdoor-seed/` | One-shot Nextdoor neighborhood seeding. |
-| `k12/` | School data and photo upload. |
-| `upload-bgm/` | Mirrors the local BGM library into storage. |
+| `upload-bgm/` | Mirrors the local BGM library into storage. Called by `render-worker/pull-bgm.sh`. |
 | `admin/` | Operator utilities — curator eval, production smoke test, demo assets. Allowed to use the service-role key (CLAUDE.md §3). |
 | `icon-fonts/` | Rebuilds the mobile app's subset icon fonts from `brand/icons/`. |
 | `maintenance/` | One-off backfills and requeues run by hand against production. |
-| `prototypes/`, `spikes/` | Experiments. Nothing in the product depends on them; treat as disposable. |
+| `spikes/` | Experiments. Nothing in the product depends on them; treat as disposable. |
 
 ---
 
@@ -190,13 +185,16 @@ regenerated `database.types.ts` in the same PR.
 | Folder | Responsibility |
 |---|---|
 | `design/` | UX specification. `spec-v3/` is authoritative for the mobile app; the rest are product design notes. |
+| `prototypes/` | Standalone HTML/JS/Python sketches that predate a feature. Source only, not maintained; kept because `packages/shared` cites them as the origin of live decisions. |
 | `pipelines/` | How the media pipelines work, end to end. |
 | `devlog/` | Finished months of `DEVLOG.md`. Rotate when the month turns. |
 | `marketing/` | Voice, templates, account notes, daily logs. |
 | `references/` | External data sources and their terms. |
 | `bgm/` | Music vibe mapping. |
 | `mls-integration/` | MLS go-live readiness: what of the RESO path exists, what is still to build, owner-only steps. |
-| `archive/` | Finished process artifacts — sprint prompts, verification checklists, handoffs. Not maintained. If it contradicts the code, the code wins. |
+| `archive/` | Finished process artifacts — sprint prompts, verification checklists, handoffs, retired prototypes and campaigns. Not maintained. If it contradicts the code, the code wins. |
+
+Loose file: `ios-release.md`, the App Store submission runbook.
 
 ---
 

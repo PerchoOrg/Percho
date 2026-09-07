@@ -28,7 +28,7 @@ export const REVIEW_DIMENSION_LABELS: Record<ReviewDimension, string> = {
 	value: "Value",
 };
 
-export const REVIEW_BODY_MIN = 20;
+const REVIEW_BODY_MIN = 20;
 export const REVIEW_BODY_MAX = 1200;
 
 export type ReviewStatus = "pending" | "approved" | "rejected";

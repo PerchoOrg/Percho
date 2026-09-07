@@ -1040,7 +1040,7 @@ BUCKET_LABELS = {
 # See lib/poi/types.ts INTENT_BUCKETS for the canonical bucket list.
 # Archetypes drive caption layout in scripts/ken-burns/generate.py.
 # Phase 89.1: Google Places `type` → human-readable label.
-# Mirror of lib/poi/types.ts POI_TYPE_LABEL. Keep in sync.
+# Canonical copy of the label map (the web app no longer carries one).
 # Falls back to bucket_label when nothing matches — do NOT invent generic
 # labels like "Point of Interest" here.
 POI_TYPE_LABEL = {

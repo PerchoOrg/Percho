@@ -31,7 +31,7 @@ const PLACES_BASE = 'https://places.googleapis.com/v1';
  * For now `BUCKET_PLACES_TYPES[bucket] = []` means the discover fanout
  * skips that bucket automatically.
  */
-export const BUCKET_PLACES_TYPES: Record<string, readonly string[]> = {
+const BUCKET_PLACES_TYPES: Record<string, readonly string[]> = {
   schools: ['school', 'primary_school', 'secondary_school'],
   dining: ['restaurant', 'cafe', 'bakery'],
   nightlife: ['bar', 'night_club', 'movie_theater'],

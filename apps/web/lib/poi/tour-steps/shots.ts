@@ -14,7 +14,6 @@ import {
   communityActSlots,
 } from '@/lib/poi/tour-orchestrator/amenity';
 import type { TourPlanPhoto } from '@/lib/poi/tour-orchestrator/plan';
-import { CANVAS_H, CANVAS_W } from '@/lib/poi/tour-orchestrator/scheduler';
 import type { PhotoAnnotation } from '@/lib/poi/tour-orchestrator/types';
 import { type RunRow, type TourDb, mustWrite } from './shared';
 
@@ -74,7 +73,7 @@ const CLIPS_BY_BUCKET: Record<string, number> = {
 };
 const DEFAULT_CLIPS_PER_POI = 2;
 
-export function clipsAllowedFor(bucket: string | null | undefined): number {
+function clipsAllowedFor(bucket: string | null | undefined): number {
   return CLIPS_BY_BUCKET[bucket ?? ''] ?? DEFAULT_CLIPS_PER_POI;
 }
 
@@ -152,19 +151,6 @@ export function initialVerdict(p: {
   // was too small. `runPlan` breaks it by queueing a rescue for exactly these.
   return { ok: true };
 }
-
-/**
- * Too small to fill the canvas even with the zoom headroom.
- *
- * Exported for the rescue in `runPlan`: this is no longer a rejection (see
- * `initialVerdict`), it is a "needs rendering first" signal.
- */
-export function tooLowRes(w: number, h: number): boolean {
-  const upscale = Math.max(CANVAS_W / w, CANVAS_H / h) * ZOOM_HEADROOM;
-  return upscale > MAX_UPSCALE;
-}
-const ZOOM_HEADROOM = 1.1;
-const MAX_UPSCALE = 2.0;
 
 /** Shared: build the final shot list for a set of POIs. Photos step computes
  *  and persists this; assemble consumes it. Clips per POI vary by kind of

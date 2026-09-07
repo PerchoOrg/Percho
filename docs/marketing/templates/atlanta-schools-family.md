@@ -25,7 +25,7 @@ see `../accounts.md` for the roster.
 ## The subdivision data blocks (pick 2-3 per reply, never all)
 
 **Sources:** GreatSchools ratings pulled 2026-06 via the k12 pipeline
-(scripts/k12/upsert_schools.py). Commute times = personal experience +
+(deleted 2026-09-06; school data now comes from `scripts/admin/import-ga-schools.ts`, NCES). Commute times = personal experience +
 Google Maps at 8am weekday. Prices = Zillow median band ± informal read
 of current market. Anything else — hedge with "not 100% sure".
 

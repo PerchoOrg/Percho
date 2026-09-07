@@ -51,7 +51,7 @@ export interface GuardResult {
 }
 
 /** Clauses a Seedance clip must carry, given what the Curator saw in it. */
-export function constraintsFor(annotation: PhotoAnnotation): string[] {
+function constraintsFor(annotation: PhotoAnnotation): string[] {
   const clauses: string[] = [];
   clauses.push(annotation.people_prominence === 'none' ? CLAUSE_NO_PEOPLE : CLAUSE_KEEP_PEOPLE);
   if (annotation.has_rigid_geometry) clauses.push(CLAUSE_RIGID_GEOMETRY);

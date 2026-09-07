@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { CommunityVideoCategory } from './community-video-categories';
 
 // ─── Listings ────────────────────────────────────────────────────
-export const ListingStatus = z.enum(['active', 'inactive']);
+const ListingStatus = z.enum(['active', 'inactive']);
 export type ListingStatus = z.infer<typeof ListingStatus>;
 
 export const ListingCreate = z.object({
@@ -35,7 +35,7 @@ export const ListingCreate = z.object({
 });
 export type ListingCreate = z.infer<typeof ListingCreate>;
 
-export const ListingUpdate = ListingCreate.partial().extend({
+const ListingUpdate = ListingCreate.partial().extend({
   status: ListingStatus.optional(),
 });
 export type ListingUpdate = z.infer<typeof ListingUpdate>;
@@ -81,7 +81,7 @@ export const VideoCreateUpload = z.object({
 export type VideoCreateUpload = z.infer<typeof VideoCreateUpload>;
 
 // ─── Leads ───────────────────────────────────────────────────────
-export const LeadCreate = z
+const LeadCreate = z
   .object({
     listing_id: z.string().uuid(),
     name: z.string().min(1).max(120),
@@ -97,7 +97,7 @@ export const LeadCreate = z
 export type LeadCreate = z.infer<typeof LeadCreate>;
 
 // ─── Schools / POIs (manual entry, audit-mandatory fields) ───────
-export const SchoolCreate = z.object({
+const SchoolCreate = z.object({
   community_id: z.string().uuid(),
   name: z.string().min(1).max(160),
   grades: z.string().max(20).optional(),
@@ -106,7 +106,7 @@ export const SchoolCreate = z.object({
 });
 export type SchoolCreate = z.infer<typeof SchoolCreate>;
 
-export const PoiCreate = z.object({
+const PoiCreate = z.object({
   community_id: z.string().uuid(),
   name: z.string().min(1).max(160),
   poi_type: z.enum(['restaurant', 'park', 'grocery', 'gym', 'shopping', 'transit', 'other']),
@@ -180,7 +180,7 @@ export const CommunityNarrationVoice = z.object({
 export type CommunityNarrationVoice = z.infer<typeof CommunityNarrationVoice>;
 
 // ─── Events ──────────────────────────────────────────────────────
-export const EventInsert = z.object({
+const EventInsert = z.object({
   listing_id: z.string().uuid().optional(),
   event_type: z.enum([
     'page_view',

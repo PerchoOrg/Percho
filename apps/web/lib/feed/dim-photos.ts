@@ -88,7 +88,7 @@ export interface DimPhoto {
  * How many photos a door shows. Three reads as a set at plate size; four starts
  * shrinking each plate past the point where a room is legible.
  */
-export const DIM_PICKS = 3;
+const DIM_PICKS = 3;
 
 /**
  * The size a plate is actually drawn at, so the phone never downloads more.

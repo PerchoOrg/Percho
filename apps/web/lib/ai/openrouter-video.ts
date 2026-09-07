@@ -1,8 +1,7 @@
 /**
  * OpenRouter video generation (image → video).
  *
- * Ported from the verified spike at
- * `scripts/spikes/seedance-community-video/spike.py`. The flow is:
+ * Ported from a verified spike (2026-08-15, since deleted). The flow is:
  *
  *   1. POST /videos         model + prompt + input_references (reference
  *                           images) → { id, polling_url }
@@ -47,29 +46,6 @@ const FETCH_TIMEOUT_MS = 45_000;
 async function failure(res: Response, label: string): Promise<Error> {
   const body = await res.text().catch(() => '');
   return new Error(`OpenRouter ${label} ${res.status}: ${body.slice(0, 300)}`);
-}
-
-/** Upload a reference image; returns the OpenRouter-hosted URL for it. */
-export async function uploadFrameImage(
-  bytes: ArrayBuffer,
-  filename: string,
-  contentType: string,
-): Promise<string> {
-  const form = new FormData();
-  form.append('file', new Blob([bytes], { type: contentType }), filename);
-
-  const res = await fetch(`${API}/files`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey()}` },
-    body: form,
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
-  if (!res.ok) throw await failure(res, '/files');
-
-  const data = (await res.json()) as { data?: { url?: string } };
-  const url = data.data?.url;
-  if (!url) throw new Error('OpenRouter /files returned no data.url');
-  return url;
 }
 
 /**

@@ -22,7 +22,7 @@ export const LoginWithPassword = z.object({
   password: Password,
 });
 
-export const Role = z.enum(['agent', 'buyer']);
+const Role = z.enum(['agent', 'buyer']);
 export type Role = z.infer<typeof Role>;
 
 export const SignupWithPassword = z

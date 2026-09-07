@@ -144,7 +144,7 @@ const BUCKET_WEIGHT: Record<string, number> = {
   other: 0.3,
 };
 
-export function bucketWeight(bucket: string): number {
+function bucketWeight(bucket: string): number {
   return BUCKET_WEIGHT[bucket] ?? 0.3;
 }
 

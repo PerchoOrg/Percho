@@ -31,5 +31,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "supabase/functions", "scripts/render-logo-cover-preview.ts"]
+  "exclude": ["node_modules", "supabase/functions"]
 }

@@ -8,7 +8,7 @@
  */
 import { z } from 'zod';
 
-export const SEARCH_QUERY_MAX_LEN = 40;
+const SEARCH_QUERY_MAX_LEN = 40;
 
 export const mobileSearchQuerySchema = z
   .string()

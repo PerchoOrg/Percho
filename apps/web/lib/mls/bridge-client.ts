@@ -69,7 +69,7 @@ export function hasBridgeCredentials(): boolean {
  * v4: single quotes are doubled. No other escaping is required for
  * ASCII string filters.
  */
-export function odataEscape(v: string): string {
+function odataEscape(v: string): string {
   return v.replace(/'/g, "''");
 }
 

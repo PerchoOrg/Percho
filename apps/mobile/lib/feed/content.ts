@@ -36,7 +36,6 @@
  * `axis` is what stops the deck asking the same thing twice: two questions that
  * share an axis are never both asked in one session (`generate-feed.ts`).
  */
-import type { CardIconName } from "@percho/shared/icons";
 import type { TradeoffCardV3 } from "./card-types";
 
 /**
@@ -627,8 +626,3 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 		},
 	},
 ];
-
-/** Every icon the bank uses — asserted by `theme/icon-font.test.ts`. */
-export const TRADEOFF_ICONS: readonly CardIconName[] = TRADEOFFS.flatMap((t) =>
-	[t.left.icon, t.right.icon].filter((i): i is CardIconName => i !== undefined),
-);

@@ -27,8 +27,8 @@
  * text.
  */
 
-export const CANVAS_W = 1080;
-export const CANVAS_H = 1920;
+const CANVAS_W = 1080;
+const CANVAS_H = 1920;
 
 /**
  * Below this a photo is already close enough to 9:16 to use as-is.
@@ -38,8 +38,6 @@ export const CANVAS_H = 1920;
  * "already in a good shape" case.
  */
 export const OUTPAINT_MIN_CROP_LOSS = 0.35;
-
-export const OUTPAINT_MODEL = process.env.GEMINI_IMAGE_MODEL ?? 'gemini-3.1-flash-image';
 
 /** Fraction of the frame a 9:16 centre crop throws away. */
 export function cropLoss(widthPx: number, heightPx: number): number {

@@ -125,7 +125,7 @@ export const COMMUNITY_ACT_CLIP_BUDGET = 8;
  * cut that opened with three of them, "starting with some houses, which i
  * already mentioned to avoid". One clip, and it plays last.
  */
-export const STREETSCAPE_MAX_CLIPS = 1;
+const STREETSCAPE_MAX_CLIPS = 1;
 
 /**
  * Divide the community act's clips between the amenities that have photos.

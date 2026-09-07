@@ -25,7 +25,7 @@ export interface ListingSummaryDTO {
 }
 
 /** Most saves the explore page ever asks about — the rail shows about this many. */
-export const SUMMARY_FETCH_CAP = 12;
+const SUMMARY_FETCH_CAP = 12;
 
 function num(v: unknown): number | undefined {
 	return typeof v === "number" && Number.isFinite(v) ? v : undefined;
@@ -35,7 +35,7 @@ function str(v: unknown): string | undefined {
 }
 
 /** Defensive row parse — a malformed row is dropped, never rendered half-empty. */
-export function parseSummary(raw: unknown): ListingSummaryDTO | null {
+function parseSummary(raw: unknown): ListingSummaryDTO | null {
 	if (typeof raw !== "object" || raw === null) return null;
 	const r = raw as Record<string, unknown>;
 	const id = str(r.id);

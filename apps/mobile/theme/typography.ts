@@ -93,13 +93,6 @@ export const textStyles = {
 	},
 } as const satisfies Record<string, TextStyle>;
 
-/** Price token — New York serif 25 bold, per §0.6 CardFoot spec. */
-export const priceStyle: TextStyle = {
-	fontFamily: serif,
-	fontSize: 25,
-	fontWeight: "700",
-};
-
 /**
  * Redline type scale (2026-07-30) — the owner-supplied "Percho Swipe Cards"
  * redline, for the four front faces it covers. Owner: 「全按redline覆盖」.

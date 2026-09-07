@@ -330,7 +330,6 @@ export async function generateSocialCopy(
 // scrolling the public `/c/<slug>` page.
 
 export type CommunityMarketingLanguage = SocialLanguage;
-export const COMMUNITY_MARKETING_LANGUAGES = SOCIAL_LANGUAGES;
 
 export interface CommunityMarketingVideo {
   /** Stable category id (matches DB enum + COMMUNITY_VIDEO_CATEGORIES). */

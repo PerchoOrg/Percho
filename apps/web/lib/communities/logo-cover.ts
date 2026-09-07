@@ -250,7 +250,7 @@ export function buildCommunityLogoSvg(name: string, boundary: BoundaryGeoJSON | 
 }
 
 /** Convert an SVG string to a data URI (utf-8, url-encoded). */
-export function svgToDataUri(svg: string): string {
+function svgToDataUri(svg: string): string {
   const encoded = encodeURIComponent(svg).replace(/'/g, '%27').replace(/"/g, '%22');
   return `data:image/svg+xml;charset=utf-8,${encoded}`;
 }

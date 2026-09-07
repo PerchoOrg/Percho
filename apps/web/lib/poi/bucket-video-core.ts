@@ -20,12 +20,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { bucketLabel } from './bucket-label';
-import type {
-  BucketVideoRow,
-  BucketVideoStatus,
-  GenerateBucketVideoResult,
-  PoiEntityScope,
-} from './entity-scope';
+import type { BucketVideoStatus, GenerateBucketVideoResult, PoiEntityScope } from './entity-scope';
 import type { IntentBucket } from './types';
 
 const MAX_PHOTOS_PER_VIDEO = 15;
@@ -320,49 +315,6 @@ export async function generateBucketVideo<N extends string>(
     photo_count: selected.length,
     status: inserted.status as 'pending' | 'processing',
   };
-}
-
-/** All bucket videos for an entity, newest first. */
-export async function listBucketVideos(
-  s: PoiEntityScope,
-  entityId: string,
-): Promise<BucketVideoRow[]> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
-
-  const { data } = (await (supabase as unknown as DynamicClient)
-    .from('generated_videos')
-    .select(
-      'id, intent_bucket, status, cf_stream_uid, duration_s, input_photo_ids, error, created_at',
-    )
-    .eq(s.idColumn, entityId)
-    .eq('scope', s.videoScope)
-    .order('created_at', { ascending: false })) as {
-    data: Array<{
-      id: string;
-      intent_bucket: string;
-      status: string;
-      cf_stream_uid: string | null;
-      duration_s: number | null;
-      input_photo_ids: string[] | null;
-      error: string | null;
-      created_at: string;
-    }> | null;
-  };
-
-  return (data ?? []).map((r) => ({
-    video_id: r.id,
-    bucket: r.intent_bucket as IntentBucket,
-    status: r.status as BucketVideoRow['status'],
-    cf_stream_uid: r.cf_stream_uid,
-    duration_s: r.duration_s,
-    photo_count: r.input_photo_ids?.length ?? 0,
-    error: r.error,
-    created_at: r.created_at,
-  }));
 }
 
 /**

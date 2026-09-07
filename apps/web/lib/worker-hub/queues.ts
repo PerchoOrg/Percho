@@ -46,7 +46,7 @@ export interface QueueSpec {
  * Both time columns are null there on purpose: an age or a throughput built on
  * `poi_photos.created_at` would be a number that looks right and means nothing.
  */
-export const QUEUES: QueueSpec[] = [
+const QUEUES: QueueSpec[] = [
   {
     id: 'render-jobs',
     label: 'Home tour renders (whole film)',

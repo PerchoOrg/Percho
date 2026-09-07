@@ -74,7 +74,7 @@ export interface StepSpec {
  * `review` is a chip with no Run button. Making the gate a visible stage is
  * the point — it is a stage of the work, not an absence of one.
  */
-export const TOUR_STEPS: StepSpec[] = [
+const TOUR_STEPS: StepSpec[] = [
   { name: 'photos', label: 'Fetch POIs', hint: 'Places photos for each POI' },
   {
     name: 'ingest',

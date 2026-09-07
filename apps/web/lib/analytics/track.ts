@@ -5,7 +5,8 @@
  * Uses `navigator.sendBeacon` (mobile-correct — `beforeunload` does not fire on iOS),
  * with a `fetch` + `keepalive` fallback for browsers that lack sendBeacon.
  *
- * Events match the existing schema in `supabase/migrations/0001_init.sql`:
+ * Events match the `events` table in `supabase/migrations/` (the schema was
+ * squashed into `20260101000000_baseline_v1.sql`):
  *   event_type:   page_view | card_view | video_complete
  *   listing_id:   uuid of the listing being viewed
  *   card_id:      FeedCard.id (text)
@@ -35,7 +36,6 @@ const ENDPOINT = '/api/events';
 const FLUSH_INTERVAL_MS = 5000;
 
 let queue: QueuedEvent[] = [];
-let flushTimer: ReturnType<typeof setInterval> | null = null;
 let listenersAttached = false;
 
 function getSessionId(): string {
@@ -88,7 +88,7 @@ function ensureListeners(): void {
   if (listenersAttached || typeof window === 'undefined') return;
   listenersAttached = true;
 
-  flushTimer = setInterval(flush, FLUSH_INTERVAL_MS);
+  setInterval(flush, FLUSH_INTERVAL_MS);
 
   // pagehide fires on iOS where beforeunload does not.
   window.addEventListener('pagehide', flush);
@@ -101,14 +101,4 @@ export function track(event: EventInput): void {
   if (typeof window === 'undefined') return;
   ensureListeners();
   queue.push({ ...event, session_id: getSessionId() });
-}
-
-/** Test-only: drain the queue without sending. Not exported via index. */
-export function _resetForTests(): void {
-  queue = [];
-  if (flushTimer) {
-    clearInterval(flushTimer);
-    flushTimer = null;
-  }
-  listenersAttached = false;
 }

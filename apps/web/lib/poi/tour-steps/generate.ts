@@ -158,7 +158,7 @@ export function renderKey(i: RenderInputs): string {
  * marks every clip stale, and without the exemption that would be a bulk
  * re-bill of the whole paid library.
  */
-export async function plannedRenderKeys(
+async function plannedRenderKeys(
   sb: TourDb,
   shots: Array<{ photo_id: string; engine: string; move?: string | null; duration_s: number }>,
 ): Promise<Map<string, string>> {

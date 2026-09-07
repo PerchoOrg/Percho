@@ -21,7 +21,7 @@ import type { DimKey } from "@percho/shared/types";
 import type { GeoSignal } from "./feed/signals";
 
 /** The four pillar dims, mirrored from the community four-pillar naming. */
-export const PILLAR_DIMS: readonly DimKey[] = [
+const PILLAR_DIMS: readonly DimKey[] = [
 	"family", // safety proxy — the dim evidence we actually have
 	"schools",
 	"walkable", // convenience proxy

@@ -445,25 +445,6 @@ export async function fetchPhotosForPoi(
 
 // ─── review actions ─────────────────────────────────────────────────────────
 
-export async function setPoiStatus(
-  s: PoiEntityScope,
-  entityId: string,
-  poiId: string,
-  status: PoiStatus,
-) {
-  await requireEntity(s, entityId);
-  const supabase = (await createClient()) as unknown as DynamicClient;
-
-  const { error } = await supabase
-    .from(s.poiTable)
-    .update({ status, reviewed_at: new Date().toISOString() })
-    .eq(s.idColumn, entityId)
-    .eq('poi_id', poiId);
-  if (error) throw error;
-
-  revalidateEntityPage(s, entityId);
-}
-
 export async function setPhotoStatus(
   s: PoiEntityScope,
   entityId: string,
@@ -579,7 +560,7 @@ export async function loadNearbyPois(s: PoiEntityScope, entityId: string): Promi
 // ─── util ──────────────────────────────────────────────────────────────────
 
 /** Short stable filename component. Not cryptographic. */
-export function hashName(name: string): string {
+function hashName(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
   return (h >>> 0).toString(16).padStart(8, '0');

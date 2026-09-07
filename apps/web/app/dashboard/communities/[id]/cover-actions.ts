@@ -3,13 +3,13 @@
 /**
  * Server actions for community cover.
  *
- * Three operations:
+ * Two operations:
  *   - setCommunityCoverVideo({ communityId, videoId })  // pick from videos
- *   - recordCommunityCoverImage({ communityId, storagePath })  // after upload
- *   - clearCommunityCover({ communityId })  // back to default
+ *   - setCommunityCoverFromPhoto({ communityId, photoStoragePath })  // copy
  *
  * The XOR constraint on (cover_video_id, cover_storage_path) is enforced
- * in DB (0025_community_covers.sql); we still null the other field on
+ * in DB (the community-cover columns, squashed into the v1 baseline
+ * migration); we still null the other field on
  * each setter to avoid relying on the constraint to flag a bug.
  *
  * Permission rule (mirrors page.tsx canEditMetadata):
@@ -114,7 +114,7 @@ const RecordImageInput = z.object({
   storagePath: z.string().min(1).max(512),
 });
 
-export async function recordCommunityCoverImage(
+async function recordCommunityCoverImage(
   input: z.infer<typeof RecordImageInput>,
 ): Promise<SetCoverResult> {
   const parsed = RecordImageInput.safeParse(input);
@@ -215,46 +215,4 @@ export async function setCommunityCoverFromPhoto(
   // Reuse the existing setter — it cleans up any prior cover image, nulls
   // cover_video_id, and revalidates the right paths.
   return recordCommunityCoverImage({ communityId, storagePath: targetPath });
-}
-
-// ─── clear cover ────────────────────────────────────────────────────
-
-const ClearInput = z.object({ communityId: z.string().uuid() });
-
-export async function clearCommunityCover(
-  input: z.infer<typeof ClearInput>,
-): Promise<SetCoverResult> {
-  const parsed = ClearInput.safeParse(input);
-  if (!parsed.success) return { ok: false, error: 'invalid_input' };
-  const { communityId } = parsed.data;
-
-  const supabase = await createClient();
-  const auth = await authorize(supabase, communityId);
-  if (!auth.ok) return auth;
-
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: prev } = (await (supabase as any)
-    .from('communities')
-    .select('cover_storage_path, slug')
-    .eq('id', communityId)
-    .maybeSingle()) as { data: { cover_storage_path: string | null; slug: string } | null };
-
-  if (prev?.cover_storage_path) {
-    const { error: rmErr } = await supabase.storage
-      .from('community-covers')
-      .remove([prev.cover_storage_path]);
-    if (rmErr) console.warn('[clearCommunityCover] storage remove warning', rmErr);
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error } = await (supabase as any)
-    .from('communities')
-    .update({ cover_video_id: null, cover_storage_path: null })
-    .eq('id', communityId);
-  if (error) {
-    console.error('[clearCommunityCover] update failed', error);
-    return { ok: false, error: 'update_failed' };
-  }
-  revalidate(communityId, prev?.slug ?? null);
-  return { ok: true };
 }

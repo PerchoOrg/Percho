@@ -19,13 +19,6 @@ import { type BoundaryGeoJSON, buildCommunityLogoDataUri } from './logo-cover';
 
 const COVERS_BUCKET = 'community-covers';
 
-export interface CommunityCoverInput {
-  cover_video_id: string | null;
-  cover_storage_path: string | null;
-  /** First-ready-video fallback. Pass `null` if not pre-fetched. */
-  fallbackVideoCfId?: string | null;
-}
-
 export interface ResolvedCover {
   kind: 'video-poster' | 'image' | 'fallback-video' | 'logo';
   url: string;
@@ -42,34 +35,9 @@ export function publicCoverImageUrl(storagePath: string): string {
 }
 
 /**
- * Resolve which cover to render. Returns null if nothing usable.
- * Pure function — safe in RSC and client components.
- */
-export function resolveCommunityCover(input: CommunityCoverInput): ResolvedCover | null {
-  // Priority 1: explicit video pick — needs the video's cf_video_id, which
-  // the caller must have already joined in. If the row reference is set
-  // but cf_video_id wasn't fetched, we fall through (defensive).
-  if (input.cover_video_id && input.fallbackVideoCfId) {
-    // Note: caller should pass the cf_video_id of cover_video_id, not the
-    // generic fallback. See helper below for the disambiguated entrypoint.
-  }
-
-  // Priority 2: uploaded image
-  if (input.cover_storage_path) {
-    return { kind: 'image', url: publicCoverImageUrl(input.cover_storage_path) };
-  }
-
-  // Priority 3: fallback to first ready video
-  if (input.fallbackVideoCfId) {
-    return { kind: 'fallback-video', url: thumbnailUrl(input.fallbackVideoCfId) };
-  }
-
-  return null;
-}
-
-/**
- * Disambiguated entrypoint for callers that have BOTH the chosen
+ * Resolve which cover to render, for callers that have BOTH the chosen
  * cover-video's cf_video_id AND the fallback first-video cf_video_id.
+ * Returns null if nothing usable.
  *
  * Use this when rendering grids/headers where you've already JOINed
  * community_videos to resolve cf_video_id for `cover_video_id`.

@@ -38,7 +38,8 @@ import { runAssemble } from '@/lib/poi/tour-steps/assemble';
 import { runFilter } from '@/lib/poi/tour-steps/filter';
 import { runGenerate, runRegenerateAll } from '@/lib/poi/tour-steps/generate';
 import { runIngest } from '@/lib/poi/tour-steps/ingest';
-import { runPhotos, runPlan } from '@/lib/poi/tour-steps/photos';
+import { runPhotos } from '@/lib/poi/tour-steps/photos';
+import { runPlan } from '@/lib/poi/tour-steps/plan';
 import { runResearch } from '@/lib/poi/tour-steps/research';
 import { runResolve } from '@/lib/poi/tour-steps/resolve';
 import {

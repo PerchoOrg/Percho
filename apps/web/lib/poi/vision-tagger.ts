@@ -26,7 +26,7 @@ const API_BASE = (m: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 const POI_PHOTO_BUCKET = 'listing-photos';
 
-export const PHOTO_CATEGORIES = [
+const PHOTO_CATEGORIES = [
   'storefront',
   'interior',
   'food',
@@ -55,12 +55,7 @@ export type PhotoCategory = (typeof PHOTO_CATEGORIES)[number];
  * `none` for everything that is not residential, which is most of what this
  * tagger ever sees.
  */
-export const RESIDENTIAL_SCOPES = [
-  'none',
-  'single_home',
-  'multiple_homes',
-  'home_interior',
-] as const;
+const RESIDENTIAL_SCOPES = ['none', 'single_home', 'multiple_homes', 'home_interior'] as const;
 export type ResidentialScope = (typeof RESIDENTIAL_SCOPES)[number];
 
 export type PhotoAiTags = {

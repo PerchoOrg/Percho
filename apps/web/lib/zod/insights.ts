@@ -6,7 +6,7 @@
 import { INSIGHT_KINDS, INSIGHT_THEMES } from '@percho/shared/insights';
 import { z } from 'zod';
 
-export const InsightBasis = z.object({
+const InsightBasis = z.object({
   note: z.string().trim().min(1).max(200),
   url: z.string().trim().url(),
 });

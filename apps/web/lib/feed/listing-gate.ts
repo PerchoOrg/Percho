@@ -14,7 +14,7 @@ import type { DimKey } from '@percho/shared/types';
 import type { NeighborhoodScores } from './neighborhood-score';
 
 /** §1.7: one tease listing per ten cards in stages 1–2. */
-export const TEASE_PER = 10;
+const TEASE_PER = 10;
 
 export interface PoolListingDTO {
   id: string;

@@ -42,7 +42,7 @@ export type CommunityListCard = {
   cover: ReturnType<typeof resolveCommunityCoverWithCfIds>;
 };
 
-export const COMMUNITY_CARDS_TAG = 'community-cards';
+const COMMUNITY_CARDS_TAG = 'community-cards';
 
 const _NIL_UUID = '00000000-0000-0000-0000-000000000000';
 

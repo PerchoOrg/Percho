@@ -43,9 +43,9 @@ import { countWords } from './vo-pass';
  * each other, which sounds the same (owner 2026-08-21: "before the elementary,
  * tts overlaps").
  */
-export const NARRATION_WORDS_PER_SECOND = 2.25;
+const NARRATION_WORDS_PER_SECOND = 2.25;
 
-export const NARRATION_MODEL = process.env.GEMINI_VO_MODEL ?? 'gemini-3.5-flash';
+const NARRATION_MODEL = process.env.GEMINI_VO_MODEL ?? 'gemini-3.5-flash';
 
 const GENERATE_URL = (model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -68,10 +68,10 @@ const GENERATE_URL = (model: string) =>
  * 60-75% of a cap set at 85%. Owner 2026-08-21 asked for 80%; at 0.92 fill with
  * a 0.85 floor the band works out to 76-89%.
  */
-export const SECTION_FILL = 0.92;
+const SECTION_FILL = 0.92;
 
 /** A line must use at least this much of its section's budget. */
-export const SECTION_MIN_FILL = 0.85;
+const SECTION_MIN_FILL = 0.85;
 
 /** Past this, one sentence cannot carry the section and the prompt says so. */
 const MULTI_SENTENCE_SECONDS = 11;
@@ -103,7 +103,7 @@ export const MIN_SECTION_SECONDS = 2.0;
  * top of each other (owner 2026-08-23: "there is overlap of the tts for last
  * two sentences").
  */
-export const TOUR_XFADE_S = 0.5;
+const TOUR_XFADE_S = 0.5;
 
 /**
  * When each clip begins, and when the film ends, on the CROSSFADED timeline.
@@ -237,7 +237,7 @@ export interface NarrationContext {
  * angle to open from instead — so a lakeside community can open on water and a
  * school-heavy one on the morning run.
  */
-export function buildNarrationPrompt(ctx: NarrationContext): string {
+function buildNarrationPrompt(ctx: NarrationContext): string {
   const where = [ctx.city, ctx.state].filter(Boolean).join(', ');
   const facts = ctx.facts ?? {};
   const timeline = ctx.sections
@@ -570,18 +570,6 @@ export const AUTO_VOICE_POOL: readonly string[] = [
   'Zephyr',
   'Zubenelgenubi',
 ];
-
-/**
- * Kept as an alias so older callers and stored results keep resolving. The
- * five names it held are all still in the catalogue.
- */
-export const NARRATION_VOICES = {
-  warm: 'Kore',
-  grounded: 'Charon',
-  bright: 'Puck',
-  calm: 'Aoede',
-  assured: 'Fenrir',
-} as const;
 
 export interface NarrationResult {
   segments: NarrationSegment[];

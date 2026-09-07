@@ -32,7 +32,7 @@ export const ACTION_KINDS = [
 export type ActionKind = (typeof ACTION_KINDS)[number];
 
 export const MIN_ACTIONS = 3;
-export const MAX_ACTIONS = 5;
+const MAX_ACTIONS = 5;
 
 export interface HotspotAction {
 	kind: ActionKind;
@@ -49,7 +49,7 @@ export interface HotspotAction {
  * `laundry`, `floorplan` are deliberately absent: a "Hallway" chip in the section
  * nav is noise, and §2.4 #2 builds the nav from these.
  */
-export const HOTSPOT_ROOMS = [
+const HOTSPOT_ROOMS = [
 	"kitchen",
 	"living",
 	"dining",

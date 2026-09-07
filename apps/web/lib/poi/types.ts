@@ -46,107 +46,19 @@ export const INTENT_BUCKETS = [
 ] as const;
 export type IntentBucket = (typeof INTENT_BUCKETS)[number];
 
-/**
- * Human-readable label for a Google Places `primary_type` / `types[]` value.
- *
- * Used by the caption pipeline to render "Public High School" /
- * "Southern Bistro" / "Neighborhood Park" instead of the bucket label.
- * Callers pass a POI's `primary_type` first, then fall back through `types[]`
- * in order (Places returns most-specific first). If nothing matches, callers
- * should fall back to the bucket label — do NOT invent a generic label here.
- *
- * The keys must stay lowercase-with-underscores (Places API convention).
- * Only include types that appear in `BUCKET_PLACES_TYPES` or that Google
- * commonly returns as a `types[]` companion to those (e.g. `food`, `store`).
- * We deliberately skip generic `point_of_interest` / `establishment` — those
- * would defeat the fallback and produce meaningless labels.
- */
-export const POI_TYPE_LABEL: Record<string, string> = {
-  // schools bucket
-  primary_school: 'Elementary School',
-  secondary_school: 'High School',
-  school: 'School',
-  university: 'University',
-  // dining bucket
-  restaurant: 'Restaurant',
-  cafe: 'Cafe',
-  bakery: 'Bakery',
-  meal_takeaway: 'Takeout',
-  meal_delivery: 'Delivery',
-  // nightlife bucket
-  bar: 'Bar',
-  night_club: 'Nightclub',
-  movie_theater: 'Movie Theater',
-  // shopping bucket
-  shopping_mall: 'Shopping Mall',
-  department_store: 'Department Store',
-  clothing_store: 'Clothing Store',
-  // outdoor bucket
-  park: 'Park',
-  campground: 'Campground',
-  tourist_attraction: 'Attraction',
-  // fitness bucket
-  gym: 'Gym',
-  spa: 'Spa',
-  // kids bucket
-  amusement_park: 'Amusement Park',
-  aquarium: 'Aquarium',
-  zoo: 'Zoo',
-  library: 'Library',
-  // daily_errands bucket
-  supermarket: 'Supermarket',
-  grocery_store: 'Grocery Store',
-  pharmacy: 'Pharmacy',
-  convenience_store: 'Convenience Store',
-  // faith bucket
-  church: 'Church',
-  mosque: 'Mosque',
-  synagogue: 'Synagogue',
-  hindu_temple: 'Hindu Temple',
-  // healthcare bucket
-  hospital: 'Hospital',
-  doctor: 'Doctor',
-  dentist: 'Dentist',
-  // pets bucket
-  veterinary_care: 'Veterinary Clinic',
-  pet_store: 'Pet Store',
-  // transit bucket
-  subway_station: 'Subway Station',
-  train_station: 'Train Station',
-  transit_station: 'Transit Station',
-  airport: 'Airport',
-  bus_station: 'Bus Station',
-};
-
-/**
- * Given a POI's `primary_type` and `types[]` (both from Google Places),
- * return the most-specific human label, or `null` if nothing matches. The
- * caller is responsible for the bucket-label fallback.
- */
-export function poiTypeLabel(
-  primaryType: string | null | undefined,
-  types: string[] | null | undefined,
-): string | null {
-  if (primaryType && POI_TYPE_LABEL[primaryType]) return POI_TYPE_LABEL[primaryType];
-  for (const t of types ?? []) {
-    if (POI_TYPE_LABEL[t]) return POI_TYPE_LABEL[t];
-  }
-  return null;
-}
-
 export const POI_STATUSES = ['candidate', 'approved', 'rejected', 'archived'] as const;
 export type PoiStatus = (typeof POI_STATUSES)[number];
 
 export const PHOTO_STATUSES = ['pending', 'approved', 'rejected'] as const;
 export type PhotoStatus = (typeof PHOTO_STATUSES)[number];
 
-export const PHOTO_SOURCES = ['google_places', 'google_streetview'] as const;
+const PHOTO_SOURCES = ['google_places', 'google_streetview'] as const;
 export type PhotoSource = (typeof PHOTO_SOURCES)[number];
 
-export const TIME_BUCKETS = ['morning_peak', 'midday', 'evening_peak', 'weekend_noon'] as const;
+const TIME_BUCKETS = ['morning_peak', 'midday', 'evening_peak', 'weekend_noon'] as const;
 export type TimeBucket = (typeof TIME_BUCKETS)[number];
 
-export const REVIEW_ENTITY_TYPES = [
+const REVIEW_ENTITY_TYPES = [
   'listing_poi',
   'listing_poi_photo',
   'tag',
@@ -165,10 +77,10 @@ export const REVIEW_ACTIONS = [
 ] as const;
 export type ReviewAction = (typeof REVIEW_ACTIONS)[number];
 
-export const VIDEO_SCOPES = ['poi', 'intent_bucket', 'listing'] as const;
+const VIDEO_SCOPES = ['poi', 'intent_bucket', 'listing'] as const;
 export type VideoScope = (typeof VIDEO_SCOPES)[number];
 
-export const VIDEO_STATUSES = [
+const VIDEO_STATUSES = [
   'pending',
   'processing',
   'ready',
@@ -310,9 +222,9 @@ export type PhotoAiTags = {
   reason?: string;
 };
 
-// ─── review reason enums (client-visible, mirrored in review-reasons.ts) ────
+// ─── review reason enums (client-visible) ──────────────────────────────────
 
-export const POI_REJECT_REASONS = [
+const POI_REJECT_REASONS = [
   'too-far',
   'wrong-vibe',
   'commercial-noise',
@@ -325,7 +237,7 @@ export const POI_REJECT_REASONS = [
 ] as const;
 export type PoiRejectReason = (typeof POI_REJECT_REASONS)[number];
 
-export const PHOTO_REJECT_REASONS = [
+const PHOTO_REJECT_REASONS = [
   'storefront-only',
   'empty-parking-lot',
   'night-blurry',

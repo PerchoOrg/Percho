@@ -6,7 +6,7 @@
  * the broker completes Bridge / FMLS approval).
  *
  * MVP does NOT mirror media — we return the Bridge CDN URLs directly
- * for the client to hotlink. See docs/mls-integration/README.md for
+ * for the client to hotlink. See docs/mls-integration/go-live.md for
  * the mirroring decision.
  */
 

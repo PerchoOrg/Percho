@@ -67,25 +67,6 @@ export interface NeighborhoodScores {
  */
 export type FunnelLayer = "area" | "city" | "zip" | "community";
 
-export const GEO_LAYERS: readonly FunnelLayer[] = [
-	"area",
-	"city",
-	"zip",
-	"community",
-] as const;
-
-export function isGeoLayer(layer: FunnelLayer): boolean {
-	return GEO_LAYERS.includes(layer);
-}
-
-/** §1.2 layer tags, verbatim. */
-export const LAYER_TAG: Record<FunnelLayer, string> = {
-	area: "🧭 AREA",
-	city: "🌆 CITY",
-	zip: "📮 ZIP",
-	community: "🏘 COMMUNITY",
-};
-
 // ─── Area (§1.3) — one card kind for all three granularities ────────
 
 export interface AreaCardV3 {

@@ -153,22 +153,3 @@ export function buildGestureEvent(input: {
 			: {}),
 	};
 }
-
-export function buildPersonaChangeEvent(input: {
-	seq: number;
-	at: number;
-	oldPersona: string;
-	newPersona: string;
-	funnelStage: FunnelStage;
-	sessionN: number;
-}): PersonaChangeEvent {
-	return {
-		type: "persona_change",
-		seq: input.seq,
-		at: input.at,
-		funnelStage: input.funnelStage,
-		sessionN: input.sessionN,
-		oldPersona: input.oldPersona,
-		newPersona: input.newPersona,
-	};
-}
