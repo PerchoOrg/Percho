@@ -44,6 +44,11 @@
 /** A metric key as stored in `area_metrics.metric`. */
 export type MetricKey =
   | 'property_tax_rate_pct'
+  /** The adopted millage rate on market value, before homestead exemptions
+   *  and credits. Sourced from the state, and NOT what the true-cost lens
+   *  prices with — see `scripts/admin/import-ga-millage.ts` for why the two
+   *  are different numbers. Shown as provenance, never summed into a cost. */
+  | 'property_tax_millage_statutory_pct'
   | 'school_proficiency_pct'
   | 'electric_monthly_usd'
   | 'water_monthly_usd'

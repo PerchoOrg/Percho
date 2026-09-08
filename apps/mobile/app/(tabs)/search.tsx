@@ -607,6 +607,13 @@ function AreaDetail({
 	const school = area.metrics.find(
 		(m) => m.metric === "school_proficiency_pct",
 	);
+	// The state's own adopted rate, when we have it. Shown beside the estimate
+	// rather than instead of it: it is the sourced fact, but it is the rate
+	// BEFORE homestead exemptions and credits, so it is not what the cost lines
+	// above are priced with. Saying both is the honest version of saying either.
+	const statutory = area.metrics.find(
+		(m) => m.metric === "property_tax_millage_statutory_pct",
+	);
 	const estimated = area.metrics.some((m) => m.estimated);
 	const sources = [...new Set(area.metrics.map((m) => m.source))];
 	const asOf = area.metrics
@@ -655,17 +662,30 @@ function AreaDetail({
 				</Text>
 			)}
 
-			{school && (
+			{(school || statutory) && (
 				<View style={styles.detailChips}>
-					<View style={styles.detailChip}>
-						<Text style={styles.detailChipText}>
-							Schools{" "}
-							<Text style={styles.detailChipValue}>
-								{Math.round(school.value)}%
-							</Text>{" "}
-							proficient
-						</Text>
-					</View>
+					{school && (
+						<View style={styles.detailChip}>
+							<Text style={styles.detailChipText}>
+								Schools{" "}
+								<Text style={styles.detailChipValue}>
+									{Math.round(school.value)}%
+								</Text>{" "}
+								proficient
+							</Text>
+						</View>
+					)}
+					{statutory && (
+						<View style={styles.detailChip}>
+							<Text style={styles.detailChipText}>
+								Adopted tax rate{" "}
+								<Text style={styles.detailChipValue}>
+									{statutory.value.toFixed(2)}%
+								</Text>{" "}
+								before exemptions
+							</Text>
+						</View>
+					)}
 				</View>
 			)}
 

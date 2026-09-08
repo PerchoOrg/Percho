@@ -21,6 +21,161 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 07:15 UTC — phase200: real numbers behind the lenses
+
+**Objective**: the owner's second instruction for the offline stretch —
+「界面做完后接着做所有真实的数据源调查并且爬取」. phase196 shipped the lens map on
+145 rows of openly-flagged estimates; this replaces them, one metric at a
+time, with sourced figures.
+
+**What the sources actually are** (all verified by fetching them):
+
+| metric | source | fetchable? |
+|---|---|---|
+| property tax | GA DOR annual millage report, PDF | yes, **2023 only** |
+| school proficiency | GOSA Milestones EOG + EOC, CSV | yes |
+| electric provider | HIFLD retail service territories, ArcGIS | yes, via a mirror |
+| trash | — | **no central source** |
+
+**Property tax — why 2023 and not 2025.** DOR's 2024 and 2025 editions are
+typeset with Type3 fonts carrying no `/ToUnicode` CMap and no embedded font
+program: the character codes map to glyph names like `/0 /1 /2` and there is
+nothing to turn them back into letters. Extraction returns gibberish from 2025
+and literally zero characters from 2024. That is a property of the files, not
+of the reader, and no PDF library gets past it — they would need OCR. 2023 is
+the newest text-bearing edition; every row carries `as_of 2023-12-31` so the
+age is visible rather than implied.
+
+**No PDF dependency.** The file is FlateDecode'd standard Type1 text, so
+Node's own `zlib` plus a small operator walk reads it. That is ~120 lines
+against adding a PDF library for one script.
+
+**Three quirks, each of which cost a county, and all found the same way — the
+county simply was not in the output:**
+1. *Two positioning idioms.* Most pages place every cell absolutely
+   (`1 0 0 1 x y cm` + identity `Tm`); some emit a whole row as one text
+   object and step across it with relative `Td`. A regex for the absolute form
+   dropped 146 strings, including every Barrow County row.
+2. *A zero bond is written three ways* — `0.000`, a literal single space, or
+   the column not drawn at all. Requiring two trailing numerics loses Bartow's
+   county levy; treating a blank as a terminator loses most of the report.
+3. *One row per taxing DISTRICT, not per county.* We publish the
+   unincorporated county total (county + school + state), which is what a
+   buyer outside city limits pays. Averaging in city districts a home is not
+   inside would produce a rate nobody pays.
+
+A fourth turned up while writing the tests: sorting cells by `(page, -y, x)`
+and cutting on a y gap is NOT equivalent to clustering. The moment two cells
+of one row differ in y by a fraction, the y comparison wins and they emerge
+transposed — a district name and its rate swapping places. Rows are now
+clustered on y, then sorted by x within the row.
+
+**And a fifth, the worst of them, found only because a research pass on
+homestead exemptions mentioned in passing that unincorporated DeKalb is
+43.590 mills while we were reporting 48.023.** Selecting the county-wide
+districts with `district.includes('SCHOOL' | 'STATE' | 'UNINCORPORATED')`
+matches `IND SCHOOL ATLANTA` and `AVONDALE ESTATES` — both real DeKalb
+districts. First-match-wins therefore summed DeKalb's county levy, *Atlanta's*
+independent school levy in place of DeKalb's own, and the *city of Avondale
+Estates* standing in for the state: 17.973 + 20.5 + 9.55 = 48.023, to the
+thousandth. Nine other counties were wrong the same way. Districts are now
+matched exactly, in `countywideMills`, with the DeKalb rows as a regression
+test.
+
+Nothing about the bad output looked malformed. It was a plausible number, in
+the right units, for every county — merely too high. That is the failure mode
+worth remembering here: a rate error does not crash, it just quietly charges
+the buyer more.
+
+Result: **29/29 metro counties** — Dawson 0.657%, Hall 0.763%, Coweta 0.804%,
+Forsyth 0.898%, Fulton 1.048%, Cobb 1.086%, Gwinnett 1.104%, DeKalb 1.638%.
+Fulton cross-checks against an independently computed 1.038% from the 2025
+rates, which is the closest thing to external validation available.
+
+**School proficiency.** GOSA's CSVs are directly fetchable but their filenames
+embed a generation timestamp and cannot be constructed, so the index page is
+scraped for the newest EOG and EOC — which is also what makes this re-runnable
+next summer with no edit. District-aggregate rows only (GOSA writes the
+literal `ALL` into `INSTN_NUMBER`), All Students only, **weighted by students
+tested** rather than a mean of per-subject percentages, and
+**Proficient + Distinguished** because that pair is what the state itself
+reports as meeting expectations. County districts are named explicitly rather
+than matched by prefix, so Atlanta Public Schools cannot answer for Fulton.
+Result: 29/29, Forsyth 66.5% down to Meriwether 22.3% — a ranking any local
+would recognise.
+
+**Where the rules live.** The PDF reading moved to
+`apps/web/lib/areas/millage-pdf.ts` with 17 tests, same reasoning as
+phase194's `naming.ts`: rules discovered by watching data disappear are rules
+the next script re-derives differently. Every fixture is a verbatim fragment
+of the real report, so the test file is the only written record of what these
+PDFs look like.
+
+**The statutory-vs-effective question, and why the answer is neither.**
+
+The gap between our statutory rate and the widely published "average effective
+rate" looked like homestead exemptions. It mostly is not. Georgia's standard
+exemptions in these counties are $2,000–$5,000 off the ASSESSED value; on a
+$500k home assessed at $200k, a $5,000 exemption is 2.5% of the bill.
+
+Four things actually explain it, and only one of them matters to a buyer:
+1. **Assessment freezes** (Fulton, Cobb, Gwinnett, DeKalb) cap the taxable
+   base for as long as you own the house — **and the base resets at closing**.
+   A 2015 owner is taxed on a base far below today's value and drags the
+   median down. A buyer today gets none of it.
+2. **Senior exemptions** are large (Cobb waives all school tax at 62, Forsyth
+   at 65) and school is over half the bill, so they pull the median down
+   further. Again, not a buyer.
+3. **DeKalb's EHOST credit** is the real outlier: 100% credit against the
+   General and Hospital levies for a homesteaded property — 11.638 of 20.810
+   county mills — and it *does* apply to a new buyer immediately.
+4. ACS's median is self-reported value and self-reported taxes, and households
+   likely fold non-ad-valorem sanitation/streetlight fees into "taxes".
+
+So the statutory rate describes a NON-homestead owner exactly (verified
+against a real DeKalb tax bill: a corporately-held parcel pays precisely the
+statutory rate), and the published effective rate describes a long-tenured
+senior. **A new buyer sits between them and is well described by neither.**
+
+Consequence: this phase writes the statutory figure to its own metric,
+`property_tax_millage_statutory_pct`, sourced and exact, shown in the county
+detail as "adopted rate, before exemptions". It does **not** overwrite
+`property_tax_rate_pct`, which the true-cost lens prices with and which stays
+a flagged estimate.
+
+**Next step is a design change, not more scraping.** Fixed-dollar exemptions
+make the effective rate rise with price, so "one percentage per county" is the
+wrong shape regardless of how good the data gets. The right form is to compute
+the bill from the listing's own price:
+`(0.40·price − county_exemption)·county_mills + 0.40·price·bond_mills +
+(0.40·price − school_exemption)·school_mills − credits`. Percho has the price.
+That also fixes a second distortion nobody has raised yet: a county-level rate
+hides real internal spread — DeKalb runs 1.607% in Dunwoody to 2.287% in Pine
+Lake, a wider range than the statutory-vs-effective gap being argued about.
+
+Blocking that: per-county exemption amounts (verified for the core eight;
+the outer fifteen need collection, their sites 403/307), and DeKalb's EHOST
+credit. Census ACS B25103 ÷ B25077 would give effective rates but now requires
+an API key — an account signup, which is the owner's call, and in any case it
+answers the wrong question for a buyer.
+
+Also learned, and load-bearing for anything built here later: HB 581's
+statewide floating exemption is opted OUT of by nearly every metro school
+district, so it changes little for a 2025+ buyer; SB 33 (signed 2026-05-11)
+makes the cap mandatory from 2027 and removes the opt-out, so any opt-out
+conclusion recorded now has an expiry date. HB 581 also deleted the clause
+making a recent arm's-length sale price the ceiling for the next year's
+assessment — using the purchase price as the base is still a good
+approximation, but it is no longer guaranteed by statute.
+
+**Trash has no central source** — Georgia EPD regulates disposal facilities,
+not collection, and its one spreadsheet is a landfill roster with no bearing
+on whether a household has kerbside pickup or what it costs. 159 counties,
+159 pages, no common format. Left as an estimate and flagged as such.
+
+**Verified**: `pnpm typecheck` clean, **636 mobile + 927 web tests pass**
+(+17 for the PDF reader).
+
 ## 2026-09-08 06:30 UTC — phase199: the You tab lets a buyer STATE what matters
 
 **Objective**: same brief as Saved — no specific instruction, bring it up to a

@@ -26,6 +26,7 @@ export interface AreasPayload {
 
 const KNOWN_METRICS = new Set<string>([
 	"property_tax_rate_pct",
+	"property_tax_millage_statutory_pct",
 	"school_proficiency_pct",
 	"electric_monthly_usd",
 	"water_monthly_usd",
