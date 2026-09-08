@@ -160,14 +160,24 @@ export default function SavedTab() {
 		[pool.geoUnits, areaData.shapes, metricsByCounty],
 	);
 
-	/** "Cherokee County · $691/mo" — or nothing, outside the covered metro. */
+	/**
+	 * "Cherokee County · $691/mo on a $500k home*" — or nothing, outside the
+	 * covered metro.
+	 *
+	 * The asterisk is not decoration. This row is the ONLY place in the app a
+	 * true-cost figure appears without a footnote explaining it, and water and
+	 * trash are still guesses in every county, so an unqualified dollar figure
+	 * here reads as more settled than the same number does on the map two taps
+	 * away. Tapping the row goes to that map, which says which part is which.
+	 */
 	const costLineFor = (unitId: string): string | undefined => {
 		const area = countyOf(unitId);
 		if (!area) return undefined;
 		const lens = lensById("true_cost");
 		const value = lens ? valuesFor(lens, [area])[0] : undefined;
 		if (!value || !lens) return `${area.name} County`;
-		return `${area.name} County · ${lens.format(value.value)}/mo on a $500k home`;
+		const mark = value.estimated ? "*" : "";
+		return `${area.name} County · ${lens.format(value.value)}/mo on a $500k home${mark}`;
 	};
 
 	/** The saved areas we can actually put in a comparison table. */
@@ -343,6 +353,21 @@ export default function SavedTab() {
 						/>
 					),
 				)}
+
+				{/* A bare asterisk is a dangling mark. It costs one line to say
+				    what it means, and without it the row implies more certainty
+				    than the same figure carries on the map. */}
+				{areaItems.some((i) => {
+					const a = countyOf(areaUnitId(i.id));
+					const lens = lensById("true_cost");
+					return a && lens
+						? valuesFor(lens, [a])[0]?.estimated === true
+						: false;
+				}) ? (
+					<Text style={styles.savedNote}>
+						* water and trash are still our estimate. Tap an area for the rest.
+					</Text>
+				) : null}
 			</ScrollView>
 		</View>
 	);
@@ -502,6 +527,13 @@ const styles = StyleSheet.create({
 	rowText: { flex: 1, gap: 2 },
 	rowTitle: { ...textStyles.headline, color: colors.ink },
 	rowSub: { ...textStyles.footnote, color: colors.ink2 },
+	savedNote: {
+		...textStyles.caption,
+		color: colors.ink3,
+		paddingHorizontal: 4,
+		paddingTop: 12,
+		lineHeight: 15,
+	},
 	rowAction: { ...textStyles.footnote, color: colors.accent },
 	compare: {
 		backgroundColor: colors.surface2,

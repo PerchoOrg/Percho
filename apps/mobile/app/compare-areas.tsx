@@ -1,3 +1,4 @@
+import { estimateNoteForRows } from "@percho/shared/lenses";
 /**
  * `/compare-areas?keys=cobb,forsyth[,dekalb]` — 2–3 areas side by side.
  *
@@ -47,7 +48,9 @@ export default function CompareAreasScreen() {
 	});
 
 	const table = buildAreaCompareTable(areas, weights);
-	const anyEstimated = table.rows.some((r) => r.cells.some((c) => c.estimated));
+	// Names which ROWS are guesses rather than implying the table is one. The
+	// property tax row comes from the GA DOR; the old sentence covered it too.
+	const estimateNote = estimateNoteForRows(table.rows);
 
 	return (
 		<View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
@@ -110,9 +113,7 @@ export default function CompareAreasScreen() {
 						Green marks the better figure in a row. There is no overall winner
 						on purpose — how much schools weigh against cost is your call, not
 						ours.
-						{anyEstimated
-							? " * estimated: we have not sourced that county’s figure yet."
-							: ""}
+						{estimateNote ? ` ${estimateNote}` : ""}
 					</Text>
 				</ScrollView>
 			)}

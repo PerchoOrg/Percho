@@ -409,6 +409,46 @@ export function estimateNoteFor(lens: Lens, areas: readonly Area[]): string | un
   return `${head}${tail}${closing}`;
 }
 
+/**
+ * The same footnote, for a table of rows rather than a lens ranking.
+ *
+ * The compare screen carried its own copy of the sentence phase216 replaced —
+ * "we have not sourced that county's figure yet" — over a table whose property
+ * tax row comes from the GA DOR. Third surface, same claim, and it survived
+ * two separate fixes because each one only looked at the screen in front of it.
+ *
+ * Takes labels rather than metrics because a compare row is a computed line
+ * ("Property tax / year"), not a stored figure, and its label is what the
+ * reader is looking at.
+ */
+export function estimateNoteForRows(
+  rows: readonly { label: string; cells: readonly { estimated: boolean }[] }[],
+): string | undefined {
+  const always: string[] = [];
+  const sometimes: string[] = [];
+  let anySourced = false;
+  for (const row of rows) {
+    const marked = row.cells.filter((c) => c.estimated).length;
+    if (marked === 0) {
+      anySourced = true;
+      continue;
+    }
+    const name = row.label.split('/')[0]?.trim().toLowerCase() ?? row.label;
+    if (marked === row.cells.length) always.push(name);
+    else sometimes.push(`${name} in ${marked} of them`);
+  }
+  if (always.length === 0 && sometimes.length === 0) return undefined;
+
+  const isAre = always.length === 1 ? 'is' : 'are';
+  const head =
+    always.length > 0
+      ? `* ${listOf(always.sort())} ${isAre} still our estimate`
+      : '* our estimate covers';
+  const tail = sometimes.length > 0 ? `, and ${listOf(sometimes.sort())}` : '';
+  const closing = anySourced ? '. Every other row comes from a public record.' : '.';
+  return `${head}${tail}${closing}`;
+}
+
 /** The lens the tab opens on. */
 export const DEFAULT_LENS: LensId = 'true_cost';
 
