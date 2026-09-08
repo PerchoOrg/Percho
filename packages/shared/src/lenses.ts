@@ -61,7 +61,13 @@ export type MetricKey =
   | 'school_proficiency_pct'
   | 'electric_monthly_usd'
   | 'water_monthly_usd'
-  | 'trash_monthly_usd';
+  | 'trash_monthly_usd'
+  /** Share of the county's people on a public water system rather than a
+   *  private well, 0–100. Not a cost: it says whether a county-level water
+   *  bill is the right SHAPE for the place. In Pike County four households in
+   *  five have a well and no water bill at all, and a flat monthly figure
+   *  there describes almost nobody. */
+  | 'public_water_pct';
 
 /** Anything the lens map can be drawn on. Mirrors the `area_kind` enum. */
 export type AreaKind = 'county' | 'city' | 'school_district' | 'utility_territory';
@@ -708,6 +714,29 @@ export interface CostLine {
   estimated: boolean;
 }
 
+/**
+ * "about 1 in 5 homes here has a well and no water bill", or nothing when
+ * almost everyone is on the mains.
+ *
+ * A county water figure is a real bill for whoever is connected and no bill at
+ * all for whoever is not, and the split is not small at the edge of the metro:
+ * four households in five in Pike County are on a well. Stated as a RATIO of
+ * households rather than as a claim about the figure — "describes a minority"
+ * is false at 88%, where it describes a large majority and the remainder is
+ * merely worth mentioning.
+ */
+export function wellShareNote(publicWaterPct: number | undefined): string | undefined {
+  if (publicWaterPct === undefined || !Number.isFinite(publicWaterPct)) return undefined;
+  const wells = 100 - publicWaterPct;
+  // Under a twentieth is noise next to a figure rounded to the dollar.
+  if (wells < 5) return undefined;
+  const who =
+    wells >= 50
+      ? `about ${Math.round(wells)}% of homes here have`
+      : `about 1 in ${Math.round(100 / wells)} homes here has`;
+  return `${who} a well and no water bill`;
+}
+
 /** Above this share, a supplier is "the county's" and the rest is rounding. */
 const EFFECTIVELY_ALL = 0.95;
 
@@ -787,8 +816,10 @@ export function costBreakdown(area: Area): CostLine[] | undefined {
     monthlyUsd: number,
     estimated: boolean,
     supplierKey?: MetricKey,
+    extraNote?: string,
   ): CostLine => {
-    const note = supplierKey ? supplierNote(byKey.get(supplierKey)) : undefined;
+    const supplied = supplierKey ? supplierNote(byKey.get(supplierKey)) : undefined;
+    const note = [supplied, extraNote].filter(Boolean).join(' · ') || undefined;
     return { label, monthlyUsd, estimated, ...(note ? { note } : {}) };
   };
   const isEstimate = (key: MetricKey) => byKey.get(key)?.estimated === true;
@@ -801,7 +832,15 @@ export function costBreakdown(area: Area): CostLine[] | undefined {
     // state's own adopted millage under a "still our estimate" footnote.
     line('Property tax', tax, taxWasEstimated),
     line('Electric', electric, isEstimate('electric_monthly_usd'), 'electric_monthly_usd'),
-    line('Water & sewer', water, isEstimate('water_monthly_usd'), 'water_monthly_usd'),
+    // Whether a water bill applies at all is part of what it costs to live
+    // here. Four households in five in Pike County are on a well.
+    line(
+      'Water & sewer',
+      water,
+      isEstimate('water_monthly_usd'),
+      'water_monthly_usd',
+      wellShareNote(get('public_water_pct')),
+    ),
     line('Trash', trash, isEstimate('trash_monthly_usd'), 'trash_monthly_usd'),
     // A flat share of price, identical in every county — an assumption by
     // construction, never a measurement.

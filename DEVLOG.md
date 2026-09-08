@@ -21,6 +21,63 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 17:45 UTC — phase220: the well/septic objection was right, and every example was wrong
+
+**Objective**: one of the three items flagged as needing the owner's decision
+was water, and one of the two inputs to that decision was **a factual claim I
+never measured**. Handing him a decision with a measured input beats handing
+him one with my guess.
+
+The claim, from the notes: *"in the outer counties a large share of homes are
+on WELL AND SEPTIC and pay nothing. A county-level water figure for **Pickens
+or Dawson** is the wrong SHAPE, not just imprecise."*
+
+**Measured, it is right in substance and wrong in every example:**
+
+```
+Pickens   84% on public water   ← the county I named as the problem
+Dawson    71%                   ← the other one
+Pike      20%   Lamar 43%   Morgan 43%   Meriwether 51%   ← never mentioned
+Fulton / DeKalb / Gwinnett  100%          Clayton 99%
+```
+
+A county water bill is exactly the right shape where most buyers look, and the
+wrong shape in about five counties at the edge. That is a far narrower problem
+than "water is the wrong shape", and a note on the line can carry it — it does
+not need the owner's ruling at all.
+
+### The source, and the one that failed
+
+**USGS** "Estimated Use of Water in the United States, County-Level Data for
+2015". `PS-TOPop` and `DO-SSPop` are the two halves of the question, published
+per county, already reconciled against `TP-TotPop`.
+
+**SDWIS was tried first and abandoned**, which is worth recording because it
+looked ideal. EPA publishes every system's `population_served_count` — but
+`county_served` is NULL for exactly the largest systems (Cobb County, DeKalb
+County, Clayton County Water Authority, North Fulton), **828** Georgia
+community systems have no county at all, and Atlanta is filed against
+"DeKalb,Fulton" with no split. Summing what remained put **Dawson above its own
+population**, which is what stopped me trusting it.
+
+### A wording bug I wrote and caught in the same tick
+
+My own summary line read *"21 counties are below 90% on public water, **where a
+flat county water bill describes a minority**"*. At Cobb's 88% it describes
+seven eighths. Same overclaim I have spent the day removing from other people's
+sentences, in a sentence I had just typed.
+
+`wellShareNote` states a **ratio of households** instead, which is true at
+every level: *"about 80% of homes here have a well and no water bill"* for
+Pike, *"about 1 in 8"* for Cobb, and nothing above 95%.
+
+**Verified**: typecheck clean, lint clean, 649 mobile + **1091 web tests** (+5,
+one of which asserts the note never claims "minority" for a county where the
+bill covers most people).
+
+**Next steps**: apply from the reference worktree. Water's own figure is still
+an estimate — this says who the estimate is *for*, not what it costs.
+
 ## 2026-09-08 17:00 UTC — phase219.2: "averaged across N" is a share test, not a count
 
 **Objective**: rebuild both demos against the new electricity data. Reading

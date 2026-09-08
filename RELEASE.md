@@ -34,6 +34,9 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- The water line now tells you when a county is largely on private wells — in
+  Pike County about 80% of homes have no water bill at all, and in Cobb about
+  1 in 8. Whether the bill applies to you is part of what living there costs.
 - The line under a county's electricity cost explains itself again, and now
   says the price is an average across the utilities serving that county rather
   than naming one company that does not charge it.
