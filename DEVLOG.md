@@ -21,6 +21,50 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 12:05 UTC — phase209: the typed client comes back, and the schema type is wrong about one column
+
+**Objective**: the loop notes said unblocked work was essentially done, so this
+tick started by checking that claim rather than accepting it. It was not quite
+true — `apps/web/lib/areas/areas.ts` still carried a TODO I wrote in phase196
+("restore the `<Database>` generic after `pnpm db:push` + `pnpm db:types`"),
+and the blocker cleared when the owner authorised the push mid-session.
+
+**Actions**:
+- Regenerated `database.types.ts`. `pnpm db:types` is wired to `--local`,
+  which needs a Docker instance; `supabase gen types typescript --linked`
+  reads the linked project directly and works. Diffed before trusting it: the
+  only table added is `area_metrics`, the rest of the delta is PostGIS
+  function signatures. No other agent's schema drift came along.
+- Restored `createPlainClient<Database>` and dropped the untyped-client
+  explanation, replacing it with why the RUNTIME validation stays anyway.
+- `MetricRow` is now derived from the generated `Row`, narrowed to exactly the
+  columns `fetchAreas` selects, so adding a column to the query without
+  widening the type fails to compile.
+
+**The generated schema type is wrong about `value`, and the fix is a widening,
+not a cast.** It says `value: number`, because the column is `numeric`. What
+actually arrives is `"0.72"` — PostgREST serialises `numeric` as a STRING
+rather than lose precision to JSON's float64. Believing the generated type
+here would make `groupMetrics`'s string handling read as dead code, and
+deleting that turns every rate into NaN and every county on the map grey. So
+`MetricRow` is `Omit<Pick<Row, …>, 'value'> & { value: number | string }`,
+with the reason written down and a test on both forms.
+
+**Restoring the type immediately caught something.** The test fixture typed
+`area_kind` as `string`; the column is an enum. Nine call sites failed to
+compile until the fixture was typed against the real row — which is the whole
+point of having the generic back, and it happened within a minute of it
+returning.
+
+**Verified**: `pnpm typecheck` clean, lint clean, **649 mobile + 1030 web
+tests pass** (+1).
+
+**Learnings**: a generated type is a claim about the SCHEMA, not about the
+wire. `numeric` is the case where those differ, and the generator has no way to
+know — it reads the catalogue, not PostgREST's serialiser. Anywhere a
+`numeric` column is read, the generated type is optimistic by exactly one
+JSON conversion.
+
 ## 2026-09-08 11:50 UTC — phase208: make demo drift a failing build, not a note
 
 **Objective**: last tick I wrote into the loop notes "re-run BOTH build scripts

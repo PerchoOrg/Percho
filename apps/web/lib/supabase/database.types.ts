@@ -230,6 +230,60 @@ export type Database = {
           },
         ]
       }
+      area_metrics: {
+        Row: {
+          area_key: string
+          area_kind: Database["public"]["Enums"]["area_kind"]
+          area_name: string
+          as_of: string
+          created_at: string
+          detail: Json | null
+          estimated: boolean
+          id: string
+          metric: string
+          source: string
+          source_url: string | null
+          state: string
+          unit: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          area_key: string
+          area_kind: Database["public"]["Enums"]["area_kind"]
+          area_name: string
+          as_of: string
+          created_at?: string
+          detail?: Json | null
+          estimated?: boolean
+          id?: string
+          metric: string
+          source: string
+          source_url?: string | null
+          state: string
+          unit: string
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          area_key?: string
+          area_kind?: Database["public"]["Enums"]["area_kind"]
+          area_name?: string
+          as_of?: string
+          created_at?: string
+          detail?: Json | null
+          estimated?: boolean
+          id?: string
+          metric?: string
+          source?: string
+          source_url?: string | null
+          state?: string
+          unit?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: []
+      }
       buyers: {
         Row: {
           avatar_url: string | null
@@ -259,13 +313,13 @@ export type Database = {
       }
       communities: {
         Row: {
-          anchor_geom: unknown | null
+          anchor_geom: unknown
           attributes: string[] | null
           avg_age: string | null
           avg_income: string | null
           boundary: Json | null
+          boundary_geom: unknown
           boundary_source: string | null
-          boundary_geom: unknown | null
           builder: string | null
           city: string | null
           county: string | null
@@ -306,13 +360,13 @@ export type Database = {
           zip: string | null
         }
         Insert: {
-          anchor_geom?: unknown | null
+          anchor_geom?: unknown
           attributes?: string[] | null
           avg_age?: string | null
           avg_income?: string | null
           boundary?: Json | null
+          boundary_geom?: unknown
           boundary_source?: string | null
-          boundary_geom?: unknown | null
           builder?: string | null
           city?: string | null
           county?: string | null
@@ -353,13 +407,13 @@ export type Database = {
           zip?: string | null
         }
         Update: {
-          anchor_geom?: unknown | null
+          anchor_geom?: unknown
           attributes?: string[] | null
           avg_age?: string | null
           avg_income?: string | null
           boundary?: Json | null
+          boundary_geom?: unknown
           boundary_source?: string | null
-          boundary_geom?: unknown | null
           builder?: string | null
           city?: string | null
           county?: string | null
@@ -1852,8 +1906,8 @@ export type Database = {
           baths: number | null
           beds: number | null
           city: string
-          community_id: string | null
           community_distance_m: number | null
+          community_id: string | null
           community_match: string | null
           cover_url: string | null
           created_at: string
@@ -1891,8 +1945,8 @@ export type Database = {
           baths?: number | null
           beds?: number | null
           city: string
-          community_id?: string | null
           community_distance_m?: number | null
+          community_id?: string | null
           community_match?: string | null
           cover_url?: string | null
           created_at?: string
@@ -1930,8 +1984,8 @@ export type Database = {
           baths?: number | null
           beds?: number | null
           city?: string
-          community_id?: string | null
           community_distance_m?: number | null
+          community_id?: string | null
           community_match?: string | null
           cover_url?: string | null
           created_at?: string
@@ -3189,10 +3243,12 @@ export type Database = {
       claim_community: {
         Args: { p_community_id: string }
         Returns: {
+          anchor_geom: unknown
           attributes: string[] | null
           avg_age: string | null
           avg_income: string | null
           boundary: Json | null
+          boundary_geom: unknown
           boundary_source: string | null
           builder: string | null
           city: string | null
@@ -3396,10 +3452,12 @@ export type Database = {
           school_id: string
         }[]
       }
+      gettransactionid: { Args: never; Returns: unknown }
+      longtransactionsenabled: { Args: never; Returns: boolean }
       match_community: {
         Args: { p_lat: number; p_lng: number }
         Returns: {
-          city: string | null
+          city: string
           community_id: string
           distance_m: number
           kind: string
@@ -3409,8 +3467,6 @@ export type Database = {
           state: string
         }[]
       }
-      gettransactionid: { Args: never; Returns: unknown }
-      longtransactionsenabled: { Args: never; Returns: boolean }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
@@ -4045,7 +4101,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      area_kind: "county" | "city" | "school_district" | "utility_territory"
     }
     CompositeTypes: {
       geometry_dump: {
@@ -4183,6 +4239,8 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      area_kind: ["county", "city", "school_district", "utility_territory"],
+    },
   },
 } as const
