@@ -47,6 +47,12 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import {
+  type Bucket,
+  classify,
+  millsToPoints as pct,
+  omissionFor,
+} from '../../apps/web/lib/areas/district-millage.js';
+import {
   type DistrictRate,
   contentStreams,
   parseRow,
@@ -89,26 +95,6 @@ const METRO_COUNTIES = [
   'WALTON',
 ];
 
-/** Statewide assessment ratio, O.C.G.A. § 48-5-7. */
-const ASSESSMENT_RATIO = 0.4;
-const pct = (mills: number) => (mills * ASSESSMENT_RATIO) / 10;
-
-type Bucket = 'countywide' | 'unincorporated' | 'city' | 'sub-district' | 'ambiguous';
-
-function classify(district: string, siblings: readonly string[]): Bucket {
-  if (/UNINC/.test(district)) return 'unincorporated';
-  if (/^COUNTY INC - /.test(district)) return 'city';
-  if (/WIDE|COUNTYWIDE/.test(district)) return 'countywide';
-  // `COUNTY FIRE - ARCADE` beside `COUNTY FIRE - MAYSVILLE`: one service split
-  // into areas, and a home is in exactly one of them.
-  const prefix = district.split(' - ')[0];
-  if (prefix && district.includes(' - ')) {
-    const family = siblings.filter((d) => d.startsWith(`${prefix} - `));
-    if (family.length > 1) return 'sub-district';
-  }
-  return 'ambiguous';
-}
-
 function main() {
   const local = process.env.MILLAGE_PDF;
   if (!local || !existsSync(local)) {
@@ -145,19 +131,11 @@ function main() {
       byBucket.set(b, [...(byBucket.get(b) ?? []), e]);
     }
 
-    // What an unincorporated home certainly pays on top of what we publish.
-    const certain = [
-      ...(byBucket.get('countywide') ?? []),
-      ...(byBucket.get('unincorporated') ?? []),
-    ].reduce((n, r) => n + r.mo + r.bond, 0);
-    const subs = byBucket.get('sub-district') ?? [];
-    const subLow = subs.length > 0 ? Math.min(...subs.map((r) => r.mo + r.bond)) : 0;
-    const subHigh = subs.length > 0 ? Math.max(...subs.map((r) => r.mo + r.bond)) : 0;
-    const ambiguous = byBucket.get('ambiguous') ?? [];
-    const ambiguousMills = ambiguous.reduce((n, r) => n + r.mo + r.bond, 0);
-
-    const lowPoints = pct(certain + subLow);
-    const highPoints = pct(certain + subHigh + ambiguousMills);
+    // The floor, the ceiling and who pays what — all of it in
+    // `lib/areas/district-millage.ts`, where it is tested.
+    const omission = omissionFor(extras.map((e) => ({ district: e.district, mills: e.mo + e.bond })));
+    const lowPoints = omission.lowPoints;
+    const highPoints = omission.highPoints;
     if (highPoints > worst.points) worst = { county, points: highPoints };
 
     console.log(`\n${county}`);
@@ -171,6 +149,8 @@ function main() {
         );
       }
     }
+    const subs = omission.levies.filter((l) => l.bucket === 'sub-district');
+    const ambiguous = omission.levies.filter((l) => l.bucket === 'ambiguous');
     if (subs.length > 1) {
       console.log(
         `    → a home is in exactly ONE of those ${subs.length}; there is no single figure for this county`,

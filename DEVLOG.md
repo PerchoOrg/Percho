@@ -21,6 +21,70 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 05:50 UTC — phase240: the tax omission moves 22 of 29 counties
+
+**Objective**: phase239 established the method — read a column as a *ranking*,
+not as a list of sourced values. The one column I had never read that way is
+property tax, and it is the largest component of every county's figure.
+
+It also has a known omission. `import-ga-millage.ts` totals `COUNTY
+UNINCORPORATED`, `SCHOOL` and `STATE`; Georgia counties **also** levy fire,
+EMS, police, recreation and ambulance as separate districts that an
+unincorporated home pays. **19 of 29 counties levy something the published
+figure omits.** That has been in the notes since phase202 as a decision for the
+owner, described by its worst case: *"Hall, 0.347 percentage points."*
+
+### What that sentence does not convey
+
+Adding each county's omission at the midpoint of its range and re-ranking:
+
+```
+22 of 29 positions change
+
+Hall       #3  → #16     +$108/month
+Barrow     #9  → #20     +$108/month
+Cherokee   #6  → #18      +$98/month
+Haralson   #5  → #11      +$60/month
+```
+
+The map currently tells a buyer **Hall is the third cheapest county to own a
+home in.** Include the levies its own DOR report lists and Hall is sixteenth.
+That is not a rounding difference, it is the opposite advice — and "0.347
+percentage points" was the true way of saying it that made it sound small.
+
+Even the certain floor for an unincorporated Hall home — ambulance, uninc fire,
+uninc development services — is 0.169 points, about **$70 a month against a
+published $315**.
+
+### What ships here, and what cannot
+
+I cannot add the levies: which ones a home pays depends on whether it is inside
+a city and which of eleven fire sub-districts covers it in Jackson. **That is
+the owner's ruling and it stays his.**
+
+What I can do is what phase239 did for water: make the incompleteness legible.
+This phase is the groundwork — `classify` and the range computation moved out of
+`scripts/admin/`, where nothing tests them, into `lib/areas/district-millage.ts`
+with **11 tests**. That classification is the judgement-laden heart of the whole
+question and had no test at all.
+
+The tests pin the traps: `UNINC` is matched before anything else (a levy only
+some homes pay must never become one every home pays), a hyphenated district is
+a sub-district only when it has siblings, a `city` levy counts at neither end,
+and Hall's 0.169–0.347 range is reproduced exactly.
+
+**Verified**: the audit prints byte-identical output from the shared code.
+typecheck clean, lint clean, 663 mobile + **1148 web tests** (+11).
+
+**Next**: surface the range on the property tax line, the way `coversSewer`
+surfaces the missing sewer half. No ruling needed for that.
+
+**Learnings**: I had written this omission down accurately and filed it as a
+pending decision, and it sat for thirty phases because the number I recorded it
+with — *0.347 percentage points* — is unreadable. **A magnitude in the units of
+the source is not a magnitude in the units of the decision.** The same fact as
+"Hall moves from 3rd to 16th" would not have waited.
+
 ## 2026-09-09 05:15 UTC — phase239: five counties are cheap because a component is missing
 
 **Objective**: with water nearly all real, read that column as a buyer would —
