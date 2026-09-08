@@ -21,6 +21,63 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 21:45 UTC — phase226: the owner's own bug, re-checked; and the demo pages get a contract
+
+**Objective**: two verifications, one of which turned into a real guard.
+
+### The owner's reported bug, 29 phases later
+
+His third explicit ask was a bug report: 「我已经注册过的要允许密码登陆」 — the
+app forced an email code on someone whose password already worked on the web.
+phase197 fixed it. I had not looked at it since, through 29 phases that
+rewrote large parts of `packages/shared` and `apps/mobile`.
+
+Checked end to end, as far as is possible without his Mac:
+
+* `auth.tsx` still initialises `step` to `"password"` — the screen opens on the
+  password path rather than the code.
+* `lib/auth-form.ts` intact, 12 tests passing, and its header still carries his
+  sentence and the reasoning for the OTP fallback.
+* Production probed with a deliberately invalid credential for a
+  non-existent address: `HTTP 400 invalid_credentials`. **The password grant is
+  enabled on the live project and rejects bad credentials correctly.** A 404 or
+  422 would have meant the grant type was off.
+
+Nothing broken. Recorded because "it was fixed 29 phases ago" is not evidence.
+
+### The demo pages had no contract with their own data
+
+Everything in `demo-artifacts.test.ts` checks `data.js` against the code that
+generates it. The `index.html` beside it is a **third party to that agreement**
+— it reads fields off the same object, and when phase218 gave both pages a
+generated `sources` table, the only thing keeping generator and page in step
+was that I wrote both in one sitting.
+
+That is precisely how phase219.1 broke: a producer changed shape, its consumer
+kept reading the old key, and the supplier note vanished from all 29 counties
+while every figure still looked right. A demo page reading a field its
+generator stopped emitting fails the same way — silently, into an empty table,
+on the pages the owner reviews from.
+
+Three tests extract the `D.<field>` reads out of each page and assert the data
+file provides them. **Verified by deleting `sources` from
+`build-compare-demo.ts` and rebuilding**: fails with *"the page reads
+D.sources, which data.js does not have"*, then passes when restored.
+
+**What the test deliberately does not do**: the looser heuristics. My
+throwaway version also matched `s.<field>`, and reported four false positives
+on the lens page — `s.rings`, `s.centre`, `s.key`, `s.name` belong to a shape
+iterator that happens to share a variable name with the source rows. A check
+that cannot tell two bindings apart cries wolf until someone deletes it, so it
+covers `D.*` and `trio.*`, both unambiguous, and nothing else.
+
+**Verified**: typecheck clean, lint clean, 663 mobile + **1100 web tests** (+3).
+
+**Learnings**: I nearly shipped the loose version. The instinct to catch more
+would have produced a test that failed on correct code the first time someone
+touched the lens page — and the fix for that is always to weaken the test, so
+it would have ended up catching nothing at all.
+
 ## 2026-09-08 21:10 UTC — phase225: nothing we run catches the failure the owner would see first
 
 **Objective**: fifteen phases have touched `apps/mobile` and
