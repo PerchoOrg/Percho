@@ -51,6 +51,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { contentStreams, textItems, toUnicodeMap } from '../../apps/web/lib/areas/millage-pdf.js';
+import { type WaterRates, monthlyBill } from '../../apps/web/lib/areas/water-bill.js';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -93,7 +94,7 @@ const TOLERANCE = 0.005;
  * actually goes wrong — the county repricing in January — without pretending
  * to a table parser this layout does not support.
  */
-const RATES: Rates = {
+const RATES: WaterRates = {
   /** "READINESS TO SERVE CHARGE", Water row, ¾" or less. */
   waterBase: 3.64,
   /** Same table, Sewer row, ¾" or less. This is the one phase202 omitted, and
@@ -106,23 +107,15 @@ const RATES: Rates = {
     [2000, 2.77],
     [10000, 3.95],
     [20000, 5.9],
-  ],
+  ] as const,
   /** Same table, "All Meters / Sewer" column — flat at every band. Not to be
    *  confused with the Irrigation column beside it at $10.36, which is the
    *  swap that made a secondary summary look like it contradicted phase202. */
   sewerPerThousand: 14.54,
 };
 
-interface Rates {
-  waterBase: number;
-  sewerBase: number;
-  /** `[upToGallons, perThousand]`, ascending. */
-  waterTiers: [number, number][];
-  sewerPerThousand: number;
-}
-
 /** Every amount above, as it is written in the sheet. */
-function published(r: Rates): string[] {
+function published(r: WaterRates): string[] {
   return [
     r.waterBase.toFixed(2),
     r.sewerBase.toFixed(2),
@@ -138,7 +131,7 @@ function published(r: Rates): string[] {
  * would have come back empty and this check would have "failed" on a sheet
  * that had not changed at all.
  */
-function assertStillPublished(pdf: Buffer, r: Rates): void {
+function assertStillPublished(pdf: Buffer, r: WaterRates): void {
   const text = textItems(contentStreams(pdf), toUnicodeMap(pdf))
     .map((i) => i.text)
     .join('');
@@ -149,22 +142,6 @@ function assertStillPublished(pdf: Buffer, r: Rates): void {
         'Re-read the sheet and update RATES deliberately.',
     );
   }
-}
-
-/** The monthly bill for a volume, tiers applied in bands as the sheet says. */
-export function billFor(gallons: number, r: Rates): number {
-  let water = 0;
-  let remaining = gallons;
-  let floor = 0;
-  for (const [upTo, per] of r.waterTiers) {
-    const inBand = Math.max(0, Math.min(remaining, upTo - floor));
-    water += (inBand / 1000) * per;
-    remaining -= inBand;
-    floor = upTo;
-    if (remaining <= 0) break;
-  }
-  const sewer = (gallons / 1000) * r.sewerPerThousand;
-  return r.waterBase + r.sewerBase + water + sewer;
 }
 
 async function main() {
@@ -194,7 +171,11 @@ async function main() {
   }
   console.log(`sewer, all consumption     $${r.sewerPerThousand.toFixed(2)} per 1,000`);
 
-  const total = billFor(BILLED_GALLONS, r);
+  const total = monthlyBill(BILLED_GALLONS, r);
+  if (total === undefined) {
+    console.error(`the tiers do not reach ${BILLED_GALLONS} gallons. Nothing written.`);
+    process.exit(1);
+  }
   console.log(
     `\n${BILLED_GALLONS.toLocaleString()} gallons → $${total.toFixed(2)}  (county publishes $${PUBLISHED_TOTAL})`,
   );

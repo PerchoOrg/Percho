@@ -199,7 +199,7 @@
     .map((s) =>
       '<tr class="' + (s.estimated ? 'est' : 'src') + '">' +
       '<td class="rw">' + s.label + '</td>' +
-      '<td>' + s.source + '<span class="n">' + s.areas + ' counties</span></td></tr>')
+      '<td>' + s.source + '<span class="n">' + s.areas + (s.areas === 1 ? ' county' : ' counties') + '</span></td></tr>')
     .join('');
 
   paint();
