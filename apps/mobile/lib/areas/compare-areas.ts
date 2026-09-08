@@ -30,7 +30,7 @@ import {
 	type Lens,
 	type MetricKey,
 	insuranceMonthlyUsd,
-	taxMonthlyUsd,
+	taxMonthlyUsdFor,
 } from "@percho/shared/lenses";
 import {
 	type PriorityKey,
@@ -133,7 +133,7 @@ export function buildAreaCompareTable(
 			"tax + utilities + trash + insurance, same $500k home",
 			areas,
 			trueCost?.inputs ?? [],
-			(a) => trueCost?.compute((m) => metricValue(a, m)),
+			(a) => trueCost?.compute((m) => metricValue(a, m), a.key),
 			usd,
 			true,
 			"cost",
@@ -150,12 +150,20 @@ export function buildAreaCompareTable(
 		),
 		row(
 			"Property tax / year",
-			"on a $500k home",
+			"on a $500k home, homestead exemption applied",
 			areas,
-			["property_tax_rate_pct"],
+			[
+				"property_tax_rate_pct",
+				"county_mo_mills",
+				"county_bond_mills",
+				"school_mo_mills",
+				"school_bond_mills",
+			],
+			// Same computation the lens uses, so the map and this table cannot
+			// disagree about what a county's tax is.
 			(a) => {
-				const rate = metricValue(a, "property_tax_rate_pct");
-				return rate === undefined ? undefined : taxMonthlyUsd(rate) * 12;
+				const monthly = taxMonthlyUsdFor(a.key, (m) => metricValue(a, m));
+				return monthly === undefined ? undefined : monthly * 12;
 			},
 			usd,
 			true,

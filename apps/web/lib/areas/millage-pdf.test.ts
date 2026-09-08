@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countywideMills, parseRow, rows, textItems } from './millage-pdf';
+import { countywideMills, parseRow, rows, textItems, totalMills } from './millage-pdf';
 
 /**
  * Every fixture below is a verbatim fragment of the real 2023 DOR report,
@@ -198,32 +198,33 @@ describe('countywideMills — districts match exactly, never by substring', () =
   it('does not let AVONDALE ESTATES stand in for the STATE levy', () => {
     // `'AVONDALE ESTATES'.includes('STATE')` is true. With substring matching
     // the city's 9.55 mills were summed as the state's.
-    expect(countywideMills(DEKALB, 'DEKALB').get('STATE')).toBe(0);
+    expect(countywideMills(DEKALB, 'DEKALB').get('STATE')?.mo).toBe(0);
   });
 
   it('does not let an independent city school stand in for the county school', () => {
     // `'IND SCHOOL ATLANTA'.includes('SCHOOL')` is true, and it sorts before
     // the real row, so first-match-wins picked Atlanta's 20.5 over DeKalb's.
-    expect(countywideMills(DEKALB, 'DEKALB').get('SCHOOL')).toBe(22.98);
+    expect(countywideMills(DEKALB, 'DEKALB').get('SCHOOL')?.mo).toBe(22.98);
   });
 
   it('totals DeKalb at its real county-wide rate', () => {
-    const parts = countywideMills(DEKALB, 'DEKALB');
-    const total = [...parts.values()].reduce((a, b) => a + b, 0);
+    const total = totalMills(countywideMills(DEKALB, 'DEKALB'));
     // 17.494 + 0.479 + 22.98 + 0. Substring matching gave 48.023 — the error
     // that motivated this whole function.
     expect(total).toBeCloseTo(40.953, 3);
     expect(total).not.toBeCloseTo(48.023, 1);
   });
 
-  it('adds a district’s bond to its M&O', () => {
-    expect(countywideMills(DEKALB, 'DEKALB').get('COUNTY UNINCORPORATED')).toBeCloseTo(17.973, 3);
+  it('keeps a district’s M&O and bond apart — an exemption reaches only M&O', () => {
+    const county = countywideMills(DEKALB, 'DEKALB').get('COUNTY UNINCORPORATED');
+    expect(county?.mo).toBeCloseTo(17.494, 3);
+    expect(county?.bond).toBeCloseTo(0.479, 3);
   });
 
   it('ignores districts belonging to another county', () => {
     const mixed = [...DEKALB, { county: 'FULTON', district: 'SCHOOL', mo: 17.14, bond: 0 }];
-    expect(countywideMills(mixed, 'FULTON').get('SCHOOL')).toBe(17.14);
-    expect(countywideMills(mixed, 'DEKALB').get('SCHOOL')).toBe(22.98);
+    expect(countywideMills(mixed, 'FULTON').get('SCHOOL')?.mo).toBe(17.14);
+    expect(countywideMills(mixed, 'DEKALB').get('SCHOOL')?.mo).toBe(22.98);
   });
 
   it('reports what is missing rather than substituting for it', () => {

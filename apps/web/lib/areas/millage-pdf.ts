@@ -122,9 +122,11 @@ export function textItems(streams: readonly string[]): TextItem[] {
     let line = { x: 0, y: 0 };
     let cursor = { x: 0, y: 0 };
 
-    let m: RegExpExecArray | null;
     token.lastIndex = 0;
-    while ((m = token.exec(stream)) !== null) {
+    // `for` rather than `while ((m = exec()))`: the assignment-in-condition
+    // idiom is banned here, and a plain `while` with the advance at the bottom
+    // would be skipped by the `continue`s below.
+    for (let m = token.exec(stream); m !== null; m = token.exec(stream)) {
       const g = m.groups ?? {};
       const n = m.slice(1).filter((v) => v !== undefined);
 
@@ -272,19 +274,35 @@ export function parseRow(cells: readonly string[]): DistrictRate | null {
  * Estates standing in for the state. The correct total is 40.953. Nothing
  * about the output looked malformed; it was merely too high, which is exactly
  * how a rate error hides.
+ *
+ * M&O and bond are returned SEPARATELY, not summed. A homestead exemption
+ * reduces the maintenance-and-operations base and by law never touches bond
+ * millage (O.C.G.A. § 48-5-44 excludes levies "to pay interest on and to
+ * retire bonded indebtedness"). A combined figure cannot be taxed correctly,
+ * and combining them was the shape this returned before anyone tried to.
  */
 export const COUNTYWIDE_DISTRICTS = ['COUNTY UNINCORPORATED', 'SCHOOL', 'STATE'] as const;
+
+export interface LevyMills {
+  mo: number;
+  bond: number;
+}
 
 export function countywideMills(
   districts: readonly DistrictRate[],
   county: string,
-): Map<string, number> {
-  const out = new Map<string, number>();
+): Map<string, LevyMills> {
+  const out = new Map<string, LevyMills>();
   for (const r of districts) {
     if (r.county !== county) continue;
     const which = COUNTYWIDE_DISTRICTS.find((d) => r.district === d);
     if (!which || out.has(which)) continue;
-    out.set(which, r.mo + r.bond);
+    out.set(which, { mo: r.mo, bond: r.bond });
   }
   return out;
+}
+
+/** Every county-wide mill, M&O and bond together. */
+export function totalMills(parts: ReadonlyMap<string, LevyMills>): number {
+  return [...parts.values()].reduce((n, l) => n + l.mo + l.bond, 0);
 }

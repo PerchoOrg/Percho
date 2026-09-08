@@ -42,6 +42,8 @@
  */
 
 /** A metric key as stored in `area_metrics.metric`. */
+import { estimatePropertyTax } from './property-tax';
+
 export type MetricKey =
   | 'property_tax_rate_pct'
   /** The adopted millage rate on market value, before homestead exemptions
@@ -49,6 +51,13 @@ export type MetricKey =
    *  prices with — see `scripts/admin/import-ga-millage.ts` for why the two
    *  are different numbers. Shown as provenance, never summed into a cost. */
   | 'property_tax_millage_statutory_pct'
+  /** The four levies, in mills, kept apart because a homestead exemption
+   *  reduces an M&O base and by law never touches bond millage. These are
+   *  what `@percho/shared/property-tax` needs to price a real bill. */
+  | 'county_mo_mills'
+  | 'county_bond_mills'
+  | 'school_mo_mills'
+  | 'school_bond_mills'
   | 'school_proficiency_pct'
   | 'electric_monthly_usd'
   | 'water_monthly_usd'
@@ -102,8 +111,14 @@ export interface Lens {
   ramp: readonly [string, string, string, string, string];
   /** Which stored metrics this lens needs. Missing any → the area is unranked. */
   inputs: readonly MetricKey[];
-  /** Computes the lens's number from the area's metrics. */
-  compute: (get: (metric: MetricKey) => number | undefined) => number | undefined;
+  /**
+   * Computes the lens's number from the area's metrics.
+   *
+   * `areaKey` is passed because property tax cannot be read off a stored
+   * percentage: the county's homestead exemption is a fixed dollar amount and
+   * has to be looked up by key. Lenses that do not need it ignore it.
+   */
+  compute: (get: (metric: MetricKey) => number | undefined, areaKey: string) => number | undefined;
   /** Renders the number the way its unit reads. */
   format: (value: number) => string;
 }
@@ -128,11 +143,41 @@ export const REFERENCE_HOME_USD = 500_000;
 export const INSURANCE_RATE_ANNUAL = 0.0035;
 
 /** Monthly insurance on the reference home. */
-export const insuranceMonthlyUsd = Math.round(
-  (REFERENCE_HOME_USD * INSURANCE_RATE_ANNUAL) / 12,
-);
+export const insuranceMonthlyUsd = Math.round((REFERENCE_HOME_USD * INSURANCE_RATE_ANNUAL) / 12);
 
-/** Monthly property tax on the reference home at an effective rate. */
+/**
+ * Monthly property tax on the reference home, in the county's own key.
+ *
+ * Computed from the four levies and the county's homestead exemption rather
+ * than from a stored percentage, because a fixed-dollar exemption makes the
+ * effective rate depend on the price — see `property-tax.ts`. Falls back to a
+ * stored `property_tax_rate_pct` only when the levies are missing, which is
+ * how a county with no scraped millage still prices at all.
+ */
+export function taxMonthlyUsdFor(
+  countyKey: string,
+  get: (metric: MetricKey) => number | undefined,
+): number | undefined {
+  const countyMo = get('county_mo_mills');
+  const schoolMo = get('school_mo_mills');
+  if (countyMo !== undefined && schoolMo !== undefined) {
+    const est = estimatePropertyTax(
+      REFERENCE_HOME_USD,
+      {
+        countyMo,
+        countyBond: get('county_bond_mills') ?? 0,
+        schoolMo,
+        schoolBond: get('school_bond_mills') ?? 0,
+      },
+      countyKey,
+    );
+    if (est) return est.monthlyUsd;
+  }
+  const rate = get('property_tax_rate_pct');
+  return rate === undefined ? undefined : taxMonthlyUsd(rate);
+}
+
+/** Monthly property tax on the reference home at a flat effective rate. */
 export function taxMonthlyUsd(ratePct: number): number {
   return Math.round((REFERENCE_HOME_USD * (ratePct / 100)) / 12);
 }
@@ -150,18 +195,22 @@ export const LENSES: readonly Lens[] = [
     ramp: ['#D5A998', '#C48A74', '#B06C53', '#985137', '#7E3D22'],
     inputs: [
       'property_tax_rate_pct',
+      'county_mo_mills',
+      'county_bond_mills',
+      'school_mo_mills',
+      'school_bond_mills',
       'electric_monthly_usd',
       'water_monthly_usd',
       'trash_monthly_usd',
     ],
-    compute: (get) => {
-      const rate = get('property_tax_rate_pct');
+    compute: (get, areaKey) => {
+      const tax = taxMonthlyUsdFor(areaKey, get);
       const electric = get('electric_monthly_usd');
       const water = get('water_monthly_usd');
       const trash = get('trash_monthly_usd');
-      if (rate === undefined || electric === undefined) return undefined;
+      if (tax === undefined || electric === undefined) return undefined;
       if (water === undefined || trash === undefined) return undefined;
-      return taxMonthlyUsd(rate) + electric + water + trash + insuranceMonthlyUsd;
+      return tax + electric + water + trash + insuranceMonthlyUsd;
     },
     format: (v) => `$${Math.round(v).toLocaleString()}`,
   },
@@ -175,8 +224,19 @@ export const LENSES: readonly Lens[] = [
     areaKind: 'county',
     betterIsLow: true,
     ramp: ['#D4AD79', '#C08F51', '#AB7330', '#935917', '#7A4409'],
-    inputs: ['property_tax_rate_pct'],
-    compute: (get) => get('property_tax_rate_pct'),
+    inputs: [
+      'property_tax_rate_pct',
+      'county_mo_mills',
+      'county_bond_mills',
+      'school_mo_mills',
+      'school_bond_mills',
+    ],
+    compute: (get, areaKey) => {
+      const monthly = taxMonthlyUsdFor(areaKey, get);
+      // Shown as a rate, computed as a bill: the percentage a buyer of the
+      // reference home actually ends up paying, exemptions included.
+      return monthly === undefined ? undefined : ((monthly * 12) / REFERENCE_HOME_USD) * 100;
+    },
     format: (v) => `${v.toFixed(2)}%`,
   },
   {
@@ -242,11 +302,9 @@ export function valuesFor(lens: Lens, areas: readonly Area[]): LensValue[] {
   const out: LensValue[] = [];
   for (const area of areas) {
     if (area.kind !== lens.areaKind) continue;
-    const value = lens.compute(metricLookup(area));
+    const value = lens.compute(metricLookup(area), area.key);
     if (value === undefined || !Number.isFinite(value)) continue;
-    const estimated = area.metrics.some(
-      (m) => m.estimated && lens.inputs.includes(m.metric),
-    );
+    const estimated = area.metrics.some((m) => m.estimated && lens.inputs.includes(m.metric));
     out.push({ area, value, estimated });
   }
   return out;
@@ -327,18 +385,16 @@ export function legendRange(
 
 /** The cost lines behind one area's true-cost figure, in display order.
  *  Returns undefined when the area cannot be priced. */
-export function costBreakdown(
-  area: Area,
-): { label: string; monthlyUsd: number }[] | undefined {
+export function costBreakdown(area: Area): { label: string; monthlyUsd: number }[] | undefined {
   const get = metricLookup(area);
-  const rate = get('property_tax_rate_pct');
+  const tax = taxMonthlyUsdFor(area.key, get);
   const electric = get('electric_monthly_usd');
   const water = get('water_monthly_usd');
   const trash = get('trash_monthly_usd');
-  if (rate === undefined || electric === undefined) return undefined;
+  if (tax === undefined || electric === undefined) return undefined;
   if (water === undefined || trash === undefined) return undefined;
   return [
-    { label: 'Property tax', monthlyUsd: taxMonthlyUsd(rate) },
+    { label: 'Property tax', monthlyUsd: tax },
     { label: 'Electric', monthlyUsd: electric },
     { label: 'Water & sewer', monthlyUsd: water },
     { label: 'Trash', monthlyUsd: trash },

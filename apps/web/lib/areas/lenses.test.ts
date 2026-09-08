@@ -4,6 +4,7 @@ import {
   DEFAULT_LENS,
   LENSES,
   type MetricKey,
+  REFERENCE_HOME_USD,
   classBreaks,
   classOf,
   colorFor,
@@ -82,7 +83,7 @@ describe('lens catalogue', () => {
       lens.compute((m) => {
         read.push(m);
         return 1;
-      });
+      }, 'cobb');
       for (const m of read) expect(lens.inputs, lens.id).toContain(m);
     }
   });
@@ -223,5 +224,70 @@ describe('area kinds', () => {
     const lens = lensById('property_tax');
     if (!lens) throw new Error('lens missing');
     expect(valuesFor(lens, [district])).toHaveLength(0);
+  });
+});
+
+describe('property tax comes from the levies, not a stored percentage', () => {
+  /** DeKalb's real 2023 levies, plus a deliberately wrong stored rate. */
+  const dekalb: Area = {
+    key: 'dekalb',
+    name: 'DeKalb',
+    kind: 'county',
+    state: 'GA',
+    metrics: [
+      metric('county_mo_mills', 17.494),
+      metric('county_bond_mills', 0.479),
+      metric('school_mo_mills', 22.98),
+      metric('school_bond_mills', 0),
+      metric('property_tax_rate_pct', 9.99, true),
+      metric('electric_monthly_usd', 165),
+      metric('water_monthly_usd', 92),
+      metric('trash_monthly_usd', 30),
+    ],
+  };
+
+  it('ignores the stored rate when the levies are present', () => {
+    const lens = lensById('property_tax');
+    if (!lens) throw new Error('lens missing');
+    const [value] = valuesFor(lens, [dekalb]);
+    // 9.99% is absurd on purpose; the computed figure lands near 1.1%.
+    expect(value?.value).toBeLessThan(1.3);
+    expect(value?.value).toBeGreaterThan(0.9);
+  });
+
+  it('applies the homestead exemption and DeKalb’s EHOST credit', () => {
+    const lens = lensById('property_tax');
+    if (!lens) throw new Error('lens missing');
+    // The statutory rate on these levies is 1.638%. Anything at or above it
+    // means the exemption and credit were not applied.
+    const [value] = valuesFor(lens, [dekalb]);
+    expect(value?.value).toBeLessThan(1.638);
+  });
+
+  it('falls back to the stored rate when the levies are missing', () => {
+    const lens = lensById('property_tax');
+    if (!lens) throw new Error('lens missing');
+    const noLevies: Area = {
+      ...dekalb,
+      metrics: dekalb.metrics.filter((m) => !m.metric.endsWith('_mills')),
+    };
+    expect(valuesFor(lens, [noLevies])[0]?.value).toBeCloseTo(9.99, 2);
+  });
+
+  it('feeds the same tax figure into the true-cost breakdown', () => {
+    const lines = costBreakdown(dekalb);
+    const tax = lines?.find((l) => l.label === 'Property tax');
+    const lens = lensById('property_tax');
+    if (!lens || !tax) throw new Error('missing');
+    const pct = valuesFor(lens, [dekalb])[0]?.value ?? 0;
+    // The two faces must not disagree: rate x price / 12 is the monthly line.
+    expect(tax.monthlyUsd).toBeCloseTo(((pct / 100) * REFERENCE_HOME_USD) / 12, 0);
+  });
+
+  it('prices an unverified county at the statutory floor rather than skipping it', () => {
+    const lens = lensById('property_tax');
+    if (!lens) throw new Error('lens missing');
+    const unknown: Area = { ...dekalb, key: 'atlantis', name: 'Atlantis' };
+    expect(valuesFor(lens, [unknown])[0]?.value).toBeGreaterThan(0);
   });
 });
