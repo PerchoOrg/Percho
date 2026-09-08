@@ -21,6 +21,53 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 09:00 UTC — phase246: doing nothing is not one of the options
+
+**Objective**: first, re-run the bundle gate — phase225 added it and twenty
+phases of `packages/shared` changes have landed since. **It builds.**
+
+Then: the tax-district ruling has been waiting since phase202. phase240 worked
+out why — *"0.347 percentage points" is accurate and reads as trivial* — and
+restated it as rank. This phase goes one further and shows the **outcome of
+each choice**, so the decision can be made by looking at what the product would
+say rather than at a millage table.
+
+```
+today      1.Dawson 2.Pickens 3.Hall 4.Coweta 5.Haralson 6.Cherokee …
+FLOOR      1.Dawson 2.Pickens 3.Coweta 4.Heard 5.Fayette 6.Haralson …   24/29 move
+MIDPOINT   1.Dawson 2.Pickens 3.Heard 4.Coweta 5.Fayette 6.Morgan  …   22/29 move
+CEILING    1.Dawson 2.Pickens 3.Heard 4.Morgan 5.Coweta 6.Carroll  …   25/29 move
+```
+
+### The finding is not which ruling wins
+
+**Hall, Cherokee and Barrow leave the cheapest ten under every ruling** —
+including the FLOOR, which counts only levies a home outside city limits
+certainly pays and is the most conservative reading available. Today they are
+3rd, 6th and 9th.
+
+The rulings differ from each other far less than any of them differs from
+today. So the open question was never really *which* correction; it is that
+**leaving the map as published is not among the defensible options**, and the
+ruling only decides how far out it currently is.
+
+That is a different thing to hand someone than a table of fire-district
+millages, and it is the same reframing that made phase240 land: state the
+consequence in the units of the product, not of the source.
+
+**Actions**: `scripts/admin/audit-ruling-outcomes.ts` — read-only, fetches
+production, prints all four rankings and names the counties that leave the top
+ten regardless. It needs no PDF, because phase241 put the omission ranges in the
+data.
+
+**Verified**: iOS bundle exports; typecheck clean, lint clean, 666 mobile +
+1161 web tests. Nothing written.
+
+**Learnings**: I had been treating "needs the owner's ruling" as a terminal
+state for thirty phases. It was not — the part that needed him was narrow, and
+everything around it could still be worked out and shown to him. **A blocked
+decision is rarely blocked in every direction.**
+
 ## 2026-09-09 08:30 UTC — phase245: three of four levies is not a tax
 
 **Objective**: phase244 swept the importers for defaults that substitute a
