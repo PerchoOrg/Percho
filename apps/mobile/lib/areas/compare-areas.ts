@@ -32,6 +32,11 @@ import {
 	insuranceMonthlyUsd,
 	taxMonthlyUsd,
 } from "@percho/shared/lenses";
+import {
+	type PriorityKey,
+	type PriorityWeights,
+	orderByPriority,
+} from "../priorities";
 
 export const AREA_COMPARE_MIN = 2;
 export const AREA_COMPARE_MAX = 3;
@@ -51,6 +56,9 @@ export interface AreaCompareRow {
 	/** Reads under the label — what the number means, or what it assumes. */
 	note?: string;
 	cells: AreaCompareCell[];
+	/** Which declared priority this row serves, for ordering. Undefined when
+	 *  it serves none — such a row keeps its place rather than sinking. */
+	priority?: PriorityKey;
 }
 
 export interface AreaCompareTable {
@@ -75,6 +83,7 @@ function row(
 	compute: (a: Area) => number | undefined,
 	format: (v: number) => string,
 	betterIsLow: boolean,
+	priority: PriorityKey | undefined,
 ): AreaCompareRow {
 	const values = areas.map(compute);
 	const present = values.filter((v): v is number => v !== undefined);
@@ -90,6 +99,7 @@ function row(
 	return {
 		label,
 		...(note ? { note } : {}),
+		...(priority ? { priority } : {}),
 		cells: areas.map((area, i) => {
 			const v = values[i];
 			return {
@@ -111,6 +121,9 @@ const usd = (v: number) => `$${Math.round(v).toLocaleString("en-US")}`;
  */
 export function buildAreaCompareTable(
 	areas: readonly Area[],
+	/** The buyer's declared priorities. Reorders rows so the table opens on
+	 *  what they said matters; it never adds, drops or reweights a figure. */
+	weights?: PriorityWeights,
 ): AreaCompareTable {
 	const trueCost = LENSES.find((l) => l.id === "true_cost") as Lens | undefined;
 
@@ -123,6 +136,7 @@ export function buildAreaCompareTable(
 			(a) => trueCost?.compute((m) => metricValue(a, m)),
 			usd,
 			true,
+			"cost",
 		),
 		row(
 			"Schools",
@@ -132,6 +146,7 @@ export function buildAreaCompareTable(
 			(a) => metricValue(a, "school_proficiency_pct"),
 			(v) => `${Math.round(v)}%`,
 			false,
+			"schools",
 		),
 		row(
 			"Property tax / year",
@@ -144,6 +159,7 @@ export function buildAreaCompareTable(
 			},
 			usd,
 			true,
+			"cost",
 		),
 		row(
 			"Utilities & trash / month",
@@ -161,6 +177,7 @@ export function buildAreaCompareTable(
 			},
 			usd,
 			true,
+			"cost",
 		),
 		row(
 			"Insurance / month",
@@ -171,11 +188,12 @@ export function buildAreaCompareTable(
 			usd,
 			// Identical in every column by construction, so nothing is best.
 			true,
+			"cost",
 		),
 	];
 
 	return {
 		headers: areas.map((a) => ({ key: a.key, name: a.name, state: a.state })),
-		rows,
+		rows: weights ? orderByPriority(rows, weights, (r) => r.priority) : rows,
 	};
 }

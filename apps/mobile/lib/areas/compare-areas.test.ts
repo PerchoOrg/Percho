@@ -1,5 +1,6 @@
 import type { Area, AreaMetric, MetricKey } from "@percho/shared/lenses";
 import { describe, expect, it } from "vitest";
+import { defaultWeights } from "../priorities";
 import { buildAreaCompareTable } from "./compare-areas";
 
 function metric(m: MetricKey, value: number, estimated = false): AreaMetric {
@@ -148,5 +149,45 @@ describe("buildAreaCompareTable", () => {
 		const t = buildAreaCompareTable([COBB]);
 		expect(t.headers).toHaveLength(1);
 		expect(t.rows.every((r) => r.cells.every((c) => !c.best))).toBe(true);
+	});
+});
+
+describe("declared priorities reorder the rows", () => {
+	const areas = [COBB, DEKALB];
+
+	it("leaves the order alone when no weights are passed", () => {
+		const a = buildAreaCompareTable(areas).rows.map((r) => r.label);
+		const b = buildAreaCompareTable(areas, defaultWeights()).rows.map(
+			(r) => r.label,
+		);
+		expect(b).toEqual(a);
+	});
+
+	it("opens on schools for a buyer who said schools matter most", () => {
+		const t = buildAreaCompareTable(areas, {
+			...defaultWeights(),
+			schools: 3,
+		});
+		expect(t.rows[0]?.label).toMatch(/schools/i);
+	});
+
+	it("keeps cost first for a buyer who said cost matters most", () => {
+		const t = buildAreaCompareTable(areas, { ...defaultWeights(), cost: 3 });
+		expect(t.rows[0]?.label).toMatch(/true cost/i);
+	});
+
+	it("never drops a row while reordering — a priority hides nothing", () => {
+		const plain = buildAreaCompareTable(areas)
+			.rows.map((r) => r.label)
+			.sort();
+		const sorted = buildAreaCompareTable(areas, {
+			schools: 3,
+			cost: 0,
+			commute: 0,
+			community: 0,
+		})
+			.rows.map((r) => r.label)
+			.sort();
+		expect(sorted).toEqual(plain);
 	});
 });
