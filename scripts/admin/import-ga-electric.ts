@@ -59,6 +59,7 @@ import {
   dominant,
   prepare,
 } from '../../apps/web/lib/areas/territory.js';
+import { readXlsx, readZip } from '../../apps/web/lib/areas/xlsx.js';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -68,16 +69,40 @@ const APPLY = process.argv.includes('--apply');
 const TERRITORY_URL =
   "https://services6.arcgis.com/BAJNi3EgCdtQ1BCG/arcgis/rest/services/Electric_Retail_Service_Territories/FeatureServer/0/query?where=STATE%3D'GA'&outFields=NAME,TYPE,CUSTOMERS,YEAR&returnGeometry=true&outSR=4326&f=geojson";
 
-/** NREL / OpenEI utility rate tables, 2023 — the newest published. */
-const RATE_URLS = [
+/**
+ * EIA-861, the annual release — the primary source, and one year newer than
+ * the OpenEI tables this used to read.
+ *
+ * `Sales_Ult_Cust_<year>.xlsx` carries residential Revenues (thousand $),
+ * Sales (MWh) and Customers per utility per state, so the rate is
+ * `revenue / sales`: money actually collected over energy actually delivered,
+ * which carries every rider by construction. That is the same property that
+ * ruled out Georgia Power's published tariff, obtained from the body that
+ * collects the numbers rather than from a redistribution of them.
+ */
+const EIA_861_URL = 'https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip';
+const EIA_YEAR = 2024;
+
+/**
+ * NREL/OpenEI's redistribution of the same figures, a year older.
+ *
+ * Kept as a CROSS-CHECK on every run rather than as the source. Two
+ * independently-derived numbers landing within a few percent is the only
+ * evidence available that either is right; when they diverge sharply, one of
+ * them has changed shape and a run should say so rather than publish quietly.
+ */
+const CROSS_CHECK_URLS = [
   'https://data.openei.org/files/6225/iou_zipcodes_2023.csv',
   'https://data.openei.org/files/6225/non_iou_zipcodes_2023.csv',
 ];
 
-const RATE_SOURCE = 'NREL/OpenEI utility rates 2023, average residential $/kWh';
+/** Past this, the two sources are not describing the same thing any more. */
+const CROSS_CHECK_TOLERANCE = 0.15;
+
+const RATE_SOURCE = `EIA-861 ${EIA_YEAR}, residential revenue ÷ sales`;
 const TERRITORY_SOURCE =
   'HIFLD Electric Retail Service Territories (2022), area-weighted against county boundaries';
-const AS_OF = '2023-12-31';
+const AS_OF = `${EIA_YEAR}-12-31`;
 
 /**
  * Georgia's average residential consumption.
@@ -120,44 +145,108 @@ function normalizeUtility(name: string): string {
     .trim();
 }
 
-/** Average residential $/kWh per utility, from the OpenEI tables. */
+/** Average residential $/kWh per utility, from EIA-861's own figures. */
 async function fetchRates(): Promise<Map<string, { rate: number; name: string }>> {
+  const local = process.env.EIA_861_ZIP;
+  let zip: Buffer;
+  if (local && existsSync(local)) {
+    console.log(`Reading ${local}`);
+    zip = readFileSync(local);
+  } else {
+    console.log(`Fetching ${EIA_861_URL}`);
+    const res = await fetch(EIA_861_URL);
+    if (!res.ok) throw new Error(`${EIA_861_URL} returned ${res.status}`);
+    zip = Buffer.from(await res.arrayBuffer());
+  }
+
+  const sales = readZip(zip).find((e) => /^Sales_Ult_Cust_\d+\.xlsx$/.test(e.name));
+  if (!sales) throw new Error('EIA-861 archive has no Sales_Ult_Cust file');
+  const [sheet] = readXlsx(sales.data);
+  if (!sheet) throw new Error(`${sales.name} has no worksheets`);
+
+  // The header is two rows deep and its position moved between the 2024 and
+  // 2025 editions, so it is FOUND rather than assumed: the row naming
+  // "Utility Name" is the header, and residential Revenues/Sales/Customers are
+  // the three columns beginning three past State.
+  const headerAt = sheet.rows.findIndex((r) => r.includes('Utility Name'));
+  if (headerAt < 0) throw new Error(`${sales.name}: no header row naming "Utility Name"`);
+  const header = sheet.rows[headerAt] ?? [];
+  const iName = header.indexOf('Utility Name');
+  const iState = header.indexOf('State');
+  if (iName < 0 || iState < 0) throw new Error(`${sales.name}: header is missing a column`);
+  const iRevenue = iState + 3;
+  const group = sheet.rows[headerAt - 1]?.slice(iRevenue, iRevenue + 3) ?? [];
+  if (group[0] !== 'Revenues' || group[1] !== 'Sales') {
+    throw new Error(
+      `${sales.name}: expected Revenues/Sales at ${iRevenue}, found ${JSON.stringify(group)}`,
+    );
+  }
+
+  // A utility can appear more than once per state — bundled vs delivery-only,
+  // and split filings — so revenue and sales are SUMMED before dividing.
+  // Taking the first row instead silently prices a utility on part of itself.
+  const totals = new Map<string, { name: string; revenue: number; mwh: number }>();
+  for (const row of sheet.rows.slice(headerAt + 1)) {
+    if (row[iState] !== 'GA') continue;
+    const name = row[iName]?.trim();
+    const revenue = Number(row[iRevenue]);
+    const mwh = Number(row[iRevenue + 1]);
+    if (!name || !Number.isFinite(revenue) || !Number.isFinite(mwh)) continue;
+    const key = normalizeUtility(name);
+    const cur = totals.get(key) ?? { name, revenue: 0, mwh: 0 };
+    cur.revenue += revenue;
+    cur.mwh += mwh;
+    totals.set(key, cur);
+  }
+
   const out = new Map<string, { rate: number; name: string }>();
-  for (const url of RATE_URLS) {
+  for (const [key, t] of totals) {
+    if (t.mwh <= 0) continue;
+    // Thousand dollars over MWh is already dollars per kWh.
+    out.set(key, { rate: t.revenue / t.mwh, name: t.name });
+  }
+  return out;
+}
+
+/**
+ * OpenEI's older redistribution of the same data, for comparison only.
+ *
+ * Returns an empty map rather than failing the run: a cross-check that can
+ * block publishing real data is a liability, not a safeguard.
+ */
+async function fetchCrossCheck(): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  for (const url of CROSS_CHECK_URLS) {
     const local = process.env.OPENEI_DIR
       ? `${process.env.OPENEI_DIR}/${url.split('/').pop()}`
       : undefined;
     let csv: string;
-    if (local && existsSync(local)) {
-      console.log(`Reading ${local}`);
-      csv = readFileSync(local, 'utf8');
-    } else {
-      console.log(`Fetching ${url}`);
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`${url} returned ${res.status}`);
-      csv = await res.text();
+    try {
+      if (local && existsSync(local)) csv = readFileSync(local, 'utf8');
+      else {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`${res.status}`);
+        csv = await res.text();
+      }
+    } catch (err) {
+      console.warn(`  cross-check unavailable (${url}): ${(err as Error).message}`);
+      continue;
     }
     const lines = csv.split('\n');
-    // The files are CRLF, so every last cell carries a trailing \r — including
-    // `res_rate`, the one column that matters.
+    // CRLF: every last cell carries a trailing \r, including `res_rate`.
     const header = (lines[0] ?? '').split(',').map((h) => h.trim());
     const iState = header.indexOf('state');
     const iName = header.indexOf('utility_name');
     const iRes = header.indexOf('res_rate');
-    if (iState < 0 || iName < 0 || iRes < 0) {
-      throw new Error(`OpenEI changed its columns: ${header.join(',')}`);
-    }
+    if (iState < 0 || iName < 0 || iRes < 0) continue;
     for (let i = 1; i < lines.length; i++) {
       const c = (lines[i] ?? '').split(',');
       if (c[iState] !== 'GA') continue;
       const name = c[iName]?.trim();
       const rate = Number(c[iRes]?.trim());
-      // A utility appears once per ZIP it serves, with the same rate on every
-      // row. First wins; a zero or missing rate is a gap in the source, not a
-      // free utility.
       if (!name || !Number.isFinite(rate) || rate <= 0) continue;
       const key = normalizeUtility(name);
-      if (!out.has(key)) out.set(key, { rate, name });
+      if (!out.has(key)) out.set(key, rate);
     }
   }
   return out;
@@ -187,6 +276,27 @@ async function main() {
 
   const rates = await fetchRates();
   console.log(`${rates.size} Georgia utilities with a published residential rate.`);
+
+  // Two independently-derived numbers landing close is the only evidence
+  // available that either is right. Reported, never enforced.
+  const crossCheck = await fetchCrossCheck();
+  const divergent: string[] = [];
+  for (const [key, r] of rates) {
+    const other = crossCheck.get(key);
+    if (other === undefined) continue;
+    const delta = (r.rate - other) / other;
+    if (Math.abs(delta) > CROSS_CHECK_TOLERANCE) {
+      divergent.push(
+        `${r.name}: EIA ${(r.rate * 100).toFixed(2)}¢ vs OpenEI ${(other * 100).toFixed(2)}¢ (${(delta * 100).toFixed(0)}%)`,
+      );
+    }
+  }
+  const compared = [...rates.keys()].filter((k) => crossCheck.has(k)).length;
+  console.log(
+    divergent.length === 0
+      ? `Cross-check: ${compared} utilities agree with OpenEI within ${(CROSS_CHECK_TOLERANCE * 100).toFixed(0)}%.`
+      : `Cross-check: ${divergent.length} of ${compared} diverge by more than ${(CROSS_CHECK_TOLERANCE * 100).toFixed(0)}%:\n  ${divergent.join('\n  ')}`,
+  );
 
   const territories = prepare(
     features.map((f) => ({ value: f.properties.NAME, geometry: f.geometry })),
@@ -230,7 +340,7 @@ async function main() {
       value: monthly,
       unit: 'usd_per_month',
       source: `${RATE_SOURCE}; provider by ${TERRITORY_SOURCE}`,
-      source_url: RATE_URLS[0],
+      source_url: EIA_861_URL,
       as_of: AS_OF,
       estimated: false,
       detail: {
