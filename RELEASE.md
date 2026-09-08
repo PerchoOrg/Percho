@@ -42,7 +42,7 @@ publishes nothing that separates household collection from commercial, so it is
 now one clearly-marked assumption, anchored on DeKalb's published annual fee,
 rather than a spread of plausible-looking numbers.
 
-**Water bills are real numbers in 26 counties**, not figures we made up. Most
+**Water bills are real numbers in 28 counties**, not figures we made up. Most
 come from the statewide rate survey run by the University of North Carolina's
 Environmental Finance Center with the Georgia Environmental Finance Authority,
 and are still marked as estimates because that survey is from 2022 and bills

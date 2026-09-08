@@ -115,17 +115,39 @@ const KEEP = new Set(['dekalb']);
  * single one of them represents the county whatever the arithmetic says.
  * Dawson fails on both counts.
  *
- * Named individually rather than made general — three counties, and the shares
+ * ── Counties with no single representative system ──────────────────────────
+ *
+ * Meriwether was refused above because its largest system serves 49% of billed
+ * households and its five systems charge between $32.40 and $55.10. Refusing to
+ * pick one of them was right. Refusing to use ANY of them was not: **blending
+ * all five, weighted by the population each serves, is the same answer
+ * electricity already gives** when no provider owns a county — phase219 argued
+ * that at length and it applies here unchanged.
+ *
+ *     water   $38.09   5 systems, 95% of billed households
+ *     sewer   $37.67   4 systems, 83%  (Luthersville files no sewer rate)
+ *     total   $75.76   against the $56 I had invented — 35% low
+ *
+ * So an entry is a LIST of labels, and the single-town counties above are the
+ * degenerate case of it rather than a separate mechanism. Each component is
+ * renormalised over the systems that publish it, which is why sewer is
+ * weighted across four and water across five.
+ *
+ * Named individually rather than made general — four counties, and the shares
  * are recorded above with what they were derived from.
  */
-const CITY_UTILITY: Record<string, { label: string; servesShare: number }> = {
-  Hall: { label: 'Gainesville', servesShare: 0.9 },
-  Lamar: { label: 'Barnesville', servesShare: 0.87 },
-  Morgan: { label: 'Madison', servesShare: 0.67 },
+const CITY_UTILITY: Record<string, { labels: string[]; servesShare: number }> = {
+  Hall: { labels: ['Gainesville'], servesShare: 0.9 },
+  Lamar: { labels: ['Barnesville'], servesShare: 0.87 },
+  Morgan: { labels: ['Madison'], servesShare: 0.67 },
+  Meriwether: {
+    labels: ['Greenville', 'Manchester', 'Woodbury', 'Warm Springs', 'Luthersville'],
+    servesShare: 0.95,
+  },
 };
 
 /** Column indices on the residential-bills sheet, from its second header row. */
-const COL = { label: 0, serviceType: 3, insideOutside: 4, at4000: 6 } as const;
+const COL = { label: 0, servicePop: 2, serviceType: 3, insideOutside: 4, at4000: 6 } as const;
 
 interface Bill {
   county: string;
@@ -156,23 +178,35 @@ export function billsByCounty(rows: readonly string[][], counties: readonly stri
     // where it was measured to serve most of the county.
     const city = CITY_UTILITY[county];
     if (bill.water === undefined && city) {
-      const cityRows = rows.filter(
-        (r) =>
-          (r[COL.insideOutside] ?? '').trim().toLowerCase() === 'inside' &&
-          (r[COL.label] ?? '').trim().toLowerCase() === city.label.toLowerCase(),
-      );
-      const cityPick = (type: string) => {
-        const row = cityRows.find((r) => (r[COL.serviceType] ?? '').trim() === type);
-        const v = row ? Number(row[COL.at4000]) : Number.NaN;
-        return Number.isFinite(v) && v > 0 ? v : undefined;
+      const systems = city.labels.map((label) => {
+        const hits = rows.filter(
+          (r) =>
+            (r[COL.insideOutside] ?? '').trim().toLowerCase() === 'inside' &&
+            (r[COL.label] ?? '').trim().toLowerCase() === label.toLowerCase(),
+        );
+        const at = (type: string) => {
+          const v = Number(hits.find((r) => (r[COL.serviceType] ?? '').trim() === type)?.[COL.at4000]);
+          return Number.isFinite(v) && v > 0 ? v : undefined;
+        };
+        return { label, servicePop: Number(hits[0]?.[COL.servicePop]) || 0, water: at('Water'), sewer: at('Sewer') };
+      });
+      // Weighted by the population each system serves, and renormalised per
+      // component over the systems that publish it — a utility that files no
+      // sewer rate must not drag the sewer average toward zero. Same shape as
+      // the electricity blend in `territory.ts`.
+      const blend = (key: 'water' | 'sewer') => {
+        const have = systems.filter((x) => x[key] !== undefined && x.servicePop > 0);
+        const weight = have.reduce((sum, x) => sum + x.servicePop, 0);
+        if (weight === 0) return undefined;
+        return have.reduce((sum, x) => sum + (x[key] as number) * x.servicePop, 0) / weight;
       };
-      const water = cityPick('Water');
+      const water = blend('water');
       if (water !== undefined) {
         bill = {
           county,
-          water,
-          sewer: cityPick('Sewer'),
-          providers: [city.label],
+          water: Number(water.toFixed(2)),
+          sewer: blend('sewer') === undefined ? undefined : Number((blend('sewer') as number).toFixed(2)),
+          providers: systems.filter((x) => x.water !== undefined).map((x) => x.label),
           servesShare: city.servesShare,
         };
       }
@@ -257,7 +291,7 @@ async function main() {
         ...(b.servesShare === undefined ? {} : { provider_share_of_billed_households: b.servesShare }),
         basis:
           b.servesShare !== undefined
-            ? `Water and sewer at 4,000 gallons a month from ${b.providers[0]}, which serves about ${Math.round(b.servesShare * 100)}% of the households in this county that have a water bill at all — there is no county-wide utility here. From the January 2022 GEFA/UNC rate survey, so it is a real published bill but not a current one.`
+            ? `Water and sewer at 4,000 gallons a month from ${b.providers.length > 1 ? `${b.providers.length} systems (${b.providers.join(', ')})` : b.providers[0]}, ${b.providers.length > 1 ? `which together serve` : `which serves`} about ${Math.round(b.servesShare * 100)}% of the households in this county that have a water bill at all — there is no county-wide utility here. From the January 2022 GEFA/UNC rate survey, so it is a real published bill but not a current one.`
             : b.sewer === undefined
             ? 'Water only, at 4,000 gallons a month. This county has no county sewer utility in the survey, which matches its low share of homes on public supply — households here are largely on septic, so there is no sewer half to add rather than a sewer charge of zero.'
             : 'Water and sewer at 4,000 gallons a month, the volume the survey and DeKalb’s own published example both price. From the January 2022 GEFA/UNC rate survey, so it is a real published bill but not a current one — bills rise roughly 6% a year, which is why it stays flagged.',
