@@ -15,6 +15,9 @@ The home page has been rebuilt from the ground up. Instead of a list of MLS fiel
 - **What you'd actually pay.** The big number is the estimated monthly payment, broken into loan, property tax, insurance and HOA with the assumptions spelled out. Not a lending offer.
 - **The essentials in one compact card** — days on market, lot size, HOA, year built, ZIP and MLS number where we have them — and the page ends with this home beside your own saved homes. A built-in "ask anything about this home" is coming next.
 
+### 2026-09-08
+- **A home's film now names the neighbourhood it's in, not its city twice.** The line above the film read "Atlanta metro › Canton" with "Canton" again underneath, because the app was only told a home's neighbourhood when that neighbourhood happened to have a film of its own — five of them do. Every home now carries its own, so it reads "Atlanta metro › Cherokee County › Canton" over "River Green", and tapping the name opens that neighbourhood
+
 ### 2026-09-07
 - **The line above a film now names the county.** It reads "Atlanta metro › Gwinnett County › Duluth" over a neighbourhood or a home — the county being the thing that decides your school district and your tax rate, and the reason that line is now worth reading rather than repeating the name underneath it. A city's own film still shows just the metro and the city: a city can sit in two counties and we won't guess which
 - **The county we hold for each neighbourhood was wrong near county lines and has been corrected** — 195 neighbourhoods moved, among them Peachtree Corners and several around Duluth and Marietta, which had been filed under the wrong county

@@ -234,24 +234,37 @@ export function feedHeaderModel({
 			 * card already carries the address and the price, and what it does
 			 * NOT say is where the home sits.
 			 *
-			 * `listings.community_id` is still almost entirely unpopulated
-			 * (`apps/web/lib/feed/listing-gate.ts`), so the city fallback is
-			 * the common case today — the city on BOTH lines, per the owner's
-			 * call (see the file header) — and the community appears with no
-			 * client change once the backfill lands. `card.locality`
-			 * ("Peachtree Corners, GA") is deliberately NOT parsed for a third
-			 * fallback: splitting a formatted display string is how a header
-			 * starts printing places that are not in the data.
+			 * Every listing has a community since phase189, and the card now
+			 * carries that community's NAME and COUNTY itself. It used to read
+			 * them out of the pool, which only holds communities that have a
+			 * cover photo — five of 16,504 under the phone's `videosOnly` — so
+			 * the city fallback fired for nearly every home and the header
+			 * printed the city on both lines (owner, 2026-09-08).
+			 *
+			 * `card.locality` ("Peachtree Corners, GA") is still deliberately
+			 * NOT parsed for a further fallback: splitting a formatted display
+			 * string is how a header starts printing places that are not in the
+			 * data.
 			 */
+			// The card's own community fields first. The pool only carries
+			// communities with a cover photo — five of 16,504 under the phone's
+			// `videosOnly` — so `community` resolves for almost no home, and
+			// relying on it printed the city on both lines.
+			const communityName = card.communityName ?? community?.name;
+			const county = card.communityCounty ?? community?.county;
 			return {
 				activeCardId: card.id,
 				kind: "home-tour",
 				contextText:
-					unit !== undefined
-						? context(countySegment(community?.county), unit.name)
-						: "",
-				title: community?.name ?? unit?.name ?? PLACELESS_HOME_TITLE,
-				titleSlug: community?.slug ?? null,
+					unit !== undefined ? context(countySegment(county), unit.name) : "",
+				title: communityName ?? unit?.name ?? PLACELESS_HOME_TITLE,
+				// A chevron only where there is a community we can NAME. An id
+				// with no name behind it is a dangling reference, and
+				// `/community/<slug>` would 404 — the same rule as before, just
+				// keyed on the name rather than on the pool having the row.
+				titleSlug: communityName
+					? (card.communityId ?? community?.slug ?? null)
+					: null,
 				mapUnitId: unit?.id ?? null,
 			};
 		}

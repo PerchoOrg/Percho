@@ -159,7 +159,22 @@ function projectListing(card: BrowseCard, verticalUid?: string): PoolListingDTO 
       : phoneVideoUrlFor(card)
         ? { videoUrl: phoneVideoUrlFor(card) }
         : {}),
+    /**
+     * The community's own fields, ON THE LISTING.
+     *
+     * The header used to resolve a listing's community by looking
+     * `communityId` up in the pool's `communities` array, which only carries
+     * communities that have a cover photo — and, under the phone's
+     * `videosOnly`, a video. Five of 16,504 qualify today, so a home whose
+     * community was not one of those five fell back to its CITY and the
+     * header printed the city on both lines (owner, 2026-09-08:
+     * 「listing card 还是显示两个 city，如果所有的 listing 都有对应的 community
+     * 你要显示出来」). Every listing has a community now; the card carries it
+     * rather than hoping the pool does.
+     */
     ...(card.community?.slug ? { communityId: card.community.slug } : {}),
+    ...(card.community?.name ? { communityName: card.community.name } : {}),
+    ...(card.community?.county ? { communityCounty: card.community.county } : {}),
     ...(card.listing.city ? { city: card.listing.city } : {}),
     ...(card.listing.state ? { state: card.listing.state } : {}),
     // Real prose only — an empty array is omitted so the client renders no

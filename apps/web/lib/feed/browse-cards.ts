@@ -127,6 +127,7 @@ type CommunityRow = {
   slug: string;
   description: string | null;
   city: string | null;
+  county: string | null;
   state: string | null;
 };
 
@@ -214,7 +215,7 @@ async function assembleCards(
     communityIds.length > 0
       ? supabase
           .from('communities')
-          .select('id, name, slug, description, city, state')
+          .select('id, name, slug, description, city, county, state')
           .in('id', communityIds)
           .eq('status', 'active')
       : Promise.resolve({ data: [] }),
@@ -469,6 +470,7 @@ async function assembleCards(
         slug: community.slug,
         name: community.name,
         city: community.city,
+        county: community.county,
         state: community.state ?? '',
         description: community.description,
         videoCount: cVids.length,

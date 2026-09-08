@@ -21,6 +21,42 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 03:16 UTC — phase195: a home's community name travels ON the card
+
+**Objective**: owner — 「listing card 还是显示两个 city，如果所有的 listing 都有
+对应的 community，你要显示出来」. Every listing has had a community since
+phase189, yet the header still read `Atlanta metro › Canton / Canton`.
+
+**Issues**: `feedHeaderModel` resolved a listing's community by looking
+`communityId` up in the pool's `communities` array. That array only carries
+communities with a cover photo, and under the phone's `videosOnly=1` only
+those with a VIDEO — **five of 16,504**. So the lookup missed for nearly
+every home and the title fell back to the city, which line one already had.
+The data was in the database the whole time; it just never reached the card.
+
+**Actions**:
+- `browse-card.ts` / `browse-cards.ts`: the card's `community` gains `county`
+  (one more column on a query that already selects the row).
+- `api/mobile/feed/route.ts`: `projectListing` emits `communityName` and
+  `communityCounty` alongside the existing `communityId`, so a listing card
+  carries its community rather than hoping the pool does.
+- `card-types.ts` / `pool-dto.ts` / `feed-header.ts`: the header reads the
+  card's own fields first and treats the pool as enrichment.
+- The chevron rule is preserved but re-keyed: a destination is offered when
+  there is a community we can NAME, not when the pool happens to hold the
+  row. An id with no name behind it is a dangling reference and
+  `/community/<slug>` would 404, so it still gets no chevron.
+
+**Verified**: engine run against the live pool at
+`stage=4&videosOnly=1` now reads `Atlanta metro › Cherokee County › Canton /
+River Green` where it read `Atlanta metro › Canton / Canton`. 586 mobile +
+883 web tests pass.
+
+**Learnings**: a lookup against a payload that is filtered for a different
+purpose is a silent join. The pool is filtered for what can be a CARD; the
+header needed what a listing IS. When the two lists have different admission
+rules, carry the field, do not look it up.
+
 ## 2026-09-08 01:42 UTC — phase194: the naming rules become code, not a memory
 
 **Objective**: owner, closing the plat phase — 「我们之后在 import listing 或者

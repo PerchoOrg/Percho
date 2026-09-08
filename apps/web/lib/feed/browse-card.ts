@@ -190,6 +190,8 @@ export type BrowseCard = {
     slug: string;
     name: string;
     city: string | null;
+    /** Bare county name ("Gwinnett"). Feeds the phone header's context row. */
+    county: string | null;
     state: string;
     description: string | null;
     videoCount: number;

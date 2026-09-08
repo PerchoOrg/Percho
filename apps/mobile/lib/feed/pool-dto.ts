@@ -267,6 +267,8 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 
 	const videoUrl = str(raw.videoUrl);
 	const communityId = str(raw.communityId);
+	const communityName = str(raw.communityName);
+	const communityCounty = str(raw.communityCounty);
 	const geoUnitId = str(raw.geoUnitId);
 	const matchScore = num(raw.matchScore);
 	// Both or neither — a lone coordinate cannot place a pin.
@@ -318,6 +320,8 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 		...(description.length > 0 ? { description } : {}),
 		...(sc ? { scores: sc } : {}),
 		...(communityId ? { communityId } : {}),
+		...(communityName ? { communityName } : {}),
+		...(communityCounty ? { communityCounty } : {}),
 		...(geoUnitId ? { geoUnitId } : {}),
 		...(matchScore !== undefined ? { matchScore } : {}),
 		...(d.length > 0 ? { dims: d } : {}),
