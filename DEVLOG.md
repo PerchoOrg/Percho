@@ -21,6 +21,66 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 13:05 UTC — phase212: EHOST verified; the PDF reader could be hung by a font
+
+**Objective**: continue phase211's audit down the list of inherited claims,
+ranked by what each holds up. The largest single-source adjustment in the
+codebase is DeKalb's EHOST credit — 11.638 county mills, which takes DeKalb
+from a 1.638% statutory rate to a 1.103% buyer rate. One research pass
+produced that number. Nothing had checked it.
+
+**Verified, from DeKalb's own published millage sheet**
+(`dekalbtax.org/wp-content/uploads/2025-Millage-Rates.pdf`), read with this
+repo's own parser:
+
+```
+General Opns  11.027   Hospitals  0.611
+```
+
+11.027 + 0.611 = **11.638**, exactly what `TAX_CREDITS.dekalb` carries. The
+claim survives.
+
+**But getting to that number found two ways to hang the parser, one of them
+already merged and on main.**
+
+1. **A font is not a content stream.** `contentStreams` kept any inflated
+   stream whose bytes contained `Tj` or `TJ`. DeKalb's sheet embeds four
+   TrueType fonts, and a binary blob contains those two bytes by chance long
+   before it contains anything meaningful — the tell was `OS/2`, `cmap`,
+   `glyf`, `loca` table tags sitting in what the reader had called text. Now
+   filtered on printable ratio: real operator streams measure 0.99+, the font
+   blobs well under half.
+
+2. **The TJ-array pattern backtracks exponentially.** Both alternatives of
+   the old array pattern matched a backslash — the classic ambiguity. Fed
+   74 KB of binary with 100 open brackets and no closing `] TJ`, it never
+   returns. Not slow: **hung**. Rewritten so the branches are disjoint.
+
+   This one was latent on main since phase202. The millage PDFs never
+   triggered it because their font streams happen not to contain the bytes,
+   so it sat there waiting for a different document.
+
+3. And I added a third hang while fixing the first: an early `continue` inside
+   the `try` block, when the loop's advance sits after it. Two rejected
+   streams in a row and it spins forever. Caught in the same session, and
+   there is now a test that would have caught it.
+
+**Every one of these has a test that fails without its fix, checked by
+reverting each fix in isolation.** The regex one is a timing assertion — with
+the old pattern restored the suite produced no output for 45 seconds before I
+killed it, which is precisely the failure being guarded. A hang is worse than
+a wrong answer: nothing tells you which stage stopped.
+
+**Verified**: `pnpm typecheck` clean, lint clean, **649 mobile + 1034 web
+tests pass** (+4). The millage importer still parses 1,618 rows from the 2023
+edition, unchanged.
+
+**Learnings**: `includes('TJ')` on a decompressed PDF stream is a content
+sniff, and content sniffing on binary is how a parser meets input it was never
+shaped for. The audit was looking for a wrong NUMBER and found a wrong
+ASSUMPTION about what a stream is — going and fetching the primary source is
+worth it even when the claim turns out to be right.
+
 ## 2026-09-08 12:45 UTC — phase211: verifying the OTHER inherited claim, the one holding up our tax data
 
 **Objective**: phase210's correction was about a claim I had restated four
