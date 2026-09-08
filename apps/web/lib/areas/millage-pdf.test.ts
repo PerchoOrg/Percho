@@ -3,11 +3,13 @@ import { describe, expect, it } from 'vitest';
 import {
   contentStreams,
   countywideMills,
+  decodeCid,
   parseRow,
   rows,
   scenarioRange,
   taxScenarios,
   textItems,
+  toUnicodeMap,
   totalMills,
 } from './millage-pdf';
 
@@ -483,5 +485,90 @@ describe('what the reader does not read, and says so', () => {
     // nonsense, which is worse than producing nothing.
     const items = textItems(['BT 1 0 0 1 10 20 Tm <001500130015>Tj ET']);
     expect(items).toHaveLength(0);
+  });
+});
+
+describe('CID-encoded text', () => {
+  /** A one-object PDF whose only stream is `body`, Flate-compressed. */
+  function pdfWith(...bodies: string[]): Buffer {
+    const parts: Buffer[] = [Buffer.from('%PDF-1.4\n')];
+    for (const b of bodies) {
+      parts.push(
+        Buffer.from('stream\n'),
+        deflateSync(Buffer.from(b, 'latin1')),
+        Buffer.from('\nendstream\n'),
+      );
+    }
+    return Buffer.concat(parts);
+  }
+
+  const CMAP =
+    '/CMapType 2 def 1 begincodespacerange <0000> <FFFF> endcodespacerange ' +
+    '3 beginbfchar <0003> <0020> <0024> <0041> <0025> <0042> endbfchar';
+
+  it('reads a bfchar CMap', () => {
+    const map = toUnicodeMap(pdfWith(CMAP));
+    expect(map.get('0024')).toBe('A');
+    expect(map.get('0025')).toBe('B');
+    expect(map.get('0003')).toBe(' ');
+  });
+
+  it('expands a bfrange span', () => {
+    const map = toUnicodeMap(pdfWith('1 beginbfrange <0010> <0013> <0030> endbfrange'));
+    // 0x30 is "0", so 0010→"0", 0011→"1", 0012→"2", 0013→"3".
+    expect([...'0123'].every((c, i) => map.get(`001${i}`) === c)).toBe(true);
+  });
+
+  it('refuses when two CMaps disagree about the same index', () => {
+    // Merging is only honest while the fonts agree. Silently picking one would
+    // produce plausible words built from the wrong font's alphabet.
+    expect(() =>
+      toUnicodeMap(
+        pdfWith('1 beginbfchar <0024> <0041> endbfchar', '1 beginbfchar <0024> <005A> endbfchar'),
+      ),
+    ).toThrow(/disagree/);
+  });
+
+  it('allows two CMaps that agree', () => {
+    const map = toUnicodeMap(
+      pdfWith('1 beginbfchar <0024> <0041> endbfchar', '1 beginbfchar <0024> <0041> endbfchar'),
+    );
+    expect(map.get('0024')).toBe('A');
+  });
+
+  it('drops an index the font never defined rather than inventing one', () => {
+    // A subset font legitimately omits glyphs the page never draws.
+    const map = new Map([['0024', 'A']]);
+    expect(decodeCid('00240099', map)).toBe('A');
+  });
+
+  it('decodes a hex string drawn with Tj', () => {
+    const map = new Map([
+      ['0024', 'A'],
+      ['0025', 'B'],
+    ]);
+    const items = textItems(['BT 1 0 0 1 100 200 Tm <00240025> Tj ET'], map);
+    expect(items.map((i) => i.text)).toEqual(['AB']);
+  });
+
+  it('decodes hex strings inside a TJ array, kerning and all', () => {
+    const map = new Map([
+      ['0024', 'A'],
+      ['0025', 'B'],
+    ]);
+    const items = textItems(['BT 1 0 0 1 10 20 Tm [<0024>-55.5<0025>] TJ ET'], map);
+    expect(items.map((i) => i.text)).toEqual(['AB']);
+  });
+
+  it('yields nothing from hex text when no map is supplied', () => {
+    // Which is exactly what this reader did for every CID-encoded sheet before
+    // phase229 — DeKalb's water schedule returned zero items and looked empty
+    // rather than unreadable.
+    expect(textItems(['BT 1 0 0 1 10 20 Tm <00240025> Tj ET'])).toHaveLength(0);
+  });
+
+  it('still reads a literal string when a map is present', () => {
+    const items = textItems(['BT 1 0 0 1 10 20 Tm (Cobb) Tj ET'], new Map([['0024', 'A']]));
+    expect(items.map((i) => i.text)).toEqual(['Cobb']);
   });
 });
