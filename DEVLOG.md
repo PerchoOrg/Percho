@@ -21,6 +21,45 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 10:35 UTC — phase249: I re-broke the file I fixed two days' work ago
+
+**Objective**: phase248 ended on *a summary is cheap to amend and expensive to
+re-read*. The obvious place to test that is the file where I had already found
+it — RELEASE.md, consolidated in phase227 and appended to five times since.
+
+**Same failure, one day later.**
+
+### Everything from today was filed under yesterday
+
+phase227 consolidated `### 2026-09-08`. Every RELEASE bullet since — the tax
+omission, the water-only note, flat rubbish, the water survey, DeKalb's own
+sheet — comes from work the DEVLOG dates **2026-09-09**, and every one of them
+went under the 09-08 heading because that is the heading that was there.
+
+A dated changelog whose dates are wrong is worse than an undated one: the dates
+are the only thing a reader cannot check.
+
+Split into `### 2026-09-09` (5 items) above `### 2026-09-08` (7), newest first
+per CLAUDE.md §2.1.
+
+### And one story told twice
+
+*"Water bills are real numbers in 28 counties"* and *"DeKalb's water bill is now
+a real figure"* are the same story — DeKalb being sourced from its own sheet is
+a detail of the survey story, not a second announcement. Merged into one
+paragraph that says both halves once.
+
+**Verified** mechanically: all 12 user-visible items still present, each under
+the date its work actually happened, nothing misfiled across the boundary, and
+no code or file names — 5 of 5 on the 9th, 7 of 7 on the 8th.
+
+typecheck clean, lint clean, 666 mobile + 1161 web tests.
+
+**Learnings**: I fixed this file, drew the lesson, wrote it in the DEVLOG — and
+then appended to it five times without re-reading it, because each append was
+individually correct. **Knowing the failure mode does not prevent it; only
+re-reading does.** The check has to be a step, not a belief.
+
 ## 2026-09-09 10:05 UTC — phase248: the handoff had drifted the same way twice
 
 **Objective**: read the loop notes' summary block as the owner would, which is
