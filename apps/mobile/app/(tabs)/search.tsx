@@ -46,6 +46,7 @@ import {
 	classBreaks,
 	colorFor,
 	costBreakdown,
+	estimateNoteFor,
 	legendRange,
 	lensById,
 	listOf,
@@ -136,6 +137,11 @@ export default function SearchTab() {
 	);
 	const legend = useMemo(
 		() => (lens ? legendRange(lens, areaData.areas) : undefined),
+		[lens, areaData.areas],
+	);
+	// Names which INPUTS are guesses rather than calling the whole figure one.
+	const estimateNote = useMemo(
+		() => (lens ? estimateNoteFor(lens, areaData.areas) : undefined),
 		[lens, areaData.areas],
 	);
 	/** Value per county key, so a polygon's fill is one map lookup. */
@@ -470,11 +476,9 @@ export default function SearchTab() {
 										</Text>
 									</Pressable>
 								))}
-								{ranked.some((h) => h.estimated) && (
-									<Text style={styles.estimateNote}>
-										* estimated — we have not sourced this county’s figure yet.
-									</Text>
-								)}
+								{estimateNote ? (
+									<Text style={styles.estimateNote}>{estimateNote}</Text>
+								) : null}
 							</>
 						)}
 

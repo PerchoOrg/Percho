@@ -21,6 +21,61 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 14:45 UTC — phase216: the ranking footnote was calling our own sourced work a guess
+
+**Objective**: phase203 replaced the county detail sheet's blanket "we have not
+sourced this county yet" with a per-line flag, because that banner was showing
+over property tax and school figures that come from the GA DOR and GOSA. **The
+ranking list above it kept the old sentence**, verbatim, and nobody noticed for
+thirteen phases.
+
+It was worst exactly where it mattered most. True cost is marked estimated on
+29 of 29 counties — water and trash are guesses — and the footnote read *"we
+have not sourced this county's figure yet"* under a number whose largest line
+is the GA DOR's own millage and whose second largest is EIA-861.
+
+**The footnote now names what is actually a guess**, and the shared
+`estimateNoteFor` decides it from what the computation READ, through
+`readingMetrics` — the same helper the three earlier versions of this mistake
+were centralised into.
+
+**Two rounds of getting the sentence honest, both worth recording:**
+
+1. First version took the UNION of estimated inputs across the ranking and
+   produced *"electricity, trash and water & sewer are still our estimate"* for
+   true cost. Technically true and materially misleading: electricity is
+   sourced in **27 of 29** counties, and listing it beside trash implies the
+   whole line was invented. Now split — a metric that is a guess in every
+   marked row is a property of the FIGURE; one that is a guess in a handful is
+   a property of THOSE COUNTIES, and gets a count.
+2. The second version then read *"…and electricity in 2 of them for the
+   counties marked"*, where the scope clause both repeats the count and reads
+   as though it governs it. And under a lens called Electricity it said
+   "electricity is still our estimate", naming the lens's only input twice.
+
+Live wording, generated from production:
+
+```
+True cost /mo      * trash and water & sewer are still our estimate, and
+                     electricity in 2 of them. The rest of each figure comes
+                     from a public record.
+Property tax       (no footnote — nothing estimated)
+Schools            (no footnote — nothing estimated)
+Electricity        * still our estimate for the counties marked.
+Utilities & trash  * trash and water & sewer are still our estimate, and
+                     electricity in 2 of them.
+```
+
+**Verified**: `pnpm typecheck` clean, lint clean, **649 mobile + 1061 web
+tests pass** (+8). Demos regenerated so the review pages carry the same
+sentence.
+
+**Learnings**: fixing an honesty bug in one surface does not fix it in the
+others, and the copy is where it hides — a stale sentence keeps rendering
+perfectly. The first correct-looking replacement was still overstating; the
+test that caught it was the one asking what the note says about a metric that
+is sourced almost everywhere.
+
 ## 2026-09-08 14:20 UTC — phase215: sampling the last unverified claim
 
 **Objective**: the only inherited claim left is the homestead exemption table
