@@ -108,6 +108,10 @@ function parseMetric(v: unknown): AreaMetric | null {
 	if (value === undefined || !source || !asOf) return null;
 	const sourceUrl = str(o.sourceUrl);
 	const supplier = parseSupplier(o.supplier);
+	// Whether a water figure includes the sewer half. Absent on every metric it
+	// does not apply to, and only ever interesting when false.
+	const coversSewer =
+		typeof o.coversSewer === "boolean" ? o.coversSewer : undefined;
 	return {
 		metric: metric as MetricKey,
 		value,
@@ -117,6 +121,7 @@ function parseMetric(v: unknown): AreaMetric | null {
 		asOf,
 		estimated: o.estimated === true,
 		...(supplier ? { supplier } : {}),
+		...(coversSewer === undefined ? {} : { coversSewer }),
 	};
 }
 

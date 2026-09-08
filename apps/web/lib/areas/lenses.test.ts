@@ -946,3 +946,48 @@ describe('a lens that bakes in an assumption says so', () => {
     expect(estimateNoteFor(lens, [county()])).not.toContain('insurance');
   });
 });
+
+describe('a water figure says when it has no sewer half', () => {
+  const water = (opts: { coversSewer?: boolean; publicPct?: number }): Area => ({
+    key: 'fayette',
+    name: 'Fayette',
+    kind: 'county',
+    state: 'GA',
+    metrics: [
+      metric('county_mo_mills', 8.46),
+      metric('county_bond_mills', 0),
+      metric('school_mo_mills', 18.7),
+      metric('school_bond_mills', 0),
+      metric('electric_monthly_usd', 140),
+      {
+        ...metric('water_monthly_usd', 25, true),
+        ...(opts.coversSewer === undefined ? {} : { coversSewer: opts.coversSewer }),
+      },
+      metric('trash_monthly_usd', 30, true),
+      ...(opts.publicPct === undefined ? [] : [metric('public_water_pct', opts.publicPct)]),
+    ],
+  });
+  const noteOf = (a: Area) => costBreakdown(a)?.find((l) => l.label === 'Water & sewer')?.note;
+
+  it('says so when the county has no sewer utility', () => {
+    // Fayette's $25 sits at the bottom of the water ranking, and it gets there
+    // partly by not counting a component: water-only counties average $41 a
+    // month against $68 for the rest. A reader comparing $25 with $75 cannot
+    // tell how much of the gap is cheapness and how much is absence.
+    expect(noteOf(water({ coversSewer: false }))).toBe(
+      'water only — no sewer utility in this county',
+    );
+  });
+
+  it('says nothing when the figure includes both halves', () => {
+    // The normal case does not need announcing; only a missing half does.
+    expect(noteOf(water({ coversSewer: true }))).toBeUndefined();
+    expect(noteOf(water({}))).toBeUndefined();
+  });
+
+  it('sits alongside the well-share note rather than replacing it', () => {
+    const note = noteOf(water({ coversSewer: false, publicPct: 83 }));
+    expect(note).toContain('water only');
+    expect(note).toContain('a well and no water bill');
+  });
+});

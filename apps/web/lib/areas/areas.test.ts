@@ -205,3 +205,38 @@ describe('the runtime allowlist cannot drift from the type', () => {
     expect(m[0]?.metrics ?? []).toHaveLength(0);
   });
 });
+
+describe('the sewer-half flag is projected like a supplier, not passed through', () => {
+  const water = (detail: Json) =>
+    groupMetrics([
+      row({ metric: 'water_monthly_usd', unit: 'usd_per_month', value: 25, detail }),
+    ])[0]?.metrics[0];
+
+  it('projects a false flag so the app can say the figure is water only', () => {
+    expect(water({ has_county_sewer: false })?.coversSewer).toBe(false);
+  });
+
+  it('projects a true flag too', () => {
+    expect(water({ has_county_sewer: true })?.coversSewer).toBe(true);
+  });
+
+  it('is absent when the importer said nothing', () => {
+    // Undefined and false mean different things: one is "no sewer here", the
+    // other is "this row predates the flag". Only false earns the note.
+    expect(water({})?.coversSewer).toBeUndefined();
+    expect(water(null)?.coversSewer).toBeUndefined();
+    expect(water({ has_county_sewer: 'no' })?.coversSewer).toBeUndefined();
+  });
+
+  it('never appears on a metric it cannot describe', () => {
+    const m = groupMetrics([
+      row({
+        metric: 'trash_monthly_usd',
+        unit: 'usd_per_month',
+        value: 30,
+        detail: { has_county_sewer: false },
+      }),
+    ])[0]?.metrics[0];
+    expect(m?.coversSewer).toBeUndefined();
+  });
+});

@@ -21,6 +21,53 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 05:15 UTC — phase239: five counties are cheap because a component is missing
+
+**Objective**: with water nearly all real, read that column as a buyer would —
+the method that found the trash problem.
+
+**Haralson at $26 and Fayette at $25** sit at the bottom of the water ranking
+while the rest run $48–$89. Measured:
+
+```
+with a sewer half   n=24   mean $68   range $48–$89
+water only          n=5    mean $41   range $25–$53
+```
+
+The five are the counties with no sewer utility in the survey, and they are
+**systematically ~$27 a month lower for a reason that is not cost**. A buyer
+comparing Fayette's $25 against Coweta's $75 sees a threefold difference, part
+of which is definitional.
+
+### What I did not do
+
+I did not decide those households pay nothing for sewer. **Public water and a
+septic tank is an ordinary combination in exurban Georgia**, and I have no
+source for which homes are on one — the USGS import covers water supply, not
+wastewater. Pike at 20% on public supply is probably mostly septic; Fayette at
+83% is not obviously anything.
+
+So the figure is not adjusted. What changes is that it now **says what it
+contains**: *"water only — no sewer utility in this county"*, beside the
+existing well-share note.
+
+### A named field, not `detail`
+
+The fact was already in `detail.has_county_sewer`, where nothing could reach
+it — `detail` is each importer's scratchpad. `AreaMetric.coversSewer` is a
+narrow projected field, exactly the shape `supplier` takes and for the reason
+phase219.1 established.
+
+`undefined` and `false` are kept distinct: one means "this row predates the
+flag", the other means "no sewer here". Only `false` earns the note.
+
+**Verified**: typecheck clean, lint clean, 663 mobile + **1137 web tests** (+7).
+
+**Learnings**: the trash problem was invented variation; this is **definitional
+variation** — every number real, and the comparison still misleading because
+they are not measuring the same thing. Reading a column as a ranking finds both,
+and I would not have found either by checking sources.
+
 ## 2026-09-09 04:45 UTC — phase238: the anchor arrived and rejected my reading
 
 **Objective**: phase237's lesson — *I read an argument against one method as an

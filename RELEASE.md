@@ -35,6 +35,11 @@ community reviews instead.
 
 ### 2026-09-08
 
+**Five counties' water figures now say they are water only.** Those counties
+have no county sewer utility, so their number covers water alone — which made
+them look dramatically cheaper than counties whose figure includes both. The
+line now says so instead of leaving you to infer it.
+
 **Rubbish collection now shows the same figure in every county.** We had been
 showing amounts that differed from county to county, and those differences were
 guesses — enough to reorder more than half the utilities ranking. Georgia
