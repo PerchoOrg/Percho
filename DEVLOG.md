@@ -21,6 +21,51 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 11:05 UTC — phase250: making the check a step
+
+**Objective**: phase249 ended on *knowing the failure mode does not prevent it;
+only re-reading does — the check has to be a step, not a belief*. That is a
+thing to build, not a thing to remember.
+
+RELEASE.md's rules in CLAUDE.md §2.2 are mostly mechanical, and I have broken
+two of them by hand and fixed them by hand twice:
+
+```
+v<major>.<minor>, no patch numbers
+each day appears once per version
+days newest first
+no code, file, module or SHA names — Vivian reads this
+```
+
+Five tests, one per rule. Each **verified by breaking the file in exactly the
+way the rule exists to catch**, under an assertion that the mutation applied —
+because phase245 is where I learned a `sed` that silently matches nothing
+reports success:
+
+```
+two blocks with the same date   → 1 failure
+days out of order               → 1 failure
+a patch version number          → 1 failure
+a file name in the prose        → 1 failure
+a phase reference               → 1 failure
+```
+
+### What it deliberately cannot do
+
+It cannot check that the prose is **true**, or that a shipped change was written
+down at all. Those need a person, and pretending otherwise would be the same
+overreach as a fallback that looks like success. What it checks is the
+mechanical part — which is the part that actually drifted, twice, while each
+individual edit was correct.
+
+**Verified**: RELEASE.md itself unmodified (`git diff --stat` empty for it);
+typecheck clean, lint clean, 666 mobile + **1166 web tests** (+5).
+
+**Learnings**: three phases in a row now have ended by finding drift in a
+document I had already fixed. The difference between this one and those is that
+this one cannot recur silently — which is the only kind of fix that survives me
+learning the lesson and then forgetting to apply it.
+
 ## 2026-09-09 10:35 UTC — phase249: I re-broke the file I fixed two days' work ago
 
 **Objective**: phase248 ended on *a summary is cheap to amend and expensive to
