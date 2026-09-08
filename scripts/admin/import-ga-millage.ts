@@ -29,8 +29,10 @@
  *
  * The file is FlateDecode'd standard Type1 text. Node's own `zlib` inflates
  * the content streams, and the text operators carry an x/y with every string,
- * which is enough to rebuild the table by row. That is ~60 lines here against
- * adding a PDF library for one script.
+ * which is enough to rebuild the table by row. That reading lives in
+ * `apps/web/lib/areas/millage-pdf.ts`, with tests, because three separate
+ * quirks of these PDFs each cost a county before they were understood — read
+ * its header before touching a millage parser again.
  *
  * ── What a "rate" means here ───────────────────────────────────────────────
  *
@@ -59,8 +61,13 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs';
-import { inflateSync } from 'node:zlib';
 import { createClient } from '@supabase/supabase-js';
+import {
+  contentStreams,
+  parseRow,
+  rows,
+  textItems,
+} from '../../apps/web/lib/areas/millage-pdf.js';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -118,212 +125,6 @@ const METRO_COUNTIES = new Set(
  * a home is not in is not a rate anybody pays.
  */
 const COUNTYWIDE_DISTRICTS = ['UNINCORPORATED', 'SCHOOL', 'STATE'];
-
-interface TextItem {
-  page: number;
-  x: number;
-  y: number;
-  text: string;
-}
-
-/** Inflate every FlateDecode stream that carries text operators. */
-function contentStreams(pdf: Buffer): string[] {
-  const out: string[] = [];
-  let i = 0;
-  for (;;) {
-    const s = pdf.indexOf('stream', i);
-    if (s < 0) break;
-    let p = s + 'stream'.length;
-    if (pdf[p] === 0x0d) p++;
-    if (pdf[p] === 0x0a) p++;
-    const e = pdf.indexOf('endstream', p);
-    if (e < 0) break;
-    try {
-      const text = inflateSync(pdf.subarray(p, e)).toString('latin1');
-      if (text.includes('Tj')) out.push(text);
-    } catch {
-      // Images, fonts and anything not Flate — not our business.
-    }
-    i = e + 'endstream'.length;
-  }
-  return out;
-}
-
-/** PDF string escapes, as far as this document uses them. */
-function unescapePdf(s: string): string {
-  return s
-    .replace(/\\([()\\])/g, '$1')
-    .replace(/\\t/g, '\t')
-    .replace(/\\n/g, ' ')
-    .replace(/\\r/g, ' ');
-}
-
-/**
- * Every drawn string with the position it was drawn at.
- *
- * This walks the content stream's positioning operators rather than pattern
- * matching one of them, because **the report uses two different idioms and a
- * regex for either one silently loses whole counties**. Most pages position
- * each cell absolutely (`1 0 0 1 x y cm` then an identity `Tm`); some emit a
- * row as one text object and step through it with relative `Td` moves. A
- * regex for the absolute form dropped 146 strings, which happened to include
- * every Barrow County row — and the failure was invisible, because the county
- * simply did not appear in the output.
- *
- * Only translation is tracked. The document never rotates or scales text, and
- * a full matrix multiply would be precision this does not need.
- *
- * Pages are counted by the report's own header line rather than by stream
- * index: one page is several content streams, so the stream number is not a
- * page number and grouping by it would merge rows from different pages that
- * happen to share a y.
- */
-function textItems(streams: readonly string[]): TextItem[] {
-  const items: TextItem[] = [];
-  let page = -1;
-  const num = String.raw`(-?[\d.]+)`;
-  const token = new RegExp(
-    [
-      String.raw`\((?<str>(?:\\.|[^\\()])*)\)\s*Tj`, // draw
-      String.raw`${num}\s+${num}\s+${num}\s+${num}\s+${num}\s+${num}\s+(?<op>cm|Tm)`,
-      String.raw`${num}\s+${num}\s+(?<td>Td|TD)`,
-      String.raw`(?<simple>BT|ET|q|Q|T\*)`,
-    ].join('|'),
-    'g',
-  );
-
-  for (const stream of streams) {
-    if (stream.includes('GEORGIA DEPARTMENT OF REVENUE')) page++;
-
-    // Graphics state stack: only the CTM translation matters here.
-    let ctm = { x: 0, y: 0 };
-    const stack: { x: number; y: number }[] = [];
-    // Text line matrix (where the current line starts) and the cursor on it.
-    let line = { x: 0, y: 0 };
-    let cursor = { x: 0, y: 0 };
-
-    let m: RegExpExecArray | null;
-    token.lastIndex = 0;
-    while ((m = token.exec(stream)) !== null) {
-      const g = m.groups ?? {};
-      const n = m.slice(1).filter((v) => v !== undefined);
-
-      if (g.str !== undefined) {
-        items.push({
-          page: Math.max(page, 0),
-          x: ctm.x + cursor.x,
-          y: ctm.y + cursor.y,
-          text: unescapePdf(g.str),
-        });
-        continue;
-      }
-      if (g.op === 'cm') {
-        ctm = { x: ctm.x + Number(n[4]), y: ctm.y + Number(n[5]) };
-        continue;
-      }
-      if (g.op === 'Tm') {
-        line = { x: Number(n[4]), y: Number(n[5]) };
-        cursor = { ...line };
-        continue;
-      }
-      if (g.td !== undefined) {
-        // Td moves the LINE origin, and the cursor restarts there — which is
-        // why a row emitted as one text object walks correctly.
-        line = { x: line.x + Number(n[0]), y: line.y + Number(n[1]) };
-        cursor = { ...line };
-        continue;
-      }
-      if (g.simple === 'q') {
-        stack.push({ ...ctm });
-      } else if (g.simple === 'Q') {
-        ctm = stack.pop() ?? { x: 0, y: 0 };
-      } else if (g.simple === 'BT') {
-        line = { x: 0, y: 0 };
-        cursor = { x: 0, y: 0 };
-      }
-    }
-  }
-  return items;
-}
-
-/** Same-row means same page and the same baseline within a hair. */
-function rows(items: readonly TextItem[]): string[][] {
-  const sorted = [...items].sort((a, b) => a.page - b.page || b.y - a.y || a.x - b.x);
-  const out: string[][] = [];
-  let currentPage = -1;
-  let currentY = Number.NaN;
-  let row: string[] = [];
-  for (const item of sorted) {
-    if (item.page !== currentPage || Math.abs(item.y - currentY) > 2) {
-      if (row.length > 0) out.push(row);
-      row = [];
-      currentPage = item.page;
-      currentY = item.y;
-    }
-    row.push(item.text);
-  }
-  if (row.length > 0) out.push(row);
-  return out;
-}
-
-interface DistrictRate {
-  county: string;
-  district: string;
-  mo: number;
-  bond: number;
-}
-
-/**
- * A data row is `County District M&O [Bond]`, with the rates last.
- *
- * Four shapes occur, and all four are real:
- *   `COBB    SCHOOL                 18.900  0.000`  — the usual form
- *   `COBB    ACWORTH                 8.950  " "`    — bond drawn as a SPACE
- *   `BARTOW  COUNTY UNINCORPORATED   6.970`         — bond column not drawn
- *   `BARTOW  CID RED TOP MOUNTAIN`                  — a district with no levy
- *
- * A zero bond is written three different ways and two of them are not the
- * digit zero. Requiring two numerics drops the third shape (Bartow's county
- * levy vanished exactly that way); treating a blank as a terminator instead of
- * as zero drops the second, which is most of the report. Both failures are
- * silent in the sense that the row simply is not there — which is why the
- * completeness check and the printed skip list exist, and why they are the
- * thing to read when a county goes missing.
- *
- * The district name can contain spaces, so the row is read from the END:
- * trailing rate cells (numeric, or blank meaning zero) are rates, the first
- * cell is the county, everything between is the district name. A row with no
- * rate at all is page furniture or a levy-free district and returns null.
- */
-function parseRow(cells: readonly string[]): DistrictRate | null {
-  if (cells.length < 2) return null;
-
-  /** A rate cell: a number, or a blank standing in for 0.000. */
-  const asRate = (cell: string | undefined): number | null => {
-    if (cell === undefined) return null;
-    if (cell.trim() === '') return 0;
-    const v = Number(cell);
-    return Number.isFinite(v) ? v : null;
-  };
-
-  const rates: number[] = [];
-  let end = cells.length;
-  while (end > 1 && rates.length < 2) {
-    const v = asRate(cells[end - 1]);
-    if (v === null) break;
-    rates.unshift(v);
-    end--;
-  }
-  if (rates.length === 0) return null;
-
-  const county = (cells[0] ?? '').trim().toUpperCase();
-  if (county.length === 0 || /\d/.test(county)) return null;
-  const district = cells.slice(1, end).join(' ').trim().toUpperCase();
-  if (district.length === 0) return null;
-
-  const [mo, bond] = rates.length === 2 ? rates : [rates[0], 0];
-  return { county, district, mo: mo ?? 0, bond: bond ?? 0 };
-}
 
 async function main() {
   const pdfPath = process.env.MILLAGE_PDF;
