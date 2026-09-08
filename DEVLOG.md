@@ -21,6 +21,57 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 13:30 UTC — phase213: the number every electric bill is multiplied by
+
+**Objective**: next on the inherited-claims list, ranked by reach. Every
+county's electric figure is `STATE_MONTHLY_KWH × that county's rate`, and
+`STATE_MONTHLY_KWH = 1074` came from a research pass. One number, 27 counties,
+never checked.
+
+**Verified against the primary source.** EIA Table 5.A,
+`eia.gov/electricity/sales_revenue_price/xls/table_5A.xlsx`, "2024 Average
+Monthly Bill — Residential", built from forms EIA-861:
+
+```
+Georgia   4,815,501 customers   1074.0134 kWh/month   14.0825 ¢/kWh   $151.248
+```
+
+1074 is right. It is also internally consistent — 1074.0134 × $0.140825 =
+$151.25, the same row's own bill figure.
+
+**Getting there needed a reader.** EIA publishes spreadsheets, so verifying
+anything from EIA meant either taking it on report forever or being able to
+open an xlsx. `apps/web/lib/areas/xlsx.ts` is a ZIP reader and a worksheet
+reader in ~140 lines — central directory, `inflateRaw`, shared strings, cells
+— against a dependency that would ship a spreadsheet engine to read a table of
+numbers in a build script. It deliberately does not do formulas, dates, styles,
+ZIP64 or encryption, and throws rather than guessing when it meets them.
+
+**Writing the tests found two bugs in it, both of the silent kind:**
+
+1. **A self-closing empty cell swallowed its neighbours.** With
+   `<c …>…</c>` tried before `<c …/>`, the open tag's `[^>]*` consumes a
+   self-closing cell's `/` and runs on to the NEXT cell's `</c>`. The empty
+   cell and everything up to it vanish — which drops a column and shifts every
+   later one left, in a table that still looks like a table. Alternation order
+   reversed.
+2. **Chained `.replace` calls double-decode XML entities.** Source `&amp;lt;`
+   is the literal text `&lt;` — one decode. Replacing `&amp;` last still
+   re-examines what an earlier pass wrote; replacing it first is worse. Neither
+   order is correct; a single pass over one alternation is. And the test I
+   wrote for it was wrong in the same way I had been — I expected two decodes.
+   The code was right and the expectation was not.
+
+**Verified**: `pnpm typecheck` clean, lint clean, **649 mobile + 1051 web
+tests pass** (+17). Re-read the real EIA file after both fixes and the Georgia
+row is unchanged.
+
+**Learnings**: the reason this claim went unverified for eleven phases was not
+carelessness, it was that the source was in a format nothing here could open.
+"We cannot check that" quietly becomes "that is true". A hundred and forty
+lines removed the excuse, and the same reader now opens EIA-861 — the
+authoritative version of the per-utility rates currently taken from OpenEI.
+
 ## 2026-09-08 13:05 UTC — phase212: EHOST verified; the PDF reader could be hung by a font
 
 **Objective**: continue phase211's audit down the list of inherited claims,
