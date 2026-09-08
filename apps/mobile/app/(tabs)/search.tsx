@@ -71,12 +71,14 @@ import { useFeedPool } from "../../hooks/use-feed-pool";
 import { MIN_QUERY_LEN, useSearch } from "../../hooks/use-search";
 import { familiarityFor } from "../../lib/area-familiarity";
 import { areasByKey } from "../../lib/areas/areas-dto";
+import { savedCitiesByCounty, savedCityNote } from "../../lib/areas/locate";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
 import { lensForPriorities } from "../../lib/priorities";
-import { formatPrice, specsLine } from "../../lib/saved/rows";
+import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
 import { usePriorityStore } from "../../state/priorities";
+import { useSavedStore } from "../../state/saved";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -137,6 +139,24 @@ export default function SearchTab() {
 		() => (lens ? classBreaks(lens, areaData.areas) : []),
 		[lens, areaData.areas],
 	);
+	// Which of the buyer's saved CITIES sit in each county. The map ranks
+	// counties and a buyer saves cities, so a county is never marked "saved" —
+	// the row names the city instead. On 29 otherwise identical outlines this
+	// is the only thing that says where they already stand.
+	const savedItems = useSavedStore((s) => s.items);
+	const savedByCounty = useMemo(
+		() =>
+			savedCitiesByCounty(
+				savedItems
+					.filter((i) => i.kind === "area")
+					.map((i) => areaUnitId(i.id)),
+				pool.geoUnits,
+				areaData.shapes,
+			),
+		[savedItems, pool.geoUnits, areaData.shapes],
+	);
+	const savedNoteFor = (key: string) => savedCityNote(savedByCounty.get(key));
+
 	const ranked = useMemo(
 		() => (lens ? rankedBy(lens, areaData.areas) : []),
 		[lens, areaData.areas],
@@ -473,9 +493,16 @@ export default function SearchTab() {
 												},
 											]}
 										/>
-										<Text style={styles.rankName} numberOfLines={1}>
-											{hit.area.name}
-										</Text>
+										<View style={styles.rankLabel}>
+											<Text style={styles.rankName} numberOfLines={1}>
+												{hit.area.name}
+											</Text>
+											{savedNoteFor(hit.area.key) ? (
+												<Text style={styles.rankSaved} numberOfLines={1}>
+													{savedNoteFor(hit.area.key)}
+												</Text>
+											) : null}
+										</View>
 										<Text style={styles.rankValue}>
 											{lens.format(hit.value)}
 											{hit.estimated ? "*" : ""}
@@ -877,7 +904,13 @@ const styles = StyleSheet.create({
 		borderBottomColor: colors.border,
 	},
 	rankSwatch: { width: 14, height: 14, borderRadius: 4 },
-	rankName: { ...textStyles.headline, color: colors.ink, flex: 1 },
+	rankLabel: { flex: 1 },
+	rankSaved: {
+		...textStyles.caption,
+		color: colors.accent,
+		marginTop: 1,
+	},
+	rankName: { ...textStyles.headline, color: colors.ink },
 	rankValue: { ...textStyles.headline, color: colors.ink2 },
 	estimateNote: {
 		...textStyles.caption,

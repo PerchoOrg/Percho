@@ -65,3 +65,54 @@ export function countyKeyForPoint(
 	}
 	return undefined;
 }
+
+/**
+ * Which of the buyer's saved cities sit in each county, by county key.
+ *
+ * The lens map ranks COUNTIES; a buyer saves CITIES. So a county cannot be
+ * marked "saved" — they never saved Cherokee, they saved Woodstock — and the
+ * honest thing to show is the city itself. `Cherokee · Woodstock, saved` tells
+ * them where they already stand on a map of 29 otherwise identical outlines.
+ *
+ * Names come back in the order the units are given, and a county with none is
+ * simply absent rather than mapped to an empty array, so callers can test
+ * presence with a lookup.
+ */
+export function savedCitiesByCounty(
+	savedUnitIds: readonly string[],
+	units: readonly {
+		id: string;
+		name: string;
+		centroid: { lat: number; lng: number };
+	}[],
+	shapes: readonly AreaShape[],
+): Map<string, string[]> {
+	const wanted = new Set(savedUnitIds);
+	const out = new Map<string, string[]>();
+	for (const u of units) {
+		if (!wanted.has(u.id)) continue;
+		const key = countyKeyForPoint(u.centroid.lat, u.centroid.lng, shapes);
+		// Undefined is a real answer: a saved city outside the covered metro
+		// has no county row to sit under. See `countyKeyForPoint`.
+		if (!key) continue;
+		const list = out.get(key);
+		if (list) list.push(u.name);
+		else out.set(key, [u.name]);
+	}
+	return out;
+}
+
+/**
+ * "Woodstock, saved" / "Woodstock and Canton, saved" — or nothing.
+ *
+ * Kept beside the resolution so the two cannot drift, and phrased as the
+ * cities rather than the county for the reason above.
+ */
+export function savedCityNote(
+	names: readonly string[] | undefined,
+): string | undefined {
+	if (!names || names.length === 0) return undefined;
+	if (names.length === 1) return `${names[0]}, saved`;
+	if (names.length === 2) return `${names[0]} and ${names[1]}, saved`;
+	return `${names[0]} and ${names.length - 1} more, saved`;
+}
