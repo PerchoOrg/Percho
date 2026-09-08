@@ -21,6 +21,59 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 02:40 UTC — phase234: a county of 141,000 was excluded by its own utility's name
+
+**Objective**: five counties still carried an invented water figure. Douglas is
+the only large one — 141,000 people, 96% on public supply — so before accepting
+it as a real gap, check whether it is a gap in the data or in my matching.
+
+**It was mine.** Douglas County's utility is the **Douglasville-Douglas County
+Water and Sewer Authority**, serving 109,694 of the county's 140,733 people.
+`namesCounty` anchored at the start of the label, so a joint authority that
+leads with the city name was rejected, and a county of 141,000 kept a number I
+made up because its water utility is named after its largest city.
+
+The strict rule was still right about what it was built for: the same survey
+carries a bare `Douglas` row, population 12,200 — the city of Douglas, in Coffee
+County — and that is correctly refused either way.
+
+### Measured before widened
+
+Anchoring anywhere in the label instead of at the start could reopen the
+collision the rule exists to close, so I ran it across all 29 counties first.
+It newly matches **exactly two labels**, both joint authorities for the county
+in question, and no city:
+
+```
+Douglas   Douglasville-Douglas County Water and Sewer Authority   pop 109,694
+Hall      Gainesville - Hall County                              pop 198,667
+```
+
+The word boundaries are what keep it safe: a bare "Douglas" has no "County" in
+it, "Jacksonville County" does not match Jackson because "Jackson" is not
+followed by whitespace, and "Cherokee Countyside" does not match because
+"County" is not followed by one.
+
+### The Hall row that looks better and is not
+
+"Gainesville - Hall County" covers 198,667 against Hall's population of 193,535,
+which reads like a strictly better source than phase233's Gainesville row at
+72%. It has **only a sewer figure** — no water. Taking it would mean splicing
+one entity's sewer onto another's water, so Hall keeps the single consistent
+provider it had. The wider rule changes nothing for Hall.
+
+**Result**: 24 of 29 counties now carry a real published water bill. Four
+remain (Dawson, Lamar, Meriwether, Morgan), all under 24,000 people, and their
+absence is real — Lamar and Meriwether appear nowhere in the survey, and Dawson
+and Morgan appear only as the same-named cities in Terrell and Calhoun counties.
+
+**Verified**: typecheck clean, lint clean, 663 mobile + **1130 web tests** (+4).
+
+**Learnings**: I had written Douglas down as "no water row in the survey" and
+moved on. It had a row the whole time, under the name the utility actually
+goes by. A gap in a join is a claim about the join before it is a claim about
+the data.
+
 ## 2026-09-09 02:10 UTC — phase233: the measurement turned four counties into one
 
 **Objective**: phase232 left six counties on an invented water figure because
