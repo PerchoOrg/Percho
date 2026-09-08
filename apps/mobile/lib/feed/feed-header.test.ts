@@ -92,6 +92,26 @@ describe("home tour", () => {
 	 * says which property this is, and the one thing it does not say is where
 	 * that property sits.
 	 */
+	/**
+	 * How this works in production: the pool only carries communities with a
+	 * cover photo, so a home's community is almost never in it. The card brings
+	 * its own.
+	 */
+	it("reads the community off the card, without needing it in the pool", () => {
+		const m = model({
+			card: listing({
+				geoUnitId: CANTON.id,
+				communityId: "river-green",
+				communityName: "River Green",
+				communityCounty: "Cherokee",
+			}),
+			communities: [],
+		});
+		expect(m.contextText).toBe("Atlanta metro › Cherokee County › Canton");
+		expect(m.title).toBe("River Green");
+		expect(m.titleSlug).toBe("river-green");
+	});
+
 	it("names the community, with the county and city in the context row", () => {
 		const m = model({
 			card: listing({ geoUnitId: CANTON.id, communityId: RIVER_GREEN.slug }),
@@ -134,6 +154,11 @@ describe("home tour", () => {
 		expect(m.mapUnitId).toBe(CANTON.id);
 	});
 
+	/**
+	 * An id with no name behind it — not in the pool and not on the card — is a
+	 * dangling reference. No title, and no chevron: `/community/<slug>` would
+	 * 404.
+	 */
 	it("resolves neither from an unresolvable community id", () => {
 		const m = model({
 			card: listing({ geoUnitId: CANTON.id, communityId: "not-in-pool" }),

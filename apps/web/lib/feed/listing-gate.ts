@@ -36,7 +36,18 @@ export interface PoolListingDTO {
   lng?: number;
   /** Pre-rendered map tile (public Storage URL). See scripts/maintenance/backfill_listing_maps.py. */
   mapUrl?: string;
+  /** The community's SLUG, not its uuid — the wire's join key. */
   communityId?: string;
+  /**
+   * The community's name and county, carried ON the listing.
+   *
+   * The pool's `communities` array only holds communities that have a cover
+   * photo (and, under the phone's `videosOnly`, a video), so a listing could
+   * not rely on finding its own community there — see the note in
+   * `app/api/mobile/feed/route.ts`.
+   */
+  communityName?: string;
+  communityCounty?: string;
   /** City the listing is in — the stage-3 fallback join key. */
   city?: string;
   /** State, for the card's "City, ST" sub-line. */

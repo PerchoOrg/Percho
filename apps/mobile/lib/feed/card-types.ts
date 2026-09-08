@@ -101,7 +101,19 @@ export interface ListingCardV3 {
 	 * the JS bundle.
 	 */
 	mapUrl?: string;
+	/** The community's SLUG — the wire sends the slug, not the row's uuid. */
 	communityId?: string;
+	/**
+	 * The community's own name and county, carried on the LISTING.
+	 *
+	 * The header used to look the community up in the pool, which only carries
+	 * communities that have a cover photo — five of 16,504 under the phone's
+	 * `videosOnly`. A home whose community was not one of those five printed
+	 * its city on both header lines. These two fields are what the header
+	 * reads now; the pool lookup is only an enrichment.
+	 */
+	communityName?: string;
+	communityCounty?: string;
 	/**
 	 * "Peachtree Corners, GA" — the sub-line under the address.
 	 */
