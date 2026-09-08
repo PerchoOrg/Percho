@@ -191,3 +191,59 @@ describe("declared priorities reorder the rows", () => {
 		expect(sorted).toEqual(plain);
 	});
 });
+
+describe("a cell is an estimate only if the computation READ one", () => {
+	/** Production's real shape: sourced levies with a seeded fallback rate
+	 *  still sitting behind them, never reached. */
+	const sourcedTax: Area = {
+		key: "fulton",
+		name: "Fulton",
+		kind: "county",
+		state: "GA",
+		metrics: [
+			metric("county_mo_mills", 8.87),
+			metric("county_bond_mills", 0.18),
+			metric("school_mo_mills", 17.14),
+			metric("school_bond_mills", 0),
+			metric("property_tax_rate_pct", 1.05, true),
+			metric("electric_monthly_usd", 157),
+			metric("water_monthly_usd", 78, true),
+			metric("trash_monthly_usd", 32, true),
+		],
+	};
+	const other: Area = { ...sourcedTax, key: "cobb", name: "Cobb" };
+
+	const cellsOf = (label: string) => {
+		const t = buildAreaCompareTable([sourcedTax, other]);
+		const r = t.rows.find((x) => x.label.startsWith(label));
+		if (!r) throw new Error(`no row ${label}`);
+		return r.cells;
+	};
+
+	it("does not flag tax because the UNUSED fallback rate is an estimate", () => {
+		// Third occurrence of this mistake, after valuesFor and costBreakdown.
+		// It put an asterisk on figures computed from the GA DOR's own millage.
+		expect(cellsOf("Property tax").every((c) => !c.estimated)).toBe(true);
+	});
+
+	it("still flags the rows whose inputs really are guesses", () => {
+		expect(cellsOf("Utilities").every((c) => c.estimated)).toBe(true);
+		expect(cellsOf("True cost").every((c) => c.estimated)).toBe(true);
+	});
+
+	it("does not flag a row computed from no metric at all", () => {
+		// Insurance is one flat assumption; it reads nothing, so nothing it read
+		// can be an estimate. The demo labels it separately.
+		expect(cellsOf("Insurance").every((c) => !c.estimated)).toBe(true);
+	});
+
+	it("flags tax when the fallback is what actually answered", () => {
+		const noLevies: Area = {
+			...sourcedTax,
+			metrics: sourcedTax.metrics.filter((m) => !m.metric.endsWith("_mills")),
+		};
+		const t = buildAreaCompareTable([noLevies, other]);
+		const r = t.rows.find((x) => x.label.startsWith("Property tax"));
+		expect(r?.cells[0]?.estimated).toBe(true);
+	});
+});

@@ -338,6 +338,39 @@ function metricLookup(area: Area): (metric: MetricKey) => number | undefined {
 }
 
 /**
+ * Run a computation over an area's metrics and record which ones it READ.
+ *
+ * This exists because the same mistake has now been made three times, in three
+ * files, by three separate pieces of code written to the same wrong instinct:
+ * asking whether any DECLARED input is an estimate. Declared inputs include
+ * fallbacks. A fallback the computation never reached is invisible to
+ * reasoning and visible to `.some()`, so a figure computed from the state's
+ * own adopted millage kept rendering with an "estimated" asterisk because a
+ * seeded `property_tax_rate_pct` still sits in the table behind it.
+ *
+ * It happened in `valuesFor`, then in `costBreakdown`, then in the mobile
+ * compare table. Three is enough: any "is this sourced?" question goes through
+ * here, and the answer is about what was read.
+ */
+export function readingMetrics<T>(
+  area: Area,
+  compute: (get: (metric: MetricKey) => number | undefined) => T,
+): { value: T; read: ReadonlySet<MetricKey> } {
+  const byKey = new Map(area.metrics.map((m) => [m.metric, m]));
+  const read = new Set<MetricKey>();
+  const value = compute((metric) => {
+    read.add(metric);
+    return byKey.get(metric)?.value;
+  });
+  return { value, read };
+}
+
+/** True when any metric the computation actually read is an estimate. */
+export function estimatedFromReads(area: Area, read: ReadonlySet<MetricKey>): boolean {
+  return area.metrics.some((m) => m.estimated && read.has(m.metric));
+}
+
+/**
  * Every area that has all of the lens's inputs, with its computed value.
  *
  * `estimated` reflects the metrics the computation ACTUALLY read, not the
@@ -352,15 +385,9 @@ export function valuesFor(lens: Lens, areas: readonly Area[]): LensValue[] {
   const out: LensValue[] = [];
   for (const area of areas) {
     if (area.kind !== lens.areaKind) continue;
-    const lookup = metricLookup(area);
-    const read = new Set<MetricKey>();
-    const value = lens.compute((metric) => {
-      read.add(metric);
-      return lookup(metric);
-    }, area.key);
+    const { value, read } = readingMetrics(area, (get) => lens.compute(get, area.key));
     if (value === undefined || !Number.isFinite(value)) continue;
-    const estimated = area.metrics.some((m) => m.estimated && read.has(m.metric));
-    out.push({ area, value, estimated });
+    out.push({ area, value, estimated: estimatedFromReads(area, read) });
   }
   return out;
 }
