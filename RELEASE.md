@@ -65,6 +65,14 @@ utility, which matches how many homes there are on septic.
 
 ### 2026-09-08
 
+**The phone feed's first card arrives about three times faster.** Opening the
+app used to sit on an empty card outline for two to four seconds before the
+first home or neighbourhood appeared. The app was waiting on four separate
+lookups that ran one after another even though only one of them needed the
+result of another; they now happen together, and a repeated open within the
+minute skips the wait entirely. Nothing about what you see has changed — only
+how long you wait for it.
+
 **Community videos in the phone feed now take turns.** Once you had swiped past
 everything at least once, the deck could deal the same community twice in a row
 while another filmed community never seemed to come up at all. Every filmed

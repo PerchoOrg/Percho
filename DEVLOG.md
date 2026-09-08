@@ -64,6 +64,128 @@ kind the cast made invisible — a field the compiler could not see, so nobody
 compared it to the table. **The count was the least interesting thing about
 them.**
 
+## 2026-09-08 23:50 UTC — phase256: the feed pool's four serial round trips
+
+**Objective**: owner on device — 「每次打开expo go都卡在这个页面」, then, once the
+page was read properly, 「不是卡住 是这个页面卡几秒然后才渲染card」. Find out why the
+first card takes seconds to arrive.
+
+### The page he photographed is not the page it looks like
+
+Worth writing down, because I spent the first half of this session chasing the
+wrong failure. The screenshot shows "Atlanta metro › Roswell" over an empty
+cream rectangle, and reads as a broken community page. It is the FEED, in its
+empty-deck state:
+
+* `feedHeaderModel` falls back to the persisted **scope** when the deck is empty
+  (`lib/feed/feed-header.ts`), and he had picked Roswell in the scope sheet at
+  some point. So the header names a place the feed is not showing yet.
+* The rectangle is `CardSkeleton`. Sampled the screenshot: `#F5F0E9`, which is
+  `surface2` mid-breath over `bg`. The card had not arrived.
+* The blue gear is Expo Go's own dev-menu button. Nothing in this repo draws it.
+
+I had already built a CDP watcher against Metro's inspector to catch a frozen JS
+thread before he corrected me. **The correction was the diagnosis** — "a few
+seconds, then it renders" is a latency question, and latency is measurable
+without the phone at all.
+
+### Measured, not guessed
+
+Production, `videosOnly=1`, TTFB, three samples each after a warm-up:
+
+```
+stage=0   0.21–0.39s      geo units + vertical videos only
+stage=1   1.12–1.23s      + listing rows, scores, dim photos
+stage=3   1.62–1.99s      + the community tail
+stage=4   1.70–2.08s      everything
+```
+
+So the batch that opens the handler answers in **0.22s**, and the two tails add
+about **0.9s each**. `cache-control: no-store` on top, so every open paid it.
+
+### The cause: four round trips stacked end to end
+
+After the opening `Promise.all` the handler ran, in sequence:
+
+1. `fetchNeighborhoodScores` — needs the page's listing ids.
+2. `fetchVerticalVideoCommunityIds` — **needs nothing at all**.
+3. `fetchCommunityPoolByIds` — needs (2).
+4. the `listing_photos` read for the trade-off doors — needs the gated ids.
+
+Only (3) has a real dependency. (2) was serial purely because of where it sat in
+the file, and (1) and (4) were separated by the whole community branch despite
+being keyed off the same list.
+
+**Three changes, no behaviour change:**
+
+* (2) hoisted into the opening batch, gated on `needsCommunities && (videosOnly
+  || videoFirst)` so stages that never read it still pay nothing.
+* `gateListings` moved ABOVE the two listing reads. It decides what survives
+  from `stage`, `limit` and the liked communities and **never reads `scores`**
+  (checked: `lib/feed/listing-gate.ts` touches `communityId`, `city`, `stage`,
+  `limit`, `liked` and nothing else), so the surviving set is identical either
+  way — and the reads now query only the ids that will actually ship. Stage 1
+  scores 2 listings where it used to score 12.
+* the three tails run in one `Promise.all`. Four hops become one.
+
+### The cache header, and the one thing that had to change first
+
+`no-store` → `public, s-maxage=60, stale-while-revalidate=120`. Shared-cache
+only; no `max-age`, so the phone still asks every time.
+
+That is only safe because the response is a pure function of the URL, and it was
+NOT: the dim-photos read used `createClient()`, which reads the auth cookie. A
+CDN entry populated by a signed-in browser could have been served to the next
+caller. Swapped to `createAnonClient()` — same anon key, same RLS, no cookie —
+so every read in the handler is now service-role or cookie-less, and the two
+buyer-specific inputs (`cities`, `likedCommunityIds`) are query params and
+therefore part of the cache key. Noted in the header comment that putting
+`createClient()` back means putting `no-store` back.
+
+Windows kept short deliberately: he tests content changes against production and
+then opens the phone, so 60s + a 120s revalidation tail is the most staleness
+worth trading for this.
+
+**Verified**: typecheck clean; biome at `--max-diagnostics=500` gives 0 errors /
+215 warnings, which is main's documented baseline (phase253); 1169 web tests
+pass. Captured production responses for eight parameter combinations covering
+every branch (stages 0–4, `videosOnly`, `videoFirst`, `cities`,
+`likedCommunityIds`) in `/tmp/feed-baseline` so the deployed result can be
+diffed byte-for-byte against them — the equivalence argument above is the claim,
+and that diff is what tests it. **Not yet verified on the deployed URL.**
+
+### Inherited red test, left alone on purpose
+
+`lib/docs/devlog-order.test.ts` **fails on origin/main as of 314a915c**, and it
+is not mine:
+
+```
+"phase253: nineteen casts gone…" (2026-09-09 12:45)
+  sits below "phase255: the looped deck…" (2026-09-08 23:45)
+```
+
+phase255 stamped itself with the real clock. Phases 230–254 — **25 entries** —
+are stamped roughly 13h fast: phase254's commit is 2026-09-08 23:08 UTC and its
+heading says 2026-09-09 13:15. phase255 is the correct one; the block above it
+is not.
+
+I did not rewrite those 25. Their true times ARE recoverable from git (unlike
+the three pairs phase251 declined to touch, whose times were never recorded
+anywhere), so this is fixable rather than unfixable — but it rewrites 25 lines
+of the institutional record in a file another agent was appending to minutes
+ago, and that is a decision for the owner, not a side effect of a latency fix.
+
+This entry therefore sits directly above phase255 rather than at the very top:
+that is its correct position by TRUE time against every entry whose stamp is
+accurate, and it adds no new failing pair. Flagged to the owner.
+
+**Learnings**: the owner's first report and his correction described the same
+pixels and pointed at different bugs. I built a debugger attachment for the
+first one. The measurement that actually found this — four `curl`s at different
+stages — took under a minute and needed no device, and I could have run it
+before touching the phone at all. **A latency complaint is a latency
+measurement; reach for the profile before the debugger.**
+
 ## 2026-09-08 23:45 UTC — phase255: the looped deck dealt one community twice and hid Windward
 
 **Objective**: owner reports the iOS feed shows the same community card twice in
