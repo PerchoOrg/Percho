@@ -224,7 +224,7 @@ async function main() {
         total_mills: Number(mills.toFixed(3)),
         assessment_ratio: ASSESSMENT_RATIO,
         basis:
-          'Adopted rate on fair market value, unincorporated county: county + school + state levies. BEFORE homestead exemptions — an owner-occupant pays less, materially so in counties with large local exemptions. A home inside a city pays that city’s millage on top.',
+          'Adopted rate on fair market value for an UNINCORPORATED home: county + school + state levies. Before homestead exemptions, and it omits the fire, EMS, police and recreation districts most counties levy separately — run scripts/admin/audit-millage-districts.ts for the size of that gap per county. A home inside a city is NOT simply this plus the city rate: the county levies a lower rate inside city limits, so a city home can pay less than its unincorporated neighbour.',
       },
     });
 

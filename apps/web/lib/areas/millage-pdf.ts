@@ -327,3 +327,133 @@ export function countywideMills(
 export function totalMills(parts: ReadonlyMap<string, LevyMills>): number {
   return [...parts.values()].reduce((n, l) => n + l.mo + l.bond, 0);
 }
+
+/**
+ * What a county's residential taxing districts add up to, one scenario at a
+ * time.
+ *
+ * ── Why a county has a RANGE, not a rate ───────────────────────────────────
+ *
+ * A single county figure reads as "what you pay here" and is only ever true
+ * for one scenario: a home outside every city. Inside a city the bill is built
+ * from different rows, and the difference is larger than most of the arguments
+ * about how to compute a rate. In DeKalb 2023 it runs from 38.445 mills in
+ * Dunwoody to 51.886 in Pine Lake against 40.953 unincorporated — a spread of
+ * 13 mills, or half a percentage point of market value.
+ *
+ * ── And it does not always go up ───────────────────────────────────────────
+ *
+ * The intuition is that a city adds its millage on top. That is wrong, and it
+ * was written into this codebase as fact before anyone checked: the county
+ * levies a LOWER rate inside a city, because the city provides the services
+ * the county would otherwise. DeKalb charges 17.494 mills unincorporated and
+ * 9.588 incorporated, so **a Dunwoody resident pays less county-wide tax than
+ * their unincorporated neighbour**, city millage included. Pine Lake's own
+ * 16.481 mills more than swallow the discount; Dunwoody's 3.04 do not.
+ *
+ * ── What is deliberately excluded, and what that costs ─────────────────────
+ *
+ *   `CID *`  Community Improvement Districts levy on COMMERCIAL property only.
+ *            Including them would put a 25-mill industrial district in a
+ *            residential range.
+ *   `TAD *`  Tax Allocation Districts are a financing mechanism and levy
+ *            0.000 in every row of this report.
+ *   other    A special service district that is not `COUNTY SSD - <city>`
+ *   `SSD`    covers specific parcels rather than a whole city — Doraville's
+ *            tank farm SSD is 54.994 mills and applies to a tank farm.
+ *   sub-     A district whose name begins with another district's name is a
+ *   areas    slice of it — `BROOKHAVEN ANNEX B` beside `BROOKHAVEN`. The
+ *            report does not say whether such a row REPLACES the parent's
+ *            millage or adds to it, and the two readings differ by more than
+ *            the row itself. Left in, `BROOKHAVEN ANNEX B` set DeKalb's floor
+ *            at 1.367% on the replace reading; it would be 1.496% on the other.
+ *            A number we cannot interpret should not define a county's floor.
+ *
+ * The cost of those exclusions is that a home inside such a district pays more
+ * than this range's top. The range is therefore a floor-and-ceiling for the
+ * ORDINARY case, which is what it is labelled as, and not a guarantee.
+ *
+ * Independent city school systems replace the county school levy rather than
+ * adding to it — Atlanta, Decatur, Marietta and the rest — so a city with one
+ * is priced with `IND SCHOOL <city>` in place of `SCHOOL`.
+ */
+
+export interface TaxScenario {
+  /** `null` for the unincorporated baseline, otherwise the city's name. */
+  city: string | null;
+  /** Total mills a residential parcel in this scenario is levied. */
+  mills: number;
+}
+
+const NON_RESIDENTIAL = /^CID |^TAD /;
+
+/** Rows that are structural rather than a place someone lives in. */
+function isStructural(district: string): boolean {
+  return (
+    district.startsWith('COUNTY ') ||
+    district === 'SCHOOL' ||
+    district === 'STATE' ||
+    district.startsWith('IND SCHOOL') ||
+    district.includes('SSD') ||
+    NON_RESIDENTIAL.test(district)
+  );
+}
+
+/**
+ * Every ordinary residential scenario in a county, unincorporated first.
+ *
+ * Empty when the county has no `COUNTY UNINCORPORATED` or `SCHOOL` row, which
+ * is the same completeness bar `countywideMills` is held to — a partial total
+ * would read as a cheap county.
+ */
+export function taxScenarios(districts: readonly DistrictRate[], county: string): TaxScenario[] {
+  const rows = districts.filter((r) => r.county === county);
+  const total = (d: string) => {
+    const r = rows.find((x) => x.district === d);
+    return r ? r.mo + r.bond : undefined;
+  };
+
+  const unincorporated = total('COUNTY UNINCORPORATED');
+  const school = total('SCHOOL');
+  const state = total('STATE') ?? 0;
+  if (unincorporated === undefined || school === undefined) return [];
+
+  const out: TaxScenario[] = [{ city: null, mills: unincorporated + school + state }];
+
+  const incorporated = total('COUNTY INCORPORATED');
+  if (incorporated === undefined) return out;
+
+  const cities = rows.filter((r) => !isStructural(r.district) && r.mo + r.bond > 0);
+  for (const row of cities) {
+    // A district named after another district is a slice of it, and the report
+    // does not say whether it replaces or adds — see the header.
+    const isSubArea = cities.some(
+      (other) => other !== row && row.district.startsWith(`${other.district} `),
+    );
+    if (isSubArea) continue;
+    const cityMills = row.mo + row.bond;
+    // The county's own service district for this city, where it runs one.
+    const ssd = total(`COUNTY SSD - ${row.district}`) ?? 0;
+    // An independent city school system REPLACES the county levy.
+    const indSchool = total(`IND SCHOOL ${row.district}`);
+    out.push({
+      city: row.district,
+      mills: incorporated + ssd + (indSchool ?? school) + state + cityMills,
+    });
+  }
+  return out;
+}
+
+/** Lowest and highest ordinary scenario, with the place each belongs to. */
+export function scenarioRange(
+  scenarios: readonly TaxScenario[],
+): { low: TaxScenario; high: TaxScenario } | undefined {
+  if (scenarios.length === 0) return undefined;
+  let low = scenarios[0] as TaxScenario;
+  let high = scenarios[0] as TaxScenario;
+  for (const s of scenarios) {
+    if (s.mills < low.mills) low = s;
+    if (s.mills > high.mills) high = s;
+  }
+  return { low, high };
+}

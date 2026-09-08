@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { countywideMills, parseRow, rows, textItems, totalMills } from './millage-pdf';
+import {
+  countywideMills,
+  parseRow,
+  rows,
+  scenarioRange,
+  taxScenarios,
+  textItems,
+  totalMills,
+} from './millage-pdf';
 
 /**
  * Every fixture below is a verbatim fragment of the real 2023 DOR report,
@@ -265,5 +273,128 @@ describe('countywideMills — districts match exactly, never by substring', () =
 
   it('is empty for a county that is not in the report at all', () => {
     expect(countywideMills(DEKALB, 'NOWHERE').size).toBe(0);
+  });
+});
+
+describe('taxScenarios — a county is a range, not a rate', () => {
+  /** DeKalb's real 2023 rows, trimmed to the ones that matter here. */
+  const d = (district: string, mo: number, bond = 0) => ({
+    county: 'DEKALB',
+    district,
+    mo,
+    bond,
+  });
+  const DEKALB = [
+    d('COUNTY UNINCORPORATED', 17.494, 0.479),
+    d('COUNTY INCORPORATED', 9.588),
+    d('SCHOOL', 22.98),
+    d('STATE', 0),
+    d('COUNTY FIRE DISTRICT', 2.837),
+    d('COUNTY SSD - DUNWOODY', 2.837),
+    d('COUNTY SSD - PINE LAKE', 2.837),
+    d('COUNTY SSD - ATLANTA', 0.826),
+    d('DUNWOODY', 3.04),
+    d('PINE LAKE', 16.481),
+    d('ATLANTA', 8.52, 1.88),
+    d('IND SCHOOL ATLANTA', 20.5),
+    // Excluded: commercial, financing, sub-area, tank farm.
+    d('CID ASSEMBLY', 25),
+    d('TAD - CITY OF DECATUR', 0),
+    d('BROOKHAVEN', 2.74, 0.49),
+    d('BROOKHAVEN ANNEX B', 1.6),
+    d('DORAVILLE SSD (S13T)', 54.994),
+  ];
+
+  const byCity = (city: string | null) =>
+    taxScenarios(DEKALB, 'DEKALB').find((s) => s.city === city);
+
+  it('leads with the unincorporated baseline', () => {
+    const first = taxScenarios(DEKALB, 'DEKALB')[0];
+    expect(first?.city).toBeNull();
+    // 17.494 + 0.479 + 22.980
+    expect(first?.mills).toBeCloseTo(40.953, 3);
+  });
+
+  it('prices a city from the INCORPORATED county rate, not the unincorporated one', () => {
+    // 9.588 + 2.837 + 22.980 + 3.040
+    expect(byCity('DUNWOODY')?.mills).toBeCloseTo(38.445, 3);
+  });
+
+  it('finds cities that pay LESS than unincorporated', () => {
+    // The intuition that a city adds its millage on top is wrong: the county
+    // charges less inside city limits because the city provides the services.
+    const base = byCity(null)?.mills ?? 0;
+    expect(byCity('DUNWOODY')?.mills).toBeLessThan(base);
+    expect(byCity('PINE LAKE')?.mills).toBeGreaterThan(base);
+  });
+
+  it('replaces the county school levy with an independent city system', () => {
+    // 9.588 + 0.826 + 20.500 + 8.520 + 1.880 — county SCHOOL 22.98 is NOT here.
+    expect(byCity('ATLANTA')?.mills).toBeCloseTo(41.314, 3);
+  });
+
+  it('excludes commercial improvement districts', () => {
+    expect(byCity('CID ASSEMBLY')).toBeUndefined();
+  });
+
+  it('excludes tax allocation districts and zero-mill rows', () => {
+    expect(byCity('TAD - CITY OF DECATUR')).toBeUndefined();
+  });
+
+  it('excludes a special service district that is not a whole city', () => {
+    // Doraville's tank farm SSD is 54.994 mills and applies to a tank farm.
+    expect(byCity('DORAVILLE SSD (S13T)')).toBeUndefined();
+  });
+
+  it('excludes a sub-area named after another district', () => {
+    // The report does not say whether BROOKHAVEN ANNEX B replaces Brookhaven's
+    // millage or adds to it, and the two readings differ by more than the row.
+    expect(byCity('BROOKHAVEN ANNEX B')).toBeUndefined();
+    expect(byCity('BROOKHAVEN')).toBeDefined();
+  });
+
+  it('has nothing to say about a county missing its baseline rows', () => {
+    expect(
+      taxScenarios(
+        DEKALB.filter((r) => r.district !== 'SCHOOL'),
+        'DEKALB',
+      ),
+    ).toEqual([]);
+  });
+
+  it('returns only the baseline when a county has no incorporated rate', () => {
+    const noCities = DEKALB.filter((r) => r.district !== 'COUNTY INCORPORATED');
+    const out = taxScenarios(noCities, 'DEKALB');
+    expect(out).toHaveLength(1);
+    expect(out[0]?.city).toBeNull();
+  });
+
+  it('ignores another county’s districts', () => {
+    const mixed = [...DEKALB, { county: 'FULTON', district: 'HAPEVILLE', mo: 20, bond: 0 }];
+    expect(taxScenarios(mixed, 'DEKALB').some((s) => s.city === 'HAPEVILLE')).toBe(false);
+  });
+});
+
+describe('scenarioRange', () => {
+  it('reports the cheapest and dearest with the place each belongs to', () => {
+    const r = scenarioRange([
+      { city: null, mills: 40 },
+      { city: 'CHEAP', mills: 30 },
+      { city: 'DEAR', mills: 50 },
+    ]);
+    expect(r?.low.city).toBe('CHEAP');
+    expect(r?.high.city).toBe('DEAR');
+  });
+
+  it('can name unincorporated as either end', () => {
+    const r = scenarioRange([
+      { city: null, mills: 20 },
+      { city: 'PRICEY', mills: 50 },
+    ]);
+    expect(r?.low.city).toBeNull();
+  });
+
+  it('has no range for an empty county', () => {
+    expect(scenarioRange([])).toBeUndefined();
   });
 });
