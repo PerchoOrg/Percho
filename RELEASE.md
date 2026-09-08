@@ -34,6 +34,12 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- Saved areas now carry their numbers. Instead of just a name, each saved area
+  shows its county and what a home there actually costs per month. Save two or
+  more and a new **Compare areas** card puts them side by side — monthly cost,
+  schools, tax, utilities — with the better figure in each row marked. There's
+  no overall winner, on purpose: how much schools matter against cost is your
+  call.
 - You can sign in with your email and password again. If you already have a
   Percho account from the website, that password now works in the app — no
   waiting for a code. The emailed code is still there for new accounts and for
