@@ -21,6 +21,67 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 12:25 UTC — phase210: CORRECTION — PostgREST does not stringify numeric here
+
+**This entry corrects a false claim I made in phase209 and repeated as fact in
+its commit message, its code comments and its tests.**
+
+phase209 asserted:
+
+> The generated schema type is WRONG about `value` … What actually arrives is
+> `"0.72"` — PostgREST serialises `numeric` as a STRING rather than lose
+> precision to JSON's float64.
+
+**It does not.** Measured against the live instance, the raw body of
+`/rest/v1/area_metrics?select=metric,value` is:
+
+```
+[{"metric":"property_tax_rate_pct","value":0.9}, {"metric":"water_monthly_usd","value":60}]
+```
+
+A JSON number. The generated type saying `value: number` was right, and I
+called it wrong.
+
+**Where it came from.** The claim was not invented in phase209 — it was
+inherited. phase196 wrote the comment "Postgres `numeric` arrives as a string
+through PostgREST" beside a defensive `typeof === 'string'` coercion, as a
+justification for code that was reasonable on its own. Nothing checked it. By
+phase209 it had been restated four times, each restatement citing the previous
+one, and it ended up in a DEVLOG entry as a general lesson about generated
+types — the most confident version of it, and the one most likely to mislead
+whoever reads this file next.
+
+**How it surfaced**: not by review. The next tick started by asking whether the
+finding applied to the codebase's OTHER `numeric` columns — `beds`, `baths`,
+`lat`, `lng`, `price`, `ai_score` — and the first thing that check did was hit
+the live API, where every one of them came back as a number. Generalising a
+claim is a good way to test it.
+
+**Actions**:
+- The comments in `areas.ts` and the tests now say what was MEASURED, with the
+  date, and mark the string tolerance as tolerance rather than description.
+- The widening stays. One union member and a `Number()` call is cheap;
+  PostgREST has stringified `numeric` in other versions and configurations,
+  arbitrary-precision values genuinely cannot round-trip through float64, and
+  the failure if it ever changes is silent — every rate NaN, every county grey.
+  The test for the number form is now the one labelled as what happens, and
+  the string test is labelled as tolerance.
+- Audited the blast radius: nothing else was built on the false premise.
+  `lib/feed/community-reasons.ts` has a `numeric()` helper that accepts
+  strings, but that is for the Nextdoor seed's genuinely-textual fields
+  ("$425,000", "62%"), which is a different and real problem. Nothing anywhere
+  ASSUMES a string, so nothing breaks.
+
+**Verified**: `pnpm typecheck` clean, lint clean, **649 mobile + 1030 web
+tests pass**.
+
+**Learnings**: a comment that explains WHY code is defensive is load-bearing
+documentation, and if the why is wrong the code survives while the
+understanding rots. This one was stated four times before anyone measured it,
+and each restatement made it sound better established. Cheap defensive code
+does not need a confident causal story to justify it — "tolerated, not
+expected, measured on this date" is both honest and enough.
+
 ## 2026-09-08 12:05 UTC — phase209: the typed client comes back, and the schema type is wrong about one column
 
 **Objective**: the loop notes said unblocked work was essentially done, so this

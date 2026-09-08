@@ -75,10 +75,10 @@ const KNOWN_METRICS = new Set<string>([
  * not agreed to. The migration is applied and the types are regenerated, so
  * the generic is back and `.from('area_metrics')` is checked again.
  *
- * The runtime validation in `groupMetrics` stays. The generated types describe
- * what the schema promises; they say nothing about the `numeric` PostgREST
- * hands back as a string, or about a metric key a newer importer writes that
- * this build does not understand.
+ * The runtime validation in `groupMetrics` stays regardless. The generated
+ * types describe what the schema PROMISES; they say nothing about a metric key
+ * a newer importer writes that this build does not understand, or about a row
+ * that arrives malformed for any other reason.
  */
 function createUncachedAnonClient() {
   // Same fetch-cache opt-out as `lib/listings/search.ts` — see the note there.
@@ -115,12 +115,22 @@ type SelectedColumn =
  * A row as this projection sees it — derived from the generated schema, with
  * one deliberate widening.
  *
- * The generated `Row` says `value: number`, and it is wrong about what arrives.
- * The column is `numeric`, and **PostgREST serialises `numeric` as a STRING**
- * rather than lose precision to JSON's float64 — so `0.72` comes over the wire
- * as `"0.72"`. Trusting the generated type here would make `groupMetrics`'s
- * string handling read as dead code, and deleting it turns every rate into NaN
- * and every county grey. There is a test for that exact case.
+ * `value` is widened to `number | string`, and the reason is narrower than it
+ * was first written down as.
+ *
+ * **Measured, 2026-09-08**: this Supabase instance's PostgREST returns
+ * `numeric` as a JSON NUMBER. The raw body of
+ * `/rest/v1/area_metrics?select=metric,value` is `{"value":0.9}`, not
+ * `{"value":"0.9"}`. An earlier version of this comment asserted the opposite
+ * as fact and it was simply wrong — see the phase210 DEVLOG entry.
+ *
+ * The widening stays anyway, because it is one union member and a `Number()`
+ * call: PostgREST HAS stringified `numeric` in other versions and
+ * configurations, arbitrary-precision values genuinely cannot round-trip
+ * through float64, and the failure mode if it ever changes under us is silent
+ * — every rate becomes NaN and every county on the map goes grey. Cheap
+ * tolerance for an expensive surprise. It is NOT a description of what
+ * currently arrives.
  */
 type MetricRow = Omit<
   Pick<Database['public']['Tables']['area_metrics']['Row'], SelectedColumn>,
@@ -164,8 +174,9 @@ export function groupMetrics(rows: readonly MetricRow[]): Area[] {
   const byArea = new Map<string, Area>();
   for (const row of rows) {
     if (!KNOWN_METRICS.has(row.metric)) continue;
-    // Postgres `numeric` arrives as a string through PostgREST; a silent NaN
-    // here would render as a blank county rather than an error.
+    // Tolerated, not expected: this instance sends `numeric` as a JSON number
+    // (measured). A silent NaN here would render as a blank county rather than
+    // as an error, so the coercion is worth its one line either way.
     const value = typeof row.value === 'string' ? Number(row.value) : row.value;
     if (!Number.isFinite(value)) continue;
 

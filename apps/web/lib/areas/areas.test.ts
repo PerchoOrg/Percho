@@ -58,19 +58,16 @@ describe('groupMetrics', () => {
     expect(areas.map((a) => a.kind).sort()).toEqual(['county', 'school_district']);
   });
 
-  it('parses the numeric Postgres sends as a string', () => {
-    // The generated schema type says `value: number` and is WRONG about what
-    // arrives: PostgREST serialises `numeric` as a string rather than lose
-    // precision to JSON's float64, so 0.72 comes over as "0.72". `MetricRow`
-    // widens that one column back for exactly this reason — delete this test
-    // and the string handling with it, and every rate becomes NaN and every
-    // county on the map goes grey.
-    const areas = groupMetrics([row({ value: '0.72' })]);
-    expect(areas[0]?.metrics[0]?.value).toBe(0.72);
+  it('reads the number form this instance actually sends', () => {
+    // Measured 2026-09-08: PostgREST returns `numeric` as a JSON number here.
+    // The raw body is {"value":0.9}. This is the case that happens.
+    expect(groupMetrics([row({ value: 0.72 })])[0]?.metrics[0]?.value).toBe(0.72);
   });
 
-  it('accepts the number form too, since the schema promises one', () => {
-    expect(groupMetrics([row({ value: 0.72 })])[0]?.metrics[0]?.value).toBe(0.72);
+  it('also tolerates the string form, which some PostgREST setups send', () => {
+    // Tolerated, not expected — see `MetricRow`. Kept because the failure if
+    // it ever changes under us is silent: every rate NaN, every county grey.
+    expect(groupMetrics([row({ value: '0.72' })])[0]?.metrics[0]?.value).toBe(0.72);
   });
 
   it('drops a row whose value cannot be a number', () => {
