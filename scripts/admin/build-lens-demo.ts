@@ -40,9 +40,11 @@ import {
   colorFor,
   costBreakdown,
   estimateNoteFor,
+  insuranceSourceLine,
   legendRange,
   listOf,
   rankedBy,
+  sourceSummary,
 } from '../../packages/shared/src/lenses.js';
 
 const API = 'https://www.percho.co/api/mobile/areas';
@@ -129,6 +131,12 @@ async function main() {
     shapes,
     lenses,
     details,
+    // Counted off the payload, not written from memory. The hand-written
+    // version of this table credited electricity to NREL/OpenEI for several
+    // phases after it moved to EIA-861 — and the compare demo's copy of the
+    // same table was wrong in the same way at the same time, which is why the
+    // grouping now lives in @percho/shared rather than in each page.
+    sources: [...sourceSummary(areas), insuranceSourceLine(areas.length)],
   };
   const path = new URL(
     '../../apps/web/public/demos/search-lenses/data.js',

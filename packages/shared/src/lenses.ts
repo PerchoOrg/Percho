@@ -421,6 +421,80 @@ export function estimateNoteFor(lens: Lens, areas: readonly Area[]): string | un
  * ("Property tax / year"), not a stored figure, and its label is what the
  * reader is looking at.
  */
+/**
+ * The rows a reader thinks in, and the metrics behind each.
+ *
+ * Both review demos print a "where the numbers come from" table, and both used
+ * to hand-write it. They drifted the same way at the same time: each credited
+ * electricity to NREL/OpenEI for several phases after it moved to EIA-861. Two
+ * pages describing one set of sources is two chances to be out of date, so the
+ * grouping and the summary both live here.
+ */
+export const PROVENANCE_ROWS: readonly { label: string; metrics: readonly MetricKey[] }[] = [
+  { label: 'Property tax', metrics: ['county_mo_mills', 'school_mo_mills'] },
+  { label: 'Schools', metrics: ['school_proficiency_pct'] },
+  { label: 'Electric', metrics: ['electric_monthly_usd'] },
+  { label: 'Water & sewer', metrics: ['water_monthly_usd'] },
+  { label: 'Trash', metrics: ['trash_monthly_usd'] },
+];
+
+export interface SourceLine {
+  label: string;
+  source: string;
+  estimated: boolean;
+  areas: number;
+}
+
+/**
+ * Where each row's figures actually come from, counted off real areas.
+ *
+ * One entry per (row, distinct source) rather than one per row, because a row
+ * is not uniformly sourced: electricity is EIA-861 in most counties and still
+ * a Percho estimate in a couple, and a summary that collapsed to the majority
+ * source would hide exactly the counties a reader should be careful about.
+ *
+ * Insurance is appended by the caller if it wants it — it has no metric, which
+ * is the whole point of it (see `estimatedFromReads`).
+ */
+export function sourceSummary(areas: readonly Area[]): SourceLine[] {
+  const out: SourceLine[] = [];
+  for (const row of PROVENANCE_ROWS) {
+    const counts = new Map<string, SourceLine>();
+    for (const area of areas) {
+      for (const m of area.metrics) {
+        if (!row.metrics.includes(m.metric)) continue;
+        const key = `${m.source}|${m.estimated === true}`;
+        const hit = counts.get(key);
+        if (hit) hit.areas++;
+        else {
+          counts.set(key, {
+            label: row.label,
+            source: m.source,
+            estimated: m.estimated === true,
+            areas: 1,
+          });
+        }
+      }
+    }
+    // A row built from several metrics counts each area once, not once per
+    // metric — the tax row reads two millage figures from the same digest.
+    for (const c of [...counts.values()].sort((a, b) => b.areas - a.areas)) {
+      out.push({ ...c, areas: Math.round(c.areas / Math.max(1, row.metrics.length)) });
+    }
+  }
+  return out;
+}
+
+/** The insurance line, which no metric backs. */
+export function insuranceSourceLine(areaCount: number): SourceLine {
+  return {
+    label: 'Insurance',
+    source: `Percho assumption — ${(INSURANCE_RATE_ANNUAL * 100).toFixed(2)}% of price per year, the same in every county`,
+    estimated: true,
+    areas: areaCount,
+  };
+}
+
 export function estimateNoteForRows(
   rows: readonly { label: string; cells: readonly { estimated: boolean }[] }[],
 ): string | undefined {
@@ -493,8 +567,24 @@ export function readingMetrics<T>(
   return { value, read };
 }
 
-/** True when any metric the computation actually read is an estimate. */
+/**
+ * True when the computation is not backed by a sourced record.
+ *
+ * Two ways that happens. The obvious one: a metric it READ is an estimate.
+ *
+ * The other is why this is not a one-liner. "No metric it read was an
+ * estimate" is VACUOUSLY true of a computation that read no metrics at all,
+ * so a hard-coded constant came out the far side marked as sourced — the
+ * strongest possible provenance claim, earned by consulting nothing. That is
+ * how the compare table came to print insurance, a flat share of price with
+ * no county in it, with no estimate mark, while the cost sheet two taps away
+ * marked the identical number as an assumption.
+ *
+ * A figure derived from zero records is an assumption by construction. It can
+ * be a good one — but it is not a reading.
+ */
 export function estimatedFromReads(area: Area, read: ReadonlySet<MetricKey>): boolean {
+  if (read.size === 0) return true;
   return area.metrics.some((m) => m.estimated && read.has(m.metric));
 }
 
@@ -507,7 +597,8 @@ export function estimatedFromReads(area: Area, read: ReadonlySet<MetricKey>): bo
  * to a stored percentage only when those are missing, so checking `inputs`
  * flagged a state-sourced figure as an estimate because the unused fallback
  * happened to be one. A lens that read nothing estimated is not an estimate,
- * whatever it might have read.
+ * whatever it might have read — provided it read something. Reading nothing at
+ * all is an assumption, not a clean bill of health; see `estimatedFromReads`.
  */
 export function valuesFor(lens: Lens, areas: readonly Area[]): LensValue[] {
   const out: LensValue[] = [];

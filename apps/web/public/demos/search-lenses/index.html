@@ -104,6 +104,11 @@
   #note td { padding: 4px 6px 4px 0; border-bottom: 1px solid #e1e0d9; vertical-align: top; }
   #note td:first-child { font-weight: 600; color: #0b0b0b; white-space: nowrap; }
   #note td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #sources td:first-child { padding-left: 8px; }
+  #sources tr.src td:first-child { border-left: 3px solid #0ca30c; }
+  #sources tr.est td:first-child { border-left: 3px solid #ec835a; }
+  #sources .n { display: block; color: #9a9892; font-size: 10.5px;
+    margin-top: 2px; font-weight: 400; white-space: nowrap; }
   .stamp { background: #fff; border: 1px solid #e1e0d9; border-left: 3px solid #0ca30c;
     border-radius: 8px; padding: 8px 12px; font-size: 12px; }
   .warn { background: #fff; border: 1px solid #e1e0d9; border-left: 3px solid #ec835a;
@@ -146,12 +151,10 @@
   <table id="summary"></table>
 
   <h2>Where the numbers come from</h2>
-  <table>
-    <tr><td>Property tax</td><td>GA DOR millage report, then the bill computed from the buyer's own price with that county's homestead exemption and any credit</td></tr>
-    <tr><td>Schools</td><td>Georgia Milestones (GOSA), district aggregate, weighted by students tested</td></tr>
-    <tr><td>Electricity</td><td>NREL/OpenEI per-utility residential rate × Georgia's average use; the utility found by AREA against the HIFLD service territories</td></tr>
-    <tr><td>Water &amp; trash</td><td><b>Still estimates.</b> Trash has no central source in Georgia at all. Water is per-utility and the big schedules are multi-column PDFs that resist parsing.</td></tr>
-  </table>
+  <p>Counted off the payload this page was built from. The hand-written version
+  of this table credited electricity to NREL/OpenEI for several phases after it
+  moved to EIA-861 — and so did the compare demo, at the same time.</p>
+  <table id="sources"></table>
 
   <h2>Deliberately absent</h2>
   <p class="warn">No crime lens. Zillow and Redfin both declined crime layers
@@ -171,6 +174,13 @@
     'Generated from live production data on <b>' +
     new Date(D.generatedAt).toISOString().replace('T', ' ').slice(0, 16) +
     ' UTC</b>. Re-run <code>scripts/admin/build-lens-demo.ts</code> to refresh.';
+
+  document.getElementById('sources').innerHTML = D.sources
+    .map((s) =>
+      '<tr class="' + (s.estimated ? 'est' : 'src') + '"><td>' + s.label +
+      '<span class="n">' + s.areas + ' counties</span></td><td>' + s.source +
+      '</td></tr>')
+    .join('');
 
   document.getElementById('summary').innerHTML = D.lenses
     .map((l) => {

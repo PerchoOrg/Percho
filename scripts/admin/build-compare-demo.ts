@@ -36,7 +36,12 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import type { Area } from '../../packages/shared/src/lenses.js';
-import { REFERENCE_HOME_USD } from '../../packages/shared/src/lenses.js';
+import {
+  REFERENCE_HOME_USD,
+  estimateNoteForRows,
+  insuranceSourceLine,
+  sourceSummary,
+} from '../../packages/shared/src/lenses.js';
 import { buildAreaCompareTable } from '../../apps/mobile/lib/areas/compare-areas.js';
 import { defaultWeights } from '../../apps/mobile/lib/priorities.js';
 
@@ -103,11 +108,17 @@ async function main() {
       console.error(`Trio "${trio.title}" is missing: ${missing.join(', ')}`);
       process.exit(1);
     }
+    const neutral = buildAreaCompareTable(picked);
     return {
       title: trio.title,
       blurb: trio.blurb,
-      neutral: buildAreaCompareTable(picked),
+      neutral,
       schoolsFirst: buildAreaCompareTable(picked, schoolsFirst),
+      // The SAME sentence the phone prints under the same table. The demo
+      // used to hand-write "* still our estimate", which named nothing and
+      // could not go stale visibly — so it did, silently, while the app's
+      // wording moved on beneath it.
+      note: estimateNoteForRows(neutral.rows) ?? '',
     };
   });
 
@@ -115,6 +126,11 @@ async function main() {
     generatedAt: new Date().toISOString(),
     referenceHomeUsd: REFERENCE_HOME_USD,
     trios,
+    // Read off the live payload rather than described from memory. The
+    // hand-written version of this list credited electricity to NREL/OpenEI
+    // for the several phases after it moved to EIA-861 — a page whose whole
+    // job is showing what shipped, describing what used to.
+    sources: [...sourceSummary(areas), insuranceSourceLine(areas.length)],
   };
   const path = new URL(
     '../../apps/web/public/demos/area-compare/data.js',

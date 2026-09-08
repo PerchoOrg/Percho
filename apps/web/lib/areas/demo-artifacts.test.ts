@@ -1,5 +1,11 @@
 import { readFileSync } from 'node:fs';
-import { type Area, type AreaMetric, LENSES, type MetricKey } from '@percho/shared/lenses';
+import {
+  type Area,
+  type AreaMetric,
+  LENSES,
+  type MetricKey,
+  estimateNoteForRows,
+} from '@percho/shared/lenses';
 import { describe, expect, it } from 'vitest';
 import { buildAreaCompareTable } from '../../../mobile/lib/areas/compare-areas';
 
@@ -59,9 +65,14 @@ interface CompareArtifact {
   generatedAt: string;
   trios: {
     title: string;
-    neutral: { headers: { name: string }[]; rows: { label: string }[] };
+    note: string;
+    neutral: {
+      headers: { name: string }[];
+      rows: { label: string; cells: { estimated: boolean }[] }[];
+    };
     schoolsFirst: { rows: { label: string }[] };
   }[];
+  sources: { label: string; source: string; estimated: boolean; areas: number }[];
 }
 
 describe('the search-lenses demo matches the shipped lens catalogue', () => {
@@ -163,6 +174,40 @@ describe('the area-compare demo matches the shipped table', () => {
   it('compares three counties in every trio', () => {
     for (const trio of art.trios) {
       expect(trio.neutral.headers, trio.title).toHaveLength(3);
+    }
+  });
+
+  it('footnotes its own table the way the app would', () => {
+    // The demo used to hand-write "* still our estimate", which names nothing
+    // and therefore cannot look stale — so it stayed put through three
+    // rewordings of the app's own sentence. Recomputing it from the artefact's
+    // own rows catches both a hand-edit and a stale rebuild.
+    for (const trio of art.trios) {
+      expect(trio.note, trio.title).toBe(estimateNoteForRows(trio.neutral.rows) ?? '');
+    }
+  });
+
+  it('names a source for every row of the table', () => {
+    // The hand-written version of this list credited electricity to
+    // NREL/OpenEI for several phases after it moved to EIA-861.
+    const labelled = new Set(art.sources.map((s) => s.label));
+    for (const row of ['Property tax', 'Schools', 'Electric', 'Trash', 'Insurance']) {
+      expect(labelled.has(row), `${row} has no stated source`).toBe(true);
+    }
+    for (const s of art.sources) {
+      expect(s.source.length, s.label).toBeGreaterThan(10);
+      expect(s.areas, s.label).toBeGreaterThan(0);
+    }
+  });
+
+  it('does not present a row as uniformly sourced when it is not', () => {
+    // Electricity is EIA-861 in most counties and still a Percho estimate in
+    // a couple. A summary that collapsed to the majority source would hide
+    // exactly the counties a reader should be careful about.
+    const electric = art.sources.filter((s) => s.label === 'Electric');
+    if (electric.some((s) => s.estimated)) {
+      expect(electric.some((s) => !s.estimated)).toBe(true);
+      expect(electric.length).toBeGreaterThan(1);
     }
   });
 

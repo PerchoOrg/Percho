@@ -231,10 +231,17 @@ describe("a cell is an estimate only if the computation READ one", () => {
 		expect(cellsOf("True cost").every((c) => c.estimated)).toBe(true);
 	});
 
-	it("does not flag a row computed from no metric at all", () => {
-		// Insurance is one flat assumption; it reads nothing, so nothing it read
-		// can be an estimate. The demo labels it separately.
-		expect(cellsOf("Insurance").every((c) => !c.estimated)).toBe(true);
+	it("flags a row computed from no metric at all", () => {
+		// This test used to assert the OPPOSITE, and its reasoning was the bug:
+		// "it reads nothing, so nothing it read can be an estimate." True, and
+		// vacuous — it earned the app's strongest provenance claim by consulting
+		// nothing. Insurance is a flat share of price with no county in it, and
+		// the cost sheet two taps away has always called it an assumption.
+		//
+		// The old comment ended "the demo labels it separately", which is the
+		// tell: the compensating control was a sentence hand-written on another
+		// surface, and that is what let the two disagree.
+		expect(cellsOf("Insurance").every((c) => c.estimated)).toBe(true);
 	});
 
 	it("flags tax when the fallback is what actually answered", () => {

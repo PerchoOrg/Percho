@@ -11,11 +11,13 @@ import {
   costBreakdown,
   estimateNoteFor,
   estimateNoteForRows,
+  estimatedFromReads,
   insuranceMonthlyUsd,
   legendRange,
   lensById,
   listOf,
   rankedBy,
+  readingMetrics,
   taxMonthlyUsd,
   valuesFor,
 } from '@percho/shared/lenses';
@@ -334,6 +336,24 @@ describe('estimated reflects what was read, not what was declared', () => {
     const lens = lensById('true_cost');
     if (!lens) throw new Error('lens missing');
     expect(valuesFor(lens, [sourcedLevies])[0]?.estimated).toBe(true);
+  });
+
+  it('does not let a computation that read NOTHING pass as sourced', () => {
+    // The vacuous case. "No metric it read was an estimate" is trivially true
+    // of a computation that read no metrics, so a hard-coded constant earned
+    // the strongest provenance claim in the app by consulting nothing. This is
+    // how the compare table printed insurance — a flat share of price with no
+    // county in it — with no estimate mark.
+    const { read } = readingMetrics(sourcedLevies, () => 146);
+    expect(read.size).toBe(0);
+    expect(estimatedFromReads(sourcedLevies, read)).toBe(true);
+  });
+
+  it('still clears a computation that read only sourced metrics', () => {
+    // The guard above must not swallow the case it sits next to.
+    const { read } = readingMetrics(sourcedLevies, (get) => get('county_mo_mills'));
+    expect(read.size).toBe(1);
+    expect(estimatedFromReads(sourcedLevies, read)).toBe(false);
   });
 });
 
