@@ -12,6 +12,7 @@ import {
   insuranceMonthlyUsd,
   legendRange,
   lensById,
+  listOf,
   rankedBy,
   taxMonthlyUsd,
   valuesFor,
@@ -331,5 +332,138 @@ describe('estimated reflects what was read, not what was declared', () => {
     const lens = lensById('true_cost');
     if (!lens) throw new Error('lens missing');
     expect(valuesFor(lens, [sourcedLevies])[0]?.estimated).toBe(true);
+  });
+});
+
+describe('cost lines name their supplier', () => {
+  const priced = (supplier?: {
+    name: string;
+    share?: number;
+    unitPrice?: number;
+    unitPriceUnit?: string;
+  }): Area => ({
+    key: 'fulton',
+    name: 'Fulton',
+    kind: 'county',
+    state: 'GA',
+    metrics: [
+      metric('property_tax_rate_pct', 1.05),
+      {
+        ...metric('electric_monthly_usd', 157),
+        ...(supplier ? { supplier } : {}),
+      },
+      metric('water_monthly_usd', 78),
+      metric('trash_monthly_usd', 32),
+    ],
+  });
+
+  const electricLine = (a: Area) => costBreakdown(a)?.find((l) => l.label === 'Electric');
+
+  it('names the utility and its rate', () => {
+    const line = electricLine(
+      priced({ name: 'Georgia Power Co', unitPrice: 0.14624, unitPriceUnit: 'usd_per_kwh' }),
+    );
+    expect(line?.note).toContain('Georgia Power Co');
+    expect(line?.note).toContain('14.6¢ per kWh');
+  });
+
+  it('says what share of the county a supplier covers when it is not all of it', () => {
+    const line = electricLine(priced({ name: 'Georgia Power Co', share: 0.55 }));
+    expect(line?.note).toContain('55% of the county');
+  });
+
+  it('does not say "100% of the county", which is noise', () => {
+    const line = electricLine(priced({ name: 'Amicalola EMC', share: 1 }));
+    expect(line?.note).toBe('Amicalola EMC');
+  });
+
+  it('has no note at all when nothing is known about the supplier', () => {
+    expect(electricLine(priced())?.note).toBeUndefined();
+  });
+
+  it('leaves lines with no supplier alone', () => {
+    const lines = costBreakdown(priced({ name: 'Georgia Power Co' }));
+    expect(lines?.find((l) => l.label === 'Property tax')?.note).toBeUndefined();
+    expect(lines?.find((l) => l.label === 'Insurance (est.)')?.note).toBeUndefined();
+  });
+
+  it('still sums to the true-cost figure with notes attached', () => {
+    const area = priced({ name: 'Georgia Power Co', share: 0.55 });
+    const lens = lensById('true_cost');
+    if (!lens) throw new Error('lens missing');
+    const total = costBreakdown(area)?.reduce((n, l) => n + l.monthlyUsd, 0);
+    expect(total).toBe(valuesFor(lens, [area])[0]?.value);
+  });
+
+  it('ignores a unit price whose unit it does not understand', () => {
+    const line = electricLine(
+      priced({ name: 'Someone', unitPrice: 3.5, unitPriceUnit: 'usd_per_furlong' }),
+    );
+    expect(line?.note).toBe('Someone');
+  });
+});
+
+describe('listOf', () => {
+  it('reads as English rather than as a truncated list', () => {
+    expect(listOf([])).toBe('');
+    expect(listOf(['trash'])).toBe('trash');
+    expect(listOf(['water & sewer', 'trash'])).toBe('water & sewer and trash');
+    expect(listOf(['tax', 'water & sewer', 'trash'])).toBe('tax, water & sewer and trash');
+  });
+});
+
+describe('cost lines say which of THEM is a guess', () => {
+  /** Tax and electric sourced, water and trash not — production's real shape. */
+  const mixed: Area = {
+    key: 'fulton',
+    name: 'Fulton',
+    kind: 'county',
+    state: 'GA',
+    metrics: [
+      metric('county_mo_mills', 8.87),
+      metric('county_bond_mills', 0.18),
+      metric('school_mo_mills', 17.14),
+      metric('school_bond_mills', 0),
+      metric('electric_monthly_usd', 157),
+      metric('water_monthly_usd', 78, true),
+      metric('trash_monthly_usd', 32, true),
+    ],
+  };
+
+  const flagged = (a: Area) =>
+    (costBreakdown(a) ?? []).filter((l) => l.estimated).map((l) => l.label);
+
+  it('flags only the lines that are actually guesses', () => {
+    expect(flagged(mixed).sort()).toEqual(['Insurance', 'Trash', 'Water & sewer']);
+  });
+
+  it('does not flag tax when it came from the levies', () => {
+    expect(flagged(mixed)).not.toContain('Property tax');
+  });
+
+  it('flags tax when it fell back to a stored estimate', () => {
+    const noLevies: Area = {
+      ...mixed,
+      metrics: [
+        ...mixed.metrics.filter((m) => !m.metric.endsWith('_mills')),
+        metric('property_tax_rate_pct', 1.05, true),
+      ],
+    };
+    expect(flagged(noLevies)).toContain('Property tax');
+  });
+
+  it('always flags insurance — it is one flat assumption, not a measurement', () => {
+    const allSourced: Area = {
+      ...mixed,
+      metrics: mixed.metrics.map((m) => ({ ...m, estimated: false })),
+    };
+    expect(flagged(allSourced)).toEqual(['Insurance']);
+  });
+
+  it('still sums to the true-cost figure', () => {
+    const lens = lensById('true_cost');
+    if (!lens) throw new Error('lens missing');
+    const total = costBreakdown(mixed)?.reduce((n, l) => n + l.monthlyUsd, 0);
+    expect(total).toBe(valuesFor(lens, [mixed])[0]?.value);
   });
 });

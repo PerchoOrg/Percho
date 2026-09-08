@@ -34,6 +34,15 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- The cost breakdown now shows its working. Tap a county and the electricity
+  line names the power company and its rate — "Georgia Power Co · 14.6¢ per
+  kWh" — and says what share of the county that company serves when it isn't
+  all of it.
+- We're clearer about which figures are still estimates. Before, every county
+  carried a blanket "we haven't sourced this yet" note, which was unfair to
+  the property tax and school numbers that come straight from state records.
+  Now only the lines that really are estimates are marked, and the footnote
+  names them.
 - Electricity costs are now real numbers, not estimates. We worked out which
   power company actually serves each county — by mapping their service areas,
   not by assuming the one with the matching name — and used that company's

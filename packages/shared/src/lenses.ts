@@ -66,6 +66,31 @@ export type MetricKey =
 /** Anything the lens map can be drawn on. Mirrors the `area_kind` enum. */
 export type AreaKind = 'county' | 'city' | 'school_district' | 'utility_territory';
 
+/**
+ * Who supplies the thing a figure prices, when it comes from a named supplier.
+ *
+ * A narrow, named field rather than passing the metric row's whole `detail`
+ * jsonb through: `detail` is free-form and each scraper writes whatever it
+ * found useful, so shipping it wholesale would let the UI quietly depend on a
+ * key one importer happened to emit. This is a contract; `detail` is a
+ * scratchpad.
+ *
+ * `share` matters more than it looks. An electric figure for a county where
+ * one utility covers 98% is a different claim from one where it covers 55%,
+ * and a buyer whose house is in the other 45% deserves to see that rather than
+ * be told a number flatly.
+ */
+export interface MetricSupplier {
+  /** As the source spells it, e.g. "Georgia Power Co". */
+  name: string;
+  /** Fraction of the area this supplier covers, 0–1. */
+  share?: number;
+  /** The unit price behind the figure, when the source publishes one. */
+  unitPrice?: number;
+  /** How to read `unitPrice`, e.g. `usd_per_kwh`. */
+  unitPriceUnit?: string;
+}
+
 /** One figure for one area, as the API hands it over. */
 export interface AreaMetric {
   metric: MetricKey;
@@ -75,6 +100,7 @@ export interface AreaMetric {
   sourceUrl?: string;
   asOf: string;
   estimated: boolean;
+  supplier?: MetricSupplier;
 }
 
 /** One area, with everything we know about it. */
@@ -398,9 +424,61 @@ export function legendRange(
   };
 }
 
+/** One line of the true-cost breakdown. */
+export interface CostLine {
+  label: string;
+  monthlyUsd: number;
+  /** Who supplies it and at what price, when we know — this is what turns
+   *  "Electric $157" into "Electric $157 · Georgia Power · 14.6¢ per kWh". */
+  note?: string;
+  /**
+   * True when this particular line is still a guess.
+   *
+   * Per LINE, not per area, and the distinction now matters: property tax and
+   * schools are sourced from the state while water and trash have no source at
+   * all. A single "this county is estimated" banner over the whole sheet was
+   * true when everything was a guess and became a lie the moment anything
+   * stopped being one — it tells a buyer to discount a figure we can defend.
+   */
+  estimated: boolean;
+}
+
+/**
+ * How a supplier reads on a cost line, or nothing when there is nothing to add
+ * beyond the figure itself.
+ */
+function supplierNote(metric: AreaMetric | undefined): string | undefined {
+  const s = metric?.supplier;
+  if (!s) return undefined;
+  const bits = [s.name];
+  if (s.unitPrice !== undefined && s.unitPriceUnit === 'usd_per_kwh') {
+    bits.push(`${(s.unitPrice * 100).toFixed(1)}¢ per kWh`);
+  }
+  // Only worth saying when the supplier is NOT effectively the whole county:
+  // "serves 100% of the county" is noise, and below the naming threshold there
+  // is no supplier here to report in the first place.
+  if (s.share !== undefined && s.share < 0.95) {
+    bits.push(`serves ${Math.round(s.share * 100)}% of the county`);
+  }
+  return bits.join(' · ');
+}
+
+/**
+ * "water & sewer and trash", "tax, water & sewer and trash" — an English list.
+ *
+ * Worth having rather than `join(', ')` because this sentence is read by a
+ * buyer deciding whether to trust a number, and "water & sewer, trash" reads
+ * like a truncated list rather than a complete one.
+ */
+export function listOf(items: readonly string[]): string {
+  if (items.length === 0) return '';
+  if (items.length === 1) return items[0] ?? '';
+  return `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
+}
+
 /** The cost lines behind one area's true-cost figure, in display order.
  *  Returns undefined when the area cannot be priced. */
-export function costBreakdown(area: Area): { label: string; monthlyUsd: number }[] | undefined {
+export function costBreakdown(area: Area): CostLine[] | undefined {
   const get = metricLookup(area);
   const tax = taxMonthlyUsdFor(area.key, get);
   const electric = get('electric_monthly_usd');
@@ -408,11 +486,30 @@ export function costBreakdown(area: Area): { label: string; monthlyUsd: number }
   const trash = get('trash_monthly_usd');
   if (tax === undefined || electric === undefined) return undefined;
   if (water === undefined || trash === undefined) return undefined;
+  const byKey = new Map(area.metrics.map((m) => [m.metric, m]));
+  const line = (
+    label: string,
+    monthlyUsd: number,
+    keys: readonly MetricKey[],
+    /** For a line computed from an assumption rather than from a metric. */
+    alwaysEstimated = false,
+  ): CostLine => {
+    const first = keys.map((k) => byKey.get(k)).find((m) => m !== undefined);
+    const note = supplierNote(first);
+    const estimated = alwaysEstimated || keys.some((k) => byKey.get(k)?.estimated === true);
+    return { label, monthlyUsd, estimated, ...(note ? { note } : {}) };
+  };
+
   return [
-    { label: 'Property tax', monthlyUsd: tax },
-    { label: 'Electric', monthlyUsd: electric },
-    { label: 'Water & sewer', monthlyUsd: water },
-    { label: 'Trash', monthlyUsd: trash },
-    { label: 'Insurance (est.)', monthlyUsd: insuranceMonthlyUsd },
+    // Tax reads the levies when they exist and the stored rate otherwise, so
+    // its honesty follows whichever one actually answered — the same rule
+    // `valuesFor` uses.
+    line('Property tax', tax, ['county_mo_mills', 'school_mo_mills', 'property_tax_rate_pct']),
+    line('Electric', electric, ['electric_monthly_usd']),
+    line('Water & sewer', water, ['water_monthly_usd']),
+    line('Trash', trash, ['trash_monthly_usd']),
+    // A flat share of price, identical in every county — an assumption by
+    // construction, never a measurement.
+    line('Insurance', insuranceMonthlyUsd, [], true),
   ];
 }

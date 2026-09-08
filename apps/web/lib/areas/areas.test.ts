@@ -15,6 +15,7 @@ function row(over: Partial<Parameters<typeof groupMetrics>[0][number]> = {}) {
     source_url: 'https://dor.georgia.gov/',
     as_of: '2024-12-31',
     estimated: false,
+    detail: null as unknown,
     ...over,
   };
 }
@@ -84,5 +85,49 @@ describe('groupMetrics', () => {
     const lens = lensById('property_tax');
     if (!lens) throw new Error('lens missing');
     expect(rankedBy(lens, areas).map((v) => v.area.name)).toEqual(['Cobb', 'DeKalb']);
+  });
+});
+
+describe('supplier projection', () => {
+  const electric = (detail: unknown) =>
+    groupMetrics([
+      row({
+        metric: 'electric_monthly_usd',
+        unit: 'usd_per_month',
+        value: 157,
+        detail,
+      }),
+    ])[0]?.metrics[0];
+
+  it('reads the three keys the client has a contract for', () => {
+    const m = electric({
+      provider: 'Georgia Power Co',
+      provider_share: 0.55,
+      rate_usd_per_kwh: 0.14624,
+      // Everything else an importer felt like recording is ignored.
+      assumed_monthly_kwh: 1074,
+      basis: 'a long sentence',
+    });
+    expect(m?.supplier).toEqual({
+      name: 'Georgia Power Co',
+      share: 0.55,
+      unitPrice: 0.14624,
+      unitPriceUnit: 'usd_per_kwh',
+    });
+  });
+
+  it('has no supplier when detail names none', () => {
+    expect(electric(null)?.supplier).toBeUndefined();
+    expect(electric({ basis: 'no provider here' })?.supplier).toBeUndefined();
+    expect(electric('not an object')?.supplier).toBeUndefined();
+  });
+
+  it('keeps a name without a share or a rate', () => {
+    expect(electric({ provider: 'Cobb EMC' })?.supplier).toEqual({ name: 'Cobb EMC' });
+  });
+
+  it('ignores a share or rate that is not a number', () => {
+    const m = electric({ provider: 'X', provider_share: '0.5', rate_usd_per_kwh: null });
+    expect(m?.supplier).toEqual({ name: 'X' });
   });
 });

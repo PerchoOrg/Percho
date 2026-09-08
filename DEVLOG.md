@@ -21,6 +21,56 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 09:50 UTC — phase203: show who supplies the number, and which lines are still guesses
+
+**Objective**: phase202 worked out the real electric supplier and rate for 27
+counties, and none of it reached the buyer — the mobile DTO drops the metric
+row's `detail` entirely, so the app showed "Electric $157" with no way to know
+where $157 came from. Work that is true but invisible is not finished.
+
+**Actions**:
+- `MetricSupplier` on `AreaMetric`: `name`, optional `share`, optional
+  `unitPrice` + `unitPriceUnit`. Projected in `lib/areas/areas.ts`, parsed in
+  `apps/mobile/lib/areas/areas-dto.ts`.
+- `costBreakdown` returns `CostLine` with a `note` ("Georgia Power Co · 14.6¢
+  per kWh · serves 55% of the county") and a per-line `estimated` flag.
+- `app/(tabs)/search.tsx` renders both.
+- `areas-dto.test.ts` — the defensive parser had no tests at all until now.
+
+**Decisions**:
+1. **A named field, not a `detail` passthrough.** `detail` is a jsonb
+   scratchpad each importer writes freely; shipping it wholesale would let the
+   UI depend on a key one scraper happened to emit. `MetricSupplier` is a
+   contract, and the projection reads exactly three keys.
+2. **No supplier is projected from an ESTIMATED row.** Reading production's
+   real `detail` found the trap: Cobb was skipped by the electric importer (no
+   majority provider) so it still carries the SEEDED row, whose hand-written
+   `provider` says "Cobb EMC" — the very guess phase202 disproved, and Cobb EMC
+   covers 41%. A supplier name beside a figure reads as provenance, so
+   attaching one to a guess makes the guess look checked.
+3. **`share` is reported below 95% and suppressed at or above it.** "Serves
+   100% of the county" is noise; "serves 55% of the county" is the buyer in the
+   other 45% being told the figure may not be theirs.
+
+**The bug this turned up.** The county detail sheet's footer read "Estimated
+figures — we have not sourced this county yet" whenever ANY metric was an
+estimate. Water and trash have no source and never will without per-county
+collection, so that banner was showing on every county — including over
+property tax and schools, which now come from the GA DOR and GOSA. It was
+telling a buyer to discount the two figures we can defend best. The flag is now
+per LINE: each estimated line carries an asterisk and the footer names them,
+"Sourced from public records, except water & sewer, trash and insurance —
+those are still our estimate."
+
+Insurance is always flagged: it is one flat share of price applied identically
+in every county, an assumption by construction rather than a measurement.
+Property tax follows whichever input actually answered — the levies when they
+exist, the stored rate when they do not — which is the same rule `valuesFor`
+uses, so the map and the sheet cannot disagree.
+
+**Verified**: `pnpm typecheck` clean, new files lint clean, **645 mobile (+9)
++ 997 web (+17) tests pass**.
+
 ## 2026-09-08 09:20 UTC — phase202: a real electric bill, and who actually sells it
 
 **Objective**: the last unsourced lens. `electric_monthly_usd` was a round
