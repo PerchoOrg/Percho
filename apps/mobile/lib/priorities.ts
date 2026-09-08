@@ -1,3 +1,5 @@
+import { DEFAULT_LENS, type LensId } from "@percho/shared/lenses";
+
 /**
  * What the buyer SAYS matters to them.
  *
@@ -140,4 +142,44 @@ export function orderByPriority<T>(
 		})
 		.sort((a, b) => b.weight - a.weight || a.i - b.i)
 		.map(({ row }) => row);
+}
+
+/**
+ * Which lens the map should open on, given what the buyer said matters.
+ *
+ * The You tab asks a buyer to rank what they care about, and until now that
+ * answer moved exactly one thing: the row order of a comparison screen they
+ * may never reach. The map — the surface the whole feature is — opened on the
+ * same default for everyone. Someone who has just said "schools matter most"
+ * and is then shown a cost map has been asked a question for nothing.
+ *
+ * Two priorities have no lens. There is no commute lens and no community lens,
+ * so rather than pretend, this walks the ranked list and takes the first
+ * priority we can actually draw. A buyer who ranks commute first and schools
+ * second opens on schools, which is the closest honest answer to what they
+ * asked for.
+ *
+ * A buyer who has stated nothing gets `DEFAULT_LENS`. This only chooses what
+ * the map OPENS on; tapping a chip is the buyer changing their mind about this
+ * moment, and that wins.
+ */
+/** What `defaultWeights` gives every priority: said nothing either way. */
+const NEUTRAL_WEIGHT = 1;
+
+const LENS_FOR_PRIORITY: Partial<Record<PriorityKey, LensId>> = {
+	schools: "schools",
+	cost: "true_cost",
+};
+
+export function lensForPriorities(weights: PriorityWeights): LensId {
+	if (!hasStated(weights)) return DEFAULT_LENS;
+	for (const p of rankedPriorities(weights)) {
+		// Only what they RAISED. Walking the whole ranked list means a buyer who
+		// lifted commute and community — neither of which we can draw — opens on
+		// a schools map they left at neutral, which is us answering for them.
+		if (weights[p.key] <= NEUTRAL_WEIGHT) break;
+		const lens = LENS_FOR_PRIORITY[p.key];
+		if (lens) return lens;
+	}
+	return DEFAULT_LENS;
 }

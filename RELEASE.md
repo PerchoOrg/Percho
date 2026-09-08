@@ -34,6 +34,10 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- The map now opens on whatever you said matters most in the You tab. Say
+  schools matter and the map opens coloured by school results instead of cost.
+  If what you picked is something the map cannot show yet — getting around, or
+  the community itself — it opens on the usual view rather than guessing.
 - The note under the true-cost map said the part of the figure we had not
   flagged came from public records. About a fifth of it is the insurance
   assumption, which is not a record and does not vary by county — it is now
