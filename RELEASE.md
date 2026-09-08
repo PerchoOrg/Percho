@@ -35,6 +35,13 @@ community reviews instead.
 
 ### 2026-09-08
 
+**Water bills are real numbers in 23 counties**, not figures we made up. Most
+come from the statewide rate survey run by the University of North Carolina's
+Environmental Finance Center with the Georgia Environmental Finance Authority,
+and are still marked as estimates because that survey is from 2022 and bills
+rise a few per cent a year. Five counties show water only — they have no county
+sewer utility, which matches how many homes there are on septic.
+
 **DeKalb's water bill is now a real figure**, not an estimate — read from the
 county's own rate sheet and checked against the typical bill DeKalb itself
 publishes. Every other county's water line is still marked as our estimate.
