@@ -217,7 +217,16 @@ export function groupMetrics(rows: readonly MetricRow[]): Area[] {
       estimated: row.estimated,
     };
     const supplier = supplierOf(row.detail, row.estimated);
+    // Whether a water figure has a sewer half. Like `supplier`, a narrow named
+    // field rather than passing `detail` through: `detail` is each importer's
+    // scratchpad, and phase219.1 is what happens when the app reads it directly.
+    const detail = row.detail as Record<string, unknown> | null;
+    const coversSewer =
+      row.metric === 'water_monthly_usd' && detail && typeof detail.has_county_sewer === 'boolean'
+        ? detail.has_county_sewer
+        : undefined;
     if (supplier) metric.supplier = supplier;
+    if (coversSewer !== undefined) metric.coversSewer = coversSewer;
     area.metrics.push(metric);
   }
   return [...byArea.values()].sort((a, b) => a.name.localeCompare(b.name));

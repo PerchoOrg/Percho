@@ -128,6 +128,23 @@ export interface AreaMetric {
   asOf: string;
   estimated: boolean;
   supplier?: MetricSupplier;
+  /**
+   * Whether a water figure includes the sewer half.
+   *
+   * Undefined on every metric this does not apply to. `false` says the figure
+   * is water ALONE, because the county has no sewer utility to price — five of
+   * the twenty-nine are like that, and they sit at the bottom of the water
+   * ranking partly because of it: water-only counties average $41 a month
+   * against $68 for the rest. Some of that gap is a genuinely cheaper place
+   * and some of it is a component that is not there, and a reader comparing
+   * $25 against $75 cannot tell which without being told.
+   *
+   * It deliberately does NOT decide whether those households pay for sewer
+   * some other way. Public water and a septic tank is an ordinary combination
+   * in exurban Georgia, and we have no source for which homes are on one. The
+   * field says what the figure contains, not what the household pays.
+   */
+  coversSewer?: boolean;
 }
 
 /** One area, with everything we know about it. */
@@ -784,6 +801,17 @@ export function wellShareNote(publicWaterPct: number | undefined): string | unde
   return `${who} a well and no water bill`;
 }
 
+/**
+ * "water only — no sewer utility in this county", or nothing.
+ *
+ * Only ever says something when the answer is no. A figure that includes both
+ * halves is the normal case and does not need announcing; one that is missing a
+ * half does, because it reads as cheap rather than as partial.
+ */
+export function sewerNote(coversSewer: boolean | undefined): string | undefined {
+  return coversSewer === false ? 'water only — no sewer utility in this county' : undefined;
+}
+
 /** Above this share, a supplier is "the county's" and the rest is rounding. */
 const EFFECTIVELY_ALL = 0.95;
 
@@ -886,7 +914,9 @@ export function costBreakdown(area: Area): CostLine[] | undefined {
       water,
       isEstimate('water_monthly_usd'),
       'water_monthly_usd',
-      wellShareNote(get('public_water_pct')),
+      [sewerNote(byKey.get('water_monthly_usd')?.coversSewer), wellShareNote(get('public_water_pct'))]
+        .filter(Boolean)
+        .join(' · ') || undefined,
     ),
     line('Trash', trash, isEstimate('trash_monthly_usd'), 'trash_monthly_usd'),
     // A flat share of price, identical in every county — an assumption by
