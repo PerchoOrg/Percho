@@ -3,11 +3,19 @@
  * tab's account row); success dismisses it and the caller's surface reacts to
  * the session via `useAuthStore` — nothing is passed back.
  *
- * Two paths, matching `lib/auth.ts`:
+ * Three paths, matching `lib/auth.ts`:
  *   - Sign in with Apple, rendered with Apple's own button component (their
  *     HIG requires the stock control) and only when the native sheet exists.
- *   - Email → 6-digit code. Two-step state machine on one screen; the code
- *     step names the address it mailed so a typo is discoverable.
+ *   - Email + password — the default, because most people arriving here
+ *     already have an account and know its password.
+ *   - Email → 6-digit code, one tap away. This is how a NEW account is made
+ *     and how a forgotten password is recovered; `lib/auth-form.ts` explains
+ *     why recovery is a code rather than a reset link.
+ *
+ * Password is the default rather than the code because the alternative is what
+ * the owner reported as a bug: an account that exists, a password he knows,
+ * and the app insisting on mailing him a number first. The code is never more
+ * than one tap away, so nobody is trapped by a password they do not have.
  *
  * Dismissal is driven by the SESSION, not the button handler: whichever path
  * signs in, `onAuthStateChange` fills the store and the effect below pops the
@@ -31,25 +39,36 @@ import {
 	appleSignInAvailable,
 	requestEmailCode,
 	signInWithApple,
+	signInWithPassword,
 	verifyEmailCode,
 } from "../lib/auth";
+import {
+	credentialMessage,
+	isEmailShaped,
+	normalizeEmail,
+	validateCredentials,
+} from "../lib/auth-form";
 import { useAuthStore } from "../state/auth";
 import { colors, radii } from "../theme/tokens";
 import { textStyles } from "../theme/typography";
 
-type EmailStep = "email" | "code";
+/** `password` is the landing step; `code` is reached deliberately, either to
+ *  make an account or to get past a password nobody has. */
+type EmailStep = "password" | "code";
 
 export default function AuthScreen() {
 	const insets = useSafeAreaInsets();
 	const session = useAuthStore((s) => s.session);
 
 	const [appleAvailable, setAppleAvailable] = useState(false);
-	const [step, setStep] = useState<EmailStep>("email");
+	const [step, setStep] = useState<EmailStep>("password");
 	const [email, setEmail] = useState("");
+	const [password, setPassword] = useState("");
 	const [code, setCode] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const codeRef = useRef<TextInput>(null);
+	const passwordRef = useRef<TextInput>(null);
 
 	useEffect(() => {
 		appleSignInAvailable().then(setAppleAvailable);
@@ -68,10 +87,24 @@ export default function AuthScreen() {
 		if (!res.ok && res.error) setError(res.error);
 	};
 
+	const submitPassword = async () => {
+		const problem = validateCredentials(email, password);
+		if (problem) {
+			setError(credentialMessage(problem));
+			return;
+		}
+		setError(null);
+		setBusy(true);
+		const res = await signInWithPassword(normalizeEmail(email), password);
+		setBusy(false);
+		// Success dismisses via the session effect; only failure lands here.
+		if (!res.ok) setError(res.error ?? "That didn’t work.");
+	};
+
 	const sendCode = async () => {
-		const addr = email.trim().toLowerCase();
-		if (!/^\S+@\S+\.\S+$/.test(addr)) {
-			setError("That doesn't look like an email address.");
+		const addr = normalizeEmail(email);
+		if (!isEmailShaped(addr)) {
+			setError(credentialMessage("email"));
 			return;
 		}
 		setError(null);
@@ -142,7 +175,7 @@ export default function AuthScreen() {
 					</>
 				) : null}
 
-				{step === "email" ? (
+				{step === "password" ? (
 					<>
 						<TextInput
 							style={styles.input}
@@ -154,21 +187,49 @@ export default function AuthScreen() {
 							autoCapitalize="none"
 							autoCorrect={false}
 							autoComplete="email"
+							textContentType="username"
 							editable={!busy}
-							onSubmitEditing={sendCode}
-							returnKeyType="send"
+							onSubmitEditing={() => passwordRef.current?.focus()}
+							returnKeyType="next"
+							submitBehavior="submit"
+						/>
+						<TextInput
+							ref={passwordRef}
+							style={styles.input}
+							value={password}
+							onChangeText={setPassword}
+							placeholder="Password"
+							placeholderTextColor={colors.ink3}
+							secureTextEntry
+							autoCapitalize="none"
+							autoCorrect={false}
+							autoComplete="current-password"
+							textContentType="password"
+							editable={!busy}
+							onSubmitEditing={submitPassword}
+							returnKeyType="go"
 						/>
 						<Pressable
 							style={[styles.cta, busy && styles.ctaDisabled]}
-							onPress={sendCode}
+							onPress={submitPassword}
 							disabled={busy}
 							accessibilityRole="button"
 						>
 							{busy ? (
 								<ActivityIndicator color={colors.onCard} />
 							) : (
-								<Text style={styles.ctaTxt}>Email me a code</Text>
+								<Text style={styles.ctaTxt}>Sign in</Text>
 							)}
+						</Pressable>
+						<Pressable
+							style={styles.linkRow}
+							onPress={sendCode}
+							disabled={busy}
+							accessibilityRole="button"
+						>
+							<Text style={styles.linkTxt}>
+								New here, or forgot it? Email me a code
+							</Text>
 						</Pressable>
 					</>
 				) : (
@@ -205,14 +266,14 @@ export default function AuthScreen() {
 						<Pressable
 							style={styles.linkRow}
 							onPress={() => {
-								setStep("email");
+								setStep("password");
 								setCode("");
 								setError(null);
 							}}
 							disabled={busy}
 							accessibilityRole="button"
 						>
-							<Text style={styles.linkTxt}>Use a different email</Text>
+							<Text style={styles.linkTxt}>Use a password instead</Text>
 						</Pressable>
 					</>
 				)}

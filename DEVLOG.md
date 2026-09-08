@@ -21,6 +21,56 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 05:35 UTC — phase197: password sign-in, because the account already exists
+
+**Objective**: owner, reported as a bug — 「登陆现在需要 email code 这不对 我已经
+注册过的要允许密码登陆」. The app shipped with Apple + email OTP only. That was
+a defensible choice for a NEW account (neither has a redirect leg) and the
+wrong one for a returning buyer: web has always been email + password, both
+surfaces are the same `auth.users`, and he was being made to wait for a code
+to enter an account whose password he knows.
+
+**Actions**:
+- `lib/auth.ts` — `signInWithPassword` and `setPassword` (`updateUser`, which
+  acts on whoever the client is authenticated as, so it cannot touch an
+  account you are not already inside).
+- `lib/auth-form.ts` + 12 tests — the pure form rules, extracted so the
+  decisions the screen makes are testable without an auth server or a native
+  module. `auth.ts` itself imports `expo-apple-authentication`, which is why
+  the logic worth testing had to leave it.
+- `app/auth.tsx` — password is now the landing step; the code is one tap away
+  under "New here, or forgot it?".
+- `app/set-password.tsx` + a You-tab entry, email accounts only. An Apple
+  account has no password to set — Apple IS the credential — and offering one
+  would imply the Apple button could be replaced by it.
+
+**Decisions**:
+1. **No `resetPasswordForEmail`.** It mails a LINK, which needs a `percho://`
+   deep link, a Supabase redirect allowlist and a recovery screen — three
+   moving parts to reach a place the existing, working OTP flow already
+   reaches. So the code IS the reset path: sign in with a code, then set a
+   password. That also means the recovery path is one we already know works,
+   rather than one that ships untested.
+2. **One error message for every password rejection.** Supabase answers a
+   password attempt against a passwordless (OTP-created) account with the same
+   "Invalid login credentials" as a wrong password, and it is right to —
+   distinguishing them would tell an attacker which addresses are registered.
+   The screen therefore does not guess; `passwordFailureHint` names the way
+   out. A test asserts the hint never claims the account does not exist.
+3. Password is validated to ≥8 characters client-side, matching Supabase's own
+   floor and `apps/web/lib/zod/auth.ts`. Kept in sync by hand rather than
+   sharing the zod schema: it is one number, and the alternative is pulling
+   zod into the phone bundle.
+
+**Issues**: the OTP-created account with no password is a real population —
+every mobile-only user to date. They cannot sign in with a password until they
+set one, and cannot be told that directly for the reason above. The mitigation
+is that the code path is visible on the same screen and the You tab offers to
+set a password afterwards, so the dead end is one tap wide.
+
+**Verified**: `pnpm typecheck` clean, new files lint clean, **598 mobile
+(+12) + 910 web tests pass**.
+
 ## 2026-09-08 05:05 UTC — phase196: the Search tab gets lenses
 
 **Objective**: owner — 「search tab 我想打破传统的搜索 引入多维度的社区搜索 包括
