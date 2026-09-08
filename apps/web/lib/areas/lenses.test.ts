@@ -814,3 +814,51 @@ describe('"averaged across N" is a share test, not a count', () => {
     ).toBe('averaged across 4 utilities · 13.1¢ per kWh · largest is Cobb EMC at 41%');
   });
 });
+
+describe('the water line says when a county is largely on wells', () => {
+  const withWater = (publicPct?: number): Area => ({
+    key: 'pike',
+    name: 'Pike',
+    kind: 'county',
+    state: 'GA',
+    metrics: [
+      metric('county_mo_mills', 8.46),
+      metric('county_bond_mills', 0),
+      metric('school_mo_mills', 18.7),
+      metric('school_bond_mills', 0),
+      metric('electric_monthly_usd', 173),
+      metric('water_monthly_usd', 58, true),
+      metric('trash_monthly_usd', 28, true),
+      ...(publicPct === undefined ? [] : [metric('public_water_pct', publicPct)]),
+    ],
+  });
+  const waterNote = (publicPct?: number) =>
+    costBreakdown(withWater(publicPct))?.find((l) => l.label === 'Water & sewer')?.note;
+
+  it('states a majority-well county as a percentage', () => {
+    // Pike: 20% on public supply. "1 in 1.25 homes" would be absurd.
+    expect(waterNote(20)).toBe('about 80% of homes here have a well and no water bill');
+  });
+
+  it('states a minority as a ratio, which reads better than a small percentage', () => {
+    expect(waterNote(88)).toBe('about 1 in 8 homes here has a well and no water bill');
+  });
+
+  it('says nothing where almost everyone is on the mains', () => {
+    // DeKalb and Gwinnett are at 100%. A note there is noise.
+    expect(waterNote(100)).toBeUndefined();
+    expect(waterNote(99)).toBeUndefined();
+  });
+
+  it('says nothing when the share is unknown', () => {
+    expect(waterNote(undefined)).toBeUndefined();
+  });
+
+  it('never claims the figure describes a minority when it describes most people', () => {
+    // The wording this replaced said a county below 90% was one where "a flat
+    // water bill describes a minority". At 88% it describes seven eighths.
+    for (const pct of [88, 85, 80, 75]) {
+      expect(waterNote(pct)).not.toMatch(/minority|most|nobody/i);
+    }
+  });
+});
