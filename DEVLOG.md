@@ -21,6 +21,58 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 21:10 UTC — phase225: nothing we run catches the failure the owner would see first
+
+**Objective**: fifteen phases have touched `apps/mobile` and
+`packages/shared`, and every one was gated on typecheck, lint and unit tests.
+**None of those runs Metro.** A shared module reaching for something Node-only
+would pass all three and then fail to load on the phone — and per the workspace
+protocol Metro serves the owner's device straight from `~/Workspace/Percho`, so
+that failure would land on him, not on CI.
+
+I had never checked it. So I did.
+
+```
+pnpm --filter @percho/mobile bundle
+› ios bundles (2): entry-….hbc (3.9MB)
+Exported. exit 0
+```
+
+**It builds.** Every `@percho/shared/lenses` import added since phase196 is
+RN-safe; `packages/shared` has no `node:` import anywhere, and the one
+transitive edge (`lenses` → `property-tax`) is pure arithmetic.
+
+**Actions**: added the `bundle` script so the check is one command rather than
+a remembered incantation, and gitignored its output. No source change — the
+value here is that the verification exists and passed.
+
+**Deliberately NOT done**: adding it to CLAUDE.md §9's definition of done.
+That file is the owner's instructions to me, and quietly editing my own rules
+is not mine to do. Flagged in the loop notes as a suggestion with the argument
+for it.
+
+### The handoff document had gone stale in the worst way
+
+The loop notes are 780 lines of append-only log and contained **two**
+"STILL YOURS TO RULE ON" blocks — one listing three decisions, a later one
+listing two after phase220 closed water's shape question. The stale one comes
+first in the file. The owner lands, opens the one artefact he was told to read,
+and finds an out-of-date list of what he owes me.
+
+Rewrote the top as a single current-state block: what is decided, what is his,
+the three product judgements I made alone, the estimates that remain and why
+each is written down rather than shrugged at. The two in-log blocks are marked
+superseded rather than deleted — the log is history and history should not be
+edited to look better than it was.
+
+**Verified**: typecheck clean, lint clean, 663 mobile + 1097 web tests, and the
+iOS bundle exports.
+
+**Learnings**: I have spent fifteen phases making the numbers honest and had
+never once checked that the app they appear in still starts. A gate is only
+worth what it catches, and three green gates said nothing about the one failure
+mode that reaches the owner directly.
+
 ## 2026-09-08 20:50 UTC — phase224: the map shows where the buyer already stands
 
 **Objective**: phase223's question — *of any input a product collects, which
