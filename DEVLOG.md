@@ -21,6 +21,79 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 12:10 UTC — phase252: 199 `as any` on the database boundary, and why
+
+**Objective**: phase251 checked one CLAUDE.md rule mechanically. Sweep the rest
+of the mechanical ones — §4's export rules, §6's bans on `any`, barrel files and
+`console.log`.
+
+Barrel files: none. `biome-ignore` without a reason: none. `console.log` in app
+code: one hit, and it is the sentence *forbidding* it inside a doc comment.
+
+Then `any`: **228 hits.** Nearly all of them one thing.
+
+### 199 casts of the Supabase client, across 57 files
+
+```ts
+// biome-ignore lint/suspicious/noExplicitAny: stub generated types
+const { data: agent } = (await (supabase as any).from('agents')…
+```
+
+The stated reason is **no longer true**: `database.types.ts` is 4,246 lines and
+carries `agents` under `public` like everything else. So a typo in a table or
+column name in any of those 57 files compiles and fails at runtime — the exact
+silent-substitution class phases 243–245 were spent on, on the boundary where it
+matters most.
+
+### Two hypotheses, both wrong, both tested before writing
+
+**"The generated types lag the schema."** Compared every table the app queries
+against the file: **2 of 42 missing**, neither in a casting file. Wrong.
+
+**"The casts are stale and can just be deleted."** Removed one and ran
+typecheck: `Property 'id' does not exist on type 'never'`. Wrong.
+
+### What it actually is
+
+Two client factories, and only one of them resolves the generated types.
+
+```
+plain  createServiceClient / createAnonClient — @supabase/supabase-js
+       cast removed → typecheck CLEAN
+ssr    createClient()                          — @supabase/ssr
+       cast removed → resolves to `never`
+```
+
+`areas.ts` is typed (phase209) precisely because it builds its own plain client.
+The generated file declares `PostgrestVersion: "14.5"`, which the pinned
+`@supabase/ssr` does not appear to understand.
+
+Split by which client a file uses:
+
+```
+27  files on the plain client only  — removable today
+91  files on the ssr client only    — blocked on the package
+32  mixed or neither                — need reading one at a time
+```
+
+**Not fixed here.** 57 files across auth, listings, communities and POI, and the
+blocked 91 need a dependency bump whose blast radius I cannot see from inside a
+long unattended run. Flagged as decision 4 with the split measured, so the work
+can be scoped rather than discovered.
+
+**Also noted**: `apps/web/lib/log.ts` exists, has **zero importers**, and
+CLAUDE.md §6 says it "was deleted in phase184". `git log` shows it re-added by
+the monorepo restructure — the deletion did not survive the move. The rulebook
+and the tree disagree; I have changed neither.
+
+**Verified**: typecheck clean, lint clean, 666 mobile + 1169 web tests. Nothing
+changed but the log.
+
+**Learnings**: I formed two causal stories and both were wrong. Each was
+plausible enough to write, and the only reason neither shipped is that testing a
+hypothesis costs one command and I had just spent three phases on what happens
+when nobody does.
+
 ## 2026-09-09 11:35 UTC — phase251: fifty-five insertions, one of them out of order
 
 **Objective**: phase250 turned RELEASE.md's rules into a step. The other
