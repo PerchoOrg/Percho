@@ -991,3 +991,54 @@ describe('a water figure says when it has no sewer half', () => {
     expect(note).toContain('a well and no water bill');
   });
 });
+
+describe('the tax line says what the published rate leaves out', () => {
+  const county = (min?: number, max?: number): Area => ({
+    key: 'hall',
+    name: 'Hall',
+    kind: 'county',
+    state: 'GA',
+    metrics: [
+      metric('county_mo_mills', 3.44),
+      metric('county_bond_mills', 0),
+      metric('school_mo_mills', 15.64),
+      metric('school_bond_mills', 0),
+      metric('electric_monthly_usd', 166),
+      metric('water_monthly_usd', 59, true),
+      metric('trash_monthly_usd', 30, true),
+      ...(min === undefined ? [] : [metric('district_millage_omitted_min_pct', min)]),
+      ...(max === undefined ? [] : [metric('district_millage_omitted_max_pct', max)]),
+    ],
+  });
+  const noteOf = (a: Area) => costBreakdown(a)?.find((l) => l.label === 'Property tax')?.note;
+
+  it('states a range, because which levies a home pays depends where it is', () => {
+    // Hall: 0.169–0.347 points of market value on a $500k home.
+    const note = noteOf(county(0.169, 0.347));
+    expect(note).toContain('$70–$145 a month more');
+    expect(note).toContain('depending where in the county');
+  });
+
+  it('says "up to" when the floor is zero', () => {
+    // Every omitted levy ambiguous: a home might pay none of them.
+    expect(noteOf(county(0, 0.166))).toContain('up to $69 a month more');
+  });
+
+  it('says nothing for a county that omits nothing', () => {
+    expect(noteOf(county())).toBeUndefined();
+    expect(noteOf(county(0, 0))).toBeUndefined();
+  });
+
+  it('does not turn a rounding-sized omission into a sentence', () => {
+    // Below a dollar a month there is nothing worth saying.
+    expect(noteOf(county(0, 0.0001))).toBeUndefined();
+  });
+
+  it('never claims to have corrected the figure', () => {
+    // The correction needs a ruling on which levies apply where. The note
+    // discloses; it must not imply the number already accounts for them.
+    const note = noteOf(county(0.169, 0.347)) ?? '';
+    expect(note).toMatch(/excludes/);
+    expect(note).not.toMatch(/includ(es|ing)|corrected|adjusted/);
+  });
+});

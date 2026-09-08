@@ -35,6 +35,13 @@ community reviews instead.
 
 ### 2026-09-08
 
+**The property tax line now says what it leaves out.** Georgia counties levy
+fire, EMS and similar services as separate districts, and the state's published
+county rate does not include them — in eighteen of the twenty-nine counties on
+the map. The line now says so and gives a range, because whether a particular
+home pays them depends on where in the county it is. The figure itself is
+unchanged; this tells you it is a floor.
+
 **Five counties' water figures now say they are water only.** Those counties
 have no county sewer utility, so their number covers water alone — which made
 them look dramatically cheaper than counties whose figure includes both. The

@@ -106,6 +106,7 @@ function main() {
     .filter((r): r is DistrictRate => r !== null);
 
   let countiesAffected = 0;
+  let countiesUnderstated = 0;
   let worst = { county: '', points: 0 };
 
   for (const county of METRO_COUNTIES) {
@@ -136,6 +137,7 @@ function main() {
     const omission = omissionFor(extras.map((e) => ({ district: e.district, mills: e.mo + e.bond })));
     const lowPoints = omission.lowPoints;
     const highPoints = omission.highPoints;
+    if (highPoints > 0) countiesUnderstated++;
     if (highPoints > worst.points) worst = { county, points: highPoints };
 
     console.log(`\n${county}`);
@@ -175,7 +177,12 @@ function main() {
   }
 
   console.log(
-    `\n${countiesAffected} of ${METRO_COUNTIES.length} counties levy something the published figure omits.`,
+    `\n${countiesUnderstated} of ${METRO_COUNTIES.length} counties UNDERSTATE the published figure.\n` +
+      `${countiesAffected} levy something extra, but in ${countiesAffected - countiesUnderstated} of those\n` +
+      'every extra row is a levy for one named city — the published figure is the\n' +
+      'unincorporated one, so a city levy is not part of it in either direction.\n' +
+      'Carroll is the whole of that difference, and "19 of 29 understate" — which\n' +
+      'this script used to print and I repeated for thirty phases — was one too many.',
   );
   console.log(
     `Worst case: ${worst.county}, up to ${worst.points.toFixed(3)} percentage points of market value.`,

@@ -21,6 +21,51 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 06:20 UTC — phase241: disclosing the tax omission, and a count I had wrong
+
+**Objective**: phase240 measured the omission in the units of the decision — 22
+of 29 ranking positions move. Correcting it needs the owner's ruling.
+Disclosing it does not, so that ships here.
+
+`import-district-millage.ts` writes the range as two metrics, and the property
+tax line now reads:
+
+```
+Property tax   $315
+excludes this county's separately-levied fire, EMS and similar districts
+— $70–$145 a month more, depending where in the county
+```
+
+A range and not a number: which levies a home pays depends on whether it is
+inside a city and, in Jackson, on which of eleven fire sub-districts covers it.
+Naming one figure would be the confident wrongness phase240 refused. A test
+asserts the note never says *included*, *corrected* or *adjusted* — it discloses
+and must not imply the number already accounts for them.
+
+### A number I had repeated for thirty phases was one too many
+
+The importer found **18** counties, the audit said **19**. The difference is
+**Carroll**, whose only extra rows are `COUNTY INC - BREMEN`,
+`COUNTY INC - CARROLLTON` and `COUNTY INC - OTHER` — county levies for named
+cities' residents. **The published figure is the unincorporated one, so a city
+levy is not part of it in either direction**, and Carroll's range is
+0.000–0.000.
+
+So "19 of 29 counties understate" — which I put in the notes, in DEVLOG and in
+every summary since phase202 — was wrong. **18 understate; 19 levy something
+extra, and those are not the same claim.** The audit now prints both and says
+which is which.
+
+I only found it because the importer and the audit disagreed by one. Neither
+number was checked against the other until something had to write data.
+
+**Verified**: typecheck clean, lint clean, 663 mobile + **1153 web tests** (+5).
+Dry run inspected; nothing applied yet.
+
+**Learnings**: the count was wrong because *affected by* and *understated by*
+are different questions and I had only ever asked one of them out loud. A
+summary statistic repeated often enough starts being quoted instead of derived.
+
 ## 2026-09-09 05:50 UTC — phase240: the tax omission moves 22 of 29 counties
 
 **Objective**: phase239 established the method — read a column as a *ranking*,

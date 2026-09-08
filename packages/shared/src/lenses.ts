@@ -81,6 +81,20 @@ export const METRIC_KEYS = [
    *  bill is the right SHAPE for the place. In Pike County four households in
    *  five have a well and no water bill at all. */
   'public_water_pct',
+  /**
+   * What the published county tax rate leaves out, in percentage points of
+   * market value — the floor and the ceiling of a range.
+   *
+   * Georgia counties levy fire, EMS, police, recreation and ambulance as
+   * SEPARATE districts that `import-ga-millage.ts` does not total, and 19 of
+   * the 29 metro counties levy something. Which of them a given home pays
+   * depends on whether it is inside a city and, in Jackson, on which of eleven
+   * fire sub-districts covers it — so this is a range and not a number, and the
+   * figure itself is deliberately NOT adjusted by it. See
+   * `apps/web/lib/areas/district-millage.ts`.
+   */
+  'district_millage_omitted_min_pct',
+  'district_millage_omitted_max_pct',
 ] as const;
 
 export type MetricKey = (typeof METRIC_KEYS)[number];
@@ -802,6 +816,32 @@ export function wellShareNote(publicWaterPct: number | undefined): string | unde
 }
 
 /**
+ * "the county also levies fire and EMS districts this excludes — $70 to $145 a
+ * month more, depending where in the county the home is", or nothing.
+ *
+ * A RANGE, because which district levies a home pays depends on whether it is
+ * inside a city and which sub-district covers it. Naming a single number would
+ * be the confident wrongness phase240 refused; naming nothing leaves a buyer
+ * reading a ranking where Hall is third cheapest and would be sixteenth.
+ *
+ * The figure itself is not adjusted. Correcting it needs a ruling on which
+ * levies apply where, and that is the owner's to make.
+ */
+export function districtOmissionNote(
+  minPct: number | undefined,
+  maxPct: number | undefined,
+  priceUsd: number,
+): string | undefined {
+  if (maxPct === undefined || !Number.isFinite(maxPct) || maxPct <= 0) return undefined;
+  const perMonth = (pct: number) => Math.round((priceUsd * (pct / 100)) / 12);
+  const hi = perMonth(maxPct);
+  if (hi < 1) return undefined;
+  const lo = minPct === undefined || !Number.isFinite(minPct) ? 0 : perMonth(minPct);
+  const amount = lo > 0 && lo !== hi ? `$${lo}–$${hi}` : `up to $${hi}`;
+  return `excludes this county’s separately-levied fire, EMS and similar districts — ${amount} a month more, depending where in the county`;
+}
+
+/**
  * "water only — no sewer utility in this county", or nothing.
  *
  * Only ever says something when the answer is no. A figure that includes both
@@ -905,7 +945,17 @@ export function costBreakdown(area: Area): CostLine[] | undefined {
     // seeded `property_tax_rate_pct` is still in the table as an unused
     // fallback — the same mistake `valuesFor` had, and here it printed the
     // state's own adopted millage under a "still our estimate" footnote.
-    line('Property tax', tax, taxWasEstimated),
+    line(
+      'Property tax',
+      tax,
+      taxWasEstimated,
+      undefined,
+      districtOmissionNote(
+        get('district_millage_omitted_min_pct'),
+        get('district_millage_omitted_max_pct'),
+        REFERENCE_HOME_USD,
+      ),
+    ),
     line('Electric', electric, isEstimate('electric_monthly_usd'), 'electric_monthly_usd'),
     // Whether a water bill applies at all is part of what it costs to live
     // here. Four households in five in Pike County are on a well.
