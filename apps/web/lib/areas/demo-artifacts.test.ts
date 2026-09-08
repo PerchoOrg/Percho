@@ -221,3 +221,66 @@ describe('the area-compare demo matches the shipped table', () => {
     }
   });
 });
+
+/**
+ * The demo PAGES read their data files, and nothing tested that contract.
+ *
+ * Everything above checks `data.js` against the code that generates it. The
+ * `index.html` beside it is a third party to that agreement: it reads fields
+ * off the same object, and when phase218 gave the compare page a generated
+ * `sources` table the only thing keeping the two in step was that I wrote both
+ * in one sitting.
+ *
+ * That is exactly how phase219.1 broke — an importer changed its `detail`
+ * shape and `supplierOf` kept reading the old key, so the supplier note
+ * vanished from all 29 counties while every figure still looked fine. A demo
+ * page reading a field its generator stopped emitting fails the same way:
+ * silently, into an empty table, on the pages the owner reviews from.
+ *
+ * `D.<field>` is unambiguous — `D` is bound to the data object at the top of
+ * each page — so the reads can be extracted rather than listed by hand. The
+ * looser heuristics are deliberately NOT used: `s.rings` and `s.key` in the
+ * lens page belong to a shape iterator that happens to share a name with the
+ * source rows, and a check that cannot tell them apart would cry wolf until
+ * someone deleted it.
+ */
+describe('each demo page reads only fields its data file provides', () => {
+  const pageOf = (slug: string) =>
+    readFileSync(new URL(`../../public/demos/${slug}/index.html`, import.meta.url), 'utf8');
+
+  const readsOf = (html: string, binding: string) =>
+    [...html.matchAll(new RegExp(`\\b${binding}\\.([A-Za-z_]\\w*)`, 'g'))]
+      .map((m) => m[1])
+      .filter((f): f is string => f !== undefined);
+
+  it('search-lenses', () => {
+    const data = readArtifact<Record<string, unknown>>('search-lenses/data.js', '__LENSES__');
+    const reads = new Set(readsOf(pageOf('search-lenses'), 'D'));
+    expect(reads.size).toBeGreaterThan(3);
+    for (const field of reads) {
+      expect(data[field], `the page reads D.${field}, which data.js does not have`).toBeDefined();
+    }
+  });
+
+  it('area-compare', () => {
+    const data = readArtifact<Record<string, unknown>>('area-compare/data.js', '__COMPARE__');
+    const reads = new Set(readsOf(pageOf('area-compare'), 'D'));
+    expect(reads.size).toBeGreaterThan(2);
+    for (const field of reads) {
+      expect(data[field], `the page reads D.${field}, which data.js does not have`).toBeDefined();
+    }
+  });
+
+  it('area-compare reads only trio fields the generator emits', () => {
+    // `trio` is bound inside `D.trios.forEach`, so this one is unambiguous too.
+    const art = readArtifact<CompareArtifact>('area-compare/data.js', '__COMPARE__');
+    const first = art.trios[0];
+    if (!first) throw new Error('no trios in the artefact');
+    for (const field of new Set(readsOf(pageOf('area-compare'), 'trio'))) {
+      expect(
+        (first as unknown as Record<string, unknown>)[field],
+        `the page reads trio.${field}, which the generator does not emit`,
+      ).toBeDefined();
+    }
+  });
+});
