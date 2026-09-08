@@ -21,6 +21,46 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 11:50 UTC — phase208: make demo drift a failing build, not a note
+
+**Objective**: last tick I wrote into the loop notes "re-run BOTH build scripts
+after any data or lens change — that is the only thing keeping these two pages
+true." That is a process that depends on someone remembering, and forgetting is
+precisely what happened twice. `/demos/search-lenses` showed four lenses when
+production had five; `/demos/area-compare` showed three communities that do not
+exist. Both failures were silent — nothing broke, the pages simply described a
+product that no longer existed, to the one person who reviews by opening them.
+
+**Actions**:
+- `apps/web/lib/areas/demo-artifacts.test.ts` — 11 tests reading the committed
+  `public/demos/*/data.js` and asserting it matches the code that generates it:
+  the lens ids in order, each lens's label, unit, heading and RAMP, the
+  reference home, that every ranked county has a shape and every shape has a
+  cost sheet, and that the compare table's rows match what
+  `buildAreaCompareTable` produces today.
+- `pnpm demos:build` runs both generators in one command.
+- `ARCHITECTURE.md` names the guard and says the fix is to re-run the
+  generator, never to edit the expectation.
+
+**Verified the guard actually fails.** A test that has never failed is a
+placebo, so I reproduced the exact drift that happened: deleted the
+`electric` lens from the committed artefact, leaving four where the code has
+five. Three tests failed — the id list, the per-lens fields, and the ramps.
+Restored, and `git diff` on the demo folder is clean.
+
+**What these tests deliberately do NOT check**: that the numbers are current.
+The data behind them changes whenever a scraper runs, with no code change to
+hang a test on, and an age assertion would fail on a quiet week rather than on
+a real problem. Structural drift is the failure that actually occurred, twice,
+and structural drift is what is now caught.
+
+The ramp assertion is the one worth keeping deliberately: a recoloured lens
+whose demo still paints the old hue is drift the eye will not catch, because
+the map still looks plausible.
+
+**Verified**: `pnpm typecheck` clean, new file lint clean, **649 mobile +
+1029 web tests pass** (+11).
+
 ## 2026-09-08 11:35 UTC — phase207: the second stale demo, and the third time the same bug
 
 **Objective**: the notes' own next item, written last tick — `/demos/
