@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex" />
-<title>Search lenses — Percho demo</title>
+<title>Search lenses — what shipped</title>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="/demos/search-lenses/data.js"></script>
@@ -24,93 +24,91 @@
     display: flex; align-items: flex-start; justify-content: center;
     gap: 40px; padding: 36px 20px;
   }
-  /* ── Phone frame ── */
   #phone {
-    width: 390px; height: 800px; flex: none; position: relative;
+    width: 390px; height: 820px; flex: none; position: relative;
     background: var(--bg); border-radius: 48px; overflow: hidden;
     box-shadow: 0 24px 60px rgba(43,33,22,0.28), 0 0 0 10px #1c1917;
   }
   #map { position: absolute; inset: 0; }
   .maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right { display: none; }
 
-  /* ── Search pill + lens chips (over the map) ── */
-  #top { position: absolute; top: 0; left: 0; right: 0; z-index: 4; padding: 54px 14px 10px;
-    background: linear-gradient(rgba(247,245,240,0.94), rgba(247,245,240,0.0)); pointer-events: none; }
+  #top { position: absolute; top: 0; left: 0; right: 0; z-index: 4; padding: 54px 0 10px;
+    background: linear-gradient(rgba(247,245,240,0.94), rgba(247,245,240,0)); pointer-events: none; }
   #pill {
-    pointer-events: auto; display: flex; align-items: center; gap: 9px;
+    pointer-events: auto; display: flex; align-items: center; gap: 9px; margin: 0 14px;
     background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
     padding: 11px 16px; color: var(--ink3); font-size: 14.5px;
     box-shadow: 0 2px 10px rgba(43,33,22,0.08);
   }
-  #pill svg { flex: none; }
-  #chips { pointer-events: auto; display: flex; gap: 7px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
+  #chips { pointer-events: auto; display: flex; gap: 7px; margin-top: 10px; padding: 0 14px;
+    overflow-x: auto; scrollbar-width: none; }
   #chips::-webkit-scrollbar { display: none; }
   .chip {
     flex: none; border-radius: 999px; padding: 7px 13px; font-size: 12.5px; font-weight: 600;
     background: var(--glass); border: 1px solid var(--border); color: var(--ink);
-    cursor: pointer; user-select: none; box-shadow: 0 1px 5px rgba(43,33,22,0.07);
+    cursor: pointer; user-select: none; white-space: nowrap;
+    box-shadow: 0 1px 5px rgba(43,33,22,0.07);
   }
   .chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
   .chip .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
-
-  /* ── Legend ── */
-  /* Legend rides under the chips — a full-width strip never covers a county. */
   #legend {
-    pointer-events: auto; margin-top: 9px;
+    pointer-events: auto; margin: 9px 14px 0;
     background: var(--glass); border: 1px solid var(--border); border-radius: 10px;
     padding: 6px 10px 7px; box-shadow: 0 1px 6px rgba(43,33,22,0.08);
   }
-  #legend .t { font-size: 10.5px; font-weight: 700; margin-bottom: 4px; }
-  #legend .ramp { display: flex; height: 8px; border-radius: 3px; overflow: hidden; }
+  #legend .t { font-size: 10.5px; font-weight: 700; }
+  #legend .ramp { display: flex; height: 8px; border-radius: 3px; overflow: hidden; margin-top: 4px; }
   #legend .ramp div { flex: 1; }
-  #legend .lbl { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink2); margin-top: 3px; font-variant-numeric: tabular-nums; }
+  #legend .lbl { display: flex; justify-content: space-between; font-size: 10px;
+    color: var(--ink2); margin-top: 3px; font-variant-numeric: tabular-nums; }
 
-  /* ── Bottom sheet ── */
   #sheet {
-    position: absolute; left: 0; right: 0; bottom: 0; height: 244px; z-index: 5;
+    position: absolute; left: 0; right: 0; bottom: 0; height: 300px; z-index: 5;
     background: var(--surface); border-radius: 24px 24px 0 0;
     box-shadow: 0 -6px 24px rgba(43,33,22,0.12); padding: 8px 18px 16px;
     display: flex; flex-direction: column; overflow: hidden;
   }
   #grab { width: 36px; height: 4px; border-radius: 2px; background: var(--border); margin: 2px auto 8px; flex: none; }
   #sheet h3 { margin: 0; font-size: 15px; }
-  #sheet .cap { font-size: 11.5px; color: var(--ink2); margin: 2px 0 8px; }
+  .cap { font-size: 11.5px; color: var(--ink2); margin: 3px 0 8px; line-height: 1.35; }
   #rows { overflow-y: auto; min-height: 0; }
-  .row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--surface2); cursor: pointer; }
-  .row:last-child { border-bottom: 0; }
-  .row .nm { width: 84px; flex: none; font-size: 12.5px; font-weight: 600; }
-  .row .bar { flex: 1; height: 7px; border-radius: 3.5px; background: var(--surface2); overflow: hidden; }
-  .row .bar div { height: 100%; border-radius: 3.5px; }
-  .row .v { width: 62px; flex: none; text-align: right; font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--ink); }
-  /* detail view */
-  #back { font-size: 12px; color: var(--accent); cursor: pointer; font-weight: 600; margin-bottom: 2px; }
-  .hero { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 1px; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 8px 0;
+    border-bottom: 1px solid var(--surface2); cursor: pointer; }
+  .row .sw { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+  .row .nm { flex: 1; font-size: 13.5px; font-weight: 600; }
+  .row .v { font-size: 13.5px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+
+  #back { font-size: 12px; color: var(--accent); cursor: pointer; font-weight: 600; }
+  .hero { display: flex; align-items: baseline; gap: 8px; margin: 4px 0 2px; }
   .hero .n { font-size: 30px; font-weight: 700; font-family: "New York", "Iowan Old Style", Georgia, serif; }
   .hero .u { font-size: 11.5px; color: var(--ink2); }
-  .brk { margin-top: 6px; }
-  .brk .row { cursor: default; }
-  .brk .nm { width: 118px; font-weight: 500; color: var(--ink2); }
-  .brk .v { width: 52px; }
-  .facts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-  .fact { background: var(--surface2); border-radius: 8px; padding: 4px 9px; font-size: 11px; color: var(--ink2); }
-  .fact b { color: var(--ink); font-weight: 650; }
+  .line { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .line .l { width: 108px; font-size: 12px; color: var(--ink2); }
+  .line .bar { flex: 1; height: 7px; border-radius: 4px; background: var(--surface2); overflow: hidden; }
+  .line .bar div { height: 100%; border-radius: 4px; background: var(--accent); }
+  .line .v { width: 52px; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .note { font-size: 10.5px; color: var(--ink3); margin: -4px 0 4px 0; line-height: 1.3; }
+  .foot { font-size: 10.5px; color: var(--ink3); margin-top: 10px; line-height: 1.4; }
 
-  /* county labels */
   .cty-label { pointer-events: none; text-align: center; line-height: 1.1;
     text-shadow: 0 0 3px rgba(252,252,251,0.95), 0 0 6px rgba(252,252,251,0.9); }
-  .cty-label .cn { font-size: 9.5px; font-weight: 700; color: #2B2116; letter-spacing: 0.02em; }
+  .cty-label .cn { font-size: 9.5px; font-weight: 700; color: #2B2116; }
   .cty-label .cv { font-size: 10px; font-weight: 650; color: #2B2116; font-variant-numeric: tabular-nums; }
 
-  /* ── Side note (owner-facing, desktop only) ── */
-  #note { width: 360px; padding-top: 8px; color: #52514e; }
+  #note { width: 380px; padding-top: 8px; color: #52514e; }
   #note h1 { font-size: 18px; color: #0b0b0b; margin: 0 0 4px; }
-  #note p { font-size: 13px; margin: 8px 0; }
-  #note h2 { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #898781; margin: 18px 0 6px; }
+  #note p { font-size: 13px; margin: 9px 0; }
+  #note h2 { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: #898781; margin: 18px 0 6px; }
   #note table { width: 100%; border-collapse: collapse; font-size: 12px; }
   #note td { padding: 4px 6px 4px 0; border-bottom: 1px solid #e1e0d9; vertical-align: top; }
   #note td:first-child { font-weight: 600; color: #0b0b0b; white-space: nowrap; }
-  .warn { background: #fff; border: 1px solid #e1e0d9; border-left: 3px solid #ec835a; border-radius: 8px; padding: 8px 12px; font-size: 12px; }
-  @media (max-width: 860px) { #note { display: none; } body { padding: 12px 0; } }
+  #note td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .stamp { background: #fff; border: 1px solid #e1e0d9; border-left: 3px solid #0ca30c;
+    border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+  .warn { background: #fff; border: 1px solid #e1e0d9; border-left: 3px solid #ec835a;
+    border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+  @media (max-width: 880px) { #note { display: none; } body { padding: 12px 0; } }
 </style>
 </head>
 <body>
@@ -129,217 +127,198 @@
       <div class="lbl"><span id="lg-lo"></span><span id="lg-hi"></span></div>
     </div>
   </div>
-  <div id="sheet">
-    <div id="grab"></div>
-    <div id="sheet-body"></div>
-  </div>
+  <div id="sheet"><div id="grab"></div><div id="body"></div></div>
 </div>
 
 <div id="note">
   <h1>Search lenses</h1>
-  <p>The search tab keeps its map — a lens chip recolors it by one dimension,
-  using each dimension's <em>real</em> geography (tax jurisdictions here;
-  school attendance zones, utility territories in production). Nothing is
-  filtered out: a lens changes what the map <em>shows</em>, not what exists —
-  the §4.1 no-filter rule holds.</p>
-  <p>Tap a chip, then tap a county (map or ranking) for the breakdown. The
-  <b>True cost</b> lens is the headline: what a $500k home actually costs per
-  month, area by area — the buyer study's #1 post-move regret (hidden costs,
-  5/10 respondents) made visible before the visit.</p>
-  <h2>Where each lens's data comes from</h2>
+  <p class="stamp" id="stamp"></p>
+  <p>This page is <b>generated</b>, not drawn. Every figure below came from
+  <code>percho.co/api/mobile/areas</code> — the same payload the phone
+  receives — and was ranked, classed and coloured by
+  <code>@percho/shared/lenses</code>, the same code the phone runs. It is a
+  view of what shipped, not a mockup of it.</p>
+  <p>Tap a chip to recolour the map by one dimension. Tap a county for the
+  cost sheet. A figure marked <b>*</b> is still our estimate; the footnote
+  under each sheet names which.</p>
+
+  <h2>What each lens knows</h2>
+  <table id="summary"></table>
+
+  <h2>Where the numbers come from</h2>
   <table>
-    <tr><td>Schools</td><td>already in our DB — <code>k12_schools</code> + attendance zones + test scores</td></tr>
-    <tr><td>Property tax</td><td>county/city millage sheets — public, free, a few hundred rows for the metro</td></tr>
-    <tr><td>Utilities &amp; trash</td><td>provider territories + rate cards (Georgia Power vs EMCs), county sanitation pages — public</td></tr>
-    <tr><td>True cost /mo</td><td>computed: tax + utilities + trash + insurance; HOA joins at community level</td></tr>
+    <tr><td>Property tax</td><td>GA DOR millage report, then the bill computed from the buyer's own price with that county's homestead exemption and any credit</td></tr>
+    <tr><td>Schools</td><td>Georgia Milestones (GOSA), district aggregate, weighted by students tested</td></tr>
+    <tr><td>Electricity</td><td>NREL/OpenEI per-utility residential rate × Georgia's average use; the utility found by AREA against the HIFLD service territories</td></tr>
+    <tr><td>Water &amp; trash</td><td><b>Still estimates.</b> Trash has no central source in Georgia at all. Water is per-utility and the big schedules are multi-column PDFs that resist parsing.</td></tr>
   </table>
+
   <h2>Deliberately absent</h2>
   <p class="warn">No crime lens. Zillow and Redfin both declined crime layers
-  on fair-housing grounds; we follow. The safety question is answered by
-  resident reviews at community level instead.</p>
-  <p style="font-size:11.5px;color:#898781">Demo figures are approximate,
-  county-level, for a $500k home. Production pulls the real millage/rate
-  tables and goes finer-grained (city, school zone, subdivision).</p>
+  on fair-housing grounds; we follow. A test asserts no lens id or label ever
+  matches <code>crime|safety|police|arrest</code>. That need is answered by
+  resident reviews at community level.</p>
 </div>
 
 <script>
 (function () {
   const D = window.__LENSES__;
-  const feats = D.counties.features;
+  const byKey = Object.fromEntries(D.details.map((d) => [d.key, d]));
+  let lensIndex = 0;
+  let open = null;
 
-  // Validated single-hue sequential ramps (dataviz validator, light surface).
-  const LENSES = {
-    tax: {
-      label: 'Property tax', ramp: ['#D4AD79','#C08F51','#AB7330','#935917','#7A4409'],
-      get: p => p.tax, fmt: v => v.toFixed(2) + '%', unit: 'effective rate',
-      cap: 'Effective property tax by county — the biggest line item buyers can’t see on a listing.',
-      rankAsc: true, rankTitle: 'Lowest tax first',
-    },
-    sch: {
-      label: 'Schools', ramp: ['#99BBA7','#76A488','#548C6C','#337452','#155C3B'],
-      get: p => p.sch, fmt: v => v + '%', unit: '% proficient (district avg)',
-      cap: 'District test proficiency — the #1 thing buyers look up first (8/10 in our study).',
-      rankAsc: false, rankTitle: 'Strongest districts first',
-    },
-    util: {
-      label: 'Utilities & trash', ramp: ['#9BB6C7','#7BA0B4','#5C89A1','#3F728D','#295C77'],
-      get: p => p.utilTrash, fmt: v => '$' + v, unit: 'per month, typical home',
-      cap: 'Electric + water + trash. Provider and pickup rules change at the county line.',
-      rankAsc: true, rankTitle: 'Cheapest first',
-    },
-    cost: {
-      label: 'True cost /mo', ramp: ['#D5A998','#C48A74','#B06C53','#985137','#7E3D22'],
-      get: p => p.trueCost, fmt: v => '$' + v, unit: 'on a $500k home',
-      cap: 'Tax + utilities + trash + insurance on the same $500k home. Hidden costs were the study’s #1 post-move regret.',
-      rankAsc: true, rankTitle: 'Cheapest to own first',
-    },
-  };
-  const ORDER = ['cost', 'tax', 'sch', 'util'];
-  const qLens = new URLSearchParams(location.search).get('lens');
-  let lens = ORDER.includes(qLens) ? qLens : 'cost';
-  let selected = null;
+  document.getElementById('stamp').innerHTML =
+    'Generated from live production data on <b>' +
+    new Date(D.generatedAt).toISOString().replace('T', ' ').slice(0, 16) +
+    ' UTC</b>. Re-run <code>scripts/admin/build-lens-demo.ts</code> to refresh.';
 
-  // The bbox centroid lands badly for the big irregular core counties —
-  // pin those labels by hand so they don't collide around Roswell/Smyrna.
-  const LABEL_AT = {
-    Fulton: [-84.51, 33.66], Cobb: [-84.60, 33.94], Clayton: [-84.35, 33.53],
-    DeKalb: [-84.20, 33.77], Gwinnett: [-84.02, 33.98],
-  };
-
-  // Quantile stops (5 classes) per lens.
-  for (const k of ORDER) {
-    const L = LENSES[k];
-    const vs = feats.map(f => L.get(f.properties)).sort((a, b) => a - b);
-    const q = p => vs[Math.min(vs.length - 1, Math.floor(p * vs.length))];
-    L.stops = [q(0.2), q(0.4), q(0.6), q(0.8)];
-    L.min = vs[0]; L.max = vs[vs.length - 1];
-  }
-  const classOf = (L, v) => { let c = 0; for (const s of L.stops) if (v > s) c++; return c; };
+  document.getElementById('summary').innerHTML = D.lenses
+    .map((l) => {
+      const sourced = l.rows.length - l.estimatedCount;
+      return (
+        '<tr><td>' + l.label + '</td><td class="num">' +
+        (l.legend ? l.legend.low + ' – ' + l.legend.high : '—') +
+        '</td><td class="num">' +
+        (l.estimatedCount === 0
+          ? '<b style="color:#0ca30c">all sourced</b>'
+          : sourced + ' of ' + l.rows.length + ' sourced') +
+        '</td></tr>'
+      );
+    })
+    .join('');
 
   // ── Chips ──
-  const chipsEl = document.getElementById('chips');
-  for (const k of ORDER) {
-    const L = LENSES[k];
+  const chips = document.getElementById('chips');
+  D.lenses.forEach((l, i) => {
     const el = document.createElement('div');
-    el.className = 'chip'; el.dataset.k = k;
-    el.innerHTML = '<span class="dot" style="background:' + L.ramp[3] + '"></span>' + L.label;
-    el.addEventListener('click', () => setLens(k));
-    chipsEl.appendChild(el);
-  }
+    el.className = 'chip';
+    el.innerHTML = '<span class="dot" style="background:' + l.ramp[3] + '"></span>' + l.label;
+    el.addEventListener('click', () => { lensIndex = i; open = null; paint(); });
+    chips.appendChild(el);
+  });
 
-  // ── Map ──
   const map = new maplibregl.Map({
     container: 'map',
     style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
     center: [-84.25, 33.87], zoom: 7.35, attributionControl: false,
     preserveDrawingBuffer: true,
   });
-  const labelMarkers = [];
+
+  /** The bbox centroid lands badly for the big irregular core counties. */
+  const LABEL_AT = {
+    fulton: [-84.51, 33.66], cobb: [-84.60, 33.94], clayton: [-84.35, 33.53],
+    dekalb: [-84.20, 33.77], gwinnett: [-84.02, 33.98],
+  };
+  const labels = [];
 
   map.on('load', () => {
-    map.addSource('counties', { type: 'geojson', data: D.counties });
-    map.addLayer({
-      id: 'lens-fill', type: 'fill', source: 'counties',
-      paint: { 'fill-color': '#000', 'fill-opacity': 0.62 },
+    map.addSource('counties', {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: D.shapes.map((s) => ({
+          type: 'Feature',
+          properties: { key: s.key, name: s.name },
+          geometry: { type: 'MultiPolygon', coordinates: s.rings.map((r) => [r]) },
+        })),
+      },
     });
     map.addLayer({
-      id: 'lens-line', type: 'line', source: 'counties',
+      id: 'fill', type: 'fill', source: 'counties',
+      paint: { 'fill-color': ['coalesce', ['feature-state', 'color'], '#ddd'], 'fill-opacity': 0.62 },
+    });
+    map.addLayer({
+      id: 'line', type: 'line', source: 'counties',
       paint: { 'line-color': 'rgba(252,252,251,0.9)', 'line-width': 1.1 },
     });
     map.addLayer({
-      id: 'lens-sel', type: 'line', source: 'counties',
+      id: 'sel', type: 'line', source: 'counties',
       paint: { 'line-color': '#2B2116', 'line-width': 2.4 },
-      filter: ['==', ['get', 'name'], ''],
+      filter: ['==', ['get', 'key'], ''],
     });
-    for (const f of feats) {
+    for (const s of D.shapes) {
       const el = document.createElement('div');
       el.className = 'cty-label';
-      labelMarkers.push({ el, name: f.properties.name });
-      const at = LABEL_AT[f.properties.name] || [f.properties.cx, f.properties.cy];
-      new maplibregl.Marker({ element: el }).setLngLat(at).addTo(map);
+      labels.push({ el, key: s.key, name: s.name });
+      new maplibregl.Marker({ element: el })
+        .setLngLat(LABEL_AT[s.key] || s.centre)
+        .addTo(map);
     }
-    map.on('click', 'lens-fill', e => {
+    map.on('click', 'fill', (e) => {
       const p = e.features && e.features[0] && e.features[0].properties;
-      if (p) select(p.name);
+      if (p) { open = p.key; paint(); }
     });
-    map.on('mouseenter', 'lens-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
-    map.on('mouseleave', 'lens-fill', () => { map.getCanvas().style.cursor = ''; });
-    setLens(lens);
+    map.on('mouseenter', 'fill', () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', 'fill', () => { map.getCanvas().style.cursor = ''; });
+    paint();
   });
 
-  // Chips, legend and the ranking sheet don't need the map — render now so the
-  // UI is complete even while tiles are still loading.
-  setLens(lens);
+  function paint() {
+    const lens = D.lenses[lensIndex];
+    document.querySelectorAll('.chip').forEach((c, i) =>
+      c.classList.toggle('on', i === lensIndex));
 
-  function setLens(k) {
-    lens = k; selected = null;
-    const L = LENSES[k];
-    document.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c.dataset.k === k));
-    if (map.getLayer('lens-fill')) {
-      map.setPaintProperty('lens-fill', 'fill-color', [
-        'step', ['get', k === 'tax' ? 'tax' : k === 'sch' ? 'sch' : k === 'util' ? 'utilTrash' : 'trueCost'],
-        L.ramp[0],
-        L.stops[0] + (k === 'tax' ? 0.0001 : 0.5), L.ramp[1],
-        L.stops[1] + (k === 'tax' ? 0.0001 : 0.5), L.ramp[2],
-        L.stops[2] + (k === 'tax' ? 0.0001 : 0.5), L.ramp[3],
-        L.stops[3] + (k === 'tax' ? 0.0001 : 0.5), L.ramp[4],
-      ]);
-      map.setFilter('lens-sel', ['==', ['get', 'name'], '']);
+    const byCounty = Object.fromEntries(lens.rows.map((r) => [r.key, r]));
+    if (map.getSource('counties')) {
+      // A data-driven `match` on the county key, rebuilt per lens. The
+      // alternative, `setFeatureState`, needs numeric feature ids the shape
+      // file does not carry.
+      const match = ['match', ['get', 'key']];
+      for (const s of D.shapes) match.push(s.key, (byCounty[s.key] || {}).color || '#e3ded4');
+      match.push('#e3ded4');
+      map.setPaintProperty('fill', 'fill-color', match);
+      map.setFilter('sel', ['==', ['get', 'key'], open || '']);
     }
-    for (const m of labelMarkers) {
-      const p = feats.find(f => f.properties.name === m.name).properties;
-      m.el.innerHTML = '<div class="cn">' + p.name + '</div><div class="cv">' + L.fmt(L.get(p)) + '</div>';
+    for (const l of labels) {
+      const r = byCounty[l.key];
+      l.el.innerHTML =
+        '<div class="cn">' + l.name + '</div><div class="cv">' +
+        (r ? r.text + (r.estimated ? '*' : '') : '—') + '</div>';
     }
-    // legend
-    document.getElementById('lg-t').textContent = L.label + ' · ' + L.unit;
-    document.getElementById('lg-ramp').innerHTML = L.ramp.map(c => '<div style="background:' + c + '"></div>').join('');
-    document.getElementById('lg-lo').textContent = L.fmt(L.min);
-    document.getElementById('lg-hi').textContent = L.fmt(L.max);
-    renderRanking();
+
+    document.getElementById('lg-t').textContent = lens.label + ' · ' + lens.unit;
+    document.getElementById('lg-ramp').innerHTML =
+      lens.ramp.map((c) => '<div style="background:' + c + '"></div>').join('');
+    document.getElementById('lg-lo').textContent = lens.legend ? lens.legend.low : '';
+    document.getElementById('lg-hi').textContent = lens.legend ? lens.legend.high : '';
+
+    document.getElementById('body').innerHTML = open ? detailHtml(open) : rankHtml(lens);
+    const back = document.getElementById('back');
+    if (back) back.addEventListener('click', () => { open = null; paint(); });
+    document.querySelectorAll('#rows .row').forEach((r) =>
+      r.addEventListener('click', () => { open = r.dataset.key; paint(); }));
   }
 
-  function renderRanking() {
-    const L = LENSES[lens];
-    const sorted = feats.slice().sort((a, b) =>
-      L.rankAsc ? L.get(a.properties) - L.get(b.properties) : L.get(b.properties) - L.get(a.properties));
-    const span = L.max - L.min || 1;
-    document.getElementById('sheet-body').innerHTML =
-      '<h3>' + L.rankTitle + '</h3><div class="cap">' + L.cap + '</div><div id="rows">' +
-      sorted.map(f => {
-        const p = f.properties, v = L.get(p);
-        const w = Math.max(6, Math.round(((v - L.min) / span) * 100));
-        return '<div class="row" data-n="' + p.name + '"><span class="nm">' + p.name + '</span>' +
-          '<span class="bar"><div style="width:' + w + '%;background:' + L.ramp[classOf(L, v)] + '"></div></span>' +
-          '<span class="v">' + L.fmt(v) + '</span></div>';
-      }).join('') + '</div>';
-    document.querySelectorAll('#rows .row').forEach(r =>
-      r.addEventListener('click', () => select(r.dataset.n)));
+  function rankHtml(lens) {
+    return (
+      '<h3>' + lens.rankTitle + '</h3><div class="cap">' + lens.caption + '</div><div id="rows">' +
+      lens.rows.map((r) =>
+        '<div class="row" data-key="' + r.key + '">' +
+        '<span class="sw" style="background:' + r.color + '"></span>' +
+        '<span class="nm">' + r.name + '</span>' +
+        '<span class="v">' + r.text + (r.estimated ? '*' : '') + '</span></div>').join('') +
+      '</div>'
+    );
   }
 
-  function select(name) {
-    selected = name;
-    const p = feats.find(f => f.properties.name === name).properties;
-    map.setFilter('lens-sel', ['==', ['get', 'name'], name]);
-    const brk = [
-      ['Property tax', p.taxMo, p.tax.toFixed(2) + '% effective'],
-      ['Electric — ' + p.elec, p.elecMo, ''],
-      ['Water & sewer', p.waterMo, ''],
-      ['Trash — ' + p.trashWho, p.trashMo, ''],
-      ['Insurance (est.)', D.insMo, ''],
-    ];
-    const mx = Math.max(...brk.map(b => b[1]));
-    document.getElementById('sheet-body').innerHTML =
+  function detailHtml(key) {
+    const d = byKey[key];
+    if (!d) return '<div class="cap">No cost figures for this county.</div>';
+    const max = Math.max.apply(null, d.lines.map((l) => l.monthlyUsd));
+    return (
       '<div id="back">‹ Back to ranking</div>' +
-      '<h3>' + name + ' County</h3>' +
-      '<div class="hero"><span class="n">$' + p.trueCost + '</span><span class="u">true cost /mo · $500k home</span></div>' +
-      '<div class="brk">' + brk.map(b =>
-        '<div class="row"><span class="nm">' + b[0] + '</span>' +
-        '<span class="bar"><div style="width:' + Math.max(5, Math.round(b[1] / mx * 100)) + '%;background:#B45309"></div></span>' +
-        '<span class="v">$' + b[1] + '</span></div>').join('') + '</div>' +
-      '<div class="facts"><span class="fact">Schools <b>' + p.sch + '%</b></span>' +
-      '<span class="fact">Tax <b>' + p.tax.toFixed(2) + '%</b></span>' +
-      '<span class="fact">Utilities+trash <b>$' + p.utilTrash + '</b></span></div>';
-    document.getElementById('back').addEventListener('click', renderRanking);
+      '<h3>' + d.name + ' County</h3>' +
+      '<div class="hero"><span class="n">$' + d.total + '</span>' +
+      '<span class="u">true cost /mo · $' + (D.referenceHomeUsd / 1000) + 'k home</span></div>' +
+      '<div id="rows">' +
+      d.lines.map((l) =>
+        '<div class="line"><span class="l">' + l.label + '</span>' +
+        '<span class="bar"><div style="width:' +
+        Math.max(5, Math.round((l.monthlyUsd / max) * 100)) + '%"></div></span>' +
+        '<span class="v">$' + l.monthlyUsd + (l.estimated ? '*' : '') + '</span></div>' +
+        (l.note ? '<div class="note">' + l.note + '</div>' : '')).join('') +
+      '<div class="foot">' + d.footer + '</div></div>'
+    );
   }
 })();
 </script>
