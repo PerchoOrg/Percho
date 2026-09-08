@@ -21,6 +21,57 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 03:45 UTC — phase236: the invented differences were reordering the map
+
+**Objective**: with water at 26 of 29, read the whole true-cost ranking the way
+a buyer would rather than chase the last two counties.
+
+The ranking is sane — outer counties cheapest, high-millage counties dearest,
+tax dominating throughout. What stood out was the **trash column: $22 to $32**,
+across all 29 counties. Every one of those numbers is mine, from phase200.
+
+### The differences were doing work
+
+```
+true cost    6 of 29 ranking positions move when trash is flattened
+utilities   15 of 29 — more than half the list
+```
+
+A buyer reading *"Fulton is 11th cheapest for utilities"* was reading my
+fiction. This is the distinction that matters: **an invented level shifts every
+county equally and cancels out of a comparison; invented variation manufactures
+a ranking signal out of nothing** — and the lens exists to be read as a ranking.
+
+It is the ruling phase218 already made about insurance, applied to the last
+fabricated variation in the dataset.
+
+### The level, anchored
+
+DeKalb publishes an annual residential sanitation assessment of **$362.30** for
+weekly garbage, recycling and yard trimmings — $30.19 a month. Verified from
+the county's own page, not from a search summary, because that lesson is two
+phases old.
+
+It is one county's real fee used flat for all of them. Not a statewide average
+and it does not claim to be — an anchored number in place of an unanchored one.
+
+### Why trash stays a per-county row and insurance did not
+
+Insurance is a formula on price with no per-county figure to hope for, so it
+lives in `lenses.ts` as a constant. Trash genuinely does vary; we simply have
+no source that decomposes it, which `audit-trash-sources.ts` establishes and
+reproduces. Keeping the metric row leaves the path open — when a source
+appears, an importer writes real varying values and nothing else changes.
+
+**Verified**: typecheck clean, lint clean, 663 mobile + 1130 web tests. Dry run
+inspected before applying.
+
+**Learnings**: I have spent phases making sure figures are labelled honestly,
+and the thing that was actually distorting the product was not a label. It was
+$10 of invented spread in a column I had stopped looking at because it was
+already marked as an estimate. **A flag on a number says nothing about the
+differences between numbers.**
+
 ## 2026-09-09 03:10 UTC — phase235: measuring the wells against the county twice
 
 **Objective**: four counties still carried an invented water figure. phase234's

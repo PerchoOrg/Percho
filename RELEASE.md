@@ -35,6 +35,13 @@ community reviews instead.
 
 ### 2026-09-08
 
+**Rubbish collection now shows the same figure in every county.** We had been
+showing amounts that differed from county to county, and those differences were
+guesses — enough to reorder more than half the utilities ranking. Georgia
+publishes nothing that separates household collection from commercial, so it is
+now one clearly-marked assumption, anchored on DeKalb's published annual fee,
+rather than a spread of plausible-looking numbers.
+
 **Water bills are real numbers in 26 counties**, not figures we made up. Most
 come from the statewide rate survey run by the University of North Carolina's
 Environmental Finance Center with the Georgia Environmental Finance Authority,
