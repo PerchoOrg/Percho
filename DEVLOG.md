@@ -21,6 +21,49 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 13:15 UTC — phase254: the cast was hiding a wrong branch
+
+**Objective**: phase253 left `app/api/events/route.ts` as the one file whose
+cast could not simply be removed, and I called it "a behaviour question". Read
+properly, it is a bug.
+
+### `'listing_id' in e` was never the right test
+
+The payload is a union of two zod shapes, and each one **declares the other's
+key** as `z.undefined().optional()` — that is how the schema enforces
+exactly-one-of. So `'listing_id' in e` is **true for a community event** that
+sent `listing_id: undefined` explicitly, and the row went to Postgres carrying
+`undefined` rather than `null`.
+
+`e.listing_id ?? null` treats absent and explicitly-undefined the same, which
+is what the nullable column means.
+
+The `as any` on the client is what let that ship: with the row type erased,
+nothing compared it against the table, and the compiler had no opinion on a
+field it could not see.
+
+### And a second, narrower thing
+
+`meta` is `z.record(z.unknown())`, which is not assignable to the column's
+`Json` — `z.unknown()` says nothing about serialisability. The value came out of
+`req.json()`, so it *is* json; the assertion now sits on **that one field** and
+states the provenance, instead of on the client where it blinded five other
+fields.
+
+### Extracted so it can be checked
+
+`eventRow` is exported and has 5 tests. Verified by restoring the `in` branch:
+*expected undefined to be null*.
+
+**Verified**: typecheck clean, lint at main's 181 warnings and 0 errors,
+666 mobile + **1174 web tests** (+5).
+
+**Learnings**: phase253 measured 199 casts and treated them as a tidiness
+problem. The first one I actually read had a live bug behind it, of the exact
+kind the cast made invisible — a field the compiler could not see, so nobody
+compared it to the table. **The count was the least interesting thing about
+them.**
+
 ## 2026-09-09 12:45 UTC — phase253: nineteen casts gone, and one of them was load-bearing
 
 **Objective**: phase252 measured that some of the 199 `supabase as any` casts sit
