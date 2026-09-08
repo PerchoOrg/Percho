@@ -448,3 +448,40 @@ describe('contentStreams rejects what only looks like a content stream', () => {
     expect(Date.now() - started).toBeLessThan(1000);
   });
 });
+
+describe('what the reader does not read, and says so', () => {
+  it('keeps a real operator stream even when the document also embeds a font', () => {
+    // Measured on Rockdale's exemption schedule: its eight content streams are
+    // 1.000 printable and its one embedded font is 0.315. The phase212 filter
+    // separates them exactly, and this pins that it is not over-aggressive —
+    // a filter that also dropped real streams would look identical from the
+    // outside, since both cases end in an empty result.
+    const ops = Buffer.from('BT /F1 11 Tf 55 756 Td (VISIBLE)Tj ET', 'latin1');
+    const font = Buffer.alloc(2048);
+    for (let i = 0; i < font.length; i++) font[i] = i % 256;
+    font.write('OS/2cvt fpgmTj', 4, 'latin1');
+    const both = [ops, font].map((b) => deflateSync(b));
+    const pdf = Buffer.concat([
+      Buffer.from('%PDF-1.6\n'),
+      ...both.flatMap((d) => [
+        Buffer.from('1 0 obj\n<</Length 1>>\nstream\n'),
+        d,
+        Buffer.from('\nendstream\nendobj\n'),
+      ]),
+    ]);
+    const kept = contentStreams(pdf);
+    expect(kept).toHaveLength(1);
+    expect(kept[0]).toContain('VISIBLE');
+  });
+
+  it('draws nothing from hex strings, which is a known limit', () => {
+    // `<0015>Tj` is valid PDF and this reader ignores it. Documented rather
+    // than fixed because the documents that use it here — Rockdale's schedule,
+    // the 2024/25 DOR millage editions — pair it with a Type0 composite font,
+    // so the bytes are glyph IDs and decoding the hex yields no letters. A
+    // reader that returned those codes as text would produce confident
+    // nonsense, which is worse than producing nothing.
+    const items = textItems(['BT 1 0 0 1 10 20 Tm <001500130015>Tj ET']);
+    expect(items).toHaveLength(0);
+  });
+});

@@ -21,6 +21,62 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 14:20 UTC — phase215: sampling the last unverified claim
+
+**Objective**: the only inherited claim left is the homestead exemption table
+— 23 counties, each changing a published tax bill, each needing that county's
+own assessor page. Twenty-three fetches was why it kept getting deferred.
+
+**So I sampled instead of deferring again.** Not at random: two chosen because
+they carry the most weight (Fulton's $30,000 is the largest county exemption
+in the metro; Rockdale's $15,000/$15,000 the largest combined), and two
+because **I had flagged them myself** when writing the table —
+`'(secondary source — re-verify)'` on Cherokee and Clayton. Four checks
+against twenty-three tells you most of what twenty-three would.
+
+| county | claim | outcome |
+|---|---|---|
+| Fulton | $30,000 / $2,000 | **verified from the county's own guide** |
+| Cherokee | $5,000 / $2,000 | corroborated; county site returns 403 |
+| Clayton | $10,000 / $10,000 | corroborated, incl. code of ordinances § 8-21 |
+| Rockdale | $15,000 / $15,000 | **not verifiable** — see below |
+
+Fulton's 2025 Homestead Exemption Guide, read with our own PDF reader, says it
+outright: *"Includes $30,000 off the assessed value on County, $2,000 off
+school."* Nothing in the sample was wrong. The two I had flagged as weak both
+hold — the flag was cautious rather than mistaken, which is the good outcome
+for a flag.
+
+**Every entry's label now states its actual standing** rather than naming a
+county and implying a reading. "verified 2026-09-08", "corroborated, county
+site blocks fetching", "PDF not machine-readable, unverified" — three different
+kinds of evidence that were previously indistinguishable.
+
+**Rockdale led somewhere more useful than Rockdale.** Its schedule downloads
+and our reader returned nothing, which raised a real worry: the printable-ratio
+filter added in phase212 could be rejecting legitimate content streams, and an
+over-aggressive filter looks *identical* from the outside to a document that
+has no text — both end in an empty result.
+
+Measured, and it is not: Rockdale's eight content streams are **1.000
+printable** and its one embedded font is **0.315**. The filter separates them
+exactly. There is now a test pinning that, because "the filter is not too
+tight" is not observable from a passing suite otherwise.
+
+The real reason Rockdale reads as nothing is that its text is drawn as
+**hex strings** — `<001500130015>Tj` — against a Type0 composite font, so the
+bytes are glyph IDs. Same class as the 2024/2025 DOR millage editions. A
+reader that decoded those to text would emit confident nonsense, so the
+limitation is now documented with a test rather than papered over.
+
+**Verified**: `pnpm typecheck` clean, lint clean, **649 mobile + 1053 web
+tests pass** (+2).
+
+**Learnings**: an item deferred for being expensive can usually be sampled,
+and sampling should be aimed rather than random — the two entries worth
+checking first were the two I had already doubted in writing. A flag I left
+for myself turned out to be the cheapest index into where the risk was.
+
 ## 2026-09-08 13:55 UTC — phase214: two sources agree, so switch to the better one
 
 **Objective**: phase213's xlsx reader existed to check one number, and its

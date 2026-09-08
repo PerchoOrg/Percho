@@ -99,16 +99,38 @@ const v = (county: number, school: number, source: string): HomesteadExemption =
 
 export const HOMESTEAD_EXEMPTIONS: Record<string, HomesteadExemption> = {
   // Core metro, from each county's own published exemption schedule.
-  fulton: v(30000, 2000, 'Fulton County 2025 Homestead Exemption Guide'),
+  // Read from the county's own guide on 2026-09-08: "Includes $30,000 off the
+  // assessed value on County, $2,000 off school." Fulton is the one to check
+  // first — its $30,000 is the largest county exemption in the metro, and its
+  // school figure is the statutory floor, so its headline generosity is worth
+  // far less than it looks against the levy that dominates the bill.
+  fulton: v(30000, 2000, 'Fulton County 2025 Homestead Exemption Guide (verified 2026-09-08)'),
   dekalb: v(10000, 12500, 'DeKalb County Tax Commissioner'),
   cobb: v(10000, 10000, 'Cobb County Tax Commissioner — Exemptions'),
   gwinnett: v(10000, 8000, 'Gwinnett County Tax Commissioner — Available Exemptions'),
   forsyth: v(8000, 2000, 'Forsyth County Board of Assessors'),
   henry: v(15000, 4000, 'Henry County Tax Commissioner'),
-  cherokee: v(5000, 2000, 'Cherokee County (secondary source — re-verify)'),
-  clayton: v(10000, 10000, 'Clayton County (secondary source — re-verify)'),
+  // These two were flagged "re-verify" when first written. Re-checked
+  // 2026-09-08 and both hold; the county's own pages return 403 to automated
+  // requests, so the corroboration is several independent secondary sources
+  // agreeing, plus Clayton's county code of ordinances (§ 8-21). Weaker than
+  // Fulton's, and no longer merely unexamined.
+  cherokee: v(
+    5000,
+    2000,
+    'Cherokee County — corroborated, county site blocks fetching (2026-09-08)',
+  ),
+  clayton: v(
+    10000,
+    10000,
+    'Clayton County — corroborated incl. code of ordinances § 8-21 (2026-09-08)',
+  ),
   // Outer ring, verified county by county.
-  rockdale: v(15000, 15000, 'Rockdale County Board of Assessors, 2025 schedule'),
+  // The county's own 2025 schedule downloads but cannot be read: its text is
+  // drawn as hex-string CIDs against a Type0 composite font, the same class of
+  // document as the 2024/2025 DOR millage editions. Unverified, and the label
+  // says so rather than implying the PDF was read.
+  rockdale: v(15000, 15000, 'Rockdale County 2025 schedule — PDF not machine-readable, unverified'),
   newton: v(4000, 4000, 'Newton County Board of Assessors'),
   coweta: v(10000, 2000, 'Coweta County Board of Assessors — S1, local supersession'),
   bartow: v(15000, 15000, 'Bartow County Tax Commissioner — HB 622 / HB 118'),
