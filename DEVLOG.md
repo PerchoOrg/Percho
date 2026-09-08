@@ -21,6 +21,63 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 09:35 UTC — phase247: every listing we have is understated
+
+**Objective**: phase246's move — a blocked decision is rarely blocked in every
+direction — applied to the other two.
+
+### `db:types`: all three routes fail, for three different reasons
+
+Tried each from the reference worktree, where the credentials live:
+
+```
+--local     Docker binary present, daemon not running
+--linked    "Access token not provided" — needs supabase login
+--db-url    pooler: tenant/user not found (wrong region)
+            direct:  no route to host — Supabase's direct endpoint is IPv6-only
+```
+
+So the decision was never `--local` vs `--linked`. **Neither works here as it
+stands**, which is concretely why phase209 hand-wrote its types. The shortest
+route is a one-off `supabase login`, after which `--linked` needs no Docker.
+
+### The listing tax: measured on the real catalogue, and it is one-directional
+
+phase242 measured the flat 0.85% against a hypothetical $500,000 home and found
+Rockdale 41% low, Dawson 31% **high**. On the 18 homes actually in the
+catalogue:
+
+```
+18 listings priced against their own county
+18 of them are UNDERSTATED by the flat rate — every one
+worst: Peachtree Corners, 21% low — $186 a month
+```
+
+Not one is overstated. The flat rate sits below every county we hold inventory
+in — Fulton, Gwinnett, Cobb, Forsyth, Cherokee — so the listing page understates
+the monthly cost of **every home it shows**, by 4% to 21%.
+
+### And I overstated the cost of fixing it
+
+phase242 recorded that "the listing detail payload carries no coordinate, so
+the county cannot be resolved on the client". True of the detail DTO, and not
+of the data: **the browse feed's own card carries `lat` and `lng`.** The server
+has the coordinate and simply does not project it into the detail response.
+
+So the fix is projecting a field that already exists, not building a resolution
+pipeline. Still the owner's call — it moves the headline monthly figure on a
+screen outside my scope — but a smaller one than I told him.
+
+**Actions**: `scripts/admin/audit-listing-tax.ts`, read-only, reproduces the
+table above from production.
+
+**Verified**: typecheck clean, lint clean, 666 mobile + 1161 web tests. Nothing
+written.
+
+**Learnings**: I described the fix as bigger than it was, from one look at one
+DTO, and that description is part of what a decision gets made on. **Reporting
+a cost is a claim like any other and deserves the same checking as a number.**
+
 ## 2026-09-09 09:00 UTC — phase246: doing nothing is not one of the options
 
 **Objective**: first, re-run the bundle gate — phase225 added it and twenty
