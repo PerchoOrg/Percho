@@ -5,6 +5,17 @@
  *
  * RLS: `agents manage communities` allows any authenticated user to insert/
  * update/delete community rows.
+ *
+ * ── Naming a community ─────────────────────────────────────────────────────
+ *
+ * `createStubCommunity` writes a placeholder and `updateCommunity` takes
+ * whatever the agent typed, which is right for a person naming a place they
+ * know. It is NOT right for anything that creates communities in bulk — a
+ * listing import, a builder feed, another county's plat layer. Those must go
+ * through `lib/communities/naming.ts`, which holds the de-duplication and
+ * humanisation rules the 22k-row plat import arrived at: one row per place,
+ * under the name people actually say. Read that file before adding a second
+ * automated writer to this table.
  */
 
 import { createClient } from '@/lib/supabase/server';

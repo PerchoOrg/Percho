@@ -95,7 +95,7 @@ No React in here. If it renders, it belongs in `app/`.
 | `supabase/` | Client construction and generated types. `server.ts` gives you `createClient` (anon + RLS), `createServiceClient` (bypasses RLS — see CLAUDE.md §3) and `createAnonClient` (for `unstable_cache`). `rows.ts` projects row types from `database.types.ts`; never hand-write a row shape. |
 | `poi/` | The largest subsystem: points of interest and the videos built from them. Discovery via Google Places, photo fetch, vision tagging, narrative, and the community-tour orchestrator. See its own section below. |
 | `feed/` | Deciding what a viewer sees and why — browse cards, community pools, highlights, the reasons shown under a card, neighborhood scores, geo units. Read-heavy, no writes. |
-| `communities/` | Community as an entity: list queries, detail projection, cover/logo resolution. |
+| `communities/` | Community as an entity: list queries, detail projection, cover/logo resolution. `naming.ts` holds the de-duplication and humanisation rules every bulk creator of community rows must use — read it before adding one. |
 | `listings/` | Listing as an entity: detail projection, the public feed loader, address autocomplete. |
 | `ai/` | Model callers and their guardrails — Gemini, OpenRouter video, prompt builders, rate limiting, response caching. Every call caps `max_tokens` (CLAUDE.md §7). |
 | `mls/` | Bridge/RESO integration: the API client with retry, address autofill, the sync worker. |

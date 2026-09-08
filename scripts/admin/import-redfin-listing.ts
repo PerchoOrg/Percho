@@ -301,6 +301,19 @@ function parse(html: string): Parsed {
  * Same rule as `lib/geo/find-community.ts`: the containing polygon
  * (subdivision first), else the nearest community with its distance.
  */
+/**
+ * The listing's community, by coordinate only — this importer never CREATES
+ * one, and that is deliberate.
+ *
+ * A listing page carries a subdivision name ("Community" in Redfin's amenity
+ * tiles, the MLS subdivision field elsewhere), and it is tempting to make a
+ * community out of it when nothing matches. Don't, not from this script: the
+ * same place arrives spelled three ways across three listings, and one row
+ * per spelling is exactly the mess `apps/web/lib/communities/naming.ts`
+ * exists to prevent. If listing-derived names should become communities,
+ * that belongs in a bulk importer that can see all of them at once and apply
+ * those rules — see `import-county-subdivisions.ts` for the shape.
+ */
 async function findCommunity(
   lat: number,
   lng: number,

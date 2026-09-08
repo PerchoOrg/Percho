@@ -1,5 +1,14 @@
 /**
- * Merge one community row into another.
+ * Merge one community row into another, by hand.
+ *
+ * For a merge you have DECIDED on. The rules for deciding — when two names
+ * are the same place, which spelling survives, when a plat is a slice of
+ * somewhere that already has a name — live in
+ * `apps/web/lib/communities/naming.ts`, and
+ * `import-county-subdivisions.ts` applies them automatically at import time.
+ * Reach for this script for the cases those rules cannot see, like the
+ * Windward case below, where the disagreement is between two SOURCES rather
+ * than two spellings.
  *
  * Nextdoor is the seed for 731 of these rows and it carves an area up its own
  * way, which does not always agree with the MLS. Windward is the case this was

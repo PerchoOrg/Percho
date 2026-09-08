@@ -21,6 +21,44 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 01:42 UTC — phase194: the naming rules become code, not a memory
+
+**Objective**: owner, closing the plat phase — 「我们之后在 import listing 或者
+builder community 可能也会看到新的 community name，到时候要做去重、合并以及人性
+化处理。现在把这个逻辑写到相关的 code 里以防忘记」. The rules existed only inside
+`import-county-subdivisions.ts`, where the next importer would never look.
+
+**Actions**:
+- New `apps/web/lib/communities/naming.ts` — pure, dependency-free so
+  `scripts/admin/*` imports it the same way they import `point-in-polygon`.
+  Exports `cleanName`, `squash`, `unwrap`, `isPodOf`, `isSamePlace`,
+  `sayable`, `titleCaseName`, `normalizeName`. Its header states the owner's
+  principle verbatim, the four steps in order, and — as importantly — what is
+  deliberately absent: no rule that classifies a name by its SHAPE. The
+  rejected `Rd`/`Dr`/city-name heuristic is recorded with its
+  counter-examples so nobody re-proposes it.
+- `naming.test.ts`, 18 tests, every string a real row from the plat layers or
+  the live table: `CREEK PARK HILLS S/D SEC.3`, `ROBERT Q. CASSELS` vs
+  `N.DRUID WOODS`, `NEIGHBORHOODS OF WINDWARD COVE` → Windward,
+  `SUNVALLEY ESTATES` → `Sun Valley Estates`. The tests are the record of
+  what the data looks like, so a future widening can see what it must not
+  break.
+- The importer now imports them instead of defining them. Verified behaviour
+  identical: Gwinnett and Forsyth dry-runs report the same counts as before
+  the refactor, 0 inserted and 0 stale.
+- Pointers at the three other places a community can come from:
+  `dashboard/communities/actions.ts` (an agent naming a place they know is
+  fine; a bulk writer is not), `import-redfin-listing.ts` (documents WHY it
+  never creates a community from a listing's subdivision string — three
+  listings spell one place three ways), and `merge-communities.ts` (for the
+  merges the rules cannot see, where two SOURCES disagree rather than two
+  spellings). `ARCHITECTURE.md` names the file.
+
+**Learnings**: a rule that lives in the script that discovered it is a rule
+the next script re-derives, differently. The test file is doing more work
+than the module here — it is the only place the shape of this data is
+written down.
+
 ## 2026-09-08 01:20 UTC — phase193: one row per place, under the name people say
 
 **Objective**: owner's naming principle — 「显示的和实际存储的应该一致，更重要

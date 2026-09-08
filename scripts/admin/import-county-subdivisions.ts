@@ -43,6 +43,16 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import {
+  cleanName,
+  isPodOf,
+  isSamePlace,
+  normalizeName,
+  sayable,
+  squash,
+  titleCaseName,
+  unwrap,
+} from '../../apps/web/lib/communities/naming.js';
+import {
   type GeoJsonPolygonLike,
   bboxOf,
   pointInBbox,
@@ -220,106 +230,6 @@ function centroidOf(polys: Ring[][]): { lat: number; lng: number } | null {
   return total ? { lng: cx / total, lat: cy / total } : null;
 }
 
-/** `SWEET BOTTOM PLANTATION` → `Sweet Bottom Plantation`. */
-const LOWER_WORDS = new Set(['of', 'at', 'the', 'and', 'on', 'in']);
-function titleCase(raw: string): string {
-  return raw
-    .trim()
-    .replace(/\s+/g, ' ')
-    .toLowerCase()
-    .split(' ')
-    .map((w, i) => (i > 0 && LOWER_WORDS.has(w) ? w : w.replace(/^[a-z]/, (c) => c.toUpperCase())))
-    .join(' ');
-}
-
-const normalize = (s: string) => s.trim().replace(/\s+/g, ' ').toUpperCase();
-
-/**
- * Plats for places nobody lives, which the land-use code misses.
- *
- * Gwinnett codes "GWINNETT PLACE COMMERCIAL CENTER" and "KILLIAN HILL OFFICE
- * CONDOMINIUMS" as LCODE=SUBDIV — the code says "this is a platted
- * development", not "this is housing". `LP` is a limited partnership, i.e.
- * the developer entity got recorded as the plat name ("GWINRAY LP").
- * Deliberately conservative: it matches the industrial/retail/office words
- * only, so "Village at …" and "Towne Center …" residential names survive.
- */
-const NOT_A_PLACE_TO_LIVE =
-  /\b(COMMERCIAL|BUSINESS PARK|SHOPPING|OFFICE|PROFESSIONAL|PRFSNL|INDUSTRIAL|RETAIL|WAREHOUSE|CORPORATE|STORAGE|FLOORS?|BANK|PROPERTY OF|APTS?|APARTMENTS?|LP|INC|LLC|LTD|CORP)\b/;
-
-/**
- * A plat recorded under a person's name — one owner splitting one parcel, not
- * a community. DeKalb is full of them ("ROBERT Q. CASSELS", "GARY E. &
- * TERESAM. KENNEDY"). The tell is a middle initial: a letter, a full stop, a
- * space. "N.DRUID WOODS" survives because its full stop has no space after
- * it, which is the difference between an abbreviation and an initial.
- */
-const A_PERSONS_NAME = /\b[A-Z]\.\s|^[A-Z]\.\s?[A-Z]\./;
-
-/**
- * Phase and plat-ese suffixes, stripped off the END of a plat name.
- *
- * Owner, 2026-09-07: 「我不要期数」. Gwinnett keeps the phase in its own column,
- * but DeKalb and Forsyth bury it in the name — "CREEK PARK HILLS UNIT 9",
- * "Woodlands At Riverstone Plantation Phase 3" — and those are the same
- * community as their other phases, not separate ones. `S/D`, `SUB` and the
- * condominium suffixes are the recorder's vocabulary, not the buyer's:
- * nobody says they live in Apple Valley Condominiums.
- *
- * Applied repeatedly and in both orders, because a name can carry two of
- * them ("GLENLEAF A CONDOMINIUM PHASE 2").
- */
-const SUFFIXES = [
-  // "UNIT 5", "SEC.3", "UNIT#1", "UNIT-1", "NO.9", "PHASE 4 & 5", "PH 2A" —
-  // the number is joined to the word by a space, a dot, a hash or a hyphen
-  // depending on who typed the plat in, and DeKalb alone has all four.
-  /\s*\b(?:UNITS?|PHASES?|PH|SECTIONS?|SEC|PODS?|PARCELS?|TRACTS?|REVISIONS?|REV|NO)\b[\s.#-]*[0-9IVX]+[A-Z]?(?:\s*(?:&|AND|-)\s*[0-9IVX]+[A-Z]?)*$/,
-  // "PHASES 1,2,3", "BLK2,3" — a list of phases, comma- or ampersand-joined,
-  // with or without a space before the number.
-  /\s*\b(?:PHASES?|UNITS?|BLKS?|BLOCKS?|SECTIONS?|LOTS?)\b[\s.#-]*[0-9]+(?:\s*[,&]\s*[0-9]+)*[A-Z]?$/,
-  /\s*#\s*[0-9]+$/,
-  // A bare trailing roman numeral is a phase everywhere in this data
-  // ("OAKS ON WOODLAWN II"); a lone "I" is not, so it is left out.
-  /\s+(?:II|III|IV|V|VI|VII|VIII|IX|X)$/,
-  /\s+(?:A\s+)?CONDOMINIUMS?(?:\s+ASSOC(?:IATION)?)?$/,
-  /\s+(?:SUBDIVISION|SUB)$/,
-  // Forsyth labels its pods with letters, not numbers ("POD S3 C"), and
-  // parenthesises the marketing name after them ("(SEVEN OAKS PHASE 2)").
-  /\s*\([^)]*\)$/,
-  /\s*\bPODS?\b\s*[A-Z0-9][A-Z0-9-]*(?:\s+[A-Z])?$/,
-  /\s*\/\s*(?:TWNHS|TH|SFR|CONDOS?)$/,
-];
-
-/**
- * The plat name as a person would say it, or null if it names no home.
- *
- * Runs on the RAW name so the grouping key is the cleaned form — which is the
- * point: "CREEK PARK HILLS UNIT 9" and "CREEK PARK HILLS UNIT 10" have to
- * collapse into one community before their polygons are unioned.
- */
-function cleanName(raw: string): string | null {
-  let s = normalize(raw);
-  if (!s || NOT_A_PLACE_TO_LIVE.test(s) || A_PERSONS_NAME.test(s)) return null;
-  // DeKalb writes "CREEK PARK HILLS S/D UNIT 5" — the recorder's abbreviation
-  // for "subdivision" sits in the middle, not at the end.
-  s = s
-    .replace(/\bS\s*\/\s*D\b/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  for (let pass = 0; pass < 5; pass++) {
-    const before = s;
-    // Plat names arrive with trailing debris — "GLYNBROOK UNIT 2,",
-    // "BRIARCLIFF WOODS EAST #6 &" — which has to come off before and after
-    // each suffix strip, or the suffix no longer sits at the end.
-    s = s.replace(/[\s,&.\-#]+$/, '');
-    for (const re of SUFFIXES) s = s.replace(re, '');
-    if (s === before) break;
-  }
-  s = s.trim();
-  // A name that was nothing but its suffix, or a bare plat-book reference.
-  return s.length < 3 ? null : s;
-}
-
 type Existing = {
   id: string;
   slug: string;
@@ -381,27 +291,6 @@ function polysOf(geom: GeoJsonPolygonLike): Ring[][] {
   return geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
 }
 
-/** Punctuation- and space-insensitive name key: "Sun Valley Estates" and
- * "SUNVALLEY ESTATES" are one place recorded by two people. */
-const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-/**
- * A developer's wrapper around the name of the place the pod sits in:
- * "Neighborhoods of Windward Cove", "Sweetwater Landing Townhomes",
- * "The Enclave at Post Oak". The wrapper NAMES ITS PARENT, which is the
- * whole point — `2090 Lake Windward Drive` is listed as being in "Windward",
- * not in "Neighborhoods of Windward Cove" (its own MLS record says so).
- *
- * Returns the inner name, or null when the name carries no wrapper.
- */
-function unwrap(name: string): string | null {
-  const prefix =
-    /^(?:THE\s+)?(?:NEIGHBORHOODS?|ENCLAVE|VILLAS?|TOWNHOMES?|COTTAGES?|RESERVE|RETREAT|MANOR|PARK|POINTE?|LANDING|GROVE|COURTS?|GARDENS?)\s+(?:OF|AT)\s+(.+)$/;
-  const suffix = /^(.+?)\s+(?:TOWNHOMES?|VILLAS?|COTTAGES?|CONDOS?|ESTATES\s+CONDOMINIUM)$/;
-  const m = name.match(prefix) ?? name.match(suffix);
-  return m?.[1]?.trim() || null;
-}
-
 /** Shoelace area of a MultiPolygon's outer rings, in square degrees — only
  * ever compared against another one at the same latitude. */
 function areaOf(polys: Ring[][]): number {
@@ -411,22 +300,6 @@ function areaOf(polys: Ring[][]): number {
     if (ring) a += Math.abs(ringArea(ring));
   }
   return a;
-}
-
-/**
- * Which of two names for the same place a person is more likely to say.
- *
- * More word breaks wins — "Sun Valley Estates" over "Sunvalley Estates",
- * because the recorder's spelling is the one that lost the spaces. Then
- * longer wins: "Canterbury Farms" over "Canterbury", since the fuller form is
- * what the entrance sign carries. This is a tie-break between two names we
- * have already decided are the same place, not a judgement about which places
- * are real.
- */
-function sayable(a: string, b: string): string {
-  const words = (s: string) => s.split(/\s+/).length;
-  if (words(a) !== words(b)) return words(a) > words(b) ? a : b;
-  return a.length >= b.length ? a : b;
 }
 
 async function main() {
@@ -442,7 +315,7 @@ async function main() {
     if (!raw) continue;
     const key = cleanName(raw);
     if (!key) {
-      commercial.add(normalize(raw));
+      commercial.add(normalizeName(raw));
       continue;
     }
     let g = groups.get(key);
@@ -461,7 +334,7 @@ async function main() {
     // Keyed on the CLEANED name so a row this importer wrote before the
     // naming rules changed still matches the plat it came from, instead of
     // being left behind as an orphan while a duplicate is inserted.
-    const key = cleanName(e.name) ?? normalize(e.name);
+    const key = cleanName(e.name) ?? normalizeName(e.name);
     const list = byName.get(key);
     if (list) list.push(e);
     else byName.set(key, [e]);
@@ -505,12 +378,7 @@ async function main() {
     // boundary is what keeps this honest — "WINDWARD COVE" folds into
     // "Windward", but not into a hypothetical "Wind".
     const inner = unwrap(key);
-    const parent =
-      inner &&
-      covers.find((e) => {
-        const pn = normalize(e.name);
-        return inner === pn || inner.startsWith(`${pn} `);
-      });
+    const parent = inner && covers.find((e) => isPodOf(inner, e.name));
     if (parent) {
       folded++;
       continue;
@@ -522,15 +390,11 @@ async function main() {
     // the other while the two shapes are within a factor of two — a genuinely
     // different subdivision inside another is far smaller than its container.
     const platArea = areaOf(g.polys);
-    const nearDuplicate = covers.find((e) => {
-      if (e.source === 'county_gis') return false;
-      const pk = squash(key);
-      const sk = squash(e.name);
-      if (pk === sk) return true;
-      if (!(pk.startsWith(sk) || sk.startsWith(pk))) return false;
-      const ratio = platArea / Math.max(areaOf(polysOf(e.boundary)), 1e-12);
-      return ratio > 0.5;
-    });
+    const nearDuplicate = covers.find(
+      (e) =>
+        e.source !== 'county_gis' &&
+        isSamePlace(key, e.name, platArea / Math.max(areaOf(polysOf(e.boundary)), 1e-12)),
+    );
 
     // Order matters. A real community — one somebody named, with a photo on
     // it — is preferred over a row this importer wrote, even though the
@@ -555,7 +419,7 @@ async function main() {
     }
     // The merged row keeps its id, slug and photo; the name is whichever of
     // the two spellings reads like the entrance sign.
-    const platName = titleCase(g.raw);
+    const platName = titleCaseName(g.raw);
     const name =
       upgradeOf && upgradeOf.source !== 'county_gis' ? sayable(upgradeOf.name, platName) : platName;
     const inside = covers[0];
