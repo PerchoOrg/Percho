@@ -78,11 +78,16 @@ export type AreaKind = 'county' | 'city' | 'school_district' | 'utility_territor
  * `share` matters more than it looks. An electric figure for a county where
  * one utility covers 98% is a different claim from one where it covers 55%,
  * and a buyer whose house is in the other 45% deserves to see that rather than
- * be told a number flatly.
+ * be told a number flatly. Since phase219 the figure is an average across all
+ * of them, so `count` says how many there were and `name`/`share` describe the
+ * largest — a note that named one utility beside a blended rate would credit
+ * that rate to a company most of the county may not buy from.
  */
 export interface MetricSupplier {
-  /** As the source spells it, e.g. "Georgia Power Co". */
+  /** As the source spells it, e.g. "Georgia Power Co". The LARGEST, when several. */
   name: string;
+  /** How many suppliers serve the area. Absent or 1 means just this one. */
+  count?: number;
   /** Fraction of the area this supplier covers, 0–1. */
   share?: number;
   /** The unit price behind the figure, when the source publishes one. */
@@ -710,13 +715,26 @@ export interface CostLine {
 function supplierNote(metric: AreaMetric | undefined): string | undefined {
   const s = metric?.supplier;
   if (!s) return undefined;
-  const bits = [s.name];
-  if (s.unitPrice !== undefined && s.unitPriceUnit === 'usd_per_kwh') {
-    bits.push(`${(s.unitPrice * 100).toFixed(1)}¢ per kWh`);
+  const price =
+    s.unitPrice !== undefined && s.unitPriceUnit === 'usd_per_kwh'
+      ? `${(s.unitPrice * 100).toFixed(1)}¢ per kWh`
+      : undefined;
+
+  // Several utilities: the price is the county's AVERAGE, so it must not be
+  // printed next to one company's name as though that company charged it.
+  if (s.count !== undefined && s.count > 1) {
+    const bits = [`averaged across ${s.count} utilities`];
+    if (price) bits.push(price);
+    if (s.share !== undefined) {
+      bits.push(`largest is ${s.name} at ${Math.round(s.share * 100)}%`);
+    }
+    return bits.join(' · ');
   }
+
+  const bits = [s.name];
+  if (price) bits.push(price);
   // Only worth saying when the supplier is NOT effectively the whole county:
-  // "serves 100% of the county" is noise, and below the naming threshold there
-  // is no supplier here to report in the first place.
+  // "serves 100% of the county" is noise.
   if (s.share !== undefined && s.share < 0.95) {
     bits.push(`serves ${Math.round(s.share * 100)}% of the county`);
   }

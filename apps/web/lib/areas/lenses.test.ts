@@ -715,3 +715,56 @@ describe('the compare table gets the same footnote, from its own rows', () => {
     expect(note).not.toContain('Every other row');
   });
 });
+
+describe('a blended figure does not credit one utility with the average', () => {
+  const withSupplier = (supplier: AreaMetric['supplier']): Area => ({
+    key: 'cobb',
+    name: 'Cobb',
+    kind: 'county',
+    state: 'GA',
+    metrics: [
+      metric('county_mo_mills', 8.46),
+      metric('county_bond_mills', 0),
+      metric('school_mo_mills', 18.7),
+      metric('school_bond_mills', 0),
+      { ...metric('electric_monthly_usd', 141), supplier },
+      metric('water_monthly_usd', 58, true),
+      metric('trash_monthly_usd', 28, true),
+    ],
+  });
+  const noteOf = (a: Area) => costBreakdown(a)?.find((l) => l.label === 'Electric')?.note;
+
+  it('says the price is an average when several utilities serve the county', () => {
+    // Cobb EMC covers 41% of Cobb and does not charge 13.1¢ — that is the
+    // county's mean. Printing the two side by side would read as its rate.
+    const note = noteOf(
+      withSupplier({
+        name: 'Cobb EMC',
+        count: 4,
+        share: 0.41,
+        unitPrice: 0.13122,
+        unitPriceUnit: 'usd_per_kwh',
+      }),
+    );
+    expect(note).toContain('averaged across 4 utilities');
+    expect(note).toContain('13.1¢ per kWh');
+    expect(note).toContain('largest is Cobb EMC at 41%');
+  });
+
+  it('still names a single utility plainly', () => {
+    const note = noteOf(
+      withSupplier({
+        name: 'Georgia Power Co',
+        share: 0.98,
+        unitPrice: 0.1549,
+        unitPriceUnit: 'usd_per_kwh',
+      }),
+    );
+    expect(note).toBe('Georgia Power Co · 15.5¢ per kWh');
+  });
+
+  it('does not say "averaged" for a county with one utility', () => {
+    const note = noteOf(withSupplier({ name: 'Solo Power', count: 1, share: 1 }));
+    expect(note).toBe('Solo Power');
+  });
+});

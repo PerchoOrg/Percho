@@ -34,6 +34,9 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- The line under a county's electricity cost explains itself again, and now
+  says the price is an average across the utilities serving that county rather
+  than naming one company that does not charge it.
 - Every county on the map now has a real electricity figure. Cobb and Henry
   were previously showing an estimate because no single utility serves half of
   either one.
