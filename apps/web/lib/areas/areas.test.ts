@@ -1,5 +1,5 @@
 import type { Json } from '@/lib/supabase/database.types';
-import { lensById, rankedBy } from '@percho/shared/lenses';
+import { METRIC_KEYS, lensById, rankedBy } from '@percho/shared/lenses';
 import { describe, expect, it } from 'vitest';
 import { groupMetrics } from './areas';
 
@@ -181,5 +181,27 @@ describe('supplier projection', () => {
     // county with a single utility.
     const m = electric({ providers: [{ name: 'Solo', share: 1 }], provider_count: 1 });
     expect(m?.supplier).toEqual({ name: 'Solo', share: 1 });
+  });
+});
+
+describe('the runtime allowlist cannot drift from the type', () => {
+  it('accepts every key the shared list declares', () => {
+    // phase220 added `public_water_pct` to `MetricKey` and not to the two
+    // hand-copied allowlists. 29 correct rows were written and silently
+    // dropped by the API: the type said the key existed, both runtime guards
+    // disagreed, and nothing failed. This is that test.
+    for (const key of METRIC_KEYS) {
+      const m = groupMetrics([row({ metric: key, unit: 'x', value: 1, detail: null })])[0]
+        ?.metrics[0];
+      expect(m?.metric, `${key} is dropped by KNOWN_METRICS`).toBe(key);
+    }
+  });
+
+  it('still drops a key it does not know', () => {
+    // The guard is the point; deriving it must not turn it off.
+    const m = groupMetrics([
+      row({ metric: 'something_a_newer_writer_produced', unit: 'x', value: 1, detail: null }),
+    ]);
+    expect(m[0]?.metrics ?? []).toHaveLength(0);
   });
 });

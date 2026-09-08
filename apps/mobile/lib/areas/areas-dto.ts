@@ -7,6 +7,7 @@
  * county whose metrics fail to parse still draws its outline.
  */
 
+import { METRIC_KEYS } from "@percho/shared/lenses";
 import type {
 	Area,
 	AreaMetric,
@@ -29,18 +30,10 @@ export interface AreasPayload {
 	areas: Area[];
 }
 
-const KNOWN_METRICS = new Set<string>([
-	"property_tax_rate_pct",
-	"property_tax_millage_statutory_pct",
-	"county_mo_mills",
-	"county_bond_mills",
-	"school_mo_mills",
-	"school_bond_mills",
-	"school_proficiency_pct",
-	"electric_monthly_usd",
-	"water_monthly_usd",
-	"trash_monthly_usd",
-]);
+// Derived from the shared list rather than copied. A shipped binary keeps the
+// list it was BUILT with, which is the version skew this guard exists for; the
+// copy only ever created a way to forget one.
+const KNOWN_METRICS = new Set<string>(METRIC_KEYS);
 
 const KNOWN_KINDS = new Set<string>([
 	"county",
