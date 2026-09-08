@@ -204,3 +204,48 @@ export function dominant<T>(
   const top = result.shares[0];
   return top && top.share >= minShare ? top : undefined;
 }
+
+/** A quantity averaged across everything that covers an area. */
+export interface Blend<T> {
+  /** The area-weighted mean, over the parts that HAD a value. */
+  value: number;
+  /** How much of the area those parts cover. 1 = all of it. */
+  covered: number;
+  /** Each contributing part with its renormalised weight, largest first. */
+  parts: { value: T; share: number; weight: number }[];
+}
+
+/**
+ * One figure for an area that several providers serve.
+ *
+ * `dominant` answers "who is THE provider", which for a county split 41/38 is
+ * a question with no true answer — and its threshold turns a continuous
+ * quantity (how mixed a county is) into a binary claim about provenance. At
+ * `minShare = 0.5`, Fulton at 55% is published as sourced and Henry at 47% is
+ * published as a guess, though the two counties are equally mixed and the
+ * figure for Fulton ignores 45% of it either way.
+ *
+ * This averages instead. Every input is a real rate for a real territory; the
+ * assumption is that AREA is a fair proxy for customers, which it is not
+ * exactly — a utility serving the dense half of a county has more customers
+ * than its acreage implies. `covered` is reported so a caller can say how much
+ * of the area the figure actually speaks for rather than implying all of it.
+ *
+ * Parts with no value (a utility that files no rate) are excluded and the rest
+ * renormalised, so they dilute `covered` rather than silently biasing `value`.
+ */
+export function blend<T>(
+  result: CoverageResult<T>,
+  weightOf: (value: T) => number | undefined,
+): Blend<T> | undefined {
+  const parts: { value: T; share: number; weight: number }[] = [];
+  for (const s of result.shares) {
+    const weight = weightOf(s.value);
+    if (weight === undefined || !Number.isFinite(weight)) continue;
+    parts.push({ value: s.value, share: s.share, weight });
+  }
+  const covered = parts.reduce((sum, p) => sum + p.share, 0);
+  if (parts.length === 0 || covered <= 0) return undefined;
+  const value = parts.reduce((sum, p) => sum + p.weight * p.share, 0) / covered;
+  return { value, covered, parts };
+}
