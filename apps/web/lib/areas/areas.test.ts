@@ -1,8 +1,13 @@
+import type { Json } from '@/lib/supabase/database.types';
 import { lensById, rankedBy } from '@percho/shared/lenses';
 import { describe, expect, it } from 'vitest';
 import { groupMetrics } from './areas';
 
-function row(over: Partial<Parameters<typeof groupMetrics>[0][number]> = {}) {
+type Row = Parameters<typeof groupMetrics>[0][number];
+
+/** A row shaped exactly as `fetchAreas` selects it. Typed rather than
+ *  inferred, so a schema change surfaces here instead of in production. */
+function row(over: Partial<Row> = {}): Row {
   return {
     area_kind: 'county',
     state: 'GA',
@@ -15,7 +20,7 @@ function row(over: Partial<Parameters<typeof groupMetrics>[0][number]> = {}) {
     source_url: 'https://dor.georgia.gov/',
     as_of: '2024-12-31',
     estimated: false,
-    detail: null as unknown,
+    detail: null,
     ...over,
   };
 }
@@ -54,10 +59,18 @@ describe('groupMetrics', () => {
   });
 
   it('parses the numeric Postgres sends as a string', () => {
-    // PostgREST serialises `numeric` as a string; a silent NaN would paint the
-    // county blank instead of raising.
+    // The generated schema type says `value: number` and is WRONG about what
+    // arrives: PostgREST serialises `numeric` as a string rather than lose
+    // precision to JSON's float64, so 0.72 comes over as "0.72". `MetricRow`
+    // widens that one column back for exactly this reason — delete this test
+    // and the string handling with it, and every rate becomes NaN and every
+    // county on the map goes grey.
     const areas = groupMetrics([row({ value: '0.72' })]);
     expect(areas[0]?.metrics[0]?.value).toBe(0.72);
+  });
+
+  it('accepts the number form too, since the schema promises one', () => {
+    expect(groupMetrics([row({ value: 0.72 })])[0]?.metrics[0]?.value).toBe(0.72);
   });
 
   it('drops a row whose value cannot be a number', () => {
@@ -89,7 +102,11 @@ describe('groupMetrics', () => {
 });
 
 describe('supplier projection', () => {
-  const electric = (detail: unknown) =>
+  // `Json`, not `unknown`: that is what the column holds, and every value
+  // these tests pass — including the deliberately malformed ones — is valid
+  // Json. `supplierOf` still takes `unknown`, because its job is to distrust
+  // whatever an importer wrote.
+  const electric = (detail: Json) =>
     groupMetrics([
       row({
         metric: 'electric_monthly_usd',

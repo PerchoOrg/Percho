@@ -21,6 +21,7 @@
  */
 
 import shapeFile from '@/data/metro-county-shapes.json';
+import type { Database } from '@/lib/supabase/database.types';
 import type { Area, AreaMetric, MetricKey } from '@percho/shared/lenses';
 import { createClient as createPlainClient } from '@supabase/supabase-js';
 
@@ -65,26 +66,23 @@ const KNOWN_METRICS = new Set<string>([
 ]);
 
 /**
- * Untyped on purpose, and only until the migration is applied.
+ * The anon client, typed against the generated schema.
  *
- * `20260908040000_area_metrics.sql` has not been pushed yet (the owner runs
- * `pnpm db:push`), so `area_metrics` is absent from the generated
- * `database.types.ts` and the typed client rejects the table name outright.
- * Hand-writing the row into the generated file would be worse: the next
- * `pnpm db:types` silently overwrites it, and until then the checked-in types
- * would claim a shape the database has not agreed to.
+ * This spent phase196–208 UNTYPED, because `area_metrics` did not exist in the
+ * database yet and so was absent from `database.types.ts`; hand-writing the
+ * row into that generated file would have been overwritten by the next
+ * `pnpm db:types` and, until then, would have claimed a shape the database had
+ * not agreed to. The migration is applied and the types are regenerated, so
+ * the generic is back and `.from('area_metrics')` is checked again.
  *
- * The rows are validated at runtime by `groupMetrics` instead — it drops any
- * row whose metric it does not know or whose value is not finite — so nothing
- * here trusts the response's shape either way.
- *
- * **After `pnpm db:push` + `pnpm db:types`**: restore the `<Database>` generic
- * and type `MetricRow` as
- * `Database['public']['Tables']['area_metrics']['Row']`.
+ * The runtime validation in `groupMetrics` stays. The generated types describe
+ * what the schema promises; they say nothing about the `numeric` PostgREST
+ * hands back as a string, or about a metric key a newer importer writes that
+ * this build does not understand.
  */
 function createUncachedAnonClient() {
   // Same fetch-cache opt-out as `lib/listings/search.ts` — see the note there.
-  return createPlainClient(
+  return createPlainClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
     {
@@ -97,21 +95,37 @@ function createUncachedAnonClient() {
   );
 }
 
-interface MetricRow {
-  area_kind: string;
-  state: string;
-  area_key: string;
-  area_name: string;
-  metric: string;
-  value: number | string;
-  unit: string;
-  source: string;
-  source_url: string | null;
-  as_of: string;
-  estimated: boolean;
-  /** Free-form per-importer scratchpad. Only `supplierOf` reads it. */
-  detail?: unknown;
-}
+/** Exactly the columns `fetchAreas` selects. Keeping the list beside the type
+ *  means adding a column to the query without widening this fails to compile. */
+type SelectedColumn =
+  | 'area_kind'
+  | 'state'
+  | 'area_key'
+  | 'area_name'
+  | 'metric'
+  | 'value'
+  | 'unit'
+  | 'source'
+  | 'source_url'
+  | 'as_of'
+  | 'estimated'
+  | 'detail';
+
+/**
+ * A row as this projection sees it — derived from the generated schema, with
+ * one deliberate widening.
+ *
+ * The generated `Row` says `value: number`, and it is wrong about what arrives.
+ * The column is `numeric`, and **PostgREST serialises `numeric` as a STRING**
+ * rather than lose precision to JSON's float64 — so `0.72` comes over the wire
+ * as `"0.72"`. Trusting the generated type here would make `groupMetrics`'s
+ * string handling read as dead code, and deleting it turns every rate into NaN
+ * and every county grey. There is a test for that exact case.
+ */
+type MetricRow = Omit<
+  Pick<Database['public']['Tables']['area_metrics']['Row'], SelectedColumn>,
+  'value'
+> & { value: number | string };
 
 /**
  * The supplier a scraper recorded in `detail`, if it recorded one.
