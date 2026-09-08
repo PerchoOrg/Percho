@@ -16,7 +16,8 @@
     "mobile:test": "pnpm --filter @percho/mobile test",
     "db:push": "pnpm --filter @percho/web db:push",
     "db:reset": "pnpm --filter @percho/web db:reset",
-    "db:types": "pnpm --filter @percho/web db:types"
+    "db:types": "pnpm --filter @percho/web db:types",
+    "demos:build": "pnpm --filter @percho/web exec tsx ../../scripts/admin/build-lens-demo.ts && pnpm --filter @percho/web exec tsx ../../scripts/admin/build-compare-demo.ts"
   },
   "engines": {
     "node": ">=20.0.0"
