@@ -21,6 +21,58 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 20:15 UTC — phase223: the map opens on what the buyer said matters
+
+**Objective**: first, housekeeping that turned out to matter — the reference
+worktree, which is what Metro serves to the owner's phone, was **8 commits
+behind** at phase220. It missed phase220.1, the change that lets
+`public_water_pct` past the mobile DTO's allowlist at all. Had he landed and
+opened the app, the well-share note would simply not have been there. Pulled to
+phase222, `pnpm install`, typecheck clean, 649 mobile tests pass from that
+worktree.
+
+**Then the actual gap.** The You tab asks a buyer to rank what they care
+about. That answer moved exactly one thing: the row order of
+`compare-areas.tsx`. The Search tab — the surface the whole feature is —
+opened on `DEFAULT_LENS` for everyone.
+
+So a buyer says *"schools matter most to me"*, opens the map, and is shown a
+cost map. They have been asked a question for nothing. The owner's instruction
+for these tabs was to enrich them "到一个上线的水准"; a preference that changes
+a screen the buyer may never reach does not meet it.
+
+`lensForPriorities(weights)` picks the initial lens. Only the initial one —
+tapping a chip is the buyer changing their mind about this moment, and that
+wins.
+
+### Two priorities have no lens, and the honest handling is not obvious
+
+There is no commute lens and no community lens. My first implementation walked
+the ranked list and took the first drawable priority, and **my own test caught
+it being presumptuous**: a buyer who raises commute and community, leaving
+schools at neutral, got a schools map. They never said schools mattered — I
+did, on their behalf.
+
+It now stops at the neutral line. Only priorities the buyer actually **raised**
+are honoured; if none of those is drawable, `DEFAULT_LENS`. A buyer who lowers
+cost to 0 also gets the default rather than being read as having asked for
+something.
+
+**Actions**: `lensForPriorities` in `apps/mobile/lib/priorities.ts`, beside
+`orderByPriority`, which is the same kind of "how a stated priority reaches a
+surface" logic. Wired into `search.tsx` as lazy initial state. 6 tests,
+including one asserting it can only ever return a lens that actually ships —
+an id outside the catalogue would render an empty map with no chip selected
+and nothing else would catch it.
+
+**Verified**: typecheck clean, lint clean, **655 mobile** (+6) + 1097 web
+tests.
+
+**Learnings**: I have spent nine phases on whether the numbers are honest and
+had not checked whether the buyer's own stated preference reached the main
+screen. It did not. Worth asking, of any input a product collects, which
+surface actually changes.
+
 ## 2026-09-08 19:40 UTC — phase222: the footnote promised a public record for money that never was one
 
 **Objective**: every real bug of the last few ticks was found by reading

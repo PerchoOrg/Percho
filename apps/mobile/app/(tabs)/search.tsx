@@ -40,7 +40,6 @@
  */
 import {
 	type Area,
-	DEFAULT_LENS,
 	LENSES,
 	type LensId,
 	classBreaks,
@@ -73,9 +72,11 @@ import { MIN_QUERY_LEN, useSearch } from "../../hooks/use-search";
 import { familiarityFor } from "../../lib/area-familiarity";
 import { areasByKey } from "../../lib/areas/areas-dto";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
+import { lensForPriorities } from "../../lib/priorities";
 import { formatPrice, specsLine } from "../../lib/saved/rows";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
+import { usePriorityStore } from "../../state/priorities";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -119,7 +120,12 @@ export default function SearchTab() {
 	// A failure is deliberately not surfaced: the tab's own job is searching,
 	// and it still works. The chips simply never appear.
 	const { areas: areaData } = useAreas();
-	const [lensId, setLensId] = useState<LensId>(DEFAULT_LENS);
+	// Opens on whatever the buyer said matters in the You tab, not on the same
+	// default for everyone. Only the INITIAL lens — tapping a chip wins.
+	const priorityWeights = usePriorityStore((s) => s.weights);
+	const [lensId, setLensId] = useState<LensId>(() =>
+		lensForPriorities(priorityWeights),
+	);
 	const [openArea, setOpenArea] = useState<string | null>(null);
 
 	const lens = lensById(lensId) ?? LENSES[0];
