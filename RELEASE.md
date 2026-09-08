@@ -34,6 +34,12 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- Electricity figures now come from the federal energy statistics themselves
+  rather than a third-party copy of them, and are a year more current. Most
+  counties moved by a few dollars; the counties on Georgia Power went from
+  $157 to $166 a month, because that company's rates rose about 6% over the
+  year. We check the new figures against the old source on every update and
+  flag anything that disagrees.
 - **Electricity is now its own lens on the map.** It was buried inside
   "Utilities & trash", where the water and rubbish estimates dragged it down —
   so the one utility figure we actually know was being presented as a guess.

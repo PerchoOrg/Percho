@@ -21,6 +21,60 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 13:55 UTC — phase214: two sources agree, so switch to the better one
+
+**Objective**: phase213's xlsx reader existed to check one number, and its
+last line noted it also opens EIA-861 — the body that COLLECTS the per-utility
+figures OpenEI redistributes. That made a cross-check possible for the first
+time: one download against 27 counties of published electric bills, cheaper
+per unit of doubt removed than the 23 county assessor pages still on the list.
+
+**They agree.** EIA-861 2024 against OpenEI 2023, all 57 Georgia utilities
+present in both:
+
+```
+Georgia Power Co        15.49¢   14.62¢   +5.9%
+Jackson EMC             11.38¢   11.98¢   -5.0%
+Cobb EMC                11.41¢   11.67¢   -2.3%
+Snapping Shoals EMC     12.37¢   12.41¢   -0.4%
+Central Georgia EMC     12.24¢   12.23¢   +0.1%
+```
+
+**56 of 57 within 15%, most within 3%.** The one exception — Albany Utility
+Board at 15% — serves no metro county. Two derivations a year apart landing
+this close is the only evidence available that either is right.
+
+**So the source changed, because the better one is now readable.** EIA-861 is
+primary (the body that collects the filings rather than a redistribution),
+a year newer, and its rate is residential revenue ÷ residential sales — money
+actually collected over energy actually delivered, which carries every rider
+by construction. That is the same property that ruled out Georgia Power's
+published tariff back in phase202, now obtained from the source.
+
+OpenEI is kept, as a **cross-check on every run**: divergence past 15% is
+reported by name. Deliberately reported and never enforced — a cross-check
+that can block publishing real data is a liability, not a safeguard.
+
+**What moved.** Georgia Power's counties go $157 → $166 (its rate rose 5.9%
+in a year), Forsyth $135 → $124, Coweta and Fayette $125 → $138. Still 27 of
+29 counties; Cobb and Henry remain genuinely split and remain estimates.
+
+**Two things the format forced, both worth stating:**
+- The header is **found, not assumed**. It is two rows deep and its position
+  moved between the 2024 and 2025 editions, so the code locates the row naming
+  "Utility Name" and asserts that Revenues/Sales sit where it expects,
+  throwing rather than reading a neighbouring column.
+- Revenue and sales are **summed per utility before dividing**. A utility can
+  file more than once per state — bundled versus delivery-only, and split
+  filings — and taking the first row prices it on part of itself.
+
+**Verified**: `pnpm typecheck` clean, lint clean, **649 mobile + 1051 web
+tests pass**. Applied to production, 27 rows.
+
+**Learnings**: the honest reason to prefer a source is rarely "it is more
+accurate" — nothing here could establish that. It is that it is closer to
+where the number is made, and now it is also the one we can open.
+
 ## 2026-09-08 13:30 UTC — phase213: the number every electric bill is multiplied by
 
 **Objective**: next on the inherited-claims list, ranked by reach. Every
