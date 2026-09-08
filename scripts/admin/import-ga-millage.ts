@@ -42,22 +42,36 @@
  * per-county credit amounts, or Census ACS B25103 ÷ B25077 — which now
  * requires an API key, i.e. an account signup, which is the owner's call.
  *
- * ── Why 2023 and not 2025 ──────────────────────────────────────────────────
+ * ── Why 2023 and not 2025 ─────────────────────────────────────────────────
  *
- * DOR publishes this yearly as a PDF. The 2024 and 2025 editions are typeset
- * with **Type3 fonts carrying no `/ToUnicode` CMap and no embedded font
- * program**, so the character codes map to glyph names like `/0 /1 /2` with
- * nothing to turn them back into letters. Text extraction from those two
- * returns either gibberish or, for 2024, literally zero characters — that is
- * a property of the files, not of the extractor, and no PDF library gets past
- * it. They would need OCR.
+ * DOR publishes this yearly as a PDF and nothing else — verified against the
+ * listing page, which offers 2019 through 2025 and not one spreadsheet or CSV
+ * among them.
  *
- * 2023 is the most recent edition typeset with standard Type1 fonts and
- * WinAnsi encoding, so it extracts cleanly. Millage rates move by fractions of
- * a mill year to year; a two-year-old real rate is far closer to the truth
- * than the round guess it replaces, and every row says `as_of 2023-12-31` so
- * the age is visible rather than implied. Re-point `YEAR` when DOR publishes
- * a text-bearing edition again.
+ * The 2024 and 2025 editions cannot be read. **Measured with this repo's own
+ * reader on 2026-09-08**, not taken on anyone's word:
+ *
+ *   2023   51 content streams → 7,006 text items → 1,844 rows → 1,618 parsed,
+ *          160 counties. `["DEKALB","ATLANTA","8.520","1.880"]`.
+ *   2024   **0 content streams carrying text at all.** Nothing to extract.
+ *   2025   53 streams → 49,099 text items → and every one is garbage:
+ *          `["L","M","Q","0","J","K"]`.
+ *
+ * The 2025 file is not encrypted or malformed — it draws text, and the text
+ * comes out as meaningless glyph codes. 90 distinct characters starting at
+ * `\u0000`, i.e. subset-font glyph INDICES with no mapping back to letters,
+ * and **no drawn run longer than six characters** — the document positions
+ * nearly every character individually, so there are not even word boundaries
+ * to work from. Solving it as a substitution cipher would mean reconstructing
+ * words from coordinates first and then breaking not one cipher but one per
+ * font subset. That is OCR's job, and OCR guessing a millage rate is the worst
+ * possible failure mode for this number.
+ *
+ * A cheap tell for whoever checks next year: **file size**. The editions that
+ * parse are small — 2023 is 123 KB, 2022 86 KB, 2020 83 KB. The ones that do
+ * not are large — 2021 8.8 MB, 2024 9.4 MB, 2025 2.4 MB. If the 2026 edition
+ * lands at a hundred-odd kilobytes, point `YEAR` and `SOURCE_URL` at it and it
+ * will very likely just work.
  *
  * ── Why there is no PDF dependency ─────────────────────────────────────────
  *
@@ -118,6 +132,10 @@ const AS_OF = `${YEAR}-12-31`;
 /** Statewide assessment ratio, O.C.G.A. § 48-5-7. */
 const ASSESSMENT_RATIO = 0.4;
 
+/** Below this, the edition is unreadable rather than merely different — the
+ *  2023 edition yields 1,618. See the header. */
+const MIN_PARSED_ROWS = 500;
+
 /** The counties the lens map covers — same list as the shape builder. */
 const METRO_COUNTIES = new Set(
   [
@@ -173,6 +191,21 @@ async function main() {
     .map(parseRow)
     .filter((r): r is DistrictRate => r !== null);
   console.log(`${parsed.length} district rows parsed.`);
+
+  // An edition whose glyphs have no mapping back to letters yields a handful
+  // of rows of nonsense rather than an error, and with --apply that would
+  // quietly write nothing while reporting success. The 2023 edition parses
+  // 1,618 rows; anything under a few hundred means the file changed shape.
+  if (parsed.length < MIN_PARSED_ROWS) {
+    console.error(
+      `\nOnly ${parsed.length} rows parsed — expected at least ${MIN_PARSED_ROWS}.\n` +
+        'This edition is almost certainly one of the unreadable ones: its text\n' +
+        'draws as subset-font glyph indices with no mapping back to letters.\n' +
+        'See this script’s header for how to tell, and for the file-size tell.\n' +
+        'Nothing written.',
+    );
+    process.exit(1);
+  }
 
   // Sum the county-wide districts. A county missing its UNINCORPORATED or
   // SCHOOL line is reported rather than published at a partial rate — a low

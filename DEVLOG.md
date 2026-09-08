@@ -21,6 +21,64 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 12:45 UTC — phase211: verifying the OTHER inherited claim, the one holding up our tax data
+
+**Objective**: phase210's correction was about a claim I had restated four
+times without ever measuring. The obvious follow-up is not "be more careful"
+— it is to go and check the other load-bearing claim of the same shape. There
+is one, and it is bigger: `import-ga-millage.ts` says the 2024 and 2025 DOR
+editions cannot be parsed, **and that is the entire reason we publish 2023 tax
+rates**. It came from a research pass. I had never run it myself.
+
+**It is true, and now it is measured.** Both files downloaded and run through
+this repo's own reader on 2026-09-08:
+
+| edition | streams | text items | rows | parsed | counties |
+|---|---|---|---|---|---|
+| 2023 | 51 | 7,006 | 1,844 | 1,618 | 160 |
+| 2024 | **0** | 0 | 0 | 0 | 0 |
+| 2025 | 53 | 49,099 | 43 | **0** | 0 |
+
+2024 has no text-bearing content streams at all. 2025 draws text and every
+character of it is garbage — `["L","M","Q","0","J","K"]` where 2023 gives
+`["DEKALB","ATLANTA","8.520","1.880"]`.
+
+**And I went one step further than the claim, because "unparseable" invites
+someone to try anyway.** The 2025 text is 90 distinct characters starting at
+`\u0000` — subset-font glyph INDICES with no mapping back to letters — and
+**no drawn run is longer than six characters**. The document positions nearly
+every character individually, so there are not even word boundaries to work
+from. Solving it as a substitution cipher would mean reconstructing words from
+coordinates first and then breaking one cipher per font subset. It is OCR's
+job, and OCR guessing a millage rate is the worst available failure mode for
+this particular number.
+
+**Also checked, since it would have made all of this moot**: DOR publishes
+this as PDF and nothing else. The listing page offers 2019 through 2025 and
+not one spreadsheet or CSV.
+
+**Actions**:
+- The script header now records the measurement, the method and the date,
+  replacing a claim that was true but inherited.
+- A **file-size tell** for whoever checks next year: the editions that parse
+  are small (2023 123 KB, 2022 86 KB, 2020 83 KB); the ones that do not are
+  large (2021 8.8 MB, 2024 9.4 MB, 2025 2.4 MB). If the 2026 edition lands at
+  a hundred-odd kilobytes, repoint `YEAR` and it will very likely just work.
+- **A guard**: under 500 parsed rows the importer now exits non-zero and names
+  the likely cause. Before this, running it against an unreadable edition
+  produced "0 district rows parsed", then "0 counties", then `--apply` would
+  have upserted an empty array and reported success. Verified both ways — 2023
+  still parses 1,618 rows, 2025 now stops with an explanation.
+
+**Verified**: `pnpm typecheck` clean, lint clean, **649 mobile + 1030 web
+tests pass**.
+
+**Learnings**: the useful response to finding one unverified claim is to ask
+what ELSE was taken on trust, and to rank those by what they are holding up.
+This one was holding up the age of every property tax figure we publish. It
+survived the check — but "we checked and it survived" and "nobody ever checked"
+are different states, and only one of them is worth writing down.
+
 ## 2026-09-08 12:25 UTC — phase210: CORRECTION — PostgREST does not stringify numeric here
 
 **This entry corrects a false claim I made in phase209 and repeated as fact in
