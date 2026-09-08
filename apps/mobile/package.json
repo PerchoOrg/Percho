@@ -7,6 +7,7 @@
 		"start": "expo start",
 		"ios": "expo run:ios",
 		"typecheck": "tsc --noEmit",
+		"bundle": "expo export --platform ios --output-dir .expo-bundle-check --dump-sourcemap false",
 		"lint": "biome check .",
 		"test": "vitest run"
 	},
