@@ -21,6 +21,75 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 19:40 UTC — phase222: the footnote promised a public record for money that never was one
+
+**Objective**: every real bug of the last few ticks was found by reading
+rendered output for a county I had not thought about, and I kept spot-checking
+three or four. So: sweep all 29, over the live production payload, through
+`costBreakdown`, `valuesFor`, `rankedBy` and `buildAreaCompareTable` — checking
+for missing lines, non-finite values, broken or empty notes, dangling `·`
+separators, mis-ordered rankings, and rows where every cell is marked best.
+
+**The sweep came back clean.** What was wrong was a sentence it printed on the
+way past.
+
+### The default lens promised something it could not
+
+`estimateNoteFor` ended with *"The rest of each figure comes from a public
+record."* on **true cost — the map's default lens**, the most-read sentence in
+the feature. True cost is tax + electric + water + trash + **insurance**. The
+note names water and trash as guesses, so "the rest" covers tax, electric and
+insurance — and insurance is a flat 0.35% of price, about **$146 of a $730
+figure**. A fifth of what the sentence vouched for was never a record.
+
+**Third function of the same family, same blindness.** phase218 fixed
+`estimatedFromReads` (the flag) and `estimateNoteForRows` (the compare table's
+footnote). Both reason about provenance from the metrics a computation READ,
+which makes a constant invisible. This is the one they did not reach.
+
+### A declaration, pinned
+
+`Lens.assumes?: readonly string[]`, with true cost declaring `['insurance']`.
+It joins the always-a-guess list, so it is named rather than covered by "the
+rest":
+
+```
+* insurance, trash and water & sewer are still our estimate.
+  The rest of each figure comes from a public record.
+```
+
+That now matches what the compare table has said since phase218.
+
+**`assumes` is a declaration, and this file has three scars from declarations
+drifting from what a computation does**, so a test pins the arithmetic: true
+cost must equal its metrics plus exactly what it names. Verified in **both**
+directions — deleting `assumes` fails 4 tests, deleting `insuranceMonthlyUsd`
+from `compute` while leaving `assumes` fails 4 different ones.
+
+### The latent half
+
+`valuesFor` also treated true cost as fully sourced whenever its metrics were.
+Sourcing water and trash would one day have marked it clean with $146 of
+assumption still inside. A lens that declares an assumption is now estimated
+regardless — the same ruling phase218 made for the compare table's insurance
+row.
+
+### Three tests had encoded the bug
+
+Two asserted `valuesFor(true_cost, COBB).estimated === false`, and one expected
+the singular footnote. Their **intents** were all still valid — that an
+estimated input flags the value, that an unrelated estimate does not leak, that
+the verb agrees with the count — so each was re-pointed at `utilities`, which
+reads the same cost metrics and assumes nothing, rather than having its
+assertion flipped.
+
+**Verified**: typecheck clean, lint clean, 649 mobile + **1097 web tests**
+(+4). Both demos rebuilt.
+
+**Learnings**: the sweep found nothing structurally broken and still paid for
+itself, because it made me read output I would not have asked for. Spot-checks
+answer the question you already had.
+
 ## 2026-09-08 19:00 UTC — phase221: "no source exists" was wrong; the source exists and still cannot answer
 
 **Objective**: the last data item that was not the owner's to decide was

@@ -165,6 +165,23 @@ export interface Lens {
   /** Which stored metrics this lens needs. Missing any → the area is unranked. */
   inputs: readonly MetricKey[];
   /**
+   * Parts of the figure that are NOT stored metrics — flat assumptions baked
+   * into `compute`.
+   *
+   * Everything else in this file reasons about provenance from the metrics a
+   * computation READ, which makes a constant invisible: true cost silently
+   * carried $146/month of insurance while its own footnote said "the rest of
+   * each figure comes from a public record". phase218 fixed the same blindness
+   * in the estimate FLAG and in the compare table's footnote; this is the
+   * third function of that family and the one on the default lens.
+   *
+   * A declaration, and this codebase has been burned three times by
+   * declarations drifting from what a computation does — so
+   * `lenses.test.ts` pins the arithmetic: true cost must equal its metrics
+   * plus exactly the assumptions named here.
+   */
+  assumes?: readonly string[];
+  /**
    * Computes the lens's number from the area's metrics.
    *
    * `areaKey` is passed because property tax cannot be read off a stored
@@ -246,6 +263,9 @@ export const LENSES: readonly Lens[] = [
     areaKind: 'county',
     betterIsLow: true,
     ramp: ['#D5A998', '#C48A74', '#B06C53', '#985137', '#7E3D22'],
+    // `insuranceMonthlyUsd` is added by `compute` and is a flat share of
+    // price, so it is never sourced and never varies by county.
+    assumes: ['insurance'],
     inputs: [
       'property_tax_rate_pct',
       'county_mo_mills',
@@ -390,18 +410,23 @@ export function estimateNoteFor(lens: Lens, areas: readonly Area[]): string | un
       guessedIn.set(m.metric, (guessedIn.get(m.metric) ?? 0) + 1);
     }
   }
-  if (flagged === 0) return undefined;
+  const assumed = [...(lens.assumes ?? [])];
+  // A lens with a baked-in assumption always has something to say, even in a
+  // future where every metric it reads is sourced.
+  if (flagged === 0 && assumed.length === 0) return undefined;
 
   const label = (m: MetricKey) => METRIC_LABELS[m];
   // A metric that is a guess in EVERY marked row is a property of the figure.
   // One that is a guess in a handful is a property of those counties, and
   // lumping the two together overstates: electricity is sourced in 27 of 29
   // counties, and listing it beside trash implied the whole line was invented.
-  const always = [...guessedIn]
-    .filter(([, n]) => n === flagged)
-    .map(([m]) => label(m))
-    .filter((l): l is string => l !== undefined)
-    .sort();
+  const always = [
+    ...assumed,
+    ...[...guessedIn]
+      .filter(([, n]) => n === flagged)
+      .map(([m]) => label(m))
+      .filter((l): l is string => l !== undefined),
+  ].sort();
   const sometimes = [...guessedIn]
     .filter(([, n]) => n < flagged)
     .map(([m, n]) => {
@@ -413,11 +438,13 @@ export function estimateNoteFor(lens: Lens, areas: readonly Area[]): string | un
 
   // Only claim a sourced remainder when the lens read something beyond the
   // guesses — a single-metric lens whose one input is a guess has no rest.
+  // The assumptions are named above, so they are not part of "the rest"; the
+  // sentence used to promise a public record for money that was never one.
   const rest = read.size > guessedIn.size;
 
   // A lens with one input does not need that input named: "electricity is
   // still our estimate" under a lens called Electricity says it twice.
-  if (read.size === 1 || (always.length === 0 && sometimes.length === 0)) {
+  if ((read.size === 1 && assumed.length === 0) || (always.length === 0 && sometimes.length === 0)) {
     return '* still our estimate for the counties marked.';
   }
 
@@ -633,7 +660,11 @@ export function valuesFor(lens: Lens, areas: readonly Area[]): LensValue[] {
     if (area.kind !== lens.areaKind) continue;
     const { value, read } = readingMetrics(area, (get) => lens.compute(get, area.key));
     if (value === undefined || !Number.isFinite(value)) continue;
-    out.push({ area, value, estimated: estimatedFromReads(area, read) });
+    // A lens that bakes in a flat assumption is partly assumed however well
+    // sourced its metrics are. Without this, sourcing water and trash would
+    // one day mark true cost fully sourced while $146 of it stayed a guess.
+    const assumed = (lens.assumes?.length ?? 0) > 0;
+    out.push({ area, value, estimated: assumed || estimatedFromReads(area, read) });
   }
   return out;
 }

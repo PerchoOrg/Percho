@@ -19,6 +19,7 @@ import {
   rankedBy,
   readingMetrics,
   taxMonthlyUsd,
+  taxMonthlyUsdFor,
   valuesFor,
 } from '@percho/shared/lenses';
 import { describe, expect, it } from 'vitest';
@@ -194,7 +195,13 @@ describe('provenance', () => {
     const lens = lensById('true_cost');
     if (!lens) throw new Error('lens missing');
     expect(valuesFor(lens, [guessed])[0]?.estimated).toBe(true);
-    expect(valuesFor(lens, [COBB])[0]?.estimated).toBe(false);
+    // The control cannot be true cost any more: since phase222 it declares a
+    // flat insurance assumption and is estimated however well sourced its
+    // metrics are. Utilities reads the same cost metrics and assumes nothing.
+    const noAssumption = lensById('utilities');
+    if (!noAssumption) throw new Error('lens missing');
+    expect(valuesFor(noAssumption, [guessed])[0]?.estimated).toBe(true);
+    expect(valuesFor(noAssumption, [COBB])[0]?.estimated).toBe(false);
   });
 
   it('does not flag a cost value because an unrelated metric is estimated', () => {
@@ -205,7 +212,10 @@ describe('provenance', () => {
         metric('school_proficiency_pct', 50, true),
       ],
     };
-    const cost = lensById('true_cost');
+    // Utilities rather than true cost, which is now always estimated because
+    // of its insurance assumption — it can no longer show that an UNRELATED
+    // estimate fails to leak, which is what this test is about.
+    const cost = lensById('utilities');
     const schools = lensById('schools');
     if (!cost || !schools) throw new Error('lens missing');
     expect(valuesFor(cost, [mixed])[0]?.estimated).toBe(false);
@@ -623,9 +633,17 @@ describe('the ranking footnote names what is actually a guess', () => {
         m.metric === 'water_monthly_usd' ? { ...m, estimated: false } : m,
       ),
     }));
-    const lens = lensById('true_cost');
+    // The SINGULAR case has to come from a lens with no declared assumption:
+    // true cost always lists insurance, so it can never be down to one item.
+    const lens = lensById('utilities');
     if (!lens) throw new Error('no lens');
     expect(estimateNoteFor(lens, oneOnly)).toContain('trash is still our estimate');
+    // And true cost, which now lists two, keeps the plural.
+    const cost = lensById('true_cost');
+    if (!cost) throw new Error('no lens');
+    expect(estimateNoteFor(cost, oneOnly)).toBe(
+      '* insurance and trash are still our estimate. The rest of each figure comes from a public record.',
+    );
   });
 });
 
@@ -860,5 +878,71 @@ describe('the water line says when a county is largely on wells', () => {
     for (const pct of [88, 85, 80, 75]) {
       expect(waterNote(pct)).not.toMatch(/minority|most|nobody/i);
     }
+  });
+});
+
+describe('a lens that bakes in an assumption says so', () => {
+  const county = (opts: { waterEstimated?: boolean } = {}): Area => ({
+    key: 'cobb',
+    name: 'Cobb',
+    kind: 'county',
+    state: 'GA',
+    metrics: [
+      metric('county_mo_mills', 8.46),
+      metric('county_bond_mills', 0),
+      metric('school_mo_mills', 18.7),
+      metric('school_bond_mills', 0),
+      metric('electric_monthly_usd', 141),
+      metric('water_monthly_usd', 58, opts.waterEstimated ?? true),
+      metric('trash_monthly_usd', 28, opts.waterEstimated ?? true),
+    ],
+  });
+
+  it('pins the declaration to the arithmetic', () => {
+    // `assumes` is a DECLARATION, and this file has three scars from
+    // declarations drifting from what a computation does. True cost must equal
+    // its metrics plus exactly the assumption it names — remove insurance from
+    // `compute` without removing it from `assumes`, or vice versa, and this
+    // fails.
+    const lens = lensById('true_cost');
+    if (!lens) throw new Error('lens missing');
+    const a = county();
+    const value = valuesFor(lens, [a])[0]?.value;
+    const byKey = new Map(a.metrics.map((m) => [m.metric, m.value]));
+    const tax = taxMonthlyUsdFor(a.key, (m) => byKey.get(m));
+    if (tax === undefined) throw new Error('no tax');
+    const metricsOnly = tax + 141 + 58 + 28;
+    expect(lens.assumes).toEqual(['insurance']);
+    expect(value).toBeCloseTo(metricsOnly + insuranceMonthlyUsd, 6);
+  });
+
+  it('names the assumption in the footnote', () => {
+    // The sentence used to end "the rest of each figure comes from a public
+    // record" over a figure a fifth of which is a flat share of price.
+    const lens = lensById('true_cost');
+    if (!lens) throw new Error('lens missing');
+    const note = estimateNoteFor(lens, [county()]);
+    expect(note).toContain('insurance');
+    expect(note).toContain('are still our estimate');
+  });
+
+  it('still marks the value estimated when every metric it reads is sourced', () => {
+    // The latent half: sourcing water and trash would otherwise mark true cost
+    // fully sourced while the insurance assumption stayed inside it.
+    const lens = lensById('true_cost');
+    if (!lens) throw new Error('lens missing');
+    const sourced = county({ waterEstimated: false });
+    expect(sourced.metrics.every((m) => !m.estimated)).toBe(true);
+    expect(valuesFor(lens, [sourced])[0]?.estimated).toBe(true);
+    expect(estimateNoteFor(lens, [sourced])).toContain('insurance');
+  });
+
+  it('leaves a lens with no assumption alone', () => {
+    // Utilities is electric + water + trash and assumes nothing, so its
+    // footnote must not grow an insurance clause.
+    const lens = lensById('utilities');
+    if (!lens) throw new Error('lens missing');
+    expect(lens.assumes).toBeUndefined();
+    expect(estimateNoteFor(lens, [county()])).not.toContain('insurance');
   });
 });
