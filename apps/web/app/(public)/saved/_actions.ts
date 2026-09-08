@@ -55,8 +55,7 @@ async function fetchCommunityCardsByIds(ids: string[]): Promise<SavedCommunityCa
   const supabase = createServiceClient();
 
   // Pull the community rows including cover columns.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: communities } = (await (supabase as any)
+  const { data: communities } = (await supabase
     .from('communities')
     .select('id, slug, name, city, state, cover_video_id, cover_storage_path, boundary')
     .in('id', ids)) as {
@@ -76,8 +75,7 @@ async function fetchCommunityCardsByIds(ids: string[]): Promise<SavedCommunityCa
   // Pull all videos for these communities via the membership view in
   // one shot — pick the first ready video per community as the fallback
   // cover. Also resolve cf_video_id for any explicit cover_video_id pick.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: memberships } = (await (supabase as any)
+  const { data: memberships } = (await supabase
     .from('community_video_membership')
     .select('community_id, video_id')
     .in('community_id', ids)) as {
@@ -91,8 +89,7 @@ async function fetchCommunityCardsByIds(ids: string[]): Promise<SavedCommunityCa
 
   let readyVideos: Array<{ id: string; cf_video_id: string }> = [];
   if (allVideoIds.size > 0) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: vids } = (await (supabase as any)
+    const { data: vids } = (await supabase
       .from('community_videos')
       .select('id, cf_video_id')
       .in('id', Array.from(allVideoIds))

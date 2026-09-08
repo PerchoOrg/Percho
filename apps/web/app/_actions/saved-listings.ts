@@ -29,8 +29,7 @@ export async function saveListing(input: z.infer<typeof SaveInput>): Promise<Sav
 
   // Confirm listing exists + is published, so we don't pile orphan
   // saves onto draft / archived rows.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: listing } = (await (supabase as any)
+  const { data: listing } = (await supabase
     .from('listings')
     .select('id, status')
     .eq('id', parsed.data.listingId)
@@ -38,8 +37,7 @@ export async function saveListing(input: z.infer<typeof SaveInput>): Promise<Sav
   if (!listing) return { ok: false, error: 'listing_not_found' };
   if (listing.status !== 'active') return { ok: false, error: 'listing_not_active' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error } = await (supabase as any).from('saved_listings').upsert(
+  const { error } = await supabase.from('saved_listings').upsert(
     {
       device_id: parsed.data.deviceId,
       listing_id: parsed.data.listingId,
@@ -59,8 +57,7 @@ export async function unsaveListing(input: z.infer<typeof SaveInput>): Promise<S
   if (!parsed.success) return { ok: false, error: 'invalid_input' };
 
   const supabase = createServiceClient();
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('saved_listings')
     .delete()
     .eq('device_id', parsed.data.deviceId)
@@ -86,8 +83,7 @@ export async function listSavedListingIds(input: z.infer<typeof DeviceInput>): P
   if (!parsed.success) return [];
 
   const supabase = createServiceClient();
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data, error } = (await (supabase as any)
+  const { data, error } = (await supabase
     .from('saved_listings')
     .select('listing_id')
     .eq('device_id', parsed.data.deviceId)) as {

@@ -51,8 +51,7 @@ export async function POST(req: Request) {
   if (parsed.data.listing_id) {
     // Listing-targeted lead: agent_id from listing.agent_id, gate by
     // status='active' (small abuse guard since RLS is `with check (true)`).
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const lookup = await (supabase as any)
+    const lookup = await supabase
       .from('listings')
       .select('id, agent_id, status')
       .eq('id', parsed.data.listing_id)
@@ -76,8 +75,7 @@ export async function POST(req: Request) {
       // inquiry still needs a human. Route it to the platform: the oldest
       // is_admin agent (the owner's account). This is the mobile tour CTA's
       // path for the phase166 demo inventory.
-      // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-      const admin = await (supabase as any)
+      const admin = await supabase
         .from('agents')
         .select('id')
         .eq('is_admin', true)
@@ -94,8 +92,7 @@ export async function POST(req: Request) {
     // Community-targeted lead: agent_id from communities.created_by.
     // Communities without an owner (legacy / unowned) cannot accept leads —
     // there's nobody to route the message to.
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const lookup = await (supabase as any)
+    const lookup = await supabase
       .from('communities')
       .select('id, created_by')
       .eq('id', parsed.data.community_id)
@@ -127,12 +124,7 @@ export async function POST(req: Request) {
     source: parsed.data.source ?? null,
   };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: inserted, error } = await (supabase as any)
-    .from('leads')
-    .insert(row)
-    .select('id')
-    .single();
+  const { data: inserted, error } = await supabase.from('leads').insert(row).select('id').single();
 
   if (error) {
     console.error('[leads] insert failed', error.message);

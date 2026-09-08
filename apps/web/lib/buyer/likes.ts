@@ -46,7 +46,7 @@ export async function toggleLike(input: z.infer<typeof TOGGLE_INPUT>): Promise<L
     // PostgREST upsert with `onConflict` is rejected ("no unique or exclusion
     // constraint matching the ON CONFLICT specification"). Use a plain insert
     // and silently absorb the unique-violation when the row already exists.
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    // biome-ignore lint/suspicious/noExplicitAny: `.from(table)` takes a VARIABLE, so no single table resolves
     const { error } = await (supabase as any)
       .from(table)
       .insert({ device_id: parsed.data.deviceId, [col]: parsed.data.targetId });
@@ -59,7 +59,7 @@ export async function toggleLike(input: z.infer<typeof TOGGLE_INPUT>): Promise<L
       }
     }
   } else {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    // biome-ignore lint/suspicious/noExplicitAny: `.from(table)` takes a VARIABLE, so no single table resolves
     const { error } = await (supabase as any)
       .from(table)
       .delete()
@@ -87,7 +87,7 @@ export async function listLiked(input: z.infer<typeof LIST_INPUT>): Promise<stri
 
   const supabase = createServiceClient();
   const { table, col } = tableFor(parsed.data.kind);
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  // biome-ignore lint/suspicious/noExplicitAny: `.from(table)` takes a VARIABLE, so no single table resolves
   const { data, error } = (await (supabase as any)
     .from(table)
     .select(col)

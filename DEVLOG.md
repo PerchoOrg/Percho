@@ -21,6 +21,56 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 12:45 UTC — phase253: nineteen casts gone, and one of them was load-bearing
+
+**Objective**: phase252 measured that some of the 199 `supabase as any` casts sit
+on the plain client, where the generated types do resolve. Remove those.
+
+**19 casts and 22 suppression comments gone from 7 files**, verified by
+typecheck: `199 → 180`. Removing a cast that typechecks is provably safe — it
+only ever suppressed compile-time information, and the compiler now agrees the
+information was there all along.
+
+### Removing them found two real things
+
+**`lib/buyer/likes.ts` genuinely needs its cast**, and not for the reason
+written on it. Every cast in the codebase says *"stub generated types"*; this
+one calls `.from(table)` with a **variable**, so no single table resolves and
+every column types as `never`. The comment was inherited, not written. Corrected
+in place — three of them.
+
+**`app/api/events/route.ts` does not typecheck against its own table.** The
+insert builds `listing_id` as `string | null | undefined` where the column is
+optional, which under this config is a real mismatch and not a formality. Left
+alone and reported: it is a behaviour question about what that endpoint should
+write, not a cast to delete.
+
+### And I broke the build on the way, in a way worth writing down
+
+My comment-stripping regex ran **unconditionally** while the cast-stripping one
+only matched the parenthesised form `(x as any)`. In three files it therefore
+removed the suppression and left the `any` — **8 lint errors**, in files whose
+contents were byte-identical to `main`.
+
+Chasing that turned up something I nearly reported wrongly: pristine `main`
+prints *"Found 181 warnings"* and no error line, and biome's default cap was
+hiding 195 diagnostics. **So my habit of reading "no error line" as "lint
+clean" could have been silence rather than success** — the phase243 shape, in
+my own verification. Checked at `--max-diagnostics=500`: main is genuinely 0
+errors, 215 warnings. The habit was sound; it just had not been tested.
+
+The other self-inflicted one: I replaced a one-line `biome-ignore` with a
+five-line explanation, and **a `biome-ignore` only suppresses the line
+immediately after it**. Explanation above, directive adjacent to the code.
+
+**Verified**: typecheck clean, lint back to main's 181 warnings and 0 errors,
+666 mobile + 1169 web tests.
+
+**Learnings**: the regex that stripped comments and the regex that stripped
+casts had different reach, and I ran them as a pair. **Two edits that must agree
+were expressed as two patterns that could not** — the same defect as a constant
+declared twice, which I spent phase242 on.
+
 ## 2026-09-09 12:10 UTC — phase252: 199 `as any` on the database boundary, and why
 
 **Objective**: phase251 checked one CLAUDE.md rule mechanically. Sweep the rest
