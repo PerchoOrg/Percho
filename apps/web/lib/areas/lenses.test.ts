@@ -441,6 +441,18 @@ describe('cost lines say which of THEM is a guess', () => {
     expect(flagged(mixed)).not.toContain('Property tax');
   });
 
+  it('does not flag tax because the UNUSED fallback rate is an estimate', () => {
+    // Production's real shape: the seeded `property_tax_rate_pct` is still in
+    // the table as a fallback the computation never reads once the levies are
+    // there. Asking whether any declared input is an estimate printed the GA
+    // DOR's own adopted millage under a "still our estimate" footnote.
+    const withStaleFallback: Area = {
+      ...mixed,
+      metrics: [...mixed.metrics, metric('property_tax_rate_pct', 1.05, true)],
+    };
+    expect(flagged(withStaleFallback)).not.toContain('Property tax');
+  });
+
   it('flags tax when it fell back to a stored estimate', () => {
     const noLevies: Area = {
       ...mixed,

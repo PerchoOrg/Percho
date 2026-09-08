@@ -68,8 +68,25 @@ Property tax follows whichever input actually answered — the levies when they
 exist, the stored rate when they do not — which is the same rule `valuesFor`
 uses, so the map and the sheet cannot disagree.
 
+**And then the same bug again, one function over.** Rendering the sheet against
+the live payload showed **property tax flagged as an estimate** on Fulton and
+Pickens — counties whose tax is computed from the GA DOR's own adopted millage.
+The per-line flag asked whether any DECLARED input was an estimate, and the
+seeded `property_tax_rate_pct` is still in the table as a fallback the
+computation never reads. That is precisely the mistake phase201.2 fixed in
+`valuesFor`, reintroduced here because the new code was written to the same
+wrong instinct. `costBreakdown` now records what `taxMonthlyUsdFor` actually
+read, the same way `valuesFor` does, and a regression test pins it.
+
+Worth naming as a pattern: a metric row that exists only as a fallback is
+invisible to reasoning and visible to `.some()`. Any new "is this sourced?"
+check has to ask what was READ.
+
 **Verified**: `pnpm typecheck` clean, new files lint clean, **645 mobile (+9)
-+ 997 web (+17) tests pass**.
++ 998 web (+18) tests pass**. Rendered against the live production payload:
+Fulton reads "Electric $157 · Georgia Power Co · 14.6¢ per kWh · serves 55% of
+the county" with property tax unflagged, Pickens omits the share at 100%, and
+Cobb correctly shows no supplier and flags electric.
 
 ## 2026-09-08 09:20 UTC — phase202: a real electric bill, and who actually sells it
 

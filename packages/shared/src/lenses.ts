@@ -480,7 +480,14 @@ export function listOf(items: readonly string[]): string {
  *  Returns undefined when the area cannot be priced. */
 export function costBreakdown(area: Area): CostLine[] | undefined {
   const get = metricLookup(area);
-  const tax = taxMonthlyUsdFor(area.key, get);
+  // Record what the tax computation actually READ, so the line's honesty
+  // follows the input that answered rather than the ones it might have.
+  const readForTax = new Set<MetricKey>();
+  const tax = taxMonthlyUsdFor(area.key, (metric) => {
+    readForTax.add(metric);
+    return get(metric);
+  });
+  const taxWasEstimated = area.metrics.some((m) => m.estimated && readForTax.has(m.metric));
   const electric = get('electric_monthly_usd');
   const water = get('water_monthly_usd');
   const trash = get('trash_monthly_usd');
@@ -490,26 +497,26 @@ export function costBreakdown(area: Area): CostLine[] | undefined {
   const line = (
     label: string,
     monthlyUsd: number,
-    keys: readonly MetricKey[],
-    /** For a line computed from an assumption rather than from a metric. */
-    alwaysEstimated = false,
+    estimated: boolean,
+    supplierKey?: MetricKey,
   ): CostLine => {
-    const first = keys.map((k) => byKey.get(k)).find((m) => m !== undefined);
-    const note = supplierNote(first);
-    const estimated = alwaysEstimated || keys.some((k) => byKey.get(k)?.estimated === true);
+    const note = supplierKey ? supplierNote(byKey.get(supplierKey)) : undefined;
     return { label, monthlyUsd, estimated, ...(note ? { note } : {}) };
   };
+  const isEstimate = (key: MetricKey) => byKey.get(key)?.estimated === true;
 
   return [
-    // Tax reads the levies when they exist and the stored rate otherwise, so
-    // its honesty follows whichever one actually answered — the same rule
-    // `valuesFor` uses.
-    line('Property tax', tax, ['county_mo_mills', 'school_mo_mills', 'property_tax_rate_pct']),
-    line('Electric', electric, ['electric_monthly_usd']),
-    line('Water & sewer', water, ['water_monthly_usd']),
-    line('Trash', trash, ['trash_monthly_usd']),
+    // Tax is an estimate only when the STORED RATE is what answered. Asking
+    // whether any DECLARED input is an estimate flags it always, because the
+    // seeded `property_tax_rate_pct` is still in the table as an unused
+    // fallback — the same mistake `valuesFor` had, and here it printed the
+    // state's own adopted millage under a "still our estimate" footnote.
+    line('Property tax', tax, taxWasEstimated),
+    line('Electric', electric, isEstimate('electric_monthly_usd'), 'electric_monthly_usd'),
+    line('Water & sewer', water, isEstimate('water_monthly_usd'), 'water_monthly_usd'),
+    line('Trash', trash, isEstimate('trash_monthly_usd'), 'trash_monthly_usd'),
     // A flat share of price, identical in every county — an assumption by
     // construction, never a measurement.
-    line('Insurance', insuranceMonthlyUsd, [], true),
+    line('Insurance', insuranceMonthlyUsd, true),
   ];
 }
