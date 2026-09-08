@@ -43,13 +43,14 @@ import { fetchNeighborhoodScores } from '@/lib/feed/fetch-neighborhood-scores';
 import { type GeoUnitDTO, fetchCityGeoUnits } from '@/lib/feed/geo-units';
 import { type LikedCommunityRef, type PoolListingDTO, gateListings } from '@/lib/feed/listing-gate';
 import { listingHighlightDims } from '@/lib/feed/listing-highlights';
+import type { NeighborhoodScores } from '@/lib/feed/neighborhood-score';
 import {
   fetchVerticalVideoCommunityIds,
   fetchVerticalVideoListingIds,
   fetchVerticalVideos,
   streamManifestUrl,
 } from '@/lib/feed/vertical-videos';
-import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { createAnonClient, createServiceClient } from '@/lib/supabase/server';
 import { parseFeedPoolQuery } from '@/lib/zod/feed-pool';
 import type { DimKey } from '@percho/shared/types';
 import { NextResponse } from 'next/server';
@@ -204,22 +205,34 @@ export async function GET(request: Request) {
   const needsListingRows = stage > 0;
   // Communities are Stage 3's main card type; earlier stages don't show them.
   const needsCommunities = stage >= 3;
+  /**
+   * Which communities have a film — needed by BOTH community branches below
+   * (`videosOnly` for the phone, `videoFirst` for the dev sampler).
+   *
+   * It takes no argument and depends on nothing, so it belongs in this batch.
+   * It used to be awaited on its own, between the listing tail and the
+   * community read that consumes it — one round trip whose only reason for
+   * being serial was where it sat in the file.
+   */
+  const needsVideoCommunityIds = needsCommunities && (videosOnly || videoFirst);
 
-  const [pageRows, geoUnits, communities, verticalVideos, aiTourVideos] = await Promise.all([
-    needsListingRows
-      ? videosOnly
-        ? fetchBrowseCardsVideosOnly(offset, limit)
-        : fetchBrowseCards(offset, limit)
-      : Promise.resolve([] as BrowseCard[]),
-    fetchCityGeoUnits(),
-    needsCommunities
-      ? fetchCommunityPool({ offset, limit, cities })
-      : Promise.resolve([] as PoolCommunityDTO[]),
-    // Cheap (15 ready rows) and needed for both listings and communities.
-    fetchVerticalVideos(),
-    // AI-generated community tours (Seedance); only communities have these.
-    needsCommunities ? fetchAiTourVideoByCommunity() : Promise.resolve(new Map<string, string>()),
-  ]);
+  const [pageRows, geoUnits, communities, verticalVideos, aiTourVideos, videoCommunityIds] =
+    await Promise.all([
+      needsListingRows
+        ? videosOnly
+          ? fetchBrowseCardsVideosOnly(offset, limit)
+          : fetchBrowseCards(offset, limit)
+        : Promise.resolve([] as BrowseCard[]),
+      fetchCityGeoUnits(),
+      needsCommunities
+        ? fetchCommunityPool({ offset, limit, cities })
+        : Promise.resolve([] as PoolCommunityDTO[]),
+      // Cheap (15 ready rows) and needed for both listings and communities.
+      fetchVerticalVideos(),
+      // AI-generated community tours (Seedance); only communities have these.
+      needsCommunities ? fetchAiTourVideoByCommunity() : Promise.resolve(new Map<string, string>()),
+      needsVideoCommunityIds ? fetchVerticalVideoCommunityIds() : Promise.resolve([] as string[]),
+    ]);
 
   /**
    * `videoFirst` has to FETCH the video-bearing listings, not just sort the page.
@@ -253,82 +266,135 @@ export async function GET(request: Request) {
     projectListing(card, verticalVideos.byListing.get(card.listing.id)),
   );
 
-  /**
-   * Neighborhood scores, attached after projection so it is ONE batched read for
-   * the whole page instead of one per card.
-   *
-   * Failure here must not take the feed down: scores are decoration on a card
-   * whose price/photo/address are the actual payload. A thrown POI query would
-   * otherwise turn a cosmetic panel into a blank feed.
-   */
-  let scored = projected;
-  if (needsListingRows && projected.length > 0) {
-    try {
-      const scores = await fetchNeighborhoodScores(
-        // Service role, deliberately: RLS caps anon at `status = 'approved'`,
-        // which on real data is 4 of 161 links. See the module header — this
-        // returns aggregates only, never POI names.
-        createServiceClient(),
-        projected.map((l) => l.id),
-      );
-      scored = projected.map((l) => {
-        const s = scores.get(l.id);
-        return s ? { ...l, scores: s } : l;
-      });
-    } catch (err) {
-      console.warn(
-        '[feed] neighborhood scores unavailable, serving cards without them:',
-        err instanceof Error ? err.message : err,
-      );
-    }
-  }
-
   // Dev-only reordering (§ see `videoFirst` in lib/zod/feed-pool.ts): surface the
   // cards that actually have a 9:16 video so video playback is testable without
   // swiping through the whole photo-only pool. Order within each group is
   // preserved, so this only moves cards forward — it never invents or drops any.
   const ordered = videoFirst
-    ? [...scored.filter((l) => l.videoUrl), ...scored.filter((l) => !l.videoUrl)]
-    : scored;
-
-  const listings = gateListings(ordered, stage, limit, likedRefs);
+    ? [...projected.filter((l) => l.videoUrl), ...projected.filter((l) => !l.videoUrl)]
+    : projected;
 
   /**
-   * `videoFirst` has to FETCH the video-bearing communities, exactly as it does
-   * for listings above — reordering the page is not enough.
+   * Gate BEFORE the two listing reads, not after.
    *
-   * Owner on device (2026-08-02): 「ios上测试dev sampler里一条带视频的community都
-   * 没有看到」. The community pool is ordered by `name` and read as
-   * `offset=0, limit=12`, and the only community with a ready video today is
-   * Ashley Crossing — **~280th alphabetically**. The sort below had nothing to
-   * hoist because the row was never in the page. Same bug, same fix as the
-   * `videoFirst` block for listings; the listing half was fixed and the
-   * community half was left sorting an empty set.
+   * `gateListings` decides what survives from `stage`, `limit` and the buyer's
+   * liked communities — it never reads `scores` — so the set it returns is the
+   * same whichever side of the reads it runs on. Moving it up buys two things:
+   * both reads now query only the ids that will actually ship (stage 1 ships 2
+   * of 12), and neither sits behind the other's `await`.
    */
-  let communityRows = communities;
-  if (needsCommunities && videosOnly) {
+  const gated = gateListings(ordered, stage, limit, likedRefs);
+
+  /**
+   * The three tails, in parallel.
+   *
+   * They share no data — the two listing reads are both keyed off `gated`, and
+   * the community read is keyed off the batch above — but until phase256 they
+   * ran end to end, four round trips deep. Measured against production that was
+   * most of the endpoint's ~2s: the geo + video batch alone answers in 0.22s,
+   * the listing tail added ~0.9s and the community tail another ~0.9s, and the
+   * phone shows a skeleton for the whole of it (owner, 2026-09-08: 「这个页面卡
+   * 几秒然后才渲染card」).
+   *
+   * Both listing tails degrade instead of throwing: scores and trade-off doors
+   * are decoration on a card whose price, photo and address are the real
+   * payload, so a failed POI or photo read must never turn a cosmetic panel
+   * into a blank feed.
+   */
+  const [scoresByListing, dimPhotos, communityRows] = await Promise.all([
+    (async (): Promise<Map<string, NeighborhoodScores>> => {
+      if (!needsListingRows || gated.length === 0) return new Map();
+      try {
+        return await fetchNeighborhoodScores(
+          // Service role, deliberately: RLS caps anon at `status = 'approved'`,
+          // which on real data is 4 of 161 links. See the module header — this
+          // returns aggregates only, never POI names.
+          createServiceClient(),
+          gated.map((l) => l.id),
+        );
+      } catch (err) {
+        console.warn(
+          '[feed] neighborhood scores unavailable, serving cards without them:',
+          err instanceof Error ? err.message : err,
+        );
+        return new Map();
+      }
+    })(),
     /**
-     * `videosOnly` covered listings and silently ignored communities, so the
-     * flag that promises "only cards with video" still shipped 12 photo-only
-     * community cards (owner 2026-08-21: "only show cards with videos, either
-     * community or listing").
+     * One detail photo per preference dimension, for the trade-off card's
+     * doors. One extra query on ids we already hold, run only when the page
+     * actually carries listings.
      *
-     * Fetched by id for the same reason the `videoFirst` block below does it:
-     * the community pool is ordered by name over 8,684 rows and the handful
-     * with a tour are nowhere near the first page. Filtering the page would
-     * return nothing at all.
+     * Deliberately NOT threaded through `browse-cards.ts`: that module serves
+     * the web app too, and its photo query is shaped for the carousel. This
+     * concern is the mobile feed's alone.
      */
-    const videoCommunityIds = await fetchVerticalVideoCommunityIds();
-    const allVideoIds = [...new Set([...videoCommunityIds, ...aiTourVideos.keys()])];
-    communityRows = allVideoIds.length > 0 ? await fetchCommunityPoolByIds(allVideoIds) : [];
-  } else if (needsCommunities && videoFirst) {
-    const videoCommunityIds = await fetchVerticalVideoCommunityIds();
-    const aiVideoIds = [...aiTourVideos.keys()];
-    const allVideoIds = [...new Set([...videoCommunityIds, ...aiVideoIds])];
-    const extra = allVideoIds.length > 0 ? await fetchCommunityPoolByIds(allVideoIds) : [];
-    const seen = new Set(extra.map((c) => c.id));
-    communityRows = [...extra, ...communities.filter((c) => !seen.has(c.id))];
-  }
+    (async (): Promise<Partial<Record<DimKey, DimPhoto[]>>> => {
+      if (gated.length === 0) return {};
+      try {
+        /**
+         * Anon + RLS, the same way `browse-cards.ts` reads this table — but the
+         * COOKIE-LESS client, which is what makes the shared cache below safe.
+         *
+         * `createClient()` reads the auth cookie, so this response could vary
+         * by caller and a CDN entry populated by one visitor could be served to
+         * the next. Nothing else in this route touches a session: every other
+         * read is service-role or plain-anon, and the whole response is now a
+         * function of the URL alone.
+         */
+        const supabase = createAnonClient();
+        const { data: taggedPhotos } = await supabase
+          .from('listing_photos')
+          .select('listing_id, storage_path, enhanced_path, enhanced_status, ai_tags')
+          .in(
+            'listing_id',
+            gated.map((l) => l.id),
+          )
+          // `ai_tags` is filtered in `pickDimPhotos`, not here: a `.not(... is
+          // null)` on a Json column makes supabase-js widen the row type to
+          // `never`, and the untagged rows are cheap to skip in JS.
+          .eq('status', 'ready');
+
+        if (!taggedPhotos || taggedPhotos.length === 0) return {};
+        const dimsByListing = new Map<string, readonly DimKey[]>(
+          gated.filter((l) => l.dims !== undefined).map((l) => [l.id, l.dims as DimKey[]]),
+        );
+        return pickDimPhotos(taggedPhotos as TaggedPhotoRow[], dimsByListing);
+      } catch (err) {
+        console.warn('[feed] dim photos unavailable', err);
+        return {};
+      }
+    })(),
+    /**
+     * `videoFirst` and `videosOnly` both have to FETCH the video-bearing
+     * communities — reordering the page is not enough.
+     *
+     * Owner on device (2026-08-02): 「ios上测试dev sampler里一条带视频的community都
+     * 没有看到」. The community pool is ordered by `name` and read as
+     * `offset=0, limit=12`, and the only community with a ready video today is
+     * Ashley Crossing — **~280th alphabetically**. Sorting had nothing to hoist
+     * because the row was never in the page.
+     *
+     * `videosOnly` had the same hole in the other direction: the flag that
+     * promises "only cards with video" still shipped 12 photo-only community
+     * cards (owner 2026-08-21: "only show cards with videos, either community
+     * or listing").
+     */
+    (async (): Promise<PoolCommunityDTO[]> => {
+      if (!needsCommunities || !(videosOnly || videoFirst)) return communities;
+      const allVideoIds = [...new Set([...videoCommunityIds, ...aiTourVideos.keys()])];
+      const withVideo = allVideoIds.length > 0 ? await fetchCommunityPoolByIds(allVideoIds) : [];
+      // `videosOnly` keeps ONLY those; `videoFirst` keeps the rest behind them.
+      if (videosOnly) return withVideo;
+      const seen = new Set(withVideo.map((c) => c.id));
+      return [...withVideo, ...communities.filter((c) => !seen.has(c.id))];
+    })(),
+  ]);
+
+  const listings = gated.map((l) => {
+    const s = scoresByListing.get(l.id);
+    return s ? { ...l, scores: s } : l;
+  });
 
   // The community's city unit, derived exactly as a listing's is above. The
   // DTO has always declared `geoUnitId` and never carried it, so the phone had
@@ -372,45 +438,6 @@ export async function GET(request: Request) {
       // honour the filter too, or `videosOnly` would only work with `videoFirst`.
       videoBearing;
 
-  /**
-   * The trade-off card's doors. One extra query on ids we already hold, run
-   * only when the page actually carries listings.
-   *
-   * Deliberately NOT threaded through `browse-cards.ts`: that module serves the
-   * web app too, and its photo query is shaped for the carousel. This concern is
-   * the mobile feed's alone.
-   */
-  let dimPhotos: Partial<Record<DimKey, DimPhoto[]>> = {};
-  if (listings.length > 0) {
-    // Anon + RLS, the same way `browse-cards.ts` reads this table. Wrapped for
-    // the same reason the scores block above is: the trade-off card's doors are
-    // a decoration on one card kind, and a failed photo query must degrade to an
-    // unlit door, never to a blank feed.
-    try {
-      const supabase = await createClient();
-      const { data: taggedPhotos } = await supabase
-        .from('listing_photos')
-        .select('listing_id, storage_path, enhanced_path, enhanced_status, ai_tags')
-        .in(
-          'listing_id',
-          listings.map((l) => l.id),
-        )
-        // `ai_tags` is filtered in `pickDimPhotos`, not here: a `.not(... is
-        // null)` on a Json column makes supabase-js widen the row type to
-        // `never`, and the untagged rows are cheap to skip in JS.
-        .eq('status', 'ready');
-
-      if (taggedPhotos && taggedPhotos.length > 0) {
-        const dimsByListing = new Map<string, readonly DimKey[]>(
-          listings.filter((l) => l.dims !== undefined).map((l) => [l.id, l.dims as DimKey[]]),
-        );
-        dimPhotos = pickDimPhotos(taggedPhotos as TaggedPhotoRow[], dimsByListing);
-      }
-    } catch (err) {
-      console.warn('[feed] dim photos unavailable', err);
-    }
-  }
-
   const body: FeedPoolResponse = {
     stage,
     offset,
@@ -429,7 +456,27 @@ export async function GET(request: Request) {
 
   return NextResponse.json(body, {
     headers: {
-      'Cache-Control': 'no-store',
+      /**
+       * Shared-cache only: `s-maxage` is the CDN's, and no `max-age` means the
+       * phone itself still asks every time (so a pull-to-refresh is never lying
+       * to the buyer about how fresh the pool is).
+       *
+       * Safe to share because the response is a pure function of the URL —
+       * every read in this route is service-role or cookie-less anon, and the
+       * two buyer-specific inputs (`cities`, `likedCommunityIds`) are query
+       * params, so they are part of the cache key. That is the property the
+       * `createAnonClient()` swap above exists to preserve; re-introducing
+       * `createClient()` anywhere in this handler would break it and this
+       * header would have to go back to `no-store`.
+       *
+       * Windows kept short on purpose. The owner tests content changes against
+       * production (a tour render, a listing edit) and then opens the phone, so
+       * the worst case here is 60s of staleness plus a 120s revalidation tail —
+       * long enough to be worth caching, short enough that "I just ran it and
+       * it isn't there" resolves itself while he is still looking. Append any
+       * unused query param to force a MISS.
+       */
+      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
       // CORS — mobile hits this from Expo Go / the native app on a different
       // origin. Read-only endpoint, no cookies needed.
       'Access-Control-Allow-Origin': '*',
