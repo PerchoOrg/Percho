@@ -34,6 +34,10 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- The note under the true-cost map said the part of the figure we had not
+  flagged came from public records. About a fifth of it is the insurance
+  assumption, which is not a record and does not vary by county — it is now
+  named alongside water and trash instead of quietly counted as sourced.
 - The water line now tells you when a county is largely on private wells — in
   Pike County about 80% of homes have no water bill at all, and in Cobb about
   1 in 8. Whether the bill applies to you is part of what living there costs.
