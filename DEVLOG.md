@@ -21,6 +21,52 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 10:05 UTC — phase248: the handoff had drifted the same way twice
+
+**Objective**: read the loop notes' summary block as the owner would, which is
+the artefact he opens first.
+
+**It had come to contradict itself**, exactly as RELEASE.md had before
+phase227 — and for the same reason: I rewrote it once, then amended it in place
+for twenty-two phases.
+
+* Decision 3 opened with phase242's hypothetical — *"Dawson is 31% **HIGH**"* —
+  and closed with phase247's measurement of the real catalogue: *"not one is
+  overstated."* The superseded framing was read first.
+* The water line said *"23 of 29"*, then *"6 counties have no water row"*, then
+  a struck-through *"DeKalb is now sourced"*, then *"the other 28 are still
+  estimates"*. The truth after phase237 is **28 of 29 carry a real figure and
+  only Dawson does not**.
+* It described Gwinnett as lacking an anchor to check against. phase232 gave it
+  one and phase238 used it to **contradict** the reading — the opposite state.
+* It opened "This file is a 780-line log". It is 1,470.
+
+Rewritten as current state, with the history left below it untouched. Verified
+mechanically: 10 current-state claims present, 7 superseded framings gone. And
+**the two commands it tells him to run were run** — they produce what the block
+says they do.
+
+### The same drift, in the repo
+
+`ARCHITECTURE.md` is the file CLAUDE.md says to read before deciding where a
+new file goes. Its `areas/` entry named three of the eight modules there; the
+four I added tonight were absent.
+
+Worse, it described `territory.ts`'s `dominant` as *"deliberately names nobody
+for a county that is genuinely split"* — which phase219 established is the
+**wrong question**, and replaced with `blend` for electricity. A file that tells
+you where to put new code was recommending the approach a later phase had
+argued against.
+
+Corrected, and the four modules described by the trap each one exists for.
+
+**Verified**: typecheck clean, lint clean, 666 mobile + 1161 web tests.
+
+**Learnings**: both drifts happened because a summary is cheap to amend and
+expensive to re-read. Amending keeps it *accurate line by line* while letting
+the whole become false — which is precisely what "read it as its audience"
+catches and nothing else does.
+
 ## 2026-09-09 09:35 UTC — phase247: every listing we have is understated
 
 **Objective**: phase246's move — a blocked decision is rarely blocked in every
