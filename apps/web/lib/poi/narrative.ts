@@ -188,8 +188,7 @@ export async function generateBucketVideoNarrative(
 
   const admin = createServiceClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: video, error: vErr } = (await (admin as any)
+  const { data: video, error: vErr } = (await admin
     .from('generated_videos')
     .select('id, listing_id, intent_bucket, input_photo_ids, status, scope')
     .eq('id', videoId)
@@ -228,8 +227,7 @@ export async function generateBucketVideoNarrative(
   }
 
   // Fetch photos + ai_tags + their POI names.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: photos, error: pErr } = (await (admin as any)
+  const { data: photos, error: pErr } = (await admin
     .from('poi_photos')
     .select('id, poi_id, ai_tags, pois!inner(display_name)')
     .in('id', photoIds)) as {
@@ -378,8 +376,7 @@ export async function generateBucketVideoNarrative(
     photo_count: scenes.length,
   };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error: updErr } = await (admin as any)
+  const { error: updErr } = await admin
     .from('generated_videos')
     .update({ narrative })
     .eq('id', videoId);

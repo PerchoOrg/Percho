@@ -77,8 +77,7 @@ export async function POST(req: Request) {
   const supabase = createServiceClient();
   const userAgent = req.headers.get('user-agent') ?? null;
 
-  // biome-ignore lint/suspicious/noExplicitAny: table not yet in generated types
-  const { error } = await (supabase as any).from('agent_waitlist_signups').insert({
+  const { error } = await supabase.from('agent_waitlist_signups').insert({
     name: parsed.data.name,
     email: parsed.data.email.toLowerCase(),
     phone: parsed.data.phone,
