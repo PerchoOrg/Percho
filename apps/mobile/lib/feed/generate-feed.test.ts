@@ -144,13 +144,12 @@ describe("§1.7 stage 4 mix", () => {
 		expect(STAGE_MIX[4].length).toBeLessThanOrEqual(WINDOW);
 	});
 
-	it("asks exactly one trade-off per cycle, and the cycle is odd", () => {
-		// The length is load-bearing, not cosmetic: `loopedFallback` reaches every
-		// pool row only when the table length and the pool size are coprime, and
-		// the live video-only inventory is 16 listings / 4 communities. An even
-		// table loops a subset forever — see the note in `ratios.ts`.
+	it("asks exactly one trade-off per cycle", () => {
+		// The length was load-bearing while `loopedFallback` indexed every list
+		// by the shared rotation (coprimality — see the note in `ratios.ts`);
+		// the per-kind cursors of 2026-09-08 lifted that, so only the trade-off
+		// rate is asserted here.
 		expect(STAGE_MIX[4].filter((s) => s.fill === "tradeoff")).toHaveLength(1);
-		expect(STAGE_MIX[4].length % 2).toBe(1);
 	});
 
 	it("stage 4 is listing-dominant", () => {
@@ -232,6 +231,56 @@ describe("seenIds and exhaustion", () => {
 		const tail = long.cards.slice(12);
 		const listings = tail.filter((c) => c.kind === "listing").length;
 		expect(listings).toBeGreaterThan(tail.length / 2);
+	});
+
+	it("round-robins each kind in the loop — no community twice running", () => {
+		// Owner 2026-09-08: with 5 filmed communities live, the deck showed the
+		// same community twice in a row and Windward only ~37 cards deep. The
+		// mix's community slots are 5 apart, so indexing the ranked list by the
+		// SHARED rotate collapsed both slots of a cycle onto one row (their
+		// rotates are congruent mod 5). The per-kind slot-ordinal cursor is what
+		// this pins down: a strict lap first, and never an immediate repeat.
+		const pool: FeedPool = {
+			geoUnits: [],
+			listings: Array.from({ length: 15 }, (_, i) => listing(`vl${i}`)),
+			communities: ["cw1", "cw2", "cw3", "cw4", "cw5"].map((id) =>
+				community(id),
+			),
+		};
+		const everything = [
+			...pool.listings.map((l) => l.id),
+			...pool.communities.map((c) => c.id),
+		];
+		const all = generateFeed({
+			stage: 4,
+			signals: EMPTY_SIGNALS,
+			pool,
+			seenIds: everything,
+			count: 60,
+		});
+		const seq = all.cards.filter((c) => c.kind === "community");
+		expect(seq.length).toBeGreaterThanOrEqual(10);
+		// Strict lap: the first five community cards are the five communities.
+		expect(new Set(seq.slice(0, 5).map((c) => c.id)).size).toBe(5);
+		// And never the same community twice running.
+		for (let i = 1; i < seq.length; i++) {
+			expect(seq[i]?.id).not.toBe(seq[i - 1]?.id);
+		}
+
+		// The fresh→loop seam too: the fresh phase enters each list at
+		// `firstUnseen`'s rotation, so the loop's first pick could land on the
+		// card just shown. A brand-new user must not see that either.
+		const fresh = generateFeed({
+			stage: 4,
+			signals: EMPTY_SIGNALS,
+			pool,
+			seenIds: [],
+			count: 60,
+		});
+		const freshSeq = fresh.cards.filter((c) => c.kind === "community");
+		for (let i = 1; i < freshSeq.length; i++) {
+			expect(freshSeq[i]?.id).not.toBe(freshSeq[i - 1]?.id);
+		}
 	});
 
 	it("emits no duplicates within a single page", () => {

@@ -65,6 +65,12 @@ utility, which matches how many homes there are on septic.
 
 ### 2026-09-08
 
+**Community videos in the phone feed now take turns.** Once you had swiped past
+everything at least once, the deck could deal the same community twice in a row
+while another filmed community never seemed to come up at all. Every filmed
+community now appears in strict rotation — you see each of them before any of
+them repeats.
+
 **Electricity is now its own lens, and every county's figure is real.** It used
 to be buried inside "Utilities & trash", where the water and rubbish estimates
 dragged down the one utility number we actually know. We worked out which power
