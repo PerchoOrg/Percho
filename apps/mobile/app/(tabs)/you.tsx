@@ -335,6 +335,21 @@ export default function YouTab() {
 								{session.user.email ?? "Signed in with Apple"}
 							</Text>
 						</View>
+						{/* Email accounts only. An Apple account has no password to set —
+						    Apple IS the credential, and offering one would imply the
+						    Apple button could be replaced by it. */}
+						{session.user.email ? (
+							<Pressable
+								style={styles.accountRow}
+								onPress={() => router.push("/set-password")}
+								accessibilityRole="button"
+							>
+								<Text style={styles.accountAction}>Set a password</Text>
+								<Text style={styles.accountSub}>
+									Sign in without waiting for a code
+								</Text>
+							</Pressable>
+						) : null}
 						<Pressable
 							style={styles.accountRow}
 							onPress={() => void signOut()}

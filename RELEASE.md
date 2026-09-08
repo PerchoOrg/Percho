@@ -34,6 +34,11 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- You can sign in with your email and password again. If you already have a
+  Percho account from the website, that password now works in the app — no
+  waiting for a code. The emailed code is still there for new accounts and for
+  when you've forgotten your password, and once you're in you can set a
+  password from the You tab so next time is one step.
 - Figures start as clearly-marked estimates and are labelled as such wherever
   they appear; each is being replaced with a sourced number that shows where it
   came from and how current it is.
