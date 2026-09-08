@@ -35,6 +35,10 @@ community reviews instead.
 
 ### 2026-09-08
 
+**DeKalb's water bill is now a real figure**, not an estimate — read from the
+county's own rate sheet and checked against the typical bill DeKalb itself
+publishes. Every other county's water line is still marked as our estimate.
+
 **Electricity is now its own lens, and every county's figure is real.** It used
 to be buried inside "Utilities & trash", where the water and rubbish estimates
 dragged down the one utility number we actually know. We worked out which power
