@@ -34,6 +34,11 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- The side-by-side comparison and the saved list now describe their estimates
+  the same way the map does. The comparison used to say we hadn't sourced a
+  county's figures at all, over a table whose tax and school rows come from
+  state records; and a saved area showed its monthly cost with no indication
+  that part of it is still an estimate.
 - The footnote under each ranked list now says which part of a figure is still
   an estimate, instead of implying the whole thing is. Under "true cost" it now
   reads that water and rubbish are our estimate and the rest comes from public

@@ -21,6 +21,58 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 15:05 UTC — phase217: the third and fourth surfaces carrying the same sentence
+
+**Objective**: phase216 closed with "fixing an honesty bug on one surface does
+not fix the others, and copy is where it hides." That is not a reflection, it
+is an instruction — so this tick went looking at every remaining surface that
+renders an area figure.
+
+**Two more, both stale.**
+
+`app/compare-areas.tsx` carried the sentence verbatim: *"estimated: we have not
+sourced that county's figure yet"*, under a table whose Property tax row comes
+from the GA DOR and whose Schools row comes from GOSA. **Third surface, same
+claim.** It survived phase203 and phase216 because each of those looked only at
+the screen in front of it.
+
+`app/(tabs)/saved.tsx` had the opposite failure: a saved area row reads
+"Cherokee County · $691/mo on a $500k home" with **no mark at all**. It was the
+only place in the app a true-cost figure appeared unqualified, so the same
+number read as more settled on the Saved tab than on the map two taps away.
+
+**Actions**:
+- `estimateNoteForRows` in shared, alongside `estimateNoteFor`. It takes ROWS
+  rather than metrics, because a compare row is a computed line
+  ("Property tax / year") and its label is what the reader is looking at — and
+  it strips the unit half, since "property tax / year is still our estimate"
+  reads as a fraction.
+- The saved row now carries the asterisk, plus one line under the list saying
+  what the asterisk means. **A bare mark with no legend is worse than no mark**;
+  it signals doubt without saying about what.
+
+Live wording, from production:
+
+```
+True cost / month          $730*  $833*  $894*
+Schools                    67%    54%    31%
+Property tax / year        $4,416 $4,932 $5,520
+Utilities & trash / month  $216*  $276*  $288*
+Insurance / month          $146   $146   $146
+
+* true cost and utilities & trash are still our estimate.
+  Every other row comes from a public record.
+```
+
+**Verified**: `pnpm typecheck` clean, lint clean, **649 mobile + 1066 web
+tests pass** (+5).
+
+**Learnings**: the same sentence appeared on four surfaces and was fixed on
+them one at a time across fourteen phases, because each fix was prompted by
+looking at one screen. What finally caught the last two was treating the
+previous phase's closing sentence as a search query rather than a moral. There
+are now two shared functions producing this copy and no screen writes its own.
+
 ## 2026-09-08 14:45 UTC — phase216: the ranking footnote was calling our own sourced work a guess
 
 **Objective**: phase203 replaced the county detail sheet's blanket "we have not

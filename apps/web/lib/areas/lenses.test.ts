@@ -10,6 +10,7 @@ import {
   colorFor,
   costBreakdown,
   estimateNoteFor,
+  estimateNoteForRows,
   insuranceMonthlyUsd,
   legendRange,
   lensById,
@@ -650,5 +651,47 @@ describe('the footnote separates always-a-guess from sometimes-a-guess', () => {
     const n = estimateNoteFor(lens, allSame) ?? '';
     expect(n).toContain('trash and water & sewer are still our estimate');
     expect(n).not.toContain('of them');
+  });
+});
+
+describe('the compare table gets the same footnote, from its own rows', () => {
+  const row = (label: string, marked: number, total = 3) => ({
+    label,
+    cells: Array.from({ length: total }, (_, i) => ({ estimated: i < marked })),
+  });
+
+  it('names the fully-estimated rows and defends the rest', () => {
+    // Production's shape: tax sourced, utilities and insurance not.
+    const note = estimateNoteForRows([
+      row('True cost / month', 3),
+      row('Schools', 0),
+      row('Property tax / year', 0),
+      row('Utilities & trash / month', 3),
+      row('Insurance / month', 3),
+    ]);
+    expect(note).toContain('Every other row comes from a public record');
+    expect(note).toContain('insurance');
+    expect(note).toContain('utilities & trash');
+  });
+
+  it('strips the unit half of a row label, which is not part of the name', () => {
+    // "property tax / year" would read as a fraction in a sentence.
+    const note = estimateNoteForRows([row('Property tax / year', 3), row('Schools', 0)]);
+    expect(note).toContain('property tax is still our estimate');
+    expect(note).not.toContain('/ year');
+  });
+
+  it('counts a row estimated in only some columns', () => {
+    const note = estimateNoteForRows([row('Electricity', 1), row('Schools', 0)]);
+    expect(note).toContain('electricity in 1 of them');
+  });
+
+  it('says nothing when every row is sourced', () => {
+    expect(estimateNoteForRows([row('Schools', 0), row('Property tax', 0)])).toBeUndefined();
+  });
+
+  it('does not promise a sourced remainder when there is none', () => {
+    const note = estimateNoteForRows([row('Trash', 3), row('Water', 3)]);
+    expect(note).not.toContain('Every other row');
   });
 });
