@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseRow, rows, textItems } from './millage-pdf';
+import { countywideMills, parseRow, rows, textItems } from './millage-pdf';
 
 /**
  * Every fixture below is a verbatim fragment of the real 2023 DOR report,
@@ -181,5 +181,61 @@ describe('parseRow — the three ways a zero bond is written', () => {
 
   it('normalises the county to upper case for the join', () => {
     expect(parseRow(['DeKalb', 'SCHOOL', '23.080', '0.000'])?.county).toBe('DEKALB');
+  });
+});
+
+describe('countywideMills — districts match exactly, never by substring', () => {
+  /** DeKalb's real 2023 rows, verbatim. Every one of these names is why. */
+  const DEKALB = [
+    { county: 'DEKALB', district: 'AVONDALE ESTATES', mo: 9.55, bond: 0 },
+    { county: 'DEKALB', district: 'COUNTY UNINCORPORATED', mo: 17.494, bond: 0.479 },
+    { county: 'DEKALB', district: 'IND SCHOOL ATLANTA', mo: 20.5, bond: 0 },
+    { county: 'DEKALB', district: 'IND SCHOOL DECATUR 50%', mo: 20.3, bond: 0 },
+    { county: 'DEKALB', district: 'SCHOOL', mo: 22.98, bond: 0 },
+    { county: 'DEKALB', district: 'STATE', mo: 0, bond: 0 },
+  ];
+
+  it('does not let AVONDALE ESTATES stand in for the STATE levy', () => {
+    // `'AVONDALE ESTATES'.includes('STATE')` is true. With substring matching
+    // the city's 9.55 mills were summed as the state's.
+    expect(countywideMills(DEKALB, 'DEKALB').get('STATE')).toBe(0);
+  });
+
+  it('does not let an independent city school stand in for the county school', () => {
+    // `'IND SCHOOL ATLANTA'.includes('SCHOOL')` is true, and it sorts before
+    // the real row, so first-match-wins picked Atlanta's 20.5 over DeKalb's.
+    expect(countywideMills(DEKALB, 'DEKALB').get('SCHOOL')).toBe(22.98);
+  });
+
+  it('totals DeKalb at its real county-wide rate', () => {
+    const parts = countywideMills(DEKALB, 'DEKALB');
+    const total = [...parts.values()].reduce((a, b) => a + b, 0);
+    // 17.494 + 0.479 + 22.98 + 0. Substring matching gave 48.023 — the error
+    // that motivated this whole function.
+    expect(total).toBeCloseTo(40.953, 3);
+    expect(total).not.toBeCloseTo(48.023, 1);
+  });
+
+  it('adds a district’s bond to its M&O', () => {
+    expect(countywideMills(DEKALB, 'DEKALB').get('COUNTY UNINCORPORATED')).toBeCloseTo(17.973, 3);
+  });
+
+  it('ignores districts belonging to another county', () => {
+    const mixed = [...DEKALB, { county: 'FULTON', district: 'SCHOOL', mo: 17.14, bond: 0 }];
+    expect(countywideMills(mixed, 'FULTON').get('SCHOOL')).toBe(17.14);
+    expect(countywideMills(mixed, 'DEKALB').get('SCHOOL')).toBe(22.98);
+  });
+
+  it('reports what is missing rather than substituting for it', () => {
+    // A county with no STATE row simply has no STATE key — the caller decides
+    // whether that is a gap (it is not; the state levy has been 0 since 2016).
+    const partial = DEKALB.filter((r) => r.district !== 'STATE');
+    const parts = countywideMills(partial, 'DEKALB');
+    expect(parts.has('STATE')).toBe(false);
+    expect(parts.has('SCHOOL')).toBe(true);
+  });
+
+  it('is empty for a county that is not in the report at all', () => {
+    expect(countywideMills(DEKALB, 'NOWHERE').size).toBe(0);
   });
 });

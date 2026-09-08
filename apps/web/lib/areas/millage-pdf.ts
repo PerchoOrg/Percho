@@ -255,3 +255,36 @@ export function parseRow(cells: readonly string[]): DistrictRate | null {
   const [mo, bond] = rates.length === 2 ? rates : [rates[0], 0];
   return { county, district, mo: mo ?? 0, bond: bond ?? 0 };
 }
+
+/**
+ * The levies every homeowner in a county pays, keyed by which one they are.
+ *
+ * `COUNTY UNINCORPORATED` is the county's own levy outside any city; `SCHOOL`
+ * and `STATE` apply county-wide. Cities, independent city school systems and
+ * special districts are excluded: only some addresses are inside them, and an
+ * average over districts a home is not in is not a rate anybody pays.
+ *
+ * **Districts are matched exactly, never by substring.** Substring matching
+ * looks harmless and is not — `AVONDALE ESTATES` contains `STATE`, and
+ * `IND SCHOOL ATLANTA` contains `SCHOOL`. Both are real DeKalb districts, and
+ * with `includes()` DeKalb summed 48.023 mills: its own county levy, Atlanta's
+ * independent school levy in place of DeKalb's, and the city of Avondale
+ * Estates standing in for the state. The correct total is 40.953. Nothing
+ * about the output looked malformed; it was merely too high, which is exactly
+ * how a rate error hides.
+ */
+export const COUNTYWIDE_DISTRICTS = ['COUNTY UNINCORPORATED', 'SCHOOL', 'STATE'] as const;
+
+export function countywideMills(
+  districts: readonly DistrictRate[],
+  county: string,
+): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const r of districts) {
+    if (r.county !== county) continue;
+    const which = COUNTYWIDE_DISTRICTS.find((d) => r.district === d);
+    if (!which || out.has(which)) continue;
+    out.set(which, r.mo + r.bond);
+  }
+  return out;
+}

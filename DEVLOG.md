@@ -70,8 +70,27 @@ of one row differ in y by a fraction, the y comparison wins and they emerge
 transposed — a district name and its rate swapping places. Rows are now
 clustered on y, then sorted by x within the row.
 
-Result: **29/29 metro counties**, e.g. Hall 0.638%, Gwinnett 0.778%,
-Cobb 1.057%, Fulton 1.182%, DeKalb 1.921%.
+**And a fifth, the worst of them, found only because a research pass on
+homestead exemptions mentioned in passing that unincorporated DeKalb is
+43.590 mills while we were reporting 48.023.** Selecting the county-wide
+districts with `district.includes('SCHOOL' | 'STATE' | 'UNINCORPORATED')`
+matches `IND SCHOOL ATLANTA` and `AVONDALE ESTATES` — both real DeKalb
+districts. First-match-wins therefore summed DeKalb's county levy, *Atlanta's*
+independent school levy in place of DeKalb's own, and the *city of Avondale
+Estates* standing in for the state: 17.973 + 20.5 + 9.55 = 48.023, to the
+thousandth. Nine other counties were wrong the same way. Districts are now
+matched exactly, in `countywideMills`, with the DeKalb rows as a regression
+test.
+
+Nothing about the bad output looked malformed. It was a plausible number, in
+the right units, for every county — merely too high. That is the failure mode
+worth remembering here: a rate error does not crash, it just quietly charges
+the buyer more.
+
+Result: **29/29 metro counties** — Dawson 0.657%, Hall 0.763%, Coweta 0.804%,
+Forsyth 0.898%, Fulton 1.048%, Cobb 1.086%, Gwinnett 1.104%, DeKalb 1.638%.
+Fulton cross-checks against an independently computed 1.038% from the 2025
+rates, which is the closest thing to external validation available.
 
 **School proficiency.** GOSA's CSVs are directly fetchable but their filenames
 embed a generation timestamp and cannot be constructed, so the index page is
@@ -92,15 +111,62 @@ the next script re-derives differently. Every fixture is a verbatim fragment
 of the real report, so the test file is the only written record of what these
 PDFs look like.
 
-**Open, and deliberately not resolved yet**: the statutory rate
-(mills × 40%, O.C.G.A. § 48-5-7) is 1.921% for DeKalb, while published
-*effective* rates for DeKalb sit near 1.1%. The gap is homestead exemptions,
-which are large and locally set. Publishing the statutory figure under a lens
-labelled "true cost" would overstate an owner-occupant's tax by up to ~60%,
-which is a worse failure than the estimate it replaces. **Both importers are
-dry-run by default and nothing has been written**, so this is a decision, not
-a live bug. Resolving it needs either per-county exemption amounts or an
-authoritative effective-rate source.
+**The statutory-vs-effective question, and why the answer is neither.**
+
+The gap between our statutory rate and the widely published "average effective
+rate" looked like homestead exemptions. It mostly is not. Georgia's standard
+exemptions in these counties are $2,000–$5,000 off the ASSESSED value; on a
+$500k home assessed at $200k, a $5,000 exemption is 2.5% of the bill.
+
+Four things actually explain it, and only one of them matters to a buyer:
+1. **Assessment freezes** (Fulton, Cobb, Gwinnett, DeKalb) cap the taxable
+   base for as long as you own the house — **and the base resets at closing**.
+   A 2015 owner is taxed on a base far below today's value and drags the
+   median down. A buyer today gets none of it.
+2. **Senior exemptions** are large (Cobb waives all school tax at 62, Forsyth
+   at 65) and school is over half the bill, so they pull the median down
+   further. Again, not a buyer.
+3. **DeKalb's EHOST credit** is the real outlier: 100% credit against the
+   General and Hospital levies for a homesteaded property — 11.638 of 20.810
+   county mills — and it *does* apply to a new buyer immediately.
+4. ACS's median is self-reported value and self-reported taxes, and households
+   likely fold non-ad-valorem sanitation/streetlight fees into "taxes".
+
+So the statutory rate describes a NON-homestead owner exactly (verified
+against a real DeKalb tax bill: a corporately-held parcel pays precisely the
+statutory rate), and the published effective rate describes a long-tenured
+senior. **A new buyer sits between them and is well described by neither.**
+
+Consequence: this phase writes the statutory figure to its own metric,
+`property_tax_millage_statutory_pct`, sourced and exact, shown in the county
+detail as "adopted rate, before exemptions". It does **not** overwrite
+`property_tax_rate_pct`, which the true-cost lens prices with and which stays
+a flagged estimate.
+
+**Next step is a design change, not more scraping.** Fixed-dollar exemptions
+make the effective rate rise with price, so "one percentage per county" is the
+wrong shape regardless of how good the data gets. The right form is to compute
+the bill from the listing's own price:
+`(0.40·price − county_exemption)·county_mills + 0.40·price·bond_mills +
+(0.40·price − school_exemption)·school_mills − credits`. Percho has the price.
+That also fixes a second distortion nobody has raised yet: a county-level rate
+hides real internal spread — DeKalb runs 1.607% in Dunwoody to 2.287% in Pine
+Lake, a wider range than the statutory-vs-effective gap being argued about.
+
+Blocking that: per-county exemption amounts (verified for the core eight;
+the outer fifteen need collection, their sites 403/307), and DeKalb's EHOST
+credit. Census ACS B25103 ÷ B25077 would give effective rates but now requires
+an API key — an account signup, which is the owner's call, and in any case it
+answers the wrong question for a buyer.
+
+Also learned, and load-bearing for anything built here later: HB 581's
+statewide floating exemption is opted OUT of by nearly every metro school
+district, so it changes little for a 2025+ buyer; SB 33 (signed 2026-05-11)
+makes the cap mandatory from 2027 and removes the opt-out, so any opt-out
+conclusion recorded now has an expiry date. HB 581 also deleted the clause
+making a recent arm's-length sale price the ceiling for the next year's
+assessment — using the purchase price as the base is still a good
+approximation, but it is no longer guaranteed by statute.
 
 **Trash has no central source** — Georgia EPD regulates disposal facilities,
 not collection, and its one spreadsheet is a landfill roster with no bearing

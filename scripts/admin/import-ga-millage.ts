@@ -2,11 +2,45 @@
  * Real property tax rates, from the Georgia Department of Revenue's own
  * annual millage report, into `area_metrics`.
  *
- * This replaces the estimates `seed-area-metrics.ts` wrote for
- * `property_tax_rate_pct`. Property tax is the single biggest line in the
- * Search tab's true-cost lens, and the buyer study named hidden carrying cost
- * as the #1 thing people discovered only after moving in — a made-up number
- * there is worse than no number.
+ * ── What this writes, and what it deliberately does NOT ────────────────────
+ *
+ * It writes `property_tax_millage_statutory_pct`: the adopted rate on fair
+ * market value, sourced and exact.
+ *
+ * It does **not** overwrite `property_tax_rate_pct`, the metric the true-cost
+ * lens prices a home with, and the reason is more interesting than it first
+ * looks.
+ *
+ * The obvious objection to the statutory figure is that it is too high:
+ * DeKalb's adopted rate is 48.023 mills, i.e. 1.921% of market value, against
+ * a widely published "average effective property tax rate" for DeKalb of about
+ * 1.1%. That looked like homestead exemptions, and it mostly is not. Georgia's
+ * standard homestead exemptions in these counties are $2,000 to $5,000 off the
+ * ASSESSED value — on a $500k home, assessed at $200k, a $5,000 exemption is
+ * 2.5% of the bill. It cannot explain a 40% gap.
+ *
+ * What explains most of it is that the published effective rate is a median
+ * over ALL owners: taxes actually paid divided by current market value, across
+ * a population whose assessed values were set years ago and, under HB 581's
+ * floating exemption, are capped against inflation thereafter. A household
+ * that bought in 2015 is taxed on a base far below what their house is worth
+ * now, and they drag the median down. **A buyer purchasing today is assessed
+ * at 40% of what they just paid**, so the statutory rate is much closer to
+ * their first-year bill than the median effective rate is.
+ *
+ * That argues the statutory figure is the RIGHT one for this product. It is
+ * still not written to the lens's metric, for one reason that survives the
+ * argument: some counties run a large credit rather than an exemption —
+ * DeKalb's EHOST credit offsets a substantial share of county tax for a
+ * homesteaded property, and it applies to a new buyer immediately. Until that
+ * is quantified per county, swapping the lens over would trade a known-round
+ * estimate for a precisely-cited number that is wrong in a handful of the
+ * densest counties.
+ *
+ * So: publish the statutory rate for what it honestly is, keep the lens's
+ * flagged estimate, and let the county detail show both. Closing this needs
+ * per-county credit amounts, or Census ACS B25103 ÷ B25077 — which now
+ * requires an API key, i.e. an account signup, which is the owner's call.
  *
  * ── Why 2023 and not 2025 ──────────────────────────────────────────────────
  *
@@ -63,7 +97,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import {
+  COUNTYWIDE_DISTRICTS,
   contentStreams,
+  countywideMills,
   parseRow,
   rows,
   textItems,
@@ -115,17 +151,6 @@ const METRO_COUNTIES = new Set(
   ].map((n) => n.toUpperCase()),
 );
 
-/**
- * The district rows that make up what an unincorporated homeowner pays.
- *
- * `UNINCORPORATED` is the county's own levy outside any city. `SCHOOL` and
- * `STATE` apply everywhere in the county. Everything else in the report is a
- * city or a special district, which only some addresses are inside — those are
- * deliberately excluded rather than averaged, because an average of districts
- * a home is not in is not a rate anybody pays.
- */
-const COUNTYWIDE_DISTRICTS = ['UNINCORPORATED', 'SCHOOL', 'STATE'];
-
 async function main() {
   const pdfPath = process.env.MILLAGE_PDF;
   let pdf: Buffer;
@@ -151,15 +176,9 @@ async function main() {
   // SCHOOL line is reported rather than published at a partial rate — a low
   // number here would read as a cheap county.
   const byCounty = new Map<string, Map<string, number>>();
-  for (const r of parsed) {
-    if (!METRO_COUNTIES.has(r.county)) continue;
-    const which = COUNTYWIDE_DISTRICTS.find((d) => r.district.includes(d));
-    if (!which) continue;
-    const seen = byCounty.get(r.county) ?? new Map<string, number>();
-    // First occurrence wins: some counties list a district twice with the
-    // second as an incorporated variant.
-    if (!seen.has(which)) seen.set(which, r.mo + r.bond);
-    byCounty.set(r.county, seen);
+  for (const county of METRO_COUNTIES) {
+    const parts = countywideMills(parsed, county);
+    if (parts.size > 0) byCounty.set(county, parts);
   }
 
   const rowsOut: Record<string, unknown>[] = [];
@@ -186,7 +205,7 @@ async function main() {
       state: 'GA',
       area_key: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       area_name: name,
-      metric: 'property_tax_rate_pct',
+      metric: 'property_tax_millage_statutory_pct',
       value: Number(effectivePct.toFixed(3)),
       unit: 'percent',
       source: SOURCE,
@@ -198,7 +217,7 @@ async function main() {
         assessment_ratio: ASSESSMENT_RATIO,
         districts: Object.fromEntries(parts),
         basis:
-          'Unincorporated county: county + school + state levies. A home inside a city pays that city’s millage on top.',
+          'Adopted rate on fair market value, unincorporated county: county + school + state levies. BEFORE homestead exemptions — an owner-occupant pays less, materially so in counties with large local exemptions. A home inside a city pays that city’s millage on top.',
       },
     });
   }
