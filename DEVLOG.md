@@ -21,6 +21,57 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 02:10 UTC — phase233: the measurement turned four counties into one
+
+**Objective**: phase232 left six counties on an invented water figure because
+the survey has no county-level row for them. phase221's trash audit had already
+shown why — those counties are served by their county seat, not by a county
+utility: "Hall — GAINESVILLE CITY", "Douglas — DOUGLASVILLE CITY".
+
+`namesCounty` rejects city labels on purpose, and rightly: a city of Forsyth is
+not Forsyth County. But for a county with no county-wide utility, refusing the
+city row leaves a real published bill on the table in favour of a number I made
+up.
+
+### I nearly imported all four by name
+
+Four of the six had a surveyed utility locatable inside them —
+Dawson→Dawsonville, Hall→Gainesville, Meriwether→Manchester, Morgan→Madison.
+The obvious move is to take them.
+
+The right question is not "is the city in the county" but **how much of the
+county that utility serves** — the question electricity answers with territory
+coverage. The survey carries its own service-population column, and the USGS
+import carries county population, so it is measurable:
+
+```
+Hall        Gainesville  140,000 of 193,535  =  72%   ← kept
+Morgan      Madison        5,215 of  18,046  =  29%
+Meriwether  Manchester     5,343 of  21,190  =  25%
+Dawson      Dawsonville    2,424 of  23,312  =  10%
+```
+
+**Only Hall is a county-wide utility.** The other three would price a whole
+county from a system serving a tenth to a quarter of it — the false precision
+this session has spent itself refusing. Hall clears the same 50% bar
+electricity already uses; nothing was invented to fit.
+
+Hall gets $59.23 (water $16.62 + sewer $42.61) and `detail` records that the
+provider serves ~72% of the county, so the weaker attribution is visible rather
+than blended in with the county-wide rows.
+
+**Named individually rather than made general.** This is one county, and
+machinery for one case is machinery to maintain forever.
+
+**Verified**: typecheck clean, lint clean, 663 mobile + 1126 web tests.
+**23 of 29 counties** now carry a real published water bill; five remain on the
+phase200 estimate (Dawson, Douglas, Lamar, Meriwether, Morgan).
+
+**Learnings**: the check I almost skipped is the one that mattered. Locating the
+city inside the county felt like the verification — it is not, it is only the
+precondition. The verification is the share, and it rejected three of the four
+cases that had passed the plausible-looking test.
+
 ## 2026-09-09 01:40 UTC — phase232: 22 invented water figures replaced with a real survey
 
 **Objective**: phase231 sharpened the blocker — reading rate sheets is largely
