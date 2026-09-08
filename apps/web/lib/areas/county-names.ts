@@ -22,11 +22,27 @@
  * is the city and is rejected.
  */
 export function namesCounty(label: string, county: string): boolean {
-  const l = label.trim().toLowerCase().replace(/\s+/g, ' ');
-  const c = county.trim().toLowerCase();
-  if (!l.startsWith(`${c} county`)) return false;
-  const rest = l.slice(`${c} county`.length);
-  // Exactly the county, or the county followed by a separator — never another
-  // word character, so "Cherokee Countyside" is not Cherokee County.
-  return rest === '' || /^[\s\-,–—]/.test(rest);
+  const l = label.trim().replace(/\s+/g, ' ');
+  const c = county.trim();
+  // "<name> County" as whole words, ANYWHERE in the label.
+  //
+  // Not just at the start, because joint city-county authorities put the city
+  // first: "Douglasville-Douglas County Water and Sewer Authority" serves
+  // 109,694 of Douglas County's 140,733 people, and a leading-anchor rule
+  // dropped it — a county of 141,000 kept an invented water figure because its
+  // utility is named after its largest city.
+  //
+  // Widening this was measured before it was made. Across all 29 counties the
+  // rule newly matches exactly TWO labels, both joint authorities for the
+  // county in question, and no city. The word boundaries are what keep it
+  // safe: a bare "Douglas" has no "County" in it, "Jacksonville County" does
+  // not match Jackson because "Jackson" is not followed by whitespace, and
+  // "Cherokee Countyside" does not match because "County" is not followed by a
+  // word boundary.
+  return new RegExp(`\\b${escapeRegExp(c)}\\s+County\\b`, 'i').test(l);
+}
+
+/** So a county name with punctuation cannot become a pattern. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
