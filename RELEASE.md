@@ -33,7 +33,7 @@ carries real fair-housing problems, and the major listing sites declined to do
 it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
-### 2026-09-08
+### 2026-09-09
 
 **The property tax line now says what it leaves out.** Georgia counties levy
 fire, EMS and similar services as separate districts, and the state's published
@@ -54,16 +54,16 @@ publishes nothing that separates household collection from commercial, so it is
 now one clearly-marked assumption, anchored on DeKalb's published annual fee,
 rather than a spread of plausible-looking numbers.
 
-**Water bills are real numbers in 28 counties**, not figures we made up. Most
-come from the statewide rate survey run by the University of North Carolina's
-Environmental Finance Center with the Georgia Environmental Finance Authority,
-and are still marked as estimates because that survey is from 2022 and bills
-rise a few per cent a year. Five counties show water only — they have no county
-sewer utility, which matches how many homes there are on septic.
+**Water bills are real numbers in 28 of the 29 counties**, not figures we made
+up. DeKalb's is read from the county's own rate sheet and reproduces the
+typical bill DeKalb itself publishes, to the cent. The rest come from the
+statewide rate survey run by the University of North Carolina's Environmental
+Finance Center with the Georgia Environmental Finance Authority, and stay
+marked as estimates because that survey is from 2022 and bills rise a few per
+cent a year. Five counties show water only — they have no county sewer
+utility, which matches how many homes there are on septic.
 
-**DeKalb's water bill is now a real figure**, not an estimate — read from the
-county's own rate sheet and checked against the typical bill DeKalb itself
-publishes. Every other county's water line is still marked as our estimate.
+### 2026-09-08
 
 **Electricity is now its own lens, and every county's figure is real.** It used
 to be buried inside "Utilities & trash", where the water and rubbish estimates
