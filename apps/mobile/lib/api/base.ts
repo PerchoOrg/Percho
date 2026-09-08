@@ -116,3 +116,8 @@ export function ratesUrl(): string {
 export function searchUrl(q: string): string {
 	return `${apiBase()}/api/mobile/search?q=${encodeURIComponent(q)}`;
 }
+
+/** `/api/mobile/areas` — county shapes + their metrics, for the lens map. */
+export function areasUrl(): string {
+	return `${apiBase()}/api/mobile/areas`;
+}

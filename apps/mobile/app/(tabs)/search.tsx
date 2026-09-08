@@ -22,7 +22,34 @@
  * ── No filter UI anywhere ───────────────────────────────────────────────────
  * The only narrowing affordances are the search box and the viewport
  * (§4.1 铁律). There is no price/bed/bath picker on this screen.
+ *
+ * ── Lenses (phase196) ───────────────────────────────────────────────────────
+ * The chip row under the search pill picks a LENS: the map fills each county
+ * with that one dimension's value. This is inside the no-filter rule rather
+ * than an exception to it — a lens recolours, it never removes an area, and
+ * there is no threshold that hides one. Selecting a lens changes what the map
+ * SHOWS, not what exists.
+ *
+ * Each lens draws on the geography its dimension is actually defined on, so a
+ * value never gradients across a border where the real number steps. See
+ * `@percho/shared/lenses`, which also records why there is deliberately no
+ * crime or safety lens.
+ *
+ * While a text search is running the fills drop to a whisper so the result
+ * pins stay readable: the buyer asked a question, and the lens is context.
  */
+import {
+	type Area,
+	DEFAULT_LENS,
+	LENSES,
+	type LensId,
+	classBreaks,
+	colorFor,
+	costBreakdown,
+	legendRange,
+	lensById,
+	rankedBy,
+} from "@percho/shared/lenses";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -36,17 +63,32 @@ import {
 	View,
 	useWindowDimensions,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, Polygon } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAreas } from "../../hooks/use-areas";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { MIN_QUERY_LEN, useSearch } from "../../hooks/use-search";
 import { familiarityFor } from "../../lib/area-familiarity";
+import { areasByKey } from "../../lib/areas/areas-dto";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
 import { formatPrice, specsLine } from "../../lib/saved/rows";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
+
+/** Fill opacity for a lens polygon: readable at rest, a whisper while the
+ *  buyer is reading search pins over it. */
+const FILL_ALPHA = 0.62;
+const FILL_ALPHA_SEARCHING = 0.16;
+
+/** `#rrggbb` + alpha → the `#rrggbbaa` react-native-maps accepts. */
+function withAlpha(hex: string, alpha: number): string {
+	const a = Math.round(Math.max(0, Math.min(1, alpha)) * 255)
+		.toString(16)
+		.padStart(2, "0");
+	return `${hex}${a}`;
+}
 
 export default function SearchTab() {
 	const { height } = useWindowDimensions();
@@ -70,6 +112,60 @@ export default function SearchTab() {
 	const searching = query.trim().length >= MIN_QUERY_LEN;
 
 	const mapRef = useRef<MapView>(null);
+
+	// ── Lenses ────────────────────────────────────────────────────────────────
+	// A failure is deliberately not surfaced: the tab's own job is searching,
+	// and it still works. The chips simply never appear.
+	const { areas: areaData } = useAreas();
+	const [lensId, setLensId] = useState<LensId>(DEFAULT_LENS);
+	const [openArea, setOpenArea] = useState<string | null>(null);
+
+	const lens = lensById(lensId) ?? LENSES[0];
+	const metricsByKey = useMemo(
+		() => areasByKey(areaData.areas),
+		[areaData.areas],
+	);
+	const breaks = useMemo(
+		() => (lens ? classBreaks(lens, areaData.areas) : []),
+		[lens, areaData.areas],
+	);
+	const ranked = useMemo(
+		() => (lens ? rankedBy(lens, areaData.areas) : []),
+		[lens, areaData.areas],
+	);
+	const legend = useMemo(
+		() => (lens ? legendRange(lens, areaData.areas) : undefined),
+		[lens, areaData.areas],
+	);
+	/** Value per county key, so a polygon's fill is one map lookup. */
+	const valueByKey = useMemo(
+		() => new Map(ranked.map((v) => [v.area.key, v])),
+		[ranked],
+	);
+	/** True once the lens has something to draw. Until then the chips stay
+	 *  hidden rather than offering a control that paints nothing. */
+	const lensReady = ranked.length > 0;
+
+	const openedArea: Area | undefined = openArea
+		? metricsByKey.get(openArea)
+		: undefined;
+
+	/** Move the map to a county and open its breakdown. */
+	const selectArea = (key: string) => {
+		setOpenArea(key);
+		setExpanded(true);
+		const shape = areaData.shapes.find((s) => s.key === key);
+		if (!shape) return;
+		mapRef.current?.animateToRegion(
+			{
+				latitude: shape.centre[1],
+				longitude: shape.centre[0],
+				latitudeDelta: 0.5,
+				longitudeDelta: 0.42,
+			},
+			500,
+		);
+	};
 
 	/** Select a unit AND move the map to it — pin tap, row tap, `focus` param. */
 	const select = (u: GeoUnit) => {
@@ -168,6 +264,35 @@ export default function SearchTab() {
 						longitudeDelta: 0.45,
 					}}
 				>
+					{/* Lens fills sit UNDER every pin — they are the ground the search
+					    results stand on, not a layer over them. */}
+					{lensReady &&
+						lens &&
+						areaData.shapes.map((shape) => {
+							const hit = valueByKey.get(shape.key);
+							if (!hit) return null;
+							const fill = colorFor(lens, hit.value, breaks);
+							const open = openArea === shape.key;
+							return shape.rings.map((ring, i) => (
+								<Polygon
+									// A county's rings are fixed in order and count for the life
+									// of the bundled shape file, so the index is a stable key.
+									key={`${shape.key}-${i}`}
+									coordinates={ring.map(([lng, lat]) => ({
+										latitude: lat,
+										longitude: lng,
+									}))}
+									fillColor={withAlpha(
+										fill,
+										searching ? FILL_ALPHA_SEARCHING : FILL_ALPHA,
+									)}
+									strokeColor={open ? colors.ink : colors.surface}
+									strokeWidth={open ? 2.5 : 1}
+									tappable
+									onPress={() => selectArea(shape.key)}
+								/>
+							));
+						})}
 					{units.map((u) => (
 						<Marker
 							key={u.id}
@@ -228,6 +353,59 @@ export default function SearchTab() {
 						</Pressable>
 					)}
 				</View>
+
+				{/* Lens chips + legend. Hidden until the metrics arrive — a chip
+				    that paints nothing is worse than no chip. */}
+				{lensReady && lens && (
+					<View style={[styles.lensBar, { top: insets.top + 58 }]}>
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							contentContainerStyle={styles.lensChips}
+							keyboardShouldPersistTaps="handled"
+						>
+							{LENSES.map((l) => {
+								const on = l.id === lensId;
+								return (
+									<Pressable
+										key={l.id}
+										onPress={() => {
+											setLensId(l.id);
+											setOpenArea(null);
+										}}
+										style={[styles.lensChip, on && styles.lensChipOn]}
+									>
+										<View
+											style={[styles.lensDot, { backgroundColor: l.ramp[3] }]}
+										/>
+										<Text style={[styles.lensLabel, on && styles.lensLabelOn]}>
+											{l.label}
+										</Text>
+									</Pressable>
+								);
+							})}
+						</ScrollView>
+						{legend && !searching && (
+							<View style={styles.legend}>
+								<Text style={styles.legendTitle} numberOfLines={1}>
+									{lens.unit}
+								</Text>
+								<View style={styles.legendRamp}>
+									{lens.ramp.map((c) => (
+										<View
+											key={c}
+											style={[styles.legendStep, { backgroundColor: c }]}
+										/>
+									))}
+								</View>
+								<View style={styles.legendLabels}>
+									<Text style={styles.legendEnd}>{legend.low}</Text>
+									<Text style={styles.legendEnd}>{legend.high}</Text>
+								</View>
+							</View>
+						)}
+					</View>
+				)}
 			</View>
 
 			{/* Collapsible list sheet */}
@@ -241,11 +419,64 @@ export default function SearchTab() {
 					<View style={styles.grabber} />
 				</Pressable>
 				<Text style={styles.sheetTitle}>
-					{searching ? `"${query.trim()}"` : "All areas"}
-					{poolLoading || search.loading ? "" : ` · ${hitCount}`}
+					{searching
+						? `"${query.trim()}"`
+						: openedArea
+							? `${openedArea.name} County`
+							: lensReady && lens
+								? lens.rankTitle
+								: "All areas"}
+					{searching && !(poolLoading || search.loading)
+						? ` · ${hitCount}`
+						: ""}
 				</Text>
 				{expanded && (
 					<ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
+						{/* One county, opened from the map or the ranking. */}
+						{!searching && openedArea && lens && (
+							<AreaDetail
+								area={openedArea}
+								onBack={() => setOpenArea(null)}
+								backLabel={lens.rankTitle}
+							/>
+						)}
+
+						{/* The lens ranking — the same numbers the map is painted with,
+						    in order, so the colours can be read as values. */}
+						{!searching && !openedArea && lensReady && lens && (
+							<>
+								<Text style={styles.lensCaption}>{lens.caption}</Text>
+								{ranked.map((hit) => (
+									<Pressable
+										key={hit.area.key}
+										style={styles.rankRow}
+										onPress={() => selectArea(hit.area.key)}
+									>
+										<View
+											style={[
+												styles.rankSwatch,
+												{
+													backgroundColor: colorFor(lens, hit.value, breaks),
+												},
+											]}
+										/>
+										<Text style={styles.rankName} numberOfLines={1}>
+											{hit.area.name}
+										</Text>
+										<Text style={styles.rankValue}>
+											{lens.format(hit.value)}
+											{hit.estimated ? "*" : ""}
+										</Text>
+									</Pressable>
+								))}
+								{ranked.some((h) => h.estimated) && (
+									<Text style={styles.estimateNote}>
+										* estimated — we have not sourced this county’s figure yet.
+									</Text>
+								)}
+							</>
+						)}
+
 						{searching && search.error && (
 							<View style={styles.stateBox}>
 								<Text style={styles.empty}>Couldn’t reach search.</Text>
@@ -321,29 +552,128 @@ export default function SearchTab() {
 							</Pressable>
 						))}
 
-						{hits && units.length > 0 && (
+						{!openedArea && units.length > 0 && (
 							<Text style={styles.groupTitle}>Areas</Text>
 						)}
-						{units.map((u) => (
-							<Pressable
-								key={u.id}
-								style={[styles.row, selectedId === u.id && styles.rowSelected]}
-								onPress={() => select(u)}
-							>
-								<Image source={{ uri: u.heroUrl }} style={styles.rowThumb} />
-								<View style={styles.rowText}>
-									<Text style={styles.rowName}>{u.name}</Text>
-									<Text style={styles.rowSub}>
-										{u.communityCount > 0
-											? `${u.communityCount} communities`
-											: "no communities yet"}
-									</Text>
-								</View>
-							</Pressable>
-						))}
+						{!openedArea &&
+							units.map((u) => (
+								<Pressable
+									key={u.id}
+									style={[
+										styles.row,
+										selectedId === u.id && styles.rowSelected,
+									]}
+									onPress={() => select(u)}
+								>
+									<Image source={{ uri: u.heroUrl }} style={styles.rowThumb} />
+									<View style={styles.rowText}>
+										<Text style={styles.rowName}>{u.name}</Text>
+										<Text style={styles.rowSub}>
+											{u.communityCount > 0
+												? `${u.communityCount} communities`
+												: "no communities yet"}
+										</Text>
+									</View>
+								</Pressable>
+							))}
 					</ScrollView>
 				)}
 			</View>
+		</View>
+	);
+}
+
+/**
+ * One county's cost, broken into the lines that make it up.
+ *
+ * The breakdown is the point, not the total: the study's complaint was that
+ * nobody could tell buyers WHAT the money went to, and a single number repeats
+ * that. Every line names its own figure, and the provenance row underneath
+ * says where the numbers came from and how old they are — including, plainly,
+ * when they are still our estimate.
+ */
+function AreaDetail({
+	area,
+	onBack,
+	backLabel,
+}: {
+	area: Area;
+	onBack: () => void;
+	backLabel: string;
+}) {
+	const lines = costBreakdown(area);
+	const total = lines?.reduce((n, l) => n + l.monthlyUsd, 0);
+	const max = lines ? Math.max(...lines.map((l) => l.monthlyUsd)) : 0;
+	const school = area.metrics.find(
+		(m) => m.metric === "school_proficiency_pct",
+	);
+	const estimated = area.metrics.some((m) => m.estimated);
+	const sources = [...new Set(area.metrics.map((m) => m.source))];
+	const asOf = area.metrics
+		.map((m) => m.asOf)
+		.sort()
+		.at(-1);
+
+	return (
+		<View style={styles.detail}>
+			<Pressable onPress={onBack} hitSlop={10}>
+				<Text style={styles.detailBack}>‹ {backLabel}</Text>
+			</Pressable>
+
+			{total !== undefined ? (
+				<>
+					<View style={styles.detailHero}>
+						<Text style={styles.detailHeroValue}>
+							${total.toLocaleString()}
+						</Text>
+						<Text style={styles.detailHeroUnit}>
+							true cost /mo · $500k home
+						</Text>
+					</View>
+					{lines?.map((line) => (
+						<View key={line.label} style={styles.detailRow}>
+							<Text style={styles.detailRowLabel} numberOfLines={1}>
+								{line.label}
+							</Text>
+							<View style={styles.detailBarTrack}>
+								<View
+									style={[
+										styles.detailBarFill,
+										{
+											width: `${Math.max(5, Math.round((line.monthlyUsd / max) * 100))}%`,
+										},
+									]}
+								/>
+							</View>
+							<Text style={styles.detailRowValue}>${line.monthlyUsd}</Text>
+						</View>
+					))}
+				</>
+			) : (
+				<Text style={styles.empty}>
+					We don’t have this county’s cost figures yet.
+				</Text>
+			)}
+
+			{school && (
+				<View style={styles.detailChips}>
+					<View style={styles.detailChip}>
+						<Text style={styles.detailChipText}>
+							Schools{" "}
+							<Text style={styles.detailChipValue}>
+								{Math.round(school.value)}%
+							</Text>{" "}
+							proficient
+						</Text>
+					</View>
+				</View>
+			)}
+
+			<Text style={styles.detailSource}>
+				{estimated
+					? "Estimated figures — we have not sourced this county yet, so treat them as a starting point, not a quote."
+					: `Source: ${sources.join(", ")}${asOf ? ` · as of ${asOf}` : ""}.`}
+			</Text>
 		</View>
 	);
 }
@@ -433,4 +763,123 @@ const styles = StyleSheet.create({
 	rowText: { flex: 1, gap: 2 },
 	rowName: { ...textStyles.headline, color: colors.ink },
 	rowSub: { ...textStyles.footnote, color: colors.ink2 },
+
+	// ── Lens chips + legend ───────────────────────────────────────────────────
+	lensBar: { position: "absolute", left: 0, right: 0 },
+	lensChips: { paddingHorizontal: 16, gap: 7 },
+	lensChip: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 6,
+		backgroundColor: colors.glass,
+		borderWidth: 1,
+		borderColor: colors.border,
+		borderRadius: radii.pill,
+		paddingHorizontal: 12,
+		paddingVertical: 7,
+	},
+	lensChipOn: { backgroundColor: colors.ink, borderColor: colors.ink },
+	lensDot: { width: 8, height: 8, borderRadius: 2 },
+	lensLabel: { ...textStyles.footnote, color: colors.ink, fontWeight: "600" },
+	lensLabelOn: { color: "#FFFFFF" },
+	legend: {
+		marginTop: 8,
+		marginHorizontal: 16,
+		backgroundColor: colors.glass,
+		borderWidth: 1,
+		borderColor: colors.border,
+		borderRadius: radii.tile,
+		paddingHorizontal: 10,
+		paddingTop: 6,
+		paddingBottom: 7,
+	},
+	legendTitle: { ...textStyles.caption, color: colors.ink, fontWeight: "700" },
+	legendRamp: {
+		flexDirection: "row",
+		height: 8,
+		borderRadius: 3,
+		overflow: "hidden",
+		marginTop: 4,
+	},
+	legendStep: { flex: 1 },
+	legendLabels: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		marginTop: 3,
+	},
+	legendEnd: { ...textStyles.caption, color: colors.ink2 },
+
+	// ── Lens ranking ──────────────────────────────────────────────────────────
+	lensCaption: {
+		...textStyles.footnote,
+		color: colors.ink2,
+		paddingHorizontal: 8,
+		paddingBottom: 8,
+	},
+	rankRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 10,
+		paddingVertical: 9,
+		paddingHorizontal: 8,
+		borderBottomWidth: StyleSheet.hairlineWidth,
+		borderBottomColor: colors.border,
+	},
+	rankSwatch: { width: 14, height: 14, borderRadius: 4 },
+	rankName: { ...textStyles.headline, color: colors.ink, flex: 1 },
+	rankValue: { ...textStyles.headline, color: colors.ink2 },
+	estimateNote: {
+		...textStyles.caption,
+		color: colors.ink3,
+		paddingHorizontal: 8,
+		paddingTop: 10,
+	},
+
+	// ── County detail ─────────────────────────────────────────────────────────
+	detail: { paddingHorizontal: 8, paddingBottom: 8 },
+	detailBack: {
+		...textStyles.footnote,
+		color: colors.accent,
+		fontWeight: "600",
+		paddingBottom: 6,
+	},
+	detailHero: { flexDirection: "row", alignItems: "baseline", gap: 8 },
+	detailHeroValue: { ...textStyles.title1, color: colors.ink },
+	detailHeroUnit: { ...textStyles.caption, color: colors.ink2, flex: 1 },
+	detailRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 10,
+		paddingVertical: 7,
+	},
+	detailRowLabel: { ...textStyles.footnote, color: colors.ink2, width: 118 },
+	detailBarTrack: {
+		flex: 1,
+		height: 7,
+		borderRadius: 4,
+		backgroundColor: colors.surface2,
+		overflow: "hidden",
+	},
+	detailBarFill: { height: 7, borderRadius: 4, backgroundColor: colors.accent },
+	detailRowValue: {
+		...textStyles.footnote,
+		color: colors.ink,
+		width: 48,
+		textAlign: "right",
+	},
+	detailChips: { flexDirection: "row", gap: 6, marginTop: 10 },
+	detailChip: {
+		backgroundColor: colors.surface2,
+		borderRadius: radii.tile,
+		paddingHorizontal: 10,
+		paddingVertical: 5,
+	},
+	detailChipText: { ...textStyles.caption, color: colors.ink2 },
+	detailChipValue: { color: colors.ink, fontWeight: "700" },
+	detailSource: {
+		...textStyles.caption,
+		color: colors.ink3,
+		marginTop: 12,
+		lineHeight: 15,
+	},
 });

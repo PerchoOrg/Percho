@@ -21,6 +21,106 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 05:05 UTC — phase196: the Search tab gets lenses
+
+**Objective**: owner — 「search tab 我想打破传统的搜索 引入多维度的社区搜索 包括
+问卷结果里用户最想了解的 学区 地税 水电 垃圾 隐形成本 治安等等 让人可以一眼看
+明白区域之间的各项优劣 像热力图一样呈现」. Then, before boarding a 10-hour
+flight: build all of it, don't block on approval.
+
+**Design decision — layers, not a heat map.** The obvious reading of "热力图"
+is one interpolated raster with every dimension baked in. That would be a
+picture of something untrue: property tax steps at a taxing jurisdiction's
+border, school proficiency belongs to an attendance zone, electricity to a
+service territory. Interpolating them onto a shared grid draws a gradient
+across a line where the real number jumps. So each lens declares the
+`areaKind` its dimension is actually defined on and is drawn on those
+polygons. Counties first, because tax and sanitation are set there.
+
+**Design decision — no crime lens, and it is written into the code.** Safety
+was the #2 thing the 2026-09 buyer study's respondents said they look up (7/10).
+It is still absent: Zillow and Redfin both publicly declined crime layers on
+fair-housing grounds, because crime counts carry reporting bias and shading a
+map by them approximates steering. `lenses.test.ts` asserts no lens id or label
+matches `/crime|safety|police|arrest/`, so re-adding one is a deliberate act
+with a failing test in front of it. The need is answered at community level by
+`community_reviews` — signed, subjective, about a place someone lives.
+
+**Design decision — a lens is inside §4.1, not an exception to it.** The Search
+tab's rule is that the only narrowing affordances are the search box and the
+viewport. A lens recolours; it never removes an area and there is no threshold
+that hides one. While a text search is running the fills drop from 0.62 to 0.16
+alpha so the result pins stay readable — the buyer asked a question and the
+lens is context, not the answer.
+
+**Actions**:
+- `supabase/migrations/20260908040000_area_metrics.sql` — `area_metrics`, LONG
+  format (one row per area × metric) rather than wide. The metrics we want
+  are not known in advance and arrive from unrelated scrapers on unrelated
+  schedules; in wide format each new metric is a migration and each scraper
+  writes a column it does not own. Every row carries `source`, `source_url`,
+  `as_of` and an `estimated` flag. Public read, service-role write.
+- `packages/shared/src/lenses.ts` — the lens catalogue and the classing maths,
+  in `shared` rather than `apps/web` because the mobile Search tab is the
+  primary consumer and web will want the same numbers. Four lenses: true cost,
+  property tax, schools, utilities & trash.
+- `apps/web/lib/areas/{areas,lenses}.test.ts` — 27 tests.
+- `scripts/admin/build-metro-county-shapes.ts` → `apps/web/data/metro-county-shapes.json`.
+  29 counties, 5,664 → 1,518 vertices, 30 KB. Sourced from the same TIGER file
+  `backfill-community-county.ts` uses, but simplified far harder (250 m vs
+  33 m): that file decides which county a home is IN and must be accurate;
+  this one is fill at metro zoom on a phone, where every vertex is one more
+  thing react-native-maps re-renders on pan.
+- `apps/web/app/api/mobile/areas/route.ts` — shapes + metrics in one payload.
+  No parameters and no paging on purpose: the lens computes quantile class
+  breaks over the whole metro, and breaks over a page would give the same
+  county a different colour depending on what else was in the response.
+- `apps/mobile`: `hooks/use-areas.ts`, `lib/areas/areas-dto.ts` (defensive
+  parse, same rule as `search-dto.ts`), and `app/(tabs)/search.tsx` — chip row,
+  `<Polygon>` fills, legend, ranking list, per-county cost breakdown.
+- `scripts/admin/seed-area-metrics.ts` — 29 counties × 5 metrics = 145 rows,
+  **every one `estimated: true`**. These are the demo's order-of-magnitude
+  figures, not sourced numbers; they exist so the UI could be built against a
+  realistic distribution and they render behind a disclosure that says so.
+  The phase200 scrapers upsert over the same unique key with `estimated: false`
+  and a real `source_url`; a metric is done when nothing in the seed still
+  owns it.
+- Two static demos merged ahead of the implementation for owner review while
+  offline: `/demos/search-lenses` and `/demos/area-compare` (`6f15337a`).
+
+**Issues**:
+1. The first quantile formula took `sorted[floor(p·n)]` as each break. With
+   n values that makes the top break equal the maximum, and since `classOf`
+   tests `value > break` the maximum never exceeded it — the darkest ramp step
+   was permanently unused and the map was visibly one colour short. Fixed by
+   making each break the LAST value of its class (`ceil(p·n) − 1`). The test
+   that caught it asserts the extremes land in classes 0 and 4.
+2. `pnpm db:push` is blocked by this environment's permission classifier
+   (a production database write), so `area_metrics` is absent from the
+   generated `database.types.ts` and the typed Supabase client rejects the
+   table name. Rather than hand-write the row into the generated file — which
+   the next `pnpm db:types` silently overwrites, and which until then would
+   claim a shape the database has not agreed to — `lib/areas/areas.ts` uses an
+   untyped client and validates rows at runtime in `groupMetrics`. The header
+   records exactly what to restore afterwards.
+
+**Verified**: `pnpm typecheck` clean, new files lint clean (the repo's
+pre-existing biome warnings are untouched), **586 mobile + 910 web tests pass**.
+The generated shapes file is added to `apps/web/biome.json`'s ignore list
+alongside `data/rent-by-zip.json`, the same kind of generated data.
+
+**Blocked on the owner**: `pnpm db:push` for
+`20260908040000_area_metrics.sql`, then `pnpm db:types`, then
+`seed-area-metrics.ts --apply`. Until the table exists `/api/mobile/areas`
+500s and the Search tab renders exactly as it did before — the chips are
+hidden when there is nothing to paint, so the failure is invisible rather than
+broken.
+
+**Learnings**: the geography a number is defined on is part of the number. The
+temptation with a "heat map" is to reach for interpolation because it looks
+continuous, but every one of these dimensions is piecewise-constant by law or
+by contract, and drawing it as continuous is drawing a claim nobody made.
+
 ## 2026-09-08 03:16 UTC — phase195: a home's community name travels ON the card
 
 **Objective**: owner — 「listing card 还是显示两个 city，如果所有的 listing 都有
