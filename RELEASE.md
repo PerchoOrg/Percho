@@ -6,6 +6,40 @@
 
 ---
 
+## v1.4 — Search now compares areas, not just finds addresses
+
+Search used to answer one question: where is this address. It now answers the
+one buyers actually ask first — what is it like to live in one area versus
+another.
+
+Above the map there is a row of lenses. Pick one and the map recolours every
+county by that single thing: what a home really costs to own each month, the
+property tax rate, how the schools test, what utilities and trash run. Dark
+means more of it, and the legend and the ranked list below the map both label
+which end is which, so you can read the map at a glance and then read the
+numbers to be sure.
+
+The headline lens is **true cost per month**. It prices the same $500,000 home
+in every county — property tax, electric, water, trash and insurance — and
+shows what each place would actually ask of you. Tap any county and it breaks
+that number into its lines, so you can see where the difference comes from
+rather than just that there is one. This is the thing our buyer research said
+people discover only after they have moved in.
+
+Two things it deliberately does not do. It never hides an area: a lens changes
+what the map shows, not what exists, and there is still no filter anywhere on
+this screen. And there is no crime or safety layer — shading a map that way
+carries real fair-housing problems, and the major listing sites declined to do
+it for the same reason. What neighbours actually say about a place lives in
+community reviews instead.
+
+### 2026-09-08
+- Figures start as clearly-marked estimates and are labelled as such wherever
+  they appear; each is being replaced with a sourced number that shows where it
+  came from and how current it is.
+
+---
+
 ## v1.3 — Opening a home now answers "does this fit me?"
 
 The home page has been rebuilt from the ground up. Instead of a list of MLS fields, opening a home now walks you through one question — whether this home fits the way you've been searching.

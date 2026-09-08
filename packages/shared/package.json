@@ -6,6 +6,7 @@
     "./dims": "./src/dims.ts",
     "./icons": "./src/icons.ts",
     "./insights": "./src/insights.ts",
+    "./lenses": "./src/lenses.ts",
     "./types": "./src/types.ts"
   },
   "scripts": {
