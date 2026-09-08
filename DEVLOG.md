@@ -21,6 +21,64 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 00:50 UTC — phase231: the one piece of real logic in that importer had no test
+
+**Objective**: after phase230 changed production data, re-sweep, then look at
+what the DeKalb work left untested.
+
+**The sweep is clean**, and the footnote adapted on its own:
+
+```
+* insurance and trash are still our estimate, and water & sewer in 28 of them.
+  The rest of each figure comes from a public record.
+```
+
+Water moved from always-a-guess to a-guess-in-28-of-29 and the sentence
+rewrote itself — the `always` vs `sometimes` split from phase216 doing exactly
+its job with no help.
+
+### Cobb was the obvious second county, and it fails the same test as Gwinnett
+
+Cobb publishes tiered residential rates. It publishes **no typical bill**, and
+its base charges are not on the rates page. So it fails on the anchor, not on
+readability — the same wall as Gwinnett.
+
+That sharpens what the blocker actually is. After phase229's decoder, **reading
+the sheets is largely solved**; what gates a county now is whether it publishes
+a figure to check the arithmetic against. DeKalb had one. Two of the three
+largest counties do not.
+
+(I also did not treat the fetched Cobb numbers as sourced. phase230's lesson was
+one day old.)
+
+### The untested arithmetic
+
+`billFor` lived in `scripts/admin/`, which is not a workspace package — neither
+`pnpm test` nor `pnpm lint` reaches it. The only thing checking the band logic
+was DeKalb's published total **at exactly 4,000 gallons**: one point on a step
+function, and the points a step function gets wrong are its edges.
+
+Moved to `lib/areas/water-bill.ts` with 11 tests, and the importer now calls it
+so there is one implementation rather than two. The tests cover the boundaries
+that one point cannot: exactly on a band edge, monotonicity across every edge,
+zero use, an open-ended top band, and a volume the ladder cannot reach.
+
+That last one is a behaviour change worth naming: `monthlyBill` returns
+**undefined** rather than a partial total when the tiers do not cover the
+volume. A ladder ending at 20,000 gallons charges nothing for the 21st thousand
+and returns a bill that looks complete and is too low.
+
+Verified by rewriting the cumulative-bound subtraction as if bands were widths:
+4 tests fail, including the $84.08 reproduction.
+
+### And a plural that only became wrong today
+
+The demo source tables printed `1 counties` for DeKalb's water — no source had
+ever covered exactly one county before. Fixed in both pages.
+
+**Verified**: typecheck clean, lint clean, 663 mobile + **1120 web tests**
+(+11). Both demos rebuilt.
+
 ## 2026-09-09 00:15 UTC — phase230: the withdrawal was wrong, and DeKalb's water is now sourced
 
 **Objective**: pin DeKalb's rates off the table phase229 made legible, and

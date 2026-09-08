@@ -178,7 +178,7 @@
   document.getElementById('sources').innerHTML = D.sources
     .map((s) =>
       '<tr class="' + (s.estimated ? 'est' : 'src') + '"><td>' + s.label +
-      '<span class="n">' + s.areas + ' counties</span></td><td>' + s.source +
+      '<span class="n">' + s.areas + (s.areas === 1 ? ' county' : ' counties') + '</span></td><td>' + s.source +
       '</td></tr>')
     .join('');
 
