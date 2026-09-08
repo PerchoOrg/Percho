@@ -21,6 +21,61 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 07:20 UTC — phase243: a fallback that was indistinguishable from success
+
+**Objective**: phase242 asked what else the rest of the app had failed to
+notice. Cost was one answer. Schools were the other dimension worth checking —
+and they are **clean**: the listing page's SchoolsBlock and the map both show
+the state's own Milestones proficient-or-above figure. Same source, different
+granularity, which is legitimate.
+
+But checking the vintage turned one up.
+
+### One line, two bugs
+
+`import-ga-proficiency.ts` derived `as_of` — the vintage stamped on every
+school figure on the map — from the file names:
+
+```ts
+const yearMatch = /(\d{4})-(\d{2})/.exec(urls.join(' '));
+const asOf = yearMatch?.[2] ? `20${yearMatch[2]}-06-30` : '2025-06-30';
+```
+
+**It took the first match while its own comment said "newest".** An EOG from
+2023-24 beside an EOC from 2024-25 would stamp both with the older year.
+
+**And its fallback was the string a correct parse produces.** With no year in
+any name it returned `'2025-06-30'` — exactly what a real 2024-25 file yields.
+A run on unnamed local files claimed the same vintage as a parsed one, and
+nothing downstream, including me looking at production, could tell them apart.
+**A fallback indistinguishable from success is not a fallback.**
+
+That is why I could not settle it by reading the live value: it is
+`2025-06-30`, which is what both paths produce.
+
+### It refuses now, and it is testable
+
+`schoolYearAsOf` in `lib/areas/school-year.ts`, 5 tests. Undefined rather than a
+default; the importer refuses to write rather than stamp a vintage nobody
+verified.
+
+**What moved it into lib was failing twice to test it in place.** Two attempts
+to exercise the no-year path through the importer died on an earlier header
+guard — logic that decides a published figure's vintage should be reachable by
+a test without a valid GOSA CSV in hand.
+
+A test also pins that `2024-99` is not a school year: a school year ends the
+calendar year after it starts, which is what stops `/tmp/run-1234-56/` becoming
+a vintage.
+
+**Verified**: typecheck clean, lint clean, 666 mobile + **1158 web tests** (+5).
+No data change — the current figures' vintage is unaffected either way, since
+GOSA's real file names do carry the year.
+
+**Learnings**: I had checked this number's *source* and never its *provenance
+mechanism*. The value was right; the code that produced it could not have told
+me if it were wrong.
+
 ## 2026-09-09 06:50 UTC — phase242: the listing page is 41% low on tax in Rockdale
 
 **Objective**: phase241 was caught because two independent computations of one
