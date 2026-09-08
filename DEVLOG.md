@@ -21,6 +21,66 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 01:20 UTC — phase193: one row per place, under the name people say
+
+**Objective**: owner's naming principle — 「显示的和实际存储的应该一致，更重要
+的是他们应该是人们最容易说到的名字，可以口口相传」. That rules out showing a
+parent name over a child row: there must be ONE row, and its name must be the
+sayable one. Two concrete defects followed from the phase192 import.
+
+**Issues**:
+1. **A pod stored as a community.** `2090 Lake Windward Drive` matched
+   "Neighborhoods of Windward Cove" — an 11.5-acre pod inside the 1,328-acre
+   "Windward". The listing's own MLS record says **Windward**.
+2. **The same place stored twice.** "Sunvalley Estates" / "Sun Valley
+   Estates", "Northfarm" / "North Farm", "Canterbury Farms" / "Canterbury" —
+   the upgrade path matched names exactly, so a spelling variant became a
+   second row.
+
+**Actions**:
+- `unwrap()` strips a developer's wrapper ("Neighborhoods of X", "Enclave at
+  X", "X Townhomes") and, if the inner name matches a community containing
+  the plat **on a word boundary** — "WINDWARD COVE" against "Windward" —
+  the plat is dropped entirely rather than stored. The parent's polygon
+  already covers it, so a listing there lands in the parent under the name it
+  is actually called. 61 folded.
+- A near-duplicate merge: punctuation-insensitive equality, or one name a
+  prefix of the other while the two shapes are within a factor of two (a
+  genuinely different subdivision nested in another is far smaller than its
+  container). 130 merged.
+- Candidate order rewritten. A real community — one somebody named, that
+  carries a photo — now beats a row this importer wrote, with the importer's
+  own row last. Checking it first short-circuited every merge, because after
+  the first import every plat already has one. A candidate another plat has
+  claimed is skipped, or the second would overwrite the first's boundary.
+- `sayable(a, b)` decides which spelling the merged row keeps: more word
+  breaks wins ("Sun Valley Estates" over "Sunvalley Estates"), then longer
+  ("Canterbury Farms" over "Canterbury"). The slug and the photo stay.
+
+**Decisions**: the owner rejected a proposed rule that a name ending in
+`Rd`/`Dr`/`Road`, or equal to its city, is not a community name — 「there is
+not single rule」, and he is right: `Peachtree Road` names a real area,
+Nextdoor's "Alpharetta" is the old town centre people do say they live in,
+and `River Road Estates` is a real subdivision. The signal is not the SHAPE
+of a name but whether independent sources agree on it — the plat, the MLS
+subdivision field, the Nextdoor name, sold records. That is what the deferred
+sold-data work supplies at scale; until then no name-shape heuristic is used.
+
+**Resolution**: 22,730 active communities, 16,504 subdivisions, 14,052 of them
+plat rows. Three full passes converge to 0 inserted / 0 removed. All 18
+listings are in a community and every one is a `boundary` containment.
+`2090 Lake Windward Drive` reads **Windward** and `950 Renaissance Way` reads
+**River Falls**, both matching their own records. Map data regenerated.
+
+**Learnings**: an importer that prefers its own rows is not idempotent, it is
+frozen — the first run's decisions become unreachable. Rank candidates by what
+they ARE (a human-named community, a spelling variant, our own row), never by
+who wrote them.
+
+**Next steps**: Cherokee via a parcel dissolve. Then ranking from public
+assessor/deed records — which doubles as the corroboration source the naming
+question needs.
+
 ## 2026-09-07 23:07 UTC — phase192: five counties of plats, readable names, coverage map
 
 **Objective**: owner on the phase191 result — 「我不要期数，`berkeley-park-2`
