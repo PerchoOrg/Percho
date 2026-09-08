@@ -21,6 +21,52 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 22:15 UTC — phase227: the day's changelog contradicted itself
+
+**Objective**: RELEASE.md is, per CLAUDE.md §2.2, the **non-technical**
+changelog — read by Vivian and other product stakeholders who do not read code.
+I have appended a bullet per phase to `### 2026-09-08` all day, and never read
+the day back as its audience would.
+
+Read as a whole, it **contradicted itself**:
+
+* *"Every county on the map now has a real electricity figure"* (phase219) sat
+  above *"Two counties — Cobb and Henry — are genuinely split between two
+  companies, so we still show an estimate there and say so"* (phase205). The
+  second was true when written and **false by the end of the day**.
+* *"the counties on Georgia Power went from $157 to $166 a month"* was
+  superseded hours later when phase219's averaging moved Fulton to $150.
+* *"The line under a county's electricity cost **explains itself again**"* —
+  that is phase219.1 fixing a regression phase219 introduced. **No user ever
+  saw it broken.** Telling them it works again is engineering-diary language in
+  a document whose stated rule is "write what a user would say".
+* **Four separate bullets** told one story — that we now name precisely which
+  part of a figure is an estimate — once per screen it was fixed on, which is
+  my commit sequence rather than anything a reader experienced.
+
+**Nobody shipped a broken day.** All of it landed before any release, so what
+users get is the day's END STATE. The changelog was describing my path to it.
+
+**Actions**: consolidated `### 2026-09-08` from 93 lines to 58. Every distinct
+user-visible capability is preserved — verified mechanically against a list of
+13 before committing — and every contradiction, duplication and same-day
+regression note is gone. No code, file or version names, per §2.2.
+
+DEVLOG keeps the per-phase history; that is what it is for. RELEASE.md is a
+product changelog, not a log.
+
+**Verified**: 13/13 capabilities present, 0 contradictions, no code/file names,
+typecheck clean, lint clean, 663 mobile + 1100 web tests.
+
+**Learnings**: append-per-phase is right for DEVLOG and wrong for RELEASE.
+A document with a different audience needs to be read AS that audience
+occasionally, not just written to. I had followed the rule that says update it
+on every push and missed the rule that says who it is for.
+
+**Flagged for the owner**: rewriting rather than appending is a judgement call
+on a stakeholder-facing document. The previous version is in git if he prefers
+the granular list.
+
 ## 2026-09-08 21:45 UTC — phase226: the owner's own bug, re-checked; and the demo pages get a contract
 
 **Objective**: two verifications, one of which turned into a real guard.
