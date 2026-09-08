@@ -57,6 +57,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
+import { schoolYearAsOf } from '../../apps/web/lib/areas/school-year.js';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -236,9 +237,19 @@ async function main() {
     }
   }
 
-  /** The school year the files describe, taken from the newest URL. */
-  const yearMatch = /(\d{4})-(\d{2})/.exec(urls.join(' '));
-  const asOf = yearMatch?.[2] ? `20${yearMatch[2]}-06-30` : '2025-06-30';
+  // The only statement of vintage these files carry is in their names, so
+  // `as_of` on every school figure on the map rests on this parse. It refuses
+  // rather than defaulting — see `lib/areas/school-year.ts` for the two bugs
+  // that were in the one line it replaces.
+  const asOf = schoolYearAsOf(urls);
+  if (asOf === undefined) {
+    console.error(
+      `No school year in the file names: ${urls.join(', ')}\n` +
+        'Refusing to write rather than stamping a vintage nobody verified.',
+    );
+    process.exit(1);
+  }
+  console.log(`\nSchool year from the file names: ${asOf}`);
 
   const rowsOut: Record<string, unknown>[] = [];
   const missing: string[] = [];
