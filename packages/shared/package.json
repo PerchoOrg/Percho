@@ -7,6 +7,7 @@
     "./icons": "./src/icons.ts",
     "./insights": "./src/insights.ts",
     "./lenses": "./src/lenses.ts",
+    "./property-tax": "./src/property-tax.ts",
     "./types": "./src/types.ts"
   },
   "scripts": {

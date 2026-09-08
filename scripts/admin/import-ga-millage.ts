@@ -103,7 +103,9 @@ import {
   parseRow,
   rows,
   textItems,
+  totalMills,
 } from '../../apps/web/lib/areas/millage-pdf.js';
+import type { LevyMills } from '../../apps/web/lib/areas/millage-pdf.js';
 
 const APPLY = process.argv.includes('--apply');
 
@@ -175,7 +177,7 @@ async function main() {
   // Sum the county-wide districts. A county missing its UNINCORPORATED or
   // SCHOOL line is reported rather than published at a partial rate — a low
   // number here would read as a cheap county.
-  const byCounty = new Map<string, Map<string, number>>();
+  const byCounty = new Map<string, Map<string, LevyMills>>();
   for (const county of METRO_COUNTIES) {
     const parts = countywideMills(parsed, county);
     if (parts.size > 0) byCounty.set(county, parts);
@@ -191,8 +193,10 @@ async function main() {
       incomplete.push(`${county} (missing ${missing.join(', ')})`);
       continue;
     }
-    const mills = [...parts.values()].reduce((a, b) => a + b, 0);
+    const mills = totalMills(parts);
     const effectivePct = (mills * ASSESSMENT_RATIO) / 10;
+    const countyLevy = parts.get('COUNTY UNINCORPORATED');
+    const schoolLevy = parts.get('SCHOOL');
     const name = county
       .split(/\s+/)
       .map((w) => w[0] + w.slice(1).toLowerCase())
@@ -200,34 +204,59 @@ async function main() {
       // The report spells it DEKALB; the shape file and every UI string say
       // DeKalb, and the key must match or the join silently drops the county.
       .replace(/^Dekalb$/, 'DeKalb');
-    rowsOut.push({
+    const base = {
       area_kind: 'county',
       state: 'GA',
       area_key: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       area_name: name,
-      metric: 'property_tax_millage_statutory_pct',
-      value: Number(effectivePct.toFixed(3)),
-      unit: 'percent',
       source: SOURCE,
       source_url: SOURCE_URL,
       as_of: AS_OF,
       estimated: false,
+    } as const;
+
+    rowsOut.push({
+      ...base,
+      metric: 'property_tax_millage_statutory_pct',
+      value: Number(effectivePct.toFixed(3)),
+      unit: 'percent',
       detail: {
         total_mills: Number(mills.toFixed(3)),
         assessment_ratio: ASSESSMENT_RATIO,
-        districts: Object.fromEntries(parts),
         basis:
           'Adopted rate on fair market value, unincorporated county: county + school + state levies. BEFORE homestead exemptions — an owner-occupant pays less, materially so in counties with large local exemptions. A home inside a city pays that city’s millage on top.',
       },
     });
+
+    // The four levies as their own rows. An exemption reduces an M&O base and
+    // by law never touches bond millage, so a client that only had the total
+    // could not compute a homesteaded bill — which is the whole point of
+    // `@percho/shared/property-tax`.
+    const levies: [string, number][] = [
+      ['county_mo_mills', countyLevy?.mo ?? 0],
+      ['county_bond_mills', countyLevy?.bond ?? 0],
+      ['school_mo_mills', schoolLevy?.mo ?? 0],
+      ['school_bond_mills', schoolLevy?.bond ?? 0],
+    ];
+    for (const [metric, value] of levies) {
+      rowsOut.push({
+        ...base,
+        metric,
+        value: Number(value.toFixed(3)),
+        unit: 'mills',
+        detail: null,
+      });
+    }
   }
 
-  console.log(`\n${rowsOut.length} counties with a complete county-wide rate:`);
-  for (const r of rowsOut) {
+  const rateRows = rowsOut.filter((r) => r.metric === 'property_tax_millage_statutory_pct');
+  console.log(`\n${rateRows.length} counties with a complete county-wide rate:`);
+  for (const r of rateRows) {
     console.log(
       `  ${String(r.area_name).padEnd(12)} ${String(r.value).padStart(6)}%  (${(r.detail as { total_mills: number }).total_mills} mills)`,
     );
   }
+  console.log(`\n${rowsOut.length} rows total, including the four levies per county.`);
   if (incomplete.length > 0) {
     console.log(`\nSkipped (incomplete): ${incomplete.join('; ')}`);
   }

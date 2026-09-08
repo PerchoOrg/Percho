@@ -54,6 +54,10 @@ const shapes = shapeFile as unknown as {
 const KNOWN_METRICS = new Set<string>([
   'property_tax_rate_pct',
   'property_tax_millage_statutory_pct',
+  'county_mo_mills',
+  'county_bond_mills',
+  'school_mo_mills',
+  'school_bond_mills',
   'school_proficiency_pct',
   'electric_monthly_usd',
   'water_monthly_usd',
