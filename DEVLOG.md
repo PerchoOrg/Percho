@@ -21,6 +21,70 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 10:40 UTC — phase204: the published tax rate is understated, and here is by how much
+
+**Objective**: the notes' next item was tax at DISTRICT level rather than
+county — DeKalb spans a wider range internally than the whole
+statutory-vs-effective argument. Building it turned up something more
+important about a number already on production.
+
+**What went wrong, and it is ours.** `import-ga-millage.ts` totals three rows
+per county: `COUNTY UNINCORPORATED`, `SCHOOL`, `STATE`. That was believed to
+be the whole county-wide levy. It is not. Georgia counties also levy fire,
+EMS, police, recreation, sanitation and ambulance as SEPARATE districts, and
+an unincorporated homeowner pays them. **19 of 29 metro counties levy
+something the published figure omits**, up to 0.347 percentage points of
+market value in Hall — against figures in the 0.65–1.55% range, so as much as
+a fifth of the number.
+
+**And a second error, this one in prose we shipped.** The `detail.basis` on
+every published tax row said "A home inside a city pays that city's millage on
+top." That is false. The county levies a LOWER rate inside city limits because
+the city provides the services — DeKalb charges 17.494 mills unincorporated
+and 9.588 incorporated. A Dunwoody home totals 38.445 mills against its
+unincorporated neighbour's 40.953: **the city resident pays less.** Pine Lake's
+own 16.481 mills do swallow the discount and reach 51.886, so the effect runs
+both ways, which is exactly why "on top" was the wrong mental model rather
+than merely an imprecise one.
+
+**Actions**:
+- `taxScenarios` / `scenarioRange` in `lib/areas/millage-pdf.ts` + 14 tests,
+  every fixture a real DeKalb 2023 row. Prices the unincorporated baseline and
+  each city, replacing the county school levy with an independent city system
+  where one exists.
+- `scripts/admin/audit-millage-districts.ts` — a READ-ONLY report of what the
+  published figure omits, per county, bucketed by whether the levy is
+  county-wide, unincorporated-only, a sub-district, city-specific, or
+  genuinely ambiguous.
+- The `detail.basis` text is rewritten to say what the figure is and is not.
+
+**Decision: report, do not silently correct.** "Which of these does a given
+home pay" is a different question in almost every county. Jackson levies
+ELEVEN separate fire districts, 0.700 to 3.390 mills; a home is in exactly one
+and the report does not say which covers where — there is no single right
+number for Jackson, there is a range. DeKalb's `COUNTY FIRE DISTRICT` is
+answerable because its fourteen `COUNTY SSD - <city>` rows carry the identical
+2.837 mills, so it is plainly the unincorporated half of one county-wide
+service; Meriwether's identically-named row has no such tell. Publishing a
+figure that is silently 0.28 points low is bad. Replacing it with one that is
+confidently wrong in a different direction is worse. **The owner gets a table
+and rules on the buckets.**
+
+**Issues**: the audit's first run reported every county's own baseline as an
+omission and put DeKalb 0.832 points light. The filter said
+`/^COUNTY (IN|UN)CORPORATED$/`, which matches "UNCORPORATED" — not a word —
+and misses "UNINCORPORATED", which is spelled UNIN-CORPORATED. An alternation
+inside a word is a good way to write a regex that reads correctly and matches
+nothing. Caught before it went anywhere, and the corrected figure is 19
+counties rather than 29.
+
+**Not done, deliberately**: `taxScenarios` is not wired to the importer and no
+published number changed. Mapping a city range needs city boundaries the lens
+map does not have, and the baseline it would extend is the one under question.
+
+**Verified**: `pnpm typecheck` clean, new files lint clean, **645 mobile +
+1012 web tests pass** (+14).
+
 ## 2026-09-08 09:50 UTC — phase203: show who supplies the number, and which lines are still guesses
 
 **Objective**: phase202 worked out the real electric supplier and rate for 27
