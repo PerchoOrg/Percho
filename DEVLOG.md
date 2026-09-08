@@ -21,6 +21,50 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 04:15 UTC — phase237: refusing to pick one was right; refusing to use any was not
+
+**Objective**: phase236 ended on *a flag on a number says nothing about the
+differences between numbers*. The last fabricated values in the dataset are
+Dawson's and Meriwether's water, so I went back to them with that in mind.
+
+**phase235 half-solved Meriwether and I did not notice.** It was refused
+because its largest system serves 49% of billed households and its five systems
+charge between $32.40 and $55.10 — so no single one represents the county.
+That reasoning is sound and I still believe it.
+
+But it only rules out **picking** one. **Blending all five, weighted by the
+population each serves, is the answer electricity already gives** when no
+provider owns a county — phase219 argued that case at length, and nothing about
+it is specific to electricity.
+
+```
+water   $38.09   5 systems, 95% of billed households
+sewer   $37.67   4 systems, 83%  (Luthersville files no sewer rate)
+total   $75.76   against the $56 I had invented — 35% low
+```
+
+Each component is renormalised over the systems that publish it, so a utility
+filing no sewer rate dilutes coverage rather than dragging the average toward
+zero. That is the same rule `blend()` in `territory.ts` follows.
+
+### The special case dissolved instead of multiplying
+
+An entry is now a **list** of labels, and Hall, Lamar and Morgan are the
+one-element case of it rather than a separate mechanism. Their figures are
+unchanged to the cent, which is the check that the generalisation is a no-op
+where it should be.
+
+**Result**: **28 of 29** counties carry a real water figure. Only Dawson
+remains, where the sole surveyed system serves 15% of billed households — it
+fails on coverage, not on the shape of the problem.
+
+**Verified**: typecheck clean, lint clean, 663 mobile + 1130 web tests.
+
+**Learnings**: I wrote "no single one represents the county" in phase235 and
+treated it as a dead end. It was an argument against one method, and I read it
+as an argument against the county. The tool that handles exactly that case was
+already in the repo, written by me, three weeks of phases earlier.
+
 ## 2026-09-09 03:45 UTC — phase236: the invented differences were reordering the map
 
 **Objective**: with water at 26 of 29, read the whole true-cost ranking the way
