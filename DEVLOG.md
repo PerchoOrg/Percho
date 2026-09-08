@@ -21,6 +21,60 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 07:55 UTC — phase244: two more vintages that were asserted, not derived
+
+**Objective**: phase243 found a vintage whose fallback was indistinguishable
+from success. That is a shape, not an incident, so I searched every importer for
+defaults that silently substitute a **published value or vintage**. Most hits
+were `?? ''` guarding a string comparison — defensive, not substitution. Two
+were real.
+
+### The electricity vintage was declared three times
+
+```ts
+const EIA_861_URL = '.../f8612024.zip';
+const EIA_YEAR = 2024;
+```
+
+Two independent statements of one fact, stamped on all 29 counties' rates.
+Change the URL to `f8612025.zip` and forget the constant and every figure claims
+the wrong year while nothing complains — phase241's shape as well as phase243's.
+
+The workbook turns out to carry its **own `Data Year` column**, so there were
+three statements. Now there is one source and one guard: the year is read from
+the file's data, every row we use must agree on it, and the URL is checked
+against it.
+
+**Verified by pointing the URL at 2025 while the file says 2024:**
+
+```
+Error: the URL says 2025 and the file says 2024. One of them is stale
+       — nothing written.
+```
+
+Restored, it reads *"EIA-861 data year, from the file's own column: 2024"* and
+the 29 figures are unchanged.
+
+### A weight that could vanish
+
+`import-efc-water.ts` read a system's service population as
+`Number(...) || 0`. A population that failed to parse became 0, and the blend
+filters systems with no population — so a system would drop out of a
+five-way weighted average **silently, indistinguishably from one that genuinely
+serves nobody**, and Meriwether's figure would be a different number with
+nothing to say so.
+
+It throws now. The guard is dormant — all 27 counties import unchanged — which
+is what a guard for a thing that has not happened yet looks like.
+
+**Verified**: typecheck clean, lint clean, 666 mobile + 1158 web tests. Both
+importers dry-run with identical output; no data change.
+
+**Learnings**: `|| 0` on a weight is the same bug as a default vintage. Both
+replace *"I could not read this"* with a value the rest of the code cannot
+distinguish from a real one — and in both cases the substituted value was the
+one least likely to look wrong.
+
 ## 2026-09-09 07:20 UTC — phase243: a fallback that was indistinguishable from success
 
 **Objective**: phase242 asked what else the rest of the app had failed to

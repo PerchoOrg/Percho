@@ -81,7 +81,24 @@ const TERRITORY_URL =
  * collects the numbers rather than from a redistribution of them.
  */
 const EIA_861_URL = 'https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip';
-const EIA_YEAR = 2024;
+
+/**
+ * The vintage is READ FROM THE FILE, not declared beside it.
+ *
+ * There used to be a `const EIA_YEAR = 2024` next to the URL — two independent
+ * statements of one fact, and changing the URL to `f8612025.zip` without
+ * changing the constant would have stamped every county's rate with the wrong
+ * year while nothing complained. phase243 is the same shape: a vintage that is
+ * asserted rather than derived cannot tell you when it is wrong.
+ *
+ * The workbook carries a `Data Year` column, so the year comes from there and
+ * the URL is checked against it. Three statements existed; now there is one
+ * source and one guard.
+ */
+function yearInUrl(url: string): number | undefined {
+  const m = /f861(\d{4})\.zip/.exec(url);
+  return m?.[1] ? Number(m[1]) : undefined;
+}
 
 /**
  * NREL/OpenEI's redistribution of the same figures, a year older.
@@ -99,10 +116,10 @@ const CROSS_CHECK_URLS = [
 /** Past this, the two sources are not describing the same thing any more. */
 const CROSS_CHECK_TOLERANCE = 0.15;
 
-const RATE_SOURCE = `EIA-861 ${EIA_YEAR}, residential revenue ÷ sales`;
+const rateSourceFor = (year: number) => `EIA-861 ${year}, residential revenue ÷ sales`;
 const TERRITORY_SOURCE =
   'HIFLD Electric Retail Service Territories (2022), area-weighted against county boundaries';
-const AS_OF = `${EIA_YEAR}-12-31`;
+
 
 /**
  * Georgia's average residential consumption.
@@ -159,7 +176,10 @@ function normalizeUtility(name: string): string {
 }
 
 /** Average residential $/kWh per utility, from EIA-861's own figures. */
-async function fetchRates(): Promise<Map<string, { rate: number; name: string }>> {
+async function fetchRates(): Promise<{
+  rates: Map<string, { rate: number; name: string }>;
+  year: number;
+}> {
   const local = process.env.EIA_861_ZIP;
   let zip: Buffer;
   if (local && existsSync(local)) {
@@ -188,6 +208,8 @@ async function fetchRates(): Promise<Map<string, { rate: number; name: string }>
   const iState = header.indexOf('State');
   if (iName < 0 || iState < 0) throw new Error(`${sales.name}: header is missing a column`);
   const iRevenue = iState + 3;
+  const iYear = header.indexOf('Data Year');
+  if (iYear < 0) throw new Error(`${sales.name}: no "Data Year" column to take the vintage from`);
   const group = sheet.rows[headerAt - 1]?.slice(iRevenue, iRevenue + 3) ?? [];
   if (group[0] !== 'Revenues' || group[1] !== 'Sales') {
     throw new Error(
@@ -199,6 +221,7 @@ async function fetchRates(): Promise<Map<string, { rate: number; name: string }>
   // and split filings — so revenue and sales are SUMMED before dividing.
   // Taking the first row instead silently prices a utility on part of itself.
   const totals = new Map<string, { name: string; revenue: number; mwh: number }>();
+  const seenYears: number[] = [];
   for (const row of sheet.rows.slice(headerAt + 1)) {
     if (row[iState] !== 'GA') continue;
     const name = row[iName]?.trim();
@@ -206,6 +229,8 @@ async function fetchRates(): Promise<Map<string, { rate: number; name: string }>
     const mwh = Number(row[iRevenue + 1]);
     if (!name || !Number.isFinite(revenue) || !Number.isFinite(mwh)) continue;
     const key = normalizeUtility(name);
+    const rowYear = Number(row[iYear]);
+    if (Number.isFinite(rowYear)) seenYears.push(rowYear);
     const cur = totals.get(key) ?? { name, revenue: 0, mwh: 0 };
     cur.revenue += revenue;
     cur.mwh += mwh;
@@ -218,7 +243,21 @@ async function fetchRates(): Promise<Map<string, { rate: number; name: string }>
     // Thousand dollars over MWh is already dollars per kWh.
     out.set(key, { rate: t.revenue / t.mwh, name: t.name });
   }
-  return out;
+
+  // One year across every row we used, or the file is not what we think.
+  const years = [...new Set(seenYears)];
+  if (years.length !== 1 || years[0] === undefined) {
+    throw new Error(`${sales.name}: expected one Data Year, found ${JSON.stringify(years)}`);
+  }
+  const year = years[0];
+  const fromUrl = yearInUrl(EIA_861_URL);
+  if (fromUrl !== undefined && fromUrl !== year) {
+    throw new Error(
+      `the URL says ${fromUrl} and the file says ${year}. One of them is stale — nothing written.`,
+    );
+  }
+  console.log(`\nEIA-861 data year, from the file's own column: ${year}`);
+  return { rates: out, year };
 }
 
 /**
@@ -287,7 +326,7 @@ async function main() {
   const { features } = JSON.parse(territoryJson) as { features: Feature[] };
   console.log(`${features.length} Georgia service territories.`);
 
-  const rates = await fetchRates();
+  const { rates, year: eiaYear } = await fetchRates();
   console.log(`${rates.size} Georgia utilities with a published residential rate.`);
 
   // Two independently-derived numbers landing close is the only evidence
@@ -359,9 +398,9 @@ async function main() {
       metric: 'electric_monthly_usd',
       value: monthly,
       unit: 'usd_per_month',
-      source: `${RATE_SOURCE}; provider by ${TERRITORY_SOURCE}`,
+      source: `${rateSourceFor(eiaYear)}; provider by ${TERRITORY_SOURCE}`,
       source_url: EIA_861_URL,
-      as_of: AS_OF,
+      as_of: `${eiaYear}-12-31`,
       estimated: false,
       detail: {
         providers: mix.parts.map((p) => ({
