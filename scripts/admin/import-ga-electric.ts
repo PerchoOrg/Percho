@@ -80,8 +80,21 @@ const TERRITORY_SOURCE =
 const AS_OF = '2023-12-31';
 
 /**
- * Georgia's average residential consumption, EIA Table 5.A (2024):
- * 1,074 kWh/month across 4.8 million customers.
+ * Georgia's average residential consumption.
+ *
+ * **Verified against the primary source on 2026-09-08**, not taken on report:
+ * EIA Table 5.A, `eia.gov/electricity/sales_revenue_price/xls/table_5A.xlsx`,
+ * "2024 Average Monthly Bill — Residential", built from forms EIA-861. Its
+ * Georgia row reads:
+ *
+ *   Number of Customers                4,815,501
+ *   Average Monthly Consumption (kWh)  1074.0134
+ *   Average Price (cents/kWh)          14.0825
+ *   Average Monthly Bill               $151.248
+ *
+ * Read with `apps/web/lib/areas/xlsx.ts`, which exists because this figure
+ * multiplies EVERY county's electric bill and was worth checking rather than
+ * inheriting. Note the internal consistency: 1074.0134 × $0.140825 = $151.25.
  *
  * Held constant across counties on purpose — see the header.
  */
