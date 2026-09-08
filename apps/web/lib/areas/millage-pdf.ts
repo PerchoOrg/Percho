@@ -60,7 +60,7 @@ export function contentStreams(pdf: Buffer): string[] {
     if (e < 0) break;
     try {
       const text = inflateSync(pdf.subarray(p, e)).toString('latin1');
-      if (text.includes('Tj')) out.push(text);
+      if (text.includes('Tj') || text.includes('TJ')) out.push(text);
     } catch {
       // Images, fonts and anything not Flate — not our business.
     }
@@ -104,7 +104,8 @@ export function textItems(streams: readonly string[]): TextItem[] {
   const num = String.raw`(-?[\d.]+)`;
   const token = new RegExp(
     [
-      String.raw`\((?<str>(?:\\.|[^\\()])*)\)\s*Tj`, // draw
+      String.raw`\((?<str>(?:\\.|[^\\()])*)\)\s*Tj`, // draw one string
+      String.raw`\[(?<arr>(?:\\.|[^\]])*)\]\s*TJ`, // draw an array of them
       String.raw`${num}\s+${num}\s+${num}\s+${num}\s+${num}\s+${num}\s+(?<op>cm|Tm)`,
       String.raw`${num}\s+${num}\s+(?<td>Td|TD)`,
       String.raw`(?<simple>BT|ET|q|Q|T\*)`,
@@ -137,6 +138,26 @@ export function textItems(streams: readonly string[]): TextItem[] {
           y: ctm.y + cursor.y,
           text: unescapePdf(g.str),
         });
+        continue;
+      }
+      if (g.arr !== undefined) {
+        // `[(Res) -250 (idential) 12 ( Service)] TJ` — the numbers between the
+        // strings are kerning in thousandths of an em, not content. They are
+        // dropped rather than turned into spaces: at this document's tracking
+        // a real space is always its own `( )` string, and inferring one from
+        // a kern threshold guesses wrong on both sides.
+        const parts = [...g.arr.matchAll(/\((?:\\.|[^\\()])*\)/g)].map((m) =>
+          unescapePdf(m[0].slice(1, -1)),
+        );
+        const text = parts.join('');
+        if (text.length > 0) {
+          items.push({
+            page: Math.max(page, 0),
+            x: ctm.x + cursor.x,
+            y: ctm.y + cursor.y,
+            text,
+          });
+        }
         continue;
       }
       if (g.op === 'cm') {

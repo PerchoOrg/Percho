@@ -84,6 +84,33 @@ ET`;
   });
 });
 
+describe('textItems — TJ arrays', () => {
+  it('joins the strings in a TJ array and drops the kerning numbers', () => {
+    // Verbatim shape from Georgia Power's residential tariff, which is typeset
+    // entirely in TJ arrays and has no Tj at all. The numbers between strings
+    // are kerning in thousandths of an em, not content.
+    const stream = `BT
+/F1 9.96 Tf
+1 0 0 1 57.6 746.6 Tm
+[(Firs) -3 (t 650 kWh)] TJ
+ET`;
+    const [item] = textItems([stream]);
+    expect(item?.text).toBe('First 650 kWh');
+    expect(item?.x).toBeCloseTo(57.6);
+  });
+
+  it('ignores an array that draws nothing', () => {
+    expect(textItems(['BT 1 0 0 1 0 0 Tm [( )] TJ ET'])[0]?.text).toBe(' ');
+    expect(textItems(['BT 1 0 0 1 0 0 Tm [] TJ ET'])).toHaveLength(0);
+  });
+
+  it('reads a document that mixes both idioms', () => {
+    const stream = `BT 1 0 0 1 0 100 Tm (PLAIN)Tj ET
+BT 1 0 0 1 0 90 Tm [(AR) 5 (RAY)] TJ ET`;
+    expect(textItems([stream]).map((i) => i.text)).toEqual(['PLAIN', 'ARRAY']);
+  });
+});
+
 describe('rows', () => {
   const at = (page: number, y: number, x: number, text: string) => ({
     page,
