@@ -43,9 +43,16 @@ import { useFeedPool } from "../../hooks/use-feed-pool";
 import { familiarityFor, unknownDimsLabel } from "../../lib/area-familiarity";
 import { deleteAccount, signOut } from "../../lib/auth";
 import { DIM_LABELS, personaName, rankedDims } from "../../lib/feed/persona";
+import {
+	PRIORITIES,
+	WEIGHT_LABELS,
+	hasStated,
+	rankedPriorities,
+} from "../../lib/priorities";
 import { useAuthStore } from "../../state/auth";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
+import { usePriorityStore } from "../../state/priorities";
 import { useSoundStore } from "../../state/sound";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
@@ -60,6 +67,9 @@ export default function YouTab() {
 	const removeDim = useFeedSession((s) => s.removeDim);
 	const recent = useFeedSession((s) => s.recent);
 	const bringBack = useFeedSession((s) => s.bringBack);
+
+	const weights = usePriorityStore((s) => s.weights);
+	const setWeight = usePriorityStore((s) => s.setWeight);
 
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const toggleSound = useSoundStore((s) => s.toggle);
@@ -257,6 +267,50 @@ export default function YouTab() {
 				</Pressable>
 			</View>
 
+			{/* Declared, as opposed to inferred. Kept as its own section rather
+			    than folded into the one below on purpose: what the buyer TOLD us
+			    and what we guessed from their swipes are different kinds of claim,
+			    and merging them would let the app quietly overrule a stated
+			    answer. See `lib/priorities.ts`. */}
+			<Text style={styles.sectionHead}>WHAT MATTERS TO YOU</Text>
+			<View style={styles.card}>
+				<Text style={styles.prioIntro}>
+					Set these and Percho leads with them — in the compare table, and in
+					what a place’s summary mentions first. They never hide anything.
+				</Text>
+				{PRIORITIES.map((p) => (
+					<View key={p.key} style={styles.prioRow}>
+						<View style={styles.prioText}>
+							<Text style={styles.prioLabel}>{p.label}</Text>
+							<Text style={styles.prioBlurb}>{p.blurb}</Text>
+						</View>
+						<View style={styles.prioSteps}>
+							{WEIGHT_LABELS.map((weightLabel, w) => (
+								<Pressable
+									// The step's own meaning is its identity — these four are
+									// fixed values, not a list that can reorder.
+									key={weightLabel}
+									onPress={() => setWeight(p.key, w)}
+									hitSlop={6}
+									style={[
+										styles.prioStep,
+										weights[p.key] >= w && w > 0 && styles.prioStepOn,
+										weights[p.key] === w && styles.prioStepHere,
+									]}
+									accessibilityRole="button"
+									accessibilityLabel={`${p.label}: ${weightLabel}`}
+								/>
+							))}
+						</View>
+					</View>
+				))}
+				<Text style={styles.prioNow}>
+					{hasStated(weights)
+						? `Leading with ${rankedPriorities(weights)[0]?.label.toLowerCase()}.`
+						: "Nothing set yet — tap the dots."}
+				</Text>
+			</View>
+
 			{/* Evidence — tap to correct (§5.3 #3). */}
 			<Text style={styles.sectionHead}>WHAT PERCHO KNOWS</Text>
 			<View style={styles.card}>
@@ -434,6 +488,37 @@ function buildLabel(): string {
 }
 
 const styles = StyleSheet.create({
+	prioIntro: {
+		...textStyles.footnote,
+		color: colors.ink2,
+		marginBottom: 10,
+		lineHeight: 18,
+	},
+	prioRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 12,
+		paddingVertical: 9,
+	},
+	prioText: { flex: 1 },
+	prioLabel: { ...textStyles.headline, color: colors.ink },
+	prioBlurb: { ...textStyles.caption, color: colors.ink3, marginTop: 1 },
+	prioSteps: { flexDirection: "row", gap: 7, alignItems: "center" },
+	prioStep: {
+		width: 14,
+		height: 14,
+		borderRadius: 7,
+		backgroundColor: colors.surface2,
+		borderWidth: 1,
+		borderColor: colors.border,
+	},
+	prioStepOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+	prioStepHere: { borderColor: colors.ink },
+	prioNow: {
+		...textStyles.caption,
+		color: colors.ink3,
+		marginTop: 8,
+	},
 	screen: { flex: 1, backgroundColor: colors.bg },
 	title: { ...textStyles.title1, color: colors.ink, marginBottom: 12 },
 	personaCard: {

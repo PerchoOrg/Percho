@@ -21,6 +21,7 @@ import {
 	AREA_COMPARE_MAX,
 	buildAreaCompareTable,
 } from "../lib/areas/compare-areas";
+import { usePriorityStore } from "../state/priorities";
 import { colors, explore, radii } from "../theme/tokens";
 import { textStyles } from "../theme/typography";
 
@@ -28,6 +29,9 @@ export default function CompareAreasScreen() {
 	const insets = useSafeAreaInsets();
 	const { keys } = useLocalSearchParams<{ keys?: string }>();
 	const { areas: data, loading } = useAreas();
+	// The buyer's declared priorities reorder the rows so the table opens on
+	// what they said matters. Nothing is added, dropped or reweighted.
+	const weights = usePriorityStore((s) => s.weights);
 
 	const wanted = (keys ?? "")
 		.split(",")
@@ -42,7 +46,7 @@ export default function CompareAreasScreen() {
 		return a ? [a] : [];
 	});
 
-	const table = buildAreaCompareTable(areas);
+	const table = buildAreaCompareTable(areas, weights);
 	const anyEstimated = table.rows.some((r) => r.cells.some((c) => c.estimated));
 
 	return (

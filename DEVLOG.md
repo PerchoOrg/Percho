@@ -21,6 +21,61 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 06:30 UTC — phase199: the You tab lets a buyer STATE what matters
+
+**Objective**: same brief as Saved — no specific instruction, bring it up to a
+shippable standard from the study. The gap: the You tab could show what Percho
+had INFERRED from swipes, and gave the buyer no way to simply say it.
+
+**The distinction this phase is built on.** "WHAT PERCHO KNOWS" is evidence —
+dims accumulated from trade-off answers, correctable row by row. It is honest,
+and it is slow: a buyer who has answered three trade-offs has told us almost
+nothing. The study's respondents arrived knowing exactly what they cared about
+before touching anything (schools 8/10, safety 7, community amenities 6).
+Making them wait to be inferred is making them wait for a conclusion they
+could have stated in four taps.
+
+So the declared half is a SEPARATE section, not merged into the inferred one.
+Merging would let the app quietly overrule what someone told it — which is the
+specific failure the study's respondents named: 8 of 10 said "fear of
+commercial bias" is what would stop them trusting a tool like this.
+
+**Actions**:
+- `lib/priorities.ts` + 17 tests — four priorities (schools, cost, commute,
+  community), weights 0–3, ordering helpers.
+- `state/priorities.ts` — persisted, device-local, with a `merge` that
+  re-normalises so a build that adds or drops a priority cannot leave a stale
+  key weighting something that no longer exists.
+- `app/(tabs)/you.tsx` — a WHAT MATTERS TO YOU card above WHAT PERCHO KNOWS.
+- `lib/areas/compare-areas.ts` — `buildAreaCompareTable` takes optional
+  weights and reorders rows; `app/compare-areas.tsx` passes them.
+
+**Decisions**:
+1. **0–3, not a slider.** Four steps a person can name: not really, a little,
+   a lot, it's the whole reason. A continuous slider invites a precision
+   nobody has about their own preferences and produces a number we would then
+   have to pretend to honour.
+2. **Default 1, not 0.** Zeroes would mean the app opens believing the buyer
+   cares about nothing, so their first tap would read as a change of mind
+   rather than as their first statement.
+3. **A weight ORDERS, it never filters.** It changes which comparison row
+   comes first and what a summary leads with. It does not score an area, does
+   not hide one, and a row serving no priority keeps its place rather than
+   sinking — a test asserts reordering never drops a row. Same restraint the
+   lens map is under: stated priorities change what you see FIRST, never what
+   exists.
+4. Ties keep the catalogue's order, so a buyer who has stated nothing gets the
+   study's own ranking (schools first) rather than an arbitrary one, and the
+   list never reshuffles under their thumb.
+
+**Verified**: `pnpm typecheck` clean, new files lint clean, **636 mobile (+21)
++ 910 web tests pass**.
+
+**Learnings**: inferred and declared preferences want to be one number and
+must not be. The moment they merge, there is no answer to "why is it showing
+me this when I said I didn't care" — and that question is the whole of the
+trust problem the study measured.
+
 ## 2026-09-08 06:05 UTC — phase198: the Saved tab learns what an area costs
 
 **Objective**: the owner gave no specific instruction for Saved beyond "bring

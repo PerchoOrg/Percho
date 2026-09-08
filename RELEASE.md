@@ -34,6 +34,13 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- You can now just **tell** Percho what matters. A new section on the You tab
+  lets you set how much you care about schools, what a place really costs,
+  getting around, and the community itself. Set them and the compare table
+  leads with what you picked. They only change what you see first — they never
+  hide a place or rule one out. This sits alongside, not instead of, what
+  Percho has worked out from your swipes: what you said and what we guessed
+  stay separate, so the app can't quietly talk over you.
 - Saved areas now carry their numbers. Instead of just a name, each saved area
   shows its county and what a home there actually costs per month. Save two or
   more and a new **Compare areas** card puts them side by side — monthly cost,
