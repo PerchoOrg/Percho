@@ -21,6 +21,52 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 16:35 UTC — phase219.1: the importer changed shape and the reader did not
+
+**Objective**: verifying phase219 on production, the figures were right —
+Cobb $141, Fulton $150, 29 of 29 sourced — and **the supplier note was gone
+from all 29 counties**.
+
+**Cause**: phase219 changed the electric importer's `detail` from `provider`
+(one name) to `providers` (a list), because the figure is now an average.
+`supplierOf` in `areas.ts` still read `provider`, found nothing, and returned
+no supplier. Every figure still looked fine; only the line explaining where it
+came from disappeared.
+
+The irony is on the record: that function's own comment says *"an importer
+adding a field cannot change what the app receives."* True. An importer
+**removing** one can, and I removed it in the same phase that built the
+producer.
+
+**Resolution**: `supplierOf` reads both shapes. Not a migration — a scraper
+rerun replaces the rows anyway, and a half-migrated table drops the note for
+whatever it missed, silently, which is the failure that just happened.
+
+### The note had to change, not just come back
+
+Restoring the old wording would have printed *"Cobb EMC · 13.1¢ per kWh"*.
+Cobb EMC covers 41% of Cobb and **does not charge 13.1¢** — that is the
+county's mean. The old phrasing was correct only while the figure was one
+company's rate.
+
+`MetricSupplier` gains `count`, and the note now reads:
+
+```
+averaged across 4 utilities · 13.1¢ per kWh · largest is Cobb EMC at 41%
+```
+
+A single-utility county is unchanged: `Georgia Power Co · 15.5¢ per kWh`.
+`count: 1` is deliberately dropped rather than passed through, so a
+one-utility county cannot fall into the "averaged" phrasing.
+
+**Verified**: typecheck clean, lint clean, 649 mobile + **1084 web tests**
+(+6, covering both detail shapes and all three note forms).
+
+**Learnings**: I verified phase219 by checking the numbers, which were right,
+and nearly stopped there. What was broken was the sentence next to them.
+Changing a producer's output shape is a change to every consumer of it, and
+the consumer here was one file away in the same repo.
+
 ## 2026-09-08 16:10 UTC — phase219: the electricity gap was a threshold, not a missing source
 
 **Objective**: two counties still carried an unsourced electricity estimate.

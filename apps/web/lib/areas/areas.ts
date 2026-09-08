@@ -157,12 +157,36 @@ function supplierOf(detail: unknown, estimated: boolean): AreaMetric['supplier']
   if (estimated) return undefined;
   if (!detail || typeof detail !== 'object') return undefined;
   const d = detail as Record<string, unknown>;
-  const name = typeof d.provider === 'string' ? d.provider : undefined;
+
+  // Two shapes. Since phase219 the electric importer writes every provider it
+  // found, because the figure is an average across them; before that it wrote
+  // the single dominant one. Both are read rather than migrating the rows,
+  // since a scraper rerun replaces them anyway and a half-migrated table would
+  // silently drop the note for whatever it missed — which is exactly what
+  // happened when the importer changed shape and this function did not.
+  const list = Array.isArray(d.providers) ? d.providers : undefined;
+  const lead = list?.[0] as Record<string, unknown> | undefined;
+
+  const name =
+    typeof lead?.name === 'string'
+      ? lead.name
+      : typeof d.provider === 'string'
+        ? d.provider
+        : undefined;
   if (!name) return undefined;
-  const share = typeof d.provider_share === 'number' ? d.provider_share : undefined;
+
+  const count = typeof d.provider_count === 'number' ? d.provider_count : list?.length;
+  const share =
+    typeof lead?.share === 'number'
+      ? lead.share
+      : typeof d.provider_share === 'number'
+        ? d.provider_share
+        : undefined;
   const unitPrice = typeof d.rate_usd_per_kwh === 'number' ? d.rate_usd_per_kwh : undefined;
+
   return {
     name,
+    ...(count !== undefined && count > 1 ? { count } : {}),
     ...(share !== undefined ? { share } : {}),
     ...(unitPrice !== undefined ? { unitPrice, unitPriceUnit: 'usd_per_kwh' } : {}),
   };

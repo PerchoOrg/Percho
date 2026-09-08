@@ -144,4 +144,42 @@ describe('supplier projection', () => {
     const m = electric({ provider: 'X', provider_share: '0.5', rate_usd_per_kwh: null });
     expect(m?.supplier).toEqual({ name: 'X' });
   });
+
+  it('reads the multi-provider shape the electric importer writes now', () => {
+    // phase219 changed the importer's detail from one provider to a list, and
+    // this function kept reading `provider` — so the supplier note vanished
+    // from all 29 counties while every figure still looked fine.
+    const m = electric({
+      providers: [
+        { name: 'COBB ELECTRIC MEMBERSHIP CORP', share: 0.41, rate_usd_per_kwh: 0.1188 },
+        { name: 'GEORGIA POWER CO', share: 0.38, rate_usd_per_kwh: 0.1549 },
+      ],
+      provider_count: 4,
+      covered_share: 0.99,
+      rate_usd_per_kwh: 0.13122,
+    });
+    expect(m?.supplier).toEqual({
+      name: 'COBB ELECTRIC MEMBERSHIP CORP',
+      count: 4,
+      share: 0.41,
+      unitPrice: 0.13122,
+      unitPriceUnit: 'usd_per_kwh',
+    });
+  });
+
+  it('still reads a row an older importer run left behind', () => {
+    // Both shapes are read rather than migrating the table: a half-migrated
+    // table drops the note for whatever it missed, silently.
+    expect(electric({ provider: 'Georgia Power Co', provider_share: 0.98 })?.supplier).toEqual({
+      name: 'Georgia Power Co',
+      share: 0.98,
+    });
+  });
+
+  it('does not claim a count of one', () => {
+    // `count: 1` would push the note into its "averaged across" phrasing for a
+    // county with a single utility.
+    const m = electric({ providers: [{ name: 'Solo', share: 1 }], provider_count: 1 });
+    expect(m?.supplier).toEqual({ name: 'Solo', share: 1 });
+  });
 });
