@@ -83,30 +83,45 @@ const KEEP = new Set(['dekalb']);
 /**
  * Counties served by a utility named for a CITY rather than for the county.
  *
- * `namesCounty` rejects city labels on purpose — a city of Forsyth is not
+ * `namesCounty` rejects bare city labels on purpose — a city of Forsyth is not
  * Forsyth County. But a few counties have no county-wide utility and are served
  * by their county seat's system, and refusing those leaves a real published
  * bill on the table in favour of a number I invented.
  *
- * The test is not "the city is in the county", it is **how much of the county
- * that utility actually serves** — the same question electricity answers with
- * territory coverage, answered here with the survey's own service-population
- * column against the county's population from the USGS import.
+ * ── The denominator, corrected ─────────────────────────────────────────────
  *
- * Four candidates were located inside a gap county. Measured, only one is a
- * county-wide utility:
+ * phase233 asked what share of the COUNTY'S POPULATION the utility serves, and
+ * that is the wrong question. A water bill applies to households that have one;
+ * in Lamar County 57% of people are on a private well and will never see this
+ * figure at all — which the well-share note beside it already says. Measuring
+ * against everyone penalises a county for its wells twice.
  *
- *     Hall        Gainesville  140,000 of 193,535  =  72%   ← kept
- *     Morgan      Madison        5,215 of  18,046  =  29%
- *     Meriwether  Manchester     5,343 of  21,190  =  25%
- *     Dawson      Dawsonville    2,424 of  23,312  =  10%
+ * The question is what share of the county's PUBLIC-SUPPLY population the
+ * utility serves. That is the same correction electricity already makes, where
+ * coverage is renormalised over the providers that have a rate rather than
+ * counting unrated ground against them. The public-supply share comes from the
+ * USGS import (phase220).
  *
- * The other three would price a whole county from a utility serving a tenth to
- * a quarter of it. Named individually rather than made general: this is one
- * county, and machinery for one case is machinery to keep working forever.
+ *     county      utility        serves   of county   of billed households
+ *     Hall        Gainesville   140,000        72%          90%   ← kept
+ *     Lamar       Barnesville     6,755        37%          87%   ← added
+ *     Morgan      Madison         5,215        29%          67%   ← added
+ *     Meriwether  Manchester      5,343        25%          49%
+ *     Dawson      Dawsonville     2,424        10%          15%
+ *
+ * Meriwether sits one point under the bar, and it would be dishonest to lean on
+ * that. The reason it is refused is not the threshold: its five surveyed
+ * systems charge between $32.40 and $55.10, a seventy per cent spread, so no
+ * single one of them represents the county whatever the arithmetic says.
+ * Dawson fails on both counts.
+ *
+ * Named individually rather than made general — three counties, and the shares
+ * are recorded above with what they were derived from.
  */
 const CITY_UTILITY: Record<string, { label: string; servesShare: number }> = {
-  Hall: { label: 'Gainesville', servesShare: 0.72 },
+  Hall: { label: 'Gainesville', servesShare: 0.9 },
+  Lamar: { label: 'Barnesville', servesShare: 0.87 },
+  Morgan: { label: 'Madison', servesShare: 0.67 },
 };
 
 /** Column indices on the residential-bills sheet, from its second header row. */
@@ -239,10 +254,10 @@ async function main() {
         sewer_usd: b.sewer ?? null,
         has_county_sewer: b.sewer !== undefined,
         providers: b.providers,
-        ...(b.servesShare === undefined ? {} : { provider_serves_share: b.servesShare }),
+        ...(b.servesShare === undefined ? {} : { provider_share_of_billed_households: b.servesShare }),
         basis:
           b.servesShare !== undefined
-            ? `Water and sewer at 4,000 gallons a month from ${b.providers[0]}, which the survey records as serving about ${Math.round(b.servesShare * 100)}% of this county — there is no county-wide utility here. From the January 2022 GEFA/UNC rate survey, so it is a real published bill but not a current one.`
+            ? `Water and sewer at 4,000 gallons a month from ${b.providers[0]}, which serves about ${Math.round(b.servesShare * 100)}% of the households in this county that have a water bill at all — there is no county-wide utility here. From the January 2022 GEFA/UNC rate survey, so it is a real published bill but not a current one.`
             : b.sewer === undefined
             ? 'Water only, at 4,000 gallons a month. This county has no county sewer utility in the survey, which matches its low share of homes on public supply — households here are largely on septic, so there is no sewer half to add rather than a sewer charge of zero.'
             : 'Water and sewer at 4,000 gallons a month, the volume the survey and DeKalb’s own published example both price. From the January 2022 GEFA/UNC rate survey, so it is a real published bill but not a current one — bills rise roughly 6% a year, which is why it stays flagged.',

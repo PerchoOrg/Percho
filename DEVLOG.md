@@ -21,6 +21,57 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 03:10 UTC — phase235: measuring the wells against the county twice
+
+**Objective**: four counties still carried an invented water figure. phase234's
+lesson — *a gap in a join is a claim about the join before it is a claim about
+the data* — says to check the join once more before accepting them.
+
+Checked every county seat and town in the four. None reaches the 50% bar
+phase233 set: the best is Barnesville at **37% of Lamar County**.
+
+### The bar was measuring the wrong thing
+
+Those four are exactly the counties phase220 found to be least on public
+supply — Lamar 43%, Morgan 43%, Meriwether 51%, Dawson 71%. And phase233 asked
+what share of the **county's population** a utility serves.
+
+A water bill applies to households that have one. In Lamar, 57% of people are
+on a private well and will never see this figure — which the well-share note
+beside it already says. **Measuring against everyone charges a county for its
+wells twice**: once by making the figure irrelevant to most residents, and again
+by disqualifying the utility that serves nearly all the rest.
+
+The right denominator is the county's public-supply population. That is the
+same correction electricity already makes, where coverage is renormalised over
+the providers that have a rate rather than counting unrated ground against them.
+
+```
+county      utility        serves   of county   of billed households
+Hall        Gainesville   140,000        72%          90%   ← kept
+Lamar       Barnesville     6,755        37%          87%   ← added
+Morgan      Madison         5,215        29%          67%   ← added
+Meriwether  Manchester      5,343        25%          49%
+Dawson      Dawsonville     2,424        10%          15%
+```
+
+### Meriwether, and not leaning on a threshold
+
+Meriwether lands one point under the bar, and after a session spent objecting
+to knife-edge thresholds it would be poor form to hide behind this one. It is
+refused for a reason that does not depend on the arithmetic: **its five surveyed
+systems charge between $32.40 and $55.10**, a seventy per cent spread, so no
+single one of them represents the county at any threshold. Dawson fails on both
+counts.
+
+**Result**: **26 of 29** counties carry a real published water bill. Two remain
+— Dawson and Meriwether — and their absence is now measured rather than assumed.
+
+**Verified**: typecheck clean, lint clean, 663 mobile + 1130 web tests.
+
+**Learnings**: the threshold was fine; what it was applied to was not. A ratio
+is two decisions, and I had checked only the numerator.
+
 ## 2026-09-09 02:40 UTC — phase234: a county of 141,000 was excluded by its own utility's name
 
 **Objective**: five counties still carried an invented water figure. Douglas is
