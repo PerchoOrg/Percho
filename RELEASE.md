@@ -34,98 +34,63 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
-- The area list on the map now shows which of your saved places sit in each
-  county — "Woodstock, saved" under Cherokee — so you can see where you already
-  stand instead of reading 29 identical rows.
-- The map now opens on whatever you said matters most in the You tab. Say
-  schools matter and the map opens coloured by school results instead of cost.
-  If what you picked is something the map cannot show yet — getting around, or
-  the community itself — it opens on the usual view rather than guessing.
-- The note under the true-cost map said the part of the figure we had not
-  flagged came from public records. About a fifth of it is the insurance
-  assumption, which is not a record and does not vary by county — it is now
-  named alongside water and trash instead of quietly counted as sourced.
-- The water line now tells you when a county is largely on private wells — in
-  Pike County about 80% of homes have no water bill at all, and in Cobb about
-  1 in 8. Whether the bill applies to you is part of what living there costs.
-- The line under a county's electricity cost explains itself again, and now
-  says the price is an average across the utilities serving that county rather
-  than naming one company that does not charge it.
-- Every county on the map now has a real electricity figure. Cobb and Henry
-  were previously showing an estimate because no single utility serves half of
-  either one.
-- Electricity costs are now averaged across every utility that serves a county
-  rather than taken from the largest one. Counties served mostly by a single
-  utility are unchanged; where a county is genuinely split, the figure was
-  overstating the bill — Fulton drops from $166 to $150 a month.
-- The comparison table was showing the monthly insurance figure as though we
-  had looked it up per county. It is one flat assumption that does not vary by
-  area, and it is now marked as such — matching what the cost sheet has always
-  said about the same number.
-- Both review demos now list where each row's figures come from by reading the
-  live data, instead of a description that had gone out of date. They also now
-  show that electricity is sourced in most counties but still an estimate in
-  two, which the old wording hid.
-- The side-by-side comparison and the saved list now describe their estimates
-  the same way the map does. The comparison used to say we hadn't sourced a
-  county's figures at all, over a table whose tax and school rows come from
-  state records; and a saved area showed its monthly cost with no indication
-  that part of it is still an estimate.
-- The footnote under each ranked list now says which part of a figure is still
-  an estimate, instead of implying the whole thing is. Under "true cost" it now
-  reads that water and rubbish are our estimate and the rest comes from public
-  records — which is what was always true, but the old note said we hadn't
-  sourced any of it.
-- Electricity figures now come from the federal energy statistics themselves
-  rather than a third-party copy of them, and are a year more current. Most
-  counties moved by a few dollars; the counties on Georgia Power went from
-  $157 to $166 a month, because that company's rates rose about 6% over the
-  year. We check the new figures against the old source on every update and
-  flag anything that disagrees.
-- **Electricity is now its own lens on the map.** It was buried inside
-  "Utilities & trash", where the water and rubbish estimates dragged it down —
-  so the one utility figure we actually know was being presented as a guess.
-  Power costs range from $125 a month in Coweta and Fayette to $189 in
-  Meriwether, and you can now see that spread on its own.
-- The cost breakdown now shows its working. Tap a county and the electricity
-  line names the power company and its rate — "Georgia Power Co · 14.6¢ per
-  kWh" — and says what share of the county that company serves when it isn't
-  all of it.
-- We're clearer about which figures are still estimates. Before, every county
-  carried a blanket "we haven't sourced this yet" note, which was unfair to
-  the property tax and school numbers that come straight from state records.
-  Now only the lines that really are estimates are marked, and the footnote
-  names them.
-- Electricity costs are now real numbers, not estimates. We worked out which
-  power company actually serves each county — by mapping their service areas,
-  not by assuming the one with the matching name — and used that company's
-  published residential rate. Several of our earlier assumptions were wrong:
-  Gwinnett, Hall, Barrow and Jackson counties are mostly Georgia Power, not
-  Jackson EMC, and Cherokee is mostly Amicalola. The real spread between
-  counties is about $64 a month, which the old flat estimates had hidden
-  completely. Two counties — Cobb and Henry — are genuinely split between two
-  companies, so we still show an estimate there and say so.
-- You can now just **tell** Percho what matters. A new section on the You tab
-  lets you set how much you care about schools, what a place really costs,
-  getting around, and the community itself. Set them and the compare table
-  leads with what you picked. They only change what you see first — they never
-  hide a place or rule one out. This sits alongside, not instead of, what
-  Percho has worked out from your swipes: what you said and what we guessed
-  stay separate, so the app can't quietly talk over you.
-- Saved areas now carry their numbers. Instead of just a name, each saved area
-  shows its county and what a home there actually costs per month. Save two or
-  more and a new **Compare areas** card puts them side by side — monthly cost,
-  schools, tax, utilities — with the better figure in each row marked. There's
-  no overall winner, on purpose: how much schools matter against cost is your
-  call.
-- You can sign in with your email and password again. If you already have a
-  Percho account from the website, that password now works in the app — no
-  waiting for a code. The emailed code is still there for new accounts and for
-  when you've forgotten your password, and once you're in you can set a
-  password from the You tab so next time is one step.
-- Figures start as clearly-marked estimates and are labelled as such wherever
-  they appear; each is being replaced with a sourced number that shows where it
-  came from and how current it is.
+
+**Electricity is now its own lens, and every county's figure is real.** It used
+to be buried inside "Utilities & trash", where the water and rubbish estimates
+dragged down the one utility number we actually know. We worked out which power
+company serves each county by mapping their service areas — not by assuming the
+one with the matching name — and used published federal rate data. Several of
+our earlier assumptions were wrong: Gwinnett, Hall, Barrow and Jackson are
+mostly Georgia Power rather than Jackson EMC, and Cherokee is mostly Amicalola.
+Where a county is served by more than one company the figure is the average
+across all of them, weighted by how much of the county each covers, so a county
+split between two companies is no longer either guessed at or credited to
+whichever one is slightly larger. All 29 counties now have a sourced number,
+and the real spread between them is about $50 a month — which the old flat
+estimates hid completely.
+
+**We say exactly which part of a figure is an estimate, everywhere.** Every
+screen used to carry a blanket "we haven't sourced this yet", which was unfair
+to the property tax and school numbers that come straight from state records.
+Now the note names the parts that are guesses and says the rest comes from
+public records — and it says the same thing on the map, in the cost breakdown,
+in the side-by-side comparison, on the saved list and in the review demos,
+instead of each screen wording it differently. Insurance is included in that
+naming: it is one flat assumption that does not vary by county, and it is no
+longer quietly counted as sourced.
+
+**The cost breakdown shows its working.** Tap a county and the electricity line
+names the company and the rate behind the number — and where several companies
+serve the county, it says so and names the largest rather than crediting one
+company with a price it does not charge.
+
+**The water line tells you when a county is largely on private wells.** In Pike
+County about 80% of homes have no water bill at all, and in Cobb about 1 in 8.
+Whether the bill applies to you is part of what living there costs.
+
+**You can just tell Percho what matters.** A section on the You tab lets you set
+how much you care about schools, what a place really costs, getting around and
+the community itself. The map now opens coloured by whatever you picked, and the
+compare table leads with it. If what you picked is something the map cannot show
+yet — getting around, or the community itself — it opens on the usual view
+rather than guessing. These only change what you see first; they never hide a
+place or rule one out. This sits alongside what Percho has worked out from your
+swipes: what you said and what we guessed stay separate, so the app can't
+quietly talk over you.
+
+**Saved areas carry their numbers, and show up on the map.** Each saved area
+shows its county and what a home there actually costs per month. Save two or
+more and a **Compare areas** card puts them side by side — monthly cost,
+schools, tax, utilities — with the better figure in each row marked, and no
+overall winner, on purpose: how much schools matter against cost is your call.
+The ranked list on the map now also shows which of your saved places sit in
+each county, so you can see where you already stand.
+
+**You can sign in with your email and password again.** If you already have a
+Percho account from the website, that password now works in the app — no
+waiting for a code. The emailed code is still there for new accounts and for
+when you've forgotten your password, and once you're in you can set a password
+from the You tab so next time is one step.
 
 ---
 
