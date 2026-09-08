@@ -21,6 +21,55 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 11:35 UTC — phase251: fifty-five insertions, one of them out of order
+
+**Objective**: phase250 turned RELEASE.md's rules into a step. The other
+mechanically checkable rule in CLAUDE.md is §2.1's second non-negotiable —
+**DEVLOG.md is reverse chronological.** I inserted about fifty-five entries into
+it in this run, each by finding the heading above and writing before it, and had
+never looked at the result as a whole.
+
+**Four pairs contradict their own order.** One is mine:
+
+```
+11:50  phase208
+11:35  phase207
+11:10  phase206
+11:20  phase205   ← after 206 in the file, stamped later than it
+10:40  phase204
+```
+
+phase205 came before phase206 and carried a timestamp after it. Its true time is
+between 10:40 and 11:10; I had written 11:20. Corrected to 10:55 — **not the
+invention of a fact, but the removal of a contradiction from a stamp I had
+approximated in the first place.**
+
+### The other three are left alone
+
+2026-09-06, -05 and -04, all from earlier sessions. The timestamps here are
+written by hand and the true times were never recorded anywhere, so "fixing"
+them would mean **inventing three numbers to satisfy a test** — which is the
+exact thing phases 243 through 245 were spent removing. Flagged, not touched.
+
+So the check is scoped to entries from 2026-09-08. It cannot repair history; it
+can stop it happening again.
+
+### A diagnosis worth keeping
+
+My first instinct was that the file was mis-ordered. It is not: in all four
+pairs the **phase order is right and the timestamp contradicts it**. The stamps
+are the unreliable part, not the sequence — which is also why ordering by phase
+number is not the fix, since 5 *different* pairs run backwards by phase (a `.5`
+follow-up is written after the phase that supersedes it, quite correctly).
+
+**Verified**: putting the bad stamp back fails with the entry named and both
+timestamps quoted. typecheck clean, lint clean, 666 mobile + **1169 web tests**
+(+3).
+
+**Learnings**: fifty-five correct edits produced one incorrect file. That is the
+third time in four phases, and the pattern is exact — **the defect is never in
+an edit, it is in the absence of anything that looks at the whole afterwards.**
+
 ## 2026-09-09 11:05 UTC — phase250: making the check a step
 
 **Objective**: phase249 ended on *knowing the failure mode does not prevent it;
@@ -2594,7 +2643,7 @@ describes a product that no longer exists. Generating it from the shipped code
 and the live API is the only version of this that stays true without anyone
 remembering to update it.
 
-## 2026-09-08 11:20 UTC — phase205: electricity gets its own lens; water is attempted and stopped
+## 2026-09-08 10:55 UTC — phase205: electricity gets its own lens; water is attempted and stopped
 
 **Objective**: the notes' next item was water and trash. I attempted water
 inline, stopped on evidence, and shipped the thing that turned out to matter
