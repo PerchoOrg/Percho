@@ -22,7 +22,7 @@
 
 import shapeFile from '@/data/metro-county-shapes.json';
 import type { Database } from '@/lib/supabase/database.types';
-import type { Area, AreaMetric, MetricKey } from '@percho/shared/lenses';
+import { type Area, type AreaMetric, METRIC_KEYS, type MetricKey } from '@percho/shared/lenses';
 import { createClient as createPlainClient } from '@supabase/supabase-js';
 
 /** A county outline, ready for react-native-maps / MapLibre. */
@@ -50,20 +50,11 @@ const shapes = shapeFile as unknown as {
 };
 
 /** The metrics any lens can ask for. A row with a metric outside this list is
- *  something a newer client writes and this one does not understand — skip it
- *  rather than widen `MetricKey` at runtime. */
-const KNOWN_METRICS = new Set<string>([
-  'property_tax_rate_pct',
-  'property_tax_millage_statutory_pct',
-  'county_mo_mills',
-  'county_bond_mills',
-  'school_mo_mills',
-  'school_bond_mills',
-  'school_proficiency_pct',
-  'electric_monthly_usd',
-  'water_monthly_usd',
-  'trash_monthly_usd',
-]);
+ *  something a newer writer produced and this build does not understand — skip
+ *  it rather than widen `MetricKey` at runtime. Derived from the shared list so
+ *  a new key cannot be added to the type and silently dropped here, which is
+ *  exactly what happened to `public_water_pct` in phase220. */
+const KNOWN_METRICS = new Set<string>(METRIC_KEYS);
 
 /**
  * The anon client, typed against the generated schema.

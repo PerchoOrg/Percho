@@ -41,33 +41,49 @@
  * a worse version of the same problem.
  */
 
-/** A metric key as stored in `area_metrics.metric`. */
 import { estimatePropertyTax } from './property-tax';
 
-export type MetricKey =
-  | 'property_tax_rate_pct'
+/**
+ * Every metric key, as stored in `area_metrics.metric`.
+ *
+ * ONE list, because there were three: this union plus a hand-copied
+ * `KNOWN_METRICS` allowlist on the server and another in the mobile DTO.
+ * Adding `public_water_pct` to the union and not to the two copies wrote 29
+ * correct rows that the API then silently dropped — the type said the key
+ * existed and both runtime guards disagreed.
+ *
+ * The allowlists themselves are right and stay: an unknown key is a row a
+ * newer writer produced, and skipping it is better than trusting it. They just
+ * derive from here now, so a shipped binary keeps the older list it was built
+ * with (which is the version skew they exist for) while nobody maintains a
+ * copy by hand.
+ */
+export const METRIC_KEYS = [
+  'property_tax_rate_pct',
   /** The adopted millage rate on market value, before homestead exemptions
    *  and credits. Sourced from the state, and NOT what the true-cost lens
    *  prices with — see `scripts/admin/import-ga-millage.ts` for why the two
    *  are different numbers. Shown as provenance, never summed into a cost. */
-  | 'property_tax_millage_statutory_pct'
+  'property_tax_millage_statutory_pct',
   /** The four levies, in mills, kept apart because a homestead exemption
    *  reduces an M&O base and by law never touches bond millage. These are
    *  what `@percho/shared/property-tax` needs to price a real bill. */
-  | 'county_mo_mills'
-  | 'county_bond_mills'
-  | 'school_mo_mills'
-  | 'school_bond_mills'
-  | 'school_proficiency_pct'
-  | 'electric_monthly_usd'
-  | 'water_monthly_usd'
-  | 'trash_monthly_usd'
+  'county_mo_mills',
+  'county_bond_mills',
+  'school_mo_mills',
+  'school_bond_mills',
+  'school_proficiency_pct',
+  'electric_monthly_usd',
+  'water_monthly_usd',
+  'trash_monthly_usd',
   /** Share of the county's people on a public water system rather than a
    *  private well, 0–100. Not a cost: it says whether a county-level water
    *  bill is the right SHAPE for the place. In Pike County four households in
-   *  five have a well and no water bill at all, and a flat monthly figure
-   *  there describes almost nobody. */
-  | 'public_water_pct';
+   *  five have a well and no water bill at all. */
+  'public_water_pct',
+] as const;
+
+export type MetricKey = (typeof METRIC_KEYS)[number];
 
 /** Anything the lens map can be drawn on. Mirrors the `area_kind` enum. */
 export type AreaKind = 'county' | 'city' | 'school_district' | 'utility_territory';

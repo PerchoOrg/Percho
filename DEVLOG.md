@@ -21,6 +21,45 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 18:15 UTC — phase220.1: the type said the key existed and both runtime guards disagreed
+
+**Objective**: phase220 wrote 29 correct `public_water_pct` rows and the API
+never returned one. Caught by polling production rather than assuming the
+write was the end of the job.
+
+**Cause**: `MetricKey` was one of **three** hand-maintained lists of the same
+thing — the union in shared, `KNOWN_METRICS` in `apps/web/lib/areas/areas.ts`,
+and another `KNOWN_METRICS` in `apps/mobile/lib/areas/areas-dto.ts`. I added
+the key to the union. Both allowlists dropped every row, silently, and
+`pnpm typecheck` was perfectly happy because the type was right.
+
+**The allowlists are not the bug and they stay.** An unknown key is a row some
+newer writer produced, and skipping it beats trusting it. What was wrong is
+that they were *copies*. They now derive from `METRIC_KEYS` in shared, with
+`MetricKey` derived from the same array — so the type and the guard cannot
+disagree. A shipped mobile binary still carries the list it was BUILT with,
+which is the version skew the guard exists for; only the hand-copy is gone.
+
+**Test**: iterating `METRIC_KEYS` and asserting each survives `groupMetrics`.
+Verified by pasting the old literal allowlist back — it fails with
+`public_water_pct is dropped by KNOWN_METRICS`, the exact bug, then passes
+when restored.
+
+I also mis-verified this once before getting it right: my first check deleted
+a key from `METRIC_KEYS`, which the test iterates, so removing it just meant
+it stopped being tested. **A test that walks the list cannot detect the list
+shrinking** — the mutation that proves it is reintroducing the copy, not
+shortening the source.
+
+**Verified**: typecheck clean, lint clean, 649 mobile + **1093 web tests**
+(+2). Production re-checked after the fix ships.
+
+**Learnings**: phase219.1 was the same shape one layer down — a producer
+changed and its consumer did not. Here a type changed and two runtime guards
+did not. Both were caught by looking at the live API rather than at the write
+succeeding, which is now twice in one session that "the script said it wrote
+29 rows" was not evidence of anything a user would see.
+
 ## 2026-09-08 17:45 UTC — phase220: the well/septic objection was right, and every example was wrong
 
 **Objective**: one of the three items flagged as needing the owner's decision
