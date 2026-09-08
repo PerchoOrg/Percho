@@ -112,6 +112,30 @@ function anyItem<T>(items: readonly T[], rotate: number): T | null {
 }
 
 /**
+ * How many slots of `fill` the mix schedules before `rotate` — the per-kind
+ * ordinal of a slot position. `loopedFallback` indexes each kind's list by
+ * this rather than by the shared `rotate`: the community slots sit 5 apart in
+ * the 9-slot table, so with 5 communities in the pool `rotate % 5` handed both
+ * slots of a cycle the SAME row (owner 2026-09-08: the deck repeated one
+ * community back-to-back and Windward surfaced ~37 cards deep). The ordinal
+ * advances by exactly one per slot of the kind, so each list is a strict
+ * round-robin whatever its length — no coprimality condition on the table.
+ */
+function slotOrdinal(
+	mix: readonly Slot[],
+	rotate: number,
+	fill: Slot["fill"],
+): number {
+	if (mix.length === 0) return 0;
+	const perCycle = mix.filter((s) => s.fill === fill).length;
+	let partial = 0;
+	for (let i = 0; i < rotate % mix.length; i++) {
+		if (mix[i]?.fill === fill) partial += 1;
+	}
+	return Math.floor(rotate / mix.length) * perCycle + partial;
+}
+
+/**
  * Soft geo ordering: a left-swiped unit sinks but is never removed, and dim
  * affinity lifts units whose sample communities match. Stable sort on id keeps
  * it deterministic.
@@ -260,6 +284,8 @@ interface FillContext {
 	communityRanked: readonly CommunityCardV3[];
 	listingRanked: readonly ListingCardV3[];
 	loopedIds: string[];
+	/** The rotation this call STARTED at — the looped cursors' cross-page base. */
+	rotate0: number;
 }
 
 /**
@@ -642,16 +668,21 @@ function fillSlot(
  *
  *   · `listing` joins the candidates, which is the parity the owner asked for.
  *   · the looped card now comes from the slot the MIX wanted at this rotation,
- *     not from the stalest kind. Staleness alternates the kinds 1:1, and
- *     `anyItem` indexes each kind's list by the same `rotate` — so a kind
- *     picked on every other card steps through its list two at a time and
- *     reaches only half of it. Following the table instead keeps the 5:2 ratio
- *     AND makes `rotate` advance by one within each kind often enough to reach
- *     every row: the mix is 7 long, gcd(7, 16) = gcd(7, 4) = 1, so the cycle
- *     visits all 16 listings and all 4 communities before repeating.
+ *     not from the stalest kind, so the tail keeps the table's 5:2 ratio.
  *
  * Staleness still orders whatever the intended slot could not supply, which is
  * the case its own note was written for.
+ *
+ * ── 2026-09-08: each kind walks its own list, not the shared rotate ──────────
+ *
+ * Indexing every kind's list by the same `rotate` aliased when the pool grew to
+ * 5 communities: the table's community slots are 5 apart, so `rotate % 5` gave
+ * both slots of a cycle the same row — the owner saw one community twice in a
+ * row and Windward not at all until ~card 37. Each kind's cursor is now the
+ * slot ORDINAL (how many slots of that kind the table scheduled before this
+ * rotation, based at the call's `rotate0`) plus how many cards of that kind
+ * this composition has already emitted — a strict round-robin over each list,
+ * whatever its length, that still threads across pages via `rotate0`.
  */
 function loopedFallback(
 	ctx: FillContext,
@@ -662,14 +693,40 @@ function loopedFallback(
 ): FeedCardV3 | null {
 	const permitted = new Set(mix.map((s) => s.fill));
 
+	// See the 2026-09-08 header note: the cursor is per KIND, not the shared
+	// rotate, so each list is walked one row per emission of that kind.
+	const cursor = (fill: Slot["fill"], kind: FeedCardV3["kind"]): number =>
+		slotOrdinal(mix, ctx.rotate0, fill) +
+		emitted.filter((c) => c.kind === kind).length;
+
+	// The fresh phase entered each list at `firstUnseen`'s rotation, not at the
+	// cursor, so the loop's first pick can land on the very card just shown —
+	// step one past it. With a single-row list the repeat stands: a repeat is
+	// bad, a blank is worse.
+	const nextLooped = <T extends { id: string }>(
+		items: readonly T[],
+		fill: Slot["fill"],
+		kind: FeedCardV3["kind"],
+	): T | null => {
+		const at = cursor(fill, kind);
+		const pick = anyItem(items, at);
+		if (pick === null) return null;
+		for (let i = emitted.length - 1; i >= 0; i--) {
+			const prev = emitted[i];
+			if (prev === undefined || prev.kind !== kind) continue;
+			return prev.id === pick.id ? anyItem(items, at + 1) : pick;
+		}
+		return pick;
+	};
+
 	/** Candidates in stage-preference order, each already stage-legal. */
 	const candidates: (FeedCardV3 | null)[] = [];
 
 	if (permitted.has("listing")) {
-		candidates.push(anyItem(ctx.listingRanked, rotate));
+		candidates.push(nextLooped(ctx.listingRanked, "listing", "listing"));
 	}
 	if (permitted.has("community")) {
-		const c = anyItem(ctx.communityRanked, rotate);
+		const c = nextLooped(ctx.communityRanked, "community", "community");
 		if (c !== null && !isLayerSuppressed(ctx.signals, "community")) {
 			candidates.push(c);
 		}
@@ -679,7 +736,10 @@ function loopedFallback(
 		ctx.level !== null &&
 		!isLayerSuppressed(ctx.signals, ctx.level)
 	) {
-		const u = anyItem(unitsAtLevel(ctx.geoRanked, ctx.level), rotate);
+		const u = anyItem(
+			unitsAtLevel(ctx.geoRanked, ctx.level),
+			cursor("geo", "area"),
+		);
 		if (u !== null) {
 			candidates.push({ kind: "area", id: `area-${u.id}`, unit: u });
 		}
@@ -816,6 +876,7 @@ export function generateFeed(input: GenerateFeedInput): GenerateFeedResult {
 		communityRanked: rankCommunities(pool.communities, signals),
 		listingRanked: rankListings(pool.listings, signals),
 		loopedIds: [],
+		rotate0,
 	};
 
 	const cards: FeedCardV3[] = [];

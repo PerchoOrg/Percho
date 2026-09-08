@@ -17,15 +17,13 @@
  * trade-off in nine cards — the pre-cull table ran one in ten, and the two geo
  * slots that made up the difference are gone. That rate is one line to tune.
  *
- * The table LENGTH is not a free choice, and this is why it is nine rather
- * than the eight that inserting one slot would give. `loopedFallback` walks the
- * whole pool by stepping each kind's list once per table cycle, which only
- * reaches every row when the table length and the pool size are coprime (see
- * its header, and the owner's 2026-08-23 "we should see all ready ones in a
- * loop"). Today's video-only inventory is 16 listings and 4 communities, both
- * powers of two — so an EVEN table silently loops a subset forever, and
- * `generate-feed.test.ts` catches exactly that. Any odd length is coprime with
- * both; nine is the shortest that also keeps the deck listing-dominant.
+ * The table LENGTH used to be constrained: `loopedFallback` once indexed each
+ * kind's list by the shared rotation, which reached every pool row only when
+ * the table length and the pool size were coprime — hence nine rather than the
+ * eight that inserting one slot would give. Since 2026-09-08 the loop walks
+ * each kind's list with its own per-kind cursor (see `slotOrdinal` in
+ * `generate-feed.ts`), so coverage no longer depends on the length; nine is
+ * kept because it is the shipped rhythm and keeps the deck listing-dominant.
  *
  * The ninth slot is a listing, so the mix goes 5:2 → 6:2 rather than dropping a
  * community. Runs are checked across the WRAP too: this table ends on a listing

@@ -64,6 +64,48 @@ kind the cast made invisible — a field the compiler could not see, so nobody
 compared it to the table. **The count was the least interesting thing about
 them.**
 
+## 2026-09-08 23:45 UTC — phase255: the looped deck dealt one community twice and hid Windward
+
+**Objective**: owner reports the iOS feed shows the same community card twice in
+a row and never shows Windward, whose tour has been ready since 2026-09-05.
+
+**Diagnosis**: the data was innocent — `/api/mobile/feed?videosOnly=1` returns
+all 5 filmed communities, Windward included, with a ready `tour_assemblies` row.
+The bug was `loopedFallback` in `apps/mobile/lib/feed/generate-feed.ts`: it
+indexed every kind's ranked list by the SHARED `rotate`. The stage-4 mix seats
+its two community slots 5 apart (indices 2 and 7 of 9), so the moment the
+filmed pool grew from 4 to 5 communities — Windward's own tour landing is what
+grew it — both slots of a cycle computed the same `rotate % 5` and dealt the
+same row. Verified by running the real engine against the production pool: a
+returning user (whose persisted `seenIds` make the whole deck looped) got
+back-to-back identical community cards and met Windward first at card #37. The
+coprimality note in `ratios.ts` guaranteed coverage, not spacing, and was
+written when the pool was 4 communities / 16 listings.
+
+**Actions**: each kind now walks its OWN list — cursor =
+`slotOrdinal(mix, rotate0, fill)` (how many slots of the kind the table
+schedules before this call's starting rotation; the cross-page base) plus the
+count of that kind already emitted this composition. Plus a seam guard
+(`nextLooped`): the fresh phase enters lists at `firstUnseen`'s rotation, so
+the loop's first pick could repeat the card just shown — it steps one past.
+Files: `generate-feed.ts` (`slotOrdinal`, `nextLooped`, `FillContext.rotate0`),
+`ratios.ts` (table length no longer constrained by coprimality — comment),
+`generate-feed.test.ts` (regression: 5-community pool, strict first lap, never
+the same community twice running, fresh→loop seam covered; the "cycle is odd"
+assertion dropped with its reason).
+
+**Verified**: mobile typecheck clean, lint 0 errors / 8 pre-existing warnings,
+667 mobile tests pass. Production-pool simulation (real `parsePoolResponse` →
+`generateFeed`): both fresh and returning sequences now cycle
+apremont → aberdeen → ashley → windward → bellmoore with no adjacent repeats;
+Windward arrives at card #7 (fresh) / #11 (returning).
+
+**Learnings**: `anyItem(list, rotate)` was a shared-clock design — every kind
+read the same clock, and the safety argument ("odd table length is coprime with
+everything") lived in a comment two files away and silently expired the day the
+pool hit a size that divided the slot gap. The per-kind ordinal makes the
+invariant local: one emission, one step, whatever the table looks like.
+
 ## 2026-09-09 12:45 UTC — phase253: nineteen casts gone, and one of them was load-bearing
 
 **Objective**: phase252 measured that some of the 199 `supabase as any` casts sit
