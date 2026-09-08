@@ -21,6 +21,72 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 19:00 UTC — phase221: "no source exists" was wrong; the source exists and still cannot answer
+
+**Objective**: the last data item that was not the owner's to decide was
+trash, blocked by a claim of mine: *"Trash: no source exists. 159 separate
+county/city arrangements; GA EPD regulates disposal facilities only."*
+Asserted in phase200, never tested. Same treatment as phase219 and phase220.
+
+**It is wrong in its first three words.** The Census Bureau's Annual Survey of
+State and Local Government Finances publishes an Individual Unit File — one
+row per government per item code — and **A81 is "Charges — Solid Waste
+Management"**. 125 Georgia governments report it for 2024, most metro counties
+among them. Real, current, machine-readable.
+
+### Why it still cannot answer
+
+A81 is total charge revenue and is **not decomposed by customer class**, so
+landfill tipping fees from commercial haulers sit in the same number as
+household billing. Per resident:
+
+```
+Jackson  $135.95   Newton $124.22   DeKalb $120.29
+Bartow    $75.23   Hall    $56.30   Gwinnett $53.17
+  ...
+Cobb       $1.30   Henry    $0.53
+Fulton, Spalding, Barrow, Dawson, Pickens, Pike + 5 more: nothing
+```
+
+**The distribution is continuous, not bimodal** — $136 down to $0.53 with no
+gap. Forsyth ($14.28), Paulding ($13.84) and Clayton ($9.98) sit in the middle
+with no principled place for a knife. Manufacturing a binary out of a
+continuum is the exact bug phase218 and phase219 were each spent removing, and
+I nearly shipped a third one.
+
+**The top of the range is not a household bill either.** DeKalb's $120/resident
+is ≈$26/month per household, matching its published sanitation fee. Jackson's
+$136 is HIGHER and Jackson is rural — commercial tipping, not collection.
+
+**And the tempting inference is false.** "County reports no A81, so residents
+arrange collection privately" breaks on Fulton, whose county government charges
+nothing while **nine city governments inside it do**. The county reporting
+nothing says nothing about the household.
+
+**Actions**: `scripts/admin/audit-trash-sources.ts` — read-only, writes
+nothing, reproduces all of the above from the live Census file so the negative
+is checkable rather than a claim in a log. It reuses the dependency-free
+`readZip` from phase213.
+
+**Verified**: typecheck clean, lint clean, 649 mobile + 1093 web tests. No
+user-visible change, so no RELEASE entry.
+
+**Learnings**: three ticks in a row I have checked my own recorded claim
+instead of accepting it, and all three were wrong — "optional, lower value"
+(phase219), "wrong shape, e.g. Pickens" (phase220), and now "no source
+exists". This one still ends in not shipping a number, which is the right
+outcome: the difference is that trash is now an estimate **for a stated and
+reproducible reason** rather than because I once said so.
+
+**Noted, not changed**: `seed-area-metrics.ts` hand-writes
+`trashArrangement: 'private hauler'` for every county including DeKalb, which
+bills $88.4M of sanitation charges. Inert today — `supplierOf` projects nothing
+from an estimated row — but it is a wrong guess sitting in the data.
+
+**Next steps**: the next thing worth trying for trash is per-city rate
+schedules, which is the same shape of problem as the water rate sheets and
+carries the same cost. Not started.
+
 ## 2026-09-08 18:15 UTC — phase220.1: the type said the key existed and both runtime guards disagreed
 
 **Objective**: phase220 wrote 29 correct `public_water_pct` rows and the API
