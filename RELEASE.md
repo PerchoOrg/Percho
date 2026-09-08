@@ -34,6 +34,14 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- The comparison table was showing the monthly insurance figure as though we
+  had looked it up per county. It is one flat assumption that does not vary by
+  area, and it is now marked as such — matching what the cost sheet has always
+  said about the same number.
+- Both review demos now list where each row's figures come from by reading the
+  live data, instead of a description that had gone out of date. They also now
+  show that electricity is sourced in most counties but still an estimate in
+  two, which the old wording hid.
 - The side-by-side comparison and the saved list now describe their estimates
   the same way the map does. The comparison used to say we hadn't sourced a
   county's figures at all, over a table whose tax and school rows come from

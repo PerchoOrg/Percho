@@ -21,6 +21,75 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 15:35 UTC — phase218: a figure that consulted nothing was marked sourced
+
+**Objective**: phase217 ended claiming "no screen writes this copy itself any
+more." That was wrong within one file of where I stopped looking, and chasing
+it found a real bug underneath.
+
+### The vacuous truth
+
+`estimatedFromReads` — the shared helper phases 201/203/207 converged on, whose
+whole point is that provenance should follow **what a computation READ** — was:
+
+```ts
+return area.metrics.some((m) => m.estimated && read.has(m.metric));
+```
+
+"No metric it read was an estimate" is **vacuously true of a computation that
+read no metrics at all.** A hard-coded constant therefore came out the far side
+marked *sourced* — the strongest provenance claim the app can make, earned by
+consulting nothing.
+
+The figure this hit is **insurance**: a flat 0.35% of price, identical in every
+county. The compare table printed it unmarked while `costBreakdown` two taps
+away marked the identical number as an assumption. Same constant, two screens,
+opposite provenance.
+
+### The test that locked the bug in
+
+`compare-areas.test.ts` **asserted the wrong behaviour**, and its comment was
+the bug's own reasoning:
+
+> "Insurance is one flat assumption; it reads nothing, so nothing it read can
+> be an estimate. **The demo labels it separately.**"
+
+That last sentence is the tell. The compensating control was a sentence
+hand-written on a different surface — which is exactly what let the two
+disagree. Flipped, with the history kept in the comment.
+
+**Actions**: `read.size === 0` → estimated, with the reasoning written down.
+Both the flipped mobile test and a new shared-level pair were **verified to
+fail with the guard reverted and pass with it restored**.
+
+### The fourth and fifth surfaces
+
+Both demo pages hand-wrote a "where the numbers come from" table, and both had
+drifted **the same way at the same time**: each credited electricity to
+NREL/OpenEI for several phases after it moved to EIA-861. The compare page also
+hand-wrote `* still our estimate` — a footnote naming nothing, which is why it
+survived three rewordings of the app's sentence without ever looking wrong.
+
+`sourceSummary` + `PROVENANCE_ROWS` now live in `@percho/shared` and both pages
+render from the live payload. One entry per (row, distinct source), **not** per
+row: electricity is EIA-861 in 27 counties and a Percho estimate in 2, and a
+majority-source summary would hide exactly the counties a reader should be
+careful about. The hand-written prose had flattened that to "sourced".
+
+**Verified**: typecheck clean, lint clean, **649 mobile + 1071 web tests**
+(+5). Both demos regenerated; production endpoints all 200.
+
+**Learnings**: the centralised helper from three earlier phases had a hole
+exactly where a constant sits, because "ask what it read" was never asked of
+something that reads nothing. And the insight already EXISTED in the codebase —
+`costBreakdown` has carried the comment *"a flat share of price, identical in
+every county — an assumption by construction, never a measurement"* the whole
+time. It was written as a local comment on one line instead of as a property of
+the helper, so it protected one screen and no others.
+
+**Next steps**: unchanged and still the owner's — the tax-district bucket
+ruling and the water decision.
+
 ## 2026-09-08 15:05 UTC — phase217: the third and fourth surfaces carrying the same sentence
 
 **Objective**: phase216 closed with "fixing an honesty bug on one surface does
