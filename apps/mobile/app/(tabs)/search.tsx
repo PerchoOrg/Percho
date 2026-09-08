@@ -48,6 +48,7 @@ import {
 	costBreakdown,
 	legendRange,
 	lensById,
+	listOf,
 	rankedBy,
 } from "@percho/shared/lenses";
 import { router, useLocalSearchParams } from "expo-router";
@@ -614,9 +615,15 @@ function AreaDetail({
 	const statutory = area.metrics.find(
 		(m) => m.metric === "property_tax_millage_statutory_pct",
 	);
-	const estimated = area.metrics.some((m) => m.estimated);
-	const sources = [...new Set(area.metrics.map((m) => m.source))];
+	// Which LINES are guesses, rather than whether the county has any guess in
+	// it. Property tax and schools come from the state; water and trash have no
+	// source at all. One banner over the whole sheet told a buyer to discount
+	// figures we can defend.
+	const estimatedLines = (lines ?? [])
+		.filter((l) => l.estimated)
+		.map((l) => l.label.toLowerCase());
 	const asOf = area.metrics
+		.filter((m) => !m.estimated)
 		.map((m) => m.asOf)
 		.sort()
 		.at(-1);
@@ -638,21 +645,34 @@ function AreaDetail({
 						</Text>
 					</View>
 					{lines?.map((line) => (
-						<View key={line.label} style={styles.detailRow}>
-							<Text style={styles.detailRowLabel} numberOfLines={1}>
-								{line.label}
-							</Text>
-							<View style={styles.detailBarTrack}>
-								<View
-									style={[
-										styles.detailBarFill,
-										{
-											width: `${Math.max(5, Math.round((line.monthlyUsd / max) * 100))}%`,
-										},
-									]}
-								/>
+						<View key={line.label}>
+							<View style={styles.detailRow}>
+								<Text style={styles.detailRowLabel} numberOfLines={1}>
+									{line.label}
+								</Text>
+								<View style={styles.detailBarTrack}>
+									<View
+										style={[
+											styles.detailBarFill,
+											{
+												width: `${Math.max(5, Math.round((line.monthlyUsd / max) * 100))}%`,
+											},
+										]}
+									/>
+								</View>
+								<Text style={styles.detailRowValue}>
+									${line.monthlyUsd}
+									{line.estimated ? "*" : ""}
+								</Text>
 							</View>
-							<Text style={styles.detailRowValue}>${line.monthlyUsd}</Text>
+							{/* Who supplies it, when we know. A bare "$157" is a
+							    number to take on trust; "Georgia Power · 14.6¢ per
+							    kWh" is a number the buyer can go and check. */}
+							{line.note ? (
+								<Text style={styles.detailRowNote} numberOfLines={2}>
+									{line.note}
+								</Text>
+							) : null}
 						</View>
 					))}
 				</>
@@ -690,9 +710,10 @@ function AreaDetail({
 			)}
 
 			<Text style={styles.detailSource}>
-				{estimated
-					? "Estimated figures — we have not sourced this county yet, so treat them as a starting point, not a quote."
-					: `Source: ${sources.join(", ")}${asOf ? ` · as of ${asOf}` : ""}.`}
+				{estimatedLines.length > 0
+					? `Sourced from public records, except ${listOf(estimatedLines)} — those are still our estimate.`
+					: "Every figure here is from a public record."}
+				{asOf ? ` Most recent data ${asOf}.` : ""}
 			</Text>
 		</View>
 	);
@@ -886,6 +907,13 @@ const styles = StyleSheet.create({
 		color: colors.ink,
 		width: 48,
 		textAlign: "right",
+	},
+	detailRowNote: {
+		...textStyles.caption,
+		color: colors.ink3,
+		marginTop: -3,
+		marginBottom: 3,
+		lineHeight: 14,
 	},
 	detailChips: { flexDirection: "row", gap: 6, marginTop: 10 },
 	detailChip: {

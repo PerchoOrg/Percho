@@ -7,7 +7,12 @@
  * county whose metrics fail to parse still draws its outline.
  */
 
-import type { Area, AreaMetric, MetricKey } from "@percho/shared/lenses";
+import type {
+	Area,
+	AreaMetric,
+	MetricKey,
+	MetricSupplier,
+} from "@percho/shared/lenses";
 
 export interface AreaShape {
 	key: string;
@@ -83,6 +88,22 @@ function parseShape(v: unknown): AreaShape | null {
 	return { key, name, centre, rings };
 }
 
+function parseSupplier(v: unknown): MetricSupplier | undefined {
+	if (!v || typeof v !== "object") return undefined;
+	const o = v as Record<string, unknown>;
+	const name = str(o.name);
+	if (!name) return undefined;
+	const share = num(o.share);
+	const unitPrice = num(o.unitPrice);
+	const unitPriceUnit = str(o.unitPriceUnit);
+	return {
+		name,
+		...(share !== undefined ? { share } : {}),
+		...(unitPrice !== undefined ? { unitPrice } : {}),
+		...(unitPriceUnit ? { unitPriceUnit } : {}),
+	};
+}
+
 function parseMetric(v: unknown): AreaMetric | null {
 	if (!v || typeof v !== "object") return null;
 	const o = v as Record<string, unknown>;
@@ -93,6 +114,7 @@ function parseMetric(v: unknown): AreaMetric | null {
 	if (!metric || !KNOWN_METRICS.has(metric)) return null;
 	if (value === undefined || !source || !asOf) return null;
 	const sourceUrl = str(o.sourceUrl);
+	const supplier = parseSupplier(o.supplier);
 	return {
 		metric: metric as MetricKey,
 		value,
@@ -101,6 +123,7 @@ function parseMetric(v: unknown): AreaMetric | null {
 		...(sourceUrl ? { sourceUrl } : {}),
 		asOf,
 		estimated: o.estimated === true,
+		...(supplier ? { supplier } : {}),
 	};
 }
 

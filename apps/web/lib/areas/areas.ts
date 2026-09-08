@@ -109,6 +109,39 @@ interface MetricRow {
   source_url: string | null;
   as_of: string;
   estimated: boolean;
+  /** Free-form per-importer scratchpad. Only `supplierOf` reads it. */
+  detail?: unknown;
+}
+
+/**
+ * The supplier a scraper recorded in `detail`, if it recorded one.
+ *
+ * `detail` is a scratchpad each importer writes freely; this reads the three
+ * keys the client has a contract for and ignores everything else, so an
+ * importer adding a field cannot change what the app receives.
+ *
+ * **Nothing is projected from an ESTIMATED row.** The seeded estimates carry a
+ * hand-written `provider`, and those names are exactly the guesses phase202
+ * disproved — Cobb's seed row still says "Cobb EMC", which covers 41% of the
+ * county and was never sourced. A supplier name rendered beside a figure reads
+ * as provenance, so attaching one to a guess would make the guess look
+ * checked. An importer that genuinely knows the supplier but not the price can
+ * say so, but it has to be a deliberate change here rather than a side effect
+ * of an old seed row surviving.
+ */
+function supplierOf(detail: unknown, estimated: boolean): AreaMetric['supplier'] {
+  if (estimated) return undefined;
+  if (!detail || typeof detail !== 'object') return undefined;
+  const d = detail as Record<string, unknown>;
+  const name = typeof d.provider === 'string' ? d.provider : undefined;
+  if (!name) return undefined;
+  const share = typeof d.provider_share === 'number' ? d.provider_share : undefined;
+  const unitPrice = typeof d.rate_usd_per_kwh === 'number' ? d.rate_usd_per_kwh : undefined;
+  return {
+    name,
+    ...(share !== undefined ? { share } : {}),
+    ...(unitPrice !== undefined ? { unitPrice, unitPriceUnit: 'usd_per_kwh' } : {}),
+  };
 }
 
 /** Groups metric rows into `Area`s, keyed by kind + key. Exported for tests —
@@ -143,6 +176,8 @@ export function groupMetrics(rows: readonly MetricRow[]): Area[] {
       asOf: row.as_of,
       estimated: row.estimated,
     };
+    const supplier = supplierOf(row.detail, row.estimated);
+    if (supplier) metric.supplier = supplier;
     area.metrics.push(metric);
   }
   return [...byArea.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -160,7 +195,7 @@ export async function fetchAreas(): Promise<AreasDTO> {
   const { data, error } = await supabase
     .from('area_metrics')
     .select(
-      'area_kind, state, area_key, area_name, metric, value, unit, source, source_url, as_of, estimated',
+      'area_kind, state, area_key, area_name, metric, value, unit, source, source_url, as_of, estimated, detail',
     )
     .eq('state', shapes.state);
   if (error) throw new Error(`area_metrics: ${error.message}`);
