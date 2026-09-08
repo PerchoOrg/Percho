@@ -46,7 +46,43 @@ export interface TextItem {
   text: string;
 }
 
-/** Inflate every FlateDecode stream that carries text operators. */
+/**
+ * How much of a buffer reads as text a PDF operator stream would contain.
+ *
+ * Content streams are ASCII operators and string literals — effectively all
+ * printable plus whitespace. Embedded FONT FILES are also FlateDecode'd and
+ * also inflate cleanly, and a binary TrueType blob will contain the two bytes
+ * `Tj` or `TJ` by chance long before it contains anything meaningful.
+ */
+function printableRatio(text: string): number {
+  if (text.length === 0) return 0;
+  let printable = 0;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    if (c === 9 || c === 10 || c === 13 || (c >= 32 && c <= 126)) printable++;
+  }
+  return printable / text.length;
+}
+
+/**
+ * Anything below this is a font, an image or a colour profile, not operators.
+ *
+ * Measured: the millage report's real content streams are 0.99+; the DeKalb
+ * millage sheet's embedded TrueType fonts — which `includes('TJ')` happily
+ * accepted — are well under half.
+ */
+const MIN_PRINTABLE_RATIO = 0.9;
+
+/**
+ * Inflate every FlateDecode stream that carries text operators.
+ *
+ * Substring-matching `Tj`/`TJ` alone is not enough, and the failure was not
+ * subtle: DeKalb's published millage sheet embeds its fonts, four of those
+ * blobs matched, and feeding 74 KB of binary TrueType to the text-operator
+ * regex HUNG the parser outright rather than returning nothing. A hang is a
+ * worse outcome than a wrong answer, because nothing tells you which stage
+ * stopped.
+ */
 export function contentStreams(pdf: Buffer): string[] {
   const out: string[] = [];
   let i = 0;
@@ -60,7 +96,13 @@ export function contentStreams(pdf: Buffer): string[] {
     if (e < 0) break;
     try {
       const text = inflateSync(pdf.subarray(p, e)).toString('latin1');
-      if (text.includes('Tj') || text.includes('TJ')) out.push(text);
+      // No `continue` here: the loop's advance sits after this try block, so
+      // skipping to the next iteration skips it and spins forever. Found the
+      // hard way, in the same edit that was fixing a different hang.
+      const drawsText = text.includes('Tj') || text.includes('TJ');
+      if (drawsText && printableRatio(text) >= MIN_PRINTABLE_RATIO) {
+        out.push(text);
+      }
     } catch {
       // Images, fonts and anything not Flate — not our business.
     }
@@ -105,7 +147,11 @@ export function textItems(streams: readonly string[]): TextItem[] {
   const token = new RegExp(
     [
       String.raw`\((?<str>(?:\\.|[^\\()])*)\)\s*Tj`, // draw one string
-      String.raw`\[(?<arr>(?:\\.|[^\]])*)\]\s*TJ`, // draw an array of them
+      // `[^\\\]]` excludes the backslash so the two alternatives cannot both
+      // match it. With the naive `(?:\\.|[^\]])*` they overlap, and on input
+      // with open brackets and no closing `] TJ` — which is to say, on binary —
+      // the engine backtracks exponentially and never returns.
+      String.raw`\[(?<arr>(?:[^\\\]]|\\.)*)\]\s*TJ`, // draw an array of them
       String.raw`${num}\s+${num}\s+${num}\s+${num}\s+${num}\s+${num}\s+(?<op>cm|Tm)`,
       String.raw`${num}\s+${num}\s+(?<td>Td|TD)`,
       String.raw`(?<simple>BT|ET|q|Q|T\*)`,

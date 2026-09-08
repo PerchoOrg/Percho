@@ -1,5 +1,7 @@
+import { deflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import {
+  contentStreams,
   countywideMills,
   parseRow,
   rows,
@@ -396,5 +398,53 @@ describe('scenarioRange', () => {
 
   it('has no range for an empty county', () => {
     expect(scenarioRange([])).toBeUndefined();
+  });
+});
+
+describe('contentStreams rejects what only looks like a content stream', () => {
+  /** A FlateDecode'd buffer holding one deflated payload, framed as a PDF
+   *  stream object so `contentStreams` will find it. */
+  function pdfWith(payload: Buffer): Buffer {
+    return Buffer.concat([
+      Buffer.from('%PDF-1.6\n1 0 obj\n<</Length 1>>\nstream\n'),
+      deflateSync(payload),
+      Buffer.from('\nendstream\nendobj\n'),
+    ]);
+  }
+
+  it('keeps a real operator stream', () => {
+    const ops = 'BT 1 0 0 1 10 20 Tm (HELLO)Tj ET';
+    expect(contentStreams(pdfWith(Buffer.from(ops, 'latin1')))).toHaveLength(1);
+  });
+
+  it('drops an embedded font that happens to contain the bytes "TJ"', () => {
+    // Not hypothetical: DeKalb's published millage sheet embeds four TrueType
+    // fonts, and every one of them matched a bare `includes('TJ')`.
+    const font = Buffer.alloc(4096);
+    for (let i = 0; i < font.length; i++) font[i] = i % 256;
+    font.write('glyfTJ[[[[Tj', 100, 'latin1');
+    expect(contentStreams(pdfWith(font))).toHaveLength(0);
+  });
+
+  it('returns promptly on binary with open brackets and no closing TJ', () => {
+    // This is the shape that hung the parser: the array alternative's two
+    // branches both matched a backslash, so on input with `[` and no `] TJ`
+    // the engine backtracked exponentially and never came back. 74 KB of
+    // TrueType did it. Anything over a second here means it is back.
+    const hostile = Buffer.from(`Tj${'['.repeat(400)}${'\\'.repeat(400)}`, 'latin1');
+    const started = Date.now();
+    textItems(contentStreams(pdfWith(hostile)));
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
+  it('terminates when a stream is filtered out', () => {
+    // The advance sits after the try block, so an early `continue` on a
+    // rejected stream spins forever. Two rejects in a row is the case.
+    const font = Buffer.alloc(512, 0xfe);
+    font.write('Tj', 10, 'latin1');
+    const pdf = Buffer.concat([pdfWith(font), pdfWith(font)]);
+    const started = Date.now();
+    expect(contentStreams(pdf)).toHaveLength(0);
+    expect(Date.now() - started).toBeLessThan(1000);
   });
 });
