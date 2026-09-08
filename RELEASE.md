@@ -34,6 +34,11 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- **Electricity is now its own lens on the map.** It was buried inside
+  "Utilities & trash", where the water and rubbish estimates dragged it down —
+  so the one utility figure we actually know was being presented as a guess.
+  Power costs range from $125 a month in Coweta and Fayette to $189 in
+  Meriwether, and you can now see that spread on its own.
 - The cost breakdown now shows its working. Tap a county and the electricity
   line names the power company and its rate — "Georgia Power Co · 14.6¢ per
   kWh" — and says what share of the county that company serves when it isn't
