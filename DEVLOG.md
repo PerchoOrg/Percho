@@ -21,6 +21,71 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 22:50 UTC — phase228: Gwinnett's rate sheet is readable now, and still not shippable
+
+**Objective**: phase221 named the next thing worth trying, and phase220 made
+one county the obvious target. Water is the last unsourced cost line; DeKalb's
+method is validated to the cent against the county's own published figure, so
+the blocker was never the maths — it was reading other counties' rate sheets.
+Gwinnett is the highest-value one left: ~1M people and, per the USGS import,
+**100% of them on public supply**.
+
+phase202 gave up on it: *"an 11-section multi-column fee schedule — row
+clustering interleaves the water tiers with meter fees, TV inspection charges
+and system development fees. I could not say which is the 3/4" water base and
+which the sewer volumetric."*
+
+**The reader has been fixed three times since** (phase212). Retried:
+
+```
+2305 text items, 155 clustered rows
+tier header found at x = 353, 467, 571
+
+meter   base water   base sewer   tier 1 (0–8k)   tier 2 (8–12k)   tier 3 (12k+)
+3/4"         $7.50        $7.50           $5.78            $8.67          $11.56
+1"          $16.50        $7.50           $5.78            $8.67          $11.56
+1 1/2"      $27.00        $7.50           $5.78            $8.67          $11.56
+2"          $52.50        $7.50           $5.78            $8.67          $11.56
+```
+
+Two tables sit **side by side at overlapping y**, which is exactly what
+defeated row clustering. They separate cleanly by x once the tier header is
+used as the anchor.
+
+### It still does not ship a figure
+
+**The sewer volumetric rate is missing.** DeKalb needed both halves — tiered
+water plus a $14.54/1,000 sewer commodity charge — to reproduce its published
+bill, and sewer is the larger one. Gwinnett's "Sewer Charge per 1,000 Gallons"
+label sits at y≈484–504 in a block I have not mapped. phase202's rule stands:
+**a water bill built from a column I am 80% sure of is worse than the flagged
+estimate**, and unlike electricity there is no second source to check it
+against.
+
+### The script disproved my own comment
+
+I wrote the header claiming the three-tier table "contains only the 3/4" and 1"
+meter rows — the two sizes houses use", and offered that as the argument for it
+being residential. **Then I ran it: the table runs to 2".** I had written the
+claim from a partial coordinate dump, before the extraction existed.
+
+Corrected in place, and the remaining argument is stated as the weaker thing it
+is: an escalating three-tier ladder starting at the smallest meter is how
+residential schedules read, which is suggestive and is not proof.
+
+**Actions**: `scripts/admin/audit-gwinnett-water.ts` — read-only, anchored on
+the tier header so that if the schedule is redesigned it fails loudly instead
+of reading the wrong columns. Whoever picks this up starts from the sewer block
+rather than from zero.
+
+**Verified**: typecheck clean, lint clean, 663 mobile + 1100 web tests. Nothing
+written to production; water remains a flagged estimate.
+
+**Learnings**: I nearly committed a comment that the very script it described
+disproves. Writing the prose before running the thing is how a plausible claim
+gets into a file and stays there — the same failure as the demo pages, one
+layer in.
+
 ## 2026-09-08 22:15 UTC — phase227: the day's changelog contradicted itself
 
 **Objective**: RELEASE.md is, per CLAUDE.md §2.2, the **non-technical**
