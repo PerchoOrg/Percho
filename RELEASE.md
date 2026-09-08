@@ -34,6 +34,9 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- The area list on the map now shows which of your saved places sit in each
+  county — "Woodstock, saved" under Cherokee — so you can see where you already
+  stand instead of reading 29 identical rows.
 - The map now opens on whatever you said matters most in the You tab. Say
   schools matter and the map opens coloured by school results instead of cost.
   If what you picked is something the map cannot show yet — getting around, or

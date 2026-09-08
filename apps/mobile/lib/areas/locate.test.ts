@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { AreaShape } from "./areas-dto";
-import { countyKeyForPoint } from "./locate";
+import {
+	countyKeyForPoint,
+	savedCitiesByCounty,
+	savedCityNote,
+} from "./locate";
 
 /** A unit square from (x,y) to (x+1,y+1), as `[lng, lat]` like the real file. */
 function square(key: string, x: number, y: number): AreaShape {
@@ -68,5 +72,108 @@ describe("countyKeyForPoint", () => {
 		// the answer must at least be deterministic rather than arbitrary.
 		const overlap = [square("first", -85, 33), square("second", -85, 33)];
 		expect(countyKeyForPoint(33.5, -84.5, overlap)).toBe("first");
+	});
+});
+
+describe("savedCitiesByCounty", () => {
+	const units = [
+		{
+			id: "city:woodstock-ga",
+			name: "Woodstock",
+			centroid: { lat: 34.1, lng: -84.52 },
+		},
+		{
+			id: "city:canton-ga",
+			name: "Canton",
+			centroid: { lat: 34.24, lng: -84.49 },
+		},
+		{
+			id: "city:decatur-ga",
+			name: "Decatur",
+			centroid: { lat: 33.77, lng: -84.3 },
+		},
+	];
+	/** A box from (w,s) to (e,n) as `[lng, lat]`, like the real shape file. */
+	const box = (
+		w: number,
+		s: number,
+		e: number,
+		n: number,
+	): AreaShape["rings"][number] => [
+		[w, s],
+		[e, s],
+		[e, n],
+		[w, n],
+		[w, s],
+	];
+	// Two boxes standing in for county outlines.
+	const shapes: AreaShape[] = [
+		{
+			key: "cherokee",
+			name: "Cherokee",
+			centre: [-84.5, 34.17],
+			rings: [box(-84.7, 33.95, -84.3, 34.4)],
+		},
+		{
+			key: "dekalb",
+			name: "DeKalb",
+			centre: [-84.22, 33.8],
+			rings: [box(-84.35, 33.65, -84.1, 33.95)],
+		},
+	];
+
+	it("groups saved cities under the county that contains them", () => {
+		const got = savedCitiesByCounty(
+			["city:woodstock-ga", "city:canton-ga", "city:decatur-ga"],
+			units,
+			shapes,
+		);
+		expect(got.get("cherokee")).toEqual(["Woodstock", "Canton"]);
+		expect(got.get("dekalb")).toEqual(["Decatur"]);
+	});
+
+	it("ignores units the buyer has not saved", () => {
+		const got = savedCitiesByCounty(["city:decatur-ga"], units, shapes);
+		expect(got.has("cherokee")).toBe(false);
+		expect(got.get("dekalb")).toEqual(["Decatur"]);
+	});
+
+	it("leaves a county with nothing saved absent rather than empty", () => {
+		// So a caller can test presence with a lookup instead of a length check.
+		expect(savedCitiesByCounty([], units, shapes).size).toBe(0);
+	});
+
+	it("drops a saved city outside the covered metro", () => {
+		const far = [
+			{
+				id: "city:ellijay-ga",
+				name: "Ellijay",
+				centroid: { lat: 34.69, lng: -84.48 },
+			},
+		];
+		expect(savedCitiesByCounty(["city:ellijay-ga"], far, shapes).size).toBe(0);
+	});
+});
+
+describe("savedCityNote", () => {
+	it("names one city", () => {
+		expect(savedCityNote(["Woodstock"])).toBe("Woodstock, saved");
+	});
+
+	it("names two", () => {
+		expect(savedCityNote(["Woodstock", "Canton"])).toBe(
+			"Woodstock and Canton, saved",
+		);
+	});
+
+	it("counts the rest beyond two, so the row cannot overflow", () => {
+		expect(savedCityNote(["Woodstock", "Canton", "Ball Ground"])).toBe(
+			"Woodstock and 2 more, saved",
+		);
+	});
+
+	it("says nothing when nothing is saved there", () => {
+		expect(savedCityNote([])).toBeUndefined();
+		expect(savedCityNote(undefined)).toBeUndefined();
 	});
 });

@@ -21,6 +21,62 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 20:50 UTC — phase224: the map shows where the buyer already stands
+
+**Objective**: phase223's question — *of any input a product collects, which
+surface actually changes?* — applied to the other inputs.
+
+**First, a verification I had never done.** Compare resolves the buyer's saved
+areas to counties (saved CITY → centroid → `countyKeyForPoint` → county), and
+every check of mine had gone through the demo generator, which passes county
+keys directly and bypasses that step entirely. So I swept it: all **109 real
+geo units** from `/api/mobile/feed` against the 29 production shapes.
+
+**99 of 109 resolve** to a county with metrics. The 10 that do not — Ellijay,
+Dahlonega, Eatonton, Cedartown, Cochran and five more — are genuinely outside
+the covered metro, which `countyKeyForPoint` documents as a real answer rather
+than a failure.
+
+Worth recording: **the cities "Jackson, GA" and "Forsyth, GA" correctly do not
+resolve.** They sit in Butts and Monroe counties. We *have* a Jackson County
+and a Forsyth County, so a name-based match would have placed the city of
+Forsyth 80 miles from where it is. Point-in-polygon walks past the trap.
+
+### The gap it turned up
+
+`state/saved.ts` is consumed by feed, listing, saved and community — **not by
+search**. A buyer saves Woodstock and Duluth, opens the map, and sees 29
+identically-treated outlines with nothing saying where they already stand.
+Familiarity does not cover this: it scores swipe engagement and only sorts the
+text search results.
+
+### Why the row cannot say "saved"
+
+The map ranks **counties**; a buyer saves **cities**. Marking Cherokee as saved
+would be false — they never saved Cherokee, they saved Woodstock. So the row
+names the city:
+
+```
+Cherokee     Woodstock, saved                 $691*
+Cherokee     Woodstock and Canton, saved      $691*
+Cherokee     Woodstock and 2 more, saved      $691*
+```
+
+The "and N more" form exists so a buyer with five saved cities in one county
+cannot overflow the row. Verified against production: saving Decatur,
+Alpharetta and Ellijay marks DeKalb and Fulton and silently drops Ellijay,
+which is outside the metro.
+
+**Actions**: `savedCitiesByCounty` and `savedCityNote` in `lib/areas/locate.ts`,
+beside the primitive they build on rather than as a second copy of the
+resolution. 8 tests. Wired into the ranking row.
+
+**Verified**: typecheck clean, lint clean, **663 mobile** (+8) + 1097 web.
+
+**Learnings**: the sweep found no bug and was still the right thing to run —
+it is the only reason I know the saved→county path works on real data, and it
+is what turned up the surface that input never reached.
+
 ## 2026-09-08 20:15 UTC — phase223: the map opens on what the buyer said matters
 
 **Objective**: first, housekeeping that turned out to matter — the reference
