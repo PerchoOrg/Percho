@@ -708,6 +708,9 @@ export interface CostLine {
   estimated: boolean;
 }
 
+/** Above this share, a supplier is "the county's" and the rest is rounding. */
+const EFFECTIVELY_ALL = 0.95;
+
 /**
  * How a supplier reads on a cost line, or nothing when there is nothing to add
  * beyond the figure itself.
@@ -722,7 +725,14 @@ function supplierNote(metric: AreaMetric | undefined): string | undefined {
 
   // Several utilities: the price is the county's AVERAGE, so it must not be
   // printed next to one company's name as though that company charged it.
-  if (s.count !== undefined && s.count > 1) {
+  //
+  // "Effectively one" is a share test, not a count. Hall is served by four
+  // utilities and Georgia Power covers 98% of it, so "averaged across 4
+  // utilities" overstated the mixing for a county where the average and that
+  // one company's rate agree to within a tenth of a cent. Same 95% the plain
+  // branch uses to decide a share is not worth mentioning.
+  const mixed = s.share === undefined || s.share < EFFECTIVELY_ALL;
+  if (s.count !== undefined && s.count > 1 && mixed) {
     const bits = [`averaged across ${s.count} utilities`];
     if (price) bits.push(price);
     if (s.share !== undefined) {
@@ -735,7 +745,7 @@ function supplierNote(metric: AreaMetric | undefined): string | undefined {
   if (price) bits.push(price);
   // Only worth saying when the supplier is NOT effectively the whole county:
   // "serves 100% of the county" is noise.
-  if (s.share !== undefined && s.share < 0.95) {
+  if (s.share !== undefined && s.share < EFFECTIVELY_ALL) {
     bits.push(`serves ${Math.round(s.share * 100)}% of the county`);
   }
   return bits.join(' · ');

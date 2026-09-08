@@ -21,6 +21,40 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 17:00 UTC — phase219.2: "averaged across N" is a share test, not a count
+
+**Objective**: rebuild both demos against the new electricity data. Reading
+the output caught a wording bug I had just shipped.
+
+**Issue**: Hall rendered as *"averaged across 4 utilities · 15.4¢ per kWh ·
+largest is GEORGIA POWER CO at 98%"*. True and misleading — Georgia Power
+covers 98% of Hall, and the county average (15.42¢) and Georgia Power's own
+rate (15.49¢) agree to within a tenth of a cent. `count > 1` was the wrong
+gate; **how many utilities exist is not how mixed a county is.**
+
+**Resolution**: the branch now turns on the largest supplier's share against
+the same 95% the plain branch already used to decide a share is not worth
+mentioning, now named `EFFECTIVELY_ALL`.
+
+```
+cobb      averaged across 4 utilities · 13.1¢ per kWh · largest is COBB EMC at 41%
+fulton    averaged across 6 utilities · 14.0¢ per kWh · largest is GEORGIA POWER CO at 55%
+hall      GEORGIA POWER CO · 15.4¢ per kWh
+pickens   AMICALOLA ELECTRIC MEMBER CORP · 12.4¢ per kWh
+```
+
+**Actions**: both demos regenerated. The lens demo now reports **electricity
+0 estimated across 29 counties**, down from 2.
+
+**Verified**: typecheck clean, lint clean, 649 mobile + **1086 web tests**
+(+2). Deploy confirmed live before rebuilding, by polling the API until the
+supplier field appeared rather than assuming it had.
+
+**Learnings**: three ticks in a row now, the bug was in the sentence beside a
+correct number, and this one I caught only because regenerating the demo made
+me read the copy for a county I had not thought about. Cobb and Fulton, the
+counties I designed the wording around, both read fine.
+
 ## 2026-09-08 16:35 UTC — phase219.1: the importer changed shape and the reader did not
 
 **Objective**: verifying phase219 on production, the figures were right —
