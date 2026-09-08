@@ -21,6 +21,68 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 00:15 UTC — phase230: the withdrawal was wrong, and DeKalb's water is now sourced
+
+**Objective**: pin DeKalb's rates off the table phase229 made legible, and
+validate against the county's published figure.
+
+### phase229 retracted a correct claim
+
+phase202 said DeKalb reproduces the published "$84 in 2026" for 4,000 gallons.
+phase229 **withdrew that** because the URL had moved and two secondary
+summaries disagreed with it.
+
+Re-derived from the current PDF with my own decoder, **phase202 was right**:
+
+```
+water readiness to serve   $3.64
+sewer readiness to serve   $8.84      ← the note omitted this
+water 0–2,000              $2.77 per 1,000  → $5.54
+water 2,001–10,000         $3.95 per 1,000  → $7.90
+sewer, all consumption    $14.54 per 1,000  → $58.16
+                                     total = $84.08
+```
+
+The $8.84 sewer base is exactly the gap that made phase229's arithmetic come up
+$8.84 short. And one summary had **swapped the sewer and irrigation columns** —
+$14.54 is sewer; $10.36 is irrigation, which a separate line of the sheet
+confirms as "$10.36 /1000 gal. (irrigation rate)".
+
+**I withdrew a claim I had derived from the primary source because two
+summaries of that source disagreed with it.** The summaries were wrong. The
+rule is: re-derive from the document before retracting, not after.
+
+### Two coordinate traps, both recorded
+
+The sheet has no page markers, so every item lands on "page 0" while each
+content stream carries its own origin — y=258 in one stream and y=1019 in
+another are not comparable. Two extraction attempts silently compared across
+streams and returned a header with no values under it.
+
+### The parser I did not ship
+
+The first draft parsed the commodity table and failed: the first band's label
+and the last band's rate each sit in a **different content stream from their own
+row**, so nothing pairs them line by line. Two rounds of loosening the column
+filter got `rates=7, bounds=1` — and at that point I was tuning a parser until
+its output matched an answer I already knew. **A guard cannot validate a parser
+that was shaped to satisfy it.**
+
+So the rates are stated, each with the table and column it was read from, and
+the checking is split into two guards that catch different things:
+`assertStillPublished` refetches the sheet and refuses unless every amount still
+appears in it — the January repricing case — and the $84.08 reproduction checks
+the arithmetic. Gwinnett has no equivalent of the second, which is exactly why
+Gwinnett remains an estimate.
+
+**Verified**: typecheck clean, lint clean, 663 mobile + 1109 web tests. Dry run
+reproduces $84.08 to the cent.
+
+**Learnings**: I over-corrected in public. phase229's withdrawal was written
+with the same confidence as the claim it retracted, and was wrong for a worse
+reason — it trusted summaries over the document, which is the failure I have
+spent this whole session guarding other people's claims against.
+
 ## 2026-09-08 23:30 UTC — phase229: a claim of mine collapsed, and the reason turned out to be fixable
 
 **Objective**: phase228 stopped on Gwinnett for want of a validation anchor. So
