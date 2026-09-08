@@ -112,7 +112,7 @@ export interface Area {
   metrics: AreaMetric[];
 }
 
-export type LensId = 'true_cost' | 'property_tax' | 'schools' | 'utilities';
+export type LensId = 'true_cost' | 'property_tax' | 'schools' | 'electric' | 'utilities';
 
 export interface Lens {
   id: LensId;
@@ -278,6 +278,20 @@ export const LENSES: readonly Lens[] = [
     inputs: ['school_proficiency_pct'],
     compute: (get) => get('school_proficiency_pct'),
     format: (v) => `${Math.round(v)}%`,
+  },
+  {
+    id: 'electric',
+    label: 'Electricity',
+    unit: 'per month at Georgia’s average use',
+    caption:
+      'Who supplies the power here and what they charge. Service territories were drawn in the 1930s and ignore county lines, so this is not the utility the county is named after.',
+    rankTitle: 'Cheapest power first',
+    areaKind: 'county',
+    betterIsLow: true,
+    ramp: ['#AB94BF', '#9478AB', '#7D5D96', '#664582', '#4F2E6D'],
+    inputs: ['electric_monthly_usd'],
+    compute: (get) => get('electric_monthly_usd'),
+    format: (v) => `$${Math.round(v).toLocaleString()}`,
   },
   {
     id: 'utilities',

@@ -479,3 +479,53 @@ describe('cost lines say which of THEM is a guess', () => {
     expect(total).toBe(valuesFor(lens, [mixed])[0]?.value);
   });
 });
+
+describe('the electricity lens', () => {
+  const county = (name: string, monthly: number, estimated = false): Area => ({
+    key: name.toLowerCase(),
+    name,
+    kind: 'county',
+    state: 'GA',
+    metrics: [metric('electric_monthly_usd', monthly, estimated)],
+  });
+
+  const lens = lensById('electric');
+  if (!lens) throw new Error('electric lens missing');
+
+  it('exists so a sourced figure is not hidden inside an estimated aggregate', () => {
+    // Electricity is the only utility we have a source for; combined with
+    // water and trash it reads as an estimate, which is what it was doing.
+    expect(lens.inputs).toEqual(['electric_monthly_usd']);
+  });
+
+  it('ranks the cheapest power first', () => {
+    const ranked = rankedBy(lens, [
+      county('Meriwether', 189),
+      county('Coweta', 125),
+      county('Fulton', 157),
+    ]);
+    expect(ranked.map((r) => r.area.name)).toEqual(['Coweta', 'Fulton', 'Meriwether']);
+  });
+
+  it('is not an estimate when the figure is sourced', () => {
+    expect(valuesFor(lens, [county('Fulton', 157)])[0]?.estimated).toBe(false);
+  });
+
+  it('stays an estimate for a county with no majority provider', () => {
+    // Cobb and Henry are genuinely split between two utilities.
+    expect(valuesFor(lens, [county('Cobb', 148, true)])[0]?.estimated).toBe(true);
+  });
+
+  it('skips a county with no electric figure rather than pricing it at zero', () => {
+    const bare: Area = { ...county('Nowhere', 0), metrics: [] };
+    expect(valuesFor(lens, [bare])).toHaveLength(0);
+  });
+
+  it('has a ramp distinct from every other lens', () => {
+    // Two lenses sharing a hue would read as the same map recoloured.
+    const others = LENSES.filter((l) => l.id !== 'electric');
+    for (const o of others) {
+      expect(o.ramp[4], `${o.id} shares electric's darkest step`).not.toBe(lens.ramp[4]);
+    }
+  });
+});

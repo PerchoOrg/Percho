@@ -21,6 +21,55 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 11:20 UTC — phase205: electricity gets its own lens; water is attempted and stopped
+
+**Objective**: the notes' next item was water and trash. I attempted water
+inline, stopped on evidence, and shipped the thing that turned out to matter
+more.
+
+**Water: attempted, not shipped, and here is exactly how far it got.**
+- DeKalb's 2026 rate sheet is real and reachable
+  (`dekalbcountyga.gov/.../2026 Rate Sheet Effecive - January 1 2026.pdf`,
+  note the county's own typo in the filename). Tiered water $2.77 / $3.95 /
+  $5.90 / $10.36 per 1,000 gal with a $3.64 base at ¾"; sewer commodity
+  $14.54. An earlier pass cross-checked 4,000 gal against the county's own
+  published "$84 in 2026" and matched at $84.08, so the METHOD is sound.
+- Gwinnett's 2026 schedule downloads as a real PDF (194 KB) and our own reader
+  parses it — but it is an eleven-section multi-column fee schedule, and row
+  clustering interleaves the water tiers with meter fees, TV inspection
+  charges and system development fees. I can see $7.50, $5.78, $8.67, $11.56,
+  $9.43 in there and I cannot say with confidence which is the ¾" water base
+  and which is the sewer volumetric.
+
+Stopped there. A water bill assembled from a column I am 80% sure about is
+worse than the flagged estimate it replaces, and unlike electricity there is
+no cross-source to check it against. **Two counties of effort produced zero
+counties of confident data**, which is the honest signal that this needs a
+different approach — per-county HTML rate pages, or a human reading eleven
+PDFs — rather than more of the same.
+
+Also unresolved and worth knowing before anyone tries again: in the outer
+counties a large share of homes are on **well and septic** and pay nothing at
+all. A county-level water figure for Pickens or Dawson is not just imprecise,
+it is the wrong shape.
+
+**What shipped instead: electricity as its own lens.** phase202 sourced a real
+electric bill for 27 of 29 counties with a $64/month spread, and it was
+invisible — combined with water and trash into "Utilities & trash", which
+reads 29-of-29 estimated because two of its three inputs are guesses. A
+sourced figure was being averaged into an estimate and losing its provenance
+on the way. It now has its own chip, its own validated single-hue ramp
+(violet, five checks passed against the light surface), and reads **2 of 29
+estimated** — Cobb and Henry, the two counties genuinely split between
+utilities.
+
+Live: Coweta and Fayette $125 (Coweta-Fayette EMC) to Meriwether $189 (Diverse
+Power). Same numbers as before; they are simply no longer hidden.
+
+**Verified**: `pnpm typecheck` clean, new files lint clean, **645 mobile +
+1018 web tests pass** (+6). Ranked against the live production payload, not
+only in tests.
+
 ## 2026-09-08 10:40 UTC — phase204: the published tax rate is understated, and here is by how much
 
 **Objective**: the notes' next item was tax at DISTRICT level rather than
