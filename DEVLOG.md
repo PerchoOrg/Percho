@@ -21,6 +21,55 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 11:10 UTC — phase206: the review demo was a mockup of something that already exists
+
+**Objective**: with water stopped on evidence and the tax-district question
+waiting on the owner, the next real gap was one I had created. The owner
+reviews remotely by opening `percho.co/demos/…` — that is how this work
+started, with two static demos built BEFORE the implementation. Five phases
+later the implementation had overtaken them and nobody had told the demo.
+
+**What the page he would open on landing actually showed**: four lenses where
+production has five (no Electricity), DeKalb's property tax as **1.04%** where
+the GA DOR's own millage now gives **1.10%**, no supplier notes, no per-line
+estimate flags, and every figure an invention of mine from before any of it
+was sourced. A stale demo is not a stale mockup. It is a wrong answer to
+"what did you build".
+
+**Actions**:
+- `scripts/admin/build-lens-demo.ts` — fetches `percho.co/api/mobile/areas`
+  (the same payload the phone receives), runs the real `@percho/shared/lenses`
+  over it, and writes `data.js` with every ranking, class colour, legend and
+  cost sheet precomputed. 59 KB.
+- `/demos/search-lenses/index.html` rewritten as a pure renderer of that file,
+  plus a "what each lens knows" table showing sourced-vs-estimated per lens.
+
+**Decisions**:
+1. **Precompute rather than fetch in the browser.** The demo is same-origin
+   with the API and could call it live, but the lens catalogue's `compute` is
+   a function and does not survive JSON. The alternative — reimplementing the
+   quantile classing and the tax maths in the demo's own script — is exactly
+   the second source of truth that let this page go stale in the first place.
+2. **The page stamps when it was generated**, in the panel beside the phone. A
+   demo that cannot say how old it is invites the reader to assume it is
+   current, which is the failure being fixed.
+3. The demo's honesty table reports **sourced of total per lens**, so the thing
+   the owner sees first is which dimensions we can defend: property tax and
+   schools all sourced, electricity 27 of 29, true cost and utilities 0 of 29
+   because water and trash are still guesses.
+
+**Verified**: screenshotted both states with a headless browser — the ranking
+view and Fulton's cost sheet, which reads "$824 true cost /mo" with "Electric
+$157 · Georgia Power Co · 14.6¢ per kWh · serves 55% of the county" and
+asterisks on water, trash and insurance only. `pnpm typecheck` clean, **645
+mobile + 1018 web tests pass** (unchanged — this phase adds no library code).
+
+**Learnings**: a demo built to preview work becomes a liability the moment the
+work lands, and the failure is silent — nothing breaks, it just quietly
+describes a product that no longer exists. Generating it from the shipped code
+and the live API is the only version of this that stays true without anyone
+remembering to update it.
+
 ## 2026-09-08 11:20 UTC — phase205: electricity gets its own lens; water is attempted and stopped
 
 **Objective**: the notes' next item was water and trash. I attempted water
