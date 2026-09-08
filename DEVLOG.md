@@ -21,6 +21,73 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 23:30 UTC — phase229: a claim of mine collapsed, and the reason turned out to be fixable
+
+**Objective**: phase228 stopped on Gwinnett for want of a validation anchor. So
+I turned to DeKalb, which the notes have called validated since phase202 —
+*"Tiered water $2.77/$3.95/$5.90/$10.36, $3.64 base at 3/4", sewer commodity
+$14.54. Cross-checked: 4,000 gal = $84.08 vs the county's own published '$84 in
+2026'."* — and which has never actually been imported. Shipping a verified
+number seemed better than chasing an unverified one.
+
+### The claim does not hold up
+
+**The URL 404s.** The notes warned "the typo 'Effecive' is the county's own —
+do not fix the URL", and the URL was right; the file has moved to a
+`2026-02/` path. **A source I validated twenty hours ago is already gone**,
+which is a fact about this whole data strategy, not about DeKalb.
+
+Worse, three sources now disagree about DeKalb's rates, and **my recorded
+arithmetic reproduces from none of them.** $3.64 + tiered water + 4,000 × $14.54
+is $75.24, not $84.08. The live county page states different tiers again, plus
+typical bills ($51.16 / $94.42 / $137.68 / $184.03 for households of 1–4) that
+my figures do not produce either.
+
+So **"DeKalb is validated to the cent" is withdrawn.** It has been the premise
+for "the method works; only reading other counties' sheets is the blocker", and
+that premise is currently unsupported. Corrected in the loop notes too.
+
+### Why it could not be re-derived — and the fix
+
+The current PDF returns **zero text items** from our reader. Its text is drawn
+as glyph indices into embedded subset fonts — `[<0016>-0.05<0019>] TJ` rather
+than `(26) Tj` — and the tokeniser only ever matched literal strings. A file
+like this does not look unreadable; it looks **empty**, which is how a wrong
+number gets written down instead.
+
+The file ships the translation: six `/ToUnicode` CMaps, which decompress fine
+even though the font dicts are inside object streams. `toUnicodeMap` merges
+them and `decodeCid` applies them.
+
+**It merges only because they agree** — all six overlap and concur on all 75
+entries here. Where two CMaps disagree it **throws** rather than picking one,
+because the failure mode of guessing is plausible words assembled from the
+wrong font's alphabet. Properly each run should be decoded with its own `Tf`
+font; that needs font resolution through the object streams, and this is
+honest about being the shortcut it is.
+
+```
+before:   0 text items
+after:  532 text items, and the COMMODITY CHARGES table is legible:
+        Monthly Consumption | ¾" Meter | All Other Meters | All Meters | All Meters
+                            | Water    |                  | Sewer      | Irrigation
+```
+
+**Verified**: 9 new tests, all 47 existing millage tests still pass, and the
+hex-`Tj` branch was deleted in isolation to confirm it is load-bearing.
+typecheck clean, lint clean, 663 mobile + **1109 web tests**.
+
+**Next steps**: the exact commodity rates still need pinning off that table,
+and then validating against the county's own published typical bills — which is
+precisely the anchor Gwinnett lacks, so DeKalb can be checked in a way Gwinnett
+cannot. Nothing written to production; water remains a flagged estimate.
+
+**Learnings**: the note I trusted was written in a session where I could not
+read the document, and it recorded numbers plus a validation that never
+reproduced. I have spent this session insisting that other claims be checkable;
+this one was mine, was load-bearing, and had sat unexamined for twenty hours
+because it said what I wanted to hear.
+
 ## 2026-09-08 22:50 UTC — phase228: Gwinnett's rate sheet is readable now, and still not shippable
 
 **Objective**: phase221 named the next thing worth trying, and phase220 made

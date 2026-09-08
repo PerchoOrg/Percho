@@ -111,6 +111,105 @@ export function contentStreams(pdf: Buffer): string[] {
   return out;
 }
 
+/**
+ * CID → character, merged from every ToUnicode CMap in the file.
+ *
+ * Some rate sheets draw their text as GLYPH INDICES into an embedded subset
+ * font — `[<0016>-0.05<0019>] TJ` rather than `(26) Tj` — so a reader that only
+ * matches literal strings comes back with nothing at all. DeKalb's 2026 water
+ * schedule is one, and it returned **zero text items** until this existed.
+ *
+ * The indices mean nothing on their own; the file ships the translation in a
+ * `/ToUnicode` CMap, one per font, as `beginbfchar` pairs and `beginbfrange`
+ * spans.
+ *
+ * ── Why one merged map, and when it refuses ────────────────────────────────
+ *
+ * Properly, each text run should be decoded with the CMap of the font its `Tf`
+ * selected, which means resolving font references through the object streams.
+ * A single merged map skips all of that — and is only honest if the fonts
+ * AGREE about every index they share. In DeKalb's sheet the six CMaps overlap
+ * and agree on all 75 entries, so merging costs nothing.
+ *
+ * Where they disagree the merge would silently pick one, so it throws instead.
+ * A document that needs per-font decoding should say so rather than produce
+ * plausible words built from the wrong font's alphabet.
+ */
+export function toUnicodeMap(pdf: Buffer): Map<string, string> {
+  const merged = new Map<string, string>();
+  const put = (cid: string, ch: string, seen: Map<string, string>) => {
+    const prior = merged.get(cid);
+    if (prior !== undefined && prior !== ch && seen.get(cid) !== ch) {
+      throw new Error(
+        `ToUnicode CMaps disagree on <${cid}>: ${JSON.stringify(prior)} vs ${JSON.stringify(ch)} — this file needs per-font decoding`,
+      );
+    }
+    merged.set(cid, ch);
+  };
+
+  let i = 0;
+  for (;;) {
+    const s = pdf.indexOf('stream', i);
+    if (s < 0) break;
+    let p = s + 'stream'.length;
+    if (pdf[p] === 0x0d) p++;
+    if (pdf[p] === 0x0a) p++;
+    const e = pdf.indexOf('endstream', p);
+    if (e < 0) break;
+    let text = '';
+    try {
+      text = inflateSync(pdf.subarray(p, e)).toString('latin1');
+    } catch {
+      i = e + 'endstream'.length;
+      continue;
+    }
+    i = e + 'endstream'.length;
+    if (!text.includes('beginbfchar') && !text.includes('beginbfrange')) continue;
+
+    const seen = new Map<string, string>();
+    for (const blk of text.matchAll(/beginbfchar([\s\S]*?)endbfchar/g)) {
+      for (const m of (blk[1] ?? '').matchAll(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g)) {
+        const cid = (m[1] ?? '').toUpperCase().padStart(4, '0');
+        const ch = String.fromCharCode(Number.parseInt((m[2] ?? '').slice(0, 4), 16));
+        put(cid, ch, seen);
+        seen.set(cid, ch);
+      }
+    }
+    for (const blk of text.matchAll(/beginbfrange([\s\S]*?)endbfrange/g)) {
+      const spans = (blk[1] ?? '').matchAll(
+        /<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g,
+      );
+      for (const m of spans) {
+        const lo = Number.parseInt(m[1] ?? '0', 16);
+        const hi = Number.parseInt(m[2] ?? '0', 16);
+        const base = Number.parseInt((m[3] ?? '0').slice(0, 4), 16);
+        // A span that runs away is a misparse, not a font with 100k glyphs.
+        if (hi < lo || hi - lo > 0xffff) continue;
+        for (let c = lo; c <= hi; c++) {
+          const cid = c.toString(16).toUpperCase().padStart(4, '0');
+          const ch = String.fromCharCode(base + c - lo);
+          put(cid, ch, seen);
+          seen.set(cid, ch);
+        }
+      }
+    }
+  }
+  return merged;
+}
+
+/** `<0016001900...>` → the characters those glyph indices stand for. */
+export function decodeCid(hex: string, map: ReadonlyMap<string, string>): string {
+  let out = '';
+  const clean = hex.replace(/[^0-9A-Fa-f]/g, '');
+  for (let i = 0; i + 4 <= clean.length; i += 4) {
+    // An index with no entry is dropped rather than guessed at: a subset font
+    // legitimately omits glyphs the page never draws, and inventing a
+    // character would put text in the output that is not in the document.
+    out += map.get(clean.slice(i, i + 4).toUpperCase()) ?? '';
+  }
+  return out;
+}
+
 /** PDF string escapes, as far as this document uses them. */
 export function unescapePdf(s: string): string {
   return s
@@ -140,13 +239,20 @@ export function unescapePdf(s: string): string {
  * page number and grouping by it would merge rows from different pages that
  * happen to share a y.
  */
-export function textItems(streams: readonly string[]): TextItem[] {
+export function textItems(
+  streams: readonly string[],
+  /** Needed only for files whose text is glyph indices — see `toUnicodeMap`.
+   *  Without it a hex string decodes to nothing, which is what this reader did
+   *  for every CID-encoded sheet before phase229. */
+  cidMap?: ReadonlyMap<string, string>,
+): TextItem[] {
   const items: TextItem[] = [];
   let page = -1;
   const num = String.raw`(-?[\d.]+)`;
   const token = new RegExp(
     [
       String.raw`\((?<str>(?:\\.|[^\\()])*)\)\s*Tj`, // draw one string
+      String.raw`<(?<hex>[0-9A-Fa-f\s]*)>\s*Tj`, // ... or as glyph indices
       // `[^\\\]]` excludes the backslash so the two alternatives cannot both
       // match it. With the naive `(?:\\.|[^\]])*` they overlap, and on input
       // with open brackets and no closing `] TJ` — which is to say, on binary —
@@ -177,6 +283,18 @@ export function textItems(streams: readonly string[]): TextItem[] {
       const g = m.groups ?? {};
       const n = m.slice(1).filter((v) => v !== undefined);
 
+      if (g.hex !== undefined) {
+        const text = cidMap ? decodeCid(g.hex, cidMap) : '';
+        if (text.length > 0) {
+          items.push({
+            page: Math.max(page, 0),
+            x: ctm.x + cursor.x,
+            y: ctm.y + cursor.y,
+            text,
+          });
+        }
+        continue;
+      }
       if (g.str !== undefined) {
         items.push({
           page: Math.max(page, 0),
@@ -192,8 +310,14 @@ export function textItems(streams: readonly string[]): TextItem[] {
         // dropped rather than turned into spaces: at this document's tracking
         // a real space is always its own `( )` string, and inferring one from
         // a kern threshold guesses wrong on both sides.
-        const parts = [...g.arr.matchAll(/\((?:\\.|[^\\()])*\)/g)].map((m) =>
-          unescapePdf(m[0].slice(1, -1)),
+        // Both spellings: literal `(text)` and, in a subset-font file, the
+        // glyph indices `<0016>` that mean the same thing.
+        const parts = [...g.arr.matchAll(/\((?:\\.|[^\\()])*\)|<[0-9A-Fa-f\s]*>/g)].map((m) =>
+          m[0].startsWith('<')
+            ? cidMap
+              ? decodeCid(m[0].slice(1, -1), cidMap)
+              : ''
+            : unescapePdf(m[0].slice(1, -1)),
         );
         const text = parts.join('');
         if (text.length > 0) {
