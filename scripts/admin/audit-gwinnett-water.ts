@@ -70,27 +70,49 @@
  * The exact 1.5× and 2.0× steps corroborate that those three are one escalating
  * series rather than three numbers that happen to be adjacent.
  *
- * ── Why this still does NOT ship a figure ──────────────────────────────────
+ * ── UPDATE, phase238: the reading above is CONTRADICTED ────────────────────
  *
- * **The sewer volumetric rate is missing.** DeKalb needed both halves — tiered
- * water plus a sewer commodity charge of $14.54 per 1,000 — to reproduce the
- * published bill, and sewer is the larger half. Gwinnett has a "Sewer Charge
- * per 1,000 Gallons" label, but it sits at y≈484–504 in a different block that
- * would have to be mapped from scratch, and this script does not claim to have
- * done that.
+ * Two things changed after this file was written.
  *
- * The standing rule from phase202 has not changed and is why nothing is
- * written: **a water bill built from a column I am 80% sure of is worse than
- * the flagged estimate**, and unlike electricity there is no second source to
- * check it against.
+ * **Gwinnett is no longer blocked.** phase232 imported the UNC EFC / GEFA
+ * statewide survey, which prices Gwinnett at **$68.18** for 4,000 gallons in
+ * January 2022 — so the county already carries a real published figure, and
+ * reading its 2026 sheet is now an upgrade in currency, not a fix for a gap.
  *
- * ── For whoever picks this up ──────────────────────────────────────────────
+ * **And that survey figure is the anchor this file said did not exist — which
+ * the reading above fails.** Escalating $68.18 at the ~6% a year that DeKalb's
+ * own 2022→2026 figures show gives roughly $86 for 2026. The tiers read above
+ * give:
  *
- * Start from the sewer block at y≈480–505, and validate the whole thing the way
- * DeKalb was validated — against a published typical bill, not against whether
- * the number looks plausible. If Gwinnett publishes no such figure, the 2024
- * and 2025 schedules are at stable URLs and a three-year progression is a
- * weaker but real check.
+ *     base water $7.50 + base sewer $7.50 + 4,000 gal at $5.78  =  $38.12
+ *
+ * A factor of two apart. So the identification is wrong somewhere, and the
+ * missing sewer volumetric is not the whole of it.
+ *
+ * **The sewer volumetric is not in the document.** Searched every content
+ * stream for a line mentioning "Sewer" alongside a per-1,000-style amount: the
+ * only hits in all eleven pages are TV-inspection fees, $1.00 and $0.46 per
+ * linear foot. The residential table's header is exactly `Meter Size | Base
+ * Water Charge | Base Sewer Charge | Tier 1 | Tier 2 | Tier 3`, all three tiers
+ * labelled "Cost per 1,000 Gallons" — no sewer volumetric column, unlike the
+ * commercial table beside it which has "Cost per 1,000 Gallons of Water"
+ * ($5.78) and "Sewer Charge per 1,000" ($9.43) as separate columns.
+ *
+ * Reading the residential tiers as a COMBINED water-and-sewer charge would
+ * explain the missing column, and is what produces the $38.12 that the anchor
+ * rejects. So that reading is out too.
+ *
+ * ── What this means for anyone continuing ──────────────────────────────────
+ *
+ * **Do not trust the table identification above.** It was the best available
+ * when nothing could check it; now something can, and it disagrees. Start by
+ * questioning which table is residential rather than by hunting for the
+ * missing column — the column may not be missing so much as looked for in the
+ * wrong table.
+ *
+ * The value at stake is currency, not coverage: Gwinnett has a real 2022 bill
+ * either way. That is a much smaller prize than when this file was written, and
+ * worth weighing before spending more on it.
  *
  * Usage:
  *   pnpm --filter @percho/web exec tsx ../../scripts/admin/audit-gwinnett-water.ts
@@ -163,11 +185,12 @@ async function main() {
   }
 
   console.log(
-    '\nREAD, NOT SHIPPED. The sewer VOLUMETRIC rate is still missing — it sits in\n' +
-      'a separate block near y≈480–505 that this script does not map. DeKalb needed\n' +
-      'both halves to reproduce its published bill, and sewer is the larger one.\n' +
-      'A water figure built without it would be confidently wrong, which is worse\n' +
-      'than the estimate it would replace. See this file’s header.',
+    '\nREAD, AND CONTRADICTED. Priced at 4,000 gallons these tiers give $38.12,\n' +
+      'against roughly $86 implied by the 2022 survey figure of $68.18 escalated at\n' +
+      'the rate DeKalb’s own sheets show. A factor of two apart, so the table\n' +
+      'identification above is wrong somewhere. Gwinnett already carries the survey\n' +
+      'figure in production; reading this sheet would buy currency, not coverage.\n' +
+      'See this file’s header before spending more on it.',
   );
 }
 
