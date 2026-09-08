@@ -768,3 +768,49 @@ describe('a blended figure does not credit one utility with the average', () => 
     expect(note).toBe('Solo Power');
   });
 });
+
+describe('"averaged across N" is a share test, not a count', () => {
+  const noteFor = (supplier: AreaMetric['supplier']) =>
+    costBreakdown({
+      key: 'x',
+      name: 'X',
+      kind: 'county',
+      state: 'GA',
+      metrics: [
+        metric('county_mo_mills', 8.46),
+        metric('county_bond_mills', 0),
+        metric('school_mo_mills', 18.7),
+        metric('school_bond_mills', 0),
+        { ...metric('electric_monthly_usd', 166), supplier },
+        metric('water_monthly_usd', 58, true),
+        metric('trash_monthly_usd', 28, true),
+      ],
+    })?.find((l) => l.label === 'Electric')?.note;
+
+  it('does not call a county mixed when one utility covers nearly all of it', () => {
+    // Hall has four utilities and Georgia Power covers 98%. The blend and that
+    // one rate agree to within a tenth of a cent, so "averaged across 4
+    // utilities" overstates the mixing.
+    expect(
+      noteFor({
+        name: 'Georgia Power Co',
+        count: 4,
+        share: 0.98,
+        unitPrice: 0.1542,
+        unitPriceUnit: 'usd_per_kwh',
+      }),
+    ).toBe('Georgia Power Co · 15.4¢ per kWh');
+  });
+
+  it('still calls it mixed when the largest covers a real minority', () => {
+    expect(
+      noteFor({
+        name: 'Cobb EMC',
+        count: 4,
+        share: 0.41,
+        unitPrice: 0.1312,
+        unitPriceUnit: 'usd_per_kwh',
+      }),
+    ).toBe('averaged across 4 utilities · 13.1¢ per kWh · largest is Cobb EMC at 41%');
+  });
+});
