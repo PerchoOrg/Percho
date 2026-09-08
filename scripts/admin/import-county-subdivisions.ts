@@ -372,8 +372,61 @@ async function fetchAllSlugs(): Promise<Set<string>> {
   return out;
 }
 
-function containing(lat: number, lng: number, rows: Existing[]): Existing | undefined {
-  return rows.find((e) => pointInBbox(lng, lat, e.bbox) && pointInPolygon(lng, lat, e.boundary));
+function containing(lat: number, lng: number, rows: Existing[]): Existing[] {
+  return rows.filter((e) => pointInBbox(lng, lat, e.bbox) && pointInPolygon(lng, lat, e.boundary));
+}
+
+/** A boundary's polygon list, whichever GeoJSON shape it arrived in. */
+function polysOf(geom: GeoJsonPolygonLike): Ring[][] {
+  return geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+}
+
+/** Punctuation- and space-insensitive name key: "Sun Valley Estates" and
+ * "SUNVALLEY ESTATES" are one place recorded by two people. */
+const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/**
+ * A developer's wrapper around the name of the place the pod sits in:
+ * "Neighborhoods of Windward Cove", "Sweetwater Landing Townhomes",
+ * "The Enclave at Post Oak". The wrapper NAMES ITS PARENT, which is the
+ * whole point — `2090 Lake Windward Drive` is listed as being in "Windward",
+ * not in "Neighborhoods of Windward Cove" (its own MLS record says so).
+ *
+ * Returns the inner name, or null when the name carries no wrapper.
+ */
+function unwrap(name: string): string | null {
+  const prefix =
+    /^(?:THE\s+)?(?:NEIGHBORHOODS?|ENCLAVE|VILLAS?|TOWNHOMES?|COTTAGES?|RESERVE|RETREAT|MANOR|PARK|POINTE?|LANDING|GROVE|COURTS?|GARDENS?)\s+(?:OF|AT)\s+(.+)$/;
+  const suffix = /^(.+?)\s+(?:TOWNHOMES?|VILLAS?|COTTAGES?|CONDOS?|ESTATES\s+CONDOMINIUM)$/;
+  const m = name.match(prefix) ?? name.match(suffix);
+  return m?.[1]?.trim() || null;
+}
+
+/** Shoelace area of a MultiPolygon's outer rings, in square degrees — only
+ * ever compared against another one at the same latitude. */
+function areaOf(polys: Ring[][]): number {
+  let a = 0;
+  for (const poly of polys) {
+    const ring = poly[0];
+    if (ring) a += Math.abs(ringArea(ring));
+  }
+  return a;
+}
+
+/**
+ * Which of two names for the same place a person is more likely to say.
+ *
+ * More word breaks wins — "Sun Valley Estates" over "Sunvalley Estates",
+ * because the recorder's spelling is the one that lost the spaces. Then
+ * longer wins: "Canterbury Farms" over "Canterbury", since the fuller form is
+ * what the entrance sign carries. This is a tie-break between two names we
+ * have already decided are the same place, not a judgement about which places
+ * are real.
+ */
+function sayable(a: string, b: string): string {
+  const words = (s: string) => s.split(/\s+/).length;
+  if (words(a) !== words(b)) return words(a) > words(b) ? a : b;
+  return a.length >= b.length ? a : b;
 }
 
 async function main() {
@@ -425,28 +478,87 @@ async function main() {
     upgradeOf?: Existing;
   };
   const plans: Plan[] = [];
+  const claimed = new Set<string>();
   let noCentroid = 0;
+  let folded = 0;
+  let fuzzy = 0;
   for (const [key, g] of groups) {
     const centroid = centroidOf(g.polys);
     if (!centroid) {
       noCentroid++;
       continue;
     }
-    // The plat layer has no city; the containing Nextdoor polygon does, and it
-    // is the same POSTAL city convention the rest of the table uses.
-    const inside = containing(centroid.lat, centroid.lng, existing);
+    // Every existing community whose polygon covers this plat's centre. The
+    // plat layer has no city; these do, in the same POSTAL city convention the
+    // rest of the table uses.
+    const covers = containing(centroid.lat, centroid.lng, existing);
     const sameName = byName.get(key);
-    // A row this importer already wrote for this name is the same subdivision
-    // by construction — re-running refreshes its boundary, which is what makes
-    // the script safe to restart after a failure and safe to run again when
-    // the county republishes the layer. No geometry test: an area-weighted
-    // centroid of disjoint phases can legitimately fall outside them all.
-    // Otherwise: same name AND the same place, since a name that repeats
-    // elsewhere in the county is a different subdivision.
+
+    // ── (2) A pod named after the place it sits in ──────────────────────────
+    // "Neighborhoods of Windward Cove" inside "Windward" is not a second
+    // community; it is a slice of one, and the name people say is the one the
+    // wrapper points at. The parent's polygon already covers the pod, so the
+    // plat is dropped outright rather than stored — a listing here still
+    // lands in the parent, under the name its own MLS record uses.
+    // Matched on a WORD BOUNDARY, not exact: the wrapper leaves "WINDWARD
+    // COVE" behind and the community it belongs to is called "Windward". The
+    // boundary is what keeps this honest — "WINDWARD COVE" folds into
+    // "Windward", but not into a hypothetical "Wind".
+    const inner = unwrap(key);
+    const parent =
+      inner &&
+      covers.find((e) => {
+        const pn = normalize(e.name);
+        return inner === pn || inner.startsWith(`${pn} `);
+      });
+    if (parent) {
+      folded++;
+      continue;
+    }
+
+    // ── (1) The same place recorded twice, spelled differently ─────────────
+    // "SUNVALLEY ESTATES" vs "Sun Valley Estates", "Canterbury Farms" vs
+    // "Canterbury". Punctuation-insensitive equality, or one name a prefix of
+    // the other while the two shapes are within a factor of two — a genuinely
+    // different subdivision inside another is far smaller than its container.
+    const platArea = areaOf(g.polys);
+    const nearDuplicate = covers.find((e) => {
+      if (e.source === 'county_gis') return false;
+      const pk = squash(key);
+      const sk = squash(e.name);
+      if (pk === sk) return true;
+      if (!(pk.startsWith(sk) || sk.startsWith(pk))) return false;
+      const ratio = platArea / Math.max(areaOf(polysOf(e.boundary)), 1e-12);
+      return ratio > 0.5;
+    });
+
+    // Order matters. A real community — one somebody named, with a photo on
+    // it — is preferred over a row this importer wrote, even though the
+    // importer's row matches by construction: after the first import every
+    // plat HAS its own row, and checking that first would short-circuit the
+    // merge forever. Falling through to the own row last is what keeps a
+    // re-run idempotent for plats with no counterpart. A candidate another
+    // plat already took is skipped, or the second would overwrite the first.
+    const free = (e: Existing | undefined) => (e && !claimed.has(e.id) ? e : undefined);
     const upgradeOf =
-      sameName?.find((e) => e.source === 'county_gis') ??
-      sameName?.find((e) => pointInPolygon(centroid.lng, centroid.lat, e.boundary));
-    const name = titleCase(g.raw);
+      free(
+        sameName?.find(
+          (e) =>
+            e.source !== 'county_gis' && pointInPolygon(centroid.lng, centroid.lat, e.boundary),
+        ),
+      ) ??
+      free(nearDuplicate) ??
+      free(sameName?.find((e) => e.source === 'county_gis'));
+    if (upgradeOf) claimed.add(upgradeOf.id);
+    if (upgradeOf && upgradeOf === nearDuplicate && squash(upgradeOf.name) !== squash(key)) {
+      fuzzy++;
+    }
+    // The merged row keeps its id, slug and photo; the name is whichever of
+    // the two spellings reads like the entrance sign.
+    const platName = titleCase(g.raw);
+    const name =
+      upgradeOf && upgradeOf.source !== 'county_gis' ? sayable(upgradeOf.name, platName) : platName;
+    const inside = covers[0];
     const city = upgradeOf?.city ?? inside?.city ?? null;
     // A numbered slug is a URL nobody can read (owner on `berkeley-park-2`,
     // 2026-09-07). Subdivision names repeat across the metro — there is a
@@ -491,7 +603,6 @@ async function main() {
   // place they would keep matching listings to a community with no plat behind
   // it, so the import is declarative: after a run, this county's county_gis
   // rows are exactly what the layer says.
-  const claimed = new Set(plans.map((p) => p.upgradeOf?.id).filter(Boolean));
   const stale = existing.filter((e) => e.source === 'county_gis' && !claimed.has(e.id));
 
   const refreshes = plans.filter((p) => p.upgradeOf?.source === 'county_gis');
@@ -503,6 +614,8 @@ async function main() {
       `${noCentroid ? ` (${noCentroid} with unusable geometry, skipped)` : ''}`,
   );
   console.log(`  ${commercial.size} names dropped as commercial or industrial`);
+  if (folded) console.log(`  ${folded} pods folded into the community they are named after`);
+  if (fuzzy) console.log(`  ${fuzzy} merged into a differently-spelled existing community`);
   console.log(`  ${upgrades.length} upgrade an existing community in place (keeps its photo)`);
   console.log(`  ${inserts.length} are new rows`);
   if (refreshes.length) console.log(`  ${refreshes.length} refresh a row a previous run wrote`);
@@ -538,8 +651,10 @@ async function main() {
     const own = !e || e.source === 'county_gis';
     return {
       ...(e ? { id: e.id } : {}),
-      name: own ? p.name : e.name,
-      slug: own ? p.slug : e.slug,
+      // `p.name` already holds the merged choice; only the slug and city are
+      // read back, because a shared /community/<slug> link hangs off them.
+      name: p.name,
+      slug: own ? p.slug : (e as Existing).slug,
       city: own ? p.city : e.city,
       state: 'GA',
       county: layer.county,
