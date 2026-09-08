@@ -21,6 +21,64 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 06:50 UTC — phase242: the listing page is 41% low on tax in Rockdale
+
+**Objective**: phase241 was caught because two independent computations of one
+number finally met. So: which other quantities are defined twice and have never
+been compared?
+
+Two, both in the listing cost block against `lenses.ts`.
+
+### Insurance agrees, and now provably
+
+`lenses.ts` says its rate is *"kept identical so a buyer is never shown two
+different insurance numbers for one house"*. `cost.ts` defines the same 0.35%
+independently. They match — and the only thing keeping them in step was that
+sentence asking politely. Now a test compares both the rate and the monthly
+figure it produces, verified by drifting one: 2 failures.
+
+### Property tax does not agree, and it is material
+
+The listing page prices tax at a flat **0.85%**. The map prices it from each
+county's adopted millage and homestead exemption — the work of this whole
+session. Measured on the same $500,000 home:
+
+```
+Rockdale    map $596   listing $354    41% LOW
+Spalding    map $533   listing $354    34% LOW
+Douglas     map $521   listing $354    32% LOW
+...
+Dawson      map $271   listing $354    31% HIGH
+```
+
+A buyer looking at a Rockdale home sees a monthly cost understating property
+tax by **$242 — nearly $3,000 a year** — and can open the area map for the same
+county and read a different number.
+
+It is disclosed: the assumptions line names the 0.85%. But **disclosing an
+assumption we cannot improve on is different from disclosing one the same app
+has already replaced.**
+
+### Why it is not fixed here
+
+The listing detail payload carries **no coordinate** — the schools block is
+resolved server-side for that reason. So the county cannot be resolved on the
+client, and fixing this properly is a change to the listing endpoint: a
+server-side change on a surface outside the scope I was given, to the headline
+monthly figure of the listing page. **Flagged with numbers rather than done
+unasked.**
+
+What ships is a test pinning `DEFAULT_TAX_RATE` at 0.0085, so the measurement
+above cannot go stale silently while the decision is pending.
+
+**Verified**: typecheck clean, lint clean, **666 mobile** (+3) + 1153 web tests.
+
+**Learnings**: I built county-accurate tax over about fifteen phases and never
+once looked at whether the rest of the app had noticed. The map got a sourced
+number; the listing page — which is where a buyer is actually deciding about a
+specific house — kept a rule of thumb, and nothing in the codebase connected
+them.
+
 ## 2026-09-09 06:20 UTC — phase241: disclosing the tax omission, and a count I had wrong
 
 **Objective**: phase240 measured the omission in the units of the decision — 22
