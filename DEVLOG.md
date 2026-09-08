@@ -21,6 +21,65 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 04:45 UTC — phase238: the anchor arrived and rejected my reading
+
+**Objective**: phase237's lesson — *I read an argument against one method as an
+argument against the whole thing* — pointed straight at phase228. That phase
+stopped on Gwinnett for two reasons, and **one of them has since been removed
+by other work**: it said there was no published figure to check a reading
+against, and phase232's survey import provides exactly that.
+
+So Gwinnett was worth revisiting. It went the other way.
+
+### First: Gwinnett was never blocked after phase232
+
+The survey prices it at **$68.18** for 4,000 gallons in January 2022, and that
+figure has been in production since phase232. Reading the 2026 sheet buys
+**currency, not coverage** — a much smaller prize than when phase228 was
+written, and I had not noticed the two phases were connected.
+
+### Then: the anchor rejects the reading
+
+Escalating $68.18 at the ~6% a year DeKalb's own 2022→2026 sheets show gives
+roughly **$86** for 2026. phase228's reading gives:
+
+```
+base water $7.50 + base sewer $7.50 + 4,000 gal at $5.78  =  $38.12
+```
+
+**A factor of two apart.** So the table identification is wrong somewhere, and
+the missing sewer volumetric is not the whole of it.
+
+### The column is not in the document at all
+
+Searched every content stream for a line mentioning "Sewer" beside a
+per-1,000-style amount. In all eleven pages the only hits are TV-inspection
+fees — $1.00 and $0.46 per linear foot.
+
+The residential table's header is exactly `Meter Size | Base Water Charge |
+Base Sewer Charge | Tier 1 | Tier 2 | Tier 3`, every tier labelled "Cost per
+1,000 Gallons". The commercial table beside it *does* separate "Cost per 1,000
+Gallons of Water" ($5.78) from "Sewer Charge per 1,000" ($9.43).
+
+Reading the residential tiers as a **combined** water-and-sewer charge would
+explain the absent column — and produces the $38.12 the anchor rejects. So that
+reading is out too.
+
+**Actions**: the audit script now records this. Its old ending — "the sewer
+volumetric is still missing" — was too kind to itself; it now says the reading
+is contradicted and tells whoever continues to question **which table is
+residential** rather than hunt for a column that may not be missing so much as
+looked for in the wrong place.
+
+**Verified**: typecheck clean, lint clean, 663 mobile + 1130 web tests. Nothing
+written to production.
+
+**Learnings**: I went looking for the blocker to be gone and it was — the
+anchor existed. What I had not considered is that an anchor can arrive and
+**disprove** the thing it was wanted for. phase228's reading looked one column
+short of complete; measured, it is not nearly complete at all, and I would have
+shipped it the moment I found a plausible $12 sewer rate.
+
 ## 2026-09-09 04:15 UTC — phase237: refusing to pick one was right; refusing to use any was not
 
 **Objective**: phase236 ended on *a flag on a number says nothing about the
