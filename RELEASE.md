@@ -34,6 +34,11 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- The footnote under each ranked list now says which part of a figure is still
+  an estimate, instead of implying the whole thing is. Under "true cost" it now
+  reads that water and rubbish are our estimate and the rest comes from public
+  records — which is what was always true, but the old note said we hadn't
+  sourced any of it.
 - Electricity figures now come from the federal energy statistics themselves
   rather than a third-party copy of them, and are a year more current. Most
   counties moved by a few dollars; the counties on Georgia Power went from

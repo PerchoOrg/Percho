@@ -321,6 +321,94 @@ export function lensById(id: string): Lens | undefined {
   return LENSES.find((l) => l.id === id);
 }
 
+/** What a metric is called when a sentence has to name it. */
+const METRIC_LABELS: Partial<Record<MetricKey, string>> = {
+  property_tax_rate_pct: 'property tax',
+  electric_monthly_usd: 'electricity',
+  water_monthly_usd: 'water & sewer',
+  trash_monthly_usd: 'trash',
+  school_proficiency_pct: 'school results',
+};
+
+/**
+ * The footnote under a ranking, naming what is actually a guess.
+ *
+ * The list used to carry one sentence for every lens: "estimated — we have not
+ * sourced this county's figure yet." For a single-metric lens that is true.
+ * For true cost it is a **misdescription of our own work**: property tax comes
+ * from the GA DOR and electricity from EIA-861, together most of every dollar
+ * in the figure, and the asterisk was telling a buyer to discount all of it
+ * because water and trash are guesses.
+ *
+ * So the note names the estimated INPUTS, and says the rest is sourced when
+ * the rest exists. Which metrics count is decided by what the computation
+ * actually read — see `readingMetrics`, and the three times that distinction
+ * was got wrong before it was centralised.
+ */
+export function estimateNoteFor(lens: Lens, areas: readonly Area[]): string | undefined {
+  /** Per estimated metric, how many flagged rows it is a guess in. */
+  const guessedIn = new Map<MetricKey, number>();
+  const read = new Set<MetricKey>();
+  let flagged = 0;
+
+  for (const area of areas) {
+    if (area.kind !== lens.areaKind) continue;
+    const { value, read: readHere } = readingMetrics(area, (get) => lens.compute(get, area.key));
+    if (value === undefined || !Number.isFinite(value)) continue;
+    for (const m of readHere) read.add(m);
+    const guesses = area.metrics.filter((m) => m.estimated && readHere.has(m.metric));
+    if (guesses.length === 0) continue;
+    flagged++;
+    for (const m of guesses) {
+      guessedIn.set(m.metric, (guessedIn.get(m.metric) ?? 0) + 1);
+    }
+  }
+  if (flagged === 0) return undefined;
+
+  const label = (m: MetricKey) => METRIC_LABELS[m];
+  // A metric that is a guess in EVERY marked row is a property of the figure.
+  // One that is a guess in a handful is a property of those counties, and
+  // lumping the two together overstates: electricity is sourced in 27 of 29
+  // counties, and listing it beside trash implied the whole line was invented.
+  const always = [...guessedIn]
+    .filter(([, n]) => n === flagged)
+    .map(([m]) => label(m))
+    .filter((l): l is string => l !== undefined)
+    .sort();
+  const sometimes = [...guessedIn]
+    .filter(([, n]) => n < flagged)
+    .map(([m, n]) => {
+      const l = label(m);
+      return l === undefined ? undefined : `${l} in ${n} of them`;
+    })
+    .filter((l): l is string => l !== undefined)
+    .sort();
+
+  // Only claim a sourced remainder when the lens read something beyond the
+  // guesses — a single-metric lens whose one input is a guess has no rest.
+  const rest = read.size > guessedIn.size;
+
+  // A lens with one input does not need that input named: "electricity is
+  // still our estimate" under a lens called Electricity says it twice.
+  if (read.size === 1 || (always.length === 0 && sometimes.length === 0)) {
+    return '* still our estimate for the counties marked.';
+  }
+
+  const isAre = always.length === 1 ? 'is' : 'are';
+  const head =
+    always.length > 0 ? `* ${listOf(always)} ${isAre} still our estimate` : '* our estimate covers';
+  const tail = sometimes.length > 0 ? `, and ${listOf(sometimes)}` : '';
+  // "in 2 of them" has already said which counties, so appending "for the
+  // counties marked" both repeats it and reads as though it governs the
+  // count. Only the unqualified form needs that scope.
+  const closing = rest
+    ? '. The rest of each figure comes from a public record.'
+    : sometimes.length > 0
+      ? '.'
+      : ' for the counties marked.';
+  return `${head}${tail}${closing}`;
+}
+
 /** The lens the tab opens on. */
 export const DEFAULT_LENS: LensId = 'true_cost';
 

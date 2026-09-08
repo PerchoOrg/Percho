@@ -9,6 +9,7 @@ import {
   classOf,
   colorFor,
   costBreakdown,
+  estimateNoteFor,
   insuranceMonthlyUsd,
   legendRange,
   lensById,
@@ -527,5 +528,127 @@ describe('the electricity lens', () => {
     for (const o of others) {
       expect(o.ramp[4], `${o.id} shares electric's darkest step`).not.toBe(lens.ramp[4]);
     }
+  });
+});
+
+describe('the ranking footnote names what is actually a guess', () => {
+  /** Production's real shape: tax and electricity sourced, water and trash not. */
+  const county = (name: string): Area => ({
+    key: name.toLowerCase(),
+    name,
+    kind: 'county',
+    state: 'GA',
+    metrics: [
+      metric('county_mo_mills', 8.87),
+      metric('county_bond_mills', 0.18),
+      metric('school_mo_mills', 17.14),
+      metric('school_bond_mills', 0),
+      metric('school_proficiency_pct', 54),
+      metric('electric_monthly_usd', 157),
+      metric('water_monthly_usd', 78, true),
+      metric('trash_monthly_usd', 32, true),
+    ],
+  });
+  const areas = [county('Fulton'), county('Cobb')];
+  const note = (id: string) => {
+    const lens = lensById(id);
+    if (!lens) throw new Error(`no lens ${id}`);
+    return estimateNoteFor(lens, areas);
+  };
+
+  it('names the estimated parts of a composite figure, and defends the rest', () => {
+    // The old note said "we have not sourced this county's figure yet" over a
+    // number whose biggest line comes from the GA DOR.
+    const n = note('true_cost');
+    expect(n).toContain('trash');
+    expect(n).toContain('water & sewer');
+    expect(n).toContain('The rest of each figure comes from a public record');
+  });
+
+  it('says nothing at all when a lens has no estimates', () => {
+    expect(note('property_tax')).toBeUndefined();
+    expect(note('schools')).toBeUndefined();
+  });
+
+  it('does not name a metric the computation never read', () => {
+    // Electricity is sourced here, so it must not appear in true cost's note
+    // — and neither may the unused property_tax_rate_pct fallback.
+    const n = note('true_cost') ?? '';
+    expect(n).not.toContain('electricity');
+    expect(n).not.toContain('property tax');
+  });
+
+  it('does not promise a sourced remainder when there is none', () => {
+    // A single-metric lens whose one input is a guess has no "rest".
+    const guessed = areas.map((a) => ({
+      ...a,
+      metrics: a.metrics.map((m) =>
+        m.metric === 'electric_monthly_usd' ? { ...m, estimated: true } : m,
+      ),
+    }));
+    const lens = lensById('electric');
+    if (!lens) throw new Error('no electric lens');
+    // A one-input lens does not name its own input — "electricity is still our
+    // estimate" under a lens called Electricity says it twice.
+    const n = estimateNoteFor(lens, guessed) ?? '';
+    expect(n).toBe('* still our estimate for the counties marked.');
+  });
+
+  it('agrees in number with what it lists', () => {
+    expect(note('true_cost')).toContain('are still our estimate');
+    const oneOnly = areas.map((a) => ({
+      ...a,
+      metrics: a.metrics.map((m) =>
+        m.metric === 'water_monthly_usd' ? { ...m, estimated: false } : m,
+      ),
+    }));
+    const lens = lensById('true_cost');
+    if (!lens) throw new Error('no lens');
+    expect(estimateNoteFor(lens, oneOnly)).toContain('trash is still our estimate');
+  });
+});
+
+describe('the footnote separates always-a-guess from sometimes-a-guess', () => {
+  const county = (name: string, electricEstimated: boolean): Area => ({
+    key: name.toLowerCase(),
+    name,
+    kind: 'county',
+    state: 'GA',
+    metrics: [
+      metric('county_mo_mills', 8.87),
+      metric('county_bond_mills', 0.18),
+      metric('school_mo_mills', 17.14),
+      metric('school_bond_mills', 0),
+      metric('electric_monthly_usd', 157, electricEstimated),
+      metric('water_monthly_usd', 78, true),
+      metric('trash_monthly_usd', 32, true),
+    ],
+  });
+  // Production's real shape: electricity sourced everywhere except the two
+  // counties genuinely split between suppliers.
+  const areas = [county('Fulton', false), county('Forsyth', false), county('Cobb', true)];
+  const lens = lensById('true_cost');
+  if (!lens) throw new Error('no lens');
+
+  it('does not lump a mostly-sourced input in with the always-guessed ones', () => {
+    // Listing electricity beside trash implied the whole line was invented,
+    // when it is sourced in 27 of 29 counties.
+    const n = estimateNoteFor(lens, areas) ?? '';
+    expect(n).toContain('trash and water & sewer are still our estimate');
+    expect(n).toContain('electricity in 1 of them');
+  });
+
+  it('counts only the rows that are actually marked', () => {
+    // Fulton and Forsyth are not flagged at all for electricity, so the count
+    // is against flagged rows, not against every county on the map.
+    const n = estimateNoteFor(lens, areas) ?? '';
+    expect(n).not.toContain('in 3 of them');
+  });
+
+  it('says nothing about sometimes when a guess is universal', () => {
+    const allSame = areas.map((a) => county(a.name, false));
+    const n = estimateNoteFor(lens, allSame) ?? '';
+    expect(n).toContain('trash and water & sewer are still our estimate');
+    expect(n).not.toContain('of them');
   });
 });

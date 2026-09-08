@@ -39,6 +39,7 @@ import {
   classBreaks,
   colorFor,
   costBreakdown,
+  estimateNoteFor,
   legendRange,
   listOf,
   rankedBy,
@@ -88,6 +89,7 @@ async function main() {
       ramp: lens.ramp,
       legend,
       estimatedCount: ranked.filter((r) => r.estimated).length,
+      estimateNote: estimateNoteFor(lens, areas),
       rows: ranked.map((hit) => ({
         key: hit.area.key,
         name: hit.area.name,
