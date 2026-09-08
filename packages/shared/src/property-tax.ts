@@ -120,6 +120,9 @@ export const HOMESTEAD_EXEMPTIONS: Record<string, HomesteadExemption> = {
   douglas: v(6000, 2000, 'Douglas County Tax Commissioner — Regular Homestead'),
   fayette: v(5000, 2000, 'Fayette County — exemption schedule L1'),
   paulding: v(10000, 2000, 'Paulding County Board of Assessors — S1, HB 988'),
+  walton: v(4000, 2000, 'Walton County — Tax Assessor information for residents'),
+  jackson: v(2000, 2000, 'Jackson County Tax Commissioner — state standard only'),
+  dawson: v(2000, 2000, 'Dawson County Tax Commissioner brochure — state standard only'),
 };
 
 /**
