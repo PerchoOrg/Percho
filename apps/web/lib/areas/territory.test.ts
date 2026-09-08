@@ -3,6 +3,7 @@ import {
   type PolygonLike,
   type Position,
   bboxOf,
+  blend,
   coverage,
   dominant,
   inGeometry,
@@ -204,5 +205,91 @@ describe('dominant', () => {
 
   it('names nobody when nothing was covered', () => {
     expect(dominant({ shares: [], sampled: 10, unclaimed: 10 })).toBeUndefined();
+  });
+});
+
+describe('blend', () => {
+  const res = (shares: [string, number][]) => ({
+    shares: shares.map(([value, share]) => ({ value, share })),
+    sampled: 100,
+    unclaimed: 0,
+  });
+  const rates: Record<string, number> = { A: 0.1, B: 0.2, C: 0.3 };
+  const rateOf = (v: string) => rates[v];
+
+  it('averages by area share', () => {
+    const b = blend(
+      res([
+        ['A', 0.75],
+        ['B', 0.25],
+      ]),
+      rateOf,
+    );
+    expect(b?.value).toBeCloseTo(0.125, 10);
+    expect(b?.covered).toBeCloseTo(1, 10);
+  });
+
+  it('answers for the split county that dominant refuses', () => {
+    // Cobb: no provider owns half, so `dominant` returns nothing and the
+    // county was published as an unsourced guess. Every rate here is real.
+    const split = res([
+      ['A', 0.41],
+      ['B', 0.38],
+      ['C', 0.21],
+    ]);
+    expect(dominant(split)).toBeUndefined();
+    expect(blend(split, rateOf)?.value).toBeCloseTo(0.18, 10);
+  });
+
+  it('renormalises over the parts that have a rate, rather than treating a missing one as zero', () => {
+    // A utility that files no rate must not drag the average toward zero —
+    // that would understate the bill and look like a real, cheap figure.
+    const b = blend(
+      res([
+        ['A', 0.5],
+        ['UNKNOWN', 0.5],
+      ]),
+      rateOf,
+    );
+    expect(b?.value).toBeCloseTo(0.1, 10);
+    expect(b?.covered).toBeCloseTo(0.5, 10);
+  });
+
+  it('reports how much of the area it actually speaks for', () => {
+    // Unclaimed area lowers `covered` without changing the mean, so a caller
+    // can decide whether a figure over a third of a county is worth printing.
+    const b = blend(res([['A', 0.3]]), rateOf);
+    expect(b?.value).toBeCloseTo(0.1, 10);
+    expect(b?.covered).toBeCloseTo(0.3, 10);
+  });
+
+  it('is nothing when no part has a rate', () => {
+    expect(blend(res([['UNKNOWN', 1]]), rateOf)).toBeUndefined();
+    expect(blend(res([]), rateOf)).toBeUndefined();
+  });
+
+  it('agrees with dominant where one provider really does own the county', () => {
+    // The blend must degrade to the old answer where the old answer was good,
+    // or this change would be a silent rewrite of 27 counties that were fine.
+    const b = blend(
+      res([
+        ['A', 0.98],
+        ['B', 0.02],
+      ]),
+      rateOf,
+    );
+    expect(b?.value).toBeCloseTo(0.102, 10);
+    expect(Math.abs((b?.value ?? 0) - 0.1)).toBeLessThan(0.005);
+  });
+
+  it('keeps parts largest-first so a caller can name the lead provider', () => {
+    const b = blend(
+      res([
+        ['B', 0.3],
+        ['A', 0.7],
+      ]),
+      rateOf,
+    );
+    expect(b?.parts.map((p) => p.value)).toEqual(['B', 'A']);
   });
 });

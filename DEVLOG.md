@@ -21,6 +21,73 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 16:10 UTC — phase219: the electricity gap was a threshold, not a missing source
+
+**Objective**: two counties still carried an unsourced electricity estimate.
+The notes filed this as "optional, lower value". The two are **Cobb and
+Henry** — core metro, among the first counties any Atlanta buyer opens — so
+that triage was wrong.
+
+### Not a scraping gap
+
+Both counties had complete data. They were withheld by `MIN_SHARE = 0.5` on
+the LARGEST provider's territory share:
+
+```
+Cobb  (COBB EMC 41%, GEORGIA POWER 38%)
+Henry (SNAPPING SHOALS 47%, CENTRAL GEORGIA EMC 27%)
+```
+
+**That threshold asks the wrong question.** "Does one utility own half the
+county" is a fact about concentration, not about how well we know the price.
+It published **Fulton at 55% as sourced** while leaving **Henry at 47% an
+unsourced guess** — an 8-point difference flipping the strongest provenance
+claim the app makes. And the Fulton figure ignored 45% of the county anyway.
+Same shape as phase218: a threshold turning a continuous quantity into a
+binary claim.
+
+### Averaging instead
+
+`blend()` in `territory.ts` area-weights every rate covering the county and
+renormalises over the parts that have one, so a utility that files no rate
+dilutes `covered` rather than dragging the mean toward zero.
+
+Two properties worth stating. It **degrades to the old answer where the old
+answer was good** — Hall (98%), Jackson (97%), Pickens (100%) and Walton (94%)
+are unchanged to the dollar, which is the test that this is not a silent
+rewrite of 27 working counties. And it **corrects a systematic bias** where
+they were mixed:
+
+```
+Fulton    $166 → $150   (55% Georgia Power; 45% buys cheaper)
+Spalding  $166 → $153
+Gwinnett  $166 → $159
+Forsyth   $124 → $135
+Cobb       est → $141
+Henry      est → $141
+```
+
+Fulton is the one that matters. It was published **as sourced** at Georgia
+Power's rate applied to the whole county, overstating the bill by $16/mo while
+wearing a provenance badge. Filling the two holes was the smaller half of this.
+
+The retained gate is `MIN_COVERED` — how much of the county we have any real
+rate for — which does bear on confidence. Nothing hits it today.
+
+**Actions**: `blend()` + 7 tests; importer switched off `dominant`; `detail`
+now carries every provider, its share and its rate rather than one name.
+
+**Verified**: typecheck clean, lint clean, 649 mobile + **1078 web tests**
+(+7). Dry-run inspected before applying.
+
+**Learnings**: "optional, lower value" was my own triage, written when the
+gap looked like two missing scrapes. The counties were named in the notes the
+whole time — reading which two they were is what re-ranked it. A gap's value
+is in which rows it hits, not how many.
+
+**Next steps**: apply to production from the reference worktree, then
+regenerate both demos against the new figures.
+
 ## 2026-09-08 15:35 UTC — phase218: a figure that consulted nothing was marked sourced
 
 **Objective**: phase217 ended claiming "no screen writes this copy itself any

@@ -55,8 +55,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import {
   type PolygonLike,
+  blend,
   coverage,
-  dominant,
   prepare,
 } from '../../apps/web/lib/areas/territory.js';
 import { readXlsx, readZip } from '../../apps/web/lib/areas/xlsx.js';
@@ -125,8 +125,21 @@ const AS_OF = `${EIA_YEAR}-12-31`;
  */
 const STATE_MONTHLY_KWH = 1074;
 
-/** A provider must cover at least this much of a county to be named. */
-const MIN_SHARE = 0.5;
+/**
+ * Rated providers must cover at least this much of a county to publish it.
+ *
+ * This replaces a `MIN_SHARE = 0.5` gate on the LARGEST provider's share,
+ * which asked the wrong question. "Does one utility own half the county" is a
+ * fact about concentration, not about how well we know the price: it published
+ * Fulton at 55% as sourced while leaving Henry at 47% an unsourced guess,
+ * though the figure for Fulton ignored 45% of the county either way. Cobb, at
+ * 41/38, has no honest answer to "who is THE provider" and a perfectly good
+ * answer to "what does electricity cost here".
+ *
+ * The question that does bear on confidence is how much of the county we have
+ * a real rate for at all.
+ */
+const MIN_COVERED = 0.5;
 
 interface Feature {
   properties: { NAME: string; TYPE: string; CUSTOMERS?: number };
@@ -306,30 +319,37 @@ async function main() {
   const split: string[] = [];
   const noRate: string[] = [];
 
-  console.log('\ncounty       provider                        share   ¢/kWh   $/mo');
+  console.log('\ncounty       largest provider              share/n    ¢/kWh   $/mo');
   for (const county of shapes.counties) {
     const area: PolygonLike = {
       type: 'MultiPolygon',
       coordinates: county.rings.map((r) => [r]),
     };
     const result = coverage(area, territories, 60);
-    const top = dominant(result, MIN_SHARE);
-    if (!top) {
-      const a = result.shares[0];
-      const b = result.shares[1];
+    const mix = blend(result, (name) => rates.get(normalizeUtility(name))?.rate);
+    if (!mix) {
+      noRate.push(`${county.name} (${result.shares[0]?.value ?? 'no territory'})`);
+      continue;
+    }
+    // Every county the old code published, it published at its top provider's
+    // rate. Kept only to report how far the blend moves each one.
+    const top = result.shares[0];
+    const topRate = top ? rates.get(normalizeUtility(top.value))?.rate : undefined;
+    if (mix.covered < MIN_COVERED) {
       split.push(
-        `${county.name} (${a?.value} ${((a?.share ?? 0) * 100).toFixed(0)}%, ${b?.value} ${((b?.share ?? 0) * 100).toFixed(0)}%)`,
+        `${county.name} (rated providers cover only ${(mix.covered * 100).toFixed(0)}%)`,
       );
       continue;
     }
-    const rate = rates.get(normalizeUtility(top.value));
-    if (!rate) {
-      noRate.push(`${county.name} (${top.value})`);
-      continue;
-    }
-    const monthly = Math.round(STATE_MONTHLY_KWH * rate.rate);
+    const monthly = Math.round(STATE_MONTHLY_KWH * mix.value);
+    const wasMonthly = topRate ? Math.round(STATE_MONTHLY_KWH * topRate) : undefined;
+    const lead = mix.parts[0];
+    const moved =
+      wasMonthly !== undefined && wasMonthly !== monthly
+        ? `  was $${wasMonthly}`
+        : '';
     console.log(
-      `  ${county.name.padEnd(11)} ${top.value.slice(0, 30).padEnd(31)} ${(top.share * 100).toFixed(0).padStart(3)}%  ${(rate.rate * 100).toFixed(2).padStart(6)}  $${String(monthly).padStart(4)}`,
+      `  ${county.name.padEnd(11)} ${String(lead?.value ?? '').slice(0, 26).padEnd(27)} ${((lead?.share ?? 0) * 100).toFixed(0).padStart(3)}% of ${mix.parts.length}  ${(mix.value * 100).toFixed(2).padStart(6)}  $${String(monthly).padStart(4)}${moved}`,
     );
     rowsOut.push({
       area_kind: 'county',
@@ -344,18 +364,23 @@ async function main() {
       as_of: AS_OF,
       estimated: false,
       detail: {
-        provider: rate.name,
-        provider_share: Number(top.share.toFixed(3)),
-        rate_usd_per_kwh: rate.rate,
+        providers: mix.parts.map((p) => ({
+          name: p.value,
+          share: Number(p.share.toFixed(3)),
+          rate_usd_per_kwh: p.weight,
+        })),
+        provider_count: mix.parts.length,
+        covered_share: Number(mix.covered.toFixed(3)),
+        rate_usd_per_kwh: Number(mix.value.toFixed(5)),
         assumed_monthly_kwh: STATE_MONTHLY_KWH,
         basis:
-          'Georgia’s average residential consumption at this county’s dominant utility’s average residential rate. Consumption is held constant across counties so the figure compares the price of electricity, which is what differs, rather than local customer mix.',
+          'Georgia’s average residential consumption at the area-weighted average of the residential rates charged across this county. Most counties are served by more than one utility, so naming a single “the” provider would put a rate on the bill of everyone who does not buy from it. Consumption is held constant across counties so the figure compares the price of electricity, which is what differs, rather than local customer mix. Area is a proxy for customers, not a substitute: a utility serving the denser half of a county has more customers than its acreage implies.',
       },
     });
   }
 
   if (split.length > 0) {
-    console.log(`\nNo majority provider, left as an estimate:\n  ${split.join('\n  ')}`);
+    console.log(`\nToo little of the county has a known rate, left as an estimate:\n  ${split.join('\n  ')}`);
   }
   if (noRate.length > 0) {
     console.log(`\nNo published rate, left as an estimate:\n  ${noRate.join('\n  ')}`);

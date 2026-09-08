@@ -34,6 +34,13 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- Every county on the map now has a real electricity figure. Cobb and Henry
+  were previously showing an estimate because no single utility serves half of
+  either one.
+- Electricity costs are now averaged across every utility that serves a county
+  rather than taken from the largest one. Counties served mostly by a single
+  utility are unchanged; where a county is genuinely split, the figure was
+  overstating the bill — Fulton drops from $166 to $150 a month.
 - The comparison table was showing the monthly insurance figure as though we
   had looked it up per county. It is one flat assumption that does not vary by
   area, and it is now marked as such — matching what the cost sheet has always
