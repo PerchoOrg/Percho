@@ -1042,3 +1042,55 @@ describe('the tax line says what the published rate leaves out', () => {
     expect(note).not.toMatch(/includ(es|ing)|corrected|adjusted/);
   });
 });
+
+describe('a missing levy is not a levy of zero', () => {
+  const cobb = (drop?: MetricKey): Area => ({
+    key: 'henry',
+    name: 'Henry',
+    kind: 'county',
+    state: 'GA',
+    metrics: [
+      metric('county_mo_mills', 12.733),
+      metric('county_bond_mills', 0),
+      metric('school_mo_mills', 20),
+      // Henry's real school bond. Bond millage is never reduced by a homestead
+      // exemption, so it lands in full on the bill.
+      metric('school_bond_mills', 3.628),
+      metric('property_tax_rate_pct', 0.5, true),
+      metric('electric_monthly_usd', 141),
+      metric('water_monthly_usd', 66, true),
+      metric('trash_monthly_usd', 30, true),
+    ].filter((m) => m.metric !== drop),
+  });
+
+  it('prices from the levies when all four are present', () => {
+    const withAll = taxMonthlyUsdFor(cobb().key, (m) => {
+      const hit = cobb().metrics.find((x) => x.metric === m);
+      return hit === undefined ? undefined : Number(hit.value);
+    });
+    // Well above what the seeded 0.5% fallback would give ($208).
+    expect(withAll).toBeGreaterThan(300);
+  });
+
+  it('refuses to price from three of the four levies', () => {
+    // `?? 0` used to compute a tax 3.628 mills light — about $60 a month, and
+    // entirely plausible-looking. The seeded fallback is not the answer either:
+    // it would have given $208 against a real ~$583, which is further off. A
+    // broken load drops the county out of the ranking instead.
+    const a = cobb('school_bond_mills');
+    const got = taxMonthlyUsdFor(a.key, (m) => {
+      const hit = a.metrics.find((x) => x.metric === m);
+      return hit === undefined ? undefined : Number(hit.value);
+    });
+    expect(got).toBeUndefined();
+  });
+
+  it('still uses the stored rate for a county with NO millage at all', () => {
+    // That is what the fallback is for — a county never scraped — and it must
+    // survive the stricter rule above.
+    const got = taxMonthlyUsdFor('nowhere', (m) =>
+      m === 'property_tax_rate_pct' ? 0.5 : undefined,
+    );
+    expect(got).toBe(taxMonthlyUsd(0.5));
+  });
+});

@@ -259,21 +259,49 @@ export function taxMonthlyUsdFor(
   countyKey: string,
   get: (metric: MetricKey) => number | undefined,
 ): number | undefined {
-  const countyMo = get('county_mo_mills');
-  const schoolMo = get('school_mo_mills');
-  if (countyMo !== undefined && schoolMo !== undefined) {
+  // All FOUR levies, or none at all — never three.
+  //
+  // `?? 0` on the bond levies made "this county has no bond levy" and "we
+  // failed to load its bond levy" the same thing, and they are not: 14 of the
+  // 29 counties carry one, Henry's school bond alone is 3.628 mills — about
+  // $60 a month on the reference home — and bond millage is never reduced by a
+  // homestead exemption, which is why the four are stored apart at all. A
+  // county missing one priced $60 light and looked entirely plausible.
+  //
+  // The three cases are genuinely different:
+  //
+  //   all four      price them. This is every county today.
+  //   none          the stored rate, which is what it is for: a county whose
+  //                 millage was never scraped.
+  //   some          a broken load. Neither a partial sum nor the seeded rate
+  //                 is honest — the partial sum is quietly light and unflagged,
+  //                 and the seeded rate is further off still. Undefined, so the
+  //                 county drops out of the ranking rather than sitting in it
+  //                 wrong. Absence over placeholder, as everywhere else here.
+  const levies = [
+    get('county_mo_mills'),
+    get('county_bond_mills'),
+    get('school_mo_mills'),
+    get('school_bond_mills'),
+  ];
+  const present = levies.filter((v) => v !== undefined).length;
+  if (present === levies.length) {
+    const [countyMo, countyBond, schoolMo, schoolBond] = levies as [
+      number,
+      number,
+      number,
+      number,
+    ];
     const est = estimatePropertyTax(
       REFERENCE_HOME_USD,
-      {
-        countyMo,
-        countyBond: get('county_bond_mills') ?? 0,
-        schoolMo,
-        schoolBond: get('school_bond_mills') ?? 0,
-      },
+      { countyMo, countyBond, schoolMo, schoolBond },
       countyKey,
     );
     if (est) return est.monthlyUsd;
+  } else if (present > 0) {
+    return undefined;
   }
+
   const rate = get('property_tax_rate_pct');
   return rate === undefined ? undefined : taxMonthlyUsd(rate);
 }

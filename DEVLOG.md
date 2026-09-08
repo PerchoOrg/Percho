@@ -21,6 +21,63 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 08:30 UTC — phase245: three of four levies is not a tax
+
+**Objective**: phase244 swept the importers for defaults that substitute a
+value the code cannot tell from a real one. The same shape lives in the
+**runtime** path — the code that reads the data and puts a number on a buyer's
+screen. Swept it.
+
+Most hits were counter initialisation (`(map.get(k) ?? 0) + 1`) — not
+substitution. One was real, and it is on every county's largest cost line.
+
+### `?? 0` on a bond levy
+
+```ts
+countyBond: get('county_bond_mills') ?? 0,
+schoolBond: get('school_bond_mills') ?? 0,
+```
+
+That made *"this county has no bond levy"* and *"we failed to load its bond
+levy"* the same thing. They are not. **14 of the 29 counties carry one**;
+Henry's school bond alone is 3.628 mills — about **$60 a month** on the
+reference home — and bond millage is never reduced by a homestead exemption,
+which is the whole reason the four levies are stored apart.
+
+Measured, a Henry-shaped county missing its school bond priced at **$523**
+instead of ~$583. Sixty dollars light and entirely plausible-looking.
+
+### The fallback was not the answer either
+
+My first fix fell through to the stored `property_tax_rate_pct`. Then I looked
+at what that gives: **$208** — further from the truth than the partial sum it
+was replacing. Writing the test is what showed me that; I had reached for the
+existing fallback because it was there.
+
+Three cases, genuinely different:
+
+```
+all four   price them — every county today
+none       the stored rate, which is exactly what it is for
+some       a broken load. Undefined, so the county drops out of the ranking
+           rather than sitting in it wrong.
+```
+
+Absence over placeholder, as everywhere else here.
+
+**Verified**: the mutation was applied under an assertion that it applied —
+my first attempt at this silently no-opped and reported 87 passing, which is
+the same failure I spent the phase removing. With the partial sum allowed
+again: *expected 523 to be undefined*. All 29 counties still price from their
+levies; no data change.
+
+typecheck clean, lint clean, 666 mobile + **1161 web tests** (+3).
+
+**Learnings**: I nearly verified this fix with a `sed` that did not match and
+called the tests load-bearing on the strength of it. The check that saved me
+was asserting the mutation changed the file — **a verification step needs its
+own verification when its failure mode is silence.**
+
 ## 2026-09-09 07:55 UTC — phase244: two more vintages that were asserted, not derived
 
 **Objective**: phase243 found a vintage whose fallback was indistinguishable
