@@ -297,14 +297,29 @@ function metricLookup(area: Area): (metric: MetricKey) => number | undefined {
   return (metric) => byKey.get(metric)?.value;
 }
 
-/** Every area that has all of the lens's inputs, with its computed value. */
+/**
+ * Every area that has all of the lens's inputs, with its computed value.
+ *
+ * `estimated` reflects the metrics the computation ACTUALLY read, not the
+ * lens's declared `inputs`. The two differ whenever a lens has a fallback:
+ * property tax is computed from the state's own millage rates and falls back
+ * to a stored percentage only when those are missing, so checking `inputs`
+ * flagged a state-sourced figure as an estimate because the unused fallback
+ * happened to be one. A lens that read nothing estimated is not an estimate,
+ * whatever it might have read.
+ */
 export function valuesFor(lens: Lens, areas: readonly Area[]): LensValue[] {
   const out: LensValue[] = [];
   for (const area of areas) {
     if (area.kind !== lens.areaKind) continue;
-    const value = lens.compute(metricLookup(area), area.key);
+    const lookup = metricLookup(area);
+    const read = new Set<MetricKey>();
+    const value = lens.compute((metric) => {
+      read.add(metric);
+      return lookup(metric);
+    }, area.key);
     if (value === undefined || !Number.isFinite(value)) continue;
-    const estimated = area.metrics.some((m) => m.estimated && lens.inputs.includes(m.metric));
+    const estimated = area.metrics.some((m) => m.estimated && read.has(m.metric));
     out.push({ area, value, estimated });
   }
   return out;

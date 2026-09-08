@@ -291,3 +291,45 @@ describe('property tax comes from the levies, not a stored percentage', () => {
     expect(valuesFor(lens, [unknown])[0]?.value).toBeGreaterThan(0);
   });
 });
+
+describe('estimated reflects what was read, not what was declared', () => {
+  /** Real state-sourced levies beside an estimated fallback rate. */
+  const sourcedLevies: Area = {
+    key: 'cobb',
+    name: 'Cobb',
+    kind: 'county',
+    state: 'GA',
+    metrics: [
+      metric('county_mo_mills', 8.46),
+      metric('county_bond_mills', 0),
+      metric('school_mo_mills', 18.7),
+      metric('school_bond_mills', 0),
+      metric('property_tax_rate_pct', 0.72, true),
+      metric('electric_monthly_usd', 148, true),
+      metric('water_monthly_usd', 58, true),
+      metric('trash_monthly_usd', 28, true),
+    ],
+  };
+
+  it('does not call a sourced tax figure an estimate because the unused fallback is one', () => {
+    const lens = lensById('property_tax');
+    if (!lens) throw new Error('lens missing');
+    expect(valuesFor(lens, [sourcedLevies])[0]?.estimated).toBe(false);
+  });
+
+  it('still calls it an estimate when the fallback is what got used', () => {
+    const lens = lensById('property_tax');
+    if (!lens) throw new Error('lens missing');
+    const noLevies: Area = {
+      ...sourcedLevies,
+      metrics: sourcedLevies.metrics.filter((m) => !m.metric.endsWith('_mills')),
+    };
+    expect(valuesFor(lens, [noLevies])[0]?.estimated).toBe(true);
+  });
+
+  it('still flags true cost, whose utility inputs really are estimates', () => {
+    const lens = lensById('true_cost');
+    if (!lens) throw new Error('lens missing');
+    expect(valuesFor(lens, [sourcedLevies])[0]?.estimated).toBe(true);
+  });
+});
