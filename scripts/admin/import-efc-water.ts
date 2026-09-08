@@ -188,7 +188,18 @@ export function billsByCounty(rows: readonly string[][], counties: readonly stri
           const v = Number(hits.find((r) => (r[COL.serviceType] ?? '').trim() === type)?.[COL.at4000]);
           return Number.isFinite(v) && v > 0 ? v : undefined;
         };
-        return { label, servicePop: Number(hits[0]?.[COL.servicePop]) || 0, water: at('Water'), sewer: at('Sewer') };
+        const servicePop = Number(hits[0]?.[COL.servicePop]);
+        // NOT `|| 0`. A population that failed to parse would drop the system
+        // out of the weighted blend below, silently and indistinguishably from
+        // a system that genuinely serves nobody — phase243's shape. Refuse
+        // instead: a blend missing one of five systems is a different number
+        // and nothing would have said so.
+        if (!Number.isFinite(servicePop) || servicePop <= 0) {
+          throw new Error(
+            `${county}: the survey gives no service population for "${label}", so it cannot be weighted`,
+          );
+        }
+        return { label, servicePop, water: at('Water'), sewer: at('Sewer') };
       });
       // Weighted by the population each system serves, and renormalised per
       // component over the systems that publish it — a utility that files no
