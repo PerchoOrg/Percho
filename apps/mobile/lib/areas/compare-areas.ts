@@ -29,7 +29,9 @@ import {
 	LENSES,
 	type Lens,
 	type MetricKey,
+	estimatedFromReads,
 	insuranceMonthlyUsd,
+	readingMetrics,
 	taxMonthlyUsdFor,
 } from "@percho/shared/lenses";
 import {
@@ -66,26 +68,28 @@ export interface AreaCompareTable {
 	rows: AreaCompareRow[];
 }
 
-function metricValue(area: Area, metric: MetricKey): number | undefined {
-	return area.metrics.find((m) => m.metric === metric)?.value;
-}
-
-function isEstimated(area: Area, metrics: readonly MetricKey[]): boolean {
-	return area.metrics.some((m) => m.estimated && metrics.includes(m.metric));
-}
-
 /** Builds one row, marking the best cell by the row's own direction. */
 function row(
 	label: string,
 	note: string | undefined,
 	areas: readonly Area[],
-	inputs: readonly MetricKey[],
-	compute: (a: Area) => number | undefined,
+	compute: (
+		get: (metric: MetricKey) => number | undefined,
+		area: Area,
+	) => number | undefined,
 	format: (v: number) => string,
 	betterIsLow: boolean,
 	priority: PriorityKey | undefined,
 ): AreaCompareRow {
-	const values = areas.map(compute);
+	// A cell is an estimate when a metric the computation READ is one — not
+	// when a declared input is. The tax row reads the state's own millage and
+	// falls back to a seeded rate it never reaches; asking about declared
+	// inputs put an "estimated" asterisk on sourced figures. Third occurrence
+	// of that mistake, hence the shared helper.
+	const computed = areas.map((a) =>
+		readingMetrics(a, (get) => compute(get, a)),
+	);
+	const values = computed.map((c) => c.value);
 	const present = values.filter((v): v is number => v !== undefined);
 	const lo = Math.min(...present);
 	const hi = Math.max(...present);
@@ -102,10 +106,14 @@ function row(
 		...(priority ? { priority } : {}),
 		cells: areas.map((area, i) => {
 			const v = values[i];
+			const read = computed[i]?.read;
 			return {
 				...(v !== undefined ? { text: format(v) } : {}),
 				best: v !== undefined && best !== undefined && v === best,
-				estimated: v !== undefined && isEstimated(area, inputs),
+				estimated:
+					v !== undefined &&
+					read !== undefined &&
+					estimatedFromReads(area, read),
 			};
 		}),
 	};
@@ -132,8 +140,7 @@ export function buildAreaCompareTable(
 			"True cost / month",
 			"tax + utilities + trash + insurance, same $500k home",
 			areas,
-			trueCost?.inputs ?? [],
-			(a) => trueCost?.compute((m) => metricValue(a, m), a.key),
+			(get, a) => trueCost?.compute(get, a.key),
 			usd,
 			true,
 			"cost",
@@ -142,8 +149,7 @@ export function buildAreaCompareTable(
 			"Schools",
 			"district average, % proficient",
 			areas,
-			["school_proficiency_pct"],
-			(a) => metricValue(a, "school_proficiency_pct"),
+			(get) => get("school_proficiency_pct"),
 			(v) => `${Math.round(v)}%`,
 			false,
 			"schools",
@@ -152,17 +158,10 @@ export function buildAreaCompareTable(
 			"Property tax / year",
 			"on a $500k home, homestead exemption applied",
 			areas,
-			[
-				"property_tax_rate_pct",
-				"county_mo_mills",
-				"county_bond_mills",
-				"school_mo_mills",
-				"school_bond_mills",
-			],
 			// Same computation the lens uses, so the map and this table cannot
 			// disagree about what a county's tax is.
-			(a) => {
-				const monthly = taxMonthlyUsdFor(a.key, (m) => metricValue(a, m));
+			(get, a) => {
+				const monthly = taxMonthlyUsdFor(a.key, get);
 				return monthly === undefined ? undefined : monthly * 12;
 			},
 			usd,
@@ -173,11 +172,10 @@ export function buildAreaCompareTable(
 			"Utilities & trash / month",
 			"electric · water · trash",
 			areas,
-			["electric_monthly_usd", "water_monthly_usd", "trash_monthly_usd"],
-			(a) => {
-				const e = metricValue(a, "electric_monthly_usd");
-				const w = metricValue(a, "water_monthly_usd");
-				const t = metricValue(a, "trash_monthly_usd");
+			(get) => {
+				const e = get("electric_monthly_usd");
+				const w = get("water_monthly_usd");
+				const t = get("trash_monthly_usd");
 				if (e === undefined || w === undefined || t === undefined) {
 					return undefined;
 				}
@@ -191,7 +189,6 @@ export function buildAreaCompareTable(
 			"Insurance / month",
 			"same assumption everywhere — it does not vary by county",
 			areas,
-			[],
 			() => insuranceMonthlyUsd,
 			usd,
 			// Identical in every column by construction, so nothing is best.

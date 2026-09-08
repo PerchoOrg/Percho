@@ -4,13 +4,14 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex" />
-<title>Area compare — Percho demo</title>
+<title>Area compare — what shipped</title>
+<script src="/demos/area-compare/data.js"></script>
 <style>
-  /* Percho app chrome tokens (apps/mobile/theme/tokens.ts `colors`) */
+  /* Percho app chrome tokens (apps/mobile/theme/tokens.ts) */
   :root {
     --bg: #F7F5F0; --surface: #FFFFFF; --surface2: #F3EDE4;
     --border: #EADFD0; --ink: #2B2116; --ink2: #8A7358; --ink3: #B9A88F;
-    --accent: #B45309; --pos: #1B7A4D; --posBg: #E2EDE7;
+    --accent: #B45309; --posBg: #E2EDE7; --posInk: #0E5C48;
     --page: #ECE7DD;
   }
   * { box-sizing: border-box; }
@@ -22,51 +23,61 @@
     gap: 40px; padding: 36px 20px;
   }
   #phone {
-    width: 390px; min-height: 800px; flex: none;
+    width: 390px; min-height: 820px; flex: none;
     background: var(--bg); border-radius: 48px; overflow: hidden;
     box-shadow: 0 24px 60px rgba(43,33,22,0.28), 0 0 0 10px #1c1917;
-    padding: 58px 14px 26px;
+    padding: 54px 14px 26px;
   }
-  header { padding: 0 4px 12px; }
-  header .eyebrow { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
-  header h1 { margin: 2px 0 0; font-size: 22px; font-family: "New York", "Iowan Old Style", Georgia, serif; }
-  header .sub { font-size: 12px; color: var(--ink2); margin-top: 2px; }
+  header { padding: 0 4px 10px; }
+  header .eyebrow { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; }
+  header h1 { margin: 2px 0 0; font-size: 22px;
+    font-family: "New York", "Iowan Old Style", Georgia, serif; }
+  header .sub { font-size: 12px; color: var(--ink2); margin-top: 3px; line-height: 1.35; }
 
-  #card { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 14px 12px 10px; }
+  #controls { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 4px 12px; }
+  .pick {
+    border-radius: 999px; padding: 6px 11px; font-size: 11.5px; font-weight: 600;
+    background: var(--surface); border: 1px solid var(--border); color: var(--ink2);
+    cursor: pointer; user-select: none;
+  }
+  .pick.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .pick.prio { border-style: dashed; }
+
+  #card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 24px; padding: 14px 12px 12px; }
   .cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
   .who { text-align: center; padding-bottom: 10px; }
   .who .nm { font-size: 13.5px; font-weight: 700; line-height: 1.2; }
-  .who .ct { font-size: 10.5px; color: var(--ink2); margin-top: 2px; }
-  .who .cty { display: inline-block; margin-top: 5px; background: var(--surface2); border-radius: 999px; padding: 2px 8px; font-size: 9.5px; font-weight: 650; color: var(--ink2); letter-spacing: 0.03em; }
+  .who .ct { display: inline-block; margin-top: 4px; background: var(--surface2);
+    border-radius: 999px; padding: 2px 8px; font-size: 9.5px; font-weight: 650;
+    color: var(--ink2); letter-spacing: 0.03em; }
 
-  .sect { font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink3); font-weight: 700; margin: 12px 2px 5px; display: flex; align-items: center; gap: 6px; }
+  .sect { font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--ink3); font-weight: 700; margin: 12px 2px 1px;
+    display: flex; align-items: center; gap: 6px; }
   .sect::after { content: ""; flex: 1; height: 1px; background: var(--surface2); }
-  .cell { background: var(--bg); border: 1px solid var(--surface2); border-radius: 12px; padding: 7px 8px; text-align: center; position: relative; }
+  .note { font-size: 9.5px; color: var(--ink3); margin: 0 2px 5px; }
+  .cell { background: var(--bg); border: 1px solid var(--surface2); border-radius: 12px;
+    padding: 8px 6px; text-align: center; position: relative; }
   .cell.win { background: var(--posBg); border-color: #CBE0D4; }
   .cell .v { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .cell.win .v { color: var(--pos); }
-  .cell .s { font-size: 9.5px; color: var(--ink2); margin-top: 1px; line-height: 1.25; }
-  .cell .tick { position: absolute; top: -6px; right: -4px; width: 16px; height: 16px; border-radius: 50%;
-    background: var(--pos); color: #fff; font-size: 10px; line-height: 16px; font-weight: 700; }
-
-  .hero-cell { padding: 10px 6px 9px; }
-  .hero-cell .v { font-size: 21px; font-family: "New York", "Iowan Old Style", Georgia, serif; }
-  .hero-cell .d { font-size: 9.5px; margin-top: 1px; color: var(--ink2); font-variant-numeric: tabular-nums; }
-
-  .bars { display: flex; gap: 3px; justify-content: center; margin-top: 4px; height: 18px; align-items: flex-end; }
-  .bars div { width: 9px; border-radius: 2px 2px 0 0; background: #548C6C; }
-
-  .quote { font-size: 10.5px; color: var(--ink2); font-style: italic; line-height: 1.35; text-align: left; }
-  .quote b { color: var(--ink); font-style: normal; font-weight: 650; }
-
+  .cell.win .v { color: var(--posInk); }
+  .cell .tick { position: absolute; top: -6px; right: -4px; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--posInk); color: #fff; font-size: 10px;
+    line-height: 16px; font-weight: 700; }
   .foot { font-size: 10px; color: var(--ink3); margin: 10px 4px 0; line-height: 1.4; }
 
-  /* side note */
-  #note { width: 360px; padding-top: 8px; color: #52514e; }
-  #note h1 { font-size: 18px; color: #0b0b0b; margin: 0 0 4px; }
-  #note p { font-size: 13px; margin: 8px 0; }
-  #note h2 { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #898781; margin: 18px 0 6px; }
-  @media (max-width: 860px) { #note { display: none; } body { padding: 12px 0; } }
+  #side { width: 380px; padding-top: 8px; color: #52514e; }
+  #side h1 { font-size: 18px; color: #0b0b0b; margin: 0 0 4px; }
+  #side p { font-size: 13px; margin: 9px 0; }
+  #side h2 { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: #898781; margin: 18px 0 6px; }
+  .stamp { background: #fff; border: 1px solid #e1e0d9; border-left: 3px solid #0ca30c;
+    border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+  .warn { background: #fff; border: 1px solid #e1e0d9; border-left: 3px solid #ec835a;
+    border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+  @media (max-width: 880px) { #side { display: none; } body { padding: 12px 0; } }
 </style>
 </head>
 <body>
@@ -74,101 +85,109 @@
 <div id="phone">
   <header>
     <div class="eyebrow">Compare</div>
-    <h1>Your three candidates</h1>
-    <div class="sub">Same $500k budget — what each place really asks of you, row by row.</div>
+    <h1 id="title"></h1>
+    <div class="sub" id="blurb"></div>
   </header>
-
-  <div id="card">
-    <div class="cols" id="who"></div>
-    <div id="body"></div>
-  </div>
-  <p class="foot">Figures are county-level estimates for a $500k home; HOA and
-  schools are community-specific. Green marks the best value in a row — the
-  verdict stays yours. Demo data, approximate.</p>
+  <div id="controls"></div>
+  <div id="card"></div>
+  <p class="foot" id="foot"></p>
 </div>
 
-<div id="note">
+<div id="side">
   <h1>Area compare</h1>
-  <p>The buyer study says our users aren't roaming the metro — they're at
-  <b>stage B: holding 2–3 candidate areas</b> and trying to pick (Q12).
-  The lens map answers "where should I look?"; this card answers
-  "which of my three?" — every dimension on one screen, best value marked,
-  no scrolling between tabs.</p>
-  <p>Entry points: the saved tab (compare your saved communities), or the
-  search sheet after tapping two counties. HOA appears here and not on the
-  county map because it's a community-level fact — each dimension joins at
-  its own geography.</p>
-  <h2>Why the rows are these</h2>
-  <p>Schools first (looked up first, 8/10), then the cost rows —
-  tax, utilities &amp; trash, HOA — that make up <b>true monthly cost</b>,
-  the study's #1 post-move regret. Resident lines at the foot answer the
-  vibe question reviews-style, instead of a crime layer we deliberately
-  don't build.</p>
+  <p class="stamp" id="stamp"></p>
+  <p>Generated, not drawn. The table comes from
+  <code>buildAreaCompareTable</code> in
+  <code>apps/mobile/lib/areas/compare-areas.ts</code> — the same function the
+  phone calls — run over the live
+  <code>percho.co/api/mobile/areas</code> payload.</p>
+  <p>The four trios are presets because the table's maths cannot run in the
+  browser without reimplementing it there, which is what let the previous
+  version of this page drift. Tap <b>Schools first</b> to see row reordering:
+  the You tab lets a buyer say what matters, and the table leads with it.</p>
+
+  <h2>Why this table marks a winner</h2>
+  <p>The homes comparison deliberately does not — ranking whole houses on a
+  composite would be our opinion dressed as a fact. Every row here is one
+  measured quantity with an agreed direction, so marking the better cell
+  states arithmetic. There is still no overall winner: how much schools weigh
+  against cost is the buyer's judgement.</p>
+
+  <h2>What is still an estimate</h2>
+  <p class="warn">Water, trash and insurance. Trash has no central source in
+  Georgia; water is per-utility and the big rate schedules are multi-column
+  PDFs. Property tax, schools and electricity are sourced from the GA DOR,
+  GOSA and NREL/OpenEI respectively.</p>
 </div>
 
 <script>
 (function () {
-  const AREAS = [
-    {
-      nm: 'River Green', ct: 'Canton', cty: 'Cherokee',
-      taxYr: 3600, taxPct: 0.72, util: 245, hoa: 92, hoaWhat: 'pool · tennis · playground',
-      sch: [58, 54, 56], cost: 783,
-      quote: '“Swim team in summer is the whole social calendar.”',
-    },
-    {
-      nm: 'Vickery', ct: 'Cumming', cty: 'Forsyth',
-      taxYr: 3850, taxPct: 0.77, util: 234, hoa: 158, hoaWhat: 'town square · gym · pool',
-      sch: [66, 62, 64], cost: 859,
-      quote: '“You pay for the village square — and use it every week.”',
-    },
-    {
-      nm: 'Oak Grove', ct: 'Decatur', cty: 'DeKalb',
-      taxYr: 5200, taxPct: 1.04, util: 287, hoa: 0, hoaWhat: 'no HOA — yard care is on you',
-      sch: [62, 48, 45], cost: 866,
-      quote: '“No HOA, but budget for your own yard crew.”',
-    },
-  ];
-  const avg = a => Math.round(a.sch.reduce((x, y) => x + y) / 3);
-  const min = f => Math.min(...AREAS.map(f));
-  const max = f => Math.max(...AREAS.map(f));
+  const D = window.__COMPARE__;
+  let trioIndex = 0;
+  let schoolsFirst = false;
 
-  document.getElementById('who').innerHTML = AREAS.map(a =>
-    '<div class="who"><div class="nm">' + a.nm + '</div><div class="ct">' + a.ct +
-    '</div><span class="cty">' + a.cty + ' Co.</span></div>').join('');
+  document.getElementById('stamp').innerHTML =
+    'Generated from live production data on <b>' +
+    new Date(D.generatedAt).toISOString().replace('T', ' ').slice(0, 16) +
+    ' UTC</b>. Re-run <code>scripts/admin/build-compare-demo.ts</code> to refresh.';
 
-  const row = (title, cells) =>
-    '<div class="sect">' + title + '</div><div class="cols">' + cells.join('') + '</div>';
-  const cell = (win, inner) =>
-    '<div class="cell' + (win ? ' win' : '') + '">' + (win ? '<span class="tick">✓</span>' : '') + inner + '</div>';
+  const controls = document.getElementById('controls');
+  D.trios.forEach((t, i) => {
+    const el = document.createElement('div');
+    el.className = 'pick';
+    el.textContent = t.title;
+    el.addEventListener('click', () => { trioIndex = i; paint(); });
+    controls.appendChild(el);
+  });
+  const prio = document.createElement('div');
+  prio.className = 'pick prio';
+  prio.textContent = 'Schools first';
+  prio.addEventListener('click', () => { schoolsFirst = !schoolsFirst; paint(); });
+  controls.appendChild(prio);
 
-  const bestCost = min(a => a.cost);
-  const bestSch = max(avg);
-  const bestTax = min(a => a.taxYr);
-  const bestUtil = min(a => a.util);
-  const bestHoa = min(a => a.hoa);
+  function paint() {
+    const trio = D.trios[trioIndex];
+    const table = schoolsFirst ? trio.schoolsFirst : trio.neutral;
 
-  document.getElementById('body').innerHTML =
-    row('True cost / month · $500k home', AREAS.map(a =>
-      cell(a.cost === bestCost,
-        '<div class="hero-cell"><div class="v">$' + a.cost + '</div><div class="d">' +
-        (a.cost === bestCost ? 'cheapest to own' : '+$' + (a.cost - bestCost) + ' /mo') +
-        '</div></div>'))) +
-    row('Assigned schools · % proficient', AREAS.map(a =>
-      cell(avg(a) === bestSch,
-        '<div class="v">' + avg(a) + '%</div>' +
-        '<div class="bars">' + a.sch.map(s => '<div style="height:' + Math.round(s / 70 * 18) + 'px"></div>').join('') + '</div>' +
-        '<div class="s">E ' + a.sch[0] + ' · M ' + a.sch[1] + ' · H ' + a.sch[2] + '</div>'))) +
-    row('Property tax / year', AREAS.map(a =>
-      cell(a.taxYr === bestTax,
-        '<div class="v">$' + a.taxYr.toLocaleString() + '</div><div class="s">' + a.taxPct.toFixed(2) + '% effective</div>'))) +
-    row('Utilities & trash / month', AREAS.map(a =>
-      cell(a.util === bestUtil,
-        '<div class="v">$' + a.util + '</div><div class="s">electric · water · trash</div>'))) +
-    row('HOA / month', AREAS.map(a =>
-      cell(a.hoa === bestHoa,
-        '<div class="v">' + (a.hoa ? '$' + a.hoa : '$0') + '</div><div class="s">' + a.hoaWhat + '</div>'))) +
-    row('What residents say', AREAS.map(a =>
-      '<div class="quote">' + a.quote + '</div>'));
+    document.querySelectorAll('#controls .pick').forEach((el, i) => {
+      if (i < D.trios.length) el.classList.toggle('on', i === trioIndex);
+    });
+    prio.classList.toggle('on', schoolsFirst);
+
+    document.getElementById('title').textContent = trio.title;
+    document.getElementById('blurb').textContent = trio.blurb;
+
+    let html =
+      '<div class="cols">' +
+      table.headers
+        .map((h) => '<div class="who"><div class="nm">' + h.name +
+          '</div><span class="ct">' + h.state + ' county</span></div>')
+        .join('') +
+      '</div>';
+
+    for (const row of table.rows) {
+      html +=
+        '<div class="sect">' + row.label + '</div>' +
+        (row.note ? '<div class="note">' + row.note + '</div>' : '') +
+        '<div class="cols">' +
+        row.cells
+          .map((c) =>
+            '<div class="cell' + (c.best ? ' win' : '') + '">' +
+            (c.best ? '<span class="tick">✓</span>' : '') +
+            '<div class="v">' + (c.text || '—') + (c.estimated ? '*' : '') + '</div></div>')
+          .join('') +
+        '</div>';
+    }
+    document.getElementById('card').innerHTML = html;
+
+    const anyEstimated = table.rows.some((r) => r.cells.some((c) => c.estimated));
+    document.getElementById('foot').textContent =
+      'Green marks the better figure in a row. There is no overall winner on ' +
+      'purpose — how much schools weigh against cost is your call, not ours.' +
+      (anyEstimated ? ' * still our estimate.' : '');
+  }
+
+  paint();
 })();
 </script>
 </body>

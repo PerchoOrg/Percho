@@ -21,6 +21,57 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 11:35 UTC — phase207: the second stale demo, and the third time the same bug
+
+**Objective**: the notes' own next item, written last tick — `/demos/
+area-compare/` was still a hand-drawn mockup showing three invented
+communities ("River Green", "Vickery", "Oak Grove") with invented figures,
+while the screen that shipped compares COUNTIES from real millage, real
+Milestones results and a real electric rate. Two demos drifting the same way
+is not bad luck; it is what a hand-drawn preview does once the thing it
+previews is real.
+
+**Actions**:
+- `scripts/admin/build-compare-demo.ts` — runs the real
+  `buildAreaCompareTable` from `apps/mobile/lib/areas/compare-areas.ts` over
+  the live `/api/mobile/areas` payload. Four preset trios, each chosen to show
+  something different: schools trading against cost, the cheap outer ring
+  where the figures converge, the core metro, and where tax dominates.
+- Each trio is also rendered under a **schools-first** priority weighting,
+  because row reordering is a real feature of the shipped screen and a static
+  table would not show it. All four reorder from "True cost" to "Schools".
+- `/demos/area-compare/index.html` rewritten as a renderer, with the same
+  generation stamp as the lens demo.
+
+**And the demo immediately earned its keep by exposing a bug.** The rendered
+table put an "estimated" asterisk on **Property tax** — a figure computed from
+the GA DOR's own adopted millage. `compare-areas.ts` had its own copy of the
+"is any DECLARED input an estimate?" check, and the declared list still names
+the seeded `property_tax_rate_pct` that the computation never reaches.
+
+**That is the third time.** `valuesFor` (phase201.2), then `costBreakdown`
+(phase203.1), now the mobile compare table — three files, three separate
+pieces of code, all written to the same wrong instinct. So this phase does not
+fix it a fourth place at a time: `readingMetrics` and `estimatedFromReads` now
+live in `@percho/shared/lenses`, all three call sites go through them, and the
+helper's header says why it exists. A declared input includes fallbacks; a
+fallback the computation never reached is invisible to reasoning and visible
+to `.some()`.
+
+**Decisions**:
+1. **Presets rather than a free picker.** The table's maths cannot run in the
+   browser without reimplementing it there, which is exactly what let the
+   previous version drift. Four trios precomputed.
+2. `row()` in the compare table now takes a metric GETTER rather than an area,
+   which is what makes read-tracking possible at all. `metricValue` and
+   `isEstimated` are gone — they were the local reimplementation.
+
+**Verified**: regenerated and re-screenshotted. The property tax row now reads
+`$4,416 · $4,932 · $5,520` with no asterisks; true cost and utilities keep
+theirs; insurance is correctly unmarked in every column because it is
+identical everywhere and reads no metric at all. `pnpm typecheck` clean,
+**649 mobile (+4) + 1018 web tests pass**.
+
 ## 2026-09-08 11:10 UTC — phase206: the review demo was a mockup of something that already exists
 
 **Objective**: with water stopped on evidence and the tax-district question
