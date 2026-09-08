@@ -19,8 +19,10 @@
  * Rows re-fetch from the detail endpoints on every mount — the store keeps
  * ids only, so a price change shows the moment the server knows it.
  */
+import type { Area } from "@percho/shared/lenses";
+import { lensById, valuesFor } from "@percho/shared/lenses";
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
 	Image,
@@ -31,8 +33,15 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAreas } from "../../hooks/use-areas";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { communityDetailUrl, listingDetailUrl } from "../../lib/api/base";
+import { areasByKey } from "../../lib/areas/areas-dto";
+import {
+	AREA_COMPARE_MAX,
+	AREA_COMPARE_MIN,
+} from "../../lib/areas/compare-areas";
+import { countyKeyForPoint } from "../../lib/areas/locate";
 import { COMPARE_MAX, COMPARE_MIN } from "../../lib/listing/compare";
 import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
 import { useAuthStore } from "../../state/auth";
@@ -127,6 +136,46 @@ export default function SavedTab() {
 	const [picking, setPicking] = useState<string[] | null>(null);
 
 	const listingCount = items.filter((i) => i.kind === "listing").length;
+	const areaItems = items.filter((i) => i.kind === "area");
+
+	// Lens metrics for the saved AREAS. A saved area is a city; the numbers are
+	// per county, so each city is placed by its centroid — see `locate.ts` for
+	// what that resolution is and is not good enough for.
+	const { areas: areaData } = useAreas();
+	const metricsByCounty = useMemo(
+		() => areasByKey(areaData.areas),
+		[areaData.areas],
+	);
+	const countyOf = useCallback(
+		(unitId: string): Area | undefined => {
+			const unit = pool.geoUnits.find((u) => u.id === unitId);
+			if (!unit) return undefined;
+			const key = countyKeyForPoint(
+				unit.centroid.lat,
+				unit.centroid.lng,
+				areaData.shapes,
+			);
+			return key ? metricsByCounty.get(key) : undefined;
+		},
+		[pool.geoUnits, areaData.shapes, metricsByCounty],
+	);
+
+	/** "Cherokee County · $691/mo" — or nothing, outside the covered metro. */
+	const costLineFor = (unitId: string): string | undefined => {
+		const area = countyOf(unitId);
+		if (!area) return undefined;
+		const lens = lensById("true_cost");
+		const value = lens ? valuesFor(lens, [area])[0] : undefined;
+		if (!value || !lens) return `${area.name} County`;
+		return `${area.name} County · ${lens.format(value.value)}/mo on a $500k home`;
+	};
+
+	/** The saved areas we can actually put in a comparison table. */
+	const comparableAreas = areaItems
+		.map((i) => countyOf(areaUnitId(i.id)))
+		.filter((a): a is Area => a !== undefined);
+	// Two cities in one county compare against themselves; de-duplicate.
+	const comparableKeys = [...new Set(comparableAreas.map((a) => a.key))];
 
 	const load = useCallback(async (item: SavedItem) => {
 		setRows((r) => ({ ...r, [item.id]: { status: "loading" } }));
@@ -235,6 +284,32 @@ export default function SavedTab() {
 					</View>
 				)}
 
+				{/* Compare the saved AREAS. Separate from the home picker on
+				    purpose: the buyer study put most people at "which of my two
+				    or three neighbourhoods", which is a different question from
+				    "which of these houses", and answering it needs no picking —
+				    the saved areas ARE the shortlist. */}
+				{comparableKeys.length >= AREA_COMPARE_MIN && (
+					<Pressable
+						style={styles.compare}
+						onPress={() =>
+							router.push({
+								pathname: "/compare-areas",
+								params: {
+									keys: comparableKeys.slice(0, AREA_COMPARE_MAX).join(","),
+								},
+							})
+						}
+						accessibilityRole="button"
+					>
+						<Text style={styles.compareHead}>COMPARE AREAS</Text>
+						<Text style={styles.compareBody}>
+							See your saved areas side by side — what a home really costs each
+							month, schools, tax, utilities.
+						</Text>
+					</Pressable>
+				)}
+
 				{items.map((item) =>
 					item.kind === "area" ? (
 						<AreaRow
@@ -243,6 +318,7 @@ export default function SavedTab() {
 							unitName={
 								pool.geoUnits.find((u) => u.id === areaUnitId(item.id))?.name
 							}
+							costLine={costLineFor(areaUnitId(item.id))}
 							onRemove={() => toggle(item.id, item.kind)}
 						/>
 					) : (
@@ -361,10 +437,14 @@ function SavedRow({
 function AreaRow({
 	item,
 	unitName,
+	costLine,
 	onRemove,
 }: {
 	item: SavedItem;
 	unitName: string | undefined;
+	/** The area's county and what a home there costs per month, when we know
+	 *  both. Absent outside the covered metro — nothing is invented. */
+	costLine: string | undefined;
 	onRemove: () => void;
 }) {
 	const unit = areaUnitId(item.id);
@@ -384,7 +464,7 @@ function AreaRow({
 				<Text style={styles.rowTitle} numberOfLines={1}>
 					{unitName ?? "…"}
 				</Text>
-				<Text style={styles.rowSub}>See on the map</Text>
+				<Text style={styles.rowSub}>{costLine ?? "See on the map"}</Text>
 			</View>
 			<Pressable
 				onPress={onRemove}

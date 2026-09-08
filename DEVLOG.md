@@ -21,6 +21,61 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 06:05 UTC — phase198: the Saved tab learns what an area costs
+
+**Objective**: the owner gave no specific instruction for Saved beyond "bring
+it to a shippable standard using the study and what you already know". The
+study is unambiguous about where to spend that effort: asked what stage they
+were at, 4 of 10 respondents were **comparing two or three neighbourhoods**
+and 5 were confirming specific homes. Saved already compared HOMES. It had
+nothing for the neighbourhood question, and the saved areas were dead rows
+reading "See on the map".
+
+**Actions**:
+- `lib/areas/locate.ts` + 6 tests — `countyKeyForPoint`, ray casting against
+  the county outlines the lens map already downloaded.
+- `lib/areas/compare-areas.ts` + 11 tests — the comparison table.
+- `app/compare-areas.tsx` — 2–3 areas side by side, reached from Saved.
+- `app/(tabs)/saved.tsx` — a saved area row now reads
+  "Cherokee County · $691/mo on a $500k home" instead of "See on the map",
+  and a COMPARE AREAS card appears once two saved areas resolve to counties
+  we have figures for.
+
+**Decisions**:
+1. **A saved area is a CITY; the metrics are per COUNTY.** Rather than add a
+   column or a geocoding call, the city's centroid is placed against the
+   bundled county shapes. Its header states the limit plainly: those shapes
+   are simplified to ~250 m for fill, so a point within ~250 m of a county
+   line can land on the wrong side, which is fine for labelling a city row and
+   is NOT fine for deciding which county a specific HOME is in — that job
+   stays with `backfill-community-county.ts` against the unsimplified
+   boundaries. A city that straddles a line (Atlanta is Fulton and DeKalb)
+   resolves by centroid, and the row names the county it used so the buyer
+   sees the assumption rather than absorbing it.
+2. **This table marks a best cell; `lib/listing/compare.ts` deliberately does
+   not.** The difference is real, not an inconsistency: that table compares
+   whole HOMES, where a "winner" would be our opinion dressed as a fact. Every
+   row here is one measured quantity with an agreed direction — a lower tax
+   bill is lower for everyone — so marking it states arithmetic. What is
+   absent in both is the same: no total, no score, no overall winner, because
+   how much schools weigh against cost is the buyer's judgement.
+3. **No winner when every column ties.** The insurance row uses one metro-wide
+   assumption, so all three cells are equal; ticking them all reads as three
+   winners rather than as "no difference here". A row needs at least two
+   figures AND a spread before anything is best. A test pins it.
+4. Two saved cities in one county are de-duplicated before the comparison —
+   otherwise a column compares against itself.
+
+**Issues**: price-change / days-on-market / delisted badges are still not
+possible — the schema has no price history and no listing date, and a 404 from
+the detail endpoint remains the only honest "gone" signal. Unchanged from the
+phase-D note; recording it again so it is not mistaken for an oversight.
+
+**Verified**: `pnpm typecheck` clean, new files lint clean, **615 mobile (+17)
++ 910 web tests pass**. Note that the area rows show nothing until the owner
+runs `pnpm db:push` and the seed — `countyKeyForPoint` returns undefined with
+no shapes, and the row falls back to its old copy.
+
 ## 2026-09-08 05:35 UTC — phase197: password sign-in, because the account already exists
 
 **Objective**: owner, reported as a bug — 「登陆现在需要 email code 这不对 我已经
