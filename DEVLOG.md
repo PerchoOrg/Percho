@@ -21,6 +21,63 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 01:40 UTC — phase232: 22 invented water figures replaced with a real survey
+
+**Objective**: phase231 sharpened the blocker — reading rate sheets is largely
+solved; what gates a county is whether it publishes a figure to check against.
+So: is there a source that publishes bills for *many* Georgia utilities at once?
+
+There is. The **UNC Environmental Finance Center and GEFA** survey ~450 Georgia
+providers and publish the residential bill at set consumption levels —
+including **4,000 gallons**, the exact volume DeKalb prices its published
+example at. Downloadable as xlsx, which `xlsx.ts` from phase213 reads.
+
+### The corroboration that makes it usable
+
+The survey's DeKalb rows and my independent reading of DeKalb's 2026 sheet agree
+on the escalation, from **two different quantities**:
+
+```
+standing charges    $9.92 (2022) → $12.48 (2026)    +5.9% a year
+bill at 4,000 gal  $66.38 (2022) → $84.08 (2026)    +6.1% a year
+```
+
+Two independent numbers landing within 0.3 points a year of each other is what
+says the survey computes a bill the same way this project does — base charges
+plus volumetric water plus volumetric sewer, inside-county residential — rather
+than something that merely shares the units. It also **independently
+corroborates phase230's DeKalb reading**, which had rested on one source.
+
+### The name collision, again — and it cost five counties
+
+Georgia has a city of **Forsyth** (Monroe County), **Jackson** (Butts),
+**Douglas** (Coffee), **Dawson** (Terrell) and **Morgan** (Calhoun) — and a
+county of each name containing none of them. My exploration script matched on
+prefix and silently priced **five counties from cities up to eighty miles
+away**: Douglas would have been written at $61.63 from the city of Douglas.
+
+`namesCounty` in `lib/areas/county-names.ts` requires the label to say
+"<name> County". It is the name-based cousin of the collision `locate.ts` avoids
+geometrically — the same trap phase224 hit, arriving through a different door.
+6 tests, verified by restoring the prefix form: 2 fail.
+
+### What is written, and what stays flagged
+
+22 counties get a real published bill. **DeKalb keeps its 2026 figure** — the
+importer refuses to overwrite it — so a buyer sees DeKalb unmarked and the rest
+marked, which is the distinction that is actually real.
+
+The survey is January 2022 and bills rise about 6% a year, so `estimated` stays
+**true**: it is SOURCED but not CURRENT, and using it as this month's cost is an
+estimate — a founded one, which is a different thing from the number I invented
+in phase200.
+
+Five counties get water only. They have no county sewer utility in the survey,
+and they are the same counties phase220's USGS import showed to be largely on
+wells and septic. That is not a hole in the data; it is one fact arriving twice.
+
+**Verified**: typecheck clean, lint clean, 663 mobile + **1126 web tests** (+6).
+
 ## 2026-09-09 00:50 UTC — phase231: the one piece of real logic in that importer had no test
 
 **Objective**: after phase230 changed production data, re-sweep, then look at
