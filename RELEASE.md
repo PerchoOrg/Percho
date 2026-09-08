@@ -34,6 +34,15 @@ it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
 ### 2026-09-08
+- Electricity costs are now real numbers, not estimates. We worked out which
+  power company actually serves each county — by mapping their service areas,
+  not by assuming the one with the matching name — and used that company's
+  published residential rate. Several of our earlier assumptions were wrong:
+  Gwinnett, Hall, Barrow and Jackson counties are mostly Georgia Power, not
+  Jackson EMC, and Cherokee is mostly Amicalola. The real spread between
+  counties is about $64 a month, which the old flat estimates had hidden
+  completely. Two counties — Cobb and Henry — are genuinely split between two
+  companies, so we still show an estimate there and say so.
 - You can now just **tell** Percho what matters. A new section on the You tab
   lets you set how much you care about schools, what a place really costs,
   getting around, and the community itself. Set them and the compare table

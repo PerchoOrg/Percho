@@ -21,6 +21,149 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-08 09:20 UTC — phase202: a real electric bill, and who actually sells it
+
+**Objective**: the last unsourced lens. `electric_monthly_usd` was a round
+estimate beside a hand-written provider name, and `utilities` therefore read
+100% estimated on every county.
+
+**The provider names were wrong, and wrong in an instructive way.** The seed
+recorded Gwinnett, Hall, Barrow and Jackson as Jackson EMC; they are 68%, 98%,
+85% and 97% Georgia Power. Cherokee was recorded as Cobb EMC; it is 57%
+Amicalola, and Cobb EMC is FOURTH at 12%. Georgia's service territories were
+drawn by who electrified which farms in the 1930s and have no relationship to
+county lines — "Jackson County is served by Jackson EMC" is the kind of guess
+that sounds like knowledge.
+
+**Actions**:
+- `apps/web/lib/areas/territory.ts` + 16 tests — point-in-polygon with HOLES,
+  and grid-sampled area coverage of one polygon by a set of others.
+- `scripts/admin/import-ga-electric.ts` — joins the HIFLD retail service
+  territories to NREL/OpenEI's per-utility residential rate.
+- The PDF reader gains `TJ`-array support (+3 tests). Georgia Power's tariff is
+  typeset entirely in `TJ` and has no `Tj` at all; the millage report is the
+  reverse, so the existing tests are untouched.
+
+**Validation that the geometry is right, and it is not a test:** run against
+the real 94-feature territories file, every county's shares sum to exactly
+100.0% with zero unclaimed points, and the method independently rediscovers
+the municipal utilities that exist as HOLES inside the co-ops — City of
+Marietta at 14.9% of Cobb, and East Point, Fairburn and Palmetto inside
+Georgia Power's Fulton territory. All four really do run their own power.
+Treating rings after the first as holes is what makes that work; without it
+every one of those cities is credited to the utility surrounding it.
+
+**Decisions**:
+1. **No provider is named unless it covers a majority.** Cobb is Cobb EMC 41%,
+   Georgia Power 39%, City of Marietta 15%; Henry is Snapping Shoals 47%,
+   Central Georgia 27%. Those two counties keep their estimate rather than
+   being assigned a rate that most of the county does not pay. 27 of 29 get a
+   real figure and the other two say so.
+2. **The published tariff is not the bill.** Georgia Power's Schedule R-31
+   fetches and parses cleanly and reads 8.2116¢/kWh in winter. The tariff
+   itself says the amount "will be increased under the provisions of" Fuel
+   Cost Recovery, Environmental Compliance Cost Recovery, the Demand Side
+   Management schedule and the Municipal Franchise Fee — four riders, none of
+   them in the PDF. The all-in average is 14.6¢/kWh, so the energy charge
+   alone is a little over half of what a customer pays. Revenue over sales
+   carries every rider by construction, which is why it is the source.
+3. **Consumption is held constant across counties** at Georgia's average,
+   1,074 kWh/month (EIA Table 5.A). What differs between counties, and what a
+   buyer is choosing between, is the PRICE. A utility's own average bill also
+   encodes its customer mix — one serving mostly apartments looks cheap in a
+   way that tells a buyer of a house nothing.
+4. OpenEI's plain CSV over EIA-861's XLSX-inside-a-ZIP: same underlying
+   figures, and it needs neither an xlsx reader nor a zip reader. EIA's 2025
+   early release is unusable for Georgia anyway — Jackson, Cobb, Sawnee and
+   GreyStone, about 760k customers, are collapsed into an `Adjustment 2025`
+   placeholder row.
+
+**Result**: Meriwether $189 (Diverse Power, 17.6¢ — the metro's most
+expensive) down to Coweta and Fayette $125 (Coweta-Fayette EMC, 11.7¢). The
+spread is $64/month, which the flat $148–165 estimates had entirely hidden.
+
+**Still estimated after this**: water and trash. Trash has no source at all —
+Georgia EPD regulates disposal facilities, not collection, and pickup is 159
+separate county and city arrangements. Water is per-utility and similarly
+scattered. Both stay flagged.
+
+**Verified**: `pnpm typecheck` clean, new files lint clean, **636 mobile +
+980 web tests pass** (+19).
+
+## 2026-09-08 08:40 UTC — phase201: the tax bill comes from the price, not a rate
+
+**Objective**: close the question phase200 left open — the statutory rate is
+1.638% for DeKalb, published effective rates are ~1.1%, and neither is what a
+buyer pays. Also: the owner authorised `pnpm db:push` mid-flight, so everything
+phase196–200 built could finally go live.
+
+**The finding that changed the design.** The gap looked like homestead
+exemptions and mostly is not — Georgia's are $2,000–$5,000 off ASSESSED value,
+which on a $500k home assessed at $200k is about 2.5% of the bill. Four things
+actually explain it, and only one matters to a buyer:
+1. **Assessment freezes** (Fulton, Cobb, Gwinnett, DeKalb) hold a base down for
+   as long as you own the house — **and reset at closing**. A 2015 owner drags
+   the published median down; a buyer gets none of it.
+2. **Senior exemptions** are large — Cobb waives all school tax at 62, Forsyth
+   at 65, and school is over half the bill.
+3. **DeKalb's EHOST credit** is the real outlier: a 100% credit against the
+   General and Hospital levies, 11.638 of 20.810 county mills, funded by sales
+   tax. Unlike a freeze it applies to a new buyer immediately.
+4. ACS's median is self-reported value over self-reported taxes, and households
+   likely fold non-ad-valorem sanitation fees into "taxes".
+
+So the statutory rate describes a NON-homestead owner exactly — verified
+against a real DeKalb tax bill where a corporately-held parcel pays it to the
+cent — and the published effective rate describes a long-tenured senior. **A
+buyer sits between them and is well described by neither.**
+
+**And a per-county percentage is the wrong SHAPE regardless.** Fixed-dollar
+exemptions make the taxed share of a home rise with its price: Fulton's
+$30,000 county exemption is 15% of a $500k home's assessed value and 7.5% of a
+$1M one. A single percentage has to pick a house and then be wrong about every
+other one. So `@percho/shared/property-tax` computes a BILL and the lens
+divides afterwards.
+
+**Actions**:
+- `packages/shared/src/property-tax.ts` + 19 tests — the formula, homestead
+  amounts for 23 of 29 counties each carrying its own source, and DeKalb's
+  EHOST credit. An unverified county falls back to the $2,000 statutory floor
+  and is marked unverified rather than guessed at.
+- `import-ga-millage.ts` now emits the four levies as their own metrics.
+  An exemption reduces an M&O base and by law never touches bond millage
+  (O.C.G.A. § 48-5-44), so a client holding only the total cannot compute a
+  homesteaded bill.
+- The lens and the compare table both read `taxMonthlyUsdFor`, so the map and
+  the side-by-side cannot disagree about a county's tax.
+
+**Issues**:
+1. **`AVONDALE ESTATES` contains `STATE`.** Selecting county-wide districts
+   with `district.includes(...)` also matched `IND SCHOOL ATLANTA`. DeKalb
+   summed its county levy, *Atlanta's* independent school levy in place of its
+   own, and the *city of Avondale Estates* standing in for the state:
+   17.973 + 20.5 + 9.55 = 48.023, to the thousandth. Correct is 40.953. Nine
+   other counties were wrong the same way. Found only because a research pass
+   mentioned in passing that unincorporated DeKalb is 43.590 mills. Nothing
+   about the output looked malformed — right units, every county, merely too
+   high. A rate error does not crash; it quietly charges the buyer more.
+2. **A sourced figure was apologising for itself.** The property-tax lens
+   rendered with an "estimated" asterisk even though it computes from the
+   state's own adopted millage, because the check asked whether any DECLARED
+   input was an estimate and the declared list still names the fallback.
+   `valuesFor` now instruments the lookup and checks only what was read.
+
+**Verified against reality**: Fulton computes to 0.988% for a $500k home
+against ~0.98% derived independently from the 2025 rates; DeKalb to 1.103%
+against its published ~1.1%, with the drop from 1.638% being EHOST exactly.
+
+**Live**: `pnpm db:push` applied `20260908040000_area_metrics.sql`; all three
+importers ran with `--apply`; `percho.co/api/mobile/areas` returns 29 counties
+and 290 rows. Property tax and Schools are 0% estimated on production.
+
+**Learnings**: when three published numbers disagree, the question is usually
+which POPULATION each describes. None of them was wrong; they were answers to
+questions we were not asking.
+
 ## 2026-09-08 07:15 UTC — phase200: real numbers behind the lenses
 
 **Objective**: the owner's second instruction for the offline stretch —
