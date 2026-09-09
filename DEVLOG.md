@@ -1336,6 +1336,90 @@ with the same confidence as the claim it retracted, and was wrong for a worse
 reason — it trusted summaries over the document, which is the failure I have
 spent this whole session guarding other people's claims against.
 
+## 2026-09-09 00:14 UTC — phase257: the door photo was never chosen, only encountered
+
+**Objective**: verify phase256 against production. It claimed to be
+behaviour-preserving, and the way to test that claim is to diff the deployed
+response against the eight responses captured before the merge.
+
+### The verification, and what it found
+
+`geoUnits`, `listings` and `communities` are **byte-identical in all eight**,
+across stages 0–4, `videosOnly`, `videoFirst`, `cities` and
+`likedCommunityIds`. So gating before scoring, and running the three tails in
+parallel, are equivalent — which is what the phase256 argument claimed and had
+no way to demonstrate at the time.
+
+**`dimPhotos` differed in three of the eight.** Same six dimensions present in
+both; a different photo behind some of them.
+
+### Not the data, and not really phase256 either
+
+The two photos in the clearest case belong to the same listing and the same
+room, and both were tagged `2026-09-02T05:33:22Z` — a week before either
+sample. Nothing was re-captioned or re-enhanced between the two runs. What
+changed is which of them came back first:
+
+```
+baseline   row 62033772   sort_order = 1
+now        row 6949ee89   sort_order = 2
+```
+
+`pickDimPhotos` takes the **first** row matching a dimension, and the query it
+reads had no `ORDER BY` at all. So the door photo was never chosen — it was
+encountered, in whatever order Postgres felt like returning. phase256 perturbed
+that order; it did not introduce the fragility, and any future refactor would
+have perturbed it again.
+
+**Fixed by ordering the query**: `sort_order` then `id`. `sort_order` is the
+agent's own ordering of their photo set, so first-by-`sort_order` is also the
+better photo — the fix makes the output both stable and slightly more correct,
+which is why it is worth doing rather than just declaring the diff benign.
+
+This mattered more than it looks: phase256 also put `s-maxage=60` on this
+response, so an arbitrary pick had gone from varying quietly to being **frozen
+at the edge for a minute**. Caching a nondeterministic response is a worse bug
+than the nondeterminism.
+
+### Why verification took an hour longer than it should have
+
+The deploy never ran. `git push` succeeded, `origin/main` moved, and I sat
+polling the production header for a change that could not arrive — because
+**the Vercel build had been failing since phase254**, 40 minutes before I
+started. Last green deploy was phase253.
+
+Nothing said so. There is no deploy check in CLAUDE.md §9, `vercel` CLI here
+needs an interactive device login, and `gh` is unauthenticated. What finally
+answered it was the **unauthenticated** GitHub status API, which the repo being
+public makes available:
+
+```
+curl -s https://api.github.com/repos/PerchoOrg/Percho/commits/<sha>/status
+```
+
+Run across the last five merges it prints the exact commit where deploys
+stopped. Worth knowing: it needs no credentials and takes a second.
+
+The cause was `export function eventRow` in `app/api/events/route.ts` — a route
+file may only export the framework's own names. `tsc --noEmit`, biome and
+vitest all pass with it there; only `next build` rejects it. I reproduced it
+locally with `pnpm build` and fixed it, then found the owner had pushed
+`phase254-hotfix` doing the same thing a few minutes earlier, so I discarded
+mine and took his. **This is phase225's finding again, one app over**: that
+phase added a Metro bundle check because nothing we run caught what the owner
+would see first, and the web app has the identical hole — `pnpm build` is not
+part of any routine, and it is the only thing that checks the Next route
+contract.
+
+**Verified**: typecheck clean, `pnpm build` compiles, lint 0 errors / 215
+warnings, 1174 tests. Production diff re-run after this deploys.
+
+**Learnings**: I called phase256 "no behaviour change" on an argument about
+what the code reads. The argument was right about the part I reasoned over and
+silent about the part I had not thought to model — row order — and only the
+before/after diff found it. **An equivalence claim is a measurement, not a
+proof;** capture the before, or do not make the claim.
+
 ## 2026-09-08 23:50 UTC — phase256: the feed pool's four serial round trips
 
 **Objective**: owner on device — 「每次打开expo go都卡在这个页面」, then, once the
