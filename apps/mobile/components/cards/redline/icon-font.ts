@@ -118,9 +118,12 @@ export const ICON_GLYPH: Record<RedlineIconName, string> = {
 	dog: "\ue74a", // dog-fill              — "Dog Friendly"
 	handshake: "\ue582", // handshake-fill  — "Friendly" / "Welcoming" / "Neighbors"
 	shieldCheck: "\ue40c", // shield-check-fill — "Safe"
-	// bookmark-simple, NOT bookmark: this is `TAB_BAR_GLYPH.saved`, the Saved
-	// tab's own drawing, so the card's save control and the tab it saves into
-	// are the same shape (owner pick "H1", 2026-09-05). It was bookmark-fill
+	// bookmark-simple, NOT bookmark: picked to match `TAB_BAR_GLYPH.saved`, the
+	// Saved tab's drawing at the time (owner pick "H1", 2026-09-05). phase177
+	// changed that tab to a HEART later the same day, so the match no longer
+	// holds — see `CardCorner`. The glyph stays: since phase260 it is the mark
+	// every save control in the app wears, cards and explore surfaces alike.
+	// It was bookmark-fill
 	// (\ue0e8) while nothing rendered it — phase140 drew the bookmark from
 	// `View`s instead.
 	bookmark: "\ue0ea", // bookmark-simple-fill — saved listing (filled bookmark)

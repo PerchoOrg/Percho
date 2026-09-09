@@ -318,7 +318,7 @@ export const explore = {
 	negInk: "#96551A",
 	/** `--scrim` — dark glass chip over the hero media (counter, ⊞, 🔊). */
 	scrim: "rgba(8,16,13,0.55)",
-	/** Light glass disc over the hero media (← / ♡). */
+	/** Light glass disc over the hero media (← / ↑ / save). */
 	glass: "rgba(255,255,255,0.92)",
 	/** Room-strip chip over the photo, resting state. */
 	jumpChip: "rgba(255,255,255,0.15)",

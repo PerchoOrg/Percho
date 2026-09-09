@@ -37,6 +37,7 @@ import type { RoomGroups } from "../../../lib/listing/rooms";
 import { useSoundStore } from "../../../state/sound";
 import { explore, radii } from "../../../theme/tokens";
 import { fonts } from "../../../theme/tokens";
+import { SaveGlyph } from "../../SaveGlyph";
 import { SoundToggle } from "../../SoundToggle";
 
 type Slide =
@@ -282,7 +283,7 @@ export function MediaCarousel(props: MediaCarouselProps) {
 						</Pressable>
 					)}
 					<Pressable onPress={onToggleSave} hitSlop={10} style={styles.gbtn}>
-						<Text style={styles.gbtnGlyph}>{saved ? "♥" : "♡"}</Text>
+						<SaveGlyph saved={saved} size={16} color={explore.ink} />
 					</Pressable>
 				</View>
 			</View>

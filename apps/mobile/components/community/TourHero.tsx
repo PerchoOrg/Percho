@@ -20,7 +20,7 @@
  * The strip hides itself when the film's structure is unknown (a legacy AI
  * video, or no tour at all) — no empty chrome.
  *
- * Chrome is the listing hero's: ← / ↑ / ♡ glass discs, the global sound
+ * Chrome is the listing hero's: ← / ↑ / bookmark glass discs, the global sound
  * toggle, a top cap and a foot wash. The page's cream/amber body palette
  * stays out of here — this is media, and `explore.*` is what the listing hero
  * already draws over media.
@@ -43,6 +43,7 @@ import {
 } from "../../lib/community/tour-buckets";
 import { useSoundStore } from "../../state/sound";
 import { explore, fonts, radii } from "../../theme/tokens";
+import { SaveGlyph } from "../SaveGlyph";
 import { SoundToggle } from "../SoundToggle";
 
 export interface TourHeroProps {
@@ -260,7 +261,7 @@ export function TourHero(props: TourHeroProps) {
 						accessibilityRole="button"
 						accessibilityLabel={saved ? "Saved" : "Save"}
 					>
-						<Text style={styles.gbtnGlyph}>{saved ? "♥" : "♡"}</Text>
+						<SaveGlyph saved={saved} size={16} color={explore.ink} />
 					</Pressable>
 				</View>
 			</View>

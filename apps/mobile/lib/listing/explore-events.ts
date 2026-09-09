@@ -158,7 +158,7 @@ export interface CostAdjustEvent extends ExploreEventBase {
 	ratePct: number;
 }
 
-/** `dock_action` — ✕ / ♡ / Request a tour, same semantics as the feed swipe. */
+/** `dock_action` — ✕ / save / Request a tour, same semantics as the feed swipe. */
 export interface DockActionEvent extends ExploreEventBase {
 	type: "dock_action";
 	action: "pass" | "save" | "unsave" | "tour";

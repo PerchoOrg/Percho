@@ -35,6 +35,12 @@ community reviews instead.
 
 ### 2026-09-09
 
+**Saving something looks the same everywhere now.** The button that keeps a
+home or a neighbourhood was a bookmark on the cards but a heart once you opened
+one, which made it look like two different things — and a heart usually means
+"like", not "keep". It is a bookmark on every screen, and it fills in when the
+place is yours.
+
 **The bookmark on a neighbourhood card works again.** Tapping it in the feed
 did nothing — the button lit up under your finger and the neighbourhood never
 reached your Saved list. It saves, and unsaves, the way the one on a home card

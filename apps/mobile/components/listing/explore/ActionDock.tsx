@@ -1,12 +1,18 @@
 /**
- * ActionDock (phase119 spec §3.10) — ✕ / ♡ / Request a tour, pinned to the
- * page foot over a gradient fade (no hard edge). ✕ and ♡ carry the feed's
- * swipe semantics: ✕ is "not for me" and leaves the page, ♡ is the same save
- * the card heart toggles. Event emission is the screen's job.
+ * ActionDock (phase119 spec §3.10) — ✕ / save / Request a tour, pinned to the
+ * page foot over a gradient fade (no hard edge). ✕ carries the feed's left
+ * swipe: "not for me", and it leaves the page. Event emission is the screen's
+ * job.
+ *
+ * The middle button was a `♡` until phase260, described here as "the same save
+ * the card heart toggles" — the card has never drawn a heart, it draws a
+ * bookmark, and the two are one action. It is `SaveGlyph` now; that file argues
+ * why the bookmark is the mark and not the heart.
  */
 import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { explore, fonts, radii } from "../../../theme/tokens";
+import { SaveGlyph } from "../../SaveGlyph";
 
 export interface ActionDockProps {
 	saved: boolean;
@@ -42,7 +48,7 @@ export function ActionDock(props: ActionDockProps) {
 					accessibilityLabel={saved ? "Remove from saved" : "Save"}
 					style={styles.round}
 				>
-					<Text style={styles.roundGlyph}>{saved ? "♥" : "♡"}</Text>
+					<SaveGlyph saved={saved} size={18} color={explore.ink} />
 				</Pressable>
 				<Pressable onPress={onTour} style={styles.primary}>
 					<Text style={styles.primaryLabel}>Request a tour</Text>

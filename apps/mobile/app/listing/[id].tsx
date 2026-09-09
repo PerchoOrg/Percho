@@ -13,7 +13,7 @@
  *   SchoolsBlock    nearest public school per level, state proficiency (phase D)
  *   FactsBlock      ≤6 real fields; the long tail is P1's Ask entry
  *   CompareRail     this home next to the buyer's SAVES (not recommendations)
- *   ActionDock      ✕ / ♡ / Request a tour
+ *   ActionDock      ✕ / save / Request a tour
  *
  * Every section can be independently absent (fit underivable → no card; no
  * saves → no rail; no price → no cost) — absence over placeholder, always.
