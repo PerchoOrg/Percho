@@ -35,6 +35,13 @@ community reviews instead.
 
 ### 2026-09-09
 
+**Map pins now show the place, not a pin.** On the Search map, every spot —
+city, community or home — used to be the same teardrop in a different colour.
+Each one now shows its own photo in a small circle, so you can recognise a
+place before you tap it. The colours still mean what they meant: they moved to
+the ring around the photo, and a spot we don't have a photo for yet shows a
+solid dot in its colour.
+
 **Compare your saved neighbourhoods side by side.** Saved could already put two
 or three homes next to each other, and two or three areas — but not the
 neighbourhoods, which for most people is the actual shortlist. Save two and a

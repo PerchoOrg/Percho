@@ -21,7 +21,43 @@ rotation, not on the way in.
 
 ---
 
-## 2026-09-09 10:39 UTC — phase261: Saved could compare everything except the shortlist
+## 2026-09-09 10:57 UTC — phase262: Search map pins wear the spot's own photo
+
+**Objective**: owner — "Search tab: each spot on map show a circle of hero
+picture instead the same icons." All three marker sets on the Search map
+(city units, community hits, listing hits) were stock `pinColor` teardrops,
+distinguishable only by tint.
+
+**Actions**: `apps/mobile/app/(tabs)/search.tsx` only. Added a local
+`PhotoMarker` component — a `Marker` whose child is a 40×40 circle
+(`radii.pill`, `overflow: "hidden"`) holding the spot's photo — and switched
+the three inline marker blocks to it. Photo sources were already on the DTOs:
+`GeoUnit.heroUrl`, `SearchCommunity.heroUrl`, `SearchListing.coverUrl` (all
+optional; the parsers only set them when non-empty).
+
+**Decisions**:
+- The old `pinColor` semantics survive as the circle's **border**: units
+  `ink2` (accent + thicker when selected), communities `pos`, listings
+  `accent`. The colour language wasn't the complaint — the identical shapes
+  were — so it moved rather than died.
+- A photo-less spot renders a solid disc in its ring colour, not a broken
+  ring. Every one of the three photo fields is optional on the wire, and the
+  list rows just below the map already treat them that way (search.tsx's
+  community/listing rows guard; the unit row at ~line 606 doesn't, which is a
+  pre-existing gap left alone per §0.3).
+- **No `tracksViewChanges` management.** The map runs Apple Maps
+  (`react-native-maps` with no `provider` prop), where a custom marker child
+  is a live view — remote photos appear on load and the selected-ring restyle
+  works without the snapshot dance the Google provider needs. If marker CPU
+  ever becomes a complaint, that's the knob to reach for.
+- Callout behaviour is untouched: same `title`/`description`, same
+  `onCalloutPress` navigation, same `onPress` select for units.
+
+**Verification**: `pnpm typecheck` clean; `pnpm lint` exit 0 (8 pre-existing
+warnings, none in the changed lines).
+
+**Next steps**: owner reviews on the phone once Metro picks it up from the
+reference worktree.
 
 **Objective**: owner — "Saved can't compare communities". True, and it was the
 odd one out: Saved could compare HOMES (a picker, phase D) and AREAS

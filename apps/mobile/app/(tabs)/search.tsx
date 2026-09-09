@@ -64,7 +64,7 @@ import {
 	View,
 	useWindowDimensions,
 } from "react-native";
-import MapView, { Marker, Polygon } from "react-native-maps";
+import MapView, { type LatLng, Marker, Polygon } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAreas } from "../../hooks/use-areas";
 import { useFeedPool } from "../../hooks/use-feed-pool";
@@ -327,37 +327,41 @@ export default function SearchTab() {
 							));
 						})}
 					{units.map((u) => (
-						<Marker
+						<PhotoMarker
 							key={u.id}
 							coordinate={{
 								latitude: u.centroid.lat,
 								longitude: u.centroid.lng,
 							}}
+							photoUrl={u.heroUrl}
+							ring={colors.ink2}
+							selected={selectedId === u.id}
 							title={u.name}
 							onPress={() => select(u)}
-							pinColor={selectedId === u.id ? colors.accent : colors.ink2}
 						/>
 					))}
 					{hits?.communities.map((c) =>
 						c.lat !== undefined && c.lng !== undefined ? (
-							<Marker
+							<PhotoMarker
 								key={`c-${c.id}`}
 								coordinate={{ latitude: c.lat, longitude: c.lng }}
+								photoUrl={c.heroUrl}
+								ring={colors.pos}
 								title={c.name}
 								description={c.city}
-								pinColor={colors.pos}
 								onCalloutPress={() => router.push(`/community/${c.slug}`)}
 							/>
 						) : null,
 					)}
 					{hits?.listings.map((l) =>
 						l.lat !== undefined && l.lng !== undefined ? (
-							<Marker
+							<PhotoMarker
 								key={`l-${l.id}`}
 								coordinate={{ latitude: l.lat, longitude: l.lng }}
+								photoUrl={l.coverUrl}
+								ring={colors.accent}
 								title={formatPrice(l.price) ?? l.address}
 								description={l.address}
-								pinColor={colors.accent}
 								onCalloutPress={() => router.push(`/listing/${l.id}`)}
 							/>
 						) : null,
@@ -622,6 +626,56 @@ export default function SearchTab() {
 }
 
 /**
+ * A map pin that shows the spot's own face — its hero photo in a circle —
+ * instead of the stock teardrop. The old pinColor language survives as the
+ * ring: what the colour used to say about the spot's kind, the border says
+ * now. A spot with no photo yet falls back to a solid disc in that colour.
+ */
+function PhotoMarker({
+	coordinate,
+	photoUrl,
+	ring,
+	selected,
+	title,
+	description,
+	onPress,
+	onCalloutPress,
+}: {
+	coordinate: LatLng;
+	photoUrl?: string;
+	ring: string;
+	selected?: boolean;
+	title: string;
+	description?: string;
+	onPress?: () => void;
+	onCalloutPress?: () => void;
+}) {
+	const border = selected ? colors.accent : ring;
+	return (
+		<Marker
+			coordinate={coordinate}
+			title={title}
+			description={description}
+			onPress={onPress}
+			onCalloutPress={onCalloutPress}
+		>
+			<View
+				style={[
+					styles.pin,
+					{ borderColor: border },
+					selected && styles.pinSelected,
+					!photoUrl && { backgroundColor: border },
+				]}
+			>
+				{photoUrl ? (
+					<Image source={{ uri: photoUrl }} style={styles.pinPhoto} />
+				) : null}
+			</View>
+		</Marker>
+	);
+}
+
+/**
  * One county's cost, broken into the lines that make it up.
  *
  * The breakdown is the point, not the total: the study's complaint was that
@@ -841,6 +895,18 @@ const styles = StyleSheet.create({
 	rowText: { flex: 1, gap: 2 },
 	rowName: { ...textStyles.headline, color: colors.ink },
 	rowSub: { ...textStyles.footnote, color: colors.ink2 },
+
+	// ── Map pins ──────────────────────────────────────────────────────────────
+	pin: {
+		width: 40,
+		height: 40,
+		borderRadius: radii.pill,
+		borderWidth: 2,
+		backgroundColor: colors.surface2,
+		overflow: "hidden",
+	},
+	pinSelected: { borderWidth: 3 },
+	pinPhoto: { width: "100%", height: "100%" },
 
 	// ── Lens chips + legend ───────────────────────────────────────────────────
 	lensBar: { position: "absolute", left: 0, right: 0 },
