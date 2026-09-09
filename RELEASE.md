@@ -35,6 +35,12 @@ community reviews instead.
 
 ### 2026-09-09
 
+**Homes on the map wear their price.** With every pin now a photo circle, a
+home and a community could look alike at a glance. Each home now carries a
+small price tag under its photo — "$525K", "$1.2M" — so you can tell the two
+apart instantly and scan asking prices without tapping a single pin.
+Communities stay a clean photo circle.
+
 **Map pins now show the place, not a pin.** On the Search map, every spot —
 city, community or home — used to be the same teardrop in a different colour.
 Each one now shows its own photo in a small circle, so you can recognise a
