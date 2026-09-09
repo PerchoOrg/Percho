@@ -143,6 +143,10 @@ export default function SearchTab() {
 	const [lensId, setLensId] = useState<LensId>(() =>
 		lensForPriorities(priorityWeights),
 	);
+	// The county ranking list is an answer, not ambience: it appears only after
+	// the buyer taps a lens chip (owner, 2026-09-09 — "don't show this ordered
+	// list by default"). The map fills still paint from the initial lens.
+	const [rankingOpen, setRankingOpen] = useState(false);
 	const [openArea, setOpenArea] = useState<string | null>(null);
 
 	const lens = lensById(lensId) ?? LENSES[0];
@@ -364,7 +368,9 @@ export default function SearchTab() {
 								ring={colors.pos}
 								title={c.name}
 								description={c.city}
-								onCalloutPress={() => router.push(`/community/${c.slug}`)}
+								// Straight to the community's explore page — no callout
+								// stop-over (owner, 2026-09-09).
+								onPress={() => router.push(`/community/${c.slug}`)}
 							/>
 						) : null,
 					)}
@@ -425,6 +431,8 @@ export default function SearchTab() {
 										onPress={() => {
 											setLensId(l.id);
 											setOpenArea(null);
+											setRankingOpen(true);
+											setExpanded(true);
 										}}
 										style={[styles.lensChip, on && styles.lensChipOn]}
 									>
@@ -476,7 +484,7 @@ export default function SearchTab() {
 						? `"${query.trim()}"`
 						: openedArea
 							? `${openedArea.name} County`
-							: lensReady && lens
+							: rankingOpen && lensReady && lens
 								? lens.rankTitle
 								: "All areas"}
 					{searching && !(poolLoading || search.loading)
@@ -490,13 +498,14 @@ export default function SearchTab() {
 							<AreaDetail
 								area={openedArea}
 								onBack={() => setOpenArea(null)}
-								backLabel={lens.rankTitle}
+								backLabel={rankingOpen ? lens.rankTitle : "All areas"}
 							/>
 						)}
 
 						{/* The lens ranking — the same numbers the map is painted with,
-						    in order, so the colours can be read as values. */}
-						{!searching && !openedArea && lensReady && lens && (
+						    in order, so the colours can be read as values. Only after a
+						    chip tap asked for it. */}
+						{!searching && !openedArea && rankingOpen && lensReady && lens && (
 							<>
 								<Text style={styles.lensCaption}>{lens.caption}</Text>
 								{ranked.map((hit) => (

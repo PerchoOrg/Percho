@@ -21,6 +21,35 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 12:10 UTC — phase264: ranking on request, community pins go straight in
+
+**Objective**: owner, from a screenshot of the Search tab with the Property
+tax lens on — "Don't show this ordered list by default, and when clicking
+community on map it should go to the explore page."
+
+**Actions**: `apps/mobile/app/(tabs)/search.tsx` only.
+- New `rankingOpen` state, false on entry. The lens ranking list (and its
+  `rankTitle` sheet header) now renders only once a lens chip has been tapped;
+  a chip tap also expands the sheet so the answer arrives with the ask. Until
+  then the expanded sheet shows the Areas list under an "All areas" title, as
+  it did before lenses existed. `AreaDetail`'s back label follows the same
+  switch so it never names a list that isn't behind it.
+- Community `PhotoMarker`s navigate on `onPress` (`/community/[slug]` — the
+  community explore page) instead of requiring a callout tap first.
+
+**Decisions**:
+- The map FILLS still paint from the priority-derived initial lens — the owner
+  objected to the list, not the colours, and the legend still explains them.
+- Listing pins keep their callout stop-over: the price chip already answers
+  the glance question, and the owner named communities only (§0.3 — surgical).
+
+**Verification**: `pnpm typecheck` clean; `pnpm lint` exit 0 (same 8
+pre-existing mobile warnings).
+
+**Next steps**: owner reviews on the phone once the reference worktree pulls.
+
+---
+
 ## 2026-09-09 11:05 UTC — phase263: a price chip tells a home from a community
 
 **Objective**: owner, straight after phase262 — "have a way to differentiate
