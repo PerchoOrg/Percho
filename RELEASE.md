@@ -35,6 +35,23 @@ community reviews instead.
 
 ### 2026-09-09
 
+**The map zooms in one step at a time.** Search used to show every city in the
+metro at once, and tapping a photo circle only nudged the map. Now it narrows
+the way you'd expect: tap a county and the map goes there and shows the cities
+in it; tap a city and you get the communities and homes inside it; tap a
+community or a home and you land on its page. A back link at the top of the
+panel walks you out the same way you came in.
+
+**County figures moved to their own page.** Tapping a county used to fill the
+panel with its whole cost breakdown, covering the map underneath. The panel now
+shows one line — that county's figure for whichever lens you're looking at —
+and a link to the full page, where the breakdown and the ranked county list
+live together.
+
+**Places without a photo show their initial.** A pin we have no picture for was
+a plain coloured dot, which told you something was there but not what. It now
+carries the first letter of its name.
+
 **Community pins open the community.** Tapping a community's photo circle on
 the Search map used to pop a small name bubble you then had to tap again.
 One tap now takes you straight to that community's page.
