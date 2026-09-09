@@ -35,6 +35,15 @@ community reviews instead.
 
 ### 2026-09-09
 
+**Community pins open the community.** Tapping a community's photo circle on
+the Search map used to pop a small name bubble you then had to tap again.
+One tap now takes you straight to that community's page.
+
+**The county ranking waits to be asked.** The ranked county list under the
+Search map used to fill the panel the moment you pulled it up. It now appears
+only when you tap one of the lens chips — until then the panel shows your
+areas, and the map's colours stay as background.
+
 **Homes on the map wear their price.** With every pin now a photo circle, a
 home and a community could look alike at a glance. Each home now carries a
 small price tag under its photo — "$525K", "$1.2M" — so you can tell the two
