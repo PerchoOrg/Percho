@@ -21,6 +21,79 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 14:05 UTC — phase265: the Search map drills, and the sheet is a preview again
+
+**Objective**: owner, on a screenshot of phase264 with a county open — "show
+those ranking only in detail page, not here. And clicking community icon
+didn't redirect me to any page, for communities without pic, just show first
+character. So the zoom in logic is click area - click city - click community -
+click homes…. The map page only shows a preview, not a full screen details
+that hide map itself."
+
+**The report that mattered most**: "clicking community icon didn't redirect me
+to any page." phase264's community navigation was correct and untouched — but
+with no query typed there are no community pins on that map at all. Every
+photo circle in his screenshot is a CITY unit from the feed pool. He was
+tapping cities and calling them communities, which is the honest read of a map
+where all three kinds wear the same 40px circle. So the fix was not the tap
+handler; it was that the map had no levels.
+
+**Actions**:
+- New `apps/mobile/app/area/[key].tsx`. The county cost breakdown (`AreaDetail`,
+  moved out of the Search tab) and the lens ranking now live here, one under
+  the other, with the ranking marking the county you came from. A ranking row
+  `router.replace`s to that county rather than pushing — the buyer is
+  comparing, not navigating, and a back stack 12 counties deep is a bug.
+- `apps/mobile/app/(tabs)/search.tsx`: drill levels. County outline tap → zoom,
+  and the sheet previews that county (its figure under the ACTIVE lens, the
+  saved-city note, a link to the page) over the list of CITIES inside it. City
+  pin tap → zoom, and the sheet lists that city's communities and homes.
+  Community pin → `/community/[slug]`; home pin → `/listing/[id]`. A back row
+  climbs one level (city → its county → the metro).
+- Photo-less pins draw the first letter of the name instead of a solid disc.
+- Callouts are gone from every pin: `title`/`description` are what draw them,
+  and now every pin tap is an action, so a bubble was a stop-over between the
+  buyer and the thing they tapped.
+
+**Decisions**:
+- **The city → community step reuses `/api/mobile/search` with the city's own
+  name.** `searchEntities` already matches communities on `city`, so "Roswell"
+  is literally the query for "what is in Roswell" — no new endpoint, no new
+  zod schema, no second read path to keep honest. `useSearch` is called with
+  the typed query when there is one and the drilled city's name otherwise.
+- The feed pool's `communities` were the obvious alternative source and are the
+  wrong one: that pool is gated on a cover photo (5 of 16,504 under the
+  phone's `videosOnly`), so a city drill would have shown almost nothing.
+- Cities are resolved into a county by centroid with `locate.ts`'s
+  `countyKeyForPoint`, against the outlines the lens map already downloaded.
+  Its own docstring warns it is ~250 m accurate and must not decide which
+  county a HOME is in; deciding which cities to list under a county is exactly
+  what it was written for.
+- The lens chips no longer open anything — they recolour the map, full stop.
+  With the ranking on its own page, phase264's `rankingOpen` state had nothing
+  left to gate and was deleted.
+- The county sheet is capped at 280pt instead of 55% of the screen. A preview
+  that covers the map fails the same complaint the breakdown just failed.
+- `fitToCoordinates` on a single point zooms to a rooftop, which a one-hit
+  drill now hits routinely; a lone coordinate gets `animateToRegion` at
+  neighbourhood scale instead.
+
+**Not done**: homes are not pinned at the community level — tapping a community
+opens its page, which is where its homes already live. The owner's chain ends
+"click community - click homes" and that is where the homes are.
+
+**Verification**: `pnpm typecheck` clean; `pnpm lint` exit 0 (same 8
+pre-existing mobile warnings); `pnpm test` 684 passed. No new lib logic, so no
+new tests — the drill is composition of `countyKeyForPoint` and `useSearch`,
+both already covered.
+
+**Next steps**: owner reviews on the phone. Watch for cities whose communities
+all lack a cover: `searchEntities` filters on `cover_storage_path`, so a drill
+there says "Nothing mapped yet" while the city row above claims N communities.
+That gap is real and worth a decision if he hits it.
+
+---
+
 ## 2026-09-09 12:10 UTC — phase264: ranking on request, community pins go straight in
 
 **Objective**: owner, from a screenshot of the Search tab with the Property

@@ -14,6 +14,27 @@
  *   · community / home row tap → its detail page; city row tap → fly to it
  *     (city/zip "don't leave the surface" per §4.4)
  *
+ * ── Drilling in (phase265) ──────────────────────────────────────────────────
+ * The map narrows the way the owner described it: county → city → community →
+ * home. Each tap goes one level in, and the sheet under it lists what lives at
+ * the level reached:
+ *
+ *   county outline → zoom to it; sheet previews its headline figure and the
+ *                    CITIES inside it
+ *   city pin       → zoom to it; sheet lists that city's COMMUNITIES and HOMES
+ *   community pin  → its explore page.  home pin → its listing page.
+ *
+ * The city step asks the SAME search endpoint for the city's name rather than
+ * a new one: `searchEntities` already matches communities on `city`, so
+ * "Roswell" is literally the query for "what is in Roswell".
+ *
+ * ── The sheet is a preview, never the page ──────────────────────────────────
+ * The county cost breakdown and the lens ranking both used to render in this
+ * sheet, where they covered the map they were describing (owner, 2026-09-09:
+ * "the map page only shows a preview, not a full screen details that hide map
+ * itself"). Both live on `/area/[key]` now; what stays here is one line and a
+ * door to it.
+ *
  * The "Your journey" layer chip moved OFF this screen (owner, 2026-09-07):
  * familiarity is the You tab's story (05 §5.3, "Your journey" section there),
  * and this surface just searches. The familiar-first sort stays because it
@@ -35,8 +56,9 @@
  * `@percho/shared/lenses`, which also records why there is deliberately no
  * crime or safety lens.
  *
- * While a text search is running the fills drop to a whisper so the result
- * pins stay readable: the buyer asked a question, and the lens is context.
+ * While results are on the map — a text search, or a city drilled into — the
+ * fills drop to a whisper so those pins stay readable: the buyer asked a
+ * question, and the lens is context.
  */
 import {
 	type Area,
@@ -44,11 +66,8 @@ import {
 	type LensId,
 	classBreaks,
 	colorFor,
-	costBreakdown,
-	estimateNoteFor,
 	legendRange,
 	lensById,
-	listOf,
 	rankedBy,
 } from "@percho/shared/lenses";
 import { router, useLocalSearchParams } from "expo-router";
@@ -71,7 +90,11 @@ import { useFeedPool } from "../../hooks/use-feed-pool";
 import { MIN_QUERY_LEN, useSearch } from "../../hooks/use-search";
 import { familiarityFor } from "../../lib/area-familiarity";
 import { areasByKey } from "../../lib/areas/areas-dto";
-import { savedCitiesByCounty, savedCityNote } from "../../lib/areas/locate";
+import {
+	countyKeyForPoint,
+	savedCitiesByCounty,
+	savedCityNote,
+} from "../../lib/areas/locate";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
 import { lensForPriorities } from "../../lib/priorities";
 import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
@@ -86,6 +109,14 @@ import { textStyles } from "../../theme/typography";
  *  buyer is reading search pins over it. */
 const FILL_ALPHA = 0.62;
 const FILL_ALPHA_SEARCHING = 0.16;
+
+/** The metro at rest — the map's opening frame, and where "back" returns to. */
+const METRO_REGION = {
+	latitude: 33.749,
+	longitude: -84.388,
+	latitudeDelta: 0.55,
+	longitudeDelta: 0.45,
+};
 
 /** "$525K" / "$1.2M" — the map chip has no room for `formatPrice`'s
  *  "$525,000", and the chip is what tells a HOME from a community out there. */
@@ -128,8 +159,15 @@ export default function SearchTab() {
 	const [expanded, setExpanded] = useState(false);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 
-	const search = useSearch(query);
 	const searching = query.trim().length >= MIN_QUERY_LEN;
+	/** The city the buyer has drilled into, when they have. */
+	const drillCity = selectedId
+		? pool.geoUnits.find((u) => u.id === selectedId)
+		: undefined;
+	// One endpoint serves both the typed question and the drill: `searchEntities`
+	// matches communities on `city`, so a city's own name IS the query for what
+	// is inside it. A typed query always wins — the buyer is asking, not browsing.
+	const search = useSearch(searching ? query : (drillCity?.name ?? ""));
 
 	const mapRef = useRef<MapView>(null);
 
@@ -143,10 +181,6 @@ export default function SearchTab() {
 	const [lensId, setLensId] = useState<LensId>(() =>
 		lensForPriorities(priorityWeights),
 	);
-	// The county ranking list is an answer, not ambience: it appears only after
-	// the buyer taps a lens chip (owner, 2026-09-09 — "don't show this ordered
-	// list by default"). The map fills still paint from the initial lens.
-	const [rankingOpen, setRankingOpen] = useState(false);
 	const [openArea, setOpenArea] = useState<string | null>(null);
 
 	const lens = lensById(lensId) ?? LENSES[0];
@@ -184,11 +218,6 @@ export default function SearchTab() {
 		() => (lens ? legendRange(lens, areaData.areas) : undefined),
 		[lens, areaData.areas],
 	);
-	// Names which INPUTS are guesses rather than calling the whole figure one.
-	const estimateNote = useMemo(
-		() => (lens ? estimateNoteFor(lens, areaData.areas) : undefined),
-		[lens, areaData.areas],
-	);
 	/** Value per county key, so a polygon's fill is one map lookup. */
 	const valueByKey = useMemo(
 		() => new Map(ranked.map((v) => [v.area.key, v])),
@@ -202,9 +231,11 @@ export default function SearchTab() {
 		? metricsByKey.get(openArea)
 		: undefined;
 
-	/** Move the map to a county and open its breakdown. */
+	/** Move the map to a county and preview it — one level in from the metro. */
 	const selectArea = (key: string) => {
 		setOpenArea(key);
+		// A county tap re-frames the level below it, never keeps a stale city.
+		setSelectedId(null);
 		setExpanded(true);
 		const shape = areaData.shapes.find((s) => s.key === key);
 		if (!shape) return;
@@ -232,6 +263,18 @@ export default function SearchTab() {
 			},
 			500,
 		);
+	};
+
+	/** One level out: a city returns to its county, a county to the metro. */
+	const goBack = () => {
+		if (drillCity) {
+			setSelectedId(null);
+			if (openArea) selectArea(openArea);
+			else mapRef.current?.animateToRegion(METRO_REGION, 500);
+			return;
+		}
+		setOpenArea(null);
+		mapRef.current?.animateToRegion(METRO_REGION, 500);
 	};
 
 	// `?focus=<unitId>` — the You tab's familiarity rows, the Saved tab's area
@@ -263,6 +306,28 @@ export default function SearchTab() {
 		return familiarityFor(signals, u.id);
 	}
 
+	/**
+	 * The city pins the map is drawing, which is what the drill level decides.
+	 * A county shows the cities inside its outline — resolved by centroid with
+	 * the outlines the lens map already downloaded (`locate.ts`), so this costs
+	 * no request and no new column.
+	 */
+	const visibleUnits = useMemo(() => {
+		if (searching) return units;
+		if (drillCity) return [drillCity];
+		if (openArea) {
+			return units.filter(
+				(u) =>
+					countyKeyForPoint(u.centroid.lat, u.centroid.lng, areaData.shapes) ===
+					openArea,
+			);
+		}
+		return units;
+	}, [units, searching, drillCity, openArea, areaData.shapes]);
+
+	/** Inside a city the sheet lists what is IN it, not the city itself. */
+	const listedUnits = drillCity ? [] : visibleUnits;
+
 	const hits = search.result;
 
 	// A fresh result set opens the sheet and fits the map to whatever has a
@@ -282,19 +347,45 @@ export default function SearchTab() {
 					? [{ latitude: c.lat, longitude: c.lng }]
 					: [],
 			),
-			...units.map((u) => ({
+			...visibleUnits.map((u) => ({
 				latitude: u.centroid.lat,
 				longitude: u.centroid.lng,
 			})),
 		];
-		if (coords.length === 0) return;
+		const only = coords[0];
+		if (!only) return;
+		// `fitToCoordinates` on a single point zooms to a rooftop. One hit still
+		// deserves a neighbourhood around it.
+		if (coords.length === 1) {
+			mapRef.current?.animateToRegion(
+				{ ...only, latitudeDelta: 0.06, longitudeDelta: 0.05 },
+				500,
+			);
+			return;
+		}
 		mapRef.current?.fitToCoordinates(coords, {
 			edgePadding: { top: 160, right: 40, bottom: 80, left: 40 },
 			animated: true,
 		});
 	}, [hits]);
 
-	const sheetH = expanded ? Math.min(height * 0.55, 480) : 110;
+	/** A county shows a preview card and its cities — it never needs half the
+	 *  screen, and the map is the thing being previewed. */
+	const previewing = !searching && !drillCity && !!openedArea;
+	/** The county's figure under the ACTIVE lens — the one the map is painted
+	 *  with, so the preview and the colour under it agree. */
+	const previewHit = openArea ? valueByKey.get(openArea) : undefined;
+	const previewValue =
+		previewHit && lens
+			? `${lens.format(previewHit.value)}${previewHit.estimated ? "*" : ""}`
+			: undefined;
+	/** Either kind of question is out to the search endpoint. */
+	const asking = searching || !!drillCity;
+	const sheetH = expanded
+		? previewing
+			? 280
+			: Math.min(height * 0.55, 480)
+		: 110;
 	const hitCount = hits
 		? hits.communities.length + hits.listings.length + units.length
 		: units.length;
@@ -309,12 +400,7 @@ export default function SearchTab() {
 					mapType="mutedStandard"
 					showsPointsOfInterests={false}
 					showsCompass={false}
-					initialRegion={{
-						latitude: 33.749,
-						longitude: -84.388,
-						latitudeDelta: 0.55,
-						longitudeDelta: 0.45,
-					}}
+					initialRegion={METRO_REGION}
 				>
 					{/* Lens fills sit UNDER every pin — they are the ground the search
 					    results stand on, not a layer over them. */}
@@ -336,7 +422,7 @@ export default function SearchTab() {
 									}))}
 									fillColor={withAlpha(
 										fill,
-										searching ? FILL_ALPHA_SEARCHING : FILL_ALPHA,
+										asking ? FILL_ALPHA_SEARCHING : FILL_ALPHA,
 									)}
 									strokeColor={open ? colors.ink : colors.surface}
 									strokeWidth={open ? 2.5 : 1}
@@ -345,7 +431,7 @@ export default function SearchTab() {
 								/>
 							));
 						})}
-					{units.map((u) => (
+					{visibleUnits.map((u) => (
 						<PhotoMarker
 							key={u.id}
 							coordinate={{
@@ -355,7 +441,7 @@ export default function SearchTab() {
 							photoUrl={u.heroUrl}
 							ring={colors.ink2}
 							selected={selectedId === u.id}
-							title={u.name}
+							name={u.name}
 							onPress={() => select(u)}
 						/>
 					))}
@@ -366,10 +452,7 @@ export default function SearchTab() {
 								coordinate={{ latitude: c.lat, longitude: c.lng }}
 								photoUrl={c.heroUrl}
 								ring={colors.pos}
-								title={c.name}
-								description={c.city}
-								// Straight to the community's explore page — no callout
-								// stop-over (owner, 2026-09-09).
+								name={c.name}
 								onPress={() => router.push(`/community/${c.slug}`)}
 							/>
 						) : null,
@@ -382,9 +465,8 @@ export default function SearchTab() {
 								photoUrl={l.coverUrl}
 								ring={colors.accent}
 								label={compactPrice(l.price) ?? "HOME"}
-								title={formatPrice(l.price) ?? l.address}
-								description={l.address}
-								onCalloutPress={() => router.push(`/listing/${l.id}`)}
+								name={l.address}
+								onPress={() => router.push(`/listing/${l.id}`)}
 							/>
 						) : null,
 					)}
@@ -428,12 +510,9 @@ export default function SearchTab() {
 								return (
 									<Pressable
 										key={l.id}
-										onPress={() => {
-											setLensId(l.id);
-											setOpenArea(null);
-											setRankingOpen(true);
-											setExpanded(true);
-										}}
+										// A chip RECOLOURS the map. It opens no list: the ranking
+										// is a page now, reached from a county (owner, 2026-09-09).
+										onPress={() => setLensId(l.id)}
 										style={[styles.lensChip, on && styles.lensChipOn]}
 									>
 										<View
@@ -482,10 +561,10 @@ export default function SearchTab() {
 				<Text style={styles.sheetTitle}>
 					{searching
 						? `"${query.trim()}"`
-						: openedArea
-							? `${openedArea.name} County`
-							: rankingOpen && lensReady && lens
-								? lens.rankTitle
+						: drillCity
+							? drillCity.name
+							: openedArea
+								? `${openedArea.name} County`
 								: "All areas"}
 					{searching && !(poolLoading || search.loading)
 						? ` · ${hitCount}`
@@ -493,58 +572,48 @@ export default function SearchTab() {
 				</Text>
 				{expanded && (
 					<ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
-						{/* One county, opened from the map or the ranking. */}
-						{!searching && openedArea && lens && (
-							<AreaDetail
-								area={openedArea}
-								onBack={() => setOpenArea(null)}
-								backLabel={rankingOpen ? lens.rankTitle : "All areas"}
-							/>
+						{/* One level out — the map's own history: city → county → metro. */}
+						{!searching && (drillCity || openedArea) && (
+							<Pressable onPress={goBack} hitSlop={8} style={styles.backRow}>
+								<Text style={styles.backLabel}>
+									‹{" "}
+									{drillCity && openedArea
+										? `${openedArea.name} County`
+										: "All areas"}
+								</Text>
+							</Pressable>
 						)}
 
-						{/* The lens ranking — the same numbers the map is painted with,
-						    in order, so the colours can be read as values. Only after a
-						    chip tap asked for it. */}
-						{!searching && !openedArea && rankingOpen && lensReady && lens && (
-							<>
-								<Text style={styles.lensCaption}>{lens.caption}</Text>
-								{ranked.map((hit) => (
-									<Pressable
-										key={hit.area.key}
-										style={styles.rankRow}
-										onPress={() => selectArea(hit.area.key)}
-									>
-										<View
-											style={[
-												styles.rankSwatch,
-												{
-													backgroundColor: colorFor(lens, hit.value, breaks),
-												},
-											]}
-										/>
-										<View style={styles.rankLabel}>
-											<Text style={styles.rankName} numberOfLines={1}>
-												{hit.area.name}
-											</Text>
-											{savedNoteFor(hit.area.key) ? (
-												<Text style={styles.rankSaved} numberOfLines={1}>
-													{savedNoteFor(hit.area.key)}
-												</Text>
-											) : null}
-										</View>
-										<Text style={styles.rankValue}>
-											{lens.format(hit.value)}
-											{hit.estimated ? "*" : ""}
-										</Text>
-									</Pressable>
-								))}
-								{estimateNote ? (
-									<Text style={styles.estimateNote}>{estimateNote}</Text>
+						{/* A county in one line, plus the door to the rest of it. */}
+						{previewing && openedArea && lens && (
+							<View style={styles.preview}>
+								<View style={styles.previewHead}>
+									<Text style={styles.previewValue}>
+										{previewValue ?? "No figure yet"}
+									</Text>
+									<Text style={styles.previewUnit} numberOfLines={2}>
+										{lens.unit}
+									</Text>
+								</View>
+								{savedNoteFor(openedArea.key) ? (
+									<Text style={styles.previewSaved} numberOfLines={1}>
+										{savedNoteFor(openedArea.key)}
+									</Text>
 								) : null}
-							</>
+								<Pressable
+									style={styles.previewCta}
+									onPress={() =>
+										router.push(`/area/${openedArea.key}?lens=${lensId}`)
+									}
+								>
+									<Text style={styles.previewCtaLabel}>
+										Full breakdown and how it ranks ›
+									</Text>
+								</Pressable>
+							</View>
 						)}
 
-						{searching && search.error && (
+						{asking && search.error && (
 							<View style={styles.stateBox}>
 								<Text style={styles.empty}>Couldn’t reach search.</Text>
 								<Pressable onPress={search.retry} style={styles.retryBtn}>
@@ -552,14 +621,25 @@ export default function SearchTab() {
 								</Pressable>
 							</View>
 						)}
-						{searching && !search.error && !hits && (
-							<Text style={styles.empty}>Searching…</Text>
+						{asking && !search.error && !hits && (
+							<Text style={styles.empty}>
+								{searching ? "Searching…" : "Loading…"}
+							</Text>
 						)}
 						{searching && hits && hitCount === 0 && (
 							<Text style={styles.empty}>
 								No match — try a street, community, city or zip.
 							</Text>
 						)}
+						{!searching &&
+							drillCity &&
+							hits &&
+							hits.communities.length === 0 &&
+							hits.listings.length === 0 && (
+								<Text style={styles.empty}>
+									Nothing mapped in {drillCity.name} yet.
+								</Text>
+							)}
 						{!searching && !poolLoading && units.length === 0 && (
 							<Text style={styles.empty}>
 								No areas yet.{"\n"}Discovery lives in the feed.
@@ -619,30 +699,28 @@ export default function SearchTab() {
 							</Pressable>
 						))}
 
-						{!openedArea && units.length > 0 && (
-							<Text style={styles.groupTitle}>Areas</Text>
+						{listedUnits.length > 0 && (
+							<Text style={styles.groupTitle}>
+								{previewing ? "Cities" : "Areas"}
+							</Text>
 						)}
-						{!openedArea &&
-							units.map((u) => (
-								<Pressable
-									key={u.id}
-									style={[
-										styles.row,
-										selectedId === u.id && styles.rowSelected,
-									]}
-									onPress={() => select(u)}
-								>
-									<Image source={{ uri: u.heroUrl }} style={styles.rowThumb} />
-									<View style={styles.rowText}>
-										<Text style={styles.rowName}>{u.name}</Text>
-										<Text style={styles.rowSub}>
-											{u.communityCount > 0
-												? `${u.communityCount} communities`
-												: "no communities yet"}
-										</Text>
-									</View>
-								</Pressable>
-							))}
+						{listedUnits.map((u) => (
+							<Pressable
+								key={u.id}
+								style={[styles.row, selectedId === u.id && styles.rowSelected]}
+								onPress={() => select(u)}
+							>
+								<Image source={{ uri: u.heroUrl }} style={styles.rowThumb} />
+								<View style={styles.rowText}>
+									<Text style={styles.rowName}>{u.name}</Text>
+									<Text style={styles.rowSub}>
+										{u.communityCount > 0
+											? `${u.communityCount} communities`
+											: "no communities yet"}
+									</Text>
+								</View>
+							</Pressable>
+						))}
 					</ScrollView>
 				)}
 			</View>
@@ -653,55 +731,55 @@ export default function SearchTab() {
 /**
  * A map pin that shows the spot's own face — its hero photo in a circle —
  * instead of the stock teardrop. The old pinColor language survives as the
- * ring: what the colour used to say about the spot's kind, the border says
- * now. A spot with no photo yet falls back to a solid disc in that colour.
+ * ring: what the colour used to say about the spot's kind, the border says now.
+ *
+ * A spot with no photo shows the first letter of its name (owner, 2026-09-09).
+ * It used to be a solid disc in the ring colour, which said only "something is
+ * here"; the letter says which one, and photo coverage is thin enough on
+ * communities that this is a common face rather than an edge case.
  *
  * `label` hangs a small chip under the circle. Listings pass their price
  * through it, which is also what tells a HOME from a community at a glance —
  * ring colour alone was too quiet a distinction (owner, 2026-09-09).
+ *
+ * No `title`/`description`: those draw a callout, and every pin here is a
+ * one-tap action — drill into the city, open the community, open the home.
  */
 function PhotoMarker({
 	coordinate,
 	photoUrl,
 	ring,
 	selected,
-	title,
-	description,
+	name,
 	label,
 	onPress,
-	onCalloutPress,
 }: {
 	coordinate: LatLng;
 	photoUrl?: string;
 	ring: string;
 	selected?: boolean;
-	title: string;
-	description?: string;
+	name: string;
 	label?: string;
-	onPress?: () => void;
-	onCalloutPress?: () => void;
+	onPress: () => void;
 }) {
 	const border = selected ? colors.accent : ring;
 	return (
-		<Marker
-			coordinate={coordinate}
-			title={title}
-			description={description}
-			onPress={onPress}
-			onCalloutPress={onCalloutPress}
-		>
-			<View style={styles.pinWrap}>
+		<Marker coordinate={coordinate} onPress={onPress}>
+			<View style={styles.pinWrap} accessibilityLabel={name}>
 				<View
 					style={[
 						styles.pin,
 						{ borderColor: border },
 						selected && styles.pinSelected,
-						!photoUrl && { backgroundColor: border },
 					]}
 				>
 					{photoUrl ? (
 						<Image source={{ uri: photoUrl }} style={styles.pinPhoto} />
-					) : null}
+					) : (
+						<Text style={[styles.pinInitial, { color: border }]}>
+							{name.trim().charAt(0).toUpperCase()}
+						</Text>
+					)}
 				</View>
 				{label ? (
 					<View style={[styles.pinLabel, { borderColor: border }]}>
@@ -710,141 +788,6 @@ function PhotoMarker({
 				) : null}
 			</View>
 		</Marker>
-	);
-}
-
-/**
- * One county's cost, broken into the lines that make it up.
- *
- * The breakdown is the point, not the total: the study's complaint was that
- * nobody could tell buyers WHAT the money went to, and a single number repeats
- * that. Every line names its own figure, and the provenance row underneath
- * says where the numbers came from and how old they are — including, plainly,
- * when they are still our estimate.
- */
-function AreaDetail({
-	area,
-	onBack,
-	backLabel,
-}: {
-	area: Area;
-	onBack: () => void;
-	backLabel: string;
-}) {
-	const lines = costBreakdown(area);
-	const total = lines?.reduce((n, l) => n + l.monthlyUsd, 0);
-	const max = lines ? Math.max(...lines.map((l) => l.monthlyUsd)) : 0;
-	const school = area.metrics.find(
-		(m) => m.metric === "school_proficiency_pct",
-	);
-	// The state's own adopted rate, when we have it. Shown beside the estimate
-	// rather than instead of it: it is the sourced fact, but it is the rate
-	// BEFORE homestead exemptions and credits, so it is not what the cost lines
-	// above are priced with. Saying both is the honest version of saying either.
-	const statutory = area.metrics.find(
-		(m) => m.metric === "property_tax_millage_statutory_pct",
-	);
-	// Which LINES are guesses, rather than whether the county has any guess in
-	// it. Property tax and schools come from the state; water and trash have no
-	// source at all. One banner over the whole sheet told a buyer to discount
-	// figures we can defend.
-	const estimatedLines = (lines ?? [])
-		.filter((l) => l.estimated)
-		.map((l) => l.label.toLowerCase());
-	const asOf = area.metrics
-		.filter((m) => !m.estimated)
-		.map((m) => m.asOf)
-		.sort()
-		.at(-1);
-
-	return (
-		<View style={styles.detail}>
-			<Pressable onPress={onBack} hitSlop={10}>
-				<Text style={styles.detailBack}>‹ {backLabel}</Text>
-			</Pressable>
-
-			{total !== undefined ? (
-				<>
-					<View style={styles.detailHero}>
-						<Text style={styles.detailHeroValue}>
-							${total.toLocaleString()}
-						</Text>
-						<Text style={styles.detailHeroUnit}>
-							true cost /mo · $500k home
-						</Text>
-					</View>
-					{lines?.map((line) => (
-						<View key={line.label}>
-							<View style={styles.detailRow}>
-								<Text style={styles.detailRowLabel} numberOfLines={1}>
-									{line.label}
-								</Text>
-								<View style={styles.detailBarTrack}>
-									<View
-										style={[
-											styles.detailBarFill,
-											{
-												width: `${Math.max(5, Math.round((line.monthlyUsd / max) * 100))}%`,
-											},
-										]}
-									/>
-								</View>
-								<Text style={styles.detailRowValue}>
-									${line.monthlyUsd}
-									{line.estimated ? "*" : ""}
-								</Text>
-							</View>
-							{/* Who supplies it, when we know. A bare "$157" is a
-							    number to take on trust; "Georgia Power · 14.6¢ per
-							    kWh" is a number the buyer can go and check. */}
-							{line.note ? (
-								<Text style={styles.detailRowNote} numberOfLines={2}>
-									{line.note}
-								</Text>
-							) : null}
-						</View>
-					))}
-				</>
-			) : (
-				<Text style={styles.empty}>
-					We don’t have this county’s cost figures yet.
-				</Text>
-			)}
-
-			{(school || statutory) && (
-				<View style={styles.detailChips}>
-					{school && (
-						<View style={styles.detailChip}>
-							<Text style={styles.detailChipText}>
-								Schools{" "}
-								<Text style={styles.detailChipValue}>
-									{Math.round(school.value)}%
-								</Text>{" "}
-								proficient
-							</Text>
-						</View>
-					)}
-					{statutory && (
-						<View style={styles.detailChip}>
-							<Text style={styles.detailChipText}>
-								Adopted tax rate{" "}
-								<Text style={styles.detailChipValue}>
-									{statutory.value.toFixed(2)}%
-								</Text>{" "}
-								before exemptions
-							</Text>
-						</View>
-					)}
-				</View>
-			)}
-
-			<Text style={styles.detailSource}>
-				{estimatedLines.length > 0
-					? `Sourced from public records, except ${listOf(estimatedLines)} — those are still our estimate.`
-					: "Every figure here is from a public record."}
-				{asOf ? ` Most recent data ${asOf}.` : ""}
-			</Text>
-		</View>
 	);
 }
 
@@ -943,9 +886,12 @@ const styles = StyleSheet.create({
 		borderWidth: 2,
 		backgroundColor: colors.surface2,
 		overflow: "hidden",
+		alignItems: "center",
+		justifyContent: "center",
 	},
 	pinSelected: { borderWidth: 3 },
 	pinPhoto: { width: "100%", height: "100%" },
+	pinInitial: { ...textStyles.headline, fontWeight: "700" },
 	pinLabel: {
 		backgroundColor: colors.glass,
 		borderWidth: 1,
@@ -1004,90 +950,27 @@ const styles = StyleSheet.create({
 	},
 	legendEnd: { ...textStyles.caption, color: colors.ink2 },
 
-	// ── Lens ranking ──────────────────────────────────────────────────────────
-	lensCaption: {
-		...textStyles.footnote,
-		color: colors.ink2,
-		paddingHorizontal: 8,
-		paddingBottom: 8,
-	},
-	rankRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 10,
-		paddingVertical: 9,
-		paddingHorizontal: 8,
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
-	},
-	rankSwatch: { width: 14, height: 14, borderRadius: 4 },
-	rankLabel: { flex: 1 },
-	rankSaved: {
-		...textStyles.caption,
-		color: colors.accent,
-		marginTop: 1,
-	},
-	rankName: { ...textStyles.headline, color: colors.ink },
-	rankValue: { ...textStyles.headline, color: colors.ink2 },
-	estimateNote: {
-		...textStyles.caption,
-		color: colors.ink3,
-		paddingHorizontal: 8,
-		paddingTop: 10,
-	},
-
-	// ── County detail ─────────────────────────────────────────────────────────
-	detail: { paddingHorizontal: 8, paddingBottom: 8 },
-	detailBack: {
+	// ── County preview ────────────────────────────────────────────────────────
+	backRow: { paddingHorizontal: 8, paddingTop: 2, paddingBottom: 6 },
+	backLabel: {
 		...textStyles.footnote,
 		color: colors.accent,
 		fontWeight: "600",
-		paddingBottom: 6,
 	},
-	detailHero: { flexDirection: "row", alignItems: "baseline", gap: 8 },
-	detailHeroValue: { ...textStyles.title1, color: colors.ink },
-	detailHeroUnit: { ...textStyles.caption, color: colors.ink2, flex: 1 },
-	detailRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 10,
-		paddingVertical: 7,
+	preview: {
+		paddingHorizontal: 8,
+		paddingBottom: 10,
+		borderBottomWidth: StyleSheet.hairlineWidth,
+		borderBottomColor: colors.border,
 	},
-	detailRowLabel: { ...textStyles.footnote, color: colors.ink2, width: 118 },
-	detailBarTrack: {
-		flex: 1,
-		height: 7,
-		borderRadius: 4,
-		backgroundColor: colors.surface2,
-		overflow: "hidden",
-	},
-	detailBarFill: { height: 7, borderRadius: 4, backgroundColor: colors.accent },
-	detailRowValue: {
+	previewHead: { flexDirection: "row", alignItems: "baseline", gap: 8 },
+	previewValue: { ...textStyles.title1, color: colors.ink },
+	previewUnit: { ...textStyles.caption, color: colors.ink2, flex: 1 },
+	previewSaved: { ...textStyles.caption, color: colors.accent, marginTop: 3 },
+	previewCta: { paddingTop: 10 },
+	previewCtaLabel: {
 		...textStyles.footnote,
-		color: colors.ink,
-		width: 48,
-		textAlign: "right",
-	},
-	detailRowNote: {
-		...textStyles.caption,
-		color: colors.ink3,
-		marginTop: -3,
-		marginBottom: 3,
-		lineHeight: 14,
-	},
-	detailChips: { flexDirection: "row", gap: 6, marginTop: 10 },
-	detailChip: {
-		backgroundColor: colors.surface2,
-		borderRadius: radii.tile,
-		paddingHorizontal: 10,
-		paddingVertical: 5,
-	},
-	detailChipText: { ...textStyles.caption, color: colors.ink2 },
-	detailChipValue: { color: colors.ink, fontWeight: "700" },
-	detailSource: {
-		...textStyles.caption,
-		color: colors.ink3,
-		marginTop: 12,
-		lineHeight: 15,
+		color: colors.accent,
+		fontWeight: "600",
 	},
 });
