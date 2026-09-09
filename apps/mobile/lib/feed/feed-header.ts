@@ -76,17 +76,28 @@ import { SCOPE_ROOT_LABEL } from "./place-stats";
  * tour as the other two. It gets the same geometry and a `CITY TOUR` label
  * rather than an exception in the layout.
  *
- * `scope` is the fifth state and belongs to no card: the deck is empty
- * (first load, or exhausted). The header still has to say where the buyer is
- * looking, so it falls back to the picked scope — which is also what keeps
- * the scope sheet reachable while the skeleton is on screen.
+ * `empty` is the fifth state and belongs to no card: the deck has nothing in
+ * it (first load, or exhausted). It carries NO text.
+ *
+ * It used to fall back to the buyer's picked scope, which is how a header
+ * reading "Roswell" in 36pt serif came to sit over a skeleton for the second
+ * before the first card landed — naming a place that had nothing to do with
+ * what was about to appear, and in his case nothing to do with anything: the
+ * video pool has no Roswell content at all, so the scope reordered nothing and
+ * its only visible effect was that wrong title (owner, 2026-09-09:
+ * 「为啥每次都显示Roswell1秒钟 然后再到卡片 这很奇怪」).
+ *
+ * The rule now is his: 「加载出什么就显示什么 不要预测」. Show the card's own
+ * place once there is a card, and nothing before that. The rows keep their
+ * `minHeight`, so an empty header is the same height as a full one and the
+ * card below does not move when the text arrives.
  */
 export type FeedHeaderKind =
 	| "home-tour"
 	| "community-tour"
 	| "city-tour"
 	| "trade-off"
-	| "scope";
+	| "empty";
 
 /**
  * The general trade-off's two fixed strings.
@@ -103,15 +114,17 @@ const TRADEOFF_TITLE = "Find your balance";
 const PLACELESS_HOME_TITLE = "Explore this home";
 
 export interface FeedHeaderModel {
-	/** The card this header is a read of. `null` in the `scope` fallback. */
+	/** The card this header is a read of. `null` in the `empty` state. */
 	activeCardId: string | null;
 	/**
-	 * Which header this is. Carried for the component's one behavioural
-	 * branch (a trade-off's context row is not the scope control) — NOT for a
-	 * label: the uppercase HOME TOUR / COMMUNITY TOUR / TRADE-OFF row was
-	 * removed on 2026-09-07 at the owner's request 「Remove the community, home
-	 * and tradeoff text from header」. The card's own badge already says what
-	 * kind of card it is.
+	 * Which header this is. NOT a label: the uppercase HOME TOUR / COMMUNITY
+	 * TOUR / TRADE-OFF row was removed on 2026-09-07 at the owner's request
+	 * 「Remove the community, home and tradeoff text from header」. The card's
+	 * own badge already says what kind of card it is.
+	 *
+	 * Nothing branches on this any more either — the context row stopped being
+	 * a control on 2026-09-09 — so it is carried for tests and for reading a
+	 * model in the debugger, not for behaviour.
 	 */
 	kind: FeedHeaderKind;
 	/**
@@ -131,9 +144,6 @@ export interface FeedHeaderInput {
 	card: FeedCardV3 | undefined;
 	geoUnits: readonly GeoUnit[];
 	communities: readonly CommunityCardV3[];
-	/** The picked scope's name, or null for the whole metro. */
-	scopeName: string | null;
-	scopedUnitId: string | null;
 }
 
 /** `Atlanta metro › Canton` from the segments BELOW the metro. */
@@ -185,19 +195,17 @@ export function feedHeaderModel({
 	card,
 	geoUnits,
 	communities,
-	scopeName,
-	scopedUnitId,
 }: FeedHeaderInput): FeedHeaderModel {
 	if (card === undefined) {
-		// No card: the header says where the buyer is looking. Unscoped, the
-		// metro IS the place and must not also precede itself in the context.
+		// No card, no claim. Every field here used to be derived from the picked
+		// scope; see `FeedHeaderKind` for why guessing was worse than silence.
 		return {
 			activeCardId: null,
-			kind: "scope",
-			contextText: scopeName ? context(scopeName) : "",
-			title: scopeName ?? SCOPE_ROOT_LABEL,
+			kind: "empty",
+			contextText: "",
+			title: "",
 			titleSlug: null,
-			mapUnitId: unitOf(scopedUnitId ?? undefined, geoUnits)?.id ?? null,
+			mapUnitId: null,
 		};
 	}
 

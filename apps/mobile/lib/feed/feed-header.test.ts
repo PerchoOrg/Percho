@@ -80,8 +80,6 @@ function model(over: Partial<FeedHeaderInput> = {}) {
 		card: undefined,
 		geoUnits: [CANTON],
 		communities: [RIVER_GREEN],
-		scopeName: null,
-		scopedUnitId: null,
 		...over,
 	});
 }
@@ -265,28 +263,33 @@ describe("general trade-off", () => {
 
 describe("no card", () => {
 	/**
-	 * First load and a dry deck. The header still says where the buyer is
-	 * looking — which is also what keeps `ScopeSheet` reachable while the
-	 * skeleton is on screen.
+	 * First load and a dry deck.
+	 *
+	 * This used to preview the buyer's picked scope, which put a 36pt serif
+	 * place name over the skeleton for the second before the first card landed
+	 * — naming somewhere the deck was not about to show (owner, 2026-09-09:
+	 * 「加载出什么就显示什么 不要预测」). Nothing is claimed now until there is a
+	 * card to claim it from.
 	 */
-	it("falls back to the scope, and does not print the metro twice", () => {
-		const scoped = model({ scopeName: "Canton", scopedUnitId: CANTON.id });
-		expect(scoped.kind).toBe("scope");
-		expect(scoped.activeCardId).toBeNull();
-		expect(scoped.contextText).toBe("Atlanta metro › Canton");
-		expect(scoped.title).toBe("Canton");
-		expect(scoped.mapUnitId).toBe(CANTON.id);
-
-		const metro = model();
-		expect(metro.title).toBe("Atlanta metro");
-		expect(metro.contextText).toBe("");
-		expect(metro.mapUnitId).toBeNull();
+	it("says nothing at all", () => {
+		const empty = model();
+		expect(empty.kind).toBe("empty");
+		expect(empty.activeCardId).toBeNull();
+		expect(empty.contextText).toBe("");
+		expect(empty.title).toBe("");
+		expect(empty.titleSlug).toBeNull();
+		expect(empty.mapUnitId).toBeNull();
 	});
 
-	it("hides Map when the scoped unit is not in the pool", () => {
-		expect(
-			model({ scopeName: "Gone", scopedUnitId: "city:gone-ga" }).mapUnitId,
-		).toBeNull();
+	/**
+	 * The pool is irrelevant to the empty state: a header with no card must not
+	 * find a place to name however much inventory is loaded around it.
+	 */
+	it("stays empty even with a full pool", () => {
+		const withPool = model({ geoUnits: [CANTON], communities: [RIVER_GREEN] });
+		expect(withPool.title).toBe("");
+		expect(withPool.contextText).toBe("");
+		expect(withPool.mapUnitId).toBeNull();
 	});
 });
 

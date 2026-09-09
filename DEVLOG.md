@@ -366,6 +366,93 @@ expensive to re-read. Amending keeps it *accurate line by line* while letting
 the whole become false — which is precisely what "read it as its audience"
 catches and nothing else does.
 
+## 2026-09-09 09:41 UTC — phase258: the header stops guessing, and scope leaves the feed
+
+**Objective**: the owner, on the screenshot that started this: 「为啥每次都显示
+Roswell1秒钟 然后再到卡片 这很奇怪」. Then the instruction —「加载出什么就显示
+什么 不要预测 并且这个scope sheet的选项不用在主feed流里提供 显示text就可以 但是
+在searchmap里可以有这个功能」.
+
+### Why it always said Roswell
+
+`feedHeaderModel` had a fifth state for "the deck is empty", and it filled the
+header from the buyer's persisted **scope**:
+
+```ts
+title: scopeName ?? SCOPE_ROOT_LABEL,   // 36pt DM Serif
+```
+
+He had picked Roswell in the scope sheet once. That lives in AsyncStorage
+(`percho-v3:feed-session:v1`) and never expires, so every cold start drew
+"Roswell" over the skeleton until the pool landed a second later and the title
+swapped to the card's real community. The swap is what read as a glitch.
+
+It also explains a detail of his screenshot I had not accounted for: no Map
+pill. The pill needs the scoped unit to resolve against `pool.geoUnits`, and on
+first paint the pool is empty — so the button appears a second later too.
+
+### The scope was doing nothing at all
+
+Checked the live pool rather than assuming. `videosOnly` inventory is five
+communities — Peachtree Corners, Suwanee, Alpharetta ×2, Johns Creek — and:
+
+```
+items with geoUnitId == city:roswell-ga : 0
+```
+
+Roswell IS offerable in the sheet (it is in `geoUnits`, 731 communities), but
+nothing filmed is in it. `preferScope` partitions and **returns the pool
+unchanged when nothing matches**, so the pick reordered zero cards. Its entire
+observable effect was a wrong title for one second. A control that can be set
+to a value that does nothing, and whose only feedback is misleading.
+
+### What changed
+
+* **The empty header claims nothing.** `contextText`, `title` and `mapUnitId`
+  are all empty until there is a card; `FeedHeaderKind`'s `"scope"` member is
+  now `"empty"`, and `scopeName` / `scopedUnitId` are gone from
+  `FeedHeaderInput` — they existed only to feed the guess. The rows keep their
+  `minHeight`, so the header is the same height empty as full and the card
+  below does not move when the text arrives.
+* **The context row is text.** `onOpenScope` and the `Pressable` around it are
+  gone. It had lost its ▾ back in phase183.1, so what remained was an
+  unadvertised tap target on a row that reads as a caption.
+* **`ScopeSheet` no longer opens anywhere in the feed.** The other entry point
+  was `ExhaustedCard`'s "Adjust my scope"; both its handlers are optional now
+  and the feed passes only `onBrowseMap`, whose destination is the Search tab —
+  which is where the owner says the capability belongs. Whichever button is the
+  only one takes the primary fill, so that card never renders an outline-only
+  CTA.
+
+The scope still **soft-orders** the pool (`preferScope` is untouched). It is
+read on the feed and written nowhere, until Search grows the control.
+
+### Deliberately not done
+
+**The Search-side control.** 「在searchmap里可以有这个功能」 says where it
+belongs, not what it looks like, and Search has nowhere to put it today: its
+"selection" is a pin colour, a row highlight and a map animation — there is no
+panel carrying actions. Inventing that UI unasked is the kind of thing §0.2
+exists to stop. `ScopeSheet` and `setScope` are therefore live code with no
+caller right now; flagged to the owner rather than deleted, because he named
+their destination in the same sentence.
+
+**Verified**: typecheck clean, lint 0 errors / 8 warnings, **668 mobile tests**
+(+2), and `pnpm bundle` exports a 3.9MB Hermes bundle — the phase225 check,
+which matters here because this is the first mobile change since the web build
+turned out to be the thing nothing ran.
+
+`theme/feed-header.test.ts` asserted the header holds exactly three
+`Pressable`s. It now holds two, which is the change itself; updated with the
+reason, plus a new assertion that the string "Scope" appears nowhere in the
+component.
+
+**Learnings**: the fix he asked for is one line of behaviour — do not predict —
+but the reason the prediction was WRONG was two layers down, in a scope that
+could be set to something the inventory could not honour. **The visible bug was
+a rendering decision; the real one was that the app let him choose nothing and
+then told him he had chosen something.**
+
 ## 2026-09-09 09:35 UTC — phase247: every listing we have is understated
 
 **Objective**: phase246's move — a blocked decision is rarely blocked in every

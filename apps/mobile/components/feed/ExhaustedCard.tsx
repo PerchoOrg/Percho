@@ -2,13 +2,15 @@
  * ExhaustedCard (§1.9) — the terminal card when the pool runs dry.
  *
  * §1.9 frames this as a scope problem, not a failure: the buyer has seen
- * everything in the area they narrowed to, and the two exits are to widen the
- * scope (You tab) or to browse spatially (Search/map). Both are explicit buttons
- * because §0.5 reserves gestures for card decisions.
+ * everything in the area they narrowed to, and the exit is to widen it.
+ * Explicit buttons because §0.5 reserves gestures for card decisions.
  *
- * `onBrowseMap` is optional: the Search tab arrives in task 4, so until then the
- * caller omits it and the button is simply not rendered — no dead affordance and
- * no fake navigation.
+ * Both handlers are optional and each renders only when given, so there is
+ * never a dead affordance or fake navigation. Since 2026-09-09 the feed passes
+ * only `onBrowseMap`: `onAdjustScope` opened `ScopeSheet`, and the sheet moved
+ * to the Search/map tab at the owner's request — which is where "Browse map"
+ * was already going. Whichever button is the only one takes the primary fill,
+ * so the card never renders an outline-only call to action.
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radii } from "../../theme/tokens";
@@ -17,7 +19,7 @@ import { textStyles } from "../../theme/typography";
 const MIN_TOUCH = 44;
 
 interface ExhaustedCardProps {
-	onAdjustScope: () => void;
+	onAdjustScope?: () => void;
 	onBrowseMap?: () => void;
 }
 
@@ -25,28 +27,39 @@ export function ExhaustedCard({
 	onAdjustScope,
 	onBrowseMap,
 }: ExhaustedCardProps) {
+	// The first button present is the primary one — see the file header.
+	const mapIsPrimary = onAdjustScope === undefined;
 	return (
 		<View style={styles.card}>
 			<Text style={styles.headline}>
 				You&rsquo;ve seen everything in your area — widen it?
 			</Text>
 			<View style={styles.actions}>
-				<Pressable
-					onPress={onAdjustScope}
-					style={[styles.btn, styles.primary]}
-					accessibilityRole="button"
-					hitSlop={8}
-				>
-					<Text style={styles.primaryLabel}>Adjust my scope</Text>
-				</Pressable>
-				{onBrowseMap ? (
+				{onAdjustScope ? (
 					<Pressable
-						onPress={onBrowseMap}
-						style={[styles.btn, styles.secondary]}
+						onPress={onAdjustScope}
+						style={[styles.btn, styles.primary]}
 						accessibilityRole="button"
 						hitSlop={8}
 					>
-						<Text style={styles.secondaryLabel}>Browse map</Text>
+						<Text style={styles.primaryLabel}>Adjust my scope</Text>
+					</Pressable>
+				) : null}
+				{onBrowseMap ? (
+					<Pressable
+						onPress={onBrowseMap}
+						style={[
+							styles.btn,
+							mapIsPrimary ? styles.primary : styles.secondary,
+						]}
+						accessibilityRole="button"
+						hitSlop={8}
+					>
+						<Text
+							style={mapIsPrimary ? styles.primaryLabel : styles.secondaryLabel}
+						>
+							Browse map
+						</Text>
 					</Pressable>
 				) : null}
 			</View>
