@@ -676,10 +676,18 @@ export default function FeedScreen() {
 			}
 			if (target === SAVE_TAP_TARGET) {
 				const top = deckRef.current[activeIndex];
-				// Listing and area faces both draw the bookmark disc. The area
-				// branch was missing, so the CITY card's bookmark silently did
-				// nothing in the feed (its own onPress is disarmed under tapSlot).
-				if (top && (top.kind === "listing" || top.kind === "area")) {
+				// Every face except the trade-off draws the bookmark, and under
+				// `tapSlot` its own onPress is disarmed — so a kind missing from
+				// here is a dead button, not a fallback. Listing was the only kind
+				// listed at first; `area` was added when the CITY card's bookmark
+				// was found dead, and `community` was dead again from phase174,
+				// which gave that face its bookmark back.
+				//
+				// So the guard names the ONE kind with no bookmark instead of
+				// enumerating the ones that have it. That makes the compiler the
+				// thing keeping the two in step: a new card kind is a `SavedKind`
+				// or it fails to typecheck here, and neither can be forgotten.
+				if (top && top.kind !== "tradeoff") {
 					toggleSaved(top.id, top.kind);
 				}
 				return;

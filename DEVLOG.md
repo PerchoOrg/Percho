@@ -21,6 +21,110 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 10:08 UTC — phase259: the community card's bookmark was never wired
+
+**Objective**: owner, on device — "not able to click favorite button on
+community card, also what is difference between favorite and like button?"
+
+### The button was dead, and the reason is a list written down twice
+
+`CardCorner` disarms a control's own `onPress` whenever `tapSlot` is present:
+under the swipe deck a `Pressable` inside the pan area silently stops firing
+(RNGH #3172), so the face ARMS a target on touch and the feed's pan `onEnd`
+dispatches it. That makes `feed.tsx`'s `onTapTarget` the only thing that can
+actually save a card in the feed.
+
+Its `SAVE_TAP_TARGET` branch read:
+
+```ts
+if (top && (top.kind === "listing" || top.kind === "area")) {
+```
+
+`community` is not in that list. phase174 (2026-09-05) gave the community face
+its bookmark back — it had been removed on 2026-08-20 only because the tour
+video burned a place pill under it — and added `SAVE_TAP_TARGET` to the face
+without adding the kind here. **Four days of a bookmark that drew a pressed
+state and did nothing.**
+
+The same omission had already happened once: the comment I deleted was there to
+explain that `area` had been missing and the CITY card's bookmark was dead.
+**A list of savable kinds, maintained by hand, in a file that is not the one
+that decides what is savable.**
+
+### So the guard names the kind that has NO bookmark
+
+```ts
+if (top && top.kind !== "tradeoff") {
+```
+
+The trade-off face is the only one that draws no `CardCorner`. Inverting the
+test hands the invariant to the compiler: the remaining kinds narrow to exactly
+`SavedKind`, so a new card kind either IS savable or fails to typecheck at
+`toggleSaved` — it cannot be silently forgotten a third time.
+
+### The test that existed asserted the dead half
+
+`community-panel-fit.test.ts` already checked that `CommunityFace` contains
+`toggleSaved(card.id, "community")` — and that call is precisely the one
+`CardCorner` disarms in the feed. It passed for the whole four days. The new
+case reads the FEED's branch instead and rejects the enumerating shape whatever
+kinds it lists; verified by restoring the old guard, which fails it.
+
+### Favourite vs Like: on the phone they differ, on the web one is a dead end
+
+- **Mobile** has no like BUTTON. Liking is the right SWIPE — it writes
+  `likedCommunityIds` / `likedListingIds` into the session signals, which rank
+  the feed and widen the pool. The bookmark writes `saved_communities` and is
+  what the Saved tab reads. Two live mechanisms, genuinely different jobs.
+- **Web** draws both as buttons in the same right rail: a rose heart "Like" and
+  a bookmark "Save". Save reaches `/saved`, which the nav labels **Favorites**.
+  Like writes `listing_likes` / `community_likes` — and the only reader in the
+  repo is `listLiked`, called to re-fill the heart on the same device.
+  Migration 0028 says likes are "surfaced in the buyer's Favorites > Likes
+  sub-tab"; that sub-tab was never built, `SavedClient`'s own header says
+  "Buyer Favorites surface (saves only)", and the `listing_like_counts` /
+  `community_like_counts` views the migration also created have zero references
+  in `apps/`.
+
+So the honest answer to the owner's question is not "no difference" — it is
+that **the web's Like does nothing a buyer can ever see again**. Consolidating
+is right, but the survivor has to be the save (it is what both Favorites
+surfaces and the phone's Saved tab read), which makes it a naming decision plus
+the removal of a button from three buyer-facing surfaces. Left for the owner —
+not folded into a bug fix.
+
+### While auditing that, three more web findings — reported, not fixed
+
+Swept every save/like affordance in `apps/web` to answer the question. None of
+this is in this phase's diff; it is scope the owner has not asked for.
+
+1. **`saved_communities` has exactly one writer in the whole web app** — the
+   `/c/[slug]/feed` right rail. Every other community surface (`CommunitySheet`,
+   `/communities`, `/communities/nearby`, `/c/[slug]`) renders a bare link tile
+   with no bookmark at all.
+2. **The browse community carousel's bookmark saves the LISTING.**
+   `BrowseFeed` passes its own listing handlers into `CommunityCarousel` — the
+   comment there calls it deliberate ("rail handlers target the parent
+   listing") — so a buyer watching neighbourhood videos taps the bookmark and
+   writes `saved_listings`. There is no way to favourite a community from the
+   browse flow, and the button gives no sign of that.
+3. **`/saved/communities` has no unsave.** `CommunitiesView` renders plain
+   `GridCard`s; `unsaveCommunity` is reachable only by navigating back to
+   `/c/[slug]/feed` and re-toggling the rail. `CommunityListingCarousel` also
+   ignores the `{ ok: false }` its save action returns instead of throwing, so
+   a rejected save leaves the bookmark filled with no row and no log.
+
+**Verified**: mobile typecheck clean, 669 mobile tests (+1), lint 0 errors at
+main's baseline (mobile 8 warnings, web 181).
+
+**Learnings**: the existing test asserted the handler on the FACE, which is the
+half the framework disables. A test that names a call site without checking
+that anything calls it is the same silence as a cast the compiler cannot see
+through — phase254's lesson, one layer up.
+
+**Next steps**: owner's call on the web Like button — delete it, or build the
+Likes sub-tab that migration 0028 promised.
+
 ## 2026-09-09 13:15 UTC — phase254: the cast was hiding a wrong branch
 
 **Objective**: phase253 left `app/api/events/route.ts` as the one file whose

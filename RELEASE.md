@@ -35,6 +35,11 @@ community reviews instead.
 
 ### 2026-09-09
 
+**The bookmark on a neighbourhood card works again.** Tapping it in the feed
+did nothing — the button lit up under your finger and the neighbourhood never
+reached your Saved list. It saves, and unsaves, the way the one on a home card
+always has.
+
 **The feed no longer names a place before it has one to name.** While the first
 card loaded, the top of the feed briefly showed whichever area you had last
 narrowed to — in large type, and often somewhere the cards that followed had

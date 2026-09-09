@@ -34,6 +34,8 @@ import { describe, expect, it } from "vitest";
 
 const SRC = readFileSync("components/cards/CommunityFace.tsx", "utf8");
 const AREA = readFileSync("components/cards/AreaFace.tsx", "utf8");
+/** The face arms the tap target; the FEED is what acts on it. */
+const FEED = readFileSync("app/(tabs)/feed.tsx", "utf8");
 
 describe("community card immersive full-bleed layout (2026-08-16)", () => {
 	it("fills the card with media — no white text block below", () => {
@@ -85,6 +87,30 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		// No community-specific offset survives: the control sits where the
 		// listing card's does, which is the whole point of the change.
 		expect(SRC).not.toContain("COMMUNITY_SOUND_TOP");
+	});
+
+	/**
+	 * The assertion above is HALF the bookmark, and on its own it passed for
+	 * four days while the button did nothing.
+	 *
+	 * Under `tapSlot` — i.e. everywhere in the feed — `CardCorner` disarms the
+	 * control's own `onPress` and the release is dispatched by the feed instead,
+	 * so `toggleSaved(card.id, "community")` on this face is dead code there. The
+	 * feed's `SAVE_TAP_TARGET` branch enumerated `listing` and `area`, and
+	 * phase174 gave this face its bookmark back without adding the third kind.
+	 * The same omission had already killed the CITY card's bookmark once.
+	 *
+	 * So the branch now names the one kind that draws NO bookmark rather than
+	 * listing the ones that do: the savable kinds are exactly `SavedKind`, and
+	 * with the guard inverted `tsc` is what holds the two files together — a kind
+	 * that is not savable cannot reach `toggleSaved` without failing to compile.
+	 */
+	it("is actually saved by the feed, not just by its own dead onPress", () => {
+		const branch = FEED.slice(FEED.indexOf("target === SAVE_TAP_TARGET"));
+		const guard = branch.slice(0, branch.indexOf("toggleSaved"));
+		expect(guard).toContain('top.kind !== "tradeoff"');
+		// Enumerating kinds here is the shape of the bug, whichever kinds it lists.
+		expect(guard).not.toMatch(/top\.kind === "/);
 	});
 
 	it("caps the signal glyphs at TWO", () => {
