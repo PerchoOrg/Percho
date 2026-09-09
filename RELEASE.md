@@ -65,13 +65,13 @@ utility, which matches how many homes there are on septic.
 
 ### 2026-09-08
 
-**The phone feed's first card arrives about three times faster.** Opening the
-app used to sit on an empty card outline for two to four seconds before the
-first home or neighbourhood appeared. The app was waiting on four separate
-lookups that ran one after another even though only one of them needed the
-result of another; they now happen together, and a repeated open within the
-minute skips the wait entirely. Nothing about what you see has changed — only
-how long you wait for it.
+**The phone feed's first card arrives about twice as fast, and almost instantly
+on a second look.** Opening the app used to sit on an empty card outline for
+around two seconds — sometimes four — before the first home or neighbourhood
+appeared. It was waiting on four separate lookups that ran one after another
+even though only one of them needed another's result; they now happen together.
+Reopening within the minute is near-instant. Nothing about what you see has
+changed, only how long you wait for it.
 
 **Community videos in the phone feed now take turns.** Once you had swiped past
 everything at least once, the deck could deal the same community twice in a row

@@ -1274,6 +1274,62 @@ ever covered exactly one county before. Fixed in both pages.
 **Verified**: typecheck clean, lint clean, 663 mobile + **1120 web tests**
 (+11). Both demos rebuilt.
 
+## 2026-09-09 00:20 UTC — phase257.1: the number I shipped was the number I predicted
+
+**Objective**: close out phases 256–257 against the deployed endpoint, and
+correct the RELEASE.md figure I wrote before I could measure it.
+
+### Measured, five samples per stage, every request a cache MISS
+
+```
+stage   before (phase253)   after (phase257)
+  0     0.21 – 0.39         0.27
+  1     1.12 – 1.23         1.14
+  3     1.62 – 1.99         1.08
+  4     1.70 – 2.08         0.99      ← the phone's path
+```
+
+Cache HIT on a repeated URL: **0.12s**.
+
+So the phone's cold open is **about 2x**, not the 3x I put in RELEASE.md.
+Corrected there. The prediction came from counting round trips (4 serial → 1)
+and assuming they were of similar cost; they are not, and stage 1 — which has
+no community tail at all — is unchanged within noise, exactly as that model
+would NOT have predicted. **I wrote a user-facing number from arithmetic on a
+model instead of from a measurement, and shipped it an hour before the
+measurement was possible.** The rule that would have caught it is the one this
+log keeps rediscovering: a figure is sourced or it is a guess.
+
+### phase257 verified
+
+Determinism: **4 consecutive calls byte-identical** on `stage=1`, `stage=4` and
+the `videoFirst` sampler query. Before phase257 the same three returned a
+different trade-off door photo depending on nothing.
+
+Equivalence across all eight captured parameter combinations: `geoUnits`,
+`listings` and `communities` **identical to the pre-phase256 baseline**.
+`dimPhotos` differs in three, which is the intended change — the pick is now
+the agent's `sort_order = 1` photo rather than whichever row arrived first.
+Confirmed directly: the `stage=2` response went back to matching the baseline
+byte-for-byte, and the photo it names is the `sort_order = 1` row (`62033772`)
+whose displacement started this.
+
+### Still on the table
+
+For `videosOnly` the opening batch still runs `fetchCommunityPool` over 8,684
+rows ordered by name and then throws the rows away — `fetchCommunityPoolByIds`
+replaces them. It survives only to pair a liked community id with its city.
+Removing it would take another slice off stage 3–4, but it changes what
+`likedRefs` can resolve, so it is a behaviour question rather than a speed one.
+Not done; flagged.
+
+**Learnings**: I also ran a `git checkout -B` inside `~/Workspace/Percho` while
+meaning to run it in my own worktree — the reference worktree Metro serves the
+owner's phone from — and moved it off `main`. Caught it when a merge said
+"Already up to date", restored it, and switched to `git -C <path>` for
+everything afterwards. `cd` in a compound command is not a safety boundary when
+the shell's cwd resets between calls; naming the repo per command is.
+
 ## 2026-09-09 00:15 UTC — phase230: the withdrawal was wrong, and DeKalb's water is now sourced
 
 **Objective**: pin DeKalb's rates off the table phase229 made legible, and
