@@ -353,7 +353,26 @@ export async function GET(request: Request) {
           // `ai_tags` is filtered in `pickDimPhotos`, not here: a `.not(... is
           // null)` on a Json column makes supabase-js widen the row type to
           // `never`, and the untagged rows are cheap to skip in JS.
-          .eq('status', 'ready');
+          .eq('status', 'ready')
+          /**
+           * Deterministic order, because `pickDimPhotos` takes the FIRST row
+           * that matches a dimension.
+           *
+           * Without this the pick is whatever order Postgres happened to
+           * return, which is not a guarantee — phase256 measured the endpoint
+           * before and after its own refactor and found `geoUnits`, `listings`
+           * and `communities` byte-identical while a trade-off door swapped
+           * between two photos of the same room, both tagged a week earlier.
+           * Nothing about the data had changed; the row order had.
+           *
+           * It matters more now than it did: with `s-maxage` above, an
+           * arbitrary pick gets frozen at the edge for a minute rather than
+           * varying quietly. `sort_order` is the agent's own ordering of the
+           * set, so first-by-sort_order is also the better photo; `id` breaks
+           * ties so the result is total.
+           */
+          .order('sort_order', { ascending: true })
+          .order('id', { ascending: true });
 
         if (!taggedPhotos || taggedPhotos.length === 0) return {};
         const dimsByListing = new Map<string, readonly DimKey[]>(
