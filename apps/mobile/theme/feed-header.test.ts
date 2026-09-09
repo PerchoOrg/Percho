@@ -207,13 +207,22 @@ describe("what the handoff forbids", () => {
 	});
 
 	/**
-	 * Three separate controls, each with its own 44pt target: the context row
-	 * (the scope sheet — see the component's file header), the title, and Map.
+	 * Two separate controls, each with its own 44pt target: the title and Map.
 	 * The handoff is explicit that the whole header must not be one button.
+	 *
+	 * It was three until 2026-09-09. The context row opened `ScopeSheet`, and
+	 * the owner moved that to the Search/map tab — 「这个scope sheet的选项不用在
+	 * 主feed流里提供 显示text就可以」 — so the row is plain text now. If a third
+	 * `Pressable` appears here, something has put a control back on it.
 	 */
 	it("wraps no shared button around the header", () => {
-		expect(CODE.match(/<Pressable/g) ?? []).toHaveLength(3);
+		expect(CODE.match(/<Pressable/g) ?? []).toHaveLength(2);
 		expect(CODE).toContain("height: MAIN_ROW * k");
+	});
+
+	/** The scope sheet does not reach the feed header by any route. */
+	it("opens no scope sheet", () => {
+		expect(CODE).not.toContain("Scope");
 	});
 
 	/**

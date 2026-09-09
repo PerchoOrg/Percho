@@ -35,6 +35,16 @@ community reviews instead.
 
 ### 2026-09-09
 
+**The feed no longer names a place before it has one to name.** While the first
+card loaded, the top of the feed briefly showed whichever area you had last
+narrowed to — in large type, and often somewhere the cards that followed had
+nothing to do with. It now stays blank for that moment and fills in with the
+real place once the card is there.
+
+**Narrowing to an area has moved to Search.** The line above the feed is now
+just a label; picking which area to focus on belongs on the map, where you can
+see what is actually there before choosing it.
+
 **The property tax line now says what it leaves out.** Georgia counties levy
 fire, EMS and similar services as separate districts, and the state's published
 county rate does not include them — in eighteen of the twenty-nine counties on

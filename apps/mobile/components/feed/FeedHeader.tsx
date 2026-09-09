@@ -66,15 +66,17 @@
  * the top of this file so `theme/feed-header.test.ts` can read them and
  * `theme/card-aspect.test.ts` can spend them.
  *
- * ── The scope sheet still opens from the context row ────────────────────────
+ * ── The context row is text, and only text (owner, 2026-09-09) ──────────────
  *
- * The handoff calls that row "explanatory text, not a feed filter", but the
- * line it replaced was the only control that opened `ScopeSheet` anywhere in
- * the feed (`ExhaustedCard`'s "Adjust my scope" only appears on a dry deck).
- * So the row keeps that job. It lost its ▾ in phase183.1 — the owner's demo
- * draws it as plain grey text — so the tap is there with nothing advertising
- * it. NOT a control on a trade-off ("Your preferences" is not a place) or on
- * a home with no resolvable location (the row is empty).
+ * 「这个scope sheet的选项不用在主feed流里提供 显示text就可以 但是在searchmap里
+ * 可以有这个功能」
+ *
+ * The handoff always called this row "explanatory text, not a feed filter",
+ * and for a while it was both: it was the only control that opened
+ * `ScopeSheet` anywhere in the feed. It had lost its ▾ in phase183.1 — the
+ * owner's demo draws it as plain grey text — so what remained was a tap target
+ * that nothing advertised, on a row that reads as a caption. That is now gone
+ * and the row is what it looks like. Scope belongs to the Search/map tab.
  */
 import { useMemo } from "react";
 import {
@@ -217,56 +219,32 @@ interface FeedHeaderProps {
 	onOpenTitle?: () => void;
 	/** Open the map on the card's place. Absent → no Map button at all. */
 	onOpenMap?: () => void;
-	/** Open `ScopeSheet` from the context row (see the file header). */
-	onOpenScope?: () => void;
 }
 
-export function FeedHeader({
-	model,
-	onOpenTitle,
-	onOpenMap,
-	onOpenScope,
-}: FeedHeaderProps) {
+export function FeedHeader({ model, onOpenTitle, onOpenMap }: FeedHeaderProps) {
 	const { width } = useWindowDimensions();
 	const k = headerScale(width);
 	const styles = useMemo(() => sheet(k), [k]);
 
-	/**
-	 * The context row doubles as the scope control only when it is showing
-	 * real parent places. "Your preferences" opens nothing, and neither does
-	 * an empty row.
-	 */
-	const scopeControl =
-		onOpenScope !== undefined &&
-		model.kind !== "trade-off" &&
-		model.contextText !== "";
-
-	const contextRow = (
-		<Text
-			style={styles.context}
-			numberOfLines={1}
-			ellipsizeMode="tail"
-			accessible={false}
-		>
-			{model.contextText}
-		</Text>
-	);
-
 	return (
 		<View style={styles.wrap}>
-			{scopeControl ? (
-				<Pressable
-					onPress={onOpenScope}
-					accessibilityRole="button"
-					accessibilityLabel={`Area: ${model.contextText}. Change`}
-					hitSlop={{ top: 8, bottom: 4, left: 8, right: 8 }}
-					style={({ pressed }) => [styles.contextRow, pressed && styles.dim]}
+			{/*
+			 * Plain text, not a control (owner, 2026-09-09: 「这个scope sheet的
+			 * 选项不用在主feed流里提供 显示text就可以 但是在searchmap里可以有这个
+			 * 功能」). It used to be the only thing that opened `ScopeSheet`; the
+			 * sheet now belongs to the Search/map tab, and this row is back to
+			 * being what it reads as — the card's place trail.
+			 */}
+			<View style={styles.contextRow}>
+				<Text
+					style={styles.context}
+					numberOfLines={1}
+					ellipsizeMode="tail"
+					accessible={false}
 				>
-					{contextRow}
-				</Pressable>
-			) : (
-				<View style={styles.contextRow}>{contextRow}</View>
-			)}
+					{model.contextText}
+				</Text>
+			</View>
 
 			<View style={styles.mainRow}>
 				{onOpenTitle !== undefined ? (

@@ -44,7 +44,6 @@ import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { FeedHeader } from "../../components/feed/FeedHeader";
 import { OfflineBar } from "../../components/feed/OfflineBar";
-import { ScopeSheet } from "../../components/feed/ScopeSheet";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
 import type { FeedCardV3 } from "../../lib/feed/card-types";
@@ -146,9 +145,12 @@ export default function FeedScreen() {
 	const recordSwipe = useFeedSession((s) => s.recordSwipe);
 	const beginSession = useFeedSession((s) => s.beginSession);
 
+	/**
+	 * The buyer's picked scope still SOFT-ORDERS the pool (`preferScope`), but
+	 * it can no longer be picked here: the sheet moved to the Search/map tab
+	 * (owner, 2026-09-09). Read, never written, on this screen.
+	 */
 	const scope = useFeedSession((s) => s.signals.scope);
-	const setScope = useFeedSession((s) => s.setScope);
-	const [scopeOpen, setScopeOpen] = useState(false);
 
 	const toggleSound = useSoundStore((s) => s.toggle);
 
@@ -408,10 +410,8 @@ export default function FeedScreen() {
 				card: topCard,
 				geoUnits: pool.geoUnits,
 				communities: pool.communities,
-				scopeName: scope?.name ?? null,
-				scopedUnitId: scope?.unitId ?? null,
 			}),
-		[topCard, pool.geoUnits, pool.communities, scope?.name, scope?.unitId],
+		[topCard, pool.geoUnits, pool.communities],
 	);
 
 	/**
@@ -747,7 +747,6 @@ export default function FeedScreen() {
 								})
 						: undefined
 				}
-				onOpenScope={() => setScopeOpen(true)}
 			/>
 			<View style={styles.stackWrap}>
 				{deck.length === 0 && loading ? (
@@ -758,12 +757,11 @@ export default function FeedScreen() {
 					<View style={styles.cardContainer}>
 						<ExhaustedCard
 							/*
-							 * §1.9's two exits: "Adjust my scope" opens the same
-							 * scope sheet as the header chip (it used to re-fetch
-							 * the exhausted pool, which changed nothing), and
-							 * "Browse map" goes to the Search tab.
+							 * One exit now, not two. "Adjust my scope" opened the
+							 * scope sheet, and the sheet left the feed on
+							 * 2026-09-09 — so widening happens where it now lives,
+							 * which is the tab this button already went to.
 							 */
-							onAdjustScope={() => setScopeOpen(true)}
 							onBrowseMap={() => router.navigate("/(tabs)/search")}
 						/>
 					</View>
@@ -803,13 +801,6 @@ export default function FeedScreen() {
 					</View>
 				)}
 			</View>
-			<ScopeSheet
-				visible={scopeOpen}
-				units={pool.geoUnits}
-				scopedId={scope?.unitId ?? null}
-				onPick={setScope}
-				onClose={() => setScopeOpen(false)}
-			/>
 		</SafeAreaView>
 	);
 }
