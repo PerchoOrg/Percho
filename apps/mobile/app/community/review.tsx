@@ -22,10 +22,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-	REVIEW_BODY_MAX,
 	REVIEW_DIMENSIONS,
 	REVIEW_DIMENSION_LABELS,
 	type ReviewDimension,
+} from "../../lib/reviews/dimensions";
+import {
+	REVIEW_BODY_MAX,
 	draftProblem,
 	fetchMyReview,
 	submitReview,

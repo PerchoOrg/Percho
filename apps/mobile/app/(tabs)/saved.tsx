@@ -13,8 +13,11 @@
  *   · price-change / DOM / delisted badges — the schema has no price history
  *     and no listing date; a 404 from the detail endpoint is the one honest
  *     "gone" signal and renders as such.
- *   · Compare — shipped in phase D as a picker: tap Compare, tick 2–3 homes,
- *     and `/compare` lays them side by side (`lib/listing/compare.ts`).
+ *   · Compare — all three kinds now have a table, and only the homes need a
+ *     picker: tap Compare, tick 2–3, and `/compare` lays them side by side
+ *     (phase D, `lib/listing/compare.ts`). Saved AREAS and saved COMMUNITIES
+ *     go straight to `/compare-areas` and `/compare-communities`, because in
+ *     both cases what is saved already IS the shortlist.
  *
  * Rows re-fetch from the detail endpoints on every mount — the store keeps
  * ids only, so a price change shows the moment the server knows it.
@@ -42,6 +45,10 @@ import {
 	AREA_COMPARE_MIN,
 } from "../../lib/areas/compare-areas";
 import { countyKeyForPoint } from "../../lib/areas/locate";
+import {
+	COMMUNITY_COMPARE_MAX,
+	COMMUNITY_COMPARE_MIN,
+} from "../../lib/community/compare-communities";
 import { COMPARE_MAX, COMPARE_MIN } from "../../lib/listing/compare";
 import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
 import { useAuthStore } from "../../state/auth";
@@ -137,6 +144,13 @@ export default function SavedTab() {
 
 	const listingCount = items.filter((i) => i.kind === "listing").length;
 	const areaItems = items.filter((i) => i.kind === "area");
+	// Saved COMMUNITIES, newest first — the order `items` already carries. No
+	// picker and no resolution step: unlike a saved area (a city that has to be
+	// placed in a county before it has numbers) a saved community IS the thing
+	// compared, so the shortlist needs nothing done to it.
+	const communityIds = items
+		.filter((i) => i.kind === "community")
+		.map((i) => i.id);
 
 	// Lens metrics for the saved AREAS. A saved area is a city; the numbers are
 	// per county, so each city is placed by its centroid — see `locate.ts` for
@@ -292,6 +306,36 @@ export default function SavedTab() {
 							</Pressable>
 						)}
 					</View>
+				)}
+
+				{/* Compare the saved COMMUNITIES (phase261). Owner: "Saved can't
+				    compare communities" — it could compare homes and it could
+				    compare areas, and the shortlist most buyers actually hold was
+				    the one kind with no table.
+
+				    Sits between the two on purpose: a community is narrower than a
+				    county and wider than a house, and this row reads down that
+				    scale. Like the areas below and unlike the homes above, it needs
+				    no picking — the saved communities ARE the shortlist. */}
+				{communityIds.length >= COMMUNITY_COMPARE_MIN && (
+					<Pressable
+						style={styles.compare}
+						onPress={() =>
+							router.push({
+								pathname: "/compare-communities",
+								params: {
+									ids: communityIds.slice(0, COMMUNITY_COMPARE_MAX).join(","),
+								},
+							})
+						}
+						accessibilityRole="button"
+					>
+						<Text style={styles.compareHead}>COMPARE NEIGHBOURHOODS</Text>
+						<Text style={styles.compareBody}>
+							See your saved neighbourhoods side by side — what residents rate
+							them, who lives there, what’s nearby.
+						</Text>
+					</Pressable>
 				)}
 
 				{/* Compare the saved AREAS. Separate from the home picker on

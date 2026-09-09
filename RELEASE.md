@@ -35,6 +35,15 @@ community reviews instead.
 
 ### 2026-09-09
 
+**Compare your saved neighbourhoods side by side.** Saved could already put two
+or three homes next to each other, and two or three areas — but not the
+neighbourhoods, which for most people is the actual shortlist. Save two and a
+Compare card appears at the top of Saved: what residents rate them out of five
+and on what, who lives there, and how much of each kind of place is nearby.
+Nothing is ranked and there is no overall score — how much a park matters
+against a short drive is your call, not ours. Anything we do not have a figure
+for is left blank rather than guessed at.
+
 **Saving something looks the same everywhere now.** The button that keeps a
 home or a neighbourhood was a bookmark on the cards but a heart once you opened
 one, which made it look like two different things — and a heart usually means
