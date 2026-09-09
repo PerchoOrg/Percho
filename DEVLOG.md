@@ -21,6 +21,40 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 11:05 UTC — phase263: a price chip tells a home from a community
+
+**Objective**: owner, straight after phase262 — "have a way to differentiate
+the community and listing". With every pin now a photo circle, the only
+remaining distinction was ring colour (`pos` vs `accent`), which is too quiet
+to carry a category.
+
+**Actions**: `apps/mobile/app/(tabs)/search.tsx` again. `PhotoMarker` gained an
+optional `label` prop that hangs a small glass chip under the circle; only
+listings pass it. Added a local `compactPrice()` ("$525K" / "$1.2M") because
+`formatPrice`'s "$525,000" doesn't fit a map chip; a listing with no usable
+price falls back to the literal chip "HOME" so the category mark never
+disappears with the price.
+
+**Decisions**:
+- The differentiator is the PRICE, not an icon — it's the datum a buyer wants
+  from a home pin anyway, and it's what §4.1's full spec ("listing price pins
+  at zoom ≥14") always intended. Communities stay a bare photo circle: absence
+  of a price tag IS the community mark.
+- Chip text is `textStyles.caption` with tracking pulled to 0.2 — the 1.2
+  tracking is for uppercase headings; on "$525K" it just gaps the K.
+- The chip makes the marker view taller than the circle, so the coordinate
+  now anchors ~11px above the circle's centre. Not corrected: at map scale
+  it's invisible, and a hand-tuned `centerOffset` would be a magic number to
+  maintain.
+
+**Verification**: `pnpm typecheck` clean; `pnpm lint` exit 0 (biome format
+auto-fix applied to one over-long style line; same 8 pre-existing warnings).
+
+**Next steps**: owner reviews on the phone. If communities ever need their own
+positive mark (beyond "no chip"), the `label` prop already takes any string.
+
+---
+
 ## 2026-09-09 10:57 UTC — phase262: Search map pins wear the spot's own photo
 
 **Objective**: owner — "Search tab: each spot on map show a circle of hero

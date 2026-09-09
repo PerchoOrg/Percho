@@ -87,6 +87,21 @@ import { textStyles } from "../../theme/typography";
 const FILL_ALPHA = 0.62;
 const FILL_ALPHA_SEARCHING = 0.16;
 
+/** "$525K" / "$1.2M" — the map chip has no room for `formatPrice`'s
+ *  "$525,000", and the chip is what tells a HOME from a community out there. */
+function compactPrice(price: number | undefined): string | undefined {
+	if (price === undefined || !Number.isFinite(price) || price <= 0) {
+		return undefined;
+	}
+	if (price >= 1_000_000) {
+		return `$${(price / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+	}
+	if (price >= 1_000) {
+		return `$${Math.round(price / 1_000)}K`;
+	}
+	return `$${Math.round(price)}`;
+}
+
 /** `#rrggbb` + alpha → the `#rrggbbaa` react-native-maps accepts. */
 function withAlpha(hex: string, alpha: number): string {
 	const a = Math.round(Math.max(0, Math.min(1, alpha)) * 255)
@@ -360,6 +375,7 @@ export default function SearchTab() {
 								coordinate={{ latitude: l.lat, longitude: l.lng }}
 								photoUrl={l.coverUrl}
 								ring={colors.accent}
+								label={compactPrice(l.price) ?? "HOME"}
 								title={formatPrice(l.price) ?? l.address}
 								description={l.address}
 								onCalloutPress={() => router.push(`/listing/${l.id}`)}
@@ -630,6 +646,10 @@ export default function SearchTab() {
  * instead of the stock teardrop. The old pinColor language survives as the
  * ring: what the colour used to say about the spot's kind, the border says
  * now. A spot with no photo yet falls back to a solid disc in that colour.
+ *
+ * `label` hangs a small chip under the circle. Listings pass their price
+ * through it, which is also what tells a HOME from a community at a glance —
+ * ring colour alone was too quiet a distinction (owner, 2026-09-09).
  */
 function PhotoMarker({
 	coordinate,
@@ -638,6 +658,7 @@ function PhotoMarker({
 	selected,
 	title,
 	description,
+	label,
 	onPress,
 	onCalloutPress,
 }: {
@@ -647,6 +668,7 @@ function PhotoMarker({
 	selected?: boolean;
 	title: string;
 	description?: string;
+	label?: string;
 	onPress?: () => void;
 	onCalloutPress?: () => void;
 }) {
@@ -659,16 +681,23 @@ function PhotoMarker({
 			onPress={onPress}
 			onCalloutPress={onCalloutPress}
 		>
-			<View
-				style={[
-					styles.pin,
-					{ borderColor: border },
-					selected && styles.pinSelected,
-					!photoUrl && { backgroundColor: border },
-				]}
-			>
-				{photoUrl ? (
-					<Image source={{ uri: photoUrl }} style={styles.pinPhoto} />
+			<View style={styles.pinWrap}>
+				<View
+					style={[
+						styles.pin,
+						{ borderColor: border },
+						selected && styles.pinSelected,
+						!photoUrl && { backgroundColor: border },
+					]}
+				>
+					{photoUrl ? (
+						<Image source={{ uri: photoUrl }} style={styles.pinPhoto} />
+					) : null}
+				</View>
+				{label ? (
+					<View style={[styles.pinLabel, { borderColor: border }]}>
+						<Text style={styles.pinLabelText}>{label}</Text>
+					</View>
 				) : null}
 			</View>
 		</Marker>
@@ -897,6 +926,7 @@ const styles = StyleSheet.create({
 	rowSub: { ...textStyles.footnote, color: colors.ink2 },
 
 	// ── Map pins ──────────────────────────────────────────────────────────────
+	pinWrap: { alignItems: "center", gap: 2 },
 	pin: {
 		width: 40,
 		height: 40,
@@ -907,6 +937,18 @@ const styles = StyleSheet.create({
 	},
 	pinSelected: { borderWidth: 3 },
 	pinPhoto: { width: "100%", height: "100%" },
+	pinLabel: {
+		backgroundColor: colors.glass,
+		borderWidth: 1,
+		borderRadius: radii.pill,
+		paddingHorizontal: 6,
+		paddingVertical: 1,
+	},
+	pinLabelText: {
+		...textStyles.caption,
+		letterSpacing: 0.2,
+		color: colors.ink,
+	},
 
 	// ── Lens chips + legend ───────────────────────────────────────────────────
 	lensBar: { position: "absolute", left: 0, right: 0 },
