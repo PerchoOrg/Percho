@@ -14,7 +14,7 @@ import { StyleSheet, Text, View } from "react-native";
 import {
 	REVIEW_DIMENSION_LABELS,
 	type ReviewDimension,
-} from "../../lib/reviews/reviews";
+} from "../../lib/reviews/dimensions";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 

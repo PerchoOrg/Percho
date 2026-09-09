@@ -12,21 +12,11 @@
  * step, the server drops any it does not know.
  */
 import { supabase } from "../supabase";
-
-export const REVIEW_DIMENSIONS = [
-	"quiet",
-	"walkable",
-	"friendly",
-	"value",
-] as const;
-export type ReviewDimension = (typeof REVIEW_DIMENSIONS)[number];
-
-export const REVIEW_DIMENSION_LABELS: Record<ReviewDimension, string> = {
-	quiet: "Quiet",
-	walkable: "Walkable",
-	friendly: "Neighbourly",
-	value: "Value",
-};
+// The dimension keys and labels live in `dimensions.ts` — pure data, reachable
+// from the vitest suite, which this module is not (the `supabase` import above
+// pulls in react-native). Callers that only need the four names should import
+// THAT file, not this one.
+import { REVIEW_DIMENSIONS, type ReviewDimension } from "./dimensions";
 
 const REVIEW_BODY_MIN = 20;
 export const REVIEW_BODY_MAX = 1200;

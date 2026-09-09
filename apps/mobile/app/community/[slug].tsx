@@ -53,18 +53,17 @@ import {
 	useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-	RedlineIcon,
-	type RedlineIconName,
-} from "../../components/cards/redline/RedlineChrome";
+import { RedlineIcon } from "../../components/cards/redline/RedlineChrome";
 import { NearbyChart } from "../../components/community/NearbyChart";
 import { RatingBars } from "../../components/community/RatingBars";
 import { StatBand } from "../../components/community/StatBand";
 import { TourHero } from "../../components/community/TourHero";
 import { apiBase } from "../../lib/api/base";
-import type { TourSegment } from "../../lib/community/tour-buckets";
+import type {
+	CommunityDetailDTO,
+	CommunityReasonDTO,
+} from "../../lib/community/detail-dto";
 import {
-	type ReviewDimension,
 	type ReviewStatus,
 	fetchMyReview,
 	reviewMonth,
@@ -74,53 +73,12 @@ import { useSavedStore } from "../../state/saved";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
-interface ReasonDTO {
-	label: string;
-	icon: RedlineIconName;
-	/** Present only when a DB row is evidence for THIS reason. */
-	fact?: string;
-}
-
-interface CommunityDetailDTO {
-	id: string;
-	slug: string;
-	name: string;
-	city: string;
-	state: string;
-	heroUrl: string;
-	/** The community's film — the SAME one the feed card plays. */
-	videoUrl?: string;
-	/** Present only when `videoUrl` is the assembled tour. */
-	tourSegments?: TourSegment[];
-	/** Prose description. Fetched but no longer shown — see the header. */
-	blurb?: string;
-	topReasons: ReasonDTO[];
-	moreReasons: ReasonDTO[];
-	stats: { label: string; value: string }[];
-	/**
-	 * Counts of real places by kind, biggest first. Charted, not narrated.
-	 * Optional because a phone can be newer than the deployed API — this
-	 * shipped 2026-09-05 and a build in the field must not crash without it.
-	 */
-	nearby?: { bucket: string; count: number }[];
-	interests: string[];
-	/** Approved resident reviews (phase E). Absent until one is approved. */
-	reviews?: {
-		count: number;
-		avgRating: number;
-		dimensionAvgs: Partial<Record<ReviewDimension, number>>;
-		items: {
-			id: string;
-			rating: number;
-			dimensions: Partial<Record<ReviewDimension, number>>;
-			body: string;
-			date: string;
-		}[];
-	};
-}
+/* The DTO moved to `lib/community/detail-dto.ts` in phase261 — the compare
+   screen reads the same wire shape, and two hand-kept copies of one contract
+   is the defect the two phases before it were about. */
 
 /** Reason row: the resident's own word, its glyph, and its evidence. */
-function ReasonRow({ reason }: { reason: ReasonDTO }) {
+function ReasonRow({ reason }: { reason: CommunityReasonDTO }) {
 	return (
 		<View style={styles.row}>
 			<View style={styles.rowIcon}>

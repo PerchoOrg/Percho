@@ -21,6 +21,81 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 10:39 UTC — phase261: Saved could compare everything except the shortlist
+
+**Objective**: owner — "Saved can't compare communities". True, and it was the
+odd one out: Saved could compare HOMES (a picker, phase D) and AREAS
+(phase198), and the kind in between had no table.
+
+Worth stating why that gap mattered rather than just closing it. The buyer
+study put most of our users at "which of my two or three neighbourhoods" —
+`compare-areas.ts`'s own header cites it — and the Saved tab was already
+holding exactly that shortlist and could not act on it.
+
+### What the table says, and what it refuses to
+
+Rows, in the order a buyer weighs them: the resident rating and its four
+dimensions first (the only figures here that came from a person, and the one
+thing no other Percho surface can tell them), then who lives there, then what
+is nearby.
+
+**No best cell is marked, unlike the AREA table.** That table ticks a winner
+per row and argues it may, because a lower tax bill is lower for everyone.
+Almost nothing here has an agreed direction: more restaurants is not better if
+you wanted quiet, a higher median adult age is a different neighbourhood rather
+than a worse one, and **"Residents on Nextdoor" is partly a measure of OUR data
+coverage** — ranking on it would tick the community we happen to know most
+about. So this follows `lib/listing/compare.ts` instead: one figure per column,
+no total, no score.
+
+A missing `nearby` count renders "—", never 0. That distinction is load-bearing
+rather than pedantic: the server omits a bucket it counted as zero AND one it
+never swept, so "0 parks" would be inventing an absence we did not measure.
+
+`nearby` rows are capped at 6, ranked by the total across the compared set. The
+union across three communities runs to dozens of buckets, and a table that
+scrolls for a minute is a data dump rather than a comparison.
+
+### No picker, and that is the same call the areas made
+
+`/compare` picks because a shortlist of saved homes runs long. Saved
+communities ARE the shortlist, so Saved passes them straight through — one tap,
+like the areas.
+
+### Two things had to move first, and one of them was a real defect
+
+**The DTO.** `CommunityDetailDTO` was declared inside
+`app/community/[slug].tsx`. A second reader meant either importing a type out
+of a screen or declaring the wire shape twice — the exact defect phases 259 and
+260 were both about — so it moved to `lib/community/detail-dto.ts`.
+
+**`REVIEW_DIMENSIONS` could not be read by the test suite.** They live in
+`lib/reviews/reviews.ts`, which opens `import { supabase }` → `lib/supabase.ts`
+→ `react-native-url-polyfill/auto`. The mobile vitest suite is deliberately
+RN-free, so the compare's test died with a rollup parse error inside a
+dependency four levels down — *"Expected 'from', got 'typeOf'"*, which names
+neither the file nor the cause.
+
+Four pure strings sat behind a network client. The two alternatives were both
+worse: copying the label table would have made a second source of truth for
+what `friendly` is called, and mocking Supabase in the test of a pure table
+builder would have made the test lie about what the module needs. Split to
+`lib/reviews/dimensions.ts`; three consumers repointed.
+
+**Actions**: `lib/community/compare-communities.ts` (+9 tests),
+`lib/community/detail-dto.ts`, `lib/reviews/dimensions.ts`,
+`app/compare-communities.tsx`, the Saved entry, and the stale scope note at the
+top of `saved.tsx` that still said compare was homes-only.
+
+**Verified**: typecheck clean, **684 mobile tests** (+9), lint 0 errors at
+main's baseline, and **`pnpm bundle` exports** — the check that matters when a
+route file is added and a type moves, since a bad import shows up nowhere else.
+
+**Learnings**: the error that cost the most time named a token, not a file. The
+thing that actually located it was noticing that `reviews.test.ts` mocks
+Supabase — an existing test working around the same import, which is a defect
+report nobody had filed.
+
 ## 2026-09-09 10:21 UTC — phase260: one action had two marks
 
 **Objective**: owner, straight after phase259 — "Explore page has a heart
