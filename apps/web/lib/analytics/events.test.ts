@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ClientEvent, eventRow } from './route';
+import { ClientEvent, eventRow } from './events';
 
 /**
  * The row an analytics event turns into.
