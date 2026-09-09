@@ -21,6 +21,98 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 10:21 UTC — phase260: one action had two marks
+
+**Objective**: owner, straight after phase259 — "Explore page has a heart
+button, same as saved? Make them consistent".
+
+Yes, same as saved. Seven controls in the app call the same
+`useSavedStore.toggle` and land in the same Saved tab, and they did not look
+like one thing:
+
+| surface | mark |
+|---|---|
+| listing / community / CITY card (`CardCorner`) | Phosphor **bookmark** |
+| community explore hero (`TourHero`) | `♥` / `♡` |
+| listing explore hero (`MediaCarousel`) | `♥` / `♡` |
+| collapsed app bar (`CollapsedAppBar`) | `♥` / `♡` |
+| listing action dock (`ActionDock`) | `♥` / `♡` |
+
+### The heart is already taken, which is what decides the direction
+
+My first instinct was the opposite one — unify on the HEART, because the Saved
+TAB is a heart and two comments in the codebase state the rule "the control and
+the tab it saves into are one shape".
+
+That is the wrong read, because the heart already means something else in this
+product. On the **web** the rose heart is the **Like** button, writing
+`listing_likes` / `community_likes` — a different table and a different promise
+from the save, and per phase259 a dead end. On the **phone** the equivalent of
+that like is the right SWIPE, which teaches the feed. So a heart that saves
+makes one shape carry two meanings, and that is not a cosmetic mismatch — it is
+exactly the ambiguity the owner walked into. He did not ask "why two icons", he
+asked **"is this the same as saved?"**
+
+The bookmark says "kept, to come back to", which is what the store does. It
+also already matches the web's own **Save**, which is a bookmark.
+
+Practical confirmation that this was the cheap direction too: `bookmark` is
+already in both weights of the redline subset, so nothing needed a font
+rebuild. Going the other way would have meant subsetting a heart into
+`PerchoIcons.ttf` AND colliding with the web's meaning.
+
+### Where the rule now lives
+
+`components/SaveGlyph.tsx` — one component, used by all four explore surfaces,
+carrying the argument above. Not an abstraction for its own sake: it is the
+thing that was missing, because "what a save control looks like" was previously
+written down five times in five files, which is how four of them drifted.
+
+State is signalled by WEIGHT — outline unsaved, fill saved — which is
+`CardCorner`'s own mechanism and the same single bit `♡` → `♥` carried, so
+nothing about how the state reads was traded away.
+
+`size` stays per-surface (16 / 16 / 17 / 18): those discs are not one size, and
+each glyph is set against the typographic `←` / `↑` / `✕` still beside it.
+**Unifying THAT chrome is a separate job and I did not start it** — it is not
+what was asked, and it is four more surfaces of visual change.
+
+### Two comments that had quietly become false
+
+`CardCorner` and `icon-font.ts` both claimed the bookmark IS
+`TAB_BAR_GLYPH.saved`, "so the control and the tab it saves into are one
+shape". phase175 wrote that on 2026-09-05 and **phase177 shipped the new tab
+bar the same day**, making `TAB_BAR_GLYPH.saved` a heart. The claim has been
+wrong for four days and would have argued a future reader straight into the
+heart. Corrected in place and dated rather than deleted.
+
+### The one surface still disagreeing — owner's call
+
+The **Saved tab icon is still a heart**. Changing it means editing one glyph of
+the four-glyph set the owner picked himself (phase177: house-line / compass /
+heart / hand-waving) and rebuilding the tab-bar subset font. That is a design
+decision, not a bug fix, so it is flagged rather than taken.
+
+**Actions**: `SaveGlyph.tsx` new; `TourHero`, `MediaCarousel`,
+`CollapsedAppBar`, `ActionDock` swapped to it; stale doc refs to `♡` fixed in
+`listing/[id].tsx`, `tokens.ts`, `explore-events.ts`; `theme/save-glyph.test.ts`
+with 6 cases.
+
+**Verified**: typecheck clean, **675 mobile tests** (+6), lint 0 errors at
+main's baseline (mobile 8 warnings, web 181). The new test strips comments
+before searching — the files that used to draw a heart document that they did —
+and was checked by restoring `ActionDock`'s heart, which fails it.
+
+**Learnings**: I nearly unified on the heart on the strength of two comments
+that were confidently written, adjacent to the code, and false. The thing that
+saved it was asking what the mark means on the OTHER client — where the heart
+is a different button writing a different table. **An invariant stated in a
+comment is a claim about a file; the meaning of an icon is a claim about the
+product.**
+
+**Next steps**: owner's call on the Saved tab's heart. Still open from
+phase259: the web Like button (delete, or build the Likes sub-tab).
+
 ## 2026-09-09 10:08 UTC — phase259: the community card's bookmark was never wired
 
 **Objective**: owner, on device — "not able to click favorite button on

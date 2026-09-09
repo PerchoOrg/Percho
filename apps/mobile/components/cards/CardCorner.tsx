@@ -22,9 +22,16 @@
  *      added to both weights of the redline subset (2026-09-05), so this file
  *      draws no art at all.
  *
- * The save glyph is `bookmark-simple` — deliberately `TAB_BAR_GLYPH.saved`, the
- * Saved tab's own drawing, so the control and the tab it saves into are one
- * shape.
+ * The save glyph is `bookmark-simple`, chosen on 2026-09-05 to be
+ * `TAB_BAR_GLYPH.saved` — the Saved tab's own drawing — so the control and the
+ * tab it saves into were one shape.
+ *
+ * That is no longer true and the claim is kept here only to date it: phase177
+ * shipped the new tab bar the SAME DAY and `TAB_BAR_GLYPH.saved` became a
+ * HEART. The bookmark is still right — phase260 made every save control in the
+ * app wear it, and `SaveGlyph` argues why the heart cannot be the mark — but
+ * the tab is now the one surface that disagrees. Owner's call, since he picked
+ * that four-glyph set.
  *
  * ── Both faces carry both controls again (phase174) ─────────────────────────
  *

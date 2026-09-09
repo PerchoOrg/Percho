@@ -14,6 +14,7 @@ import { useEffect, useRef } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { explore, fonts } from "../../../theme/tokens";
+import { SaveGlyph } from "../../SaveGlyph";
 
 export interface AppBarTab {
 	id: string;
@@ -73,7 +74,7 @@ export function CollapsedAppBar(props: CollapsedAppBarProps) {
 					</Text>
 				</View>
 				<Pressable onPress={onToggleSave} hitSlop={10} style={styles.iconBtn}>
-					<Text style={styles.icon}>{saved ? "♥" : "♡"}</Text>
+					<SaveGlyph saved={saved} size={17} color={explore.ink} />
 				</Pressable>
 			</View>
 			{tabs.length > 1 && (
