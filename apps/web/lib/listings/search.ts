@@ -9,6 +9,13 @@
  *   communities  — name / city, active with a cover (same gate as the feed's
  *                  community pool, so a hit here is always a page that renders)
  *
+ * Communities carry their real `boundary`, simplified for display: the map
+ * draws the outline rather than one more identical circle (owner, 2026-09-09).
+ * The feed's community pool must NEVER select that column — 8k dense
+ * multipolygons time PostgREST out — but this query is capped at 24 rows, and
+ * `displayRingsFromGeoJson` drops holes and thins each ring to ~30 m before it
+ * goes on the wire.
+ *
  * `ilike '%q%'` on ≤ a few thousand rows is fine; the query string has
  * already been folded to `[a-z0-9 -]` by `lib/zod/mobile-search.ts` so it
  * can be interpolated into PostgREST's `.or()` DSL safely. Same projection
@@ -16,6 +23,7 @@
  */
 
 import { publicCoverImageUrl } from '@/lib/communities/cover';
+import { displayRingsFromGeoJson } from '@/lib/geo/simplify-ring';
 import type { Database } from '@/lib/supabase/database.types';
 import { createClient as createPlainClient } from '@supabase/supabase-js';
 
@@ -46,6 +54,12 @@ export interface SearchCommunityDTO {
   heroUrl?: string;
   lat?: number;
   lng?: number;
+  /**
+   * The community's real outline, outer rings only and simplified for display
+   * (`lib/geo/simplify-ring.ts`). Absent when the row has no boundary — about
+   * half of them — and the client draws its pin instead.
+   */
+  boundary?: [number, number][][];
 }
 
 export interface SearchResultDTO {
@@ -79,6 +93,7 @@ type CommunityRow = {
   cover_storage_path: string | null;
   lat: number | null;
   lng: number | null;
+  boundary: unknown;
 };
 
 function coord(lat: number | null, lng: number | null): { lat: number; lng: number } | undefined {
@@ -105,15 +120,19 @@ export function projectSearchListings(rows: ListingRow[]): SearchListingDTO[] {
 }
 
 export function projectSearchCommunities(rows: CommunityRow[]): SearchCommunityDTO[] {
-  return rows.map((r) => ({
-    id: r.id,
-    slug: r.slug,
-    name: r.name,
-    city: r.city,
-    state: r.state ?? 'GA',
-    ...(r.cover_storage_path ? { heroUrl: publicCoverImageUrl(r.cover_storage_path) } : {}),
-    ...(coord(r.lat, r.lng) ?? {}),
-  }));
+  return rows.map((r) => {
+    const boundary = displayRingsFromGeoJson(r.boundary);
+    return {
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      city: r.city,
+      state: r.state ?? 'GA',
+      ...(r.cover_storage_path ? { heroUrl: publicCoverImageUrl(r.cover_storage_path) } : {}),
+      ...(coord(r.lat, r.lng) ?? {}),
+      ...(boundary.length > 0 ? { boundary } : {}),
+    };
+  });
 }
 
 function createUncachedAnonClient() {
@@ -148,7 +167,9 @@ export async function searchEntities(q: string): Promise<SearchResultDTO> {
       .limit(SEARCH_LIMIT),
     supabase
       .from('communities')
-      .select('id, slug, name, city, state, cover_storage_path, lat, lng')
+      // `boundary` IS selected here, unlike the feed's community pool — see
+      // the header. 24 rows is the whole reason that is safe.
+      .select('id, slug, name, city, state, cover_storage_path, lat, lng, boundary')
       .eq('status', 'active')
       .not('cover_storage_path', 'is', null)
       .or(`name.ilike.${like},city.ilike.${like}`)
