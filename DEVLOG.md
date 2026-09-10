@@ -21,6 +21,73 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-10 02:35 UTC — phase271: four Saved layouts as a hosted mockup (proposal, no app code)
+
+**Objective**: owner, on phase270 — "Right now it shows each item in a row,
+can you proposal something else? Can have a filter top right. Can have two
+buttons: select and compare, up to 5?"
+
+A proposal, so **nothing in `apps/mobile` was touched**. Deliverable is an
+interactive mockup at `apps/web/public/demos/saved-layout-v1/` —
+percho.co/demos/saved-layout-v1/ — four 390 pt phones side by side (Today,
+Gallery, Shelves, Board), all four with a working filter popover and a
+working Select mode, on one shared 10-item shortlist. Photos are real
+listing/community URLs from the public Supabase buckets.
+
+**What the flat list actually costs** (the case the mockup makes): a 56 pt
+thumbnail on a product whose thesis is the neighbourhood film; a county and a
+$624k house at identical visual weight; and — the real one — the fact that
+four of the ten saves are in Woodstock, the single most decision-relevant
+thing in the list, is invisible. Save order in the mockup is deliberately
+interleaved (home, community, area, home…) because that jumble is what the
+row list has to render.
+
+**Recommendation: Option B, shelves grouped by place.** It is the only one of
+the three that makes the list SAY something, and a saved AREA stops being a
+row and becomes the section header it always was. Compare then lives per
+shelf, which is where the comparison actually is. Cost: most build, and it
+needs an "Elsewhere" bucket for a home we cannot place.
+
+**Two findings the owner has to rule on, both surfaced in the page:**
+
+1. **The filter is the segment chips he deleted on 2026-09-07** (phase187,
+   「remove home and community filtering sub tabs」). Not refused — argued:
+   the chips were a permanent bar that ate a row and forced you into one
+   segment; this is an icon that costs nothing unused and defaults to All.
+   Same function though, so he says yes on purpose rather than me slipping
+   it back in.
+2. **"Up to 5" breaks the compare TABLE, not the take.** `COMPARE_MAX` is 3;
+   five columns on a 390 pt phone is ~57 pt each after the 92 pt label
+   column, which clips "$3,912/mo" and shrinks addresses to "1450 Ki…". Drawn
+   to scale in the page at 3, at 5-squeezed, and at 5 with the label column
+   pinned + values scrolling — the last works and is what 5 actually
+   requires. The take is unaffected; it reads all five and still lands one
+   answer. Also unresolved: **mixed-kind selection** — homes/communities/
+   areas have three different tables, so the mockup makes the first tap set
+   the kind and dims the rest.
+
+**Issues**: chased a phantom for three rounds — the intro prose looked
+clipped off the right edge at phone width, and I "fixed" it twice (`100%` →
+`100vw` caps) before proving it was a measurement artifact: Chrome's
+`--window-size` sets the SCREENSHOT CANVAS, not the layout viewport (which
+stayed 800 px), in both `--headless` and `--headless=new`. Rendering the page
+inside a `<iframe width="402">` gave a true 402 px viewport and the layout was
+correct all along. Both speculative CSS fixes were reverted, including a
+comment that explained a cause that did not exist. **Learning: to check a
+responsive layout headlessly, embed it in a fixed-width iframe — do not trust
+`--window-size`.**
+
+**Verification**: rendered at 1780 px (desktop) and in a 402 px iframe
+(phone); Select mode verified by temporarily defaulting the state in a /tmp
+copy — kind-lock dimming and the "2 of 5 selected · Comparing homes" bar both
+correct. `apps/web` lint unchanged at its pre-existing 2 errors / 181
+warnings. No RELEASE entry: internal proposal, nothing user-visible shipped.
+
+**Next steps**: owner picks A / B / C (or none), rules on the filter and on
+3-vs-5. Then it becomes a real phase against `apps/mobile`.
+
+---
+
 ## 2026-09-10 02:00 UTC — phase270: compare leads with a take, and the picker moved to where the tap is
 
 **Objective**: owner — "it is very unnatural to compare community and home by

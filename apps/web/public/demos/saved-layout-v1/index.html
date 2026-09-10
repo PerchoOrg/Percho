@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho Saved tab — layout proposals</title>
+<style>
+:root{
+  --bg:#F7F5F0; --surface:#FFFFFF; --surface2:#F3EDE4; --border:#EADFD0;
+  --ink:#2B2116; --ink2:#8A7358; --ink3:#B9A88F;
+  --accent:#B45309; --cta:#2B2116; --pos:#1B7A4D; --neg:#B3402A;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --ui: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px 20px 60px}
+
+/* ── page chrome ─────────────────────────────────────────── */
+.wrap{max-width:1780px;margin:0 auto}
+.nav{margin-bottom:22px}
+.nav h1{font:700 30px var(--serif);color:#0E6B57;margin-bottom:6px}
+.nav p{max-width:900px;color:#4A4038;font-size:14.5px;line-height:1.65;margin-bottom:6px}
+.nav b{color:var(--ink)}
+.nav code{font:500 12.5px ui-monospace,Menlo,monospace;background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px}
+
+.stage{display:flex;gap:26px;align-items:flex-start;overflow-x:auto;padding-bottom:14px}
+.col{flex:none;width:390px}
+.colhead{margin-bottom:12px;min-height:104px}
+.colhead .tag{display:inline-block;font:600 10.5px var(--ui);letter-spacing:1.2px;text-transform:uppercase;
+  padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.06);color:#5C5348;margin-bottom:7px}
+.colhead .tag.rec{background:#0E6B57;color:#fff}
+.colhead h2{font:700 20px var(--serif);margin-bottom:5px}
+.colhead p{font-size:13px;line-height:1.55;color:#4A4038}
+.colfoot{margin-top:14px;font-size:12.5px;line-height:1.6;color:#4A4038}
+.colfoot .y{color:#0E6B57;font-weight:600}
+.colfoot .n{color:#8A3A24;font-weight:600}
+
+/* ── phone ───────────────────────────────────────────────── */
+.phone{position:relative;width:390px;height:800px;background:var(--bg);border-radius:42px;
+  overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.22);display:flex;flex-direction:column}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 0 90px}
+.scroll::-webkit-scrollbar{width:0}
+
+/* header */
+.hdr{padding:52px 20px 8px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.hdr h3{font:700 28px var(--serif);color:var(--ink);line-height:1}
+.hdrbtns{display:flex;align-items:center;gap:6px;padding-bottom:2px}
+.iconbtn{display:flex;align-items:center;justify-content:center;height:34px;min-width:34px;padding:0 10px;
+  border-radius:11px;border:1px solid var(--border);background:var(--surface);cursor:pointer;
+  font:600 13px var(--ui);color:var(--ink);gap:5px}
+.iconbtn:active{background:var(--surface2)}
+.iconbtn.on{background:var(--cta);border-color:var(--cta);color:#fff}
+.iconbtn.on svg{stroke:#fff}
+.iconbtn svg{stroke:var(--ink);flex:none}
+.dot{position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:3px;background:var(--accent)}
+.iconbtn{position:relative}
+
+/* filter popover */
+.pop{position:absolute;right:16px;top:92px;z-index:40;background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.16);padding:6px;width:212px;display:none}
+.pop.open{display:block}
+.pop .sec{font:600 10px var(--ui);letter-spacing:1.1px;text-transform:uppercase;color:var(--ink3);padding:8px 10px 5px}
+.pop button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;
+  padding:9px 10px;border:0;background:none;border-radius:10px;cursor:pointer;
+  font:400 14px var(--ui);color:var(--ink);text-align:left}
+.pop button:hover{background:var(--surface2)}
+.pop button.on{font-weight:600;color:var(--accent)}
+.pop button .ck{color:var(--accent);font-weight:700}
+.pop hr{border:0;border-top:1px solid var(--border);margin:5px 8px}
+
+/* take card */
+.take{margin:12px 16px 14px;background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:14px 14px 4px}
+.take h4{font:700 22px var(--serif);color:var(--ink)}
+.take .s{font:400 13px var(--ui);color:var(--ink2);margin:2px 0 6px;line-height:1.45}
+.take .r{display:flex;align-items:center;justify-content:space-between;padding:12px 0;
+  border-top:1px solid var(--border);font:600 15px var(--ui);color:var(--ink);cursor:pointer}
+.take .r .go{color:var(--accent)}
+
+/* generic bits */
+.kind{display:inline-block;font:600 9.5px var(--ui);letter-spacing:1px;text-transform:uppercase;
+  padding:3px 6px;border-radius:5px;background:rgba(43,33,22,.06);color:var(--ink2)}
+.kind.c{background:rgba(14,107,87,.10);color:#0E6B57}
+.kind.a{background:rgba(180,83,9,.10);color:var(--accent)}
+.price{font:700 17px var(--serif);color:var(--ink)}
+.muted{font:400 12.5px var(--ui);color:var(--ink2)}
+.tiny{font:400 11.5px var(--ui);color:var(--ink3)}
+
+/* ── TODAY: flat rows ────────────────────────────────────── */
+.rowitem{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:16px;
+  padding:12px;margin:0 20px 8px}
+.rowitem .th{width:56px;height:56px;border-radius:14px;background:var(--surface2) center/cover no-repeat;flex:none}
+.rowitem .tx{flex:1;min-width:0}
+.rowitem .t{font:600 15px var(--ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rowitem .s{font:400 13px var(--ui);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rowitem .rm{font:400 13px var(--ui);color:var(--accent);flex:none}
+
+/* ── A: gallery ──────────────────────────────────────────── */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:2px 16px 0}
+.gcard{position:relative;background:var(--surface);border-radius:18px;overflow:hidden;
+  border:1px solid var(--border);cursor:pointer}
+.gcard .ph{height:118px;background:var(--surface2) center/cover no-repeat;position:relative}
+.gcard .bd{padding:9px 10px 11px}
+.gcard .t{font:600 13.5px var(--ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.gcard .s{font:400 11.5px var(--ui);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gcard .ph .kind{position:absolute;left:8px;top:8px;background:rgba(250,246,240,.93)}
+/* area tile has no photo — it gets a figure instead */
+.gcard.area .ph{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(150deg,#F3EDE4,#EADFD0)}
+.gcard.area .ph .big{font:700 26px var(--serif);color:var(--ink)}
+.gcard.area .ph .lbl{font:400 10.5px var(--ui);color:var(--ink2);margin-top:1px}
+
+/* ── B: shelves ──────────────────────────────────────────── */
+.shelf{margin-bottom:20px}
+.shead{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding:0 20px 9px}
+.shead .l{min-width:0}
+.shead .nm{font:700 19px var(--serif);color:var(--ink);display:flex;align-items:center;gap:6px}
+.shead .nm .pin{font-size:11px;color:var(--accent)}
+.shead .mt{font:400 12px var(--ui);color:var(--ink2);margin-top:1px}
+.shead .cmp{font:600 12.5px var(--ui);color:var(--accent);flex:none;cursor:pointer;white-space:nowrap}
+.rail{display:flex;gap:10px;overflow-x:auto;padding:2px 20px 4px;scroll-snap-type:x mandatory}
+.rail::-webkit-scrollbar{height:0}
+.scard{flex:none;width:150px;scroll-snap-align:start;background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;overflow:hidden;cursor:pointer;position:relative}
+.scard .ph{height:104px;background:var(--surface2) center/cover no-repeat;position:relative}
+.scard .bd{padding:8px 9px 10px}
+.scard .t{font:600 13px var(--ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.scard .s{font:400 11.5px var(--ui);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scard .ph .kind{position:absolute;left:7px;top:7px;background:rgba(250,246,240,.93)}
+
+/* ── C: board ────────────────────────────────────────────── */
+.bcard{margin:0 16px 12px;background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  overflow:hidden;cursor:pointer;position:relative}
+.bcard .ph{height:172px;background:var(--surface2) center/cover no-repeat;position:relative}
+.bcard .ph .kind{position:absolute;left:10px;top:10px;background:rgba(250,246,240,.93)}
+.bcard .bd{padding:11px 14px 13px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.bcard .t{font:600 14px var(--ui);color:var(--ink)}
+.bcard .s{font:400 12.5px var(--ui);color:var(--ink2)}
+.bcard.area .ph{height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(150deg,#F3EDE4,#EADFD0)}
+.bcard.area .ph .big{font:700 30px var(--serif);color:var(--ink)}
+.bcard.area .ph .lbl{font:400 11px var(--ui);color:var(--ink2)}
+
+/* ── select mode ─────────────────────────────────────────── */
+.selectable{position:relative}
+.tick{position:absolute;right:8px;top:8px;width:25px;height:25px;border-radius:13px;
+  border:2px solid rgba(255,255,255,.95);background:rgba(43,33,22,.30);
+  box-shadow:0 1px 4px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;
+  color:#fff;font:700 13px var(--ui);z-index:5}
+.on>.tick{background:var(--accent);border-color:#fff}
+.dim{opacity:.34;pointer-events:none;filter:saturate(.5)}
+.on{outline:2.5px solid var(--accent);outline-offset:-2px}
+.gcard.on,.scard.on,.bcard.on,.rowitem.on{border-color:var(--accent)}
+
+.actionbar{position:absolute;left:0;right:0;bottom:0;background:rgba(250,246,240,.97);
+  border-top:1px solid var(--border);padding:12px 16px 26px;display:flex;align-items:center;
+  justify-content:space-between;gap:12px;z-index:30;
+  transform:translateY(105%);transition:transform .22s cubic-bezier(.3,.8,.4,1)}
+.actionbar.up{transform:none}
+.actionbar .cnt{font:400 13px var(--ui);color:var(--ink2);line-height:1.35}
+.actionbar .cnt b{display:block;font:600 14.5px var(--ui);color:var(--ink)}
+.actionbar .go{background:var(--cta);color:#fff;border:0;border-radius:12px;padding:12px 18px;
+  font:600 14.5px var(--ui);cursor:pointer;flex:none}
+.actionbar .go[disabled]{opacity:.35;cursor:default}
+
+.empty{padding:60px 30px;text-align:center;color:var(--ink2);font-size:14px;line-height:1.6}
+
+/* ── the "up to 5" section ───────────────────────────────── */
+.five{margin-top:44px;background:#fff;border-radius:22px;padding:26px 28px 30px;max-width:1300px}
+.five h2{font:700 24px var(--serif);color:#0E6B57;margin-bottom:8px}
+.five>p{font-size:14.5px;line-height:1.65;color:#4A4038;max-width:880px;margin-bottom:20px}
+.five .pair{display:flex;gap:26px;flex-wrap:wrap}
+.tblbox{flex:1;min-width:330px;max-width:420px}
+.tblbox h5{font:600 11px var(--ui);letter-spacing:1.1px;text-transform:uppercase;color:var(--ink2);margin-bottom:8px}
+.tblbox .note{font-size:12.5px;line-height:1.55;color:#4A4038;margin-top:9px}
+.tblbox .note.bad{color:#8A3A24}
+.tblbox .note.good{color:#0E6B57}
+.fakeT{width:390px;background:var(--bg);border-radius:18px;padding:14px 12px;overflow:hidden}
+.fakeT .hrow{display:flex;gap:6px;align-items:flex-start}
+.fakeT .lab{width:76px;flex:none;font:400 11.5px var(--ui);color:var(--ink2);padding-top:3px}
+.fakeT .cells{display:flex;gap:6px;flex:1;min-width:0}
+.fakeT .cells.sc{overflow-x:auto;padding-bottom:6px}
+.fakeT .cells.sc::-webkit-scrollbar{height:5px}
+.fakeT .cells.sc::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.fakeT .c{flex:1;min-width:0;text-align:center;font:400 12.5px var(--ui);color:var(--ink)}
+.fakeT .cells.sc .c{flex:none;width:88px}
+.fakeT .c.h{font:600 11px var(--ui);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fakeT .drow{border-top:1px solid var(--border);padding:9px 0 0;margin-top:9px}
+.clip{white-space:nowrap;overflow:hidden;text-overflow:clip}
+.warn{background:#FBEEE9;color:#8A3A24;border-radius:8px;padding:2px 5px;font-weight:600}
+
+.qs{margin-top:34px;background:#fff;border-radius:22px;padding:26px 28px 28px;max-width:1300px}
+.qs h2{font:700 24px var(--serif);color:#0E6B57;margin-bottom:14px}
+.qs ol{padding-left:20px}
+.qs li{font-size:14.5px;line-height:1.7;color:#4A4038;margin-bottom:12px}
+.qs li b{color:var(--ink)}
+
+/* On a phone the four columns become a swipe. The phone frame stays a true
+   390 pt — scaling it down would misrepresent the very sizes under review. */
+@media (max-width:900px){
+  html,body{overflow-x:hidden;max-width:100%}
+  body{padding:16px 0 40px}
+  .wrap{width:100%}
+  .nav,.five,.qs{margin-left:14px;margin-right:14px}
+  .stage{padding-left:14px;padding-right:14px;min-width:0;scroll-snap-type:x mandatory}
+  .col{scroll-snap-align:start}
+  .five,.qs{padding:20px 18px 24px}
+  .five .pair{gap:20px}
+  .tblbox{min-width:0;max-width:100%}
+  .fakeT{width:100%;max-width:390px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="nav">
+  <h1>Saved tab — four layouts, side by side</h1>
+  <p>Everything here is <b>clickable</b>. The <b>filter</b> (top right) and <b>Select</b> button work on all four
+     phones — tap Select, then tap cards, and watch the bottom bar. Photos and figures are real listings and
+     communities from the database; nothing here is wired to the app yet.</p>
+  <p>The shortlist is the same in every phone: <b>5 homes, 3 neighbourhoods, 2 areas</b> — a realistic shortlist
+     at the point where a buyer actually needs help.</p>
+</div>
+
+<div class="stage" id="stage"></div>
+
+<!-- ── the "up to 5" question ───────────────────────────── -->
+<div class="five">
+  <h2>“Up to 5” — what it costs, and how it can work</h2>
+  <p>Selecting 5 is easy. <b>Showing</b> 5 is where it breaks: the compare table gives each home a column, and
+     five columns on a 390&nbsp;pt phone leaves about 57&nbsp;pt each — narrower than the words that go in them.
+     Below is the same table at 3 and at 5, drawn to scale.</p>
+  <div class="pair">
+    <div class="tblbox">
+      <h5>3 homes — today</h5>
+      <div class="fakeT" id="t3"></div>
+      <p class="note good">Fits. Every figure readable at a glance, all three visible at once.</p>
+    </div>
+    <div class="tblbox">
+      <h5>5 homes — same table, squeezed</h5>
+      <div class="fakeT" id="t5bad"></div>
+      <p class="note bad">Breaks. “$3,912/mo” gets its tail cut off, addresses shrink to “1450&nbsp;Ki…”,
+         and the at-a-glance comparison — the entire point — is gone.</p>
+    </div>
+    <div class="tblbox">
+      <h5>5 homes — label pinned, values scroll →</h5>
+      <div class="fakeT" id="t5good"></div>
+      <p class="note good">Works. The row label stays put and the columns scroll sideways, so you always know
+         which figure you're reading. You see 3 at a time and swipe to the rest.
+         <b>This is the change “up to 5” actually requires.</b></p>
+    </div>
+  </div>
+</div>
+
+<div class="qs">
+  <h2>Three things I need you to decide</h2>
+  <ol>
+    <li><b>The filter is the segment chips you deleted on 7 Sep</b> — “remove home and community filtering sub
+        tabs”. I think it's genuinely different this time and worth doing: the chips were a <b>permanent bar</b>
+        that ate a row of screen and forced you into one segment; this is an <b>icon that costs nothing when
+        unused</b> and defaults to showing everything. But it is the same function, so you should say yes to it
+        on purpose rather than have me slip it back in.</li>
+    <li><b>Mixed selection has to be ruled on.</b> Homes, neighbourhoods and areas have three different compare
+        tables — there's no such thing as comparing a house against a county. In these mockups the
+        <b>first thing you tap sets the kind</b> and the rest dim out. It's the honest rule, but it means a tap
+        can be refused, so watch how it feels.</li>
+    <li><b>5 costs you the side-by-side glance</b> (see above). My recommendation: <b>allow 5, pin the label
+        column, scroll the values</b> — and note that the take at the top doesn't suffer at all; it reads all
+        five and still gives you one answer. If you'd rather keep the clean 3-up table, cap it at 4.</li>
+  </ol>
+</div>
+
+</div>
+
+<script>
+const B='https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/';
+const IMG={
+  h1:B+'listing-photos/fmls-import/577396655/00.jpg',
+  h2:B+'listing-photos/fmls-import/584585849/00.jpg',
+  h3:B+'listing-photos/fmls-import/587946116/00.jpg',
+  h4:B+'listing-photos/fmls-import/577396655/03.jpg',
+  h5:B+'listing-photos/fmls-import/584585849/02.jpg',
+  c1:B+'community-covers/nextdoor/ashley-crossing.jpg',
+  c2:B+'community-covers/nextdoor/bellmoore-park.jpg',
+  c3:B+'community-covers/nextdoor/amberfield.jpg',
+};
+
+/* One shortlist, shared by every layout. `place` is what Option B groups on.
+   Order is a REAL save history — kinds interleaved, newest first — because
+   that jumble is exactly what the flat list has to render today. */
+const ITEMS=[
+  {id:'h1',kind:'home',img:IMG.h1,price:'$624,000',specs:'4 bd · 3 ba · 2,940 sqft',addr:'312 Founders Way',place:'Woodstock'},
+  {id:'c1',kind:'comm',img:IMG.c1,name:'Ashley Crossing',place:'Woodstock',meta:'4.6 · 12 reviews'},
+  {id:'a1',kind:'area',name:'Woodstock',place:'Woodstock',county:'Cherokee County',cost:'$691'},
+  {id:'h2',kind:'home',img:IMG.h2,price:'$549,900',specs:'3 bd · 2.5 ba · 2,210 sqft',addr:'88 Mill Creek Ct',place:'Woodstock'},
+  {id:'h3',kind:'home',img:IMG.h3,price:'$712,000',specs:'5 bd · 4 ba · 3,480 sqft',addr:'1450 Kirkwood Dr',place:'Marietta'},
+  {id:'a2',kind:'area',name:'Marietta',place:'Marietta',county:'Cobb County',cost:'$734'},
+  {id:'c2',kind:'comm',img:IMG.c2,name:'Bellmoore Park',place:'Alpharetta',meta:'4.3 · 8 reviews'},
+  {id:'h4',kind:'home',img:IMG.h4,price:'$498,000',specs:'3 bd · 2 ba · 1,860 sqft',addr:'27 Laurel Bend',place:'Marietta'},
+  {id:'c3',kind:'comm',img:IMG.c3,name:'Amberfield',place:'Woodstock',meta:'no reviews yet'},
+  {id:'h5',kind:'home',img:IMG.h5,price:'$665,000',specs:'4 bd · 3.5 ba · 3,100 sqft',addr:'9 Aster Ln',place:'Alpharetta'},
+];
+const KIND_LABEL={home:'Home',comm:'Community',area:'Area'};
+const KIND_PLURAL={home:'homes',comm:'neighbourhoods',area:'areas'};
+const MAX=5;
+
+const svgFilter='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>';
+
+/* ── per-phone state ─────────────────────────────────────── */
+const S={};  // id -> {filter, popOpen, selecting, picked[]}
+function st(v){ return S[v] || (S[v]={filter:'all',popOpen:false,selecting:false,picked:[]}); }
+function visible(v){
+  const f=st(v).filter;
+  return f==='all'?ITEMS:ITEMS.filter(i=>i.kind===f);
+}
+function lockedKind(v){
+  const p=st(v).picked;
+  return p.length? ITEMS.find(i=>i.id===p[0]).kind : null;
+}
+
+/* ── item copy helpers ───────────────────────────────────── */
+const title=i=> i.kind==='home'? i.price : i.name;
+const sub  =i=> i.kind==='home'? i.specs
+               : i.kind==='comm'? i.meta
+               : i.county+' · '+i.cost+'/mo';
+const line2=i=> i.kind==='home'? i.addr+' · '+i.place : i.place+', GA';
+
+/* ── the four layouts ────────────────────────────────────── */
+function layoutToday(v){
+  return visible(v).map(i=>{
+    const on=st(v).picked.includes(i.id);
+    const dim=st(v).selecting && lockedKind(v) && lockedKind(v)!==i.kind;
+    const bg=i.kind==='area'?'':`background-image:url('${i.img}')`;
+    return `<div class="rowitem selectable ${on?'on':''} ${dim?'dim':''}" data-id="${i.id}">
+      ${st(v).selecting?`<div class="tick">${on?'✓':''}</div>`:''}
+      <div class="th" style="${bg}"></div>
+      <div class="tx">
+        <div class="t">${i.kind==='home'? i.price+' · '+i.specs : i.name}</div>
+        <div class="s">${i.kind==='area'? i.county+' · '+i.cost+'/mo on a $500k home' : line2(i)}</div>
+      </div>
+      ${st(v).selecting?'':'<div class="rm">Remove</div>'}
+    </div>`;
+  }).join('');
+}
+
+function layoutGallery(v){
+  const cards=visible(v).map(i=>{
+    const on=st(v).picked.includes(i.id);
+    const dim=st(v).selecting && lockedKind(v) && lockedKind(v)!==i.kind;
+    const k=i.kind==='comm'?'c':i.kind==='area'?'a':'';
+    const ph = i.kind==='area'
+      ? `<div class="ph"><span class="kind a">Area</span><div class="big">${i.cost}</div><div class="lbl">/mo · $500k home</div></div>`
+      : `<div class="ph" style="background-image:url('${i.img}')"><span class="kind ${k}">${KIND_LABEL[i.kind]}</span></div>`;
+    return `<div class="gcard selectable ${i.kind==='area'?'area':''} ${on?'on':''} ${dim?'dim':''}" data-id="${i.id}">
+      ${st(v).selecting?`<div class="tick">${on?'✓':''}</div>`:''}
+      ${ph}
+      <div class="bd">
+        <div class="t">${title(i)}</div>
+        <div class="s">${i.kind==='home'? i.addr : i.kind==='comm'? i.place+', GA' : i.county}</div>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="grid">${cards}</div>`;
+}
+
+function layoutShelves(v){
+  const vis=visible(v);
+  const places=[...new Set(vis.map(i=>i.place))];
+  return places.map(pl=>{
+    const mine=vis.filter(i=>i.place===pl);
+    const area=mine.find(i=>i.kind==='area');
+    const rest=mine.filter(i=>i.kind!=='area');
+    const nH=rest.filter(i=>i.kind==='home').length;
+    const nC=rest.filter(i=>i.kind==='comm').length;
+    const bits=[];
+    if(nH) bits.push(nH+' home'+(nH>1?'s':''));
+    if(nC) bits.push(nC+' neighbourhood'+(nC>1?'s':''));
+    const meta = area
+      ? `${area.county} · ${area.cost}/mo on a $500k home`
+      : (bits.length? bits.join(' · ') : '');
+    const cards = rest.length? rest.map(i=>{
+      const on=st(v).picked.includes(i.id);
+      const dim=st(v).selecting && lockedKind(v) && lockedKind(v)!==i.kind;
+      const k=i.kind==='comm'?'c':'';
+      return `<div class="scard selectable ${on?'on':''} ${dim?'dim':''}" data-id="${i.id}">
+        ${st(v).selecting?`<div class="tick">${on?'✓':''}</div>`:''}
+        <div class="ph" style="background-image:url('${i.img}')"><span class="kind ${k}">${KIND_LABEL[i.kind]}</span></div>
+        <div class="bd"><div class="t">${title(i)}</div>
+          <div class="s">${i.kind==='home'? i.addr : i.meta}</div></div>
+      </div>`;
+    }).join('') : `<div style="padding:2px 20px 6px" class="tiny">Only the area itself is saved here.</div>`;
+    return `<div class="shelf">
+      <div class="shead">
+        <div class="l">
+          <div class="nm">${pl}${area?' <span class="pin">◆ saved</span>':''}</div>
+          <div class="mt">${meta}${area&&bits.length?' · '+bits.join(' · '):''}</div>
+        </div>
+        ${nH>1?'<div class="cmp">Compare '+nH+' ›</div>':''}
+      </div>
+      <div class="rail">${cards}</div>
+    </div>`;
+  }).join('');
+}
+
+function layoutBoard(v){
+  return visible(v).map(i=>{
+    const on=st(v).picked.includes(i.id);
+    const dim=st(v).selecting && lockedKind(v) && lockedKind(v)!==i.kind;
+    const k=i.kind==='comm'?'c':i.kind==='area'?'a':'';
+    const ph = i.kind==='area'
+      ? `<div class="ph"><span class="kind a">Area</span><div class="big">${i.cost}<span style="font-size:14px">/mo</span></div><div class="lbl">${i.county} · on a $500k home</div></div>`
+      : `<div class="ph" style="background-image:url('${i.img}')"><span class="kind ${k}">${KIND_LABEL[i.kind]}</span></div>`;
+    return `<div class="bcard selectable ${i.kind==='area'?'area':''} ${on?'on':''} ${dim?'dim':''}" data-id="${i.id}">
+      ${st(v).selecting?`<div class="tick">${on?'✓':''}</div>`:''}
+      ${ph}
+      <div class="bd">
+        <div><div class="t" style="font:700 17px var(--serif)">${title(i)}</div>
+        <div class="s">${i.kind==='home'? i.addr+' · '+i.specs : i.kind==='comm'? i.place+', GA · '+i.meta : i.place}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+const LAYOUTS={today:layoutToday,gallery:layoutGallery,shelves:layoutShelves,board:layoutBoard};
+
+/* ── take card (only on `today`, where it lives now) ─────── */
+function takeCard(){
+  return `<div class="take">
+    <h4>Torn between a few?</h4>
+    <div class="s">Get a straight take — a lean, the why, and the numbers behind it.</div>
+    <div class="r">Your homes — which are you torn between? <span class="go">›</span></div>
+    <div class="r">Your 3 neighbourhoods <span class="go">›</span></div>
+    <div class="r">Your 2 areas <span class="go">›</span></div>
+  </div>`;
+}
+
+/* ── render one phone ────────────────────────────────────── */
+function render(v){
+  const s=st(v);
+  const el=document.querySelector(`[data-phone="${v}"]`);
+  const kind=lockedKind(v);
+  const nSel=s.picked.length;
+  const canGo=nSel>=2;
+  const fLabel={all:'All',home:'Homes',comm:'Neighbourhoods',area:'Areas'}[s.filter];
+
+  el.innerHTML=`
+    <div class="scroll">
+      <div class="hdr">
+        <h3>Saved</h3>
+        <div class="hdrbtns">
+          <div class="iconbtn ${s.selecting?'on':''}" data-act="select">${s.selecting?'Done':'Select'}</div>
+          <div class="iconbtn ${s.filter!=='all'?'on':''}" data-act="filter">${svgFilter}${s.filter!=='all'?'<span class="dot"></span>':''}</div>
+        </div>
+      </div>
+      ${s.filter!=='all'?`<div class="tiny" style="padding:2px 20px 4px">Showing ${fLabel.toLowerCase()} only · <span style="color:var(--accent)" data-act="clearf">show all</span></div>`:''}
+      ${v==='today'&&!s.selecting?takeCard():''}
+      ${visible(v).length? LAYOUTS[v](v) : '<div class="empty">Nothing saved in this filter yet.</div>'}
+    </div>
+
+    <div class="pop ${s.popOpen?'open':''}">
+      <div class="sec">Show</div>
+      ${['all','home','comm','area'].map(f=>{
+        const lbl={all:'Everything',home:'Homes',comm:'Neighbourhoods',area:'Areas'}[f];
+        const n=f==='all'?ITEMS.length:ITEMS.filter(i=>i.kind===f).length;
+        return `<button data-f="${f}" class="${s.filter===f?'on':''}"><span>${lbl}</span>
+          <span class="${s.filter===f?'ck':'tiny'}">${s.filter===f?'✓':n}</span></button>`;
+      }).join('')}
+      <hr>
+      <div class="sec">Sort</div>
+      <button class="on"><span>Recently saved</span><span class="ck">✓</span></button>
+      <button><span>Price</span><span class="tiny"></span></button>
+      <button><span>By place</span><span class="tiny"></span></button>
+    </div>
+
+    <div class="actionbar ${s.selecting?'up':''}">
+      <div class="cnt">
+        <b>${nSel? nSel+' of '+MAX+' selected' : 'Pick 2 to '+MAX}</b>
+        ${kind? 'Comparing '+KIND_PLURAL[kind] : 'Tap what you’re torn between'}
+      </div>
+      <button class="go" ${canGo?'':'disabled'}>${canGo?'Get the take':'Compare'}</button>
+    </div>`;
+}
+
+/* ── events ──────────────────────────────────────────────── */
+document.addEventListener('click',e=>{
+  const phone=e.target.closest('[data-phone]');
+  if(!phone) return;
+  const v=phone.dataset.phone, s=st(v);
+
+  const act=e.target.closest('[data-act]');
+  if(act){
+    const a=act.dataset.act;
+    if(a==='select'){ s.selecting=!s.selecting; s.picked=[]; s.popOpen=false; }
+    if(a==='filter'){ s.popOpen=!s.popOpen; }
+    if(a==='clearf'){ s.filter='all'; }
+    return render(v);
+  }
+  const fbtn=e.target.closest('[data-f]');
+  if(fbtn){ s.filter=fbtn.dataset.f; s.popOpen=false; return render(v); }
+
+  if(s.popOpen && !e.target.closest('.pop')){ s.popOpen=false; return render(v); }
+
+  const card=e.target.closest('[data-id]');
+  if(card && s.selecting){
+    const id=card.dataset.id, i=ITEMS.find(x=>x.id===id), lk=lockedKind(v);
+    if(lk && lk!==i.kind) return;                     // kind-locked
+    if(s.picked.includes(id)) s.picked=s.picked.filter(x=>x!==id);
+    else if(s.picked.length<MAX) s.picked.push(id);
+    return render(v);
+  }
+});
+
+/* ── build the stage ─────────────────────────────────────── */
+const COLS=[
+  {v:'today',tag:'Today',rec:false,h:'One flat row per item',
+   p:'What ships right now. Every save is a 56 pt thumbnail, a title and a “Remove”, in the order you saved them.',
+   foot:'<span class="n">The problem:</span> the photo that made you save it is a postage stamp, a county and a $624k house carry identical weight, and the fact that four of these are in Woodstock — the most decision-relevant thing in the list — is invisible.'},
+  {v:'gallery',tag:'Option A',rec:false,h:'Gallery',
+   p:'Two-up photo cards. The picture does the recognising, the way it does in the feed.',
+   foot:'<span class="y">Good:</span> looks like Percho, photos earn their space, twice as much fits per screen.<br><span class="n">Cost:</span> areas have no photograph, so they need an invented tile (shown here as the cost figure), and the sub-lines get short.'},
+  {v:'shelves',tag:'Option B · recommended',rec:true,h:'Shelves, grouped by place',
+   p:'A section per place, each a swipeable rail. A saved <b>area</b> stops being a row and becomes the section header it always was.',
+   foot:'<span class="y">Good:</span> the list finally says something — “you are really choosing between Woodstock and Marietta”, which is exactly what the buyer study said people are doing. Compare lives per shelf, where the comparison actually is.<br><span class="n">Cost:</span> the most build; needs an “Elsewhere” bucket for a home we can’t place.'},
+  {v:'board',tag:'Option C',rec:false,h:'Board',
+   p:'One big card per item, full-width photo. The least new machinery — today’s list with the photo let off its leash.',
+   foot:'<span class="y">Good:</span> the most legible of the four; the price reads as a price. Cheapest to build.<br><span class="n">Cost:</span> about 2½ items per screen — a ten-item shortlist becomes a long scroll.'},
+];
+document.getElementById('stage').innerHTML=COLS.map(c=>`
+  <div class="col">
+    <div class="colhead">
+      <span class="tag ${c.rec?'rec':''}">${c.tag}</span>
+      <h2>${c.h}</h2><p>${c.p}</p>
+    </div>
+    <div class="phone" data-phone="${c.v}"></div>
+    <div class="colfoot">${c.foot}</div>
+  </div>`).join('');
+COLS.forEach(c=>render(c.v));
+
+/* ── the 3-vs-5 table demo ───────────────────────────────── */
+const H3=[{a:'312 Founders Way',m:'$3,912/mo',p:'$212'},{a:'88 Mill Creek Ct',m:'$3,486/mo',p:'$249'},{a:'1450 Kirkwood Dr',m:'$4,470/mo',p:'$205'}];
+const H5=H3.concat([{a:'27 Laurel Bend',m:'$3,167/mo',p:'$268'},{a:'9 Aster Ln',m:'$4,178/mo',p:'$215'}]);
+function fakeTable(homes,scroll){
+  const cls=scroll?'cells sc':'cells';
+  const row=(lab,key)=>`<div class="hrow drow"><div class="lab">${lab}</div>
+    <div class="${cls}">${homes.map(h=>`<div class="c clip">${h[key]}</div>`).join('')}</div></div>`;
+  return `<div class="hrow"><div class="lab"></div>
+      <div class="${cls}">${homes.map(h=>`<div class="c h">${h.a}</div>`).join('')}</div></div>
+    ${row('Monthly, all-in','m')}${row('Per sqft','p')}`;
+}
+document.getElementById('t3').innerHTML=fakeTable(H3,false);
+document.getElementById('t5bad').innerHTML=fakeTable(H5,false);
+document.getElementById('t5good').innerHTML=fakeTable(H5,true);
+</script>
+</body>
+</html>
