@@ -21,6 +21,71 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-10 02:00 UTC — phase270: compare leads with a take, and the picker moved to where the tap is
+
+**Objective**: owner — "it is very unnatural to compare community and home by
+selecting the a text then selecting few item below, redesign it, also the
+comparing results should not be the traditional way, it should look like a
+real suggestion from a friend or agent, you can still have facts in the below
+section to support your point."
+
+Two asks in one sentence: the ENTRY (a "COMPARE" text card that silently
+flipped the list below into a tick-mode) and the RESULT (a bare table).
+
+**The result: "Percho's take".** Each compare screen now opens with a
+`CompareTake` — `{ lead, points, caveat }` — rendered by
+`components/compare/TakeCard.tsx` (serif lead, evidence lines, italic
+counterweight), with the existing table below as the supporting facts.
+
+The takes are DETERMINISTIC pure functions, not an LLM call — same repo
+pattern as the table builders, computed from exactly the figures the table
+under them shows:
+- `lib/listing/take.ts` — leans on monthly all-in / $-per-sqft / school
+  proficiency (the three directed dims); gaps below stated thresholds
+  ($50/mo, 8%, 5pts) earn no opinion. One home wins everything → "If it were
+  me, I'd lean …" plus reasons; wins split → "a trade, not a ranking" with
+  each home's case; all close → says so. A third home that leads on nothing
+  gets told so in the caveat, and a home with no school data is named as a
+  blind spot rather than skipped silently.
+- `lib/areas/take.ts` — two axes only (true cost + schools; tax appears only
+  as the EXPLANATION of a cost gap when it actually carries ≥60% of it —
+  leaning on the total and its parts would double-count).
+- `lib/community/take.ts` — the resident rating is the only directed figure,
+  so it is the only thing a lean may stand on (gap ≥0.4, thin samples named
+  in the caveat); review-dimension gaps, nearby counts and owner-occupancy
+  are offered as CHARACTER, never as a verdict. A nearby bucket the server
+  omits stays UNKNOWN, not zero — no contrast is spoken from one side's data.
+- `lib/compare/take.ts` — the shared shape + prose helpers, and the header
+  comment that reconciles this with the old "no winner" trust rule: the
+  TABLES still rank nothing; the opinion now exists but is labelled as one,
+  argues in checkable numbers, and names what the pick gives up.
+
+**Decision — why not an LLM.** Zero cost, instant, offline, testable, and the
+runtime Anthropic path on this host is broken anyway (see 2026-07-26). If the
+owner wants richer prose later, the generator's output is the guardrail spec.
+
+**The entry**: the three stacked COMPARE cards and the tick-mode are gone
+from Saved. One card ("Torn between a few?") lists each kind as a one-tap
+row. Homes with 2–3 saved go STRAIGHT to `/compare` — the saved set is the
+shortlist, the argument areas/communities always made. Only >3 homes needs
+narrowing, and that now happens on a thumbnail strip inside the card (tap
+photos, 2–3, "Get the take") — selection at the point of the tap, not a mode
+the list below silently enters. Sliced kinds say "Your latest 3
+neighbourhoods" instead of implying all made the trip. `SavedRow` lost its
+checkbox mode entirely; `Row` gained `short` (the street line) to caption
+strip thumbs.
+
+**Verification**: `pnpm typecheck` clean; mobile tests 699 pass (was 684 —
+15 new across the three take suites); mobile `pnpm lint` clean (same 8
+pre-existing warnings). NOTE: `apps/web` lint fails with 2 pre-existing
+errors on origin/main (a `role="search"` a11y complaint among them) — not
+touched here, this phase is mobile-only.
+
+**Next steps**: owner reviews the take copy on device — the voice ("If it
+were me…") is the product call to sand. RELEASE bumped to v1.5.
+
+---
+
 ## 2026-09-10 01:30 UTC — phase269: the panel was the problem
 
 **Objective**: owner — "still see empty sheet for county and city… need a
