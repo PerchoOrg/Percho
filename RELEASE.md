@@ -33,6 +33,21 @@ carries real fair-housing problems, and the major listing sites declined to do
 it for the same reason. What neighbours actually say about a place lives in
 community reviews instead.
 
+### 2026-09-10
+
+**Far more neighbourhoods on the map.** Only communities we had a photo of
+were being drawn, which left a city looking almost empty. Every community we
+have an outline for now appears, whether or not we have a picture of it.
+
+**Tapping a neighbourhood opens it.** Tapping inside a community's outline was
+being caught by the county underneath and bouncing you back out to the county
+view. It opens the community now.
+
+**Quieter outlines, and no empty bar.** The neighbourhood shapes were drawn
+with a heavy green edge that turned busy areas into a tangle — they're a thin
+line and a light wash now. The white strip that always sat at the bottom of
+the Search map is gone unless it has something to tell you.
+
 ### 2026-09-09
 
 **Neighbourhoods are drawn as neighbourhoods.** A community used to be a

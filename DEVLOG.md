@@ -21,6 +21,60 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-10 01:05 UTC — phase268: the outlines cover the city, and the tap lands
+
+**Objective**: owner on phase267 — "地图上看到几个零星的社区图形 为啥不是全覆盖?
+而且这个不太好看 很乱 点击社区也没有反应 最下面一直有个空sheet 干掉它."
+Four faults, three of them mine from yesterday.
+
+**1. "几个零星的社区图形" — why coverage was thin.** Not the boundary data:
+the query. `searchEntities` filtered communities to `cover_storage_path is not
+null`, inherited from the feed pool, where the rule is right because a feed
+card IS a photo. On a map that draws OUTLINES the cover is never rendered, so
+that filter was hiding every community we have a shape for but no picture of —
+which is most of them. Gate dropped, and communities got their own ceiling
+(`COMMUNITY_LIMIT = 100`) separate from the 24 that sizes a result list.
+
+Still a ceiling, and worth being straight about: Atlanta has 731 communities
+and this returns 100 of them by name order. Real full coverage is a viewport
+query — `st_intersects(boundary_geom, <map bounds>)` behind an RPC, refetched
+on pan — not a larger constant. That is the next step if he wants it.
+
+**2. "点击社区也没有反应" — a real bug, and an instructive one.**
+react-native-maps hit-tests overlays in insertion order and stops at the first
+polygon containing the point. County outlines are added before community
+outlines, so every tap inside a community was being answered by the county
+underneath it: `selectArea` fired, which CLEARS `selectedId` — so the tap did
+not do nothing, it silently threw the buyer back out of the city they had
+drilled into. Fixed by making counties `tappable={!asking}`: while results are
+on the map a county is scenery, not a control.
+
+**3. "不太好看 很乱".** The community outline was `pos` at 0.2 under a 2px
+stroke — fine for four shapes, noise for a hundred. Now a 1px stroke at 0.55
+and a 0.14 wash. Also: the pin fallback for a community with no polygon now
+draws ONLY for a typed search. A search must show what it found; a drill is a
+map of shapes, and falling back to circles for every shapeless row would have
+rebuilt the exact mess phase267 removed.
+
+**4. "最下面一直有个空sheet".** True — at rest it was 110pt of white holding
+the words "All areas". The sheet is no longer MOUNTED unless it has something
+to say (`sheetVisible = searching || drillCity || previewing`). The cost,
+stated plainly: the region-level list of cities is gone with it. The map's city
+pins are that list, and the map is the answer he keeps asking us to stop
+covering.
+
+**Verification**: `pnpm typecheck` clean both packages; `pnpm lint` exit 0
+(same 8 pre-existing mobile warnings); mobile 684 pass; web 1,186 pass with the
+SAME one pre-existing failure flagged in phase267 — `devlog-order.test.ts`,
+another agent's phase254 (13:15) still sitting below phase259 (10:08).
+Re-confirmed against this branch's DEVLOG: the failing pair does not involve
+any entry written here.
+
+**Next steps**: owner reviews. Two open decisions from him — the viewport
+query for true coverage, and TIGER Places for city outlines (phase267).
+
+---
+
 ## 2026-09-09 16:40 UTC — phase267: real outlines, no lens until asked
 
 **Objective**: owner — "It doesn't make sense to have everything in circle,

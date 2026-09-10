@@ -6,15 +6,28 @@
  *
  * One query hits two tables the buyer can actually open:
  *   listings     — address / city / state / zip / neighborhood, active only
- *   communities  — name / city, active with a cover (same gate as the feed's
- *                  community pool, so a hit here is always a page that renders)
+ *   communities  — name / city, active
  *
  * Communities carry their real `boundary`, simplified for display: the map
  * draws the outline rather than one more identical circle (owner, 2026-09-09).
  * The feed's community pool must NEVER select that column — 8k dense
- * multipolygons time PostgREST out — but this query is capped at 24 rows, and
+ * multipolygons time PostgREST out — but this query is capped, and
  * `displayRingsFromGeoJson` drops holes and thins each ring to ~30 m before it
  * goes on the wire.
+ *
+ * ── The cover gate is gone (2026-09-10) ─────────────────────────────────────
+ * Communities used to be filtered to `cover_storage_path is not null`, the
+ * same gate as the feed's pool, on the grounds that a hit should always be a
+ * page that renders. That made sense when a hit was a PHOTO circle on the map.
+ * It is now an outline, the photo is not drawn at all, and the gate was the
+ * reason the owner saw "几个零星的社区图形" instead of a city's subdivisions:
+ * it was hiding every community we have a shape for but no picture of.
+ *
+ * Communities therefore get their own, much higher ceiling. It is still a
+ * ceiling: a city like Atlanta has 731 communities and this returns the first
+ * `COMMUNITY_LIMIT` of them by name. True full coverage needs a viewport query
+ * (`st_intersects` against the map's bounds, refetched on pan) rather than a
+ * bigger number here — see the DEVLOG entry for phase268.
  *
  * `ilike '%q%'` on ≤ a few thousand rows is fine; the query string has
  * already been folded to `[a-z0-9 -]` by `lib/zod/mobile-search.ts` so it
@@ -28,6 +41,13 @@ import type { Database } from '@/lib/supabase/database.types';
 import { createClient as createPlainClient } from '@supabase/supabase-js';
 
 const SEARCH_LIMIT = 24;
+/**
+ * Communities are map SHAPES, not a result list, so they get a ceiling sized
+ * for covering a city rather than for filling a sheet. ~100 simplified rings
+ * is roughly 120 KB on the wire and renders without stuttering a pan; the
+ * next honest step past it is a viewport query, not a bigger constant.
+ */
+const COMMUNITY_LIMIT = 100;
 
 export interface SearchListingDTO {
   id: string;
@@ -168,13 +188,12 @@ export async function searchEntities(q: string): Promise<SearchResultDTO> {
     supabase
       .from('communities')
       // `boundary` IS selected here, unlike the feed's community pool — see
-      // the header. 24 rows is the whole reason that is safe.
+      // the header. The row ceiling is the whole reason that is safe.
       .select('id, slug, name, city, state, cover_storage_path, lat, lng, boundary')
       .eq('status', 'active')
-      .not('cover_storage_path', 'is', null)
       .or(`name.ilike.${like},city.ilike.${like}`)
       .order('name', { ascending: true })
-      .limit(SEARCH_LIMIT),
+      .limit(COMMUNITY_LIMIT),
   ]);
 
   if (listingRes.error)
