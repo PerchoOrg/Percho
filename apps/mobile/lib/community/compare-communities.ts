@@ -42,7 +42,8 @@ import type { CommunityDetailDTO } from "./detail-dto";
 import { bucketLabel } from "./tour-buckets";
 
 export const COMMUNITY_COMPARE_MIN = 2;
-export const COMMUNITY_COMPARE_MAX = 3;
+/** 3 → 5 in phase272, for the reason `lib/listing/compare.ts` states. */
+export const COMMUNITY_COMPARE_MAX = 5;
 
 /**
  * How many `nearby` bucket rows the table will draw.

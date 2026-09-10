@@ -21,6 +21,87 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-10 03:20 UTC — phase272: Saved becomes shelves; compare goes to 5
+
+**Objective**: owner, on the phase271 mockup: "B". Option B — shelves grouped
+by place — plus the two controls he floated in the same breath (filter top
+right; Select + Compare, up to 5).
+
+**Read of "B"**: he picked a phone he could tap, and that phone had the filter
+and Select in it, so B ships WITH them rather than as a bare layout swap. The
+one thing he did not answer explicitly was 3-vs-5; I had recommended 5 and he
+did not push back, so 5 it is — with the layout change that actually makes 5
+legible (below).
+
+**`apps/mobile/lib/saved/shelves.ts`** (new, pure, 8 tests). Groups resolved
+saves by city. A shelf takes the position of its earliest member, so the town
+you last touched leads — the order is still your own history, the only ranking
+this tab has ever claimed. Also `shelfCountLine` / `shelfListingIds`.
+
+**The load-bearing idea: a saved AREA is a header, not a card.** A bookmarked
+city was always the odd row out — no photograph, and what it names is not a
+thing beside the homes but the place they are IN. It now becomes the shelf's
+own header and carries the county + true-cost line. This also closed a hole
+the mockup had: in the demo only rail cards were selectable, so saved AREAS
+could not be compared at all under Option B. Fixed by making the header itself
+a checkbox in Select mode.
+
+**`app/(tabs)/saved.tsx`**, rewritten:
+- Header: `Saved` + Select + Filter. Filter is a popover (Everything / Homes /
+  Neighbourhoods / Areas) — an icon that costs nothing until opened, which is
+  the distinction from the phase187 chips (a permanent bar that forced you
+  into a segment). Flagged to the owner in the mockup; he did not object.
+- Select mode: first pick sets the kind and the rest dim, because the three
+  kinds have three different compare tables. Bottom bar carries the count, the
+  kind, Remove and "Get the take".
+- **Removal moved into Select.** It was a "Remove" link on every single row —
+  the most destructive action given the most permanent real estate. A
+  shortlist has two verbs, compare and prune; both now live in one mode.
+- Per-shelf "Compare N ›" shortcut: the homes in THIS town, which is the
+  comparison a buyer standing in one place actually wants.
+
+**COMPARE_MAX 3 → 5, and the layout change that earns it.** The old table put
+the label in a 92 pt left column, leaving ~45 pt per cell at five homes —
+narrower than "$3,912/mo" (~58 pt at 13 px). So `/compare` and
+`/compare-communities` adopted the row-block layout `/compare-areas` has
+always used: **label above, cells across the full width**. That gives ~65 pt
+per cell at five, and as a bonus frees the rate/down-payment note to run full
+width instead of truncating into a gutter. Three screens now share one table
+shape instead of two-of-three. No horizontal scrolling, no synced ScrollViews,
+no fixed row heights — the simplest thing that works, and it was already in
+the codebase.
+
+**Four traps caught before shipping**, all mine:
+1. `canSelect` gated on `items.length >= 2`, which offered the mode to a buyer
+   holding one home and one neighbourhood — a mode you can enter but whose
+   kind-lock makes every second tap illegal. Now gated per-kind.
+2. A listing with a blank `city` would have fallen into `unplaced` and sat
+   under a spinner that never resolves, because the row IS ready. `placeOf`
+   gives it an "Elsewhere" shelf — the bucket phase271 said B would need.
+3. "Nothing saved under everything yet" rendered over a column of spinners on
+   every cold open. Now also requires `unplaced.length === 0`.
+4. The shelf's "Compare N ›" was nested INSIDE the header Pressable. A
+   disabled outer Pressable does not reliably stop an inner one, and
+   overlapping press targets are exactly how phase268 lost every tap inside a
+   community outline to the county under it. Now siblings.
+
+**Issues**: none outstanding. Two saved cities in one county (Marietta and
+Smyrna are both Cobb) would compare a county against itself, so the area route
+de-duplicates keys and the bar refuses on fewer than two distinct ones, saying
+"Those are in the same county — pick one in another" rather than drawing twin
+columns.
+
+**Verification**: `pnpm typecheck` clean; mobile tests **707 pass** (was 699 —
+8 new in `shelves.test.ts`); `pnpm lint` clean (same 8 pre-existing warnings).
+Not run on device by me — owner reviews on his phone via Metro from the
+reference worktree, which has been pulled and re-installed.
+
+**Next steps**: owner taps it. Most likely sanding: whether "◆ saved" on a
+shelf header reads, and whether Remove living only inside Select is
+discoverable enough.
+
+---
+
 ## 2026-09-10 02:35 UTC — phase271: four Saved layouts as a hosted mockup (proposal, no app code)
 
 **Objective**: owner, on phase270 — "Right now it shows each item in a row,
