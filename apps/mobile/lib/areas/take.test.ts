@@ -87,3 +87,59 @@ describe("buildAreaTake", () => {
 		expect(take.caveat).toContain("school figures");
 	});
 });
+
+describe("buildAreaTake — personalised by declared priorities", () => {
+	const TRADE = [
+		county("Cheapside", { tax: 0.7, school: 30, ...UTILITIES }),
+		county("Bookford", { tax: 1.1, school: 60, ...UTILITIES }),
+	];
+
+	it("breaks the classic trade toward schools when that is what they said", () => {
+		const take = buildAreaTake(TRADE, {
+			schools: 3,
+			cost: 1,
+			commute: 1,
+			community: 1,
+		});
+		expect(take.lead).toContain("You said schools matters most");
+		expect(take.lead).toContain("Bookford County");
+		// The down-weighted axis still gets said — a lean that hides its cost
+		// is a sales pitch.
+		expect(take.caveat).toContain("Cheapside County");
+		expect(take.caveat).toContain("what it really costs");
+	});
+
+	it("breaks the same trade the other way for a cost-first buyer", () => {
+		const take = buildAreaTake(TRADE, {
+			schools: 1,
+			cost: 3,
+			commute: 1,
+			community: 1,
+		});
+		expect(take.lead).toContain("Cheapside County");
+		expect(take.caveat).toContain("Bookford County");
+		expect(take.caveat).toContain("schools");
+	});
+
+	it("still refuses to choose when they have said nothing", () => {
+		const take = buildAreaTake(TRADE, {
+			schools: 1,
+			cost: 1,
+			commute: 1,
+			community: 1,
+		});
+		expect(take.lead).toContain("classic trade");
+	});
+
+	it("ignores a priority with no axis on this screen", () => {
+		// There is no commute figure for a county, so a commute-first buyer
+		// gets the honest shrug rather than an invented lean.
+		const take = buildAreaTake(TRADE, {
+			schools: 1,
+			cost: 1,
+			commute: 3,
+			community: 1,
+		});
+		expect(take.lead).toContain("classic trade");
+	});
+});

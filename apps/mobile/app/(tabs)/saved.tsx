@@ -341,6 +341,21 @@ export default function SavedTab() {
 			? pickedAreaKeys.length >= AREA_COMPARE_MIN
 			: picked.length >= BOUNDS[lockedKind].min);
 
+	/**
+	 * How many towns the current picks span.
+	 *
+	 * Grouping by place made the tab legible and, owner: "Allow cross city
+	 * comparison", also made it look like a fence — the only visible compare
+	 * affordance was each shelf's own. Nothing ever stopped a cross-town pick;
+	 * it just was not said. So the bar says it, before you pick and after.
+	 */
+	const pickedTowns = useMemo(() => {
+		const towns = picked
+			.map((id) => entries.find((e) => e.id === id)?.place)
+			.filter((p): p is string => p !== undefined);
+		return new Set(towns).size;
+	}, [picked, entries]);
+
 	const openCompare = () => {
 		if (!lockedKind || !canCompare) return;
 		if (lockedKind === "listing") {
@@ -553,8 +568,8 @@ export default function SavedTab() {
 							pickedAreaKeys.length < 2
 								? "Those are in the same county — pick one in another."
 								: bounds
-									? `Comparing ${bounds.noun}`
-									: "Tap what you’re torn between"}
+									? `Comparing ${bounds.noun}${pickedTowns > 1 ? ` across ${pickedTowns} towns` : ""}`
+									: "Tap what you’re torn between — different towns are fine"}
 						</Text>
 					</View>
 					{picked.length > 0 && (
@@ -661,8 +676,11 @@ function ShelfBlock({
 						hitSlop={8}
 						accessibilityRole="button"
 					>
+						{/* "these" is doing real work: it scopes the shortcut to this
+						    town, so its existence stops implying that comparing is a
+						    within-town act. Across towns is Select, which says so. */}
 						<Text style={styles.sCompare}>
-							Compare {Math.min(homes.length, COMPARE_MAX)} ›
+							Compare these {Math.min(homes.length, COMPARE_MAX)} ›
 						</Text>
 					</Pressable>
 				)}

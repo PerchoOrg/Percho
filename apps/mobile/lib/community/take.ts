@@ -18,8 +18,14 @@
  */
 import { type CompareTake, listJoin } from "../compare/take";
 import {
+	type PriorityKey,
+	type PriorityWeights,
+	topStatedPriority,
+} from "../priorities";
+import {
 	REVIEW_DIMENSIONS,
 	REVIEW_DIMENSION_LABELS,
+	type ReviewDimension,
 } from "../reviews/dimensions";
 import type { CommunityDetailDTO } from "./detail-dto";
 import { bucketLabel } from "./tour-buckets";
@@ -41,12 +47,41 @@ function pct(c: CommunityDetailDTO, label: string): number | undefined {
 	return Number.isFinite(n) ? n : undefined;
 }
 
-/** The review dimension with the widest real gap, spoken as character. */
+/**
+ * Which declared priority each resident-rated dimension speaks to.
+ *
+ * The mapping is the honest half of personalising this screen: a buyer who
+ * said "getting around" matters most is told about WALKABLE first, because
+ * that is the only thing four residents' ratings can say about it.
+ */
+const DIMENSION_PRIORITY: Record<ReviewDimension, PriorityKey> = {
+	quiet: "community",
+	walkable: "commute",
+	friendly: "community",
+	value: "cost",
+};
+
+/**
+ * One review dimension, spoken as character.
+ *
+ * Prefers the one serving the buyer's declared priority when it has a real
+ * gap; otherwise the widest gap, which is what it always did. Note what this
+ * does NOT do: it never lowers the bar. A dimension the residents barely
+ * split is not reported just because the buyer said they cared about it —
+ * that would be manufacturing a difference to flatter an answer.
+ */
 function dimensionPoint(
 	communities: readonly CommunityDetailDTO[],
+	prefer?: PriorityKey,
 ): string | undefined {
 	let best:
-		| { label: string; hi: CommunityDetailDTO; hiV: number; loV: number }
+		| {
+				label: string;
+				hi: CommunityDetailDTO;
+				hiV: number;
+				loV: number;
+				wanted: boolean;
+		  }
 		| undefined;
 	for (const d of REVIEW_DIMENSIONS) {
 		const rated = communities
@@ -61,17 +96,27 @@ function dimensionPoint(
 		if (!hi || !lo) continue;
 		const gap = hi.v - lo.v;
 		if (gap < DIMENSION_MIN_GAP) continue;
-		if (!best || gap > best.hiV - best.loV) {
+		const wanted = prefer !== undefined && DIMENSION_PRIORITY[d] === prefer;
+		// A dimension the buyer asked about outranks a wider gap they did not.
+		const better = !best
+			? true
+			: wanted !== best.wanted
+				? wanted
+				: gap > best.hiV - best.loV;
+		if (better) {
 			best = {
 				label: REVIEW_DIMENSION_LABELS[d].toLowerCase(),
 				hi: hi.c,
 				hiV: hi.v,
 				loV: lo.v,
+				wanted,
 			};
 		}
 	}
 	if (!best) return undefined;
-	return `The clearest gap residents report is ${best.label}: ${best.hi.name} at ${best.hiV.toFixed(1)} against ${best.loV.toFixed(1)}.`;
+	return best.wanted
+		? `On ${best.label} — the thing you said matters most — residents put ${best.hi.name} at ${best.hiV.toFixed(1)} against ${best.loV.toFixed(1)}.`
+		: `The clearest gap residents report is ${best.label}: ${best.hi.name} at ${best.hiV.toFixed(1)} against ${best.loV.toFixed(1)}.`;
 }
 
 /** The busiest real contrast in what is around each place, if there is one. */
@@ -135,10 +180,16 @@ function ownerPoint(
 	return `${hi.c.name} is ${Math.round(hi.v)}% owner-occupied to ${lo.c.name}’s ${Math.round(lo.v)}% — usually the steadier streets.`;
 }
 
-/** Assumes 2–3 communities — the screen guards the count. */
+/**
+ * Assumes 2–COMMUNITY_COMPARE_MAX communities — the screen guards the count.
+ * `weights` chooses which resident-rated dimension leads; it never invents a
+ * gap and never changes a rating.
+ */
 export function buildCommunityTake(
 	communities: readonly CommunityDetailDTO[],
+	weights?: PriorityWeights,
 ): CompareTake {
+	const top = weights ? topStatedPriority(weights) : undefined;
 	const rated = communities
 		.map((c) => ({ c, r: c.reviews }))
 		.filter(
@@ -151,7 +202,7 @@ export function buildCommunityTake(
 		);
 
 	const points = [
-		dimensionPoint(communities),
+		dimensionPoint(communities, top),
 		nearbyPoint(communities),
 		ownerPoint(communities),
 	].filter((p): p is string => p !== undefined);

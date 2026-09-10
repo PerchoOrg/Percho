@@ -171,6 +171,29 @@ const LENS_FOR_PRIORITY: Partial<Record<PriorityKey, LensId>> = {
 	cost: "true_cost",
 };
 
+/**
+ * The one thing the buyer RAISED above neutral, when there is exactly one
+ * clear answer. Otherwise undefined.
+ *
+ * The bar is deliberately high, because the only caller is prose: a compare
+ * take that opens "You said schools matter most" is quoting the buyer back to
+ * themselves, and quoting someone who never said it is worse than saying
+ * nothing. So this returns a key only when they moved something up AND
+ * nothing else is tied with it — a tie is not a statement about which of the
+ * two, and `rankedPriorities`' tie-break is our order, not theirs.
+ */
+export function topStatedPriority(
+	weights: PriorityWeights,
+): PriorityKey | undefined {
+	if (!hasStated(weights)) return undefined;
+	const ranked = rankedPriorities(weights);
+	const first = ranked[0];
+	const second = ranked[1];
+	if (!first || weights[first.key] <= NEUTRAL_WEIGHT) return undefined;
+	if (second && weights[second.key] === weights[first.key]) return undefined;
+	return first.key;
+}
+
 export function lensForPriorities(weights: PriorityWeights): LensId {
 	if (!hasStated(weights)) return DEFAULT_LENS;
 	for (const p of rankedPriorities(weights)) {

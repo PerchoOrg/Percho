@@ -7,6 +7,11 @@
  * says Percho does not do. Each row is one figure per home, with the cell
  * blank when the data is missing rather than filled with a guess.
  */
+import {
+	type PriorityKey,
+	type PriorityWeights,
+	orderByPriority,
+} from "../priorities";
 import { buildCost } from "./cost";
 import type { ListingDetailDTO } from "./detail-dto";
 import {
@@ -34,6 +39,9 @@ export interface CompareRow {
 	cells: (string | undefined)[];
 	/** Small print under the label, e.g. the rate the monthly figure assumes. */
 	note?: string;
+	/** Which declared priority this row serves, for ordering. Undefined when
+	 *  it serves none — such a row keeps its place rather than sinking. */
+	priority?: PriorityKey;
 }
 
 export interface CompareTable {
@@ -43,9 +51,18 @@ export interface CompareTable {
 
 const num = (n: number): string => Math.round(n).toLocaleString("en-US");
 
+/**
+ * `weights` reorders the rows so the table opens on what the buyer said
+ * matters — the same contract `buildAreaCompareTable` has always had. It
+ * never adds, drops or reweights a figure. It matters more than it used to:
+ * the screen now shows only the first few rows by default (owner: "reduce the
+ * numbers part"), so the ordering decides which figures a buyer sees without
+ * tapping.
+ */
 export function buildCompareTable(
 	homes: ListingDetailDTO[],
 	annualRate: number,
+	weights?: PriorityWeights,
 ): CompareTable {
 	const headers = homes.map((h) => ({
 		id: h.id,
@@ -79,17 +96,20 @@ export function buildCompareTable(
 	const rows: CompareRow[] = [
 		{
 			label: "Price",
+			priority: "cost",
 			cells: homes.map((h) =>
 				h.price !== undefined ? formatUsd(h.price) : undefined,
 			),
 		},
 		{
 			label: "Monthly, all-in",
+			priority: "cost",
 			note: `${(annualRate * 100).toFixed(2)}% rate, ${Math.round(DEFAULT_DOWN_FRACTION * 100)}% down, tax + insurance + upkeep + HOA`,
 			cells: cost.map((c) => (c ? `${formatUsd(c.totalUsd)}/mo` : undefined)),
 		},
 		{
 			label: "Per sqft",
+			priority: "cost",
 			cells: homes.map((h) =>
 				h.price !== undefined && h.sqft !== undefined && h.sqft > 0
 					? `$${num(h.price / h.sqft)}`
@@ -118,6 +138,7 @@ export function buildCompareTable(
 		},
 		{
 			label: "HOA",
+			priority: "cost",
 			cells: homes.map((h) => {
 				const hoa = parseHoaMonthlyUsd(h.hoaRaw);
 				return hoa !== undefined ? `${formatUsd(hoa)}/mo` : h.hoaRaw;
@@ -125,6 +146,7 @@ export function buildCompareTable(
 		},
 		{
 			label: "Rent, typical",
+			priority: "cost",
 			note: "Zillow ZORI for the ZIP",
 			cells: homes.map((h) =>
 				h.rentEstimate
@@ -134,17 +156,23 @@ export function buildCompareTable(
 		},
 		{
 			label: "Elementary",
+			priority: "schools",
 			note: "nearest · % proficient",
 			cells: school("elementary"),
 		},
-		{ label: "Middle", cells: school("middle") },
-		{ label: "High", cells: school("high") },
+		{ label: "Middle", priority: "schools", cells: school("middle") },
+		{ label: "High", priority: "schools", cells: school("high") },
 		{
 			label: "Neighbourhood",
+			priority: "community",
 			cells: homes.map((h) => h.neighborhood),
 		},
 	];
 
 	// A row nobody has data for says nothing — drop it.
-	return { headers, rows: rows.filter((r) => r.cells.some((c) => c)) };
+	const kept = rows.filter((r) => r.cells.some((c) => c));
+	return {
+		headers,
+		rows: weights ? orderByPriority(kept, weights, (r) => r.priority) : kept,
+	};
 }

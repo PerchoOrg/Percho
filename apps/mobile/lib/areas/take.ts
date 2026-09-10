@@ -20,7 +20,13 @@ import {
 	readingMetrics,
 	taxMonthlyUsdFor,
 } from "@percho/shared/lenses";
-import { type CompareTake, listJoin, usd } from "../compare/take";
+import {
+	type CompareTake,
+	PRIORITY_PROSE,
+	listJoin,
+	usd,
+} from "../compare/take";
+import { type PriorityWeights, topStatedPriority } from "../priorities";
 
 /** Gaps smaller than these are "the same, basically" and earn no opinion. */
 const COST_MIN_GAP_USD_MONTHLY = 25;
@@ -77,14 +83,20 @@ const countyName = (a: Area | undefined): string =>
 	a ? `${a.name} County` : "it";
 
 /**
- * Assumes 2–3 areas — the screen guards the count. The cost figures are the
- * lens's own computation, so the take and the map cannot disagree.
+ * Assumes 2–AREA_COMPARE_MAX areas — the screen guards the count. The cost
+ * figures are the lens's own computation, so the take and the map cannot
+ * disagree. `weights` orders the case and lets it quote the buyer back; it
+ * never decides who wins an axis.
  */
-export function buildAreaTake(areas: readonly Area[]): CompareTake {
+export function buildAreaTake(
+	areas: readonly Area[],
+	weights?: PriorityWeights,
+): CompareTake {
 	const ms = areas.map(measure);
 
 	const cost = verdict(ms, (m) => m.cost, true, COST_MIN_GAP_USD_MONTHLY);
 	const school = verdict(ms, (m) => m.school, false, SCHOOL_MIN_GAP_PCT);
+	const top = weights ? topStatedPriority(weights) : undefined;
 
 	const points: string[] = [];
 	if (cost) {
@@ -121,11 +133,25 @@ export function buildAreaTake(areas: readonly Area[]): CompareTake {
 	}
 
 	if (cost && school && cost.winner !== school.winner) {
+		// The two axes point apart — which is exactly the moment a declared
+		// priority earns its keep. With one, it breaks the tie and we say whose
+		// tie-break it was; without one, we refuse to break it for them.
+		const pick = top === "schools" ? school : top === "cost" ? cost : undefined;
+		if (pick) {
+			const other = pick === cost ? school : cost;
+			return {
+				lead: `You said ${PRIORITY_PROSE[top === "schools" ? "schools" : "cost"]} matters most — so of these I’d lean ${countyName(areas[pick.winner])}.`,
+				// The buyer's axis argues first; the one they down-weighted still
+				// gets said, because a lean that hides its cost is a sales pitch.
+				points: top === "schools" ? [...points].reverse() : points,
+				caveat: `Be clear what that costs you: ${countyName(areas[other.winner])} is the better of the two on ${top === "schools" ? "what it really costs" : "schools"}. Change what matters on the You tab and I'll read it differently.`,
+			};
+		}
 		return {
 			lead: `It’s the classic trade: ${countyName(areas[cost.winner])} is the cheaper hold, ${countyName(areas[school.winner])} has the stronger schools.`,
 			points,
 			caveat:
-				"What a school point is worth per month is your call, not mine — that’s why nothing below is marked as the overall winner.",
+				"What a school point is worth per month is your call, not mine — that’s why nothing below is marked as the overall winner. Tell me on the You tab and I'll take a side.",
 		};
 	}
 

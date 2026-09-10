@@ -16,7 +16,8 @@ import { estimateNoteForRows } from "@percho/shared/lenses";
  * exactly the rows below.
  */
 import { router, useLocalSearchParams } from "expo-router";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TakeCard } from "../components/compare/TakeCard";
 import { useAreas } from "../hooks/use-areas";
@@ -27,6 +28,7 @@ import {
 	buildAreaCompareTable,
 } from "../lib/areas/compare-areas";
 import { buildAreaTake } from "../lib/areas/take";
+import { splitRows } from "../lib/compare/take";
 import { usePriorityStore } from "../state/priorities";
 import { colors, explore, radii } from "../theme/tokens";
 import { textStyles } from "../theme/typography";
@@ -38,6 +40,7 @@ export default function CompareAreasScreen() {
 	// The buyer's declared priorities reorder the rows so the table opens on
 	// what they said matters. Nothing is added, dropped or reweighted.
 	const weights = usePriorityStore((s) => s.weights);
+	const [showAll, setShowAll] = useState(false);
 
 	const wanted = (keys ?? "")
 		.split(",")
@@ -53,6 +56,10 @@ export default function CompareAreasScreen() {
 	});
 
 	const table = buildAreaCompareTable(areas, weights);
+	// Owner: "reduce the numbers part it is not very useful." Ordered by the
+	// buyer's priorities first, so the rows that survive are the ones they
+	// asked for; the rest are one tap away.
+	const { shown, collapsible } = splitRows(table.rows, showAll);
 	// Names which ROWS are guesses rather than implying the table is one. The
 	// property tax row comes from the GA DOR; the old sentence covered it too.
 	const estimateNote = estimateNoteForRows(table.rows);
@@ -77,7 +84,7 @@ export default function CompareAreasScreen() {
 					contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
 				>
 					{areas.length >= AREA_COMPARE_MIN && (
-						<TakeCard take={buildAreaTake(areas)} />
+						<TakeCard take={buildAreaTake(areas, weights)} />
 					)}
 					<View style={styles.headerRow}>
 						{table.headers.map((h) => (
@@ -90,7 +97,7 @@ export default function CompareAreasScreen() {
 						))}
 					</View>
 
-					{table.rows.map((row) => (
+					{shown.map((row) => (
 						<View key={row.label} style={styles.rowBlock}>
 							<Text style={styles.rowLabel}>{row.label}</Text>
 							{row.note ? <Text style={styles.rowNote}>{row.note}</Text> : null}
@@ -116,6 +123,20 @@ export default function CompareAreasScreen() {
 							</View>
 						</View>
 					))}
+
+					{collapsible && (
+						<Pressable
+							style={styles.more}
+							onPress={() => setShowAll((v) => !v)}
+							accessibilityRole="button"
+						>
+							<Text style={styles.moreTxt}>
+								{showAll
+									? "Show fewer"
+									: `Show all ${table.rows.length} figures`}
+							</Text>
+						</Pressable>
+					)}
 
 					<Text style={styles.foot}>
 						Green marks the better figure in a row. The take at the top is our
@@ -172,6 +193,8 @@ const styles = StyleSheet.create({
 	cellBest: { backgroundColor: explore.posBg, borderColor: explore.posBg },
 	cellValue: { ...textStyles.headline, color: colors.ink },
 	cellBestTxt: { color: explore.posInk },
+	more: { minHeight: 44, justifyContent: "center", marginTop: 16 },
+	moreTxt: { ...textStyles.footnote, fontWeight: "600", color: colors.accent },
 	foot: {
 		...textStyles.caption,
 		color: colors.ink3,

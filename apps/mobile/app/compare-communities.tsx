@@ -38,6 +38,8 @@ import {
 } from "../lib/community/compare-communities";
 import type { CommunityDetailDTO } from "../lib/community/detail-dto";
 import { buildCommunityTake } from "../lib/community/take";
+import { splitRows } from "../lib/compare/take";
+import { usePriorityStore } from "../state/priorities";
 import { colors, radii } from "../theme/tokens";
 import { textStyles } from "../theme/typography";
 
@@ -55,8 +57,12 @@ export default function CompareCommunitiesScreen() {
 		.filter(Boolean)
 		.slice(0, COMMUNITY_COMPARE_MAX);
 	const key = list.join(",");
+	// What the buyer said matters, from the You tab. Orders the take's case and
+	// the table's rows; never changes a figure.
+	const weights = usePriorityStore((s) => s.weights);
 	const [state, setState] = useState<State>({ status: "loading" });
 	const [nonce, setNonce] = useState(0);
+	const [showAll, setShowAll] = useState(false);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `nonce` is the retry trigger; `key` stands in for `list`
 	useEffect(() => {
@@ -92,10 +98,15 @@ export default function CompareCommunitiesScreen() {
 
 	const table =
 		state.status === "ready"
-			? buildCommunityCompareTable(state.communities)
+			? buildCommunityCompareTable(state.communities, weights)
 			: null;
 	const take =
-		state.status === "ready" ? buildCommunityTake(state.communities) : null;
+		state.status === "ready"
+			? buildCommunityTake(state.communities, weights)
+			: null;
+	// Owner: "reduce the numbers part it is not very useful." This table ran to
+	// fourteen rows; the ordering above decides which four survive the cut.
+	const { shown, collapsible } = splitRows(table?.rows ?? [], showAll);
 
 	return (
 		<View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
@@ -161,7 +172,7 @@ export default function CompareCommunitiesScreen() {
 						))}
 					</View>
 
-					{table.rows.map((r) => (
+					{shown.map((r) => (
 						<View key={r.label} style={styles.rowBlock}>
 							<Text style={styles.label}>{r.label}</Text>
 							{r.note && <Text style={styles.note}>{r.note}</Text>}
@@ -180,15 +191,29 @@ export default function CompareCommunitiesScreen() {
 						</View>
 					))}
 
+					{collapsible && (
+						<Pressable
+							style={styles.more}
+							onPress={() => setShowAll((v) => !v)}
+							accessibilityRole="button"
+						>
+							<Text style={styles.moreTxt}>
+								{showAll
+									? "Show fewer"
+									: `Show all ${table.rows.length} figures`}
+							</Text>
+						</Pressable>
+					)}
+
 					{/* The same promise the home table's foot makes, and it has to be
 					    made here too: the table ranks nothing, the take is built from
 					    these rows alone, and the counts are of the places we know
 					    about rather than of every place that exists. */}
 					<Text style={styles.foot}>
-						The same figures each neighbourhood’s page shows. The take above is
-						worked out from them and nothing else — read them and feel free to
-						disagree. Ratings are from residents whose review we have approved,
-						and a count is of the places we know about nearby, not a census.
+						The take above is worked out from these figures and nothing else,
+						and they are ordered by what you said matters on the You tab.
+						Ratings are from residents whose review we have approved, and a
+						count is of the places we know about nearby, not a census.
 					</Text>
 				</ScrollView>
 			)}
@@ -233,6 +258,8 @@ const styles = StyleSheet.create({
 	note: { ...textStyles.caption, color: colors.ink3, marginTop: 1 },
 	cells: { flexDirection: "row", gap: 8, marginTop: 6 },
 	cell: { flex: 1 },
+	more: { minHeight: 44, justifyContent: "center", marginTop: 12 },
+	moreTxt: { ...textStyles.footnote, fontWeight: "600", color: colors.accent },
 	thumb: {
 		width: "100%",
 		aspectRatio: 4 / 3,

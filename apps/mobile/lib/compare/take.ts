@@ -28,6 +28,53 @@ export interface CompareTake {
 	caveat?: string;
 }
 
+/**
+ * How a priority is named INSIDE a sentence (phase273).
+ *
+ * `PRIORITIES[].label` is chrome — title case, sized for a settings row
+ * ("What it really costs"). Dropped mid-sentence it reads as a quotation from
+ * a form. These are the same four things said the way a person says them.
+ */
+export const PRIORITY_PROSE = {
+	schools: "schools",
+	cost: "what it really costs",
+	commute: "getting around",
+	community: "the community itself",
+} as const;
+
+/**
+ * How many table rows a compare screen shows before "Show all figures".
+ *
+ * Owner, phase273: "reduce the numbers part it is not very useful." The rows
+ * are ordered by the buyer's declared priorities first, so the four that
+ * survive are the four they said they cared about — truncation and
+ * personalisation are the same mechanism, not two.
+ */
+export const ESSENTIAL_ROWS = 4;
+
+/** Below this the expander is noise: one hidden row is not worth a control. */
+export const MIN_HIDDEN_TO_EXPAND = 2;
+
+/**
+ * Which rows a compare screen draws, and whether it owes the buyer a toggle.
+ *
+ * The two constants above interact in a way that bit me: truncating at 4 while
+ * only showing the expander for 2+ hidden rows means a 5-row table hides its
+ * fifth row FOREVER, with no control to reveal it. So the decision is made
+ * once, here — a table is either collapsible (and gets a toggle) or it is
+ * shown whole. There is no state in which a figure exists and is unreachable.
+ */
+export function splitRows<T>(
+	rows: readonly T[],
+	showAll: boolean,
+): { shown: T[]; collapsible: boolean } {
+	const collapsible = rows.length - ESSENTIAL_ROWS >= MIN_HIDDEN_TO_EXPAND;
+	return {
+		shown: showAll || !collapsible ? [...rows] : rows.slice(0, ESSENTIAL_ROWS),
+		collapsible,
+	};
+}
+
 /** "a" · "a and b" · "a, b and c" — prose, not a list. */
 export function listJoin(parts: readonly string[]): string {
 	if (parts.length <= 1) return parts[0] ?? "";

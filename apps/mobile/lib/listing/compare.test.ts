@@ -55,3 +55,66 @@ describe("buildCompareTable", () => {
 		expect(t.rows).toEqual([]);
 	});
 });
+
+describe("buildCompareTable — row order follows declared priorities", () => {
+	const HOMES = [
+		base({
+			id: "a",
+			price: 400_000,
+			sqft: 2000,
+			schools: [
+				{
+					level: "elementary",
+					name: "Sixes Elementary",
+					distanceKm: 1,
+					assigned: false,
+					proficiencyPct: 70,
+				},
+			],
+		}),
+		base({
+			id: "b",
+			price: 500_000,
+			sqft: 2100,
+			schools: [
+				{
+					level: "elementary",
+					name: "Bells Ferry",
+					distanceKm: 1,
+					assigned: false,
+					proficiencyPct: 55,
+				},
+			],
+		}),
+	];
+
+	it("leaves the built order alone when no weights are passed", () => {
+		const t = buildCompareTable(HOMES, 0.065);
+		expect(t.rows[0]?.label).toBe("Price");
+	});
+
+	it("floats the schools rows to the top for a schools-first buyer", () => {
+		const t = buildCompareTable(HOMES, 0.065, {
+			schools: 3,
+			cost: 1,
+			commute: 1,
+			community: 1,
+		});
+		expect(t.rows[0]?.label).toBe("Elementary");
+		// Nothing was dropped — a weight orders, it never filters.
+		expect(t.rows.some((r) => r.label === "Price")).toBe(true);
+	});
+
+	it("keeps every figure regardless of weighting", () => {
+		const neutral = buildCompareTable(HOMES, 0.065);
+		const weighted = buildCompareTable(HOMES, 0.065, {
+			schools: 3,
+			cost: 0,
+			commute: 1,
+			community: 1,
+		});
+		expect(weighted.rows.map((r) => r.label).sort()).toEqual(
+			neutral.rows.map((r) => r.label).sort(),
+		);
+	});
+});

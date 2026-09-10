@@ -21,6 +21,79 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-10 13:10 UTC — phase273: the take reads the buyer's priorities; the table shrinks
+
+**Objective**: owner, three notes on phase272: "Allow cross city comparison.
+Comparison should be personalized - you need to structure it based on the
+input and facts. Comparison results - reduce the numbers part it is not very
+useful."
+
+**1. Cross-city was never blocked — it was never SAID.** `togglePick` locks on
+kind only; a home in Woodstock and one in Marietta have always been selectable
+together. But grouping by place made the tab read like a fence, because the
+only visible compare affordance was each shelf's own `Compare N ›`. Fixed as a
+wording problem, which is what it was: the shelf shortcut is now "Compare
+**these** 2 ›" (scoping itself, so it stops implying comparison is a
+within-town act), the empty Select bar reads "different towns are fine", and
+once picks span towns the bar confirms it — "Comparing homes across 2 towns".
+No logic changed. Worth remembering: a layout can withdraw a capability by
+implication.
+
+**2. Personalisation, built on the existing doctrine.** `lib/priorities.ts`
+has said since it was written that a weight ORDERS and does nothing else — it
+never filters, scores or hides. Everything here obeys that, and the tests
+assert it.
+
+New `topStatedPriority(weights)`: the one priority the buyer RAISED above
+neutral, and only when nothing ties it. The bar is deliberately high because
+the sole consumer is prose — a take that opens "You said schools matters most"
+is quoting someone, and quoting a tie would be putting our tie-break in their
+mouth.
+
+- `lib/listing/take.ts` — each axis now declares the priority it serves. When
+  the axes SPLIT, a stated priority breaks the tie and the take says whose
+  tie-break it was: "You said schools matters most — so of these I'd lean 9 Elm
+  Ave", with the caveat naming what that costs ("12 Oak St wins on monthly
+  cost"). With nothing stated it still refuses to choose. A home that wins
+  outright is still the lean regardless of weights.
+- `lib/areas/take.ts` — same treatment for the classic cost-vs-schools trade.
+  The down-weighted axis is still spoken; a lean that hides its cost is a
+  sales pitch.
+- `lib/community/take.ts` — the four resident-rated dimensions map to
+  priorities (quiet/friendly → community, walkable → commute, value → cost),
+  so a commute-first buyer hears about walkable rather than the widest gap.
+  It never lowers the gap threshold: a dimension residents barely split is not
+  reported just because the buyer said they cared, which would be
+  manufacturing a difference to flatter an answer.
+- `lib/listing/compare.ts` and `lib/community/compare-communities.ts` — rows
+  gained `priority` and both tables now take `weights` and run
+  `orderByPriority`, which only `/compare-areas` did before.
+
+**3. "Reduce the numbers" — same mechanism as personalisation, not a second
+one.** Rows are ordered by the buyer's priorities, then cut to
+`ESSENTIAL_ROWS = 4` with "Show all N figures". The four that survive are the
+four they asked for. The community table ran to fourteen rows; it opens on
+four.
+
+**Issue caught in my own new code**: `ESSENTIAL_ROWS = 4` with a toggle gated
+on `MIN_HIDDEN_TO_EXPAND = 2` means a 5-row table (the areas one, exactly)
+hides its fifth row and renders NO control to reveal it. Fixed by making the
+decision once in `splitRows()`: a table is either collapsible and gets a
+toggle, or is shown whole. There is no state in which a figure exists and is
+unreachable, and a test asserts that at the boundary.
+
+**Verification**: `pnpm typecheck` clean; mobile tests **734 pass** (was 707 —
+27 new across `splitRows`, `topStatedPriority`, and the three takes' priority
+behaviour, including the negative cases: nothing stated, two tied at the top,
+a priority with no axis on this screen, and refusing to manufacture a gap);
+`pnpm lint` clean (same 8 pre-existing warnings). Not run on device by me.
+
+**Next steps**: owner taps it. The takes only personalise for a buyer who has
+actually set priorities on the You tab — worth checking that surface is
+findable, because everything here is inert until it is used.
+
+---
+
 ## 2026-09-10 03:20 UTC — phase272: Saved becomes shelves; compare goes to 5
 
 **Objective**: owner, on the phase271 mockup: "B". Option B — shelves grouped
