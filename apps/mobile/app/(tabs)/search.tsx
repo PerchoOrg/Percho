@@ -16,36 +16,40 @@
  *
  * ── Drilling in (phase265) ──────────────────────────────────────────────────
  * The map narrows the way the owner described it: county → city → community →
- * home. Each tap goes one level in, and the sheet under it lists what lives at
- * the level reached:
+ * home. Each tap goes one level in, and the MAP is what answers:
  *
- *   county outline → zoom to it; sheet previews its headline figure and the
- *                    CITIES inside it
- *   city pin       → zoom to it; sheet lists that city's COMMUNITIES and HOMES
- *   community pin  → its explore page.  home pin → its listing page.
+ *   county outline → zoom to it; its cities become the visible pins
+ *   city pin       → zoom to it; its communities become the visible outlines
+ *   community      → its explore page.  home pin → its listing page.
  *
  * The city step asks the SAME search endpoint for the city's name rather than
  * a new one: `searchEntities` already matches communities on `city`, so
  * "Roswell" is literally the query for "what is in Roswell".
  *
- * ── Nothing covers the map (owner, 2026-09-09, twice) ───────────────────────
- * "The map page only shows a preview, not a full screen details that hide map
- * itself" — then, after the drill shipped: "don't show the sheet with all
- * community list after clicking the city, I don't want to hide the map, same
- * rule applied everywhere, too much data and numbers." So:
+ * ── The sheet is for typed search, and nothing else ─────────────────────────
+ * Three rounds of the same note (owner, 2026-09-09 ×2 and 2026-09-10): "the
+ * map page only shows a preview, not a full screen details that hide map
+ * itself" → "don't show the sheet with all community list after clicking the
+ * city, I don't want to hide the map, same rule applied everywhere, too much
+ * data and numbers" → "still see empty sheet for county and city… need a
+ * different entry to see details". Each round moved the panel; the panel was
+ * the problem. So:
  *
- *   · a tap on the MAP never opens the sheet. It re-frames the map and moves
- *     the peek's title. Only a TYPED query opens the list — you asked in
- *     words, you get words back.
- *   · with nothing selected and nothing typed the sheet is not MOUNTED. An
- *     empty strip along the bottom is a worse answer than the map itself.
- *   · the peek carries what the map cannot say: where you are, one way back,
- *     and on a county its ONE figure plus a link to the page.
+ *   · the sheet is MOUNTED only while a query is typed. Nothing a map tap can
+ *     do brings it back — a sheet holding one line still reads as an empty
+ *     panel, which is what the third note was about.
+ *   · a county or a city puts a PILL on the map instead: back, the name, and
+ *     for a county its one figure and the way into `/area/[key]`. It is sized
+ *     to its own text, so the map runs under and around it.
  *   · the county cost breakdown and the lens ranking live on `/area/[key]`.
  *   · there is no legend. The ramp with "PER MONTH ON A $500K HOME" over it
  *     was a permanent block of numerals on a surface that should be
  *     photographs; the chip names the dimension and tapping a county gives
  *     the figure, so the buyer reads a number when they ask for one.
+ *
+ * A CITY has no page behind its pill, and that is not an oversight: there is
+ * no city record in this product, only communities grouped by a `city` string.
+ * Its communities are on the map, which is the answer.
  *
  * The "Your journey" layer chip moved OFF this screen (owner, 2026-09-07):
  * familiarity is the You tab's story (05 §5.3, "Your journey" section there),
@@ -334,9 +338,6 @@ export default function SearchTab() {
 		return units;
 	}, [units, searching, drillCity, openArea, areaData.shapes]);
 
-	/** Inside a city the sheet lists what is IN it, not the city itself. */
-	const listedUnits = drillCity ? [] : visibleUnits;
-
 	const hits = search.result;
 
 	// A fresh result set opens the sheet and fits the map to whatever has a
@@ -380,11 +381,9 @@ export default function SearchTab() {
 		});
 	}, [hits]);
 
-	/** A county says its one figure in the peek — it never needs half the
-	 *  screen, and the map is the thing being previewed. */
-	const previewing = !searching && !drillCity && !!openedArea;
 	/** The county's figure under the ACTIVE lens — the one the map is painted
-	 *  with, so the preview and the colour under it agree. */
+	 *  with, so the pill and the colour under it agree. Absent with no lens on,
+	 *  and then the pill is just a name and a way in. */
 	const previewHit = openArea ? valueByKey.get(openArea) : undefined;
 	const previewValue =
 		previewHit && lens
@@ -392,13 +391,7 @@ export default function SearchTab() {
 			: undefined;
 	/** Either kind of question is out to the search endpoint. */
 	const asking = searching || !!drillCity;
-	/** The sheet is mounted only when it has something to say. */
-	const sheetVisible = searching || !!drillCity || previewing;
-	const sheetH = expanded
-		? Math.min(height * 0.55, 480)
-		: previewing
-			? 148
-			: 110;
+	const sheetH = expanded ? Math.min(height * 0.55, 480) : 110;
 	const hitCount = hits
 		? hits.communities.length + hits.listings.length + units.length
 		: units.length;
@@ -585,13 +578,68 @@ export default function SearchTab() {
 						</ScrollView>
 					</View>
 				)}
+
+				{/* Where you are, floating ON the map instead of under it. A county
+				    or a city used to raise the sheet, and a sheet holding one line
+				    still reads as an empty panel (owner, 2026-09-10: "still see empty
+				    sheet for county and city… need a different entry to see
+				    details"). This is that different entry: a pill wide enough for
+				    its own text, so the map runs underneath and around it.
+
+				    A county's body opens `/area/[key]`. A CITY has no page to open —
+				    there is no city-level record in this product, only the
+				    communities grouped under its name — so its pill is the name and
+				    the way back, and the communities themselves are on the map. */}
+				{!searching && (drillCity || openedArea) && (
+					<View style={[styles.contextBar, { bottom: insets.bottom + 16 }]}>
+						<View style={styles.contextPill}>
+							<Pressable onPress={goBack} hitSlop={12}>
+								<Text style={styles.contextBack}>‹</Text>
+							</Pressable>
+							{drillCity ? (
+								<Text style={styles.contextName} numberOfLines={1}>
+									{drillCity.name}
+								</Text>
+							) : openedArea ? (
+								<Pressable
+									style={styles.contextBody}
+									// With no lens on, the page picks its own default rather
+									// than being handed the string "null".
+									onPress={() =>
+										router.push(
+											lensId
+												? `/area/${openedArea.key}?lens=${lensId}`
+												: `/area/${openedArea.key}`,
+										)
+									}
+								>
+									<View style={styles.contextText}>
+										<Text style={styles.contextName} numberOfLines={1}>
+											{openedArea.name} County
+										</Text>
+										{/* Words, not numerals, and the only thing on 29
+										    identical outlines that says where the buyer already
+										    stands. */}
+										{savedNoteFor(openedArea.key) ? (
+											<Text style={styles.contextSaved} numberOfLines={1}>
+												{savedNoteFor(openedArea.key)}
+											</Text>
+										) : null}
+									</View>
+									{previewValue ? (
+										<Text style={styles.contextValue}>{previewValue}</Text>
+									) : null}
+									<Text style={styles.contextChevron}>›</Text>
+								</Pressable>
+							) : null}
+						</View>
+					</View>
+				)}
 			</View>
 
-			{/* The sheet exists only when it has something to say. At rest there
-			    is no strip along the bottom at all — it held one dead word ("All
-			    areas") over a map that was the actual answer (owner, 2026-09-10:
-			    "最下面一直有个空sheet 干掉它"). */}
-			{sheetVisible && (
+			{/* The sheet is for TYPED search only — a list you asked for in words.
+			    Every map interaction answers on the map itself. */}
+			{searching && (
 				<View
 					style={[
 						styles.sheet,
@@ -604,54 +652,10 @@ export default function SearchTab() {
 					>
 						<View style={styles.grabber} />
 					</Pressable>
-					{/* The peek, and everything the map needs to say without covering
-				    itself: where you are, one way back, and — on a county — its one
-				    figure with the door to the rest. */}
-					<View style={styles.headRow}>
-						{!searching && (drillCity || openedArea) ? (
-							<Pressable onPress={goBack} hitSlop={14}>
-								<Text style={styles.backChevron}>‹</Text>
-							</Pressable>
-						) : null}
-						<Text style={styles.sheetTitle} numberOfLines={1}>
-							{searching
-								? `"${query.trim()}"`
-								: drillCity
-									? drillCity.name
-									: openedArea
-										? `${openedArea.name} County`
-										: "All areas"}
-							{searching && !(poolLoading || search.loading)
-								? ` · ${hitCount}`
-								: ""}
-						</Text>
-						{previewing && previewValue ? (
-							<Text style={styles.headValue}>{previewValue}</Text>
-						) : null}
-					</View>
-					{previewing && openedArea ? (
-						<>
-							{savedNoteFor(openedArea.key) ? (
-								<Text style={styles.previewSaved} numberOfLines={1}>
-									{savedNoteFor(openedArea.key)}
-								</Text>
-							) : null}
-							<Pressable
-								style={styles.previewCta}
-								// With no lens on, the page picks its own default rather than
-								// being handed the string "null".
-								onPress={() =>
-									router.push(
-										lensId
-											? `/area/${openedArea.key}?lens=${lensId}`
-											: `/area/${openedArea.key}`,
-									)
-								}
-							>
-								<Text style={styles.previewCtaLabel}>Full breakdown ›</Text>
-							</Pressable>
-						</>
-					) : null}
+					<Text style={styles.sheetTitle} numberOfLines={1}>
+						{`"${query.trim()}"`}
+						{poolLoading || search.loading ? "" : ` · ${hitCount}`}
+					</Text>
 					{expanded && (
 						<ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
 							{asking && search.error && (
@@ -740,12 +744,8 @@ export default function SearchTab() {
 								</Pressable>
 							))}
 
-							{listedUnits.length > 0 && (
-								<Text style={styles.groupTitle}>
-									{previewing ? "Cities" : "Areas"}
-								</Text>
-							)}
-							{listedUnits.map((u) => (
+							{units.length > 0 && <Text style={styles.groupTitle}>Areas</Text>}
+							{units.map((u) => (
 								<Pressable
 									key={u.id}
 									style={[
@@ -873,16 +873,12 @@ const styles = StyleSheet.create({
 		borderRadius: 3,
 		backgroundColor: colors.border,
 	},
-	headRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 8,
+	sheetTitle: {
+		...textStyles.caption,
+		color: colors.ink2,
 		paddingHorizontal: 20,
 		marginBottom: 6,
 	},
-	backChevron: { ...textStyles.title2, color: colors.accent, marginTop: -4 },
-	sheetTitle: { ...textStyles.caption, color: colors.ink2, flex: 1 },
-	headValue: { ...textStyles.title2, color: colors.ink },
 	list: { flex: 1, paddingHorizontal: 12 },
 	groupTitle: {
 		...textStyles.caption,
@@ -972,16 +968,35 @@ const styles = StyleSheet.create({
 	lensDot: { width: 8, height: 8, borderRadius: 2 },
 	lensLabel: { ...textStyles.footnote, color: colors.ink, fontWeight: "600" },
 	lensLabelOn: { color: "#FFFFFF" },
-	// ── County peek ───────────────────────────────────────────────────────────
-	previewSaved: {
-		...textStyles.caption,
-		color: colors.accent,
-		paddingHorizontal: 20,
+	// ── Context pill (floats ON the map) ──────────────────────────────────────
+	contextBar: { position: "absolute", left: 0, right: 0, alignItems: "center" },
+	contextPill: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+		maxWidth: "92%",
+		backgroundColor: colors.glass,
+		borderWidth: 1,
+		borderColor: colors.border,
+		borderRadius: radii.pill,
+		paddingLeft: 12,
+		paddingRight: 14,
+		paddingVertical: 9,
+		shadowColor: "#000",
+		shadowOpacity: 0.1,
+		shadowRadius: 10,
+		shadowOffset: { width: 0, height: 2 },
 	},
-	previewCta: { paddingHorizontal: 20, paddingTop: 8 },
-	previewCtaLabel: {
-		...textStyles.footnote,
-		color: colors.accent,
-		fontWeight: "600",
+	contextBody: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+		flexShrink: 1,
 	},
+	contextBack: { ...textStyles.title2, color: colors.accent, marginTop: -3 },
+	contextText: { flexShrink: 1 },
+	contextName: { ...textStyles.headline, color: colors.ink },
+	contextSaved: { ...textStyles.caption, color: colors.accent, marginTop: 1 },
+	contextValue: { ...textStyles.headline, color: colors.ink2 },
+	contextChevron: { ...textStyles.headline, color: colors.accent },
 });
