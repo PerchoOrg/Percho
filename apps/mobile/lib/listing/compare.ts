@@ -16,7 +16,17 @@ import {
 } from "./monthly";
 
 export const COMPARE_MIN = 2;
-export const COMPARE_MAX = 3;
+/**
+ * Raised 3 → 5 in phase272 (owner: "up to 5").
+ *
+ * The ceiling is a LAYOUT fact, not a preference. The screen draws one column
+ * per home across ~358 pt of usable width; at 5 that is ~65 pt each, which is
+ * the narrowest a cell can be and still hold "$3,912/mo" (~58 pt at 13 px).
+ * Six would not fit, and the old label-on-the-left table could not fit five —
+ * it left only ~45 pt. If a sixth is ever wanted the layout has to change
+ * first, not this number.
+ */
+export const COMPARE_MAX = 5;
 
 export interface CompareRow {
 	label: string;

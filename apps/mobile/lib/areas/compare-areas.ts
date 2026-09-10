@@ -41,7 +41,8 @@ import {
 } from "../priorities";
 
 export const AREA_COMPARE_MIN = 2;
-export const AREA_COMPARE_MAX = 3;
+/** 3 → 5 in phase272, for the reason `lib/listing/compare.ts` states. */
+export const AREA_COMPARE_MAX = 5;
 
 export interface AreaCompareCell {
 	/** Formatted value, or undefined when we have no figure. */

@@ -6,6 +6,31 @@
 
 ---
 
+## v1.6 — Saved is organised by place, the way you actually think about it
+
+Saved used to be one long list: every home, neighbourhood and area as an
+identical row, newest first. It hid the one thing that matters most — that
+four of your ten saves are in the same town.
+
+Now Saved is grouped by place. Each town gets its own section with a
+swipeable row of what you saved there, and if you've saved the town itself,
+its name becomes the heading and carries what a home there really costs each
+month. You can see at a glance that you're really choosing between Woodstock
+and Marietta, which is the decision you're actually making. Each town also
+gets its own "Compare" shortcut for the homes in it.
+
+Two new controls sit in the top right. **Filter** narrows the tab to just
+homes, just neighbourhoods, or just areas — and it stays out of the way until
+you tap it. **Select** lets you tick anything (up to five now, not three) and
+either compare it or remove it. Removing is no longer a link on every single
+row; it lives with Select, alongside compare.
+
+Comparing five at once meant the side-by-side had to change shape: each
+figure's label now sits above its row instead of in a narrow left-hand
+column, so five columns still fit and nothing gets cut off.
+
+---
+
 ## v1.5 — Comparing now gets you a suggestion, not a spreadsheet
 
 Put two or three saved homes, neighbourhoods, or areas next to each other and

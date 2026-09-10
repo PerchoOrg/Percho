@@ -130,8 +130,7 @@ export default function CompareScreen() {
 				>
 					{take && <TakeCard take={take} />}
 					<Text style={styles.factsHead}>The numbers behind it</Text>
-					<View style={styles.tableRow}>
-						<View style={styles.labelCol} />
+					<View style={styles.headerRow}>
 						{table.headers.map((h) => (
 							<Pressable
 								key={h.id}
@@ -155,21 +154,21 @@ export default function CompareScreen() {
 					</View>
 
 					{table.rows.map((r) => (
-						<View key={r.label} style={[styles.tableRow, styles.dataRow]}>
-							<View style={styles.labelCol}>
-								<Text style={styles.label}>{r.label}</Text>
-								{r.note && <Text style={styles.note}>{r.note}</Text>}
+						<View key={r.label} style={styles.rowBlock}>
+							<Text style={styles.label}>{r.label}</Text>
+							{r.note && <Text style={styles.note}>{r.note}</Text>}
+							<View style={styles.cells}>
+								{r.cells.map((c, i) => (
+									<View
+										key={table.headers[i]?.id ?? String(i)}
+										style={styles.cell}
+									>
+										<Text style={[styles.value, !c && styles.valueBlank]}>
+											{c ?? "—"}
+										</Text>
+									</View>
+								))}
 							</View>
-							{r.cells.map((c, i) => (
-								<View
-									key={table.headers[i]?.id ?? String(i)}
-									style={styles.cell}
-								>
-									<Text style={[styles.value, !c && styles.valueBlank]}>
-										{c ?? "—"}
-									</Text>
-								</View>
-							))}
 						</View>
 					))}
 
@@ -210,15 +209,29 @@ const styles = StyleSheet.create({
 	},
 	btnTxt: { ...textStyles.headline, color: colors.surface },
 	factsHead: { ...textStyles.caption, color: colors.ink3, marginBottom: 10 },
-	tableRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-	dataRow: {
-		paddingVertical: 10,
+	headerRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+	/**
+	 * The label sits ABOVE its cells rather than in a 92 pt left column — the
+	 * layout `/compare-areas` has always used, adopted here in phase272 when
+	 * COMPARE_MAX went to 5. A left column left only ~45 pt per cell at five
+	 * homes, which clips "$3,912/mo"; giving the row its full width leaves
+	 * ~65 pt. It also frees the note to run the whole width instead of
+	 * truncating the rate/down-payment disclosure into a 92 pt gutter.
+	 */
+	rowBlock: {
+		marginTop: 14,
+		paddingTop: 12,
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: colors.border,
 	},
-	labelCol: { width: 92 },
-	label: { ...textStyles.footnote, color: colors.ink2 },
-	note: { ...textStyles.caption, fontSize: 9.5, color: colors.ink3 },
+	label: {
+		...textStyles.caption,
+		color: colors.ink3,
+		textTransform: "uppercase",
+		letterSpacing: 0.6,
+	},
+	note: { ...textStyles.caption, color: colors.ink3, marginTop: 1 },
+	cells: { flexDirection: "row", gap: 8, marginTop: 6 },
 	cell: { flex: 1 },
 	thumb: {
 		width: "100%",
@@ -227,9 +240,13 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.surface2,
 		marginBottom: 6,
 	},
-	headAddr: { ...textStyles.footnote, color: colors.ink },
-	headCity: { ...textStyles.caption, color: colors.ink2 },
-	value: { ...textStyles.footnote, color: colors.ink },
+	headAddr: { ...textStyles.footnote, color: colors.ink, textAlign: "center" },
+	headCity: {
+		...textStyles.caption,
+		color: colors.ink2,
+		textAlign: "center",
+	},
+	value: { ...textStyles.footnote, color: colors.ink, textAlign: "center" },
 	valueBlank: { color: colors.ink3 },
 	foot: {
 		...textStyles.caption,

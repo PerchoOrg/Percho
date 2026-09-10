@@ -135,8 +135,7 @@ export default function CompareCommunitiesScreen() {
 				>
 					{take && <TakeCard take={take} />}
 					<Text style={styles.factsHead}>The numbers behind it</Text>
-					<View style={styles.tableRow}>
-						<View style={styles.labelCol} />
+					<View style={styles.headerRow}>
 						{table.headers.map((h) => (
 							<Pressable
 								key={h.id}
@@ -163,21 +162,21 @@ export default function CompareCommunitiesScreen() {
 					</View>
 
 					{table.rows.map((r) => (
-						<View key={r.label} style={[styles.tableRow, styles.dataRow]}>
-							<View style={styles.labelCol}>
-								<Text style={styles.label}>{r.label}</Text>
-								{r.note && <Text style={styles.note}>{r.note}</Text>}
+						<View key={r.label} style={styles.rowBlock}>
+							<Text style={styles.label}>{r.label}</Text>
+							{r.note && <Text style={styles.note}>{r.note}</Text>}
+							<View style={styles.cells}>
+								{r.cells.map((c, i) => (
+									<View
+										key={table.headers[i]?.id ?? String(i)}
+										style={styles.cell}
+									>
+										<Text style={[styles.value, !c && styles.valueBlank]}>
+											{c ?? "—"}
+										</Text>
+									</View>
+								))}
 							</View>
-							{r.cells.map((c, i) => (
-								<View
-									key={table.headers[i]?.id ?? String(i)}
-									style={styles.cell}
-								>
-									<Text style={[styles.value, !c && styles.valueBlank]}>
-										{c ?? "—"}
-									</Text>
-								</View>
-							))}
 						</View>
 					))}
 
@@ -217,15 +216,22 @@ const styles = StyleSheet.create({
 	},
 	btnTxt: { ...textStyles.headline, color: colors.surface },
 	factsHead: { ...textStyles.caption, color: colors.ink3, marginBottom: 10 },
-	tableRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-	dataRow: {
-		paddingVertical: 10,
+	headerRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+	/** Label above its cells — see the same style in `compare.tsx` for why. */
+	rowBlock: {
+		marginTop: 14,
+		paddingTop: 12,
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: colors.border,
 	},
-	labelCol: { width: 92 },
-	label: { ...textStyles.footnote, color: colors.ink2 },
-	note: { ...textStyles.caption, fontSize: 9.5, color: colors.ink3 },
+	label: {
+		...textStyles.caption,
+		color: colors.ink3,
+		textTransform: "uppercase",
+		letterSpacing: 0.6,
+	},
+	note: { ...textStyles.caption, color: colors.ink3, marginTop: 1 },
+	cells: { flexDirection: "row", gap: 8, marginTop: 6 },
 	cell: { flex: 1 },
 	thumb: {
 		width: "100%",
@@ -234,9 +240,13 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.surface2,
 		marginBottom: 6,
 	},
-	headName: { ...textStyles.footnote, color: colors.ink },
-	headPlace: { ...textStyles.caption, color: colors.ink2 },
-	value: { ...textStyles.footnote, color: colors.ink },
+	headName: { ...textStyles.footnote, color: colors.ink, textAlign: "center" },
+	headPlace: {
+		...textStyles.caption,
+		color: colors.ink2,
+		textAlign: "center",
+	},
+	value: { ...textStyles.footnote, color: colors.ink, textAlign: "center" },
 	valueBlank: { color: colors.ink3 },
 	foot: {
 		...textStyles.caption,
