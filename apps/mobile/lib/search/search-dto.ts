@@ -29,6 +29,9 @@ export interface SearchCommunity {
 	heroUrl?: string;
 	lat?: number;
 	lng?: number;
+	/** Outer rings, `[lng, lat]` — the same shape `AreaShape.rings` uses.
+	 *  Absent for a community we have no polygon for; the map draws its pin. */
+	boundary?: [number, number][][];
 }
 
 export interface SearchResult {
@@ -66,6 +69,27 @@ function parseListing(v: unknown): SearchListing | null {
 	};
 }
 
+/** `[[lng, lat], …][]`, keeping only rings that can actually be drawn. */
+function parseBoundary(v: unknown): [number, number][][] | undefined {
+	if (!Array.isArray(v)) return undefined;
+	const rings: [number, number][][] = [];
+	for (const raw of v) {
+		if (!Array.isArray(raw)) continue;
+		const ring: [number, number][] = [];
+		for (const pt of raw) {
+			if (!Array.isArray(pt)) continue;
+			const lng = num(pt[0]);
+			const lat = num(pt[1]);
+			if (lng === undefined || lat === undefined) continue;
+			ring.push([lng, lat]);
+		}
+		// Three points and a close. Fewer is a line, which renders as a scar
+		// across the map rather than as a shape.
+		if (ring.length >= 4) rings.push(ring);
+	}
+	return rings.length > 0 ? rings : undefined;
+}
+
 function parseCommunity(v: unknown): SearchCommunity | null {
 	if (!v || typeof v !== "object") return null;
 	const o = v as Record<string, unknown>;
@@ -83,6 +107,7 @@ function parseCommunity(v: unknown): SearchCommunity | null {
 		heroUrl: str(o.heroUrl),
 		lat: num(o.lat),
 		lng: num(o.lng),
+		boundary: parseBoundary(o.boundary),
 	};
 }
 

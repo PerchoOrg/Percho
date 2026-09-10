@@ -105,11 +105,9 @@ import {
 	savedCityNote,
 } from "../../lib/areas/locate";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
-import { lensForPriorities } from "../../lib/priorities";
 import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
-import { usePriorityStore } from "../../state/priorities";
 import { useSavedStore } from "../../state/saved";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
@@ -184,15 +182,13 @@ export default function SearchTab() {
 	// A failure is deliberately not surfaced: the tab's own job is searching,
 	// and it still works. The chips simply never appear.
 	const { areas: areaData } = useAreas();
-	// Opens on whatever the buyer said matters in the You tab, not on the same
-	// default for everyone. Only the INITIAL lens — tapping a chip wins.
-	const priorityWeights = usePriorityStore((s) => s.weights);
-	const [lensId, setLensId] = useState<LensId>(() =>
-		lensForPriorities(priorityWeights),
-	);
+	// NO lens until the buyer picks one (owner, 2026-09-09). The map opens as a
+	// map — photographs and county lines — and colour arrives only when someone
+	// asks a question with a chip. Tapping the live chip puts it away again.
+	const [lensId, setLensId] = useState<LensId | null>(null);
 	const [openArea, setOpenArea] = useState<string | null>(null);
 
-	const lens = lensById(lensId) ?? LENSES[0];
+	const lens = lensId ? lensById(lensId) : undefined;
 	const metricsByKey = useMemo(
 		() => areasByKey(areaData.areas),
 		[areaData.areas],
@@ -228,9 +224,10 @@ export default function SearchTab() {
 		() => new Map(ranked.map((v) => [v.area.key, v])),
 		[ranked],
 	);
-	/** True once the lens has something to draw. Until then the chips stay
-	 *  hidden rather than offering a control that paints nothing. */
-	const lensReady = ranked.length > 0;
+	/** The chips appear once the METRICS have landed, not once a lens is on —
+	 *  with no lens by default, keying this to `ranked` would hide the only
+	 *  control that can turn one on. */
+	const lensReady = areaData.areas.length > 0;
 
 	const openedArea: Area | undefined = openArea
 		? metricsByKey.get(openArea)
@@ -414,35 +411,42 @@ export default function SearchTab() {
 					showsCompass={false}
 					initialRegion={METRO_REGION}
 				>
-					{/* Lens fills sit UNDER every pin — they are the ground the search
-					    results stand on, not a layer over them. */}
-					{lensReady &&
-						lens &&
-						areaData.shapes.map((shape) => {
-							const hit = valueByKey.get(shape.key);
-							if (!hit) return null;
-							const fill = colorFor(lens, hit.value, breaks);
-							const open = openArea === shape.key;
-							return shape.rings.map((ring, i) => (
-								<Polygon
-									// A county's rings are fixed in order and count for the life
-									// of the bundled shape file, so the index is a stable key.
-									key={`${shape.key}-${i}`}
-									coordinates={ring.map(([lng, lat]) => ({
-										latitude: lat,
-										longitude: lng,
-									}))}
-									fillColor={withAlpha(
-										fill,
-										asking ? FILL_ALPHA_SEARCHING : FILL_ALPHA,
-									)}
-									strokeColor={open ? colors.ink : colors.surface}
-									strokeWidth={open ? 2.5 : 1}
-									tappable
-									onPress={() => selectArea(shape.key)}
-								/>
-							));
-						})}
+					{/* County OUTLINES, always — the areas are a boundary, not a pin,
+					    and they are the map's structure whether or not a lens is on.
+					    A lens fills them in; without one they are just lines. */}
+					{areaData.shapes.map((shape) => {
+						const hit = lens ? valueByKey.get(shape.key) : undefined;
+						const open = openArea === shape.key;
+						return shape.rings.map((ring, i) => (
+							<Polygon
+								// A county's rings are fixed in order and count for the life
+								// of the bundled shape file, so the index is a stable key.
+								key={`${shape.key}-${i}`}
+								coordinates={ring.map(([lng, lat]) => ({
+									latitude: lat,
+									longitude: lng,
+								}))}
+								fillColor={
+									lens && hit
+										? withAlpha(
+												colorFor(lens, hit.value, breaks),
+												asking ? FILL_ALPHA_SEARCHING : FILL_ALPHA,
+											)
+										: withAlpha(colors.ink2, 0)
+								}
+								strokeColor={
+									open
+										? colors.ink
+										: lens && hit
+											? colors.surface
+											: withAlpha(colors.ink2, 0.45)
+								}
+								strokeWidth={open ? 2.5 : 1}
+								tappable
+								onPress={() => selectArea(shape.key)}
+							/>
+						));
+					})}
 					{visibleUnits.map((u) => (
 						<PhotoMarker
 							key={u.id}
@@ -457,17 +461,38 @@ export default function SearchTab() {
 							onPress={() => select(u)}
 						/>
 					))}
+					{/* A community draws its own outline when we have one — that is
+					    what it IS, and it tells a subdivision's shape and size in a
+					    way a 40px circle never could. The pin is the fallback for the
+					    rows with no polygon, not the default. */}
 					{hits?.communities.map((c) =>
-						c.lat !== undefined && c.lng !== undefined ? (
-							<PhotoMarker
-								key={`c-${c.id}`}
-								coordinate={{ latitude: c.lat, longitude: c.lng }}
-								photoUrl={c.heroUrl}
-								ring={colors.pos}
-								name={c.name}
-								onPress={() => router.push(`/community/${c.slug}`)}
-							/>
-						) : null,
+						c.boundary
+							? c.boundary.map((ring, i) => (
+									<Polygon
+										key={`cb-${c.id}-${i}`}
+										coordinates={ring.map(([lng, lat]) => ({
+											latitude: lat,
+											longitude: lng,
+										}))}
+										fillColor={withAlpha(colors.pos, 0.2)}
+										strokeColor={colors.pos}
+										strokeWidth={2}
+										tappable
+										onPress={() => router.push(`/community/${c.slug}`)}
+									/>
+								))
+							: c.lat !== undefined && c.lng !== undefined
+								? [
+										<PhotoMarker
+											key={`c-${c.id}`}
+											coordinate={{ latitude: c.lat, longitude: c.lng }}
+											photoUrl={c.heroUrl}
+											ring={colors.pos}
+											name={c.name}
+											onPress={() => router.push(`/community/${c.slug}`)}
+										/>,
+									]
+								: null,
 					)}
 					{hits?.listings.map((l) =>
 						l.lat !== undefined && l.lng !== undefined ? (
@@ -489,7 +514,10 @@ export default function SearchTab() {
 					<TextInput
 						value={query}
 						onChangeText={setQuery}
-						placeholder="Address, community, city or zip…"
+						// Names the levels the map itself walks, coarse to fine, so the
+						// box and the map read as one thing (owner, 2026-09-09). Zip
+						// still matches; the hint stays short rather than complete.
+						placeholder="Area, city, community or address…"
 						placeholderTextColor={colors.ink3}
 						style={styles.searchInput}
 						autoCorrect={false}
@@ -509,7 +537,7 @@ export default function SearchTab() {
 
 				{/* Lens chips. Hidden until the metrics arrive — a chip that paints
 				    nothing is worse than no chip. */}
-				{lensReady && lens && (
+				{lensReady && (
 					<View style={[styles.lensBar, { top: insets.top + 58 }]}>
 						<ScrollView
 							horizontal
@@ -524,7 +552,8 @@ export default function SearchTab() {
 										key={l.id}
 										// A chip RECOLOURS the map. It opens no list: the ranking
 										// is a page now, reached from a county (owner, 2026-09-09).
-										onPress={() => setLensId(l.id)}
+										// Tapping the live one turns the colour back off.
+										onPress={() => setLensId(on ? null : l.id)}
 										style={[styles.lensChip, on && styles.lensChipOn]}
 									>
 										<View
@@ -585,8 +614,14 @@ export default function SearchTab() {
 						) : null}
 						<Pressable
 							style={styles.previewCta}
+							// With no lens on, the page picks its own default rather than
+							// being handed the string "null".
 							onPress={() =>
-								router.push(`/area/${openedArea.key}?lens=${lensId}`)
+								router.push(
+									lensId
+										? `/area/${openedArea.key}?lens=${lensId}`
+										: `/area/${openedArea.key}`,
+								)
 							}
 						>
 							<Text style={styles.previewCtaLabel}>Full breakdown ›</Text>

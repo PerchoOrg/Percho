@@ -21,6 +21,80 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 16:40 UTC — phase267: real outlines, no lens until asked
+
+**Objective**: owner — "It doesn't make sense to have everything in circle,
+each with boundary can we use that for area city and communities? Also by
+default there should be no lens. The hint of the search bar needs to be
+updated as well."
+
+**Answering the question first**: of the three levels, two have a real
+boundary and one does not.
+
+| level | boundary | what shipped |
+|---|---|---|
+| area (county) | yes — `data/metro-county-shapes.json`, TIGER, ~250 m | outline, always drawn |
+| community | yes — `communities.boundary`, Nextdoor seeds + county GIS | outline, simplified to ~30 m |
+| **city** | **none anywhere in the repo or the DB** | still a photo circle |
+
+There is no city polygon to draw. `city_geo_units` is an aggregation of
+`communities` rows — a city exists in this product only as "the communities
+whose `city` column says so", and its own header says boundary must never be
+added to that view. The honest options for a city outline are (a) import TIGER
+Places for GA the way `build-metro-county-shapes.ts` imported counties, or
+(b) draw a hull around the city's communities, which would be a shape we
+invented. (a) is a real task and worth doing; (b) is not. Left as a circle
+until the owner picks.
+
+**Actions**:
+- `apps/web/lib/geo/simplify-ring.ts` (+ test, 12 cases): Douglas-Peucker
+  lifted from `build-metro-county-shapes.ts`, plus GeoJSON → outer rings.
+  Holes are dropped. Header states loudly that the output must never reach a
+  point-in-polygon test.
+- `apps/web/lib/listings/search.ts`: communities now carry `boundary`.
+  Selecting that column is the documented timeout trap for the FEED pool
+  (8k dense multipolygons); it is safe here only because this query is capped
+  at 24 rows and each ring is thinned to ~30 m before it goes on the wire.
+  That reasoning is now in the file header so the next reader does not "fix"
+  one of the two rules by breaking the other.
+- `apps/mobile/lib/search/search-dto.ts`: parses `boundary`, dropping any ring
+  with fewer than four points — three or fewer renders as a scar across the
+  map, not a shape.
+- `apps/mobile/app/(tabs)/search.tsx`: county outlines draw ALWAYS (a lens
+  fills them; without one they are lines). A community with a boundary draws
+  it — green fill at 0.2, tappable to its page — and only a community without
+  one falls back to the pin. Lens starts `null`; tapping the live chip turns
+  colour back off. Placeholder is now "Area, city, community or address…".
+
+**Decisions**:
+- `lensId` became `LensId | null` rather than keeping a default and adding an
+  "off" chip. An off state that is also a chip is two ways to say the same
+  thing, and the chip row is already 5 wide on a 390pt phone.
+- The chip bar's gate moved from `ranked.length > 0` to
+  `areaData.areas.length > 0`. Keyed to the old condition it would have hidden
+  itself the moment there was no lens — the control that turns one on.
+- `lensForPriorities` (`lib/priorities.ts`) now has NO production caller; the
+  You tab's priorities no longer choose the opening lens, because there is no
+  opening lens. Left in place with its tests per §0.3 — flagging, not deleting.
+- Community fill is `pos` at 0.2 over whatever the lens painted. Distinct from
+  a county (white or ink stroke, lens fill) without inventing a third colour.
+
+**Verification**: `pnpm typecheck` clean both packages; `pnpm lint` exit 0
+(same 8 pre-existing mobile warnings); mobile 684 tests pass; web 1,186 pass
+with ONE pre-existing failure that is not from this work — see below.
+
+**Pre-existing red test on main**: `lib/docs/devlog-order.test.ts` fails on a
+clean `origin/main` (9335db62). Another agent's phase254 entry (13:15) sits
+below phase259 (10:08) in DEVLOG.md. Reproduced before touching anything and
+left alone — reordering another agent's entry mid-flight is how two sessions
+collide. Whoever owns phase254 should move it up.
+
+**Next steps**: owner decides on TIGER Places for city outlines. If yes it is
+a script + a bundled JSON + one more `shapes` array on `/api/mobile/areas`,
+same shape as the counties.
+
+---
+
 ## 2026-09-09 15:20 UTC — phase266: nothing covers the map
 
 **Objective**: owner, on phase265 — "remove that per month on a xxx home bar,

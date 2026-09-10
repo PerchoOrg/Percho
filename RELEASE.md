@@ -35,6 +35,19 @@ community reviews instead.
 
 ### 2026-09-09
 
+**Neighbourhoods are drawn as neighbourhoods.** A community used to be a
+circle in the same spot as everything else. Where we have the real outline —
+and we do for most of them — the map now draws that shape instead, so you can
+see how big a subdivision is and where it actually reaches before you open it.
+County lines are always visible now too, colour or no colour.
+
+**The map opens with no colour layer.** Search used to start with a lens
+already applied, tinting every county before you'd asked anything. It now
+opens plain; pick a lens when you want one, and tap it again to put it away.
+
+**The search box says what it takes.** The hint now reads "Area, city,
+community or address" — the same four steps the map itself walks.
+
 **The map stays the map.** Tapping something on Search no longer slides a panel
 up over it. Tap a county or a city and the map moves, the pins change, and the
 strip at the bottom tells you where you are — pull it up yourself when you want
