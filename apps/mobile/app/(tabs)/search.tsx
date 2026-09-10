@@ -28,12 +28,22 @@
  * a new one: `searchEntities` already matches communities on `city`, so
  * "Roswell" is literally the query for "what is in Roswell".
  *
- * ── The sheet is a preview, never the page ──────────────────────────────────
- * The county cost breakdown and the lens ranking both used to render in this
- * sheet, where they covered the map they were describing (owner, 2026-09-09:
- * "the map page only shows a preview, not a full screen details that hide map
- * itself"). Both live on `/area/[key]` now; what stays here is one line and a
- * door to it.
+ * ── Nothing covers the map (owner, 2026-09-09, twice) ───────────────────────
+ * "The map page only shows a preview, not a full screen details that hide map
+ * itself" — then, after the drill shipped: "don't show the sheet with all
+ * community list after clicking the city, I don't want to hide the map, same
+ * rule applied everywhere, too much data and numbers." So:
+ *
+ *   · a tap on the MAP never opens the sheet. It re-frames the map and moves
+ *     the peek's title. Only a TYPED query opens the list — you asked in
+ *     words, you get words back.
+ *   · the peek carries what the map cannot say: where you are, one way back,
+ *     and on a county its ONE figure plus a link to the page.
+ *   · the county cost breakdown and the lens ranking live on `/area/[key]`.
+ *   · there is no legend. The ramp with "PER MONTH ON A $500K HOME" over it
+ *     was a permanent block of numerals on a surface that should be
+ *     photographs; the chip names the dimension and tapping a county gives
+ *     the figure, so the buyer reads a number when they ask for one.
  *
  * The "Your journey" layer chip moved OFF this screen (owner, 2026-09-07):
  * familiarity is the You tab's story (05 §5.3, "Your journey" section there),
@@ -66,7 +76,6 @@ import {
 	type LensId,
 	classBreaks,
 	colorFor,
-	legendRange,
 	lensById,
 	rankedBy,
 } from "@percho/shared/lenses";
@@ -214,10 +223,6 @@ export default function SearchTab() {
 		() => (lens ? rankedBy(lens, areaData.areas) : []),
 		[lens, areaData.areas],
 	);
-	const legend = useMemo(
-		() => (lens ? legendRange(lens, areaData.areas) : undefined),
-		[lens, areaData.areas],
-	);
 	/** Value per county key, so a polygon's fill is one map lookup. */
 	const valueByKey = useMemo(
 		() => new Map(ranked.map((v) => [v.area.key, v])),
@@ -236,7 +241,9 @@ export default function SearchTab() {
 		setOpenArea(key);
 		// A county tap re-frames the level below it, never keeps a stale city.
 		setSelectedId(null);
-		setExpanded(true);
+		// Collapse, never open: a tap on the map is answered BY the map, and a
+		// sheet over it is the thing the owner keeps asking us to stop doing.
+		setExpanded(false);
 		const shape = areaData.shapes.find((s) => s.key === key);
 		if (!shape) return;
 		mapRef.current?.animateToRegion(
@@ -253,7 +260,10 @@ export default function SearchTab() {
 	/** Select a unit AND move the map to it — pin tap, row tap, `focus` param. */
 	const select = (u: GeoUnit) => {
 		setSelectedId(u.id);
-		setExpanded(true);
+		// The city's communities arrive as PINS. Listing them over the map was
+		// exactly the complaint (owner, 2026-09-09) — pull the sheet up for the
+		// list, or read the map.
+		setExpanded(false);
 		mapRef.current?.animateToRegion(
 			{
 				latitude: u.centroid.lat,
@@ -335,7 +345,9 @@ export default function SearchTab() {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: fit once per result set, not on every city-list re-sort
 	useEffect(() => {
 		if (!hits) return;
-		setExpanded(true);
+		// A TYPED question opens the list — you asked in words, you get words
+		// back. A drill does not: its answer is the pins that just appeared.
+		if (searching) setExpanded(true);
 		const coords = [
 			...hits.listings.flatMap((l) =>
 				l.lat !== undefined && l.lng !== undefined
@@ -369,7 +381,7 @@ export default function SearchTab() {
 		});
 	}, [hits]);
 
-	/** A county shows a preview card and its cities — it never needs half the
+	/** A county says its one figure in the peek — it never needs half the
 	 *  screen, and the map is the thing being previewed. */
 	const previewing = !searching && !drillCity && !!openedArea;
 	/** The county's figure under the ACTIVE lens — the one the map is painted
@@ -382,10 +394,10 @@ export default function SearchTab() {
 	/** Either kind of question is out to the search endpoint. */
 	const asking = searching || !!drillCity;
 	const sheetH = expanded
-		? previewing
-			? 280
-			: Math.min(height * 0.55, 480)
-		: 110;
+		? Math.min(height * 0.55, 480)
+		: previewing
+			? 148
+			: 110;
 	const hitCount = hits
 		? hits.communities.length + hits.listings.length + units.length
 		: units.length;
@@ -495,8 +507,8 @@ export default function SearchTab() {
 					)}
 				</View>
 
-				{/* Lens chips + legend. Hidden until the metrics arrive — a chip
-				    that paints nothing is worse than no chip. */}
+				{/* Lens chips. Hidden until the metrics arrive — a chip that paints
+				    nothing is worse than no chip. */}
 				{lensReady && lens && (
 					<View style={[styles.lensBar, { top: insets.top + 58 }]}>
 						<ScrollView
@@ -525,25 +537,6 @@ export default function SearchTab() {
 								);
 							})}
 						</ScrollView>
-						{legend && !searching && (
-							<View style={styles.legend}>
-								<Text style={styles.legendTitle} numberOfLines={1}>
-									{lens.unit}
-								</Text>
-								<View style={styles.legendRamp}>
-									{lens.ramp.map((c) => (
-										<View
-											key={c}
-											style={[styles.legendStep, { backgroundColor: c }]}
-										/>
-									))}
-								</View>
-								<View style={styles.legendLabels}>
-									<Text style={styles.legendEnd}>{legend.low}</Text>
-									<Text style={styles.legendEnd}>{legend.high}</Text>
-								</View>
-							</View>
-						)}
 					</View>
 				)}
 			</View>
@@ -558,61 +551,50 @@ export default function SearchTab() {
 				>
 					<View style={styles.grabber} />
 				</Pressable>
-				<Text style={styles.sheetTitle}>
-					{searching
-						? `"${query.trim()}"`
-						: drillCity
-							? drillCity.name
-							: openedArea
-								? `${openedArea.name} County`
-								: "All areas"}
-					{searching && !(poolLoading || search.loading)
-						? ` · ${hitCount}`
-						: ""}
-				</Text>
+				{/* The peek, and everything the map needs to say without covering
+				    itself: where you are, one way back, and — on a county — its one
+				    figure with the door to the rest. */}
+				<View style={styles.headRow}>
+					{!searching && (drillCity || openedArea) ? (
+						<Pressable onPress={goBack} hitSlop={14}>
+							<Text style={styles.backChevron}>‹</Text>
+						</Pressable>
+					) : null}
+					<Text style={styles.sheetTitle} numberOfLines={1}>
+						{searching
+							? `"${query.trim()}"`
+							: drillCity
+								? drillCity.name
+								: openedArea
+									? `${openedArea.name} County`
+									: "All areas"}
+						{searching && !(poolLoading || search.loading)
+							? ` · ${hitCount}`
+							: ""}
+					</Text>
+					{previewing && previewValue ? (
+						<Text style={styles.headValue}>{previewValue}</Text>
+					) : null}
+				</View>
+				{previewing && openedArea ? (
+					<>
+						{savedNoteFor(openedArea.key) ? (
+							<Text style={styles.previewSaved} numberOfLines={1}>
+								{savedNoteFor(openedArea.key)}
+							</Text>
+						) : null}
+						<Pressable
+							style={styles.previewCta}
+							onPress={() =>
+								router.push(`/area/${openedArea.key}?lens=${lensId}`)
+							}
+						>
+							<Text style={styles.previewCtaLabel}>Full breakdown ›</Text>
+						</Pressable>
+					</>
+				) : null}
 				{expanded && (
 					<ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
-						{/* One level out — the map's own history: city → county → metro. */}
-						{!searching && (drillCity || openedArea) && (
-							<Pressable onPress={goBack} hitSlop={8} style={styles.backRow}>
-								<Text style={styles.backLabel}>
-									‹{" "}
-									{drillCity && openedArea
-										? `${openedArea.name} County`
-										: "All areas"}
-								</Text>
-							</Pressable>
-						)}
-
-						{/* A county in one line, plus the door to the rest of it. */}
-						{previewing && openedArea && lens && (
-							<View style={styles.preview}>
-								<View style={styles.previewHead}>
-									<Text style={styles.previewValue}>
-										{previewValue ?? "No figure yet"}
-									</Text>
-									<Text style={styles.previewUnit} numberOfLines={2}>
-										{lens.unit}
-									</Text>
-								</View>
-								{savedNoteFor(openedArea.key) ? (
-									<Text style={styles.previewSaved} numberOfLines={1}>
-										{savedNoteFor(openedArea.key)}
-									</Text>
-								) : null}
-								<Pressable
-									style={styles.previewCta}
-									onPress={() =>
-										router.push(`/area/${openedArea.key}?lens=${lensId}`)
-									}
-								>
-									<Text style={styles.previewCtaLabel}>
-										Full breakdown and how it ranks ›
-									</Text>
-								</Pressable>
-							</View>
-						)}
-
 						{asking && search.error && (
 							<View style={styles.stateBox}>
 								<Text style={styles.empty}>Couldn’t reach search.</Text>
@@ -828,12 +810,16 @@ const styles = StyleSheet.create({
 		borderRadius: 3,
 		backgroundColor: colors.border,
 	},
-	sheetTitle: {
-		...textStyles.caption,
-		color: colors.ink2,
+	headRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
 		paddingHorizontal: 20,
 		marginBottom: 6,
 	},
+	backChevron: { ...textStyles.title2, color: colors.accent, marginTop: -4 },
+	sheetTitle: { ...textStyles.caption, color: colors.ink2, flex: 1 },
+	headValue: { ...textStyles.title2, color: colors.ink },
 	list: { flex: 1, paddingHorizontal: 12 },
 	groupTitle: {
 		...textStyles.caption,
@@ -905,7 +891,7 @@ const styles = StyleSheet.create({
 		color: colors.ink,
 	},
 
-	// ── Lens chips + legend ───────────────────────────────────────────────────
+	// ── Lens chips ────────────────────────────────────────────────────────────
 	lensBar: { position: "absolute", left: 0, right: 0 },
 	lensChips: { paddingHorizontal: 16, gap: 7 },
 	lensChip: {
@@ -923,51 +909,13 @@ const styles = StyleSheet.create({
 	lensDot: { width: 8, height: 8, borderRadius: 2 },
 	lensLabel: { ...textStyles.footnote, color: colors.ink, fontWeight: "600" },
 	lensLabelOn: { color: "#FFFFFF" },
-	legend: {
-		marginTop: 8,
-		marginHorizontal: 16,
-		backgroundColor: colors.glass,
-		borderWidth: 1,
-		borderColor: colors.border,
-		borderRadius: radii.tile,
-		paddingHorizontal: 10,
-		paddingTop: 6,
-		paddingBottom: 7,
-	},
-	legendTitle: { ...textStyles.caption, color: colors.ink, fontWeight: "700" },
-	legendRamp: {
-		flexDirection: "row",
-		height: 8,
-		borderRadius: 3,
-		overflow: "hidden",
-		marginTop: 4,
-	},
-	legendStep: { flex: 1 },
-	legendLabels: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		marginTop: 3,
-	},
-	legendEnd: { ...textStyles.caption, color: colors.ink2 },
-
-	// ── County preview ────────────────────────────────────────────────────────
-	backRow: { paddingHorizontal: 8, paddingTop: 2, paddingBottom: 6 },
-	backLabel: {
-		...textStyles.footnote,
+	// ── County peek ───────────────────────────────────────────────────────────
+	previewSaved: {
+		...textStyles.caption,
 		color: colors.accent,
-		fontWeight: "600",
+		paddingHorizontal: 20,
 	},
-	preview: {
-		paddingHorizontal: 8,
-		paddingBottom: 10,
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
-	},
-	previewHead: { flexDirection: "row", alignItems: "baseline", gap: 8 },
-	previewValue: { ...textStyles.title1, color: colors.ink },
-	previewUnit: { ...textStyles.caption, color: colors.ink2, flex: 1 },
-	previewSaved: { ...textStyles.caption, color: colors.accent, marginTop: 3 },
-	previewCta: { paddingTop: 10 },
+	previewCta: { paddingHorizontal: 20, paddingTop: 8 },
 	previewCtaLabel: {
 		...textStyles.footnote,
 		color: colors.accent,

@@ -21,6 +21,59 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-09 15:20 UTC — phase266: nothing covers the map
+
+**Objective**: owner, on phase265 — "remove that per month on a xxx home bar,
+not immersive, don't show the sheet with all community list after clicking the
+city, I don't want to hide the map, same rule applied everywhere, too much
+data and numbers."
+
+phase265 moved the county breakdown off the map and then had the city drill
+open a full sheet of communities over it. Same mistake, one level down. This
+entry is the rule stated once so it stops being relearned.
+
+**The rule**: a tap on the MAP is answered BY the map. It re-frames, it swaps
+pins, it changes one line of the peek — it never opens a panel. Only a TYPED
+query opens the list, because the buyer asked in words and words are the
+answer. Anything longer than a line lives on a pushed page.
+
+**Actions**, all in `apps/mobile/app/(tabs)/search.tsx`:
+- The legend is gone — the ramp, the two end labels, and the `lens.unit`
+  heading over it ("PER MONTH ON A $500K HOME") that the owner quoted back.
+  `legendRange` is no longer imported here.
+- `select()` and `selectArea()` now `setExpanded(false)`. The fit effect only
+  expands when `searching`.
+- The sheet's peek carries the state instead: a back chevron, the level's name,
+  and — on a county — its one figure, the saved-city note, and "Full breakdown
+  ›". The back affordance MOVED out of the ScrollView to get here; inside it,
+  a collapsed sheet had no way out of a level.
+- Peek is 110pt, or 148pt on a county so its two extra lines fit. The expanded
+  height is unchanged.
+
+**Decisions**:
+- **The legend's job moves to the tap.** Without it nothing permanently
+  explains the fill ramp — the chip names the dimension and a county tap gives
+  the number. That is the trade the owner asked for: a number when you ask for
+  one, photographs otherwise. If a buyer ever reports not knowing what dark
+  means, the answer is a one-line hint on first use, not the bar back.
+- The county figure in the peek prints WITHOUT `lens.unit` beside it. Repeating
+  "per month on a $500k home" three lines under where he asked us to delete it
+  would be obtuse; the active chip already names the dimension.
+- The saved-city note survives, because it is words, not numerals, and it is
+  still the only thing on 29 identical outlines that says where the buyer
+  already stands.
+- A typed search still auto-expands. He complained about a MAP tap, and a
+  search with no list is a search with no result.
+
+**Verification**: `pnpm typecheck` clean; `pnpm lint` exit 0 (same 8
+pre-existing warnings); `pnpm test` 684 passed.
+
+**Next steps**: owner reviews on the phone. The remaining numerals on the map
+surface are the home price chips (his own request, phase263), the county figure
+behind a tap, and the search hit count.
+
+---
+
 ## 2026-09-09 14:05 UTC — phase265: the Search map drills, and the sheet is a preview again
 
 **Objective**: owner, on a screenshot of phase264 with a county open — "show

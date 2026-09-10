@@ -35,6 +35,17 @@ community reviews instead.
 
 ### 2026-09-09
 
+**The map stays the map.** Tapping something on Search no longer slides a panel
+up over it. Tap a county or a city and the map moves, the pins change, and the
+strip at the bottom tells you where you are — pull it up yourself when you want
+the list. Typing a search still opens the results, because that's what you
+asked for.
+
+**The colour scale bar is gone.** The band of numbers pinned under the lens
+buttons took up the top of the map to explain the shading. Tap any county and
+you get its figure instead, so the number arrives when you want it rather than
+sitting there all the time.
+
 **The map zooms in one step at a time.** Search used to show every city in the
 metro at once, and tapping a photo circle only nudged the map. Now it narrows
 the way you'd expect: tap a county and the map goes there and shows the cities
