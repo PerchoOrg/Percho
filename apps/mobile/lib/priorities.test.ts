@@ -11,6 +11,7 @@ import {
 	normalizeWeights,
 	orderByPriority,
 	rankedPriorities,
+	topStatedPriority,
 } from "./priorities";
 
 describe("the catalogue", () => {
@@ -183,5 +184,34 @@ describe("lensForPriorities", () => {
 		for (const key of PRIORITIES.map((p) => p.key)) {
 			expect(ids.has(lensForPriorities(w({ [key]: 3 })))).toBe(true);
 		}
+	});
+});
+
+describe("topStatedPriority", () => {
+	it("is undefined until the buyer moves something off neutral", () => {
+		expect(topStatedPriority(defaultWeights())).toBeUndefined();
+	});
+
+	it("names the one thing they raised", () => {
+		expect(
+			topStatedPriority({ schools: 3, cost: 1, commute: 1, community: 1 }),
+		).toBe("schools");
+	});
+
+	it("is undefined when two are tied at the top", () => {
+		// A tie is not a statement about which of the two, and the tie-break in
+		// `rankedPriorities` is OUR order — quoting it back as theirs would be
+		// putting words in their mouth.
+		expect(
+			topStatedPriority({ schools: 3, cost: 3, commute: 1, community: 1 }),
+		).toBeUndefined();
+	});
+
+	it("is undefined when they only lowered things, never raised one", () => {
+		// Everything at or below neutral: they have said what they do NOT care
+		// about, which is not the same as naming a favourite.
+		expect(
+			topStatedPriority({ schools: 1, cost: 0, commute: 0, community: 0 }),
+		).toBeUndefined();
 	});
 });

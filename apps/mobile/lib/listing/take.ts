@@ -14,7 +14,17 @@
  * arithmetic pretending to a confidence it does not have. The thresholds
  * are stated once, below, and are deliberately coarse.
  */
-import { type CompareTake, listJoin, usd } from "../compare/take";
+import {
+	type CompareTake,
+	PRIORITY_PROSE,
+	listJoin,
+	usd,
+} from "../compare/take";
+import {
+	type PriorityKey,
+	type PriorityWeights,
+	topStatedPriority,
+} from "../priorities";
 import { buildCost } from "./cost";
 import type { ListingDetailDTO } from "./detail-dto";
 import { DEFAULT_DOWN_FRACTION, parseHoaMonthlyUsd } from "./monthly";
@@ -58,6 +68,8 @@ function measure(home: ListingDetailDTO, annualRate: number): Measured {
 interface Dim {
 	/** How the lean names this axis: "…it wins on monthly cost and schools". */
 	name: string;
+	/** Which declared priority this axis serves — what personalises the lean. */
+	priority: PriorityKey;
 	/** Index of the winning home, when the dimension counts at all. */
 	winner: number;
 	/** The winner's supporting sentence, gap already worked in. */
@@ -67,6 +79,7 @@ interface Dim {
 /** The dimension's verdict, or null when it cannot carry one. */
 function dim(
 	name: string,
+	priority: PriorityKey,
 	values: (number | undefined)[],
 	betterLow: boolean,
 	minGap: (best: number) => number,
@@ -84,7 +97,7 @@ function dim(
 	if (!best || !next) return null;
 	const gap = Math.abs(next.v - best.v);
 	if (gap < minGap(best.v)) return null;
-	return { name, winner: best.i, point: point(best.i, next.i, gap) };
+	return { name, priority, winner: best.i, point: point(best.i, next.i, gap) };
 }
 
 /** The street line is how a friend would say it — never the full address. */
@@ -139,19 +152,26 @@ function tradeOff(
 }
 
 /**
- * Assumes 2–3 homes — the screen's COMPARE_MIN/MAX guard is upstream.
- * `annualRate` is the same live rate the table's monthly row uses, so the
- * take and the row beneath it cannot disagree.
+ * Assumes 2–COMPARE_MAX homes — the screen's guard is upstream.
+ *
+ * `annualRate` is the same live rate the table's monthly row uses, so the take
+ * and the row beneath it cannot disagree. `weights` is the buyer's DECLARED
+ * priorities: it reorders which axis the lean is built on and lets the take
+ * quote them back to themselves. It never changes who wins an axis — the
+ * arithmetic is the arithmetic, and `lib/priorities.ts` is explicit that a
+ * weight orders and nothing else.
  */
 export function buildHomeTake(
 	homes: readonly ListingDetailDTO[],
 	annualRate: number,
+	weights?: PriorityWeights,
 ): CompareTake {
 	const ms = homes.map((h) => measure(h, annualRate));
 
 	const dims = [
 		dim(
 			"monthly cost",
+			"cost",
 			ms.map((m) => m.monthly),
 			true,
 			() => MONTHLY_MIN_GAP_USD,
@@ -160,6 +180,7 @@ export function buildHomeTake(
 		),
 		dim(
 			"space for the money",
+			"cost",
 			ms.map((m) => m.perSqft),
 			true,
 			(best) => best * PER_SQFT_MIN_GAP_FRACTION,
@@ -168,6 +189,7 @@ export function buildHomeTake(
 		),
 		dim(
 			"schools",
+			"schools",
 			ms.map((m) => m.school),
 			false,
 			() => SCHOOL_MIN_GAP_PCT,
@@ -175,6 +197,15 @@ export function buildHomeTake(
 				`The schools near ${street(homes[w])} test stronger — ${Math.round(ms[w]?.school ?? 0)}% proficient against ${Math.round(ms[r]?.school ?? 0)}%.`,
 		),
 	].filter((d): d is Dim => d !== null);
+
+	// What the buyer said matters, when they said anything unambiguous. Used
+	// to ORDER the case and to name them in it — never to pick a winner.
+	const top = weights ? topStatedPriority(weights) : undefined;
+	if (top) {
+		dims.sort(
+			(a, b) => Number(b.priority === top) - Number(a.priority === top),
+		);
+	}
 
 	// Schools compared for some homes but silent for another: say so, rather
 	// than letting the silence read as "nothing to report".
@@ -204,9 +235,23 @@ export function buildHomeTake(
 		};
 	}
 
-	// The wins split: name what each home is best at and hand the weighing
-	// back, plus the one thing a friend would actually say about a home that
-	// leads on nothing measurable.
+	// The wins split. If the buyer has told us what they weigh, that IS the
+	// tie-break — quoting it back is the difference between a friend who knows
+	// you and a spreadsheet that shrugs. Without a stated priority we shrug
+	// honestly rather than choosing for them.
+	const decisive = top ? dims.find((d) => d.priority === top) : undefined;
+	if (decisive) {
+		const against = dims.filter((d) => d.winner !== decisive.winner);
+		return {
+			lead: `You said ${PRIORITY_PROSE[decisive.priority]} matters most — so of these I’d lean ${street(homes[decisive.winner])}.`,
+			points: [...dims.map((d) => d.point), ...(blindSpot ? [blindSpot] : [])],
+			caveat:
+				against.length > 0
+					? `Be clear what that costs you: ${listJoin(against.map((d) => `${street(homes[d.winner])} wins on ${d.name}`))}. Change what matters on the You tab and I'll read it differently.`
+					: tradeOff(homes, decisive.winner),
+		};
+	}
+
 	const winners = new Set(dims.map((d) => d.winner));
 	const alsoRans = homes
 		.map((h, i) => ({ h, i }))

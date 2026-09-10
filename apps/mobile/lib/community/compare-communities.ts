@@ -35,8 +35,14 @@
  * community we simply have no POI sweep for would be inventing an absence.
  */
 import {
+	type PriorityKey,
+	type PriorityWeights,
+	orderByPriority,
+} from "../priorities";
+import {
 	REVIEW_DIMENSIONS,
 	REVIEW_DIMENSION_LABELS,
+	type ReviewDimension,
 } from "../reviews/dimensions";
 import type { CommunityDetailDTO } from "./detail-dto";
 import { bucketLabel } from "./tour-buckets";
@@ -61,7 +67,32 @@ export interface CommunityCompareRow {
 	note?: string;
 	/** One cell per community, in the caller's order. `undefined` renders "—". */
 	cells: (string | undefined)[];
+	/** Which declared priority this row serves, for ordering only. */
+	priority?: PriorityKey;
 }
+
+/** Which priority each resident-rated dimension speaks to. Mirrors `take.ts`. */
+const DIMENSION_PRIORITY: Record<ReviewDimension, PriorityKey> = {
+	quiet: "community",
+	walkable: "commute",
+	friendly: "community",
+	value: "cost",
+};
+
+/**
+ * A nearby bucket's priority. Only the ones with an unambiguous owner are
+ * mapped — "Food" or "Shopping" are amenities to one buyer and noise to
+ * another, and guessing would put a row at the top of someone's table on our
+ * hunch rather than their answer.
+ */
+const BUCKET_PRIORITY: Record<string, PriorityKey> = {
+	schools: "schools",
+	transit: "commute",
+	daily_errands: "commute",
+	work_hubs: "commute",
+	outdoor: "community",
+	amenities: "community",
+};
 
 export interface CommunityCompareTable {
 	headers: {
@@ -111,6 +142,7 @@ function nearbyRows(
 		.map(([bucket]) => ({
 			// Non-null: an unlabelled bucket never entered `totals`.
 			label: bucketLabel(bucket) as string,
+			...(BUCKET_PRIORITY[bucket] ? { priority: BUCKET_PRIORITY[bucket] } : {}),
 			cells: communities.map((c) => {
 				const hit = c.nearby?.find((n) => n.bucket === bucket);
 				return hit ? String(hit.count) : undefined;
@@ -125,11 +157,14 @@ function nearbyRows(
  */
 export function buildCommunityCompareTable(
 	communities: readonly CommunityDetailDTO[],
+	/** Reorders rows to lead with what the buyer said matters. Never filters. */
+	weights?: PriorityWeights,
 ): CommunityCompareTable {
 	const rows: CommunityCompareRow[] = [
 		{
 			label: "Resident rating",
 			note: "approved reviews only",
+			priority: "community",
 			cells: communities.map((c) =>
 				c.reviews
 					? `${c.reviews.avgRating.toFixed(1)} · ${c.reviews.count} review${
@@ -141,6 +176,7 @@ export function buildCommunityCompareTable(
 		...REVIEW_DIMENSIONS.map((dim) => ({
 			label: REVIEW_DIMENSION_LABELS[dim],
 			note: "residents’ average, out of 5",
+			priority: DIMENSION_PRIORITY[dim],
 			cells: communities.map((c) => {
 				const v = c.reviews?.dimensionAvgs[dim];
 				return v === undefined ? undefined : v.toFixed(1);
@@ -148,6 +184,7 @@ export function buildCommunityCompareTable(
 		})),
 		{
 			label: "Owner-occupied",
+			priority: "community",
 			cells: statCells(communities, "Owner-occupied"),
 		},
 		{
@@ -157,11 +194,14 @@ export function buildCommunityCompareTable(
 		{
 			label: "Residents on Nextdoor",
 			note: "how many we have heard from, not the population",
+			priority: "community",
 			cells: statCells(communities, "Residents on Nextdoor"),
 		},
 		...nearbyRows(communities),
 	];
 
+	// A row nobody has data for says nothing — drop it.
+	const kept = rows.filter((r) => r.cells.some((c) => c !== undefined));
 	return {
 		headers: communities.map((c) => ({
 			id: c.id,
@@ -170,7 +210,6 @@ export function buildCommunityCompareTable(
 			place: placeOf(c),
 			...(c.heroUrl ? { thumbUrl: c.heroUrl } : {}),
 		})),
-		// A row nobody has data for says nothing — drop it.
-		rows: rows.filter((r) => r.cells.some((c) => c !== undefined)),
+		rows: weights ? orderByPriority(kept, weights, (r) => r.priority) : kept,
 	};
 }

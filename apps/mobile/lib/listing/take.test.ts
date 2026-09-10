@@ -149,3 +149,96 @@ describe("buildHomeTake", () => {
 		).toBe(true);
 	});
 });
+
+describe("buildHomeTake — personalised by declared priorities", () => {
+	const SPLIT = [
+		home({
+			id: "a",
+			address: "12 Oak St",
+			price: 400_000,
+			sqft: 1600,
+			schools: [school(50)],
+		}),
+		home({
+			id: "b",
+			address: "9 Elm Ave",
+			price: 500_000,
+			sqft: 2500,
+			schools: [school(65)],
+		}),
+	];
+
+	it("breaks a split decision with the buyer's top priority, and quotes it", () => {
+		const take = buildHomeTake(SPLIT, RATE, {
+			schools: 3,
+			cost: 1,
+			commute: 1,
+			community: 1,
+		});
+		expect(take.lead).toContain("You said schools matters most");
+		// b has the stronger schools, so the lean follows the stated priority
+		// even though a is the cheaper hold.
+		expect(take.lead).toContain("9 Elm Ave");
+		// And it must NOT hide what that choice costs.
+		expect(take.caveat).toContain("12 Oak St");
+		expect(take.caveat).toContain("monthly cost");
+	});
+
+	it("leans the other way when the same homes meet a cost-first buyer", () => {
+		const take = buildHomeTake(SPLIT, RATE, {
+			schools: 1,
+			cost: 3,
+			commute: 1,
+			community: 1,
+		});
+		expect(take.lead).toContain("what it really costs");
+		expect(take.lead).toContain("12 Oak St");
+		expect(take.caveat).toContain("9 Elm Ave");
+	});
+
+	it("refuses to break the tie when the buyer has stated nothing", () => {
+		const take = buildHomeTake(SPLIT, RATE, {
+			schools: 1,
+			cost: 1,
+			commute: 1,
+			community: 1,
+		});
+		expect(take.lead).toContain("a trade, not a ranking");
+	});
+
+	it("refuses to break the tie when two priorities are tied at the top", () => {
+		const take = buildHomeTake(SPLIT, RATE, {
+			schools: 3,
+			cost: 3,
+			commute: 1,
+			community: 1,
+		});
+		expect(take.lead).toContain("a trade, not a ranking");
+	});
+
+	it("never lets a priority overrule a home that wins outright", () => {
+		// a wins cost, per-sqft AND schools. A schools-first buyer must still be
+		// told about a — a weight orders the case, it does not pick a winner.
+		const take = buildHomeTake(
+			[
+				home({
+					id: "a",
+					address: "12 Oak St",
+					price: 400_000,
+					sqft: 2000,
+					schools: [school(70)],
+				}),
+				home({
+					id: "b",
+					address: "9 Elm Ave",
+					price: 500_000,
+					sqft: 2100,
+					schools: [school(55)],
+				}),
+			],
+			RATE,
+			{ schools: 3, cost: 0, commute: 1, community: 1 },
+		);
+		expect(take.lead).toContain("12 Oak St");
+	});
+});

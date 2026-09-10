@@ -6,6 +6,38 @@
 
 ---
 
+## v1.7 — The take now answers *you*, and stops burying you in figures
+
+Comparing used to give everyone the same answer. Now it reads what you said
+matters on the You tab and structures the whole comparison around it.
+
+Put two homes side by side where one is cheaper to hold and the other has the
+better schools, and Percho no longer shrugs and calls it a trade. If you've
+said schools matter most, it says so and takes a side: "You said schools
+matters most — so of these I'd lean 9 Elm Ave" — and then tells you exactly
+what that choice costs you, because a recommendation that hides its downside
+isn't advice. Say cost matters most instead and the same two homes get the
+opposite answer, with the same honesty about the trade. Haven't told us
+anything? It still won't choose for you.
+
+The same goes for neighbourhoods: if getting around is your priority, you hear
+what residents said about walkability rather than whatever happened to differ
+most. It will never invent a difference that isn't there just because you said
+you cared about it.
+
+**Far fewer numbers.** The side-by-side table opened with up to fourteen rows
+of figures. It now opens with four — the four that match what you said matters
+— and everything else is behind "Show all figures". Nothing was removed; it's
+just no longer the first thing you have to wade through.
+
+**Comparing across towns is clearer.** You could always pick saved homes in
+different towns, but grouping Saved by place made it look like you couldn't.
+Each town's own shortcut now says "Compare these 2", and Select spells out
+that different towns are fine — and tells you when your picks span more than
+one.
+
+---
+
 ## v1.6 — Saved is organised by place, the way you actually think about it
 
 Saved used to be one long list: every home, neighbourhood and area as an

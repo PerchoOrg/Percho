@@ -101,3 +101,80 @@ describe("buildCommunityTake", () => {
 		expect(take.lead).toContain("near twins");
 	});
 });
+
+describe("buildCommunityTake — personalised by declared priorities", () => {
+	const RATED = [
+		community({
+			id: "a",
+			name: "Alpha",
+			reviews: reviews(4.2, 5, { quiet: 4.8, walkable: 2.4 }),
+		}),
+		community({
+			id: "b",
+			name: "Beta",
+			reviews: reviews(4.1, 6, { quiet: 3.4, walkable: 4.3 }),
+		}),
+	];
+
+	it("speaks the dimension serving the buyer's priority, not the widest gap", () => {
+		// quiet splits by 1.4, walkable by 1.9 — the widest is walkable, but a
+		// community-first buyer is told about quiet.
+		const take = buildCommunityTake(RATED, {
+			schools: 1,
+			cost: 1,
+			commute: 1,
+			community: 3,
+		});
+		expect(take.points.some((p) => p.includes("quiet"))).toBe(true);
+		expect(take.points.some((p) => p.includes("you said matters most"))).toBe(
+			true,
+		);
+	});
+
+	it("maps getting-around to walkable", () => {
+		const take = buildCommunityTake(RATED, {
+			schools: 1,
+			cost: 1,
+			commute: 3,
+			community: 1,
+		});
+		expect(take.points.some((p) => p.includes("walkable"))).toBe(true);
+	});
+
+	it("falls back to the widest gap when nothing was stated", () => {
+		const take = buildCommunityTake(RATED, {
+			schools: 1,
+			cost: 1,
+			commute: 1,
+			community: 1,
+		});
+		expect(take.points.some((p) => p.includes("clearest gap"))).toBe(true);
+		expect(take.points.some((p) => p.includes("walkable"))).toBe(true);
+	});
+
+	it("never manufactures a gap to flatter a stated priority", () => {
+		// Residents agree on walkable (0.1 apart). A commute-first buyer must
+		// not be handed a difference that is not there.
+		const flat = [
+			community({
+				id: "a",
+				name: "Alpha",
+				reviews: reviews(4.2, 5, { quiet: 4.8, walkable: 3.0 }),
+			}),
+			community({
+				id: "b",
+				name: "Beta",
+				reviews: reviews(4.1, 6, { quiet: 3.4, walkable: 3.1 }),
+			}),
+		];
+		const take = buildCommunityTake(flat, {
+			schools: 1,
+			cost: 1,
+			commute: 3,
+			community: 1,
+		});
+		expect(take.points.some((p) => p.includes("walkable"))).toBe(false);
+		// It reports the real one instead of nothing.
+		expect(take.points.some((p) => p.includes("quiet"))).toBe(true);
+	});
+});

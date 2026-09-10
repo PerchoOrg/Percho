@@ -25,6 +25,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TakeCard } from "../components/compare/TakeCard";
 import { listingDetailUrl } from "../lib/api/base";
+import { splitRows } from "../lib/compare/take";
 import {
 	COMPARE_MAX,
 	COMPARE_MIN,
@@ -33,6 +34,7 @@ import {
 import type { ListingDetailDTO } from "../lib/listing/detail-dto";
 import { useRates } from "../lib/listing/rates";
 import { buildHomeTake } from "../lib/listing/take";
+import { usePriorityStore } from "../state/priorities";
 import { colors, radii } from "../theme/tokens";
 import { textStyles } from "../theme/typography";
 
@@ -51,8 +53,12 @@ export default function CompareScreen() {
 		.slice(0, COMPARE_MAX);
 	const key = list.join(",");
 	const rate = useRates();
+	// What the buyer said matters, from the You tab. Orders both the take's
+	// case and the table's rows; never changes a figure or who wins one.
+	const weights = usePriorityStore((s) => s.weights);
 	const [state, setState] = useState<State>({ status: "loading" });
 	const [nonce, setNonce] = useState(0);
+	const [showAll, setShowAll] = useState(false);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `nonce` is the retry trigger; `key` stands in for `list`
 	useEffect(() => {
@@ -85,12 +91,16 @@ export default function CompareScreen() {
 
 	const table =
 		state.status === "ready"
-			? buildCompareTable(state.homes, rate.annualRate)
+			? buildCompareTable(state.homes, rate.annualRate, weights)
 			: null;
 	const take =
 		state.status === "ready"
-			? buildHomeTake(state.homes, rate.annualRate)
+			? buildHomeTake(state.homes, rate.annualRate, weights)
 			: null;
+	// Owner: "reduce the numbers part it is not very useful." Rows are already
+	// ordered by what the buyer said matters, so the few that survive the cut
+	// are the few they asked for; the rest are one tap away, never gone.
+	const { shown, collapsible } = splitRows(table?.rows ?? [], showAll);
 
 	return (
 		<View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
@@ -153,7 +163,7 @@ export default function CompareScreen() {
 						))}
 					</View>
 
-					{table.rows.map((r) => (
+					{shown.map((r) => (
 						<View key={r.label} style={styles.rowBlock}>
 							<Text style={styles.label}>{r.label}</Text>
 							{r.note && <Text style={styles.note}>{r.note}</Text>}
@@ -172,11 +182,25 @@ export default function CompareScreen() {
 						</View>
 					))}
 
+					{collapsible && (
+						<Pressable
+							style={styles.more}
+							onPress={() => setShowAll((v) => !v)}
+							accessibilityRole="button"
+						>
+							<Text style={styles.moreTxt}>
+								{showAll
+									? "Show fewer"
+									: `Show all ${table.rows.length} figures`}
+							</Text>
+						</Pressable>
+					)}
+
 					<Text style={styles.foot}>
-						Figures are the same ones each home’s page shows. The take above is
-						worked out from them and nothing else — read them and feel free to
-						disagree. Schools are the nearest public school by distance, not an
-						assignment.
+						The take above is worked out from these figures and nothing else —
+						read them and feel free to disagree. They are ordered by what you
+						said matters on the You tab. Schools are the nearest public school
+						by distance, not an assignment.
 					</Text>
 				</ScrollView>
 			)}
@@ -233,6 +257,8 @@ const styles = StyleSheet.create({
 	note: { ...textStyles.caption, color: colors.ink3, marginTop: 1 },
 	cells: { flexDirection: "row", gap: 8, marginTop: 6 },
 	cell: { flex: 1 },
+	more: { minHeight: 44, justifyContent: "center", marginTop: 12 },
+	moreTxt: { ...textStyles.footnote, fontWeight: "600", color: colors.accent },
 	thumb: {
 		width: "100%",
 		aspectRatio: 4 / 3,
