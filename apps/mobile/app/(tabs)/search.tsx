@@ -6,8 +6,8 @@
  * popularity sorting server-side, listing price pins at zoom ≥14. This is the
  * honest subset that ships for the store launch (phase D):
  *
- *   · no query → map renders CITY pins from the feed pool; the sheet lists
- *     the city units, familiar ones first (§4.3 "in your journey first")
+ *   · no query → map renders CITY pins from the feed pool, familiar ones
+ *     sorted first (§4.3 "in your journey first"), and there is NO sheet
  *   · ≥2 characters → `/api/mobile/search` (`hooks/use-search.ts`) returns
  *     communities + homes; the sheet shows them grouped, plus any city whose
  *     name matches, and the map fits to the hits that have coordinates
@@ -37,6 +37,8 @@
  *   · a tap on the MAP never opens the sheet. It re-frames the map and moves
  *     the peek's title. Only a TYPED query opens the list — you asked in
  *     words, you get words back.
+ *   · with nothing selected and nothing typed the sheet is not MOUNTED. An
+ *     empty strip along the bottom is a worse answer than the map itself.
  *   · the peek carries what the map cannot say: where you are, one way back,
  *     and on a county its ONE figure plus a link to the page.
  *   · the county cost breakdown and the lens ranking live on `/area/[key]`.
@@ -390,6 +392,8 @@ export default function SearchTab() {
 			: undefined;
 	/** Either kind of question is out to the search endpoint. */
 	const asking = searching || !!drillCity;
+	/** The sheet is mounted only when it has something to say. */
+	const sheetVisible = searching || !!drillCity || previewing;
 	const sheetH = expanded
 		? Math.min(height * 0.55, 480)
 		: previewing
@@ -442,7 +446,13 @@ export default function SearchTab() {
 											: withAlpha(colors.ink2, 0.45)
 								}
 								strokeWidth={open ? 2.5 : 1}
-								tappable
+								// A county stops taking taps the moment communities are on
+								// the map. react-native-maps hit-tests overlays in the order
+								// they were added and stops at the first match, so a county
+								// added first swallows every tap meant for a community
+								// polygon drawn inside it — which read on the phone as
+								// "点击社区也没有反应" (owner, 2026-09-10).
+								tappable={!asking}
 								onPress={() => selectArea(shape.key)}
 							/>
 						));
@@ -474,14 +484,21 @@ export default function SearchTab() {
 											latitude: lat,
 											longitude: lng,
 										}))}
-										fillColor={withAlpha(colors.pos, 0.2)}
-										strokeColor={colors.pos}
-										strokeWidth={2}
+										// Quiet: a hairline edge and a wash. At a hundred
+										// subdivisions the 2px green outline read as noise
+										// (owner, 2026-09-10 — "不太好看 很乱"), and the shape
+										// is legible from the fill alone.
+										fillColor={withAlpha(colors.pos, 0.14)}
+										strokeColor={withAlpha(colors.pos, 0.55)}
+										strokeWidth={1}
 										tappable
 										onPress={() => router.push(`/community/${c.slug}`)}
 									/>
 								))
-							: c.lat !== undefined && c.lng !== undefined
+							: // Only a TYPED search falls back to a pin. A search must show
+								// what it found; a drill is a map of shapes, and a hundred
+								// circles for the shapeless rows is the mess we just left.
+								searching && c.lat !== undefined && c.lng !== undefined
 								? [
 										<PhotoMarker
 											key={`c-${c.id}`}
@@ -570,177 +587,188 @@ export default function SearchTab() {
 				)}
 			</View>
 
-			{/* Collapsible list sheet */}
-			<View
-				style={[styles.sheet, { height: sheetH, paddingBottom: insets.bottom }]}
-			>
-				<Pressable
-					style={styles.grabberArea}
-					onPress={() => setExpanded((v) => !v)}
+			{/* The sheet exists only when it has something to say. At rest there
+			    is no strip along the bottom at all — it held one dead word ("All
+			    areas") over a map that was the actual answer (owner, 2026-09-10:
+			    "最下面一直有个空sheet 干掉它"). */}
+			{sheetVisible && (
+				<View
+					style={[
+						styles.sheet,
+						{ height: sheetH, paddingBottom: insets.bottom },
+					]}
 				>
-					<View style={styles.grabber} />
-				</Pressable>
-				{/* The peek, and everything the map needs to say without covering
+					<Pressable
+						style={styles.grabberArea}
+						onPress={() => setExpanded((v) => !v)}
+					>
+						<View style={styles.grabber} />
+					</Pressable>
+					{/* The peek, and everything the map needs to say without covering
 				    itself: where you are, one way back, and — on a county — its one
 				    figure with the door to the rest. */}
-				<View style={styles.headRow}>
-					{!searching && (drillCity || openedArea) ? (
-						<Pressable onPress={goBack} hitSlop={14}>
-							<Text style={styles.backChevron}>‹</Text>
-						</Pressable>
-					) : null}
-					<Text style={styles.sheetTitle} numberOfLines={1}>
-						{searching
-							? `"${query.trim()}"`
-							: drillCity
-								? drillCity.name
-								: openedArea
-									? `${openedArea.name} County`
-									: "All areas"}
-						{searching && !(poolLoading || search.loading)
-							? ` · ${hitCount}`
-							: ""}
-					</Text>
-					{previewing && previewValue ? (
-						<Text style={styles.headValue}>{previewValue}</Text>
-					) : null}
-				</View>
-				{previewing && openedArea ? (
-					<>
-						{savedNoteFor(openedArea.key) ? (
-							<Text style={styles.previewSaved} numberOfLines={1}>
-								{savedNoteFor(openedArea.key)}
-							</Text>
+					<View style={styles.headRow}>
+						{!searching && (drillCity || openedArea) ? (
+							<Pressable onPress={goBack} hitSlop={14}>
+								<Text style={styles.backChevron}>‹</Text>
+							</Pressable>
 						) : null}
-						<Pressable
-							style={styles.previewCta}
-							// With no lens on, the page picks its own default rather than
-							// being handed the string "null".
-							onPress={() =>
-								router.push(
-									lensId
-										? `/area/${openedArea.key}?lens=${lensId}`
-										: `/area/${openedArea.key}`,
-								)
-							}
-						>
-							<Text style={styles.previewCtaLabel}>Full breakdown ›</Text>
-						</Pressable>
-					</>
-				) : null}
-				{expanded && (
-					<ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
-						{asking && search.error && (
-							<View style={styles.stateBox}>
-								<Text style={styles.empty}>Couldn’t reach search.</Text>
-								<Pressable onPress={search.retry} style={styles.retryBtn}>
-									<Text style={styles.retryLabel}>Try again</Text>
-								</Pressable>
-							</View>
-						)}
-						{asking && !search.error && !hits && (
-							<Text style={styles.empty}>
-								{searching ? "Searching…" : "Loading…"}
-							</Text>
-						)}
-						{searching && hits && hitCount === 0 && (
-							<Text style={styles.empty}>
-								No match — try a street, community, city or zip.
-							</Text>
-						)}
-						{!searching &&
-							drillCity &&
-							hits &&
-							hits.communities.length === 0 &&
-							hits.listings.length === 0 && (
+						<Text style={styles.sheetTitle} numberOfLines={1}>
+							{searching
+								? `"${query.trim()}"`
+								: drillCity
+									? drillCity.name
+									: openedArea
+										? `${openedArea.name} County`
+										: "All areas"}
+							{searching && !(poolLoading || search.loading)
+								? ` · ${hitCount}`
+								: ""}
+						</Text>
+						{previewing && previewValue ? (
+							<Text style={styles.headValue}>{previewValue}</Text>
+						) : null}
+					</View>
+					{previewing && openedArea ? (
+						<>
+							{savedNoteFor(openedArea.key) ? (
+								<Text style={styles.previewSaved} numberOfLines={1}>
+									{savedNoteFor(openedArea.key)}
+								</Text>
+							) : null}
+							<Pressable
+								style={styles.previewCta}
+								// With no lens on, the page picks its own default rather than
+								// being handed the string "null".
+								onPress={() =>
+									router.push(
+										lensId
+											? `/area/${openedArea.key}?lens=${lensId}`
+											: `/area/${openedArea.key}`,
+									)
+								}
+							>
+								<Text style={styles.previewCtaLabel}>Full breakdown ›</Text>
+							</Pressable>
+						</>
+					) : null}
+					{expanded && (
+						<ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
+							{asking && search.error && (
+								<View style={styles.stateBox}>
+									<Text style={styles.empty}>Couldn’t reach search.</Text>
+									<Pressable onPress={search.retry} style={styles.retryBtn}>
+										<Text style={styles.retryLabel}>Try again</Text>
+									</Pressable>
+								</View>
+							)}
+							{asking && !search.error && !hits && (
 								<Text style={styles.empty}>
-									Nothing mapped in {drillCity.name} yet.
+									{searching ? "Searching…" : "Loading…"}
 								</Text>
 							)}
-						{!searching && !poolLoading && units.length === 0 && (
-							<Text style={styles.empty}>
-								No areas yet.{"\n"}Discovery lives in the feed.
-							</Text>
-						)}
+							{searching && hits && hitCount === 0 && (
+								<Text style={styles.empty}>
+									No match — try a street, community, city or zip.
+								</Text>
+							)}
+							{!searching &&
+								drillCity &&
+								hits &&
+								hits.communities.length === 0 &&
+								hits.listings.length === 0 && (
+									<Text style={styles.empty}>
+										Nothing mapped in {drillCity.name} yet.
+									</Text>
+								)}
+							{!searching && !poolLoading && units.length === 0 && (
+								<Text style={styles.empty}>
+									No areas yet.{"\n"}Discovery lives in the feed.
+								</Text>
+							)}
 
-						{hits && hits.communities.length > 0 && (
-							<Text style={styles.groupTitle}>Communities</Text>
-						)}
-						{hits?.communities.map((c) => (
-							<Pressable
-								key={`c-${c.id}`}
-								style={styles.row}
-								onPress={() => router.push(`/community/${c.slug}`)}
-							>
-								<Image
-									source={c.heroUrl ? { uri: c.heroUrl } : undefined}
-									style={styles.rowThumb}
-								/>
-								<View style={styles.rowText}>
-									<Text style={styles.rowName}>{c.name}</Text>
-									<Text style={styles.rowSub}>
-										{c.city}, {c.state}
-									</Text>
-								</View>
-							</Pressable>
-						))}
+							{hits && hits.communities.length > 0 && (
+								<Text style={styles.groupTitle}>Communities</Text>
+							)}
+							{hits?.communities.map((c) => (
+								<Pressable
+									key={`c-${c.id}`}
+									style={styles.row}
+									onPress={() => router.push(`/community/${c.slug}`)}
+								>
+									<Image
+										source={c.heroUrl ? { uri: c.heroUrl } : undefined}
+										style={styles.rowThumb}
+									/>
+									<View style={styles.rowText}>
+										<Text style={styles.rowName}>{c.name}</Text>
+										<Text style={styles.rowSub}>
+											{c.city}, {c.state}
+										</Text>
+									</View>
+								</Pressable>
+							))}
 
-						{hits && hits.listings.length > 0 && (
-							<Text style={styles.groupTitle}>Homes</Text>
-						)}
-						{hits?.listings.map((l) => (
-							<Pressable
-								key={`l-${l.id}`}
-								style={styles.row}
-								onPress={() => router.push(`/listing/${l.id}`)}
-							>
-								<Image
-									source={l.coverUrl ? { uri: l.coverUrl } : undefined}
-									style={styles.rowThumb}
-								/>
-								<View style={styles.rowText}>
-									<Text style={styles.rowName} numberOfLines={1}>
-										{[formatPrice(l.price), l.address]
-											.filter(Boolean)
-											.join(" · ")}
-									</Text>
-									<Text style={styles.rowSub} numberOfLines={1}>
-										{[
-											`${l.city}, ${l.state}${l.zip ? ` ${l.zip}` : ""}`,
-											specsLine(l.beds, l.baths, l.sqft),
-										]
-											.filter(Boolean)
-											.join(" · ")}
-									</Text>
-								</View>
-							</Pressable>
-						))}
+							{hits && hits.listings.length > 0 && (
+								<Text style={styles.groupTitle}>Homes</Text>
+							)}
+							{hits?.listings.map((l) => (
+								<Pressable
+									key={`l-${l.id}`}
+									style={styles.row}
+									onPress={() => router.push(`/listing/${l.id}`)}
+								>
+									<Image
+										source={l.coverUrl ? { uri: l.coverUrl } : undefined}
+										style={styles.rowThumb}
+									/>
+									<View style={styles.rowText}>
+										<Text style={styles.rowName} numberOfLines={1}>
+											{[formatPrice(l.price), l.address]
+												.filter(Boolean)
+												.join(" · ")}
+										</Text>
+										<Text style={styles.rowSub} numberOfLines={1}>
+											{[
+												`${l.city}, ${l.state}${l.zip ? ` ${l.zip}` : ""}`,
+												specsLine(l.beds, l.baths, l.sqft),
+											]
+												.filter(Boolean)
+												.join(" · ")}
+										</Text>
+									</View>
+								</Pressable>
+							))}
 
-						{listedUnits.length > 0 && (
-							<Text style={styles.groupTitle}>
-								{previewing ? "Cities" : "Areas"}
-							</Text>
-						)}
-						{listedUnits.map((u) => (
-							<Pressable
-								key={u.id}
-								style={[styles.row, selectedId === u.id && styles.rowSelected]}
-								onPress={() => select(u)}
-							>
-								<Image source={{ uri: u.heroUrl }} style={styles.rowThumb} />
-								<View style={styles.rowText}>
-									<Text style={styles.rowName}>{u.name}</Text>
-									<Text style={styles.rowSub}>
-										{u.communityCount > 0
-											? `${u.communityCount} communities`
-											: "no communities yet"}
-									</Text>
-								</View>
-							</Pressable>
-						))}
-					</ScrollView>
-				)}
-			</View>
+							{listedUnits.length > 0 && (
+								<Text style={styles.groupTitle}>
+									{previewing ? "Cities" : "Areas"}
+								</Text>
+							)}
+							{listedUnits.map((u) => (
+								<Pressable
+									key={u.id}
+									style={[
+										styles.row,
+										selectedId === u.id && styles.rowSelected,
+									]}
+									onPress={() => select(u)}
+								>
+									<Image source={{ uri: u.heroUrl }} style={styles.rowThumb} />
+									<View style={styles.rowText}>
+										<Text style={styles.rowName}>{u.name}</Text>
+										<Text style={styles.rowSub}>
+											{u.communityCount > 0
+												? `${u.communityCount} communities`
+												: "no communities yet"}
+										</Text>
+									</View>
+								</Pressable>
+							))}
+						</ScrollView>
+					)}
+				</View>
+			)}
 		</View>
 	);
 }
