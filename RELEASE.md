@@ -35,6 +35,12 @@ community reviews instead.
 
 ### 2026-09-10
 
+**No panel on the Search map at all.** Tapping a county or a city no longer
+raises a strip along the bottom. Where you are now shows as a small floating
+tag over the map — tap the arrow to step back out, or tap the county's name to
+open its full page. The panel only appears when you type a search, which is
+the one time you're actually asking for a list.
+
 **Far more neighbourhoods on the map.** Only communities we had a photo of
 were being drawn, which left a city looking almost empty. Every community we
 have an outline for now appears, whether or not we have a picture of it.

@@ -21,6 +21,54 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-10 01:30 UTC — phase269: the panel was the problem
+
+**Objective**: owner — "still see empty sheet for county and city… need a
+different entry to see details."
+
+**The lesson, written down because I needed three rounds to learn it.** The
+note has now arrived three times:
+
+  1. (09-09) "not a full screen details that hide map itself" → I moved the
+     breakdown to a page and left a 280pt sheet.
+  2. (09-09) "don't show the sheet with all community list after clicking the
+     city… same rule applied everywhere" → I stopped auto-expanding and left a
+     110–148pt peek.
+  3. (09-10) "still see empty sheet for county and city".
+
+Each round I shrank the panel. **A sheet holding one line does not read as a
+compact sheet; it reads as an empty sheet.** The panel itself was the thing
+being objected to, and shrinking it was answering a question he had not asked.
+
+**Actions**, `apps/mobile/app/(tabs)/search.tsx`:
+- The sheet is mounted only while a query is TYPED. No map interaction brings
+  it back. `sheetVisible` is gone; the condition is just `searching`.
+- A county or a drilled city now puts a PILL on the map, bottom-centre, sized
+  to its own text so the map runs under and around it:
+  `‹ Cobb County · $987 ›`. The chevron goes back a level; the body opens
+  `/area/[key]` — the "different entry" he asked for.
+- A city's pill is the name and the way back only. There is no city page to
+  open: this product has no city record, only communities grouped by a `city`
+  string, and its communities are already the outlines on the map.
+- The saved-city note ("Woodstock, saved") survives as a second line inside the
+  county pill rather than dying with the peek — it is words, not numerals, and
+  still the only thing that distinguishes 29 identical outlines.
+- Dead with the peek: `headRow` / `backChevron` / `headValue` / `previewSaved`
+  / `previewCta` styles, the `previewing` and `sheetVisible` flags, and
+  `listedUnits` (the sheet is search-only, so the unit list is just `units`).
+
+**Cost, stated**: the region-level and county-level lists of cities are gone
+from the UI entirely. Cities are pins; you tap one. If he ever wants a list
+back it should be a pushed page, not a panel on this screen.
+
+**Verification**: `pnpm typecheck` clean; `pnpm lint` exit 0 (same 8
+pre-existing warnings); mobile 684 pass. Web untouched this phase.
+
+**Next steps**: owner reviews. Still open from phase267/268: the viewport
+query for true community coverage, and TIGER Places for city outlines.
+
+---
+
 ## 2026-09-10 01:05 UTC — phase268: the outlines cover the city, and the tap lands
 
 **Objective**: owner on phase267 — "地图上看到几个零星的社区图形 为啥不是全覆盖?
