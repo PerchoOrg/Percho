@@ -6,6 +6,28 @@
 
 ---
 
+## v1.5 — Comparing now gets you a suggestion, not a spreadsheet
+
+Put two or three saved homes, neighbourhoods, or areas next to each other and
+Percho no longer just lays out a table and leaves you to do the reading. It
+now opens with a take — the kind of straight answer a friend who had done the
+math would give you: "If it were me, I'd lean the Oak Street house — it runs
+about $340 a month less and the nearby schools test stronger. The trade: it's
+the older build." When the numbers genuinely don't pick a side, it says that
+instead of pretending they do, and it always names what the pick gives up.
+The full side-by-side figures still sit right below the take, unranked, so
+you can check its work and disagree.
+
+Getting there is one tap now. The Saved tab used to make you tap a "Compare"
+label and then tick checkboxes in the list below it — an awkward two-step
+that never felt like one action. Now a single card at the top of Saved offers
+your homes, your neighbourhoods, and your areas each as a one-tap row. Saved
+two or three homes? They ARE your shortlist — no picking step at all. Saved
+more than three? You pick the ones you're torn between by tapping their
+photos, right there in the card.
+
+---
+
 ## v1.4 — Search now compares areas, not just finds addresses
 
 Search used to answer one question: where is this address. It now answers the

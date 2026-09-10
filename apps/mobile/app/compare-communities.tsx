@@ -9,10 +9,13 @@
  * hairlines, same "—" for a figure we do not have. A buyer who has compared
  * homes should not have to learn a second table to compare neighbourhoods.
  *
- * The one difference is the PICKER, or rather its absence: `/compare` is
- * reached by ticking homes, because a shortlist of saved homes runs long. The
- * saved communities ARE the shortlist — the same argument the area compare
- * makes — so Saved passes them straight through.
+ * The saved communities ARE the shortlist — the same argument the area
+ * compare makes — so Saved passes them straight through, no picking.
+ *
+ * Since phase270 the screen LEADS with the take (`lib/community/take.ts`,
+ * owner: results "should look like a real suggestion from a friend or
+ * agent") and the table follows as the evidence. The table still ranks
+ * nothing — the opinion lives in the card that is labelled as one.
  */
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -26,6 +29,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { TakeCard } from "../components/compare/TakeCard";
 import { communityDetailUrl } from "../lib/api/base";
 import {
 	COMMUNITY_COMPARE_MAX,
@@ -33,6 +37,7 @@ import {
 	buildCommunityCompareTable,
 } from "../lib/community/compare-communities";
 import type { CommunityDetailDTO } from "../lib/community/detail-dto";
+import { buildCommunityTake } from "../lib/community/take";
 import { colors, radii } from "../theme/tokens";
 import { textStyles } from "../theme/typography";
 
@@ -89,6 +94,8 @@ export default function CompareCommunitiesScreen() {
 		state.status === "ready"
 			? buildCommunityCompareTable(state.communities)
 			: null;
+	const take =
+		state.status === "ready" ? buildCommunityTake(state.communities) : null;
 
 	return (
 		<View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
@@ -126,6 +133,8 @@ export default function CompareCommunitiesScreen() {
 				<ScrollView
 					contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
 				>
+					{take && <TakeCard take={take} />}
+					<Text style={styles.factsHead}>The numbers behind it</Text>
 					<View style={styles.tableRow}>
 						<View style={styles.labelCol} />
 						{table.headers.map((h) => (
@@ -173,13 +182,14 @@ export default function CompareCommunitiesScreen() {
 					))}
 
 					{/* The same promise the home table's foot makes, and it has to be
-					    made here too: nothing on this screen is ranked, and the
-					    counts are of the places we know about rather than of every
-					    place that exists. */}
+					    made here too: the table ranks nothing, the take is built from
+					    these rows alone, and the counts are of the places we know
+					    about rather than of every place that exists. */}
 					<Text style={styles.foot}>
-						The same figures each neighbourhood’s page shows — no ranking, no
-						score. Ratings are from residents whose review we have approved, and
-						a count is of the places we know about nearby, not a census.
+						The same figures each neighbourhood’s page shows. The take above is
+						worked out from them and nothing else — read them and feel free to
+						disagree. Ratings are from residents whose review we have approved,
+						and a count is of the places we know about nearby, not a census.
 					</Text>
 				</ScrollView>
 			)}
@@ -206,6 +216,7 @@ const styles = StyleSheet.create({
 		paddingVertical: 12,
 	},
 	btnTxt: { ...textStyles.headline, color: colors.surface },
+	factsHead: { ...textStyles.caption, color: colors.ink3, marginBottom: 10 },
 	tableRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
 	dataRow: {
 		paddingVertical: 10,

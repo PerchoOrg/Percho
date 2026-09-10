@@ -13,11 +13,13 @@
  *   · price-change / DOM / delisted badges — the schema has no price history
  *     and no listing date; a 404 from the detail endpoint is the one honest
  *     "gone" signal and renders as such.
- *   · Compare — all three kinds now have a table, and only the homes need a
- *     picker: tap Compare, tick 2–3, and `/compare` lays them side by side
- *     (phase D, `lib/listing/compare.ts`). Saved AREAS and saved COMMUNITIES
- *     go straight to `/compare-areas` and `/compare-communities`, because in
- *     both cases what is saved already IS the shortlist.
+ *   · Compare — reworked in phase270 into "the take": one card up top, one
+ *     row per kind, one tap each (owner: "very unnatural to compare … by
+ *     selecting the a text then selecting few item below"). Homes with ≤3
+ *     saved go straight to `/compare` — the saved set IS the shortlist, the
+ *     argument areas and communities always made. Only MORE than 3 homes
+ *     needs narrowing, and that now happens on thumbnails inside the card,
+ *     where the tap is — not as a mode the list below silently enters.
  *
  * Rows re-fetch from the detail endpoints on every mount — the store keeps
  * ids only, so a price change shows the moment the server knows it.
@@ -64,6 +66,8 @@ type Row =
 			status: "ready";
 			title: string;
 			sub?: string;
+			/** The street line alone — what the take picker captions a thumb. */
+			short?: string;
 			thumbUrl?: string;
 			href: string;
 	  }
@@ -98,6 +102,7 @@ async function fetchRow(item: SavedItem): Promise<Row> {
 				status: "ready",
 				title: [price, specs].filter(Boolean).join(" · ") || d.address,
 				sub: `${d.address} · ${d.city}, ${d.state}`,
+				short: d.address,
 				thumbUrl: d.photos[0]?.url,
 				href: `/listing/${d.id}`,
 			};
@@ -139,10 +144,12 @@ export default function SavedTab() {
 	});
 
 	const [rows, setRows] = useState<Record<string, Row>>({});
-	// Compare picker: null = off; otherwise the ticked listing ids.
+	// The take card's home picker — only mounted when MORE than COMPARE_MAX
+	// homes are saved. null = strip closed; otherwise the picked listing ids.
 	const [picking, setPicking] = useState<string[] | null>(null);
 
-	const listingCount = items.filter((i) => i.kind === "listing").length;
+	const listingItems = items.filter((i) => i.kind === "listing");
+	const listingCount = listingItems.length;
 	const areaItems = items.filter((i) => i.kind === "area");
 	// Saved COMMUNITIES, newest first — the order `items` already carries. No
 	// picker and no resolution step: unlike a saved area (a city that has to be
@@ -256,112 +263,189 @@ export default function SavedTab() {
 				style={styles.list}
 				contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
 			>
-				{/* Compare (05 §5.2): pick 2–3 homes, then open the side-by-side. */}
-				{listingCount >= COMPARE_MIN && (
-					<View style={styles.compare}>
-						{picking ? (
-							<>
-								<Text style={styles.compareBody}>
-									{picking.length < COMPARE_MIN
-										? `Tick ${COMPARE_MIN}–${COMPARE_MAX} homes to compare.`
-										: `${picking.length} homes picked.`}
-								</Text>
-								<View style={styles.compareActions}>
+				{/* The take card (phase270) — one card, one row per kind, one tap.
+				    The old design was a "COMPARE" text card that flipped the list
+				    below into a tick-mode; owner called that unnatural, and it
+				    was: the tap and the choosing happened on different surfaces.
+				    Now a shortlist of 2–3 goes straight to its take, and only
+				    MORE than 3 homes needs narrowing — done on thumbnails right
+				    here in the card. Each destination leads with a suggestion, so
+				    the card promises one, not a table. */}
+				{(listingCount >= COMPARE_MIN ||
+					communityIds.length >= COMMUNITY_COMPARE_MIN ||
+					comparableKeys.length >= AREA_COMPARE_MIN) && (
+					<View style={styles.take}>
+						<Text style={styles.takeHead}>Torn between a few?</Text>
+						<Text style={styles.takeSub}>
+							Get a straight take — a lean, the why, and the numbers behind it.
+						</Text>
+
+						{listingCount >= COMPARE_MIN &&
+							(listingCount <= COMPARE_MAX ? (
+								<Pressable
+									style={styles.takeRow}
+									onPress={() =>
+										router.push({
+											pathname: "/compare",
+											params: {
+												ids: listingItems.map((i) => i.id).join(","),
+											},
+										})
+									}
+									accessibilityRole="button"
+								>
+									<Text style={styles.takeRowTxt}>
+										Your {listingCount} homes
+									</Text>
+									<Text style={styles.takeRowGo}>›</Text>
+								</Pressable>
+							) : (
+								<>
 									<Pressable
-										style={[
-											styles.compareBtn,
-											picking.length < COMPARE_MIN && styles.compareBtnOff,
-										]}
-										disabled={picking.length < COMPARE_MIN}
-										onPress={() =>
-											router.push({
-												pathname: "/compare",
-												params: { ids: picking.join(",") },
-											})
-										}
+										style={styles.takeRow}
+										onPress={() => setPicking((p) => (p ? null : []))}
 										accessibilityRole="button"
+										accessibilityState={{ expanded: picking !== null }}
 									>
-										<Text style={styles.compareBtnTxt}>Compare</Text>
+										<Text style={styles.takeRowTxt}>
+											Your homes — which are you torn between?
+										</Text>
+										<Text style={styles.takeRowGo}>{picking ? "×" : "›"}</Text>
 									</Pressable>
-									<Pressable
-										style={styles.compareCancel}
-										onPress={() => setPicking(null)}
-										accessibilityRole="button"
-									>
-										<Text style={styles.compareCancelTxt}>Cancel</Text>
-									</Pressable>
-								</View>
-							</>
-						) : (
+									{picking && (
+										<>
+											<ScrollView
+												horizontal
+												showsHorizontalScrollIndicator={false}
+												contentContainerStyle={styles.pickStrip}
+											>
+												{/* Only resolved homes can be picked — a row still
+												    loading has no picture to recognise it by, and a
+												    gone one has nothing to compare. */}
+												{listingItems.map((i) => {
+													const r = rows[i.id];
+													if (!r || r.status !== "ready") return null;
+													const on = picking.includes(i.id);
+													return (
+														<Pressable
+															key={i.id}
+															style={styles.pickItem}
+															onPress={() =>
+																setPicking((p) => {
+																	if (!p) return p;
+																	if (p.includes(i.id))
+																		return p.filter((x) => x !== i.id);
+																	return p.length < COMPARE_MAX
+																		? [...p, i.id]
+																		: p;
+																})
+															}
+															accessibilityRole="checkbox"
+															accessibilityState={{ checked: on }}
+															accessibilityLabel={r.short ?? r.title}
+														>
+															{r.thumbUrl ? (
+																<Image
+																	source={{ uri: r.thumbUrl }}
+																	style={[
+																		styles.pickThumb,
+																		on && styles.pickThumbOn,
+																	]}
+																/>
+															) : (
+																<View
+																	style={[
+																		styles.pickThumb,
+																		on && styles.pickThumbOn,
+																	]}
+																/>
+															)}
+															<Text
+																style={[
+																	styles.pickCaption,
+																	on && styles.pickCaptionOn,
+																]}
+																numberOfLines={1}
+															>
+																{r.short ?? r.title}
+															</Text>
+														</Pressable>
+													);
+												})}
+											</ScrollView>
+											<Pressable
+												style={[
+													styles.takeBtn,
+													picking.length < COMPARE_MIN && styles.takeBtnOff,
+												]}
+												disabled={picking.length < COMPARE_MIN}
+												onPress={() =>
+													router.push({
+														pathname: "/compare",
+														params: { ids: picking.join(",") },
+													})
+												}
+												accessibilityRole="button"
+											>
+												<Text style={styles.takeBtnTxt}>
+													{picking.length < COMPARE_MIN
+														? `Pick 2 or ${COMPARE_MAX}`
+														: `Get the take on ${picking.length}`}
+												</Text>
+											</Pressable>
+										</>
+									)}
+								</>
+							))}
+
+						{communityIds.length >= COMMUNITY_COMPARE_MIN && (
 							<Pressable
-								style={styles.compareEntry}
-								onPress={() => setPicking([])}
+								style={styles.takeRow}
+								onPress={() =>
+									router.push({
+										pathname: "/compare-communities",
+										params: {
+											ids: communityIds
+												.slice(0, COMMUNITY_COMPARE_MAX)
+												.join(","),
+										},
+									})
+								}
 								accessibilityRole="button"
 							>
-								<Text style={styles.compareHead}>COMPARE</Text>
-								<Text style={styles.compareBody}>
-									Pick {COMPARE_MIN}–{COMPARE_MAX} homes and see them side by
-									side — price, monthly cost, size, schools.
+								<Text style={styles.takeRowTxt}>
+									{communityIds.length > COMMUNITY_COMPARE_MAX
+										? // Sliced to the newest saves — say so instead of
+											// implying all of them made the trip.
+											`Your latest ${COMMUNITY_COMPARE_MAX} neighbourhoods`
+										: `Your ${communityIds.length} neighbourhoods`}
 								</Text>
+								<Text style={styles.takeRowGo}>›</Text>
+							</Pressable>
+						)}
+
+						{comparableKeys.length >= AREA_COMPARE_MIN && (
+							<Pressable
+								style={styles.takeRow}
+								onPress={() =>
+									router.push({
+										pathname: "/compare-areas",
+										params: {
+											keys: comparableKeys.slice(0, AREA_COMPARE_MAX).join(","),
+										},
+									})
+								}
+								accessibilityRole="button"
+							>
+								<Text style={styles.takeRowTxt}>
+									{comparableKeys.length > AREA_COMPARE_MAX
+										? `Your latest ${AREA_COMPARE_MAX} areas`
+										: `Your ${comparableKeys.length} areas`}
+								</Text>
+								<Text style={styles.takeRowGo}>›</Text>
 							</Pressable>
 						)}
 					</View>
-				)}
-
-				{/* Compare the saved COMMUNITIES (phase261). Owner: "Saved can't
-				    compare communities" — it could compare homes and it could
-				    compare areas, and the shortlist most buyers actually hold was
-				    the one kind with no table.
-
-				    Sits between the two on purpose: a community is narrower than a
-				    county and wider than a house, and this row reads down that
-				    scale. Like the areas below and unlike the homes above, it needs
-				    no picking — the saved communities ARE the shortlist. */}
-				{communityIds.length >= COMMUNITY_COMPARE_MIN && (
-					<Pressable
-						style={styles.compare}
-						onPress={() =>
-							router.push({
-								pathname: "/compare-communities",
-								params: {
-									ids: communityIds.slice(0, COMMUNITY_COMPARE_MAX).join(","),
-								},
-							})
-						}
-						accessibilityRole="button"
-					>
-						<Text style={styles.compareHead}>COMPARE NEIGHBOURHOODS</Text>
-						<Text style={styles.compareBody}>
-							See your saved neighbourhoods side by side — what residents rate
-							them, who lives there, what’s nearby.
-						</Text>
-					</Pressable>
-				)}
-
-				{/* Compare the saved AREAS. Separate from the home picker on
-				    purpose: the buyer study put most people at "which of my two
-				    or three neighbourhoods", which is a different question from
-				    "which of these houses", and answering it needs no picking —
-				    the saved areas ARE the shortlist. */}
-				{comparableKeys.length >= AREA_COMPARE_MIN && (
-					<Pressable
-						style={styles.compare}
-						onPress={() =>
-							router.push({
-								pathname: "/compare-areas",
-								params: {
-									keys: comparableKeys.slice(0, AREA_COMPARE_MAX).join(","),
-								},
-							})
-						}
-						accessibilityRole="button"
-					>
-						<Text style={styles.compareHead}>COMPARE AREAS</Text>
-						<Text style={styles.compareBody}>
-							See your saved areas side by side — what a home really costs each
-							month, schools, tax, utilities.
-						</Text>
-					</Pressable>
 				)}
 
 				{items.map((item) =>
@@ -381,19 +465,6 @@ export default function SavedTab() {
 							row={rows[item.id] ?? { status: "loading" }}
 							onRetry={() => void load(item)}
 							onRemove={() => toggle(item.id, item.kind)}
-							picked={
-								picking && item.kind === "listing"
-									? picking.includes(item.id)
-									: undefined
-							}
-							onPick={() =>
-								setPicking((p) => {
-									if (!p) return p;
-									if (p.includes(item.id))
-										return p.filter((x) => x !== item.id);
-									return p.length < COMPARE_MAX ? [...p, item.id] : p;
-								})
-							}
 						/>
 					),
 				)}
@@ -421,15 +492,10 @@ function SavedRow({
 	row,
 	onRetry,
 	onRemove,
-	picked,
-	onPick,
 }: {
 	row: Row;
 	onRetry: () => void;
 	onRemove: () => void;
-	/** Defined only while the compare picker is open. */
-	picked?: boolean;
-	onPick: () => void;
 }) {
 	if (row.status === "loading") {
 		return (
@@ -459,20 +525,13 @@ function SavedRow({
 			</View>
 		);
 	}
-	const pickMode = picked !== undefined;
 	return (
 		<Pressable
-			style={[styles.row, picked && styles.rowPicked]}
-			onPress={pickMode ? onPick : () => router.push(row.href as never)}
-			accessibilityRole={pickMode ? "checkbox" : "button"}
-			accessibilityState={pickMode ? { checked: picked } : undefined}
+			style={styles.row}
+			onPress={() => router.push(row.href as never)}
+			accessibilityRole="button"
 			accessibilityLabel={`${row.title}${row.sub ? `, ${row.sub}` : ""}`}
 		>
-			{pickMode && (
-				<View style={[styles.tick, picked && styles.tickOn]}>
-					{picked && <Text style={styles.tickMark}>✓</Text>}
-				</View>
-			)}
 			{row.thumbUrl ? (
 				<Image source={{ uri: row.thumbUrl }} style={styles.thumb} />
 			) : (
@@ -488,16 +547,14 @@ function SavedRow({
 					</Text>
 				)}
 			</View>
-			{!pickMode && (
-				<Pressable
-					onPress={onRemove}
-					hitSlop={8}
-					accessibilityRole="button"
-					accessibilityLabel="Remove from saved"
-				>
-					<Text style={styles.rowAction}>Remove</Text>
-				</Pressable>
-			)}
+			<Pressable
+				onPress={onRemove}
+				hitSlop={8}
+				accessibilityRole="button"
+				accessibilityLabel="Remove from saved"
+			>
+				<Text style={styles.rowAction}>Remove</Text>
+			</Pressable>
 		</Pressable>
 	);
 }
@@ -579,44 +636,55 @@ const styles = StyleSheet.create({
 		lineHeight: 15,
 	},
 	rowAction: { ...textStyles.footnote, color: colors.accent },
-	compare: {
-		backgroundColor: colors.surface2,
+	take: {
+		backgroundColor: colors.surface,
 		borderRadius: radii.tile,
-		padding: 14,
-		marginBottom: 8,
-		gap: 4,
+		borderWidth: 1,
+		borderColor: colors.border,
+		paddingHorizontal: 14,
+		paddingTop: 14,
+		paddingBottom: 6,
+		marginBottom: 12,
 	},
-	compareEntry: { gap: 4 },
-	compareHead: { ...textStyles.caption, color: colors.ink3 },
-	compareBody: { ...textStyles.footnote, color: colors.ink2 },
-	compareActions: {
+	takeHead: { ...textStyles.title2, color: colors.ink },
+	takeSub: {
+		...textStyles.footnote,
+		color: colors.ink2,
+		marginTop: 2,
+		marginBottom: 6,
+	},
+	takeRow: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 12,
-		marginTop: 8,
+		justifyContent: "space-between",
+		paddingVertical: 12,
+		borderTopWidth: StyleSheet.hairlineWidth,
+		borderTopColor: colors.border,
 	},
-	compareBtn: {
+	takeRowTxt: { ...textStyles.headline, color: colors.ink },
+	takeRowGo: { ...textStyles.headline, color: colors.accent },
+	pickStrip: { gap: 10, paddingBottom: 10 },
+	pickItem: { width: 76, gap: 4 },
+	pickThumb: {
+		width: 76,
+		height: 76,
+		borderRadius: radii.tile,
+		backgroundColor: colors.surface2,
+		borderWidth: 2,
+		borderColor: "transparent",
+	},
+	pickThumbOn: { borderColor: colors.accent },
+	pickCaption: { ...textStyles.footnote, fontSize: 11, color: colors.ink2 },
+	pickCaptionOn: { color: colors.accent },
+	takeBtn: {
 		backgroundColor: colors.cta,
 		borderRadius: radii.btn,
-		paddingHorizontal: 18,
 		paddingVertical: 10,
-	},
-	compareBtnOff: { opacity: 0.4 },
-	compareBtnTxt: { ...textStyles.headline, color: colors.surface },
-	compareCancel: { minHeight: 44, justifyContent: "center" },
-	compareCancelTxt: { ...textStyles.footnote, color: colors.accent },
-	rowPicked: { borderWidth: 1.5, borderColor: colors.accent },
-	tick: {
-		width: 22,
-		height: 22,
-		borderRadius: 11,
-		borderWidth: 1.5,
-		borderColor: colors.border,
 		alignItems: "center",
-		justifyContent: "center",
+		marginBottom: 10,
 	},
-	tickOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-	tickMark: { ...textStyles.caption, color: colors.surface },
+	takeBtnOff: { opacity: 0.4 },
+	takeBtnTxt: { ...textStyles.headline, color: colors.surface },
 	emptyTitle: { ...textStyles.title2, color: colors.ink, textAlign: "center" },
 	backBtn: {
 		backgroundColor: colors.cta,

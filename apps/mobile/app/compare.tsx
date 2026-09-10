@@ -1,10 +1,15 @@
 /**
  * `/compare?ids=a,b[,c]` — 2–3 saved homes side by side (phase D, 05 §5.2).
  *
- * Pushed from the Saved tab's compare picker. Each home re-fetches its detail
- * (the store keeps ids only), the table is `lib/listing/compare.ts`, and the
- * monthly figure uses the same live rate as the listing page's cost block.
+ * Pushed from the Saved tab. Each home re-fetches its detail (the store
+ * keeps ids only), the table is `lib/listing/compare.ts`, and the monthly
+ * figure uses the same live rate as the listing page's cost block.
  * Tap a column header → that home's page.
+ *
+ * Since phase270 the screen LEADS with the take (`lib/listing/take.ts`,
+ * owner: results "should look like a real suggestion from a friend or
+ * agent") and the table follows as the evidence. The table itself still
+ * ranks nothing — the opinion lives in the card that is labelled as one.
  */
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -18,6 +23,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { TakeCard } from "../components/compare/TakeCard";
 import { listingDetailUrl } from "../lib/api/base";
 import {
 	COMPARE_MAX,
@@ -26,6 +32,7 @@ import {
 } from "../lib/listing/compare";
 import type { ListingDetailDTO } from "../lib/listing/detail-dto";
 import { useRates } from "../lib/listing/rates";
+import { buildHomeTake } from "../lib/listing/take";
 import { colors, radii } from "../theme/tokens";
 import { textStyles } from "../theme/typography";
 
@@ -80,6 +87,10 @@ export default function CompareScreen() {
 		state.status === "ready"
 			? buildCompareTable(state.homes, rate.annualRate)
 			: null;
+	const take =
+		state.status === "ready"
+			? buildHomeTake(state.homes, rate.annualRate)
+			: null;
 
 	return (
 		<View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
@@ -117,6 +128,8 @@ export default function CompareScreen() {
 				<ScrollView
 					contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
 				>
+					{take && <TakeCard take={take} />}
+					<Text style={styles.factsHead}>The numbers behind it</Text>
 					<View style={styles.tableRow}>
 						<View style={styles.labelCol} />
 						{table.headers.map((h) => (
@@ -161,8 +174,9 @@ export default function CompareScreen() {
 					))}
 
 					<Text style={styles.foot}>
-						Figures are the same ones each home’s page shows — no ranking, no
-						score. Schools are the nearest public school by distance, not an
+						Figures are the same ones each home’s page shows. The take above is
+						worked out from them and nothing else — read them and feel free to
+						disagree. Schools are the nearest public school by distance, not an
 						assignment.
 					</Text>
 				</ScrollView>
@@ -195,6 +209,7 @@ const styles = StyleSheet.create({
 		paddingVertical: 12,
 	},
 	btnTxt: { ...textStyles.headline, color: colors.surface },
+	factsHead: { ...textStyles.caption, color: colors.ink3, marginBottom: 10 },
 	tableRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
 	dataRow: {
 		paddingVertical: 10,

@@ -9,19 +9,24 @@ import { estimateNoteForRows } from "@percho/shared/lenses";
  * The lens map answers "where should I look?"; this answers "which of my
  * two or three?" — which the buyer study says is where most of our users
  * actually are. It marks the best cell in each row, because every row here is
- * one measured quantity with an agreed direction. It marks no overall winner,
- * because how much schools weigh against cost is the buyer's judgement, not
- * ours.
+ * one measured quantity with an agreed direction. The table still marks no
+ * overall winner; since phase270 the OPINION lives above it instead, in the
+ * take (`lib/areas/take.ts`, owner: results "should look like a real
+ * suggestion from a friend or agent"), labelled as an opinion and built from
+ * exactly the rows below.
  */
 import { router, useLocalSearchParams } from "expo-router";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { TakeCard } from "../components/compare/TakeCard";
 import { useAreas } from "../hooks/use-areas";
 import { areasByKey } from "../lib/areas/areas-dto";
 import {
 	AREA_COMPARE_MAX,
+	AREA_COMPARE_MIN,
 	buildAreaCompareTable,
 } from "../lib/areas/compare-areas";
+import { buildAreaTake } from "../lib/areas/take";
 import { usePriorityStore } from "../state/priorities";
 import { colors, explore, radii } from "../theme/tokens";
 import { textStyles } from "../theme/typography";
@@ -71,6 +76,9 @@ export default function CompareAreasScreen() {
 					style={styles.body}
 					contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
 				>
+					{areas.length >= AREA_COMPARE_MIN && (
+						<TakeCard take={buildAreaTake(areas)} />
+					)}
 					<View style={styles.headerRow}>
 						{table.headers.map((h) => (
 							<View key={h.key} style={styles.headerCell}>
@@ -110,9 +118,9 @@ export default function CompareAreasScreen() {
 					))}
 
 					<Text style={styles.foot}>
-						Green marks the better figure in a row. There is no overall winner
-						on purpose — how much schools weigh against cost is your call, not
-						ours.
+						Green marks the better figure in a row. The take at the top is our
+						read of these rows and nothing else — how much schools weigh against
+						cost is still your call, and no row below marks an overall winner.
 						{estimateNote ? ` ${estimateNote}` : ""}
 					</Text>
 				</ScrollView>
