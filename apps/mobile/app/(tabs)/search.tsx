@@ -102,6 +102,7 @@ import MapView, { type LatLng, Marker, Polygon } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAreas } from "../../hooks/use-areas";
 import { useFeedPool } from "../../hooks/use-feed-pool";
+import { useSchools } from "../../hooks/use-schools";
 import { MIN_QUERY_LEN, useSearch } from "../../hooks/use-search";
 import { familiarityFor } from "../../lib/area-familiarity";
 import { areasByKey } from "../../lib/areas/areas-dto";
@@ -112,6 +113,13 @@ import {
 } from "../../lib/areas/locate";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
 import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
+import {
+	type MapRegion,
+	type SchoolPin,
+	proficiencyStep,
+	schoolNote,
+	visibleSchools,
+} from "../../lib/schools/school-pins";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
@@ -193,6 +201,11 @@ export default function SearchTab() {
 	// asks a question with a chip. Tapping the live chip puts it away again.
 	const [lensId, setLensId] = useState<LensId | null>(null);
 	const [openArea, setOpenArea] = useState<string | null>(null);
+	/** What the map is currently showing. Only the school layer reads it, and
+	 *  only `onRegionChangeComplete` writes it — which fires when a gesture
+	 *  ENDS, not through the pan, so this is a handful of renders and not a
+	 *  stream of them. */
+	const [region, setRegion] = useState<MapRegion>(METRO_REGION);
 
 	const lens = lensId ? lensById(lensId) : undefined;
 	const metricsByKey = useMemo(
@@ -234,6 +247,26 @@ export default function SearchTab() {
 	 *  with no lens by default, keying this to `ranked` would hide the only
 	 *  control that can turn one on. */
 	const lensReady = areaData.areas.length > 0;
+
+	// ── The school layer ──────────────────────────────────────────────────────
+	// Icons for the schools themselves, on top of the county colours (owner,
+	// 2026-09-10: "School should be the top one, show school icons on map and
+	// their coverage area"). Their COVERAGE AREAS are not drawn: the
+	// `attendance_zones` table has never been seeded, and a district outline is
+	// a different claim than a zone — see `lib/schools/school-pins.ts`.
+	//
+	// Only under the Schools lens. A pin per school is a lot of ink, and it is
+	// an answer to a question the buyer asks with the chip; without the chip it
+	// is clutter over a map whose job is finding a home.
+	const { schools: schoolData } = useSchools();
+	const schoolPins = useMemo(
+		() =>
+			lensId === "schools" ? visibleSchools(schoolData.schools, region) : [],
+		[lensId, schoolData.schools, region],
+	);
+	/** The schools lens's own ramp, so a pin and the county under it are
+	 *  coloured in one language rather than two. */
+	const schoolRamp = lensById("schools")?.ramp;
 
 	const openedArea: Area | undefined = openArea
 		? metricsByKey.get(openArea)
@@ -407,6 +440,7 @@ export default function SearchTab() {
 					showsPointsOfInterests={false}
 					showsCompass={false}
 					initialRegion={METRO_REGION}
+					onRegionChangeComplete={setRegion}
 				>
 					{/* County OUTLINES, always — the areas are a boundary, not a pin,
 					    and they are the map's structure whether or not a lens is on.
@@ -450,6 +484,19 @@ export default function SearchTab() {
 							/>
 						));
 					})}
+					{/* Schools, under the photo pins on purpose: a home or a
+					    community is what the buyer came to tap, and a school is the
+					    context around it. react-native-maps hit-tests in the order
+					    overlays were added. */}
+					{schoolRamp
+						? schoolPins.map((pin) => (
+								<SchoolMarker
+									key={`sch-${pin.id}`}
+									pin={pin}
+									ramp={schoolRamp}
+								/>
+							))
+						: null}
 					{visibleUnits.map((u) => (
 						<PhotoMarker
 							key={u.id}
@@ -790,6 +837,56 @@ export default function SearchTab() {
  * No `title`/`description`: those draw a callout, and every pin here is a
  * one-tap action — drill into the city, open the community, open the home.
  */
+/**
+ * One school: a small disc carrying its level's initial, coloured by how the
+ * state scored it.
+ *
+ * Unlike `PhotoMarker` this one DOES take a title and description, because a
+ * school is the only pin on this map with nothing to open — there is no school
+ * page in the product. A tap has to answer in place, so it draws the platform
+ * callout with the name and the score.
+ *
+ * `tracksViewChanges={false}` is load-bearing, not a micro-optimisation. A
+ * react-native-maps marker with a custom child re-rasterises that child on
+ * every frame by default; at a hundred pins that is the difference between a
+ * map that pans and one that does not. The content here is fixed at mount —
+ * a pin's letter and colour never change once placed — so there is nothing to
+ * track.
+ *
+ * A school with no published score is deliberately grey rather than dropped or
+ * given a middling colour. GA suppresses cells with too few tested students,
+ * and a new school has no scores at all; both are "we don't know", which is a
+ * different thing from "average" and the whole reason this codebase keeps an
+ * `estimated` flag on every figure it shows.
+ */
+function SchoolMarker({
+	pin,
+	ramp,
+}: {
+	pin: SchoolPin;
+	ramp: readonly [string, string, string, string, string];
+}) {
+	const step = proficiencyStep(pin.proficiencyPct);
+	const fill = step === undefined ? colors.ink3 : (ramp[step] ?? colors.ink3);
+	// The ramp darkens as it goes; its top two steps need light text on them.
+	const ink = step !== undefined && step >= 2 ? colors.surface : colors.ink;
+	const initial =
+		pin.level === "high" ? "H" : pin.level === "middle" ? "M" : "E";
+	return (
+		<Marker
+			coordinate={{ latitude: pin.lat, longitude: pin.lng }}
+			title={pin.name}
+			description={schoolNote(pin)}
+			anchor={{ x: 0.5, y: 0.5 }}
+			tracksViewChanges={false}
+		>
+			<View style={[styles.schoolPin, { backgroundColor: fill }]}>
+				<Text style={[styles.schoolPinText, { color: ink }]}>{initial}</Text>
+			</View>
+		</Marker>
+	);
+}
+
 function PhotoMarker({
 	coordinate,
 	photoUrl,
@@ -838,6 +935,20 @@ function PhotoMarker({
 
 const styles = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: colors.bg },
+	// ── School pins ───────────────────────────────────────────────────────────
+	// Small on purpose: at city zoom there can be dozens, and they sit UNDER
+	// the photo pins in importance. 22pt is legible for one letter and still
+	// leaves the map readable through a cluster of them.
+	schoolPin: {
+		width: 22,
+		height: 22,
+		borderRadius: 11,
+		alignItems: "center",
+		justifyContent: "center",
+		borderWidth: 1.5,
+		borderColor: colors.surface,
+	},
+	schoolPinText: { ...textStyles.caption, fontWeight: "700", fontSize: 11 },
 	mapWrap: { flex: 1, backgroundColor: colors.surface2 },
 	searchPill: {
 		position: "absolute",
