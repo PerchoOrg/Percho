@@ -57,9 +57,22 @@ check from memory" — Forsyth having zero schools is obviously wrong to anyone
 who knows the metro, while 970 vs 2270 is just a number. Worth doing on any
 endpoint that reads a whole table.
 
-**Verification**: typecheck clean, lint clean, `map-pins.test.ts` 6 pass.
-Verified against production after deploy — see the numbers in the next entry's
-commit trail. Pin counts per zoom re-measured against the full set.
+**Verification**, measured against production after the deploy:
+
+| | before | after |
+|---|---|---|
+| pins returned | 970 | **2227** |
+| Gwinnett | 14 | 136 |
+| Fulton | 4 | 103 |
+| Forsyth | 0 | 42 |
+| Henry | 3 | 50 |
+
+95% carry a GA Milestones score. Pin counts per zoom re-measured on the FULL
+set, over downtown Atlanta: metro (0.55, high only) **89**, county (0.50) 75,
+city (0.18, high+middle) 29, street (0.06, all three) 18 — every rung comfortably
+under `MAX_PINS` (120), so the cap stays what it was meant to be, a safety valve
+rather than a thing the layer runs into. Typecheck and lint clean;
+`map-pins.test.ts` 6 pass.
 
 ---
 
