@@ -2,11 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
 	MAX_PINS,
 	type MapRegion,
+	NAMED_MAX,
+	PROFICIENCY_BANDS,
+	PROFICIENCY_LEGEND,
 	type SchoolPin,
 	levelsForZoom,
 	parseSchoolPins,
 	proficiencyStep,
 	schoolNote,
+	shortSchoolName,
+	shouldLabel,
 	visibleSchools,
 } from "./school-pins";
 
@@ -97,9 +102,15 @@ describe("the zoom ladder", () => {
 		expect(levelsForZoom(0.5)).toEqual(["high"]);
 	});
 
-	it("adds middles at city range", () => {
-		// 0.18 is where a city drill lands.
-		expect(levelsForZoom(0.18)).toEqual(["high", "middle"]);
+	it("holds city range to high schools, so the names fit", () => {
+		// 0.18 is where a city drill lands. Retuned in phase275: high + middle
+		// is 29 pins over downtown Atlanta, which is fine as dots and a wall of
+		// overlapping labels with names on. High-only holds that frame at 13.
+		expect(levelsForZoom(0.18)).toEqual(["high"]);
+	});
+
+	it("adds middles once the frame is a neighbourhood", () => {
+		expect(levelsForZoom(0.1)).toEqual(["high", "middle"]);
 	});
 
 	it("shows everything at street range", () => {
@@ -199,6 +210,74 @@ describe("colouring a pin by its score", () => {
 		// panned. 67% is step 3 whether or not anything else is in view.
 		expect(proficiencyStep(67)).toBe(3);
 		expect(proficiencyStep(67)).toBe(proficiencyStep(67));
+	});
+});
+
+describe("naming a pin", () => {
+	it("drops the word every school ends in", () => {
+		// The dot already said it is a school.
+		expect(shortSchoolName("Milton High School")).toBe("Milton High");
+	});
+
+	it("keeps the level but shortens it", () => {
+		// At a zoom showing both, the level word is the only thing telling two
+		// pins a block apart from each other.
+		expect(shortSchoolName("Hollis Hand Elementary School")).toBe(
+			"Hollis Hand Elem.",
+		);
+		expect(shortSchoolName("Trickum Middle School")).toBe("Trickum Mid.");
+	});
+
+	it("truncates a name too long for a map pin", () => {
+		const out = shortSchoolName(
+			"Dr Martin Luther King Junior Memorial Academy School",
+		);
+		expect(out.length).toBeLessThanOrEqual(22);
+		expect(out.endsWith("…")).toBe(true);
+	});
+
+	it("never returns an empty label", () => {
+		// A row literally named "School" would otherwise render as a blank chip.
+		expect(shortSchoolName("School")).toBe("School");
+		expect(shortSchoolName("  Grady   High   School ")).toBe("Grady High");
+	});
+});
+
+describe("deciding whether names fit", () => {
+	it("labels a handful", () => {
+		expect(shouldLabel(1)).toBe(true);
+		expect(shouldLabel(NAMED_MAX)).toBe(true);
+	});
+
+	it("falls back to bare dots past the limit", () => {
+		// Past two dozen the labels stack on each other and the layer becomes
+		// less legible than the dots alone.
+		expect(shouldLabel(NAMED_MAX + 1)).toBe(false);
+	});
+
+	it("says no when there is nothing to label", () => {
+		expect(shouldLabel(0)).toBe(false);
+	});
+});
+
+describe("the pin scale is not the county scale", () => {
+	it("keeps its own absolute bands", () => {
+		// The county fill is a quantile rank over 29 averages spanning 22-67%.
+		// Borrowing it would put every school above ~49% in the darkest step,
+		// so a 55% school and a 99% school would be one colour.
+		expect(PROFICIENCY_BANDS).toEqual([25, 40, 55, 70]);
+		expect(proficiencyStep(55)).not.toBe(proficiencyStep(99));
+	});
+
+	it("labels both ends the way the legend prints them", () => {
+		expect(PROFICIENCY_LEGEND.low).toBe("<25%");
+		expect(PROFICIENCY_LEGEND.high).toBe("70%+");
+	});
+
+	it("puts a band edge in the higher step", () => {
+		// A school sitting exactly on 40 is in the 40-55 band, not below it.
+		expect(proficiencyStep(39.9)).toBe(1);
+		expect(proficiencyStep(40)).toBe(2);
 	});
 });
 

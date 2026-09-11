@@ -104,18 +104,24 @@ export function parseSchoolPins(json: unknown): SchoolPinsPayload {
  *
  * The thresholds are keyed to the regions this app actually animates to
  * (`search.tsx`): the metro opens at 0.55, a county tap lands at 0.5, a city
- * at 0.18 and a single hit at 0.06. So county range shows high schools, city
- * range adds middles, and street range shows everything.
+ * at 0.18 and a single hit at 0.06.
+ *
+ * Retuned in phase275, when pins gained NAMES. Measured over downtown Atlanta,
+ * the densest case in the state: at 0.18 the old ladder drew high + middle,
+ * which is 29 pins — fine as dots, a wall of overlapping labels with names on.
+ * High-only holds that frame at 13. So middles now wait until 0.12 and
+ * elementaries until 0.06, which is the zoom at which a buyer is looking at
+ * one neighbourhood rather than a metro.
  *
  * Above 0.6 — further out than the app ever puts you deliberately, i.e. the
  * buyer has pinched out to see the state — nothing is drawn. At that range the
- * pins are a grey smear over the county colours, which are the answer the lens
- * is already giving.
+ * pins are a smear over the county colours, which are the answer the lens is
+ * already giving.
  */
 export function levelsForZoom(latitudeDelta: number): SchoolPinLevel[] {
 	if (!Number.isFinite(latitudeDelta) || latitudeDelta > 0.6) return [];
-	if (latitudeDelta > 0.25) return ["high"];
-	if (latitudeDelta > 0.08) return ["high", "middle"];
+	if (latitudeDelta > 0.12) return ["high"];
+	if (latitudeDelta > 0.06) return ["high", "middle"];
 	return ["high", "middle", "elementary"];
 }
 
@@ -163,23 +169,95 @@ export function visibleSchools(
 }
 
 /**
+ * The cuts between the five colour steps a school pin can take, in % proficient.
+ *
+ * **These are NOT the county map's cuts, and the difference is the point.**
+ *
+ * The county fill classes by QUANTILE over the 29 metro counties, because the
+ * question a filled county answers is comparative — "cheap or dear FOR AROUND
+ * HERE" — and because equal intervals over a lopsided distribution paint a map
+ * of one colour (see `classBreaks` in `@percho/shared/lenses`).
+ *
+ * A school pin answers a different question. It is read on its own — "is this
+ * a strong school?" — by someone standing in one town, and the population
+ * behind it is 2227 individual schools spanning 1% to 99%, not 29 averages
+ * spanning 22% to 67%. Borrowing the county cuts would saturate it: every
+ * school above 49% would take the darkest green, so a 55% school and a 99%
+ * school would be the same colour.
+ *
+ * So the pins get fixed, absolute cuts, which also means a school does not
+ * change colour when you pan — and the legend states both scales rather than
+ * letting one ramp quietly mean two things (owner, 2026-09-11: "I don't know
+ * the lens color meaning here").
+ */
+export const PROFICIENCY_BANDS = [25, 40, 55, 70] as const;
+
+/** How the legend labels the two ends of the pin scale. */
+export const PROFICIENCY_LEGEND = {
+	low: `<${PROFICIENCY_BANDS[0]}%`,
+	high: `${PROFICIENCY_BANDS[3]}%+`,
+} as const;
+
+/**
  * The ramp step a school's proficiency sits in, 0 (lightest) … 4, or undefined
  * when the state published no figure.
- *
- * Fixed bands rather than quantiles over what happens to be on screen. The
- * county map classes by quantile because it is ranking 29 fixed things against
- * each other; a school pin is read on its own ("is this a strong school?"),
- * and a quantile scale would repaint the same school a different colour every
- * time you panned. The bands are the shared lens ramp's five steps over the
- * range GA Milestones actually occupies.
  */
 export function proficiencyStep(pct: number | undefined): number | undefined {
 	if (pct === undefined || !Number.isFinite(pct)) return undefined;
-	if (pct < 25) return 0;
-	if (pct < 40) return 1;
-	if (pct < 55) return 2;
-	if (pct < 70) return 3;
-	return 4;
+	let step = 0;
+	for (const b of PROFICIENCY_BANDS) if (pct >= b) step++;
+	return step;
+}
+
+/**
+ * The most pins that can carry a NAME without the labels colliding.
+ *
+ * A 390pt phone fits roughly three name chips across and the map is about
+ * 700pt tall, so two dozen labels is the point where they start stacking on
+ * each other rather than sitting beside their dots. Measured against the real
+ * distribution: downtown Atlanta, the densest square in the state, holds 13
+ * high schools at city zoom and 18 schools of all three levels at street zoom.
+ */
+export const NAMED_MAX = 24;
+
+/**
+ * Whether this many pins should carry their names.
+ *
+ * Count-driven rather than zoom-driven, and deliberately so: the same zoom is
+ * 18 schools over Buckhead and 8 over Alpharetta, and a fixed zoom threshold
+ * would either label the sparse case too late or the dense case into a mess.
+ * Asking the number that is actually about to be drawn is self-tuning, and it
+ * is the number we already have in hand.
+ */
+export function shouldLabel(pinCount: number): boolean {
+	return pinCount > 0 && pinCount <= NAMED_MAX;
+}
+
+/**
+ * "Hollis Hand Elementary School" → "Hollis Hand Elem."
+ *
+ * Every school in the table ends in the word "School", which on a map pin is
+ * 6 characters saying nothing — the dot already said it is a school. The level
+ * word is kept but abbreviated, because at a zoom showing both middles and
+ * elementaries it is the only thing distinguishing two pins a block apart.
+ *
+ * This replaces the H / M / E initial the pins carried in phase274, which the
+ * owner read as noise (2026-09-11: "school show names instead of H, M, E").
+ * A letter that needs a legend to mean anything is worse than a name that
+ * needs none.
+ */
+export function shortSchoolName(name: string): string {
+	const trimmed = name
+		.replace(/\s+/g, " ")
+		.trim()
+		.replace(/\s+school$/i, "")
+		.replace(/\belementary\b/i, "Elem.")
+		.replace(/\bmiddle\b/i, "Mid.")
+		.trim();
+	if (trimmed.length === 0) return name.trim();
+	// One line, and the chip is sized to its text — past this it crowds the
+	// map it is annotating.
+	return trimmed.length > 22 ? `${trimmed.slice(0, 21).trimEnd()}…` : trimmed;
 }
 
 /** "Milton High · 67% proficient" — the callout's one line. */
