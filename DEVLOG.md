@@ -21,6 +21,93 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-11 07:05 UTC — phase275: the map says what its colours mean, and the pins say which school
+
+**Objective**: owner on phase274 — "better. But, school show names instead of
+H, M, E, maybe have some color with legend? Also I don't know the lens color
+meaning here, it is not very useful."
+
+**The third note is the real one, and it indicts a decision this file
+records.** phase265 removed the map legend on the grounds that "the ramp with
+PER MONTH ON A $500K HOME over it was a permanent block of numerals on a
+surface that should be photographs". That was right about the permanence and
+wrong about the key: with no legend at all the fills stopped being a scale and
+became decoration. Six phases later the owner said so in as many words. The
+resolution is that "permanent" was doing the work in the original objection —
+a legend that exists ONLY while a lens is on is scoped to the moment the buyer
+asked the question, which is the same principle phase265 was defending.
+
+So the legend is back, conditional: it appears under the chip that turned the
+colour on, and it is two short rows, not a block.
+
+**Two scales, and the legend says so.** This was the design problem worth
+getting right. The county fill classes by QUANTILE over 29 counties; the school
+pins use FIXED absolute bands (25/40/55/70 % proficient). One ramp was quietly
+meaning two things.
+
+Measured both ways before choosing:
+- Fixed bands on the counties: 3 / 9 / 15 / 2 / 0 across the five steps — 15
+  counties in one bucket and the darkest green never used, which is precisely
+  the flat map `classBreaks`' quantile rationale exists to prevent.
+- County quantile breaks on the pins: cuts at 30.2 / 37.6 / 47.6 / 49.4, so
+  every school above 49% takes the darkest step. A 55% school and a 99% school
+  would be one colour. The pin population is 2227 schools spanning 1-99%; the
+  county population is 29 averages spanning 22-67%. They are not the same
+  question and a shared scale flatters one of them.
+
+So they keep their own scales and the legend prints BOTH rows, labelled
+"Counties" and "Schools". The second row appears only when pins are actually
+drawn — a key for absent ink is more ink. The caption switches too: the lens's
+own `unit` says "district average", which stops being the whole truth the
+moment a per-school row sits under it.
+
+**Names instead of H / M / E.** The letter was a code that needed a legend to
+decode, on a map that had no legend, encoding the one fact the zoom already
+implied. `shortSchoolName` drops the trailing "School" every row ends in and
+abbreviates the level — "Hollis Hand Elementary School" → "Hollis Hand Elem."
+
+Names go on only when they FIT, and the rule is count-driven rather than
+zoom-driven (`shouldLabel`, NAMED_MAX 24). A fixed zoom threshold would label
+sparse Alpharetta too late and dense Buckhead into a wall — the same delta is
+8 pins over one and 18 over the other. Asking the number about to be drawn is
+self-tuning and the number is already in hand. Past the limit the pins fall
+back to bare dots, which is why the dot is the fallback and not the default.
+
+**The zoom ladder was retuned for labels.** Measured over downtown Atlanta,
+the densest square in the state: at 0.18 the old ladder drew high + middle =
+29 pins, fine as dots and a wall of overlapping labels with names on.
+High-only holds that frame at 13. Middles now wait for 0.12, elementaries for
+0.06.
+
+**A placement bug caught before it shipped.** A labelled pin is a row (dot,
+gap, name) and react-native-maps anchors a custom marker by a fraction of the
+child's own size — so with a text-sized row, the fraction that puts the DOT on
+the school's coordinate differs per pin. A short name would sit a few points
+east of its school and a long one a few points west: small, silent, and wrong
+in a different direction per pin. The label area is now a fixed width and the
+anchor is COMPUTED from it (`SCHOOL_ANCHOR_LABELLED`), so the two cannot drift.
+The name's own background still wraps only the glyphs, so a short name still
+looks short — the fixed width is layout, not decoration.
+
+**Issues**: none outstanding. Coverage areas are still not drawn and still
+blocked on `k12_attendance_zones` being empty — unchanged from phase274, and
+still an owner call between stale-but-free (NCES SABS, 2015-16) and
+current-but-piecemeal (county GIS).
+
+**Verification**: `pnpm typecheck` clean. Mobile **765 pass** (was 754 — 11 new
+covering `shortSchoolName`, `shouldLabel` and the band edges). Lint clean on
+every file touched; the 2 remaining warnings in `search.tsx` are pre-existing
+`exhaustive-deps` on code this phase did not touch. Shared `lenses.ts` was NOT
+touched, so the search-lenses demo artifact is still current. NOT run on a
+device by me — legend placement and label density are exactly what wants a
+phone, and the reference worktree has been pulled for Metro.
+
+**Next steps**: owner taps it. Most likely sanding: whether NAMED_MAX 24 is
+too generous on a real screen, and whether the legend wants to be bottom-left
+rather than stacked under the chips.
+
+---
+
 ## 2026-09-11 06:35 UTC — phase274.1: the school layer was missing Gwinnett, Fulton and Forsyth
 
 **Objective**: verify the new `/api/mobile/schools` against production rather

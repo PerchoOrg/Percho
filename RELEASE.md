@@ -29,6 +29,16 @@ being hidden or guessed at — you can see the school is there, and that we don'
 have its number.
 
 ### 2026-09-11
+- **The map now explains its own colours.** Turn on a lens and a small key
+  appears under it showing what the lightest and darkest shades mean, in real
+  numbers — so a shaded county is a figure you can read rather than a colour
+  you have to guess at.
+- **Schools show their names.** Pins used to carry a single letter (H, M, E);
+  they now carry the school's name, appearing as soon as you are zoomed in far
+  enough for the names to fit without covering each other.
+- Under the Schools lens the key has two lines, one for counties and one for
+  the school pins, because the two are shaded on different scales — a county
+  is ranked against other counties, a school is scored on its own.
 - Map lenses reduced from five to two: Schools and Cost of living
 - School pins on the map, coloured by state test results
 - County cost breakdown unchanged and still one tap away

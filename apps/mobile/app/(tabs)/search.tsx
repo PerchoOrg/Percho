@@ -42,10 +42,14 @@
  *     for a county its one figure and the way into `/area/[key]`. It is sized
  *     to its own text, so the map runs under and around it.
  *   · the county cost breakdown and the lens ranking live on `/area/[key]`.
- *   · there is no legend. The ramp with "PER MONTH ON A $500K HOME" over it
- *     was a permanent block of numerals on a surface that should be
- *     photographs; the chip names the dimension and tapping a county gives
- *     the figure, so the buyer reads a number when they ask for one.
+ *   · the legend is CONDITIONAL (phase275). phase265 removed a permanent ramp
+ *     with "PER MONTH ON A $500K HOME" over it, and that removal was right
+ *     about the permanence and wrong about the key: with no legend at all the
+ *     fills became decoration, which is what the owner eventually said out
+ *     loud (2026-09-11: "I don't know the lens color meaning here, it is not
+ *     very useful"). It now appears only while a lens is on — i.e. only in the
+ *     moment the buyer asked the question — sits directly under the chip that
+ *     turned it on, and is two short rows rather than a block.
  *
  * A CITY has no page behind its pill, and that is not an oversight: there is
  * no city record in this product, only communities grouped by a `city` string.
@@ -82,6 +86,7 @@ import {
 	type LensId,
 	classBreaks,
 	colorFor,
+	legendRange,
 	lensById,
 	rankedBy,
 } from "@percho/shared/lenses";
@@ -115,9 +120,12 @@ import type { GeoUnit } from "../../lib/feed/geo-unit";
 import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
 import {
 	type MapRegion,
+	PROFICIENCY_LEGEND,
 	type SchoolPin,
 	proficiencyStep,
 	schoolNote,
+	shortSchoolName,
+	shouldLabel,
 	visibleSchools,
 } from "../../lib/schools/school-pins";
 import { useFeedSession } from "../../state/feed-session";
@@ -264,9 +272,22 @@ export default function SearchTab() {
 			lensId === "schools" ? visibleSchools(schoolData.schools, region) : [],
 		[lensId, schoolData.schools, region],
 	);
-	/** The schools lens's own ramp, so a pin and the county under it are
-	 *  coloured in one language rather than two. */
+	/** The schools lens's own ramp. The pins share the ramp with the county
+	 *  fill but NOT its scale — see `PROFICIENCY_BANDS`, which is why the
+	 *  legend prints two rows rather than one. */
 	const schoolRamp = lensById("schools")?.ramp;
+	/** Names go on the pins only when they fit. See `shouldLabel`. */
+	const schoolsLabelled = shouldLabel(schoolPins.length);
+	/** The second legend row earns its space only when pins are actually on the
+	 *  map — under the schools lens zoomed out past 0.6 there are none, and a
+	 *  key for absent ink is just more ink. */
+	const showSchoolLegend = lensId === "schools" && schoolPins.length > 0;
+	/** The two ends of the county fill, in the lens's own units — the thing the
+	 *  owner could not read off the map (2026-09-11). */
+	const legend = useMemo(
+		() => (lens ? legendRange(lens, areaData.areas) : undefined),
+		[lens, areaData.areas],
+	);
 
 	const openedArea: Area | undefined = openArea
 		? metricsByKey.get(openArea)
@@ -494,6 +515,7 @@ export default function SearchTab() {
 									key={`sch-${pin.id}`}
 									pin={pin}
 									ramp={schoolRamp}
+									labelled={schoolsLabelled}
 								/>
 							))
 						: null}
@@ -623,6 +645,43 @@ export default function SearchTab() {
 								);
 							})}
 						</ScrollView>
+					</View>
+				)}
+
+				{/* What the colours MEAN. Absent until a lens is on, which is the
+				    distinction from the legend phase265 removed: that one was a
+				    permanent block of numerals over a surface that should be
+				    photographs. This appears only in the moment the buyer asked a
+				    question with a chip, and it sits directly under that chip so
+				    the two read as one control (owner, 2026-09-11: "I don't know
+				    the lens color meaning here, it is not very useful").
+
+				    Two rows under the Schools lens, because there really are two
+				    scales: the county fill is a quantile rank across the metro and
+				    a pin is an absolute score. One ramp quietly meaning two things
+				    is the confusion this is here to end, so it says so. */}
+				{lens && legend && (
+					<View style={[styles.legend, { top: insets.top + 100 }]}>
+						<LegendRow
+							label={showSchoolLegend ? "Counties" : lens.label}
+							ramp={lens.ramp}
+							low={legend.low}
+							high={legend.high}
+						/>
+						{showSchoolLegend && schoolRamp ? (
+							<LegendRow
+								label="Schools"
+								ramp={schoolRamp}
+								low={PROFICIENCY_LEGEND.low}
+								high={PROFICIENCY_LEGEND.high}
+							/>
+						) : null}
+						<Text style={styles.legendUnit}>
+							{/* The lens's own unit names the COUNTY figure ("district
+							    average"), which stops being the whole truth the moment
+							    the school row is under it. */}
+							{showSchoolLegend ? "% proficient on state tests" : lens.unit}
+						</Text>
 					</View>
 				)}
 
@@ -838,50 +897,121 @@ export default function SearchTab() {
  * one-tap action — drill into the city, open the community, open the home.
  */
 /**
- * One school: a small disc carrying its level's initial, coloured by how the
- * state scored it.
+ * One row of the legend: a name, the five ramp steps, and what each end means.
  *
- * Unlike `PhotoMarker` this one DOES take a title and description, because a
- * school is the only pin on this map with nothing to open — there is no school
- * page in the product. A tap has to answer in place, so it draws the platform
- * callout with the name and the score.
+ * The swatches are the lens's own `ramp` array in order, so this cannot drift
+ * from the fill it describes — there is no second copy of the colours here.
+ */
+function LegendRow({
+	label,
+	ramp,
+	low,
+	high,
+}: {
+	label: string;
+	ramp: readonly [string, string, string, string, string];
+	low: string;
+	high: string;
+}) {
+	return (
+		<View style={styles.legendRow}>
+			<Text style={styles.legendLabel} numberOfLines={1}>
+				{label}
+			</Text>
+			<Text style={styles.legendEnd}>{low}</Text>
+			<View style={styles.legendRamp}>
+				{ramp.map((c) => (
+					<View key={c} style={[styles.legendSwatch, { backgroundColor: c }]} />
+				))}
+			</View>
+			<Text style={styles.legendEnd}>{high}</Text>
+		</View>
+	);
+}
+
+/**
+ * One school: a dot coloured by how the state scored it, with its name beside
+ * it when the names fit.
+ *
+ * **The dot carried an H / M / E initial until phase275** and the owner read it
+ * as noise (2026-09-11: "school show names instead of H, M, E"). He was right
+ * in a way worth writing down: the letter was a code that needed a legend to
+ * decode, sitting on a map that had no legend at all, encoding the one fact a
+ * buyer could already infer from the zoom. The name is the thing he was
+ * looking for and it needs no key.
+ *
+ * Names appear only when `shouldLabel` says the count fits — past two dozen
+ * they stack on each other and the layer becomes less legible than the dots
+ * alone, so the dot is the fallback rather than the default.
+ *
+ * Unlike `PhotoMarker` this takes a title and description, because a school is
+ * the only pin on this map with nothing to open — there is no school page in
+ * the product. A tap has to answer in place, so it draws the platform callout
+ * with the full name and the score. The label is the short name; the callout
+ * is the whole one.
  *
  * `tracksViewChanges={false}` is load-bearing, not a micro-optimisation. A
  * react-native-maps marker with a custom child re-rasterises that child on
  * every frame by default; at a hundred pins that is the difference between a
- * map that pans and one that does not. The content here is fixed at mount —
- * a pin's letter and colour never change once placed — so there is nothing to
- * track.
+ * map that pans and one that does not. The content is fixed at mount.
  *
  * A school with no published score is deliberately grey rather than dropped or
  * given a middling colour. GA suppresses cells with too few tested students,
  * and a new school has no scores at all; both are "we don't know", which is a
- * different thing from "average" and the whole reason this codebase keeps an
- * `estimated` flag on every figure it shows.
+ * different thing from "average".
  */
+/**
+ * The pin's geometry, in one place because the ANCHOR is derived from it.
+ *
+ * A labelled pin is a row — dot, gap, name — and react-native-maps places a
+ * custom marker by a fraction of the child's own size. So the fraction that
+ * puts the DOT on the school's coordinate depends on how wide the whole row
+ * is, and if the row is sized by its text then every pin gets a different
+ * offset: a short name would sit a few points east of its school and a long
+ * one a few points west. Small, silent, and wrong in a different direction per
+ * pin, which is the worst kind.
+ *
+ * So the label area is a FIXED width and the anchor is computed from it. The
+ * name's own background only wraps the glyphs, so a short name still looks
+ * short — the fixed width is layout, not decoration.
+ */
+const SCHOOL_DOT = 12;
+const SCHOOL_GAP = 4;
+const SCHOOL_LABEL_W = 96;
+const SCHOOL_ROW_W = SCHOOL_DOT + SCHOOL_GAP + SCHOOL_LABEL_W;
+const SCHOOL_ANCHOR_LABELLED = { x: SCHOOL_DOT / 2 / SCHOOL_ROW_W, y: 0.5 };
+const SCHOOL_ANCHOR_BARE = { x: 0.5, y: 0.5 };
+
 function SchoolMarker({
 	pin,
 	ramp,
+	labelled,
 }: {
 	pin: SchoolPin;
 	ramp: readonly [string, string, string, string, string];
+	labelled: boolean;
 }) {
 	const step = proficiencyStep(pin.proficiencyPct);
 	const fill = step === undefined ? colors.ink3 : (ramp[step] ?? colors.ink3);
-	// The ramp darkens as it goes; its top two steps need light text on them.
-	const ink = step !== undefined && step >= 2 ? colors.surface : colors.ink;
-	const initial =
-		pin.level === "high" ? "H" : pin.level === "middle" ? "M" : "E";
 	return (
 		<Marker
 			coordinate={{ latitude: pin.lat, longitude: pin.lng }}
 			title={pin.name}
 			description={schoolNote(pin)}
-			anchor={{ x: 0.5, y: 0.5 }}
+			// Anchored on the DOT, not on the middle of the row: the dot is what
+			// sits at the school's coordinate, and the name hangs off it.
+			anchor={labelled ? SCHOOL_ANCHOR_LABELLED : SCHOOL_ANCHOR_BARE}
 			tracksViewChanges={false}
 		>
-			<View style={[styles.schoolPin, { backgroundColor: fill }]}>
-				<Text style={[styles.schoolPinText, { color: ink }]}>{initial}</Text>
+			<View style={labelled ? styles.schoolRow : styles.schoolWrap}>
+				<View style={[styles.schoolDot, { backgroundColor: fill }]} />
+				{labelled ? (
+					<View style={styles.schoolLabelBox}>
+						<Text style={styles.schoolName} numberOfLines={1}>
+							{shortSchoolName(pin.name)}
+						</Text>
+					</View>
+				) : null}
 			</View>
 		</Marker>
 	);
@@ -936,19 +1066,65 @@ function PhotoMarker({
 const styles = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: colors.bg },
 	// ── School pins ───────────────────────────────────────────────────────────
-	// Small on purpose: at city zoom there can be dozens, and they sit UNDER
-	// the photo pins in importance. 22pt is legible for one letter and still
-	// leaves the map readable through a cluster of them.
-	schoolPin: {
-		width: 22,
-		height: 22,
-		borderRadius: 11,
+	// A dot and its name. The dot is small on purpose — it sits UNDER the photo
+	// pins in importance and there can be dozens — and the name carries the
+	// meaning the H/M/E initial never did.
+	schoolWrap: { flexDirection: "row", alignItems: "center" },
+	// Fixed width, so the anchor fraction above is exact for every pin.
+	schoolRow: {
+		flexDirection: "row",
 		alignItems: "center",
-		justifyContent: "center",
+		width: SCHOOL_ROW_W,
+		gap: SCHOOL_GAP,
+	},
+	schoolLabelBox: { width: SCHOOL_LABEL_W, alignItems: "flex-start" },
+	schoolDot: {
+		width: SCHOOL_DOT,
+		height: SCHOOL_DOT,
+		borderRadius: SCHOOL_DOT / 2,
 		borderWidth: 1.5,
 		borderColor: colors.surface,
 	},
-	schoolPinText: { ...textStyles.caption, fontWeight: "700", fontSize: 11 },
+	schoolName: {
+		...textStyles.caption,
+		fontSize: 11,
+		fontWeight: "600",
+		color: colors.ink,
+		// A wash behind the text, not a chip: a hard-edged box per school reads
+		// as a hundred buttons. This lets the map through while keeping the
+		// name legible over a photograph or a filled county.
+		backgroundColor: withAlpha(colors.surface, 0.82),
+		borderRadius: 4,
+		paddingHorizontal: 3,
+		paddingVertical: 1,
+		overflow: "hidden",
+	},
+	// ── Legend ────────────────────────────────────────────────────────────────
+	legend: {
+		position: "absolute",
+		left: 16,
+		backgroundColor: colors.glass,
+		borderRadius: radii.tile,
+		paddingHorizontal: 10,
+		paddingVertical: 8,
+		gap: 5,
+		shadowColor: "#000",
+		shadowOpacity: 0.08,
+		shadowRadius: 8,
+		shadowOffset: { width: 0, height: 2 },
+	},
+	legendRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+	legendLabel: {
+		...textStyles.caption,
+		fontSize: 11,
+		fontWeight: "700",
+		color: colors.ink,
+		minWidth: 62,
+	},
+	legendEnd: { ...textStyles.caption, fontSize: 10, color: colors.ink2 },
+	legendRamp: { flexDirection: "row", borderRadius: 2, overflow: "hidden" },
+	legendSwatch: { width: 15, height: 8 },
+	legendUnit: { ...textStyles.caption, fontSize: 10, color: colors.ink3 },
 	mapWrap: { flex: 1, backgroundColor: colors.surface2 },
 	searchPill: {
 		position: "absolute",
