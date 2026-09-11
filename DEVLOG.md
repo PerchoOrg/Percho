@@ -21,6 +21,48 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-11 06:35 UTC — phase274.1: the school layer was missing Gwinnett, Fulton and Forsyth
+
+**Objective**: verify the new `/api/mobile/schools` against production rather
+than assume it. It returned 200 and real data, which is where a weaker check
+would have stopped.
+
+**What the count actually said.** 970 pins from a table holding ~2270 schools.
+The gap alone was suspicious; the SHAPE of it was the finding. Grouping the
+payload by district: Cobb 109, DeKalb 100, Atlanta Public Schools 83, Clayton
+67 — complete. Gwinnett 14, Fulton 4, **Forsyth 0**. The layer had lost
+precisely the districts people move to metro Atlanta for, and lost them
+silently: every pin that did come back was correct, the endpoint was 200, and
+a screenshot of the Atlanta core would have looked finished.
+
+**Cause**: this instance's PostgREST enforces a 1000-row cap server-side, and
+`.range(0, 4999)` does not lift it — it returns the first thousand and says
+nothing. 1000 rows minus 30 with a level outside the elementary/middle/high
+ladder is the 970 that arrived.
+
+The galling part is that the ORIGINAL code carried a comment naming this exact
+risk — "silently returning the first thousand would draw a map that stops
+halfway down the state" — and then used `.range()`, which does not prevent it.
+Knowing the failure mode is not the same as defending against it.
+
+**Fix** (`apps/web/lib/schools/map-pins.ts`): page the read at 1000 rows until
+a short page arrives. `.order('id')` with it, and not as decoration — PostgREST
+promises nothing about row order between requests without a sort, so pages off
+an unordered result can both repeat and skip rows.
+
+**Learnings**: a row-count ceiling is invisible at the call site and silent at
+runtime, and the damage is a biased sample rather than an error. The check that
+caught it was not "did it 200" but "group the result by a dimension I can sanity
+check from memory" — Forsyth having zero schools is obviously wrong to anyone
+who knows the metro, while 970 vs 2270 is just a number. Worth doing on any
+endpoint that reads a whole table.
+
+**Verification**: typecheck clean, lint clean, `map-pins.test.ts` 6 pass.
+Verified against production after deploy — see the numbers in the next entry's
+commit trail. Pin counts per zoom re-measured against the full set.
+
+---
+
 ## 2026-09-11 06:20 UTC — phase274: five lenses become two; schools get pins
 
 **Objective**: owner on the Search map — "Map - too many lens, not useful,

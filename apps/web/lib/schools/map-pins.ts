@@ -117,24 +117,47 @@ function createUncachedAnonClient() {
   );
 }
 
-/** PostgREST caps a response at 1000 rows by default and Georgia has ~2270
- *  schools, so the range is explicit. Silently returning the first thousand
- *  would draw a map that stops halfway down the state. */
-const MAX_ROWS = 5000;
+/**
+ * Rows per request, and the ceiling on how many we will ask for.
+ *
+ * This instance's PostgREST enforces a 1000-row cap SERVER-SIDE, and a
+ * `.range(0, 4999)` does not lift it — it silently returns the first thousand.
+ * Measured on 2026-09-11: the first deploy of this endpoint returned 970 pins
+ * out of ~2270 schools, and the missing ones were not a random sample. Cobb,
+ * DeKalb, Clayton and Atlanta Public Schools came back complete while Gwinnett
+ * had 14 schools, Fulton 4 and Forsyth none at all — which is to say the map
+ * lost precisely the districts a buyer moves to Atlanta FOR, and lost them
+ * silently, with every remaining pin looking perfectly correct.
+ *
+ * So the read is paged. `.order('id')` is not decoration: without a stable
+ * sort PostgREST makes no promise about row order between requests, and pages
+ * taken from an unordered result can both repeat and skip.
+ */
+const PAGE_ROWS = 1000;
+const MAX_ROWS = 10000;
 
 export async function fetchSchoolPins(): Promise<SchoolPinsDTO> {
   const supabase = createUncachedAnonClient();
-  const { data, error } = await supabase
-    .from('k12_schools')
-    .select('id,name,level,lat,lng,district,test_scores')
-    .eq('state', 'GA')
-    .not('lat', 'is', null)
-    .not('lng', 'is', null)
-    .range(0, MAX_ROWS - 1);
-  if (error) throw new Error(`k12_schools: ${error.message}`);
+  const rows: SchoolRow[] = [];
+  for (let from = 0; from < MAX_ROWS; from += PAGE_ROWS) {
+    const { data, error } = await supabase
+      .from('k12_schools')
+      .select('id,name,level,lat,lng,district,test_scores')
+      .eq('state', 'GA')
+      .not('lat', 'is', null)
+      .not('lng', 'is', null)
+      .order('id')
+      .range(from, from + PAGE_ROWS - 1);
+    if (error) throw new Error(`k12_schools: ${error.message}`);
+    if (!data || data.length === 0) break;
+    rows.push(...data);
+    // A short page is the last page. Without this the loop always costs ten
+    // round trips to learn what the second one already said.
+    if (data.length < PAGE_ROWS) break;
+  }
   return {
     state: 'GA',
-    schools: projectSchoolPins(data ?? []),
+    schools: projectSchoolPins(rows),
     fetchedAt: new Date().toISOString(),
   };
 }
