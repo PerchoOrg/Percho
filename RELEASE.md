@@ -6,6 +6,35 @@
 
 ---
 
+## v1.8 — One map question at a time, and the schools are on it
+
+The map used to offer five coloured overlays: true cost, property tax,
+electricity, utilities, and schools. Four of those were the same question cut
+four ways — property tax and the utility bills are *parts of* what a place
+costs to live in, and asking you to pick between a total and its own line items
+before the map has told you anything is a choice nobody wanted to make.
+
+There are two now. **Schools**, first, and **Cost of living**. Tap a county and
+the full breakdown is still there, line by line — tax, electricity, water,
+trash, insurance — each naming its own supplier and saying plainly which
+figures are still our estimate. Nothing was lost; it just stopped competing
+with itself for space at the top of the screen.
+
+**Schools now appear as pins on the map.** Turn on the Schools lens and the
+schools themselves show up where they actually stand, coloured by how the state
+scored them. Zoom out and you see the high schools; zoom into a city and the
+middle schools join them; zoom to a few streets and the elementaries appear
+too. A school the state hasn't published a score for shows up grey rather than
+being hidden or guessed at — you can see the school is there, and that we don't
+have its number.
+
+### 2026-09-11
+- Map lenses reduced from five to two: Schools and Cost of living
+- School pins on the map, coloured by state test results
+- County cost breakdown unchanged and still one tap away
+
+---
+
 ## v1.7 — The take now answers *you*, and stops burying you in figures
 
 Comparing used to give everyone the same answer. Now it reads what you said

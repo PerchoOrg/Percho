@@ -40,7 +40,15 @@ export interface NearestSchoolRow {
   enrollment: number | null;
 }
 
-function milestones(scores: Json): { pct: number; year: string } | undefined {
+/**
+ * The GA Milestones figure out of a school's `test_scores` jsonb.
+ *
+ * Exported because the schools MAP layer (`lib/schools/map-pins.ts`) reads the
+ * same column for the same number, and a second copy of this parse is exactly
+ * the drift this codebase keeps paying for — `KNOWN_METRICS` and the estimate
+ * flag were each got wrong three times by three copies of one rule.
+ */
+export function milestones(scores: Json): { pct: number; year: string } | undefined {
   if (typeof scores !== 'object' || scores === null || Array.isArray(scores)) return undefined;
   const m = (scores as Record<string, Json | undefined>).ga_milestones;
   if (typeof m !== 'object' || m === null || Array.isArray(m)) return undefined;

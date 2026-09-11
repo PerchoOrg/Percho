@@ -46,7 +46,11 @@ export default function AreaDetailScreen() {
 	}>();
 	const { areas: data, loading } = useAreas();
 
-	const lens = lensById(lensParam ?? "") ?? LENSES[0];
+	// Falls back to the COST lens, not to `LENSES[0]`. Since phase274 the
+	// catalogue leads with schools, and this page's top half is the cost
+	// breakdown — a missing `?lens=` would have paired a tax-and-utilities
+	// sheet with a school-proficiency ranking underneath it.
+	const lens = lensById(lensParam ?? "") ?? lensById("true_cost") ?? LENSES[0];
 	const area = key ? areasByKey(data.areas).get(key) : undefined;
 
 	const ranked = useMemo(

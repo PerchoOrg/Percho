@@ -88,13 +88,26 @@ describe('groupMetrics', () => {
   });
 
   it('feeds the lenses directly', () => {
+    // The point is that `groupMetrics` output needs no adapting to rank — so
+    // it goes through a REAL lens, not a stub. Schools, since phase274 cut the
+    // single-metric cost lenses this used to borrow.
     const areas = groupMetrics([
-      row({ area_key: 'cobb', area_name: 'Cobb', value: 0.72 }),
-      row({ area_key: 'dekalb', area_name: 'DeKalb', value: 1.04 }),
+      row({
+        area_key: 'forsyth',
+        area_name: 'Forsyth',
+        metric: 'school_proficiency_pct',
+        value: 62,
+      }),
+      row({
+        area_key: 'dekalb',
+        area_name: 'DeKalb',
+        metric: 'school_proficiency_pct',
+        value: 33,
+      }),
     ]);
-    const lens = lensById('property_tax');
+    const lens = lensById('schools');
     if (!lens) throw new Error('lens missing');
-    expect(rankedBy(lens, areas).map((v) => v.area.name)).toEqual(['Cobb', 'DeKalb']);
+    expect(rankedBy(lens, areas).map((v) => v.area.name)).toEqual(['Forsyth', 'DeKalb']);
   });
 });
 

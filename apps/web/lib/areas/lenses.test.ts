@@ -3,6 +3,7 @@ import {
   type AreaMetric,
   DEFAULT_LENS,
   LENSES,
+  type Lens,
   type MetricKey,
   REFERENCE_HOME_USD,
   classBreaks,
@@ -65,6 +66,60 @@ const FULTON = county('Fulton', { tax: 1.02, school: 42, electric: 165, water: 7
 const CHEROKEE = county('Cherokee', { tax: 0.72, school: 50, electric: 150, water: 70, trash: 25 });
 const ALL = [COBB, DEKALB, FORSYTH, FULTON, CHEROKEE];
 
+/**
+ * A lens built for a test rather than taken from the catalogue.
+ *
+ * Most of what follows is about `valuesFor` / `classBreaks` / `rankedBy` /
+ * `estimateNoteFor` — the machinery — and not about any particular lens. Those
+ * tests used to reach into the catalogue for whichever real lens happened to
+ * have the shape they needed: `property_tax` when they wanted a low-is-better
+ * percentage, `electric` when they wanted one input, `utilities` when they
+ * wanted a sum with no baked-in assumption. None of that was a claim about
+ * electricity; it was a claim about the machinery, borrowing a lens to make it.
+ *
+ * Which is why cutting three lenses in phase274 broke thirty assertions that
+ * had no opinion about any of them. A probe states the shape it needs, so a
+ * future catalogue change breaks only the tests that are actually ABOUT the
+ * catalogue.
+ *
+ * `id` is not read by any function under test here — they take the lens as a
+ * parameter and never look it up — so the default is arbitrary and only the
+ * type demands a real one.
+ */
+function probe(o: {
+  inputs: readonly MetricKey[];
+  betterIsLow?: boolean;
+  assumes?: readonly string[];
+  compute?: Lens['compute'];
+  format?: Lens['format'];
+}): Lens {
+  const [first] = o.inputs;
+  return {
+    id: 'true_cost',
+    label: 'Probe',
+    unit: 'probe units',
+    caption: 'A lens that exists only in this file.',
+    rankTitle: 'Probe',
+    areaKind: 'county',
+    betterIsLow: o.betterIsLow ?? true,
+    ramp: ['#EEEEEE', '#CCCCCC', '#999999', '#666666', '#333333'],
+    inputs: o.inputs,
+    ...(o.assumes ? { assumes: o.assumes } : {}),
+    compute: o.compute ?? ((get) => (first ? get(first) : undefined)),
+    format: o.format ?? ((v) => `${v}`),
+  };
+}
+
+/** An area's metric lookup, the same shape `compute` is handed. */
+function lookup(area: Area): (m: MetricKey) => number | undefined {
+  return (m) => area.metrics.find((x) => x.metric === m)?.value;
+}
+
+/** A monthly tax figure back as the effective annual rate it represents. */
+function asRatePct(monthlyUsd: number): number {
+  return ((monthlyUsd * 12) / REFERENCE_HOME_USD) * 100;
+}
+
 describe('lens catalogue', () => {
   it('opens on a lens that exists', () => {
     expect(lensById(DEFAULT_LENS)).toBeDefined();
@@ -81,6 +136,21 @@ describe('lens catalogue', () => {
       expect(lens.ramp, lens.id).toHaveLength(5);
       expect(new Set(lens.ramp).size, `${lens.id} has a repeated step`).toBe(5);
     }
+  });
+
+  it('gives every lens a ramp of its own', () => {
+    // Two lenses sharing a hue would read as the same map recoloured. This
+    // lived in the electricity block until phase274 cut that lens; it was
+    // always a statement about the catalogue, not about electricity.
+    const darkest = LENSES.map((l) => l.ramp[4]);
+    expect(new Set(darkest).size, 'two lenses share a darkest step').toBe(LENSES.length);
+  });
+
+  it('carries only the two lenses the owner asked for', () => {
+    // phase274. The three cut lenses were each a SLICE of true cost, and the
+    // breakdown they duplicated lives on `/area/[key]`. Re-adding one is a
+    // product decision, not a refactor — see the `LensId` header.
+    expect(LENSES.map((l) => l.id)).toEqual(['schools', 'true_cost']);
   });
 
   it('declares every metric its compute actually reads', () => {
@@ -134,19 +204,22 @@ describe('true cost', () => {
 });
 
 describe('direction', () => {
-  it('ranks a low tax rate best and a high proficiency best', () => {
-    const tax = lensById('property_tax');
+  // `betterIsLow` is the property under test, and it needs both answers. Only
+  // one real lens has each since phase274, and the low-is-better one (true
+  // cost) sums five things — which makes "is 0.72 first?" a statement about
+  // arithmetic rather than about direction. A probe reads the rate straight.
+  const lowIsBetter = probe({ inputs: ['property_tax_rate_pct'], betterIsLow: true });
+
+  it('ranks a low rate best and a high proficiency best', () => {
     const schools = lensById('schools');
-    if (!tax || !schools) throw new Error('lens missing');
-    expect(rankedBy(tax, ALL)[0]?.value).toBe(0.72);
+    if (!schools) throw new Error('lens missing');
+    expect(rankedBy(lowIsBetter, ALL)[0]?.value).toBe(0.72);
     expect(rankedBy(schools, ALL)[0]?.area.name).toBe('Forsyth');
   });
 
   it('breaks ties on name so the list does not reshuffle between renders', () => {
-    const tax = lensById('property_tax');
-    if (!tax) throw new Error('lens missing');
     // Cobb and Cherokee are both 0.72.
-    const top = rankedBy(tax, ALL)
+    const top = rankedBy(lowIsBetter, ALL)
       .slice(0, 2)
       .map((v) => v.area.name);
     expect(top).toEqual(['Cherokee', 'Cobb']);
@@ -154,8 +227,9 @@ describe('direction', () => {
 });
 
 describe('classing', () => {
-  const lens = lensById('property_tax');
-  if (!lens) throw new Error('lens missing');
+  // A one-metric probe so the class boundaries below are the fixture's own
+  // numbers, not a five-part sum a reader would have to recompute.
+  const lens = probe({ inputs: ['property_tax_rate_pct'], betterIsLow: true });
 
   it('puts the lowest value in the lightest class and the highest in the darkest', () => {
     const breaks = classBreaks(lens, ALL);
@@ -195,11 +269,12 @@ describe('provenance', () => {
     const lens = lensById('true_cost');
     if (!lens) throw new Error('lens missing');
     expect(valuesFor(lens, [guessed])[0]?.estimated).toBe(true);
-    // The control cannot be true cost any more: since phase222 it declares a
-    // flat insurance assumption and is estimated however well sourced its
-    // metrics are. Utilities reads the same cost metrics and assumes nothing.
-    const noAssumption = lensById('utilities');
-    if (!noAssumption) throw new Error('lens missing');
+    // The control cannot be true cost: since phase222 it declares a flat
+    // insurance assumption and is estimated however well sourced its metrics
+    // are, so it can only ever answer `true` and proves nothing. The control
+    // needs a lens that assumes nothing — a probe, since phase274 left no real
+    // cost lens without an assumption.
+    const noAssumption = probe({ inputs: ['water_monthly_usd'] });
     expect(valuesFor(noAssumption, [guessed])[0]?.estimated).toBe(true);
     expect(valuesFor(noAssumption, [COBB])[0]?.estimated).toBe(false);
   });
@@ -212,12 +287,21 @@ describe('provenance', () => {
         metric('school_proficiency_pct', 50, true),
       ],
     };
-    // Utilities rather than true cost, which is now always estimated because
-    // of its insurance assumption — it can no longer show that an UNRELATED
-    // estimate fails to leak, which is what this test is about.
-    const cost = lensById('utilities');
+    // A probe rather than true cost, which is always estimated because of its
+    // insurance assumption and so cannot show that an UNRELATED estimate fails
+    // to leak — which is what this test is about. The probe sums the same three
+    // utility metrics the cut `utilities` lens did and assumes nothing.
+    const cost = probe({
+      inputs: ['electric_monthly_usd', 'water_monthly_usd', 'trash_monthly_usd'],
+      compute: (get) => {
+        const e = get('electric_monthly_usd');
+        const w = get('water_monthly_usd');
+        const t = get('trash_monthly_usd');
+        return e === undefined || w === undefined || t === undefined ? undefined : e + w + t;
+      },
+    });
     const schools = lensById('schools');
-    if (!cost || !schools) throw new Error('lens missing');
+    if (!schools) throw new Error('lens missing');
     expect(valuesFor(cost, [mixed])[0]?.estimated).toBe(false);
     expect(valuesFor(schools, [mixed])[0]?.estimated).toBe(true);
   });
@@ -225,23 +309,32 @@ describe('provenance', () => {
 
 describe('legend', () => {
   it('prints the real range in the lens’s own units', () => {
-    const tax = lensById('property_tax');
+    const schools = lensById('schools');
     const cost = lensById('true_cost');
-    if (!tax || !cost) throw new Error('lens missing');
-    expect(legendRange(tax, ALL)).toEqual({ low: '0.72%', high: '1.04%' });
+    if (!schools || !cost) throw new Error('lens missing');
+    // A percentage lens and a dollar lens, so the formatting half is covered
+    // both ways round.
+    expect(legendRange(schools, ALL)).toEqual({ low: '33%', high: '62%' });
     expect(legendRange(cost, ALL)?.high).toMatch(/^\$\d/);
   });
 });
 
 describe('area kinds', () => {
   it('ignores an area of a kind the lens is not defined on', () => {
+    // Deliberately the schools lens against a school DISTRICT: proficiency is
+    // stored per county here, so a district-shaped row is the wrong geometry
+    // even though it is obviously the right subject.
     const district: Area = { ...FORSYTH, kind: 'school_district', key: 'fcs' };
-    const lens = lensById('property_tax');
+    const lens = lensById('schools');
     if (!lens) throw new Error('lens missing');
     expect(valuesFor(lens, [district])).toHaveLength(0);
   });
 });
 
+// Tests `taxMonthlyUsdFor` directly. They used to go through the `property_tax`
+// lens, which was only ever a thin wrapper that divided this function's answer
+// by the reference price — so when phase274 cut the lens, the subject under
+// test was never in question, just the door these tests walked in through.
 describe('property tax comes from the levies, not a stored percentage', () => {
   /** DeKalb's real 2023 levies, plus a deliberately wrong stored rate. */
   const dekalb: Area = {
@@ -262,48 +355,43 @@ describe('property tax comes from the levies, not a stored percentage', () => {
   };
 
   it('ignores the stored rate when the levies are present', () => {
-    const lens = lensById('property_tax');
-    if (!lens) throw new Error('lens missing');
-    const [value] = valuesFor(lens, [dekalb]);
+    const monthly = taxMonthlyUsdFor('dekalb', lookup(dekalb));
+    if (monthly === undefined) throw new Error('not priced');
     // 9.99% is absurd on purpose; the computed figure lands near 1.1%.
-    expect(value?.value).toBeLessThan(1.3);
-    expect(value?.value).toBeGreaterThan(0.9);
+    expect(asRatePct(monthly)).toBeLessThan(1.3);
+    expect(asRatePct(monthly)).toBeGreaterThan(0.9);
   });
 
   it('applies the homestead exemption and DeKalb’s EHOST credit', () => {
-    const lens = lensById('property_tax');
-    if (!lens) throw new Error('lens missing');
+    const monthly = taxMonthlyUsdFor('dekalb', lookup(dekalb));
+    if (monthly === undefined) throw new Error('not priced');
     // The statutory rate on these levies is 1.638%. Anything at or above it
     // means the exemption and credit were not applied.
-    const [value] = valuesFor(lens, [dekalb]);
-    expect(value?.value).toBeLessThan(1.638);
+    expect(asRatePct(monthly)).toBeLessThan(1.638);
   });
 
   it('falls back to the stored rate when the levies are missing', () => {
-    const lens = lensById('property_tax');
-    if (!lens) throw new Error('lens missing');
     const noLevies: Area = {
       ...dekalb,
       metrics: dekalb.metrics.filter((m) => !m.metric.endsWith('_mills')),
     };
-    expect(valuesFor(lens, [noLevies])[0]?.value).toBeCloseTo(9.99, 2);
+    const monthly = taxMonthlyUsdFor('dekalb', lookup(noLevies));
+    if (monthly === undefined) throw new Error('not priced');
+    expect(asRatePct(monthly)).toBeCloseTo(9.99, 2);
   });
 
   it('feeds the same tax figure into the true-cost breakdown', () => {
     const lines = costBreakdown(dekalb);
     const tax = lines?.find((l) => l.label === 'Property tax');
-    const lens = lensById('property_tax');
-    if (!lens || !tax) throw new Error('missing');
-    const pct = valuesFor(lens, [dekalb])[0]?.value ?? 0;
-    // The two faces must not disagree: rate x price / 12 is the monthly line.
-    expect(tax.monthlyUsd).toBeCloseTo(((pct / 100) * REFERENCE_HOME_USD) / 12, 0);
+    const monthly = taxMonthlyUsdFor('dekalb', lookup(dekalb));
+    if (!tax || monthly === undefined) throw new Error('missing');
+    // The breakdown must not compute its own tax: one function, one answer.
+    expect(tax.monthlyUsd).toBeCloseTo(monthly, 0);
   });
 
   it('prices an unverified county at the statutory floor rather than skipping it', () => {
-    const lens = lensById('property_tax');
-    if (!lens) throw new Error('lens missing');
     const unknown: Area = { ...dekalb, key: 'atlantis', name: 'Atlantis' };
-    expect(valuesFor(lens, [unknown])[0]?.value).toBeGreaterThan(0);
+    expect(taxMonthlyUsdFor('atlantis', lookup(unknown))).toBeGreaterThan(0);
   });
 });
 
@@ -327,19 +415,22 @@ describe('estimated reflects what was read, not what was declared', () => {
   };
 
   it('does not call a sourced tax figure an estimate because the unused fallback is one', () => {
-    const lens = lensById('property_tax');
-    if (!lens) throw new Error('lens missing');
-    expect(valuesFor(lens, [sourcedLevies])[0]?.estimated).toBe(false);
+    // Straight at the mechanism: what the tax computation READ, against what
+    // the area has. `property_tax_rate_pct` is an estimate and is sitting right
+    // there — it just never gets reached, so it must not count.
+    const { read } = readingMetrics(sourcedLevies, (get) => taxMonthlyUsdFor('cobb', get));
+    expect(read.has('property_tax_rate_pct')).toBe(false);
+    expect(estimatedFromReads(sourcedLevies, read)).toBe(false);
   });
 
   it('still calls it an estimate when the fallback is what got used', () => {
-    const lens = lensById('property_tax');
-    if (!lens) throw new Error('lens missing');
     const noLevies: Area = {
       ...sourcedLevies,
       metrics: sourcedLevies.metrics.filter((m) => !m.metric.endsWith('_mills')),
     };
-    expect(valuesFor(lens, [noLevies])[0]?.estimated).toBe(true);
+    const { read } = readingMetrics(noLevies, (get) => taxMonthlyUsdFor('cobb', get));
+    expect(read.has('property_tax_rate_pct')).toBe(true);
+    expect(estimatedFromReads(noLevies, read)).toBe(true);
   });
 
   it('still flags true cost, whose utility inputs really are estimates', () => {
@@ -512,7 +603,12 @@ describe('cost lines say which of THEM is a guess', () => {
   });
 });
 
-describe('the electricity lens', () => {
+// Was `describe('the electricity lens')` until phase274 cut that lens. The
+// block never tested electricity — it tested what the machinery does with a
+// lens that has exactly ONE input, which is the case with no sum to hide a
+// missing part inside. That case still exists (schools is one), so the tests
+// stay and take a probe.
+describe('a lens with a single input', () => {
   const county = (name: string, monthly: number, estimated = false): Area => ({
     key: name.toLowerCase(),
     name,
@@ -521,16 +617,9 @@ describe('the electricity lens', () => {
     metrics: [metric('electric_monthly_usd', monthly, estimated)],
   });
 
-  const lens = lensById('electric');
-  if (!lens) throw new Error('electric lens missing');
+  const lens = probe({ inputs: ['electric_monthly_usd'] });
 
-  it('exists so a sourced figure is not hidden inside an estimated aggregate', () => {
-    // Electricity is the only utility we have a source for; combined with
-    // water and trash it reads as an estimate, which is what it was doing.
-    expect(lens.inputs).toEqual(['electric_monthly_usd']);
-  });
-
-  it('ranks the cheapest power first', () => {
+  it('ranks the smallest value first when low is better', () => {
     const ranked = rankedBy(lens, [
       county('Meriwether', 189),
       county('Coweta', 125),
@@ -543,22 +632,13 @@ describe('the electricity lens', () => {
     expect(valuesFor(lens, [county('Fulton', 157)])[0]?.estimated).toBe(false);
   });
 
-  it('stays an estimate for a county with no majority provider', () => {
-    // Cobb and Henry are genuinely split between two utilities.
+  it('stays an estimate when the one figure it reads is flagged', () => {
     expect(valuesFor(lens, [county('Cobb', 148, true)])[0]?.estimated).toBe(true);
   });
 
-  it('skips a county with no electric figure rather than pricing it at zero', () => {
+  it('skips a county with no figure at all rather than pricing it at zero', () => {
     const bare: Area = { ...county('Nowhere', 0), metrics: [] };
     expect(valuesFor(lens, [bare])).toHaveLength(0);
-  });
-
-  it('has a ramp distinct from every other lens', () => {
-    // Two lenses sharing a hue would read as the same map recoloured.
-    const others = LENSES.filter((l) => l.id !== 'electric');
-    for (const o of others) {
-      expect(o.ramp[4], `${o.id} shares electric's darkest step`).not.toBe(lens.ramp[4]);
-    }
   });
 });
 
@@ -597,8 +677,14 @@ describe('the ranking footnote names what is actually a guess', () => {
   });
 
   it('says nothing at all when a lens has no estimates', () => {
-    expect(note('property_tax')).toBeUndefined();
     expect(note('schools')).toBeUndefined();
+    // And for a multi-input lens reading only sourced levies, which is where
+    // the `property_tax` lens used to make this point.
+    const levies = probe({
+      inputs: ['county_mo_mills', 'school_mo_mills'],
+      compute: (get, key) => taxMonthlyUsdFor(key, get),
+    });
+    expect(estimateNoteFor(levies, areas)).toBeUndefined();
   });
 
   it('does not name a metric the computation never read', () => {
@@ -617,10 +703,9 @@ describe('the ranking footnote names what is actually a guess', () => {
         m.metric === 'electric_monthly_usd' ? { ...m, estimated: true } : m,
       ),
     }));
-    const lens = lensById('electric');
-    if (!lens) throw new Error('no electric lens');
     // A one-input lens does not name its own input — "electricity is still our
     // estimate" under a lens called Electricity says it twice.
+    const lens = probe({ inputs: ['electric_monthly_usd'] });
     const n = estimateNoteFor(lens, guessed) ?? '';
     expect(n).toBe('* still our estimate for the counties marked.');
   });
@@ -635,8 +720,16 @@ describe('the ranking footnote names what is actually a guess', () => {
     }));
     // The SINGULAR case has to come from a lens with no declared assumption:
     // true cost always lists insurance, so it can never be down to one item.
-    const lens = lensById('utilities');
-    if (!lens) throw new Error('no lens');
+    // A probe, since phase274 left no real cost lens without an assumption.
+    const lens = probe({
+      inputs: ['electric_monthly_usd', 'water_monthly_usd', 'trash_monthly_usd'],
+      compute: (get) => {
+        const e = get('electric_monthly_usd');
+        const w = get('water_monthly_usd');
+        const t = get('trash_monthly_usd');
+        return e === undefined || w === undefined || t === undefined ? undefined : e + w + t;
+      },
+    });
     expect(estimateNoteFor(lens, oneOnly)).toContain('trash is still our estimate');
     // And true cost, which now lists two, keeps the plural.
     const cost = lensById('true_cost');
@@ -938,10 +1031,18 @@ describe('a lens that bakes in an assumption says so', () => {
   });
 
   it('leaves a lens with no assumption alone', () => {
-    // Utilities is electric + water + trash and assumes nothing, so its
-    // footnote must not grow an insurance clause.
-    const lens = lensById('utilities');
-    if (!lens) throw new Error('lens missing');
+    // Electric + water + trash, assuming nothing, so its footnote must not
+    // grow an insurance clause. A probe: every real cost lens assumes
+    // insurance since phase274 merged them into one.
+    const lens = probe({
+      inputs: ['electric_monthly_usd', 'water_monthly_usd', 'trash_monthly_usd'],
+      compute: (get) => {
+        const e = get('electric_monthly_usd');
+        const w = get('water_monthly_usd');
+        const t = get('trash_monthly_usd');
+        return e === undefined || w === undefined || t === undefined ? undefined : e + w + t;
+      },
+    });
     expect(lens.assumes).toBeUndefined();
     expect(estimateNoteFor(lens, [county()])).not.toContain('insurance');
   });

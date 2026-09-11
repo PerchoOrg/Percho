@@ -21,6 +21,96 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-11 06:20 UTC — phase274: five lenses become two; schools get pins
+
+**Objective**: owner on the Search map — "Map - too many lens, not useful,
+maybe combine all of them into one lens called cost of living? Breakdown is
+provided separately. School should be the top one, show school icons on map
+and their coverage area. Any other dimensions we can have here?"
+
+**The finding that made this cheap**: `true_cost` ALREADY was the combined
+lens. `property_tax`, `electric` and `utilities` were each a slice of it — same
+reference $500k home, same metrics, a subset of the same sum. So the chip row
+was asking a buyer to choose between a total and three of its own line items
+before the map had told them anything. And the breakdown the owner asked to be
+"provided separately" did not have to be built either: `costBreakdown` has
+listed tax / electric / water / trash / insurance line by line on
+`/area/[key]` since phase216, each with its supplier and its own estimate mark.
+
+**What shipped, lens side**:
+- `LensId` is now `'schools' | 'true_cost'`. Three lens definitions deleted;
+  no computation was. `taxMonthlyUsdFor` and `supplierNote` stay — they feed
+  the breakdown, which is the surface that survived.
+- **The id `true_cost` is kept, only the label changed** to "Cost of living".
+  The id is in deep links (`/area/[key]?lens=…`), in the demo artifact and in
+  four call sites that ask for the cost lens by name. A key is not a label.
+- Schools first, per the owner. `DEFAULT_LENS` moved to `schools` with it, so
+  `lensForPriorities`' fallback and the chip row's first entry agree.
+- `/area/[key]` now falls back to the COST lens explicitly rather than to
+  `LENSES[0]`. With schools newly first, a missing `?lens=` would have paired
+  a tax-and-utilities sheet with a school-proficiency ranking underneath it.
+
+**The test debt this exposed, and the fix.** Thirty-odd assertions broke that
+had no opinion about property tax or electricity — they had borrowed whichever
+real lens had the shape they needed (`property_tax` for a low-is-better
+percentage, `electric` for a single input, `utilities` for a sum with no
+assumption) to test `valuesFor` / `classBreaks` / `estimateNoteFor`. That is a
+claim about the machinery wearing a claim about the catalogue. They now build
+a local `probe()` lens that states the shape it needs, so the next catalogue
+change breaks only the tests actually ABOUT the catalogue — of which there is
+now one, pinning the two ids. The property-tax group was pointed straight at
+`taxMonthlyUsdFor`, which was always the unit under test.
+
+**Schools on the map** (`/api/mobile/schools` → `useSchools` → `SchoolMarker`):
+2270 GA schools were already in `k12_schools` from NCES CCD + GOSA Milestones
+(phase D), so this is a projection and a marker, not a pipeline.
+- A 22pt disc with its level's initial, coloured by GA Milestones proficiency
+  on the schools lens's own ramp — pin and county speak one colour language.
+- **Only under the Schools lens.** A pin per school is a lot of ink and it
+  answers a question asked with the chip.
+- **A zoom ladder, not a cap on ranking**: high schools at metro/county range,
+  middles at city range, everything at street range, nothing when pinched out
+  past the metro. `MAX_PINS` (120) cuts by distance from the centre of the
+  view, NEVER by score — a layer that thinned itself by proficiency would draw
+  a map where only the good schools exist. Pinned by test.
+- **No score renders grey, never a zero.** GOSA suppresses small cells and a
+  new school has none; "we don't know" is not "average".
+- `tracksViewChanges={false}` is load-bearing — a custom marker child
+  re-rasterises every frame by default, and at a hundred pins that is the
+  difference between a map that pans and one that does not.
+
+**Issues**:
+1. **Coverage areas are NOT drawn, and cannot be yet.** `k12_attendance_zones`
+   was created by the phase60 migration and has never been seeded — which is
+   also why the listing page says "nearest, not assignment". A district
+   outline is a different claim than an attendance zone, and it is the claim a
+   buyer would act on. Two free paths, both needing an owner call: NCES EDGE
+   SABS (national, free, but frozen at 2015-16 and metro Atlanta has redrawn
+   since) or county GIS one district at a time (current, same shape of work as
+   the community-coverage county-GIS line).
+2. `lib/docs/devlog-order.test.ts` FAILS on `origin/main` and still fails —
+   not mine and not touched. phase251-254 (11:35-13:15) sit below phase259-267
+   (10:08-16:40); two parallel agents interleaved timestamps. Fixing it means
+   relocating four entries, which is a merge conflict waiting for whoever is
+   still working in that range. Flagged, not fixed.
+
+**Verification**: `pnpm typecheck` clean. Web **1192 pass** (1 pre-existing
+failure above), mobile **754 pass** (was 734 — 20 new in
+`school-pins.test.ts`, 6 in `map-pins.test.ts`). Lint clean on every file this
+phase touched; the repo's other biome errors are all in `app/(public)/*`
+and predate this. The search-lenses demo was regenerated from the live API and
+now reads "2 lenses: Schools 22%→67%, Cost of living $639→$987". NOT run on a
+device by me — and the school layer is the part that wants a device, since its
+whole design is about what a hundred markers do to a pan.
+
+**Next steps**: owner taps it. The open product question he also asked —
+"Any other dimensions we can have here?" — is answered in chat with five
+free-data candidates (commute, FEMA flood, FCC broadband, Census growth, Census
+housing age) and one deliberate refusal (no crime lens, fair housing; see the
+`lenses.ts` header). None built.
+
+---
+
 ## 2026-09-10 13:10 UTC — phase273: the take reads the buyer's priorities; the table shrinks
 
 **Objective**: owner, three notes on phase272: "Allow cross city comparison.

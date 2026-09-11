@@ -121,3 +121,8 @@ export function searchUrl(q: string): string {
 export function areasUrl(): string {
 	return `${apiBase()}/api/mobile/areas`;
 }
+
+/** `/api/mobile/schools` — every GA school as a point, for the school layer. */
+export function schoolsUrl(): string {
+	return `${apiBase()}/api/mobile/schools`;
+}

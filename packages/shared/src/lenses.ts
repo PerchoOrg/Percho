@@ -170,7 +170,31 @@ export interface Area {
   metrics: AreaMetric[];
 }
 
-export type LensId = 'true_cost' | 'property_tax' | 'schools' | 'electric' | 'utilities';
+/**
+ * Two lenses, and that is the whole catalogue.
+ *
+ * There were five. `property_tax`, `electric` and `utilities` were each a
+ * SLICE of true cost — the same reference home, the same metrics, a subset of
+ * the sum — so the chip row asked a buyer to choose between a total and three
+ * of its own line items before the map had told them anything (owner,
+ * 2026-09-10: "too many lens, not useful, maybe combine all of them into one
+ * lens called cost of living? Breakdown is provided separately").
+ *
+ * The breakdown did not have to be built: `costBreakdown` has always listed
+ * tax, electric, water, trash and insurance line by line on `/area/[key]`,
+ * each with its own supplier and its own estimate mark. The slices were a
+ * second, worse copy of that — worse because a map can only show one number,
+ * so a chip could say Cobb is cheap for power while hiding that its tax is
+ * not. Splitting the question is the detail page's job; the map's job is to
+ * ask one.
+ *
+ * What that cost: the electricity chip was added (phase219) so a figure we
+ * genuinely source is not buried inside an aggregate that is partly a guess.
+ * That concern is real and it survives in the line's own `estimated` flag and
+ * in the ranking footnote, which names which inputs are guesses rather than
+ * discounting the whole figure. It just is not worth a chip.
+ */
+export type LensId = 'schools' | 'true_cost';
 
 export interface Lens {
   id: LensId;
@@ -312,12 +336,32 @@ export function taxMonthlyUsd(ratePct: number): number {
 }
 
 export const LENSES: readonly Lens[] = [
+  // Schools leads, by owner ruling (2026-09-10: "School should be the top
+  // one"). It is also the only lens here that is not about money, so putting
+  // it first keeps the row from reading as a price filter.
+  {
+    id: 'schools',
+    label: 'Schools',
+    unit: 'proficient, district average',
+    caption:
+      'District test proficiency — the first thing buyers look up about an area they have never visited.',
+    rankTitle: 'Strongest districts first',
+    areaKind: 'county',
+    betterIsLow: false,
+    ramp: ['#99BBA7', '#76A488', '#548C6C', '#337452', '#155C3B'],
+    inputs: ['school_proficiency_pct'],
+    compute: (get) => get('school_proficiency_pct'),
+    format: (v) => `${Math.round(v)}%`,
+  },
   {
     id: 'true_cost',
-    label: 'True cost /mo',
+    // The id stays `true_cost`: it is in deep links (`/area/[key]?lens=…`),
+    // in the demo artifact and in four call sites that ask for the cost lens
+    // by name. The label is what the owner renamed; the key is not a label.
+    label: 'Cost of living',
     unit: `per month on a $${(REFERENCE_HOME_USD / 1000).toFixed(0)}k home`,
     caption:
-      'Tax, utilities, trash and insurance on the same home. Hidden carrying cost was the #1 thing buyers said they got wrong after moving in.',
+      'Tax, electricity, water, trash and insurance on the same home — one figure, so counties are comparable. Tap a county for the line-by-line breakdown. Hidden carrying cost was the #1 thing buyers said they got wrong after moving in.',
     rankTitle: 'Cheapest to own first',
     areaKind: 'county',
     betterIsLow: true,
@@ -343,81 +387,6 @@ export const LENSES: readonly Lens[] = [
       if (tax === undefined || electric === undefined) return undefined;
       if (water === undefined || trash === undefined) return undefined;
       return tax + electric + water + trash + insuranceMonthlyUsd;
-    },
-    format: (v) => `$${Math.round(v).toLocaleString()}`,
-  },
-  {
-    id: 'property_tax',
-    label: 'Property tax',
-    unit: 'effective rate',
-    caption:
-      'What the county actually collects on a home’s value — the biggest line item a listing never shows you.',
-    rankTitle: 'Lowest tax first',
-    areaKind: 'county',
-    betterIsLow: true,
-    ramp: ['#D4AD79', '#C08F51', '#AB7330', '#935917', '#7A4409'],
-    inputs: [
-      'property_tax_rate_pct',
-      'county_mo_mills',
-      'county_bond_mills',
-      'school_mo_mills',
-      'school_bond_mills',
-    ],
-    compute: (get, areaKey) => {
-      const monthly = taxMonthlyUsdFor(areaKey, get);
-      // Shown as a rate, computed as a bill: the percentage a buyer of the
-      // reference home actually ends up paying, exemptions included.
-      return monthly === undefined ? undefined : ((monthly * 12) / REFERENCE_HOME_USD) * 100;
-    },
-    format: (v) => `${v.toFixed(2)}%`,
-  },
-  {
-    id: 'schools',
-    label: 'Schools',
-    unit: 'proficient, district average',
-    caption:
-      'District test proficiency — the first thing buyers look up about an area they have never visited.',
-    rankTitle: 'Strongest districts first',
-    areaKind: 'county',
-    betterIsLow: false,
-    ramp: ['#99BBA7', '#76A488', '#548C6C', '#337452', '#155C3B'],
-    inputs: ['school_proficiency_pct'],
-    compute: (get) => get('school_proficiency_pct'),
-    format: (v) => `${Math.round(v)}%`,
-  },
-  {
-    id: 'electric',
-    label: 'Electricity',
-    unit: 'per month at Georgia’s average use',
-    caption:
-      'Who supplies the power here and what they charge. Service territories were drawn in the 1930s and ignore county lines, so this is not the utility the county is named after.',
-    rankTitle: 'Cheapest power first',
-    areaKind: 'county',
-    betterIsLow: true,
-    ramp: ['#AB94BF', '#9478AB', '#7D5D96', '#664582', '#4F2E6D'],
-    inputs: ['electric_monthly_usd'],
-    compute: (get) => get('electric_monthly_usd'),
-    format: (v) => `$${Math.round(v).toLocaleString()}`,
-  },
-  {
-    id: 'utilities',
-    label: 'Utilities & trash',
-    unit: 'per month, typical home',
-    caption:
-      'Electric, water and trash. Who provides them — and whether pickup is a county service or your own contract — changes at the county line.',
-    rankTitle: 'Cheapest first',
-    areaKind: 'county',
-    betterIsLow: true,
-    ramp: ['#9BB6C7', '#7BA0B4', '#5C89A1', '#3F728D', '#295C77'],
-    inputs: ['electric_monthly_usd', 'water_monthly_usd', 'trash_monthly_usd'],
-    compute: (get) => {
-      const electric = get('electric_monthly_usd');
-      const water = get('water_monthly_usd');
-      const trash = get('trash_monthly_usd');
-      if (electric === undefined || water === undefined || trash === undefined) {
-        return undefined;
-      }
-      return electric + water + trash;
     },
     format: (v) => `$${Math.round(v).toLocaleString()}`,
   },
@@ -636,8 +605,16 @@ export function estimateNoteForRows(
   return `${head}${tail}${closing}`;
 }
 
-/** The lens the tab opens on. */
-export const DEFAULT_LENS: LensId = 'true_cost';
+/**
+ * The lens the tab opens on, for the surfaces that open on one.
+ *
+ * The Search map does NOT: it opens with no lens at all and waits for a chip
+ * (owner, 2026-09-09). This is the fallback for `lensForPriorities`, which
+ * picks a lens from what a buyer said matters — and schools is the owner's
+ * lead, so a buyer who has said nothing gets the same lens as the chip row's
+ * first entry rather than a different one.
+ */
+export const DEFAULT_LENS: LensId = 'schools';
 
 /** An area's value under one lens, plus whether any input was a guess. */
 export interface LensValue {
