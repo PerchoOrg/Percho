@@ -29,15 +29,19 @@ being hidden or guessed at — you can see the school is there, and that we don'
 have its number.
 
 ### 2026-09-11
-- **The You tab is shorter and clearer.** Eight sections became five. Your
-  recent swipes now sit in one row you scroll sideways, with "Change my mind"
-  under each; the areas you've explored are chips in a row instead of a list that
-  grew with every new town; what you told Percho matters and what it picked up
-  from your swipes share one "Your preferences" card — tap the × on anything
-  it got wrong, or "Reset preferences" at the foot of that card to clear the
-  lot. Account moved to the bottom and now reads like every other app's:
-  who you are, Change password, Sign out, Delete account. The privacy, terms
-  and contact links sit quietly under it rather than posing as settings.
+- **The You tab is shorter and clearer.** Eight sections became five. Under
+  your buyer type, three short readings replace the old counts — where you
+  feel most at home, what you lean toward (and away from), and how choosy
+  you are. Your recent swipes sit in one row you scroll sideways, with
+  "Change my mind" under each; the areas you've explored are chips in a row
+  instead of a list that grew with every new town; what you told Percho
+  matters and what it picked up from your swipes share one "Your
+  preferences" card — the swipe side is now a set of bars showing how much
+  of your choosing went to each thing, with an × on anything it got wrong,
+  and "Reset preferences" at the foot to clear the lot. Account moved to the
+  bottom and reads like every other app's: who you are, Change password,
+  Sign out. Privacy, terms, contact and account deletion sit quietly under it
+  as small links rather than posing as settings.
 - **You always have a buyer type.** The card no longer says "Still taking
   shape" — it names you from your first answer ("Trail-Runner Buyer"), and
   starts as "Curious Buyer" before that.

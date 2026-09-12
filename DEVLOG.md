@@ -21,6 +21,48 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-11 16:45 UTC — phase276.5: readings under the name, share bars, deletion to the footer
+
+**Objective**: the owner took the recommendations on the rest of his
+review: replace the three count pills with something that reads ("keep them
+short in one line"), bars not a pie for the swipe dims, Delete account out of
+the card, and defer dark mode and phone sign-in.
+
+**Actions**:
+- `lib/feed/persona-lines.ts` (+ tests) — `insightLines`: up to three
+  one-liners from evidence the tab already holds. "Most at home in
+  Alpharetta" (top familiarity), "Leaning quiet streets over nightlife
+  nearby" (strongest positive dim; the "over" is the most NEGATIVE dim, not
+  the runner-up — a second favourite is not a contrast), "You like 1 in 3
+  places you see" (Σ`geo.right` over Σ`geo.right + left`; a card credits
+  several geo levels so both are over-counted by the same factor and the
+  ratio is exact; withheld under 3 swipes or with no likes; "almost
+  everything" when the ratio rounds to 1). Each line is omitted, not padded,
+  when its evidence is missing; with none the card says "Swipe the feed and
+  Percho starts learning."
+- `app/(tabs)/you.tsx` — the persona card renders those lines; "From your
+  swipes" is now label + `share%` + meter + × per dim, share = weight over
+  the positive total; Delete account leaves the Account card and joins the
+  footer links ("Privacy · Terms · Contact & support · Delete account",
+  signed-in only) — App Review 5.1.1(v) says it must exist in-app, the owner
+  says it should not be a red button, and a footer link is both.
+
+**Decisions**:
+- **Bars, not a pie.** Eleven dims slice a pie too thin to label, and the
+  weights are not parts of a whole — a pie would assert a total that does
+  not exist. Bars show rank and gap at a glance and need no
+  `react-native-svg`. Offered as the recommendation; owner: 「其余都按你说的」.
+- **Dark mode deferred.** `colors.*` is a static constant read directly by
+  every screen; dark mode means a theme hook through the whole app plus a
+  second AA-checked palette. A phase of its own, not a You-tab item.
+- **Phone sign-in not started.** Needs an SMS provider (Twilio: ~$0.0079 per
+  US SMS + $1.15/mo number + A2P 10DLC registration) — a new paid service
+  under CLAUDE.md §8, priced for the owner and awaiting his yes.
+- **Delete account stays**, just demoted — removing it would fail review.
+
+**Verified**: typecheck clean, lint clean, 768 tests (5 new). Merged for the
+phone.
+
 ## 2026-09-11 16:05 UTC — phase276.4: "Bring back" → "Change my mind"
 
 **Objective**: owner: "Recent - instead of being back, change mind makes more
