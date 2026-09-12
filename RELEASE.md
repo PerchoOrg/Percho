@@ -29,6 +29,14 @@ being hidden or guessed at — you can see the school is there, and that we don'
 have its number.
 
 ### 2026-09-12
+- **Communities are dots on the map now.** Zooming into a city used to show a
+  patchwork of green outlines — every neighborhood a different shape, and
+  many showing nothing at all because we don't have a boundary for every
+  community. Each community is now one small green dot at its location, so a
+  city shows all of its communities the same way; zoom in and the names
+  appear beside the dots. Tap a dot to open the community. Searching and
+  drilling into a city also got a little faster, since the map no longer
+  downloads shapes it won't draw.
 - Your buyer type now describes places, never households: the parks dim
   reads "Park-Side" / "Park-Goer" instead of "Family-First" / "Suburbanite",
   and school quality no longer names a buyer type at all. The Schools

@@ -8,20 +8,21 @@
  *   listings     — address / city / state / zip / neighborhood, active only
  *   communities  — name / city, active
  *
- * Communities carry their real `boundary`, simplified for display: the map
- * draws the outline rather than one more identical circle (owner, 2026-09-09).
- * The feed's community pool must NEVER select that column — 8k dense
- * multipolygons time PostgREST out — but this query is capped, and
- * `displayRingsFromGeoJson` drops holes and thins each ring to ~30 m before it
- * goes on the wire.
+ * Communities are map DOTS: one mark per row at its centroid. Their real
+ * `boundary` was shipped and drawn as an outline from 2026-09-09 to
+ * 2026-09-12, when the owner called the result inconsistent — subdivisions
+ * differ wildly in shape and half the rows have no polygon at all. `boundary`
+ * is deliberately NOT selected here (it never was in the feed's community
+ * pool, where 8k dense multipolygons time PostgREST out); the true shape
+ * still renders on the community's own page.
  *
  * ── The cover gate is gone (2026-09-10) ─────────────────────────────────────
  * Communities used to be filtered to `cover_storage_path is not null`, the
  * same gate as the feed's pool, on the grounds that a hit should always be a
  * page that renders. That made sense when a hit was a PHOTO circle on the map.
- * It is now an outline, the photo is not drawn at all, and the gate was the
+ * It is now a dot, the photo is not drawn at all, and the gate was the
  * reason the owner saw "几个零星的社区图形" instead of a city's subdivisions:
- * it was hiding every community we have a shape for but no picture of.
+ * it was hiding every community that has no picture yet.
  *
  * Communities therefore get their own, much higher ceiling. It is still a
  * ceiling: a city like Atlanta has 731 communities and this returns the first
@@ -36,16 +37,15 @@
  */
 
 import { publicCoverImageUrl } from '@/lib/communities/cover';
-import { displayRingsFromGeoJson } from '@/lib/geo/simplify-ring';
 import type { Database } from '@/lib/supabase/database.types';
 import { createClient as createPlainClient } from '@supabase/supabase-js';
 
 const SEARCH_LIMIT = 24;
 /**
- * Communities are map SHAPES, not a result list, so they get a ceiling sized
- * for covering a city rather than for filling a sheet. ~100 simplified rings
- * is roughly 120 KB on the wire and renders without stuttering a pan; the
- * next honest step past it is a viewport query, not a bigger constant.
+ * Communities are map DOTS, not a result list, so they get a ceiling sized
+ * for covering a city rather than for filling a sheet. A hundred name+centroid
+ * rows is a few KB on the wire; the next honest step past this ceiling is a
+ * viewport query, not a bigger constant.
  */
 const COMMUNITY_LIMIT = 100;
 
@@ -74,12 +74,6 @@ export interface SearchCommunityDTO {
   heroUrl?: string;
   lat?: number;
   lng?: number;
-  /**
-   * The community's real outline, outer rings only and simplified for display
-   * (`lib/geo/simplify-ring.ts`). Absent when the row has no boundary — about
-   * half of them — and the client draws its pin instead.
-   */
-  boundary?: [number, number][][];
 }
 
 export interface SearchResultDTO {
@@ -113,7 +107,6 @@ type CommunityRow = {
   cover_storage_path: string | null;
   lat: number | null;
   lng: number | null;
-  boundary: unknown;
 };
 
 function coord(lat: number | null, lng: number | null): { lat: number; lng: number } | undefined {
@@ -140,19 +133,15 @@ export function projectSearchListings(rows: ListingRow[]): SearchListingDTO[] {
 }
 
 export function projectSearchCommunities(rows: CommunityRow[]): SearchCommunityDTO[] {
-  return rows.map((r) => {
-    const boundary = displayRingsFromGeoJson(r.boundary);
-    return {
-      id: r.id,
-      slug: r.slug,
-      name: r.name,
-      city: r.city,
-      state: r.state ?? 'GA',
-      ...(r.cover_storage_path ? { heroUrl: publicCoverImageUrl(r.cover_storage_path) } : {}),
-      ...(coord(r.lat, r.lng) ?? {}),
-      ...(boundary.length > 0 ? { boundary } : {}),
-    };
-  });
+  return rows.map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    name: r.name,
+    city: r.city,
+    state: r.state ?? 'GA',
+    ...(r.cover_storage_path ? { heroUrl: publicCoverImageUrl(r.cover_storage_path) } : {}),
+    ...(coord(r.lat, r.lng) ?? {}),
+  }));
 }
 
 function createUncachedAnonClient() {
@@ -187,9 +176,7 @@ export async function searchEntities(q: string): Promise<SearchResultDTO> {
       .limit(SEARCH_LIMIT),
     supabase
       .from('communities')
-      // `boundary` IS selected here, unlike the feed's community pool — see
-      // the header. The row ceiling is the whole reason that is safe.
-      .select('id, slug, name, city, state, cover_storage_path, lat, lng, boundary')
+      .select('id, slug, name, city, state, cover_storage_path, lat, lng')
       .eq('status', 'active')
       .or(`name.ilike.${like},city.ilike.${like}`)
       .order('name', { ascending: true })

@@ -19,7 +19,7 @@
  * home. Each tap goes one level in, and the MAP is what answers:
  *
  *   county outline → zoom to it; its cities become the visible pins
- *   city pin       → zoom to it; its communities become the visible outlines
+ *   city pin       → zoom to it; its communities become the visible dots
  *   community      → its explore page.  home pin → its listing page.
  *
  * The city step asks the SAME search endpoint for the city's name rather than
@@ -209,10 +209,10 @@ export default function SearchTab() {
 	// asks a question with a chip. Tapping the live chip puts it away again.
 	const [lensId, setLensId] = useState<LensId | null>(null);
 	const [openArea, setOpenArea] = useState<string | null>(null);
-	/** What the map is currently showing. Only the school layer reads it, and
-	 *  only `onRegionChangeComplete` writes it — which fires when a gesture
-	 *  ENDS, not through the pan, so this is a handful of renders and not a
-	 *  stream of them. */
+	/** What the map is currently showing. Only the school layer and the
+	 *  community labels read it, and only `onRegionChangeComplete` writes it —
+	 *  which fires when a gesture ENDS, not through the pan, so this is a
+	 *  handful of renders and not a stream of them. */
 	const [region, setRegion] = useState<MapRegion>(METRO_REGION);
 
 	const lens = lensId ? lensById(lensId) : undefined;
@@ -394,6 +394,26 @@ export default function SearchTab() {
 
 	const hits = search.result;
 
+	/** Names go on the community dots only when the VIEW is sparse enough to
+	 *  read them. Count-driven like the school pins (`shouldLabel`), but
+	 *  counted against the current viewport rather than the result set: a
+	 *  drill returns up to 100 rows for the whole city, and a buyer zoomed
+	 *  into one corner of it is looking at a dozen. Same 10% margin as
+	 *  `visibleSchools`, for the same reason. */
+	const communitiesLabelled = useMemo(() => {
+		if (!hits) return false;
+		const latPad = (region.latitudeDelta / 2) * 1.1;
+		const lngPad = (region.longitudeDelta / 2) * 1.1;
+		const inView = hits.communities.filter(
+			(c) =>
+				c.lat !== undefined &&
+				c.lng !== undefined &&
+				Math.abs(c.lat - region.latitude) <= latPad &&
+				Math.abs(c.lng - region.longitude) <= lngPad,
+		).length;
+		return shouldLabel(inView);
+	}, [hits, region]);
+
 	// A fresh result set opens the sheet and fits the map to whatever has a
 	// pin. Cities keep their centroid pins so a city-only match still lands.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: fit once per result set, not on every city-list re-sort
@@ -494,12 +514,12 @@ export default function SearchTab() {
 											: withAlpha(colors.ink2, 0.45)
 								}
 								strokeWidth={open ? 2.5 : 1}
-								// A county stops taking taps the moment communities are on
-								// the map. react-native-maps hit-tests overlays in the order
-								// they were added and stops at the first match, so a county
-								// added first swallows every tap meant for a community
-								// polygon drawn inside it — which read on the phone as
-								// "点击社区也没有反应" (owner, 2026-09-10).
+								// A county stops taking taps while results are on the map.
+								// The community dots are markers and hit-test above every
+								// polygon, but a tap that just misses one lands HERE, and
+								// `selectArea` clears the drill — the buyer aiming at a
+								// community would be thrown back out of the city, which is
+								// how "点击社区也没有反应" read on the phone (2026-09-10).
 								tappable={!asking}
 								onPress={() => selectArea(shape.key)}
 							/>
@@ -533,45 +553,24 @@ export default function SearchTab() {
 							onPress={() => select(u)}
 						/>
 					))}
-					{/* A community draws its own outline when we have one — that is
-					    what it IS, and it tells a subdivision's shape and size in a
-					    way a 40px circle never could. The pin is the fallback for the
-					    rows with no polygon, not the default. */}
+					{/* A community is a DOT — one mark, one size, every row. Its real
+					    outline was drawn here through phase276 and the owner called
+					    the result inconsistent (2026-09-12: "all communities have
+					    different shapes, not consistent"): subdivisions differ wildly
+					    in size and shape, and half the rows have no polygon at all,
+					    so a drill drew some communities and skipped others. The dot
+					    needs only a centroid, so every row shows; the true shape
+					    still lives on the community's own page. */}
 					{hits?.communities.map((c) =>
-						c.boundary
-							? c.boundary.map((ring, i) => (
-									<Polygon
-										key={`cb-${c.id}-${i}`}
-										coordinates={ring.map(([lng, lat]) => ({
-											latitude: lat,
-											longitude: lng,
-										}))}
-										// Quiet: a hairline edge and a wash. At a hundred
-										// subdivisions the 2px green outline read as noise
-										// (owner, 2026-09-10 — "不太好看 很乱"), and the shape
-										// is legible from the fill alone.
-										fillColor={withAlpha(colors.pos, 0.14)}
-										strokeColor={withAlpha(colors.pos, 0.55)}
-										strokeWidth={1}
-										tappable
-										onPress={() => router.push(`/community/${c.slug}`)}
-									/>
-								))
-							: // Only a TYPED search falls back to a pin. A search must show
-								// what it found; a drill is a map of shapes, and a hundred
-								// circles for the shapeless rows is the mess we just left.
-								searching && c.lat !== undefined && c.lng !== undefined
-								? [
-										<PhotoMarker
-											key={`c-${c.id}`}
-											coordinate={{ latitude: c.lat, longitude: c.lng }}
-											photoUrl={c.heroUrl}
-											ring={colors.pos}
-											name={c.name}
-											onPress={() => router.push(`/community/${c.slug}`)}
-										/>,
-									]
-								: null,
+						c.lat !== undefined && c.lng !== undefined ? (
+							<CommunityDot
+								key={`c-${c.id}`}
+								coordinate={{ latitude: c.lat, longitude: c.lng }}
+								name={c.name}
+								labelled={communitiesLabelled}
+								onPress={() => router.push(`/community/${c.slug}`)}
+							/>
+						) : null,
 					)}
 					{hits?.listings.map((l) =>
 						l.lat !== undefined && l.lng !== undefined ? (
@@ -1017,6 +1016,56 @@ function SchoolMarker({
 	);
 }
 
+// The community dot mirrors the school row's geometry so the anchor math is
+// the same, but it is bigger and always `pos`-green: a community is what the
+// buyer came here to tap, a school is context around it.
+const COMMUNITY_DOT = 14;
+const COMMUNITY_GAP = 4;
+const COMMUNITY_LABEL_W = 110;
+const COMMUNITY_ROW_W = COMMUNITY_DOT + COMMUNITY_GAP + COMMUNITY_LABEL_W;
+const COMMUNITY_ANCHOR_LABELLED = {
+	x: COMMUNITY_DOT / 2 / COMMUNITY_ROW_W,
+	y: 0.5,
+};
+const COMMUNITY_ANCHOR_BARE = { x: 0.5, y: 0.5 };
+
+function CommunityDot({
+	coordinate,
+	name,
+	labelled,
+	onPress,
+}: {
+	coordinate: LatLng;
+	name: string;
+	labelled: boolean;
+	onPress: () => void;
+}) {
+	return (
+		<Marker
+			coordinate={coordinate}
+			// Anchored on the DOT, not the middle of the row — the dot is what
+			// sits at the community's coordinate, and the name hangs off it.
+			anchor={labelled ? COMMUNITY_ANCHOR_LABELLED : COMMUNITY_ANCHOR_BARE}
+			tracksViewChanges={false}
+			onPress={onPress}
+		>
+			<View
+				style={labelled ? styles.communityRow : styles.communityWrap}
+				accessibilityLabel={name}
+			>
+				<View style={styles.communityDot} />
+				{labelled ? (
+					<View style={styles.communityLabelBox}>
+						<Text style={styles.communityName} numberOfLines={1}>
+							{name}
+						</Text>
+					</View>
+				) : null}
+			</View>
+		</Marker>
+	);
+}
+
 function PhotoMarker({
 	coordinate,
 	photoUrl,
@@ -1093,6 +1142,39 @@ const styles = StyleSheet.create({
 		// A wash behind the text, not a chip: a hard-edged box per school reads
 		// as a hundred buttons. This lets the map through while keeping the
 		// name legible over a photograph or a filled county.
+		backgroundColor: withAlpha(colors.surface, 0.82),
+		borderRadius: 4,
+		paddingHorizontal: 3,
+		paddingVertical: 1,
+		overflow: "hidden",
+	},
+	// ── Community dots ────────────────────────────────────────────────────────
+	// Same anatomy as a school pin — a dot and its name — one size up, because
+	// the dot replaced the boundary polygons as the community's whole presence
+	// on this map (owner, 2026-09-12).
+	communityWrap: { flexDirection: "row", alignItems: "center" },
+	communityRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		width: COMMUNITY_ROW_W,
+		gap: COMMUNITY_GAP,
+	},
+	communityLabelBox: { width: COMMUNITY_LABEL_W, alignItems: "flex-start" },
+	communityDot: {
+		width: COMMUNITY_DOT,
+		height: COMMUNITY_DOT,
+		borderRadius: COMMUNITY_DOT / 2,
+		backgroundColor: colors.pos,
+		borderWidth: 2,
+		borderColor: colors.surface,
+	},
+	communityName: {
+		...textStyles.caption,
+		fontSize: 12,
+		fontWeight: "600",
+		color: colors.ink,
+		// The same wash as a school name, for the same reason: a hard-edged
+		// chip per community reads as a hundred buttons.
 		backgroundColor: withAlpha(colors.surface, 0.82),
 		borderRadius: 4,
 		paddingHorizontal: 3,
