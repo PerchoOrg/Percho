@@ -21,6 +21,52 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-11 14:20 UTC — phase276: You tab redesign — two proposals as a hosted demo
+
+**Objective**: owner's review of the You tab: "a lot of sections there and
+people will get confused." Itemised: `Still taking shape` is opaque; Recent
+should be a carousel; Your Journey becomes a wall once a buyer has seen many
+areas; What Matters to You is a lot of text; users won't parse "What Percho
+knows"; policy links are not settings and belong at the foot as references;
+Account belongs at the bottom. Asked for designs, then for a demo.
+
+**Actions**: `apps/web/public/demos/you-tab-v2/index.html` — three 390 pt
+phones side by side, static HTML on the app's own tokens (`colors`, `radii`,
+`textStyles`), no data.js: this is a proposal, not a mirror of production, so
+the phase208 drift guard does not apply. Every label a buyer would read is the
+real string — persona name from `lib/feed/persona.ts`'s lexicon, priorities
+from `lib/priorities.ts`, dim labels from `DIM_LABELS`; counts, addresses and
+photos are placeholders.
+
+- **Today**: production as-is, 8 sections, for comparison.
+- **A — one page, five sections** (recommended): persona card with the three
+  counts as pills · Recent as a horizontal carousel with the verdict badge on
+  the thumbnail and "Bring back" under it · YOUR AREAS as horizontal chips
+  with a progress ring (unbounded count, one row tall; toggle to a top-3 +
+  "N more on the map" variant) · YOUR PREFERENCES as one card with two
+  labelled groups, "You set" (the four dot rows, blurbs hidden by default —
+  toggle) and "From your swipes" (the inferred dims as chips, × removes,
+  replacing the "Still true?" two-step) · ACCOUNT holding email, the sound
+  switch, set-password, sign out, start fresh and delete · Privacy / Terms /
+  Contact and the version as grey text under the last card, no heading.
+- **B — hub + sub-pages**: the tab fits one screen — persona card, three
+  stat tiles (Likes / Areas / Trade-offs) that push Recent, Your areas and
+  Your preferences as their own pages (the demo animates the push), then the
+  same Account card and footer.
+- Persona toggle shows both states; the under-threshold state now reads
+  "No profile yet — answer a few trade-off cards in the feed and Percho names
+  your buyer type", replacing "Still taking shape".
+
+**Decisions**: "You set" and "From your swipes" share a card but stay two
+labelled groups — the source comment on `you.tsx` is right that declared and
+inferred are different kinds of claim and merging them would let the app
+overrule a stated answer; the grouping keeps that line while dropping a
+section heading. "Start fresh" moves into Account next to Delete account: it
+is a data action, and YOUR SCOPE existed only to give it a heading.
+
+**Next steps**: owner picks A or B, the areas variant, and whether blurbs
+are tap-to-expand or gone; then the RN change in `app/(tabs)/you.tsx`.
+
 ## 2026-09-11 07:05 UTC — phase275: the map says what its colours mean, and the pins say which school
 
 **Objective**: owner on phase274 — "better. But, school show names instead of

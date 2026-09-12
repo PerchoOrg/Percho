@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho You tab — redesign demo</title>
+<style>
+@font-face { font-family: "DM Serif Display"; src: url("/demos/feed-chrome-v1/DMSerifDisplay-Regular.ttf"); }
+:root{
+  --bg:#F7F5F0; --surface:#FFFFFF; --surface2:#F3EDE4; --border:#EADFD0;
+  --ink:#2B2116; --ink2:#8A7358; --ink3:#B9A88F;
+  --accent:#B45309; --pos:#1B7A4D; --neg:#B3402A; --cta:#2B2116;
+  --green:#0E6B57; --gray:#9B9B94;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --ui: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px}
+.nav{max-width:1300px;margin:0 auto 20px;font:400 14px/1.6 var(--ui)}
+.nav h1{font:400 26px "DM Serif Display",serif;color:var(--green);margin-bottom:4px}
+.nav p{max-width:820px;color:#4A4038}
+.nav code{font:500 12.5px ui-monospace,Menlo,monospace;background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px}
+
+/* ---- controls ---- */
+.panel{max-width:1300px;margin:0 auto 26px;background:#fff;border-radius:20px;padding:18px 22px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.panel h2{font:600 11px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2);margin:0 0 10px}
+.row{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:flex-start}
+.grp{display:flex;flex-direction:column;gap:6px}
+.grp b{font:600 13px var(--ui);color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:12px;border:1.5px solid #E8E2D8;background:#FBFAF7;cursor:pointer;font:500 13px var(--ui);color:#171715;user-select:none}
+.chip:hover{border-color:#CFC6B8}
+.chip.on{border-color:var(--green);background:#EAF3F0}
+
+/* ---- phones ---- */
+.stage{display:flex;gap:28px;justify-content:center;align-items:flex-start;flex-wrap:wrap;max-width:1300px;margin:0 auto}
+.col{display:flex;flex-direction:column;gap:10px;align-items:center}
+.col h3{font:600 13px var(--ui);color:#4A4038}
+.col h3 small{display:block;font:400 12px var(--ui);color:#7A6E62;margin-top:2px;max-width:390px;text-align:center}
+.phone{width:390px;height:844px;background:var(--bg);border-radius:44px;box-shadow:0 12px 40px rgba(0,0,0,.18),0 0 0 8px #1C1A17;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.scroll{flex:1;overflow-y:auto;padding:62px 20px 110px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.h1{font:700 28px var(--serif);color:var(--ink);margin-bottom:12px}
+.eyebrow{font:600 11px var(--ui);letter-spacing:1.2px;text-transform:uppercase}
+.sec{font:600 11px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);margin:22px 0 8px}
+.card{background:var(--surface);border-radius:14px;padding:6px 14px}
+.hl{font:600 15px var(--ui);color:var(--ink)}
+.body{font:400 15px var(--ui);color:var(--ink)}
+.fn{font:400 13px var(--ui);color:var(--ink2)}
+.link{font:600 15px var(--ui);color:var(--accent)}
+.neg{color:var(--neg)}
+.pos{color:var(--pos)}
+.r{padding:12px 0;border-top:.5px solid var(--border)}
+.r:first-child,.r.nb{border-top:0}
+.r.between{display:flex;align-items:center;justify-content:space-between}
+.sw{width:51px;height:31px;border-radius:16px;background:var(--pos);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:2px;right:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+.meter{height:5px;border-radius:3px;background:var(--surface2);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--pos)}
+.dots{display:flex;gap:7px}
+.dots i{width:14px;height:14px;border-radius:7px;background:var(--surface2);border:1px solid var(--border)}
+.dots i.on{background:var(--accent);border-color:var(--accent)}
+.dots i.here{border-color:var(--ink)}
+
+/* persona card */
+.persona{background:var(--cta);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.persona .eyebrow{color:rgba(255,255,255,.72)}
+.persona .name{font:700 22px var(--serif);color:#fff}
+.persona .sub{font:400 13px var(--ui);color:rgba(255,255,255,.72)}
+.persona .stats{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.persona .stats span{font:500 12px var(--ui);color:#fff;background:rgba(255,255,255,.14);border-radius:999px;padding:4px 10px}
+
+/* recent */
+.rrow{display:flex;align-items:center;gap:12px;padding:10px 0}
+.thumb{width:52px;height:52px;border-radius:14px;flex:none}
+.rrow .t{flex:1;min-width:0}
+.rrow .t div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rrow .fn.v{font-weight:600;margin-top:2px}
+.carousel{display:flex;gap:10px;overflow-x:auto;padding:4px 0 6px;margin:0 -20px;padding-left:20px;padding-right:20px;scrollbar-width:none}
+.carousel::-webkit-scrollbar{display:none}
+.rc{width:124px;flex:none;display:flex;flex-direction:column;gap:6px}
+.rc .img{width:124px;height:96px;border-radius:14px;position:relative;overflow:hidden}
+.rc .badge{position:absolute;top:8px;left:8px;font:600 10px var(--ui);letter-spacing:.6px;text-transform:uppercase;padding:3px 7px;border-radius:999px;background:rgba(250,246,240,.92)}
+.rc .ttl{font:600 13px var(--ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc .sub{font:400 12px var(--ui);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc .bb{font:600 13px var(--ui);color:var(--accent);margin-top:2px}
+
+/* area chips */
+.achips{display:flex;gap:8px;overflow-x:auto;margin:0 -20px;padding:2px 20px 6px;scrollbar-width:none}
+.achips::-webkit-scrollbar{display:none}
+.ac{flex:none;display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;padding:9px 14px 9px 10px;font:600 14px var(--ui);color:var(--ink)}
+.ac .ring{width:22px;height:22px;border-radius:50%;background:conic-gradient(var(--pos) calc(var(--p)*1%),var(--surface2) 0);position:relative;flex:none}
+.ac .ring::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--surface)}
+.ac small{font:500 12px var(--ui);color:var(--accent)}
+.ac.more{color:var(--accent);font-weight:600;font-size:13px;background:transparent;padding-left:4px}
+
+/* preference chips */
+.pchips{display:flex;flex-wrap:wrap;gap:8px;padding:2px 0 10px}
+.pc{display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border-radius:999px;padding:8px 10px 8px 14px;font:500 14px var(--ui);color:var(--ink)}
+.pc b{font:500 11px var(--ui);color:var(--ink3);width:16px;height:16px;border-radius:50%;background:#fff;display:inline-flex;align-items:center;justify-content:center}
+.pc.weak{opacity:.6}
+.sub-h{font:600 13px var(--ui);color:var(--ink2);padding:12px 0 4px}
+.prio{display:flex;align-items:center;gap:12px;padding:10px 0}
+.prio .t{flex:1}
+.prio .blurb{font:400 12px var(--ui);color:var(--ink3);margin-top:2px}
+.hideblurb .prio .blurb{display:none}
+.about{margin-top:26px;text-align:center;font:400 12px var(--ui);color:var(--ink3);line-height:1.9}
+.about a{color:var(--ink2);text-decoration:none}
+
+/* tab bar */
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:84px;background:rgba(247,245,240,.96);border-top:.5px solid var(--border);display:flex;justify-content:space-around;padding:10px 18px 0}
+.tab{display:flex;flex-direction:column;align-items:center;gap:4px;font:500 11px var(--ui);color:var(--gray);width:60px}
+.tab i{width:24px;height:24px;border-radius:7px;border:2px solid currentColor;display:block}
+.tab.on{color:var(--green)}
+.tab.on i{background:var(--green)}
+
+/* B: hub + sub-pages */
+.tiles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
+.tile{background:var(--surface);border-radius:14px;padding:14px 12px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.tile:hover{background:#FDFBF7}
+.tile .n{font:700 24px var(--serif);color:var(--ink)}
+.tile .l{font:600 12px var(--ui);color:var(--ink)}
+.tile .s{font:400 11px var(--ui);color:var(--ink2);margin-top:4px}
+.tile .go{font:600 12px var(--ui);color:var(--accent);margin-top:6px}
+.brow{display:flex;align-items:center;justify-content:space-between;padding:14px 0;cursor:pointer}
+.brow .chev{color:var(--ink3);font-size:18px}
+.sub{position:absolute;inset:0;background:var(--bg);transform:translateX(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column}
+.sub.open{transform:translateX(0)}
+.sub .top{padding:58px 20px 6px;display:flex;align-items:center;gap:8px}
+.sub .top .back{font:500 17px var(--ui);color:var(--accent);cursor:pointer}
+.sub .top h2{font:700 22px var(--serif);color:var(--ink)}
+.sub .scroll{padding-top:6px}
+.arow{padding:10px 0;border-top:.5px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.arow:first-child{border-top:0}
+.arow .n{display:flex;justify-content:space-between}
+.arow .n span{font:400 13px var(--ui);color:var(--accent)}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>You tab — redesign</h1>
+  <p>Left is production as of today (8 sections). <b>A</b> keeps one scrolling page and folds it to 5. <b>B</b> makes the tab a one-screen hub and pushes each part to its own page — tap a tile or row to see it. All names and labels are the real ones from <code>lib/feed/persona.ts</code> and <code>lib/priorities.ts</code>; counts and photos are placeholders.</p>
+</div>
+
+<div class="panel">
+  <h2>Options</h2>
+  <div class="row">
+    <div class="grp"><b>Persona</b>
+      <div class="chips" data-opt="persona">
+        <span class="chip on" data-v="named">Named</span>
+        <span class="chip" data-v="none">Not enough signal yet</span>
+      </div>
+    </div>
+    <div class="grp"><b>A · Your areas</b>
+      <div class="chips" data-opt="areas">
+        <span class="chip on" data-v="chips">Chips, horizontal</span>
+        <span class="chip" data-v="top3">Top 3 + link</span>
+      </div>
+    </div>
+    <div class="grp"><b>A · Priority blurbs</b>
+      <div class="chips" data-opt="blurb">
+        <span class="chip on" data-v="hide">Hidden</span>
+        <span class="chip" data-v="show">Shown</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="stage">
+
+<!-- ═══════════ TODAY ═══════════ -->
+<div class="col">
+  <h3>Today<small>8 sections, ~3 screens tall</small></h3>
+  <div class="phone">
+    <div class="scroll">
+      <div class="h1">You</div>
+      <div class="persona">
+        <div class="eyebrow">Your persona</div>
+        <div class="name p-named">Trail-Runner Suburbanite</div>
+        <div class="name p-none" hidden>Still taking shape</div>
+        <div class="sub">Shaped by 14 likes · 6 trade-offs</div>
+      </div>
+
+      <div class="sec">Recent</div>
+      <div class="card">
+        <div class="rrow"><div class="thumb g1"></div><div class="t"><div class="hl">4120 Ashford Dunwoody Rd</div><div class="fn">Brookhaven · $612,000</div><div class="fn v pos">Liked</div></div><span class="link">Bring back</span></div>
+        <div class="rrow"><div class="thumb g2"></div><div class="t"><div class="hl">Ashley Crossing</div><div class="fn">Community · Alpharetta</div><div class="fn v neg">Passed</div></div><span class="link">Bring back</span></div>
+        <div class="rrow"><div class="thumb g3"></div><div class="t"><div class="hl">210 Wexford Ln</div><div class="fn">Roswell · $489,900</div><div class="fn v pos">Liked</div></div><span class="link">Bring back</span></div>
+        <div class="rrow"><div class="thumb g4"></div><div class="t"><div class="hl">1885 Ivey Creek Ct</div><div class="fn">Marietta · $455,000</div><div class="fn v neg">Passed</div></div><span class="link">Bring back</span></div>
+      </div>
+
+      <div class="sec">Your journey</div>
+      <div class="card">
+        <div class="arow"><div class="n"><span class="hl" style="color:var(--ink)">Alpharetta <span>82%</span></span></div><div class="fn">31 cards · Still unknown: nightlife</div><div class="meter"><i style="width:82%"></i></div></div>
+        <div class="arow"><div class="n"><span class="hl" style="color:var(--ink)">Roswell <span>40%</span></span></div><div class="fn">12 cards · Still unknown: schools, nightlife</div><div class="meter"><i style="width:40%"></i></div></div>
+        <div class="arow"><div class="n"><span class="hl" style="color:var(--ink)">Marietta <span>12%</span></span></div><div class="fn">4 cards · Still unknown: most things</div><div class="meter"><i style="width:12%"></i></div></div>
+        <div class="arow"><div class="n"><span class="hl" style="color:var(--ink)">Brookhaven <span>9%</span></span></div><div class="fn">3 cards · Still unknown: most things</div><div class="meter"><i style="width:9%"></i></div></div>
+        <div class="arow"><div class="n"><span class="hl" style="color:var(--ink)">Johns Creek <span>6%</span></span></div><div class="fn">2 cards · Still unknown: most things</div><div class="meter"><i style="width:6%"></i></div></div>
+        <div class="arow"><div class="n"><span class="hl" style="color:var(--ink)">Sandy Springs <span>3%</span></span></div><div class="fn">1 card · Still unknown: most things</div><div class="meter"><i style="width:3%"></i></div></div>
+        <div class="arow"><div class="n"><span class="hl" style="color:var(--ink)">Decatur <span>3%</span></span></div><div class="fn">1 card · Still unknown: most things</div><div class="meter"><i style="width:3%"></i></div></div>
+        <div class="arow"><div class="n"><span class="hl" style="color:var(--ink)">Smyrna <span>3%</span></span></div><div class="fn">1 card · Still unknown: most things</div><div class="meter"><i style="width:3%"></i></div></div>
+        <div class="r"><span class="fn" style="color:var(--accent)">Explore more areas →</span></div>
+      </div>
+
+      <div class="sec">What matters to you</div>
+      <div class="card">
+        <p class="fn" style="padding:10px 0 4px;line-height:18px">Set these and Percho leads with them — in the compare table, and in what a place’s summary mentions first. They never hide anything.</p>
+        <div class="prio"><div class="t"><div class="hl">Schools</div><div class="blurb">District test scores and the zones a home is assigned to</div></div><div class="dots"><i></i><i class="on"></i><i class="on"></i><i class="on here"></i></div></div>
+        <div class="prio"><div class="t"><div class="hl">What it really costs</div><div class="blurb">Tax, utilities, trash and HOA — the monthly total, not the price</div></div><div class="dots"><i></i><i class="on here"></i><i></i><i></i></div></div>
+        <div class="prio"><div class="t"><div class="hl">Getting around</div><div class="blurb">How far the daily errands and the drive to work actually are</div></div><div class="dots"><i class="here"></i><i></i><i></i><i></i></div></div>
+        <div class="prio"><div class="t"><div class="hl">The community itself</div><div class="blurb">Amenities, who your neighbours are, what residents say</div></div><div class="dots"><i></i><i class="on"></i><i class="on here"></i><i></i></div></div>
+        <p class="fn" style="color:var(--ink3);padding:0 0 10px">Leading with schools.</p>
+      </div>
+
+      <div class="sec">What Percho knows</div>
+      <div class="card">
+        <div class="r" style="display:flex;align-items:center;gap:12px"><span class="body" style="flex:none">Quiet streets</span><div class="meter" style="flex:1"><i style="width:100%"></i></div></div>
+        <div class="r" style="display:flex;align-items:center;gap:12px"><span class="body" style="flex:none">Good schools</span><div class="meter" style="flex:1"><i style="width:75%"></i></div></div>
+        <div class="r" style="display:flex;align-items:center;gap:12px"><span class="body" style="flex:none">Trail access</span><div class="meter" style="flex:1"><i style="width:50%"></i></div></div>
+        <div class="r" style="display:flex;align-items:center;gap:12px"><span class="body" style="flex:none">Family-friendly</span><div class="meter" style="flex:1"><i style="width:25%"></i></div></div>
+      </div>
+
+      <div class="sec">Your scope</div>
+      <div class="card">
+        <div class="body" style="padding:10px 0">14 likes · 6 trade-offs · 8 areas explored</div>
+        <div style="padding:0 0 10px"><span class="hl neg" style="display:inline-block;background:var(--surface2);border-radius:16px;padding:10px 16px">Start fresh</span></div>
+      </div>
+
+      <div class="sec">Account</div>
+      <div class="card">
+        <div class="r nb body">roy@example.com</div>
+        <div class="r"><div class="link">Set a password</div><div class="fn">Sign in without waiting for a code</div></div>
+        <div class="r link">Sign out</div>
+        <div class="r hl neg">Delete account</div>
+      </div>
+
+      <div class="sec">Settings</div>
+      <div class="card">
+        <div class="r nb between"><span class="body">Sound autoplay</span><span class="sw"></span></div>
+        <div class="r body">Privacy policy</div>
+        <div class="r body">Terms of use</div>
+        <div class="r body">Contact &amp; support</div>
+        <div class="r fn">Percho 1.4 (build 12)</div>
+      </div>
+    </div>
+    <div class="tabbar"><div class="tab"><i></i>Feed</div><div class="tab"><i></i>Search</div><div class="tab"><i></i>Saved</div><div class="tab on"><i></i>You</div></div>
+  </div>
+</div>
+
+<!-- ═══════════ A ═══════════ -->
+<div class="col">
+  <h3>A · One page, five sections<small>Recommended. Same data, no new screens.</small></h3>
+  <div class="phone" id="phoneA">
+    <div class="scroll hideblurb" id="scrollA">
+      <div class="h1">You</div>
+      <div class="persona">
+        <div class="p-named">
+          <div class="eyebrow">Your buyer type</div>
+          <div class="name">Trail-Runner Suburbanite</div>
+        </div>
+        <div class="p-none" hidden>
+          <div class="eyebrow">Your buyer type</div>
+          <div class="name">No profile yet</div>
+          <div class="sub">Answer a few trade-off cards in the feed and Percho names your buyer type.</div>
+        </div>
+        <div class="stats"><span>14 likes</span><span>6 trade-offs</span><span>8 areas</span></div>
+      </div>
+
+      <div class="sec">Recent</div>
+      <div class="carousel">
+        <div class="rc"><div class="img g1"><span class="badge pos">Liked</span></div><div class="ttl">4120 Ashford Dunwoody</div><div class="sub">$612,000</div><div class="bb">Bring back</div></div>
+        <div class="rc"><div class="img g2"><span class="badge neg">Passed</span></div><div class="ttl">Ashley Crossing</div><div class="sub">Alpharetta</div><div class="bb">Bring back</div></div>
+        <div class="rc"><div class="img g3"><span class="badge pos">Liked</span></div><div class="ttl">210 Wexford Ln</div><div class="sub">$489,900</div><div class="bb">Bring back</div></div>
+        <div class="rc"><div class="img g4"><span class="badge neg">Passed</span></div><div class="ttl">1885 Ivey Creek Ct</div><div class="sub">$455,000</div><div class="bb">Bring back</div></div>
+        <div class="rc"><div class="img g5"><span class="badge pos">Liked</span></div><div class="ttl">Windward Lakes</div><div class="sub">Alpharetta</div><div class="bb">Bring back</div></div>
+        <div class="rc"><div class="img g6"><span class="badge neg">Passed</span></div><div class="ttl">77 Peachtree Battle</div><div class="sub">$1,240,000</div><div class="bb">Bring back</div></div>
+      </div>
+
+      <div class="sec">Your areas</div>
+      <div class="a-chips">
+        <div class="achips">
+          <div class="ac"><span class="ring" style="--p:82"></span>Alpharetta <small>82%</small></div>
+          <div class="ac"><span class="ring" style="--p:40"></span>Roswell <small>40%</small></div>
+          <div class="ac"><span class="ring" style="--p:12"></span>Marietta <small>12%</small></div>
+          <div class="ac"><span class="ring" style="--p:9"></span>Brookhaven <small>9%</small></div>
+          <div class="ac"><span class="ring" style="--p:6"></span>Johns Creek <small>6%</small></div>
+          <div class="ac"><span class="ring" style="--p:3"></span>Sandy Springs <small>3%</small></div>
+          <div class="ac"><span class="ring" style="--p:3"></span>Decatur <small>3%</small></div>
+          <div class="ac"><span class="ring" style="--p:3"></span>Smyrna <small>3%</small></div>
+          <div class="ac more">See all on map →</div>
+        </div>
+      </div>
+      <div class="a-top3 card" hidden>
+        <div class="arow"><div class="n"><span class="hl">Alpharetta</span><span>82%</span></div><div class="meter"><i style="width:82%"></i></div></div>
+        <div class="arow"><div class="n"><span class="hl">Roswell</span><span>40%</span></div><div class="meter"><i style="width:40%"></i></div></div>
+        <div class="arow"><div class="n"><span class="hl">Marietta</span><span>12%</span></div><div class="meter"><i style="width:12%"></i></div></div>
+        <div class="r"><span class="fn" style="color:var(--accent)">5 more on the map →</span></div>
+      </div>
+
+      <div class="sec">Your preferences</div>
+      <div class="card">
+        <div class="sub-h">You set</div>
+        <div class="prio"><div class="t"><div class="hl">Schools</div><div class="blurb">District test scores and the zones a home is assigned to</div></div><div class="dots"><i></i><i class="on"></i><i class="on"></i><i class="on here"></i></div></div>
+        <div class="prio"><div class="t"><div class="hl">What it really costs</div><div class="blurb">Tax, utilities, trash and HOA — the monthly total, not the price</div></div><div class="dots"><i></i><i class="on here"></i><i></i><i></i></div></div>
+        <div class="prio"><div class="t"><div class="hl">Getting around</div><div class="blurb">How far the daily errands and the drive to work actually are</div></div><div class="dots"><i class="here"></i><i></i><i></i><i></i></div></div>
+        <div class="prio"><div class="t"><div class="hl">The community itself</div><div class="blurb">Amenities, who your neighbours are, what residents say</div></div><div class="dots"><i></i><i class="on"></i><i class="on here"></i><i></i></div></div>
+        <div class="sub-h" style="border-top:.5px solid var(--border);margin-top:4px;padding-top:14px">From your swipes</div>
+        <div class="pchips">
+          <span class="pc">Quiet streets <b>×</b></span>
+          <span class="pc">Good schools <b>×</b></span>
+          <span class="pc">Trail access <b>×</b></span>
+          <span class="pc weak">Family-friendly <b>×</b></span>
+        </div>
+      </div>
+
+      <div class="sec">Account</div>
+      <div class="card">
+        <div class="r nb body">roy@example.com</div>
+        <div class="r between"><span class="body">Sound autoplay</span><span class="sw"></span></div>
+        <div class="r link">Set a password</div>
+        <div class="r link">Sign out</div>
+        <div class="r hl neg">Start fresh</div>
+        <div class="r hl neg">Delete account</div>
+      </div>
+
+      <div class="about"><a>Privacy</a> · <a>Terms</a> · <a>Contact &amp; support</a><br>Percho 1.4 (build 12)</div>
+    </div>
+    <div class="tabbar"><div class="tab"><i></i>Feed</div><div class="tab"><i></i>Search</div><div class="tab"><i></i>Saved</div><div class="tab on"><i></i>You</div></div>
+  </div>
+</div>
+
+<!-- ═══════════ B ═══════════ -->
+<div class="col">
+  <h3>B · Hub + sub-pages<small>Main tab fits one screen. Tap a tile or row.</small></h3>
+  <div class="phone" id="phoneB">
+    <div class="scroll">
+      <div class="h1">You</div>
+      <div class="persona">
+        <div class="p-named">
+          <div class="eyebrow">Your buyer type</div>
+          <div class="name">Trail-Runner Suburbanite</div>
+        </div>
+        <div class="p-none" hidden>
+          <div class="eyebrow">Your buyer type</div>
+          <div class="name">No profile yet</div>
+          <div class="sub">Answer a few trade-off cards in the feed and Percho names your buyer type.</div>
+        </div>
+      </div>
+      <div class="tiles">
+        <div class="tile" data-sub="recent"><div class="n">14</div><div class="l">Likes</div><div class="s">6 passed today</div><div class="go">Recent →</div></div>
+        <div class="tile" data-sub="areas"><div class="n">8</div><div class="l">Areas</div><div class="s">Alpharetta 82%</div><div class="go">See all →</div></div>
+        <div class="tile" data-sub="prefs"><div class="n">6</div><div class="l">Trade-offs</div><div class="s">Leading with schools</div><div class="go">Edit →</div></div>
+      </div>
+
+      <div class="sec">Account</div>
+      <div class="card">
+        <div class="r nb body">roy@example.com</div>
+        <div class="r between"><span class="body">Sound autoplay</span><span class="sw"></span></div>
+        <div class="r link">Set a password</div>
+        <div class="r link">Sign out</div>
+        <div class="r hl neg">Start fresh</div>
+        <div class="r hl neg">Delete account</div>
+      </div>
+      <div class="about"><a>Privacy</a> · <a>Terms</a> · <a>Contact &amp; support</a><br>Percho 1.4 (build 12)</div>
+    </div>
+
+    <!-- sub-pages -->
+    <div class="sub" data-page="recent">
+      <div class="top"><span class="back">‹ You</span><h2>Recent</h2></div>
+      <div class="scroll">
+        <div class="card">
+          <div class="rrow"><div class="thumb g1"></div><div class="t"><div class="hl">4120 Ashford Dunwoody Rd</div><div class="fn">Brookhaven · $612,000</div><div class="fn v pos">Liked</div></div><span class="link">Bring back</span></div>
+          <div class="rrow"><div class="thumb g2"></div><div class="t"><div class="hl">Ashley Crossing</div><div class="fn">Community · Alpharetta</div><div class="fn v neg">Passed</div></div><span class="link">Bring back</span></div>
+          <div class="rrow"><div class="thumb g3"></div><div class="t"><div class="hl">210 Wexford Ln</div><div class="fn">Roswell · $489,900</div><div class="fn v pos">Liked</div></div><span class="link">Bring back</span></div>
+          <div class="rrow"><div class="thumb g4"></div><div class="t"><div class="hl">1885 Ivey Creek Ct</div><div class="fn">Marietta · $455,000</div><div class="fn v neg">Passed</div></div><span class="link">Bring back</span></div>
+          <div class="rrow"><div class="thumb g5"></div><div class="t"><div class="hl">Windward Lakes</div><div class="fn">Community · Alpharetta</div><div class="fn v pos">Liked</div></div><span class="link">Bring back</span></div>
+          <div class="rrow"><div class="thumb g6"></div><div class="t"><div class="hl">77 Peachtree Battle Ave</div><div class="fn">Buckhead · $1,240,000</div><div class="fn v neg">Passed</div></div><span class="link">Bring back</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="sub" data-page="areas">
+      <div class="top"><span class="back">‹ You</span><h2>Your areas</h2></div>
+      <div class="scroll">
+        <div class="card">
+          <div class="arow"><div class="n"><span class="hl">Alpharetta</span><span>82%</span></div><div class="fn">31 cards · Still unknown: nightlife</div><div class="meter"><i style="width:82%"></i></div></div>
+          <div class="arow"><div class="n"><span class="hl">Roswell</span><span>40%</span></div><div class="fn">12 cards · Still unknown: schools, nightlife</div><div class="meter"><i style="width:40%"></i></div></div>
+          <div class="arow"><div class="n"><span class="hl">Marietta</span><span>12%</span></div><div class="fn">4 cards</div><div class="meter"><i style="width:12%"></i></div></div>
+          <div class="arow"><div class="n"><span class="hl">Brookhaven</span><span>9%</span></div><div class="fn">3 cards</div><div class="meter"><i style="width:9%"></i></div></div>
+          <div class="arow"><div class="n"><span class="hl">Johns Creek</span><span>6%</span></div><div class="fn">2 cards</div><div class="meter"><i style="width:6%"></i></div></div>
+          <div class="arow"><div class="n"><span class="hl">Sandy Springs</span><span>3%</span></div><div class="fn">1 card</div><div class="meter"><i style="width:3%"></i></div></div>
+          <div class="arow"><div class="n"><span class="hl">Decatur</span><span>3%</span></div><div class="fn">1 card</div><div class="meter"><i style="width:3%"></i></div></div>
+          <div class="arow"><div class="n"><span class="hl">Smyrna</span><span>3%</span></div><div class="fn">1 card</div><div class="meter"><i style="width:3%"></i></div></div>
+          <div class="r"><span class="fn" style="color:var(--accent)">Open the map →</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="sub" data-page="prefs">
+      <div class="top"><span class="back">‹ You</span><h2>Your preferences</h2></div>
+      <div class="scroll">
+        <div class="sec" style="margin-top:8px">You set</div>
+        <div class="card">
+          <div class="prio"><div class="t"><div class="hl">Schools</div><div class="blurb">District test scores and the zones a home is assigned to</div></div><div class="dots"><i></i><i class="on"></i><i class="on"></i><i class="on here"></i></div></div>
+          <div class="prio"><div class="t"><div class="hl">What it really costs</div><div class="blurb">Tax, utilities, trash and HOA — the monthly total, not the price</div></div><div class="dots"><i></i><i class="on here"></i><i></i><i></i></div></div>
+          <div class="prio"><div class="t"><div class="hl">Getting around</div><div class="blurb">How far the daily errands and the drive to work actually are</div></div><div class="dots"><i class="here"></i><i></i><i></i><i></i></div></div>
+          <div class="prio"><div class="t"><div class="hl">The community itself</div><div class="blurb">Amenities, who your neighbours are, what residents say</div></div><div class="dots"><i></i><i class="on"></i><i class="on here"></i><i></i></div></div>
+        </div>
+        <div class="sec">From your swipes</div>
+        <div class="card">
+          <p class="fn" style="padding:10px 0 2px">What your trade-off answers point to. Tap × if one is wrong.</p>
+          <div class="pchips">
+            <span class="pc">Quiet streets <b>×</b></span>
+            <span class="pc">Good schools <b>×</b></span>
+            <span class="pc">Trail access <b>×</b></span>
+            <span class="pc weak">Family-friendly <b>×</b></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabbar"><div class="tab"><i></i>Feed</div><div class="tab"><i></i>Search</div><div class="tab"><i></i>Saved</div><div class="tab on"><i></i>You</div></div>
+  </div>
+</div>
+
+</div>
+
+<style>
+/* placeholder photo gradients */
+.g1{background:linear-gradient(135deg,#8C6A4E,#4A3628)}
+.g2{background:linear-gradient(135deg,#5C8A6E,#2E4A3A)}
+.g3{background:linear-gradient(135deg,#A88A5E,#5A4630)}
+.g4{background:linear-gradient(135deg,#6E7E8C,#3A4650)}
+.g5{background:linear-gradient(135deg,#7A9A7E,#3E5642)}
+.g6{background:linear-gradient(135deg,#9E7A6A,#523A32)}
+</style>
+
+<script>
+// Options → toggle classes / hidden blocks across all three phones.
+const opts = { persona: "named", areas: "chips", blurb: "hide" };
+function apply() {
+  document.querySelectorAll(".p-named").forEach(e => e.hidden = opts.persona !== "named");
+  document.querySelectorAll(".p-none").forEach(e => e.hidden = opts.persona !== "none");
+  document.querySelector("#phoneA .a-chips").hidden = opts.areas !== "chips";
+  document.querySelector("#phoneA .a-top3").hidden = opts.areas !== "top3";
+  document.getElementById("scrollA").classList.toggle("hideblurb", opts.blurb === "hide");
+}
+document.querySelectorAll("[data-opt]").forEach(g => {
+  g.addEventListener("click", ev => {
+    const c = ev.target.closest(".chip"); if (!c) return;
+    g.querySelectorAll(".chip").forEach(x => x.classList.toggle("on", x === c));
+    opts[g.dataset.opt] = c.dataset.v; apply();
+  });
+});
+apply();
+
+// B: push / pop sub-pages.
+document.querySelectorAll("#phoneB [data-sub]").forEach(t => {
+  t.addEventListener("click", () => {
+    document.querySelector(`#phoneB .sub[data-page="${t.dataset.sub}"]`).classList.add("open");
+  });
+});
+document.querySelectorAll("#phoneB .back").forEach(b => {
+  b.addEventListener("click", () => b.closest(".sub").classList.remove("open"));
+});
+</script>
+</body>
+</html>
