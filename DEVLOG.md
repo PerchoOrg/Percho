@@ -21,6 +21,48 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-12 21:25 UTC — phase277.3: `tappable` is a lie on iOS — the county was eating every tap
+
+**Objective**: owner, third report on the same tap — "Clicking community,
+Always go to county view." "County view" names the culprit exactly:
+`selectArea` is the only thing that animates there. Stopped guessing and
+read the installed react-native-maps (1.27.2) iOS source.
+
+**Root cause, from the source**:
+1. `AIRMapManager.m handleMapTap` fires `polygon.onPress` for EVERY polygon
+   whose ring contains the tap, gated only on `if (polygon.onPress)` — the
+   `tappable` prop is parsed (`Props.cpp`) and never read on this path.
+   **phase268's `tappable={!asking}` never worked on iOS.** Every drill-mode
+   tap that reached the map recognizer fired the county's `selectArea`,
+   which clears the drill and animates to the county.
+2. A marker's own tap recognizer and the map's are mutually exclusive in
+   practice (city drilling works, so a won marker tap does suppress
+   `handleMapTap`) — but the small custom-view dots keep LOSING that race,
+   which is why rounds one to three of rewiring the Marker changed nothing:
+   the dot's wires were fine, the tap was never on them.
+
+**Actions**, all `apps/mobile/app/(tabs)/search.tsx`:
+- County `Polygon`: `onPress={asking ? undefined : …}` — nil handler is the
+  only gate iOS respects. `tappable` stays for Android, where it is honoured.
+- New `onMapPress` on the MapView: a bare map press while results are up is
+  resolved to the nearest community dot by screen distance (region spans →
+  points, `DOT_TAP_RADIUS_PX = 28`) and funnelled through `openCommunity`'s
+  existing dedupe. Whichever recognizer wins the tap, a press on or near a
+  dot now has exactly one outcome: the community's explore page.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (same 8
+pre-existing warnings), mobile 769 pass.
+
+**Learnings**: `tappable` on iOS polygons is decorative in react-native-maps
+1.27.2 — anywhere this app needs a polygon to stop listening, the handler
+itself must be withdrawn. Worth remembering for the school layer too: school
+pins have no `onPress`, so a school tap falls through to `handleMapTap` and
+will fire a county's handler when no results are up (pre-existing, benign —
+a county tap at rest is the intended drill — but it is the same mechanism).
+
+**Next steps**: owner re-checks. If a dot tap STILL misbehaves it will at
+least misbehave differently now, which would itself be signal.
+
 ## 2026-09-12 21:10 UTC — phase277.2: the dot tap gets a second wire
 
 **Objective**: owner, after phase277.1 — "Clicking community dot on map
