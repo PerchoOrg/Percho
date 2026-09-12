@@ -21,6 +21,38 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-12 23:50 UTC — phase277.6: marker-shape mockup for the owner to pick from
+
+**Objective**: owner — "Design some shapes for both community and homes with
+preview on map, maybe house shape for home? circle for community." A design
+pick, not a code change yet — so per the demo convention it ships as a
+static preview on percho.co for him to try on the phone.
+
+**Actions**: `apps/web/public/demos/map-markers/index.html` — MapLibre +
+Carto positron (the community-coverage demo's basemap), Alpharetta-ish
+placeholder data, app palette (`accent` amber homes / `pos` green
+communities). Two live switchers:
+- HOME: **House · photo** (photo masked into a roof-and-walls silhouette,
+  amber shell as the border since clip-path eats real borders, price chip
+  below) / **House · icon** (white disc, amber house glyph, pointer tail) /
+  **Circle (today)** as the baseline.
+- COMMUNITY: **Dot (today)** / **Circle · photo** (30px round cover with
+  green ring — viable since phase277.5, every visible community HAS a
+  cover) / **Circle · initial**. Plus a names on/off toggle to preview the
+  zoomed-out state.
+
+**Decisions**: photos are picsum placeholders — the pick is about shape
+language, not real covers; positions are hand-placed, not DB reads. RN
+implementation notes for later: the house mask needs `react-native-svg` or
+a two-View roof+wall composition (no clip-path on RN); everything else is
+plain Views.
+
+**Verification**: static file only — typecheck/lint/tests unaffected. URL
+live once Vercel deploys this main: percho.co/demos/map-markers/.
+
+**Next steps**: owner picks one per layer; implementation lands in
+`search.tsx` (`PhotoMarker` / `CommunityDot`) as its own phase.
+
 ## 2026-09-12 23:35 UTC — phase279: the market line comes off the trade-off, and a door can name its own room
 
 **Objective**: owner, two asks on the trade-off card. (1) 「remove the 6homes
