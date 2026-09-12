@@ -94,39 +94,11 @@ describe('projectSearchCommunities', () => {
         cover_storage_path: 'windward/cover.jpg',
         lat: 34.1,
         lng: -84.25,
-        boundary: null,
       },
     ]);
     expect(c?.heroUrl).toBe(
       'https://sb.example/storage/v1/object/public/community-covers/windward/cover.jpg',
     );
     expect(c?.lat).toBe(34.1);
-    // No polygon on the row → the key is OMITTED, and the map draws a pin.
-    expect(c).not.toHaveProperty('boundary');
-  });
-
-  it('projects a real boundary into drawable outer rings', () => {
-    const square = [
-      [-84.3, 34.0],
-      [-84.2, 34.0],
-      [-84.2, 34.1],
-      [-84.3, 34.1],
-      [-84.3, 34.0],
-    ];
-    const [c] = projectSearchCommunities([
-      {
-        id: 'c2',
-        slug: 'shaped',
-        name: 'Shaped',
-        city: 'Roswell',
-        state: 'GA',
-        cover_storage_path: null,
-        lat: null,
-        lng: null,
-        boundary: { type: 'MultiPolygon', coordinates: [[square]] },
-      },
-    ]);
-    expect(c?.boundary).toHaveLength(1);
-    expect(c?.boundary?.[0]?.[0]).toEqual([-84.3, 34.0]);
   });
 });

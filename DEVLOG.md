@@ -21,6 +21,58 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-12 10:30 UTC — phase277: communities are dots, and the boundary leaves the wire
+
+**Objective**: owner — "On Map - when going into a city, all communities have
+different shapes, not consistent, can you use flagging dot instead? Or
+something else?" The community outlines shipped in phase267 at his own request
+("each with boundary can we use that?"), but on a real drill they read as
+chaos: subdivisions differ wildly in size and shape, and about half the rows
+have no polygon at all, so a city showed some communities as green blobs and
+the rest as nothing.
+
+**Actions**:
+- `apps/mobile/app/(tabs)/search.tsx`: the community `Polygon` branch and its
+  typed-search `PhotoMarker` fallback are replaced by one `CommunityDot`
+  marker — a 14px `pos`-green dot with a white ring, same anatomy as a school
+  pin one size up, drawn for EVERY community hit with a centroid (drill and
+  typed search alike; lat/lng is populated independently of boundary, so
+  coverage doubles with no server change). The name labels come on when the
+  viewport holds ≤ `NAMED_MAX` dots — count-driven like `shouldLabel` for
+  schools, but counted against the current `region` rather than the result
+  set, since a drill returns up to 100 rows for a whole city. County
+  `tappable={!asking}` stays: dots hit-test above polygons, but a near-miss
+  would still land on the county and clear the drill.
+- `apps/mobile/lib/search/search-dto.ts`: `SearchCommunity.boundary` and
+  `parseBoundary` removed — nothing reads them now.
+- `apps/web/lib/listings/search.ts`: `boundary` is no longer selected or
+  projected; `CommunityRow`/`SearchCommunityDTO` lose the field, header
+  rewritten. Cuts ~120 KB of simplified rings from every drill payload.
+- `apps/web/lib/geo/simplify-ring.ts` (+ test) deleted — its only production
+  caller was that projection. `git log` has it if shapes ever return.
+- `search.test.ts` both sides updated; separate commit fixes the
+  long-red `devlog-order.test.ts` (another agent's 09-09 entries interleaved;
+  two prior sessions flagged it and left it).
+
+**Decisions**:
+- **Dot over polygon everywhere on this map**, not a zoom switch. The polygon
+  was wrong for this surface twice over — inconsistent shapes when present,
+  absent half the time — and the real shape still renders on the community's
+  own web page. One mark, one size, every row is the answer to "not
+  consistent". A zoom-gated hybrid would keep both the payload and the mess.
+- The dot layer borrows the school pins' dot+label language (viewport-counted
+  labels, washed name chips) so the map speaks one visual dialect; community
+  dots are bigger and always green since they are the destination, schools the
+  context.
+
+**Verification**: `pnpm typecheck` clean both packages; `pnpm lint` exit 0
+(same 8 pre-existing mobile warnings); mobile 769 pass; web 1,180 pass —
+including `devlog-order.test.ts`, green again.
+
+**Next steps**: owner reviews the dots on the phone. Still open from
+phase267/268: TIGER Places for city outlines, and the viewport query for true
+community coverage past the 100-row ceiling.
+
 ## 2026-09-12 09:40 UTC — phase276.6: the persona names places, not households
 
 **Objective**: Owner asked 「You persona - is it legal to say explicitly the
