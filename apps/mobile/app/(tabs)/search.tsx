@@ -344,6 +344,27 @@ export default function SearchTab() {
 		mapRef.current?.animateToRegion(METRO_REGION, 500);
 	};
 
+	/**
+	 * Open a community's explore page from a dot tap — the same destination the
+	 * sheet rows push, reachable by TWO event paths on purpose. A dot's tap
+	 * arrives either through its own `Marker.onPress` or through the map-level
+	 * `onMarkerPress` (whose `identifier` names the community); on iOS both are
+	 * driven by the same annotation selection and can BOTH fire for one tap,
+	 * so the second arrival inside a beat is dropped rather than pushed as a
+	 * second screen. Why two paths at all: the Marker-level callback is the
+	 * one that kept silently not arriving for the small custom-view dots
+	 * (owner, 2026-09-12 ×2 — "goes back to city view", then "should go to
+	 * community explore page"), and the map-level event is delivered
+	 * independently of the marker's own JS wiring.
+	 */
+	const lastCommunityNav = useRef(0);
+	const openCommunity = (slug: string) => {
+		const now = Date.now();
+		if (now - lastCommunityNav.current < 800) return;
+		lastCommunityNav.current = now;
+		router.push(`/community/${slug}`);
+	};
+
 	// `?focus=<unitId>` — the You tab's familiarity rows, the Saved tab's area
 	// rows and the §5.5 deep link all land here. Handled once per distinct
 	// value: the pool refreshing must not re-fly a map the buyer has panned.
@@ -489,6 +510,16 @@ export default function SearchTab() {
 					showsCompass={false}
 					initialRegion={METRO_REGION}
 					onRegionChangeComplete={setRegion}
+					// The map-level half of the community dots' tap path — see
+					// `openCommunity`. Only the dots carry an `identifier`, so city
+					// and home pins (whose own `onPress` works) pass through here
+					// without effect.
+					onMarkerPress={(e) => {
+						const id = e.nativeEvent.id;
+						if (id?.startsWith("community:")) {
+							openCommunity(id.slice("community:".length));
+						}
+					}}
 				>
 					{/* County OUTLINES, always — the areas are a boundary, not a pin,
 					    and they are the map's structure whether or not a lens is on.
@@ -571,17 +602,12 @@ export default function SearchTab() {
 					{hits?.communities.map((c) =>
 						c.lat !== undefined && c.lng !== undefined ? (
 							<CommunityDot
-								// `labelled` is in the key on purpose: the dots render with
-								// `tracksViewChanges={false}` (a hundred live-tracking views
-								// would rasterise every frame), which freezes both the image
-								// AND the native hit frame — so when the labels toggle, the
-								// marker must be REMADE, not repainted. Once per zoom
-								// threshold, not per frame.
-								key={`c-${c.id}-${communitiesLabelled ? "l" : "b"}`}
+								key={`c-${c.id}`}
+								identifier={`community:${c.slug}`}
 								coordinate={{ latitude: c.lat, longitude: c.lng }}
 								name={c.name}
 								labelled={communitiesLabelled}
-								onPress={() => router.push(`/community/${c.slug}`)}
+								onPress={() => openCommunity(c.slug)}
 							/>
 						) : null,
 					)}
@@ -1031,23 +1057,28 @@ function SchoolMarker({
 
 function CommunityDot({
 	coordinate,
+	identifier,
 	name,
 	labelled,
 	onPress,
 }: {
 	coordinate: LatLng;
+	identifier: string;
 	name: string;
 	labelled: boolean;
 	onPress: () => void;
 }) {
 	return (
-		// Built on the PhotoMarker pattern — plain Marker, no `anchor`, column
-		// layout — because that is the marker shape whose taps provably land in
-		// this app. The first cut anchored a side-label row the way the school
-		// pins do; those pins have no onPress, and the combination of `anchor`
-		// with a 14px child left a hit target small enough that MapKit handed
-		// the tap to whatever else was near (owner, 2026-09-12).
-		<Marker coordinate={coordinate} tracksViewChanges={false} onPress={onPress}>
+		// Built on the PhotoMarker pattern — plain Marker, no `anchor`, no
+		// `tracksViewChanges` override, column layout — because that is the
+		// exact marker shape whose taps provably land in this app (the home
+		// pins). Two earlier cuts each deviated once and each lost the tap:
+		// a school-style anchored row, then a rasterised (`tracksViewChanges
+		// ={false}`) column. Rasterising would spare re-renders, but a dot
+		// that cannot be pressed is not worth them; the ~109 city photo pins
+		// already live-track and pan fine. The `identifier` feeds the
+		// map-level `onMarkerPress` fallback — see `openCommunity`.
+		<Marker coordinate={coordinate} identifier={identifier} onPress={onPress}>
 			<View style={styles.communityWrap} accessibilityLabel={name}>
 				{/* The pad is the real tap target — transparent, finger-sized. */}
 				<View style={styles.communityPad}>
