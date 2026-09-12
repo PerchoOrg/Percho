@@ -50,7 +50,9 @@ export interface CommunityDetailDTO {
 	name: string;
 	city: string;
 	state: string;
-	heroUrl: string;
+	/** Absent when the row has no cover photo — the map's dots reach every
+	 *  active community, photo or not, and the hero shows the initial. */
+	heroUrl?: string;
 	/** The community's film — the SAME one the feed card plays. */
 	videoUrl?: string;
 	/** Present only when `videoUrl` is the assembled tour. */

@@ -82,7 +82,12 @@ export interface CommunityDetailDTO {
   name: string;
   city: string;
   state: string;
-  heroUrl: string;
+  /**
+   * Absent when the row has no cover photo — about half of them, and since
+   * the map's community dots (phase277) every one of those is reachable.
+   * The phone shows the community's initial in the hero slot instead.
+   */
+  heroUrl?: string;
   /**
    * The community's video, chosen by the SAME priority the feed card uses
    * (`fetchVerticalVideos`): the assembled tour / bucket video on Cloudflare
@@ -214,7 +219,10 @@ export function projectCommunityDetail(
   videoUrl?: string | null,
   tourSegments?: TourSegment[],
 ): CommunityDetailDTO | null {
-  if (!r.cover_storage_path || !r.slug || !r.name) return null;
+  // No cover gate here, deliberately (2026-09-12): the map draws a dot for
+  // EVERY active community, so every one of them must open. A missing photo
+  // is a missing field, not a missing page.
+  if (!r.slug || !r.name) return null;
 
   const facts = {
     residentsCount: r.residents_count,
@@ -274,7 +282,7 @@ export function projectCommunityDetail(
     name: r.name.trim(),
     city: r.city ?? '',
     state: r.state ?? '',
-    heroUrl: publicCoverImageUrl(r.cover_storage_path),
+    ...(r.cover_storage_path ? { heroUrl: publicCoverImageUrl(r.cover_storage_path) } : {}),
     ...(videoUrl ? { videoUrl } : {}),
     // Segments without a film to seek make no sense on the wire.
     ...(videoUrl && tourSegments && tourSegments.length > 0 ? { tourSegments } : {}),

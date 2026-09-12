@@ -63,6 +63,16 @@ describe('projectCommunityDetail tour segments', () => {
   });
 });
 
+describe('projectCommunityDetail without a cover', () => {
+  it('still projects — heroUrl omitted, not a null page', () => {
+    // The map draws a dot for EVERY active community (phase277); a missing
+    // photo must read as a missing field, not a 404.
+    const out = projectCommunityDetail({ ...ROW, cover_storage_path: null }, undefined, null);
+    expect(out?.name).toBe('Aberdeen');
+    expect(out).not.toHaveProperty('heroUrl');
+  });
+});
+
 describe('projectCommunityDetail nearby counts', () => {
   it('charts every countable bucket, biggest first', () => {
     // Peachtree Corners' live counts, 2026-09-05.

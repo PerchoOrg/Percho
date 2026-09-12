@@ -21,6 +21,48 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-12 21:40 UTC — phase277.4: every dot opens, and the map-press fallback learns manners
+
+**Objective**: owner on phase277.3 — "Clicking listing, say couldn't load
+this neighborhood, after clicking back it goes to the actual listing; for
+communities, not able to load." Two distinct faults, and one correction to
+the record.
+
+**Fault 1 — the detail API refused half the communities.**
+`projectCommunityDetail` (`apps/web/lib/communities/detail.ts:217`) returned
+null for any row without `cover_storage_path` → 404 → "Couldn't load this
+neighbourhood." That gate predates the dots: it was harmless while only
+covered communities were reachable, and phase277 made EVERY active community
+tappable. Fixed end to end:
+- `detail.ts`: the cover gate is gone; `heroUrl` is optional and omitted for
+  a coverless row (+ test). `avg_income` rules etc. untouched.
+- `detail-dto.ts` (mobile mirror): `heroUrl?`.
+- `TourHero.tsx`: new required `initial` prop — no film and no photo renders
+  the community's first letter, large and quiet, on the overlay ground. The
+  owner's own fallback rule from phase265 ("just show first character"),
+  applied one level up. Back/save/share chrome unchanged.
+- `community/[slug].tsx` passes `initial` and spreads `heroUrl` only when
+  present.
+
+**Fault 2 — a home tap ALSO opened a community page.** The stack he
+described (community error on top, listing beneath) proves the marker
+recognizer and the map recognizer BOTH fired for one tap — phase277.3's
+"mutually exclusive in practice" was wrong, recorded here as the correction.
+`onMapPress` now disclaims any press within `PIN_TAP_RADIUS_PX` (30) of a
+home or city photo pin before claiming a dot: those 40px markers
+demonstrably receive their own taps, and the doubled community tap was
+already absorbed by `openCommunity`'s dedupe.
+
+**Verification**: mobile — typecheck clean, lint exit 0 (same 8 warnings),
+769 pass. Web — typecheck clean, lint exit 0, 1,181 pass (one new).
+
+**Deploy note**: fault 1's fix is SERVER-side — coverless communities load
+on the phone only after Vercel deploys this main. The dots and the
+map-press manners are Metro-side and land on reload.
+
+**Next steps**: owner re-checks: a home pin opens only its listing; a dot
+opens its community; a coverless community opens with a letter hero.
+
 ## 2026-09-12 21:25 UTC — phase277.3: `tappable` is a lie on iOS — the county was eating every tap
 
 **Objective**: owner, third report on the same tap — "Clicking community,
