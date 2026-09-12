@@ -28,6 +28,12 @@ too. A school the state hasn't published a score for shows up grey rather than
 being hidden or guessed at — you can see the school is there, and that we don't
 have its number.
 
+### 2026-09-12
+- Your buyer type now describes places, never households: the parks dim
+  reads "Park-Side" / "Park-Goer" instead of "Family-First" / "Suburbanite",
+  and school quality no longer names a buyer type at all. The Schools
+  priority you set yourself is unchanged.
+
 ### 2026-09-11
 - **The You tab is shorter and clearer.** Eight sections became five. Under
   your buyer type, three short readings replace the old counts — where you

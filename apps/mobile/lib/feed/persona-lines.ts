@@ -9,16 +9,16 @@
  *
  * PURE: no react / zustand / expo imports.
  */
-import type { DimKey } from "@percho/shared/types";
-import { DIM_LABELS, rankedDims } from "./persona";
+import {
+	DIM_LABELS,
+	type PersonaDim,
+	isPersonaDim,
+	rankedDims,
+} from "./persona";
 import type { GeoSignal } from "./signals";
 
 /** Fewer swipes than this and a like ratio is noise, not a trait. */
 const MIN_SWIPES_FOR_RATIO = 3;
-
-function isDimKey(key: string): key is DimKey {
-	return key in DIM_LABELS;
-}
 
 export function insightLines(args: {
 	/** The buyer's most-explored area, if any. */
@@ -35,7 +35,7 @@ export function insightLines(args: {
 		// The dim the buyer has most consistently swiped AWAY from, if any —
 		// "over nightlife" reads as a trait; the second-favourite would not.
 		const against = Object.entries(args.dims)
-			.filter((pair): pair is [DimKey, number] => isDimKey(pair[0]))
+			.filter((pair): pair is [PersonaDim, number] => isPersonaDim(pair[0]))
 			.filter(([, w]) => w < 0)
 			.sort((a, b) => a[1] - b[1])[0];
 		const label = DIM_LABELS[lean.dim].toLowerCase();
