@@ -30,8 +30,8 @@ have its number.
 
 ### 2026-09-11
 - **The You tab is shorter and clearer.** Eight sections became five. Your
-  recent swipes now sit in one row you scroll sideways, with "Bring back" under
-  each; the areas you've explored are chips in a row instead of a list that
+  recent swipes now sit in one row you scroll sideways, with "Change my mind"
+  under each; the areas you've explored are chips in a row instead of a list that
   grew with every new town; what you told Percho matters and what it picked up
   from your swipes share one "Your preferences" card — tap the × on anything
   it got wrong, or "Reset preferences" at the foot of that card to clear the
