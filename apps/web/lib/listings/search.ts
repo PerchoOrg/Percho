@@ -16,13 +16,16 @@
  * pool, where 8k dense multipolygons time PostgREST out); the true shape
  * still renders on the community's own page.
  *
- * ── The cover gate is gone (2026-09-10) ─────────────────────────────────────
- * Communities used to be filtered to `cover_storage_path is not null`, the
- * same gate as the feed's pool, on the grounds that a hit should always be a
- * page that renders. That made sense when a hit was a PHOTO circle on the map.
- * It is now a dot, the photo is not drawn at all, and the gate was the
- * reason the owner saw "几个零星的社区图形" instead of a city's subdivisions:
- * it was hiding every community that has no picture yet.
+ * ── The cover gate is BACK, as a content gate (2026-09-12) ──────────────────
+ * Removed 2026-09-10 while hits were map outlines (a shape needs no photo);
+ * re-added when the owner saw what that let through: "No need to show
+ * communities just with a name." A full scan of the 22,730 active rows found
+ * 14,052 that are a name and a location and NOTHING else — no photo, no
+ * video, no demographics, no resident content. And the 8,678 rows with a
+ * cover are EXACTLY the rows with any of those (every community with stats
+ * or a video also has a cover), so `cover_storage_path is not null` is not a
+ * photo preference, it is the precise "this page has something on it" test
+ * the data offers. Scan: DEVLOG 2026-09-12 phase277.5.
  *
  * Communities therefore get their own, much higher ceiling. It is still a
  * ceiling: a city like Atlanta has 731 communities and this returns the first
@@ -178,6 +181,9 @@ export async function searchEntities(q: string): Promise<SearchResultDTO> {
       .from('communities')
       .select('id, slug, name, city, state, cover_storage_path, lat, lng')
       .eq('status', 'active')
+      // The content gate — see the header. A row this drops has a name and
+      // a point and nothing else to open.
+      .not('cover_storage_path', 'is', null)
       .or(`name.ilike.${like},city.ilike.${like}`)
       .order('name', { ascending: true })
       .limit(COMMUNITY_LIMIT),

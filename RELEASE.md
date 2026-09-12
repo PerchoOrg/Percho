@@ -29,6 +29,11 @@ being hidden or guessed at — you can see the school is there, and that we don'
 have its number.
 
 ### 2026-09-12
+- The map only shows communities that have something to say. Nearly two
+  thirds of the communities in the database are just a name and a location —
+  no photo, no residents' voices, no figures — and their dots were cluttering
+  every city. They no longer appear; every dot you see now opens a page with
+  real content on it.
 - Every community on the map opens now. Neighborhoods without a photo used
   to fail with "Couldn't load this neighbourhood" — their page now opens
   with the community's initial standing in for the missing picture.
