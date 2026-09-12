@@ -107,15 +107,3 @@ export function familiarityFor(
 		unknownDims,
 	};
 }
-
-/** A terse gap summary for the You-tab row ("safety & schools still unknown"). */
-export function unknownDimsLabel(unknownDims: readonly DimKey[]): string {
-	if (unknownDims.length === 0) return "all four pillars known";
-	const labels: Partial<Record<DimKey, string>> = {
-		family: "safety",
-		schools: "schools",
-		walkable: "convenience",
-		space: "potential",
-	};
-	return `${unknownDims.map((d) => labels[d] ?? d).join(" & ")} still unknown`;
-}

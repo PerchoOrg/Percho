@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	COVERAGE_SATURATION,
-	familiarityFor,
-	unknownDimsLabel,
-} from "./area-familiarity";
+import { COVERAGE_SATURATION, familiarityFor } from "./area-familiarity";
 
 function geo(unitId: string, right: number, left: number) {
 	return [{ unitId, level: "city" as const, right, left }];
@@ -84,16 +80,5 @@ describe("familiarityFor", () => {
 		expect(f.dimensions).toBe(30);
 		// 25/25 cards → 40 coverage + 30 decisiveness + 30 dims = 100
 		expect(f.score).toBe(100);
-	});
-});
-
-describe("unknownDimsLabel", () => {
-	it("names the gaps in buyer-facing vocabulary", () => {
-		expect(unknownDimsLabel(["family", "schools"])).toBe(
-			"safety & schools still unknown",
-		);
-	});
-	it("handles the known-all case", () => {
-		expect(unknownDimsLabel([])).toBe("all four pillars known");
 	});
 });

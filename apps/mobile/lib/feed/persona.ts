@@ -10,22 +10,20 @@
  * The spec's own example, "Trail-Runner Suburbanite", is what
  * `trails` + `family` produces here.
  *
- * Below the threshold the function returns null and the card says the persona
- * is still taking shape — 05 §5.4's push rule ("persona 未成型不发") already
- * treats an under-evidenced persona as not existing, and a name invented from
- * one swipe would be the "complete your profile" energy the spec bans.
+ * The card always carries a name (owner, 2026-09-11: 「Don't show no profile
+ * yet, anything works」 — the earlier "Still taking shape" placeholder read as
+ * a broken state, not a stage). Any positive weight claims a dim; with one dim
+ * the noun is the neutral `STARTER_NOUN`, with none the name is
+ * `STARTER_NAME`. So the output space is 110 pairings + 11 singles + 1.
  *
  * PURE: no react / zustand / expo imports.
  */
 import type { DimKey } from "@percho/shared/types";
 
-/**
- * A dim's weight must reach this for the pairing to claim it. One trade-off
- * answer scores +1; requiring 2 means a dim was chosen at least twice (or
- * chosen twice as often as it was discarded), which is the difference between
- * a preference and a coin flip.
- */
-export const DIM_NAME_THRESHOLD = 2;
+/** The name before any dim has a positive weight. */
+export const STARTER_NAME = "Curious Buyer";
+/** The noun while only one dim has a positive weight. */
+const STARTER_NOUN = "Buyer";
 
 /** The strongest dim, as the name's leading modifier. */
 const MODIFIER: Record<DimKey, string> = {
@@ -92,16 +90,11 @@ export function rankedDims(
 		.sort((a, b) => b.weight - a.weight || a.dim.localeCompare(b.dim));
 }
 
-/**
- * The persona name, or null while it is still taking shape. Needs two dims at
- * `DIM_NAME_THRESHOLD` — one strong dim is a preference, not a persona.
- */
-export function personaName(
-	dims: Readonly<Record<string, number>>,
-): string | null {
-	const ranked = rankedDims(dims).filter((d) => d.weight >= DIM_NAME_THRESHOLD);
+/** The persona name — never empty, see the header. */
+export function personaName(dims: Readonly<Record<string, number>>): string {
+	const ranked = rankedDims(dims);
 	const first = ranked[0];
 	const second = ranked[1];
-	if (!first || !second) return null;
-	return `${MODIFIER[first.dim]} ${ARCHETYPE[second.dim]}`;
+	if (!first) return STARTER_NAME;
+	return `${MODIFIER[first.dim]} ${second ? ARCHETYPE[second.dim] : STARTER_NOUN}`;
 }
