@@ -21,6 +21,44 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-12 09:40 UTC — phase276.6: the persona names places, not households
+
+**Objective**: Owner asked 「You persona - is it legal to say explicitly the
+users preference」. Answer given: showing a buyer their OWN inferred taste is
+transparency, not steering (FHA governs how the housing side treats people by
+protected class, not what a buyer says about themselves) — but two of the
+eleven persona words characterised residents rather than places, which is the
+line `docs/design/move-in-questions.md` §1.3 and `content.ts` rule 6 draw.
+
+**Actions**:
+- `lib/feed/persona.ts`: new `PersonaDim = Exclude<DimKey, "schools">`; all
+  three tables are keyed on it. `family` is now "Park-Side" / "Park-Goer" /
+  "Parks & playgrounds" (was "Family-First" / "Suburbanite" /
+  "Family-friendly" — familial status). `schools` is out of the persona:
+  school quality is a close proxy for race, and no trade-off card feeds the
+  dim anyway. `isPersonaDim` exported; `rankedDims` drops retired keys, so a
+  stale `schools` weight in an old session's storage is ignored rather than
+  named. Output space 110 + 11 + 1 → 90 + 10 + 1.
+- `lib/feed/persona-lines.ts`: reuses `isPersonaDim` instead of its own guard.
+- `persona.test.ts`: the spec-example test becomes "names the parks dim by the
+  place"; new "never names from schools, even when it leads"; the
+  `DIM_LABELS` test now also asserts no label matches `/family|school/`.
+- `apps/web/public/demos/you-tab-v2/index.html`: matrix regenerated as 10×10
+  (90 names), caption says why; sample dims in the mock phones no longer show
+  "Good schools" / "Family-friendly".
+
+**Decisions**: The buyer's own Schools priority under "You set" stays — that
+is buyer-initiated (the substitute `content.ts` rule 6 itself names). Not
+touched, flagged for a separate look: `area-familiarity.ts:25` calls `family`
+a "safety proxy" (the same reason `lenses.ts` has no crime lens), and
+`areas/take.ts` picks a county on the Schools priority.
+
+**Verification**: `tsc --noEmit` clean, biome clean, 22 tests in
+`persona*` / `area-familiarity` pass.
+
+**Next steps**: owner review of the new words on the phone; the two flagged
+call sites above as their own phase.
+
 ## 2026-09-11 16:45 UTC — phase276.5: readings under the name, share bars, deletion to the footer
 
 **Objective**: the owner took the recommendations on the rest of his
