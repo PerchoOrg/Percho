@@ -29,6 +29,11 @@ being hidden or guessed at — you can see the school is there, and that we don'
 have its number.
 
 ### 2026-09-12
+- **The trade-off card's two sides line up now.** The photos, the choice
+  names, the captions, and the home counts sit at the same height on both
+  sides of the split, so the card reads as one question again instead of two
+  mismatched halves — even when one side's name is longer or only one side
+  has a home count to show.
 - **Communities are dots on the map now.** Zooming into a city used to show a
   patchwork of green outlines — every neighborhood a different shape, and
   many showing nothing at all because we don't have a boundary for every
