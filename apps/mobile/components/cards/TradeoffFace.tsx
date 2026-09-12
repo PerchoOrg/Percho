@@ -37,8 +37,13 @@
  * So the door shows INTERIOR room photos the server matched to the dimension —
  * kitchens for `move_in`, living rooms for `space`. Place dims (`schools`,
  * `walkable`, `trails`, `hip`, `nightlife`) have no room inside a house that
- * shows them, so those doors take a single community tour poster instead — a
- * real photograph of the neighbourhood.
+ * shows them, so those doors take community tour posters instead — real
+ * photographs of the neighbourhood.
+ *
+ * From 2026-09-12 a door with neither can also name its own ROOM TYPES
+ * ("A home office" → `office`), which is what lights the questions that ask
+ * about a room rather than a lifestyle dim. See `content.ts` for the rule and
+ * for the questions that deliberately stay unlit.
  *
  * ── Three plates, not one photograph ────────────────────────────────────────
  *
@@ -69,14 +74,18 @@
  *
  * ── The last line ──────────────────────────────────────────────────────────
  *
- * How many homes in the loaded pool claim this dimension and what they cost
- * ("18 homes · median $342,000"). The plates say what the choice LOOKS like;
- * this says what it COSTS. The median is suppressed under three homes — below
- * that it is noise, not a fact about the market.
+ * The door used to close with a market statistic — "18 homes · median
+ * $342,000". The owner cut it on 2026-09-12: 「remove the 6homes median price
+ * stuff, no need to show that, just asking preference」. A trade-off asks what
+ * the buyer WANTS; what the pool happens to hold at that price answers a
+ * question nobody asked, and putting a number under one door quietly argues
+ * for it. The count still reaches `grounding()`, which decides which questions
+ * the deck asks first — it is simply never drawn.
  *
- * The tagger's sentence renders only when the door shows exactly ONE photo. Set
- * under three plates it reads as describing all of them, and it does not: it is
- * trustworthy precisely because it describes one frame.
+ * So the last line is the tagger's sentence, and it renders only when the door
+ * shows exactly ONE photo. Set under three plates it reads as describing all of
+ * them, and it does not: it is trustworthy precisely because it describes one
+ * frame.
  *
  * ── The unlit field ─────────────────────────────────────────────────────────
  *
@@ -92,14 +101,13 @@
  * ── The two feet mirror each other (owner, 2026-09-12) ─────────────────────
  *
  * 「left and right should be aligned, text and image」. The foot used to let
- * every row take its natural height, so a label that wrapped, a longer
- * support line, or a count row present on one side only would push that
- * door's plates and label to a different height than its neighbour's — the
- * two halves of one question no longer read as one card. Every row is now a
- * FIXED measure shared by both doors: the label fills a two-line slot from
- * the bottom, the support reserves the same line count on both sides (three
- * only when a lone plate brings its tagger sentence, two otherwise), and the
- * count/median row is reserved on BOTH doors whenever either has one.
+ * every row take its natural height, so a label that wrapped or a longer
+ * support line would push that door's plates and label to a different height
+ * than its neighbour's — the two halves of one question no longer read as one
+ * card. Every row is now a FIXED measure shared by both doors: the label fills
+ * a two-line slot from the bottom, and the support reserves the same line count
+ * on both sides (three only when a lone plate brings its tagger sentence, two
+ * otherwise).
  *
  * ── The drag ────────────────────────────────────────────────────────────────
  *
@@ -184,8 +192,6 @@ interface DoorProps {
 	tone: "tradeoff" | "tradeoffAlt";
 	/** How many support lines BOTH doors reserve — see the header on mirroring. */
 	supportLines: number;
-	/** Whether the count/median row is reserved on both doors. */
-	showMeta: boolean;
 	/** Veil (the discarded door) and check (the chosen one), driven by the drag. */
 	veilStyle: AnimatedStyle<ViewStyle>;
 	checkStyle: AnimatedStyle<ViewStyle>;
@@ -196,7 +202,6 @@ function Door({
 	side,
 	tone,
 	supportLines,
-	showMeta,
 	veilStyle,
 	checkStyle,
 	greenStyle,
@@ -323,19 +328,6 @@ function Door({
 				>
 					{caption ?? side.support}
 				</Text>
-				{/* A side without numbers still holds the row, so the neighbour's
-				    count never pushes its own rows out of line. */}
-				{showMeta && (
-					<Text style={styles.meta}>
-						{side.homes === undefined
-							? " "
-							: `${side.homes} ${side.homes === 1 ? "home" : "homes"}${
-									side.medianLabel === undefined
-										? ""
-										: ` · median ${side.medianLabel}`
-								}`}
-					</Text>
-				)}
 			</View>
 		</>
 	);
@@ -353,8 +345,6 @@ export function TradeoffFace({ card, tx, cardWidth }: TradeoffFaceProps) {
 	/** Shared measures, so the two feet mirror — see the header. */
 	const supportLines =
 		hasLoneCaption(card.left) || hasLoneCaption(card.right) ? 3 : 2;
-	const showMeta =
-		card.left.homes !== undefined || card.right.homes !== undefined;
 
 	/**
 	 * The split, as a share of the card. Drag LEFT (negative `tx`) opens the
@@ -437,7 +427,6 @@ export function TradeoffFace({ card, tx, cardWidth }: TradeoffFaceProps) {
 						side={card.left}
 						tone="tradeoff"
 						supportLines={supportLines}
-						showMeta={showMeta}
 						veilStyle={leftVeil}
 						checkStyle={leftCheck}
 						greenStyle={leftGreen}
@@ -448,7 +437,6 @@ export function TradeoffFace({ card, tx, cardWidth }: TradeoffFaceProps) {
 						side={card.right}
 						tone="tradeoffAlt"
 						supportLines={supportLines}
-						showMeta={showMeta}
 						veilStyle={rightVeil}
 						checkStyle={rightCheck}
 						greenStyle={rightGreen}
@@ -585,17 +573,6 @@ const styles = StyleSheet.create({
 		lineHeight: SUPPORT_LINE,
 		color: "rgba(255,255,255,0.78)",
 	},
-	/**
-	 * The count/median line. Deliberately quieter than the caption above it —
-	 * it is the footnote to the picture, not a second headline.
-	 */
-	meta: {
-		...redlineText.nano,
-		fontSize: 10.5,
-		lineHeight: 13,
-		color: "rgba(255,255,255,0.5)",
-	},
-
 	seam: {
 		position: "absolute",
 		top: 0,

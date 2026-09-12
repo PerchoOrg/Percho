@@ -378,23 +378,12 @@ describe("the v2 trade-off bank", () => {
 
 	it("counts each side from the structured axis, not from prose", () => {
 		// `to-era` splits on `yearBuilt`, which no dim and no agent adjective can
-		// supply. Both sides clear the three-home floor, so both earn a median.
+		// supply. The count is never drawn (the owner cut the market line on
+		// 2026-09-12) — it is what `grounding` ranks the question bank by.
 		const card = firstTradeoff(ERA_POOL, EXCEPT_ERA);
 		expect(card?.id).toBe("to-era");
 		expect(card?.left.homes).toBe(3);
-		expect(card?.left.medianLabel).toBe("$400,000");
 		expect(card?.right.homes).toBe(5);
-		expect(card?.right.medianLabel).toBe("$280,000");
-	});
-
-	it("suppresses a median under three homes but keeps the count", () => {
-		const thin: FeedPool = {
-			...ERA_POOL,
-			listings: [built("n1", 2012, 400_000), built("o1", 1998, 300_000)],
-		};
-		const card = firstTradeoff(thin, EXCEPT_ERA);
-		expect(card?.left.homes).toBe(1);
-		expect(card?.left.medianLabel).toBeUndefined();
 	});
 
 	it("NEVER falls back to a listing hero", () => {
@@ -501,6 +490,140 @@ describe("the v2 trade-off bank", () => {
 		expect(card?.id).toBe("to-spread-vs-upkeep");
 		expect(card?.left.photos).toHaveLength(2);
 		expect(card?.right.photos).toBeUndefined();
+	});
+
+	it("gives a PLACE dim three posters from three different communities", () => {
+		// Until 2026-09-12 a place door took exactly ONE poster while a room door
+		// took three, so every place-against-room question levelled to 1 and 1.
+		const many: FeedPool = {
+			geoUnits: CITIES,
+			listings: [listing("l1")],
+			communities: [
+				community("c-q1", ["quiet"]),
+				community("c-q2", ["quiet"]),
+				community("c-q3", ["quiet"]),
+				community("c-q4", ["quiet"]),
+				community("c-w1", ["walkable"]),
+				community("c-w2", ["walkable"]),
+				community("c-w3", ["walkable"]),
+			],
+			dimPhotos: {},
+		};
+		const card = firstTradeoff(many, EXCEPT_DENSITY);
+		expect(card?.id).toBe("to-quiet-vs-walkable");
+		expect(card?.left.photos?.map((p) => p.url)).toEqual([
+			"https://img/c-q1.jpg",
+			"https://img/c-q2.jpg",
+			"https://img/c-q3.jpg",
+		]);
+		expect(card?.right.photos).toHaveLength(3);
+	});
+
+	it("lights a door that names a ROOM but carries no dim", () => {
+		// Owner, 2026-09-12: 「If no real rooms, can we show some pictures instead
+		// the empty card?」 `to-office-vs-guest` has no dim on either side — it
+		// names `office` and `bedroom`.
+		const rooms: FeedPool = {
+			geoUnits: CITIES,
+			listings: [listing("l1"), listing("l2")],
+			communities: [community("c1")],
+			dimPhotos: {},
+			roomPhotos: {
+				office: [{ url: "https://img/office.jpg", listingId: "l1" }],
+				bedroom: [{ url: "https://img/bed.jpg", listingId: "l2" }],
+			},
+		};
+		const card = firstTradeoff(rooms, except("to-office-vs-guest"));
+		expect(card?.id).toBe("to-office-vs-guest");
+		expect(card?.left.photos?.map((p) => p.url)).toEqual([
+			"https://img/office.jpg",
+		]);
+		expect(card?.right.photos?.map((p) => p.url)).toEqual([
+			"https://img/bed.jpg",
+		]);
+	});
+
+	it("draws a room only from homes that satisfy the side's match", () => {
+		// "Newer build" is `yearBuilt >= 2005`. A 1978 kitchen under that label is
+		// a lie the buyer would act on.
+		const mixed: FeedPool = {
+			...ERA_POOL,
+			roomPhotos: {
+				kitchen: [
+					{ url: "https://img/k-old.jpg", listingId: "a-old-1978" },
+					{ url: "https://img/k-new.jpg", listingId: "b-new-2012" },
+				],
+				living: [{ url: "https://img/lv-old.jpg", listingId: "a-old-1995" }],
+			},
+		};
+		const card = firstTradeoff(mixed, EXCEPT_ERA);
+		expect(card?.id).toBe("to-era");
+		// Left is "Newer build" — the 2012 kitchen only.
+		expect(card?.left.photos?.map((p) => p.url)).toEqual([
+			"https://img/k-new.jpg",
+		]);
+		// Right is "Older character" — its own rooms are living-first.
+		for (const photo of card?.right.photos ?? []) {
+			expect(photo.url).not.toBe("https://img/k-new.jpg");
+		}
+	});
+
+	it("leaves the door unlit when the match rules every room photo out", () => {
+		// No fallback to the unfiltered room: the unfiltered photo is the WRONG
+		// photo, and an unlit field is the honest answer.
+		const allOld: FeedPool = {
+			...ERA_POOL,
+			roomPhotos: {
+				kitchen: [{ url: "https://img/k-old.jpg", listingId: "a-old-1978" }],
+			},
+		};
+		const card = firstTradeoff(allOld, EXCEPT_ERA);
+		expect(card?.id).toBe("to-era");
+		expect(card?.left.photos).toBeUndefined();
+	});
+
+	it("never lights a side whose choice no photograph can depict", () => {
+		// "No pool to look after" names no room on purpose — no frame depicts an
+		// absence — so publishing every room in the pool must not light it.
+		const pooled: FeedPool = {
+			geoUnits: CITIES,
+			listings: [listing("l1"), listing("l2")],
+			communities: [community("c1")],
+			dimPhotos: {},
+			roomPhotos: {
+				pool: [{ url: "https://img/pool.jpg", listingId: "l1" }],
+				backyard: [{ url: "https://img/yard.jpg", listingId: "l2" }],
+				living: [{ url: "https://img/living.jpg", listingId: "l2" }],
+			},
+		};
+		const card = firstTradeoff(pooled, except("to-pool"));
+		expect(card?.id).toBe("to-pool");
+		expect(card?.left.photos?.map((p) => p.url)).toEqual([
+			"https://img/pool.jpg",
+		]);
+		expect(card?.right.photos).toBeUndefined();
+	});
+
+	it("never draws two frames of the same home on one door", () => {
+		const sameHome: FeedPool = {
+			geoUnits: CITIES,
+			listings: [listing("l1")],
+			communities: [community("c1")],
+			dimPhotos: {},
+			roomPhotos: {
+				// `to-topofbudget-vs-room` names kitchen AND living on one side.
+				kitchen: [{ url: "https://img/k.jpg", listingId: "l1" }],
+				living: [{ url: "https://img/lv.jpg", listingId: "l1" }],
+			},
+		};
+		const card = firstTradeoff(sameHome, except("to-topofbudget-vs-room"));
+		expect(card?.id).toBe("to-topofbudget-vs-room");
+		const urls = [
+			...(card?.left.photos ?? []),
+			...(card?.right.photos ?? []),
+		].map((p) => p.url);
+		expect(new Set(urls).size).toBe(urls.length);
+		expect(card?.left.photos?.length ?? 0).toBeLessThanOrEqual(1);
 	});
 
 	it("asks at most one question per axis in a session", () => {

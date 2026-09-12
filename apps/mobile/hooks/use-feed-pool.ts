@@ -67,6 +67,7 @@ function mergePool(prev: FeedPool, next: FeedPool): FeedPool {
 		// must survive a page 2 whose rows happen to have no photo for it —
 		// otherwise a door that was lit goes dark as the buyer pages.
 		dimPhotos: { ...prev.dimPhotos, ...next.dimPhotos },
+		roomPhotos: { ...prev.roomPhotos, ...next.roomPhotos },
 	};
 }
 

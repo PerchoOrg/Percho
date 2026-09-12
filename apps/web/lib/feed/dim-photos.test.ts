@@ -7,7 +7,7 @@ import type { DimKey } from '@percho/shared/types';
  * not a requirement, and a dim with no honest room comes back absent.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
-import { type TaggedPhotoRow, pickDimPhotos } from './dim-photos';
+import { type TaggedPhotoRow, pickDimPhotos, pickRoomPhotos } from './dim-photos';
 
 function photo(
   listing_id: string,
@@ -151,5 +151,52 @@ describe('pickDimPhotos', () => {
   it('ignores untagged rows without throwing', () => {
     expect(pickDimPhotos([photo('a', 'x/p.jpg', null)], claims({}))).toEqual({});
     expect(pickDimPhotos([], claims({}))).toEqual({});
+  });
+});
+
+describe('pickRoomPhotos', () => {
+  beforeAll(() => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://project.supabase.co';
+  });
+
+  it('keys the pool by room type, best frame per home', () => {
+    const out = pickRoomPhotos([
+      photo('a', 'x/o1.jpg', 'office', { hero_score: 4 }),
+      photo('a', 'x/o2.jpg', 'office', { hero_score: 9 }),
+      photo('b', 'x/o3.jpg', 'office', { hero_score: 7 }),
+    ]);
+    expect(out.office?.map((p) => p.url.split('?')[0]?.split('/').pop())).toEqual([
+      'o2.jpg',
+      'o3.jpg',
+    ]);
+  });
+
+  it('carries the listing id, because a match is filtered on it', () => {
+    // "Newer build" may only draw homes built since 2005, and the client cannot
+    // tell which home a frame came from without this.
+    const out = pickRoomPhotos([photo('a', 'x/k.jpg', 'kitchen')]);
+    expect(out.kitchen?.[0]?.listingId).toBe('a');
+  });
+
+  it('publishes more than a door draws, so a match still leaves three', () => {
+    const rows = Array.from({ length: 9 }, (_, i) =>
+      photo(`home-${i}`, `x/l${i}.jpg`, 'living', { hero_score: 9 - i }),
+    );
+    expect(pickRoomPhotos(rows).living).toHaveLength(6);
+  });
+
+  it('publishes only the rooms the question bank asks for', () => {
+    const out = pickRoomPhotos([
+      photo('a', 'x/h.jpg', 'hallway'),
+      photo('a', 'x/f.jpg', 'floorplan'),
+      photo('b', 'x/g.jpg', 'garage'),
+    ]);
+    // `hallway` and `floorplan` depict no choice anyone is asked to make, and
+    // shipping them would be ~40 unused urls on every feed response.
+    expect(Object.keys(out)).toEqual(['garage']);
+  });
+
+  it('skips frames the tagger marked unusable', () => {
+    expect(pickRoomPhotos([photo('a', 'x/b.jpg', 'pool', { usable: false })])).toEqual({});
   });
 });

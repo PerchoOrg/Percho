@@ -260,6 +260,12 @@ export interface DoorPhoto {
 	 * is trustworthy precisely because it describes one frame.
 	 */
 	caption?: string;
+	/**
+	 * The home the frame came from. Present on room-keyed photos, which is where
+	 * `lightSide` needs it: a side with a `match` may only draw homes that
+	 * satisfy it, and a door never shows two frames of the same house.
+	 */
+	listingId?: string;
 }
 
 /**
@@ -297,20 +303,6 @@ export type SideMatch =
 			op: "aboveMedian" | "belowMedian";
 	  };
 
-/** One photograph on a trade-off door. */
-export interface DoorPhoto {
-	url: string;
-	/**
-	 * The vision tagger's factual sentence for THIS frame — "Modern kitchen with
-	 * white cabinetry, stainless appliances, and center island".
-	 *
-	 * Rendered only when the door shows exactly ONE photo. With three on screen
-	 * a single sentence reads as describing all of them, which it does not: it
-	 * is trustworthy precisely because it describes one frame.
-	 */
-	caption?: string;
-}
-
 export interface TradeoffSideV3 {
 	/** What the door says. 2-4 words — it is a headline, not a sentence. */
 	label: string;
@@ -330,6 +322,22 @@ export interface TradeoffSideV3 {
 	match?: SideMatch;
 
 	/**
+	 * Which ROOM types depict this side, best first — the photo source for the
+	 * questions that carry no dim (owner, 2026-09-12: 「If no real rooms, can we
+	 * show some pictures instead the empty card?」).
+	 *
+	 * Declared per side rather than derived, because the bar is that the photo
+	 * DEPICTS the choice: "A home office" earns `office`, "Nothing to mow" earns
+	 * nothing, and a door with no honest room keeps its unlit field. A side that
+	 * also carries a `match` only draws rooms from homes that satisfy it — "Newer
+	 * build" shows the kitchen of a 2015 home, never of a 1974 one.
+	 *
+	 * Ignored when the side has a `dim`: that path is already room-matched and
+	 * ranks a claiming listing first.
+	 */
+	rooms?: readonly string[];
+
+	/**
 	 * What this door shows: up to three DETAIL photos, never a listing hero
 	 * (owner, 2026-08-29 — a front-elevation shot cannot say "move-in ready").
 	 *
@@ -342,10 +350,17 @@ export interface TradeoffSideV3 {
 	 * field rather than an unrelated picture.
 	 */
 	photos?: readonly DoorPhoto[];
-	/** How many homes in the loaded pool fall on this side. */
+	/**
+	 * How many homes in the loaded pool fall on this side.
+	 *
+	 * RANKING ONLY — never rendered. The card used to print "18 homes · median
+	 * $342,000" under each door; the owner cut it on 2026-09-12 (「no need to
+	 * show that, just asking preference」): a trade-off asks what the buyer
+	 * wants, and a market statistic under the choice answers a question nobody
+	 * asked. `grounding()` still reads it to prefer questions this pool can
+	 * actually act on.
+	 */
 	homes?: number;
-	/** Their median price, pre-formatted ("$342,000"). Absent under 3 homes. */
-	medianLabel?: string;
 }
 
 export interface TradeoffCardV3 {

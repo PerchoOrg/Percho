@@ -38,7 +38,12 @@ import {
   fetchCommunityPool,
   fetchCommunityPoolByIds,
 } from '@/lib/feed/community-pool';
-import { type DimPhoto, type TaggedPhotoRow, pickDimPhotos } from '@/lib/feed/dim-photos';
+import {
+  type DimPhoto,
+  type TaggedPhotoRow,
+  pickDimPhotos,
+  pickRoomPhotos,
+} from '@/lib/feed/dim-photos';
 import { fetchNeighborhoodScores } from '@/lib/feed/fetch-neighborhood-scores';
 import { type GeoUnitDTO, fetchCityGeoUnits } from '@/lib/feed/geo-units';
 import { type LikedCommunityRef, type PoolListingDTO, gateListings } from '@/lib/feed/listing-gate';
@@ -77,8 +82,23 @@ interface FeedPoolResponse {
      * Omitted entirely when no listing in the page has a tagged photo.
      */
     dimPhotos?: Partial<Record<DimKey, DimPhoto[]>>;
+    /**
+     * The same photos keyed by ROOM TYPE, for the 26 trade-off questions that
+     * carry no lifestyle dim but still name a room ("A home office", "Finished
+     * basement"). Resolved from the same query as `dimPhotos` — see
+     * `pickRoomPhotos`.
+     */
+    roomPhotos?: Record<string, DimPhoto[]>;
   };
 }
+
+/** Both trade-off photo maps, resolved from one read of `listing_photos`. */
+interface DoorPhotos {
+  dims: Partial<Record<DimKey, DimPhoto[]>>;
+  rooms: Record<string, DimPhoto[]>;
+}
+
+const EMPTY_DOOR_PHOTOS: DoorPhotos = { dims: {}, rooms: {} };
 
 function heroUrlFor(card: BrowseCard): string {
   if (card.mediaKind === 'photo' && card.heroPhotoUrl) return card.heroPhotoUrl;
@@ -301,7 +321,7 @@ export async function GET(request: Request) {
    * payload, so a failed POI or photo read must never turn a cosmetic panel
    * into a blank feed.
    */
-  const [scoresByListing, dimPhotos, communityRows] = await Promise.all([
+  const [scoresByListing, doorPhotos, communityRows] = await Promise.all([
     (async (): Promise<Map<string, NeighborhoodScores>> => {
       if (!needsListingRows || gated.length === 0) return new Map();
       try {
@@ -329,8 +349,8 @@ export async function GET(request: Request) {
      * the web app too, and its photo query is shaped for the carousel. This
      * concern is the mobile feed's alone.
      */
-    (async (): Promise<Partial<Record<DimKey, DimPhoto[]>>> => {
-      if (gated.length === 0) return {};
+    (async (): Promise<DoorPhotos> => {
+      if (gated.length === 0) return EMPTY_DOOR_PHOTOS;
       try {
         /**
          * Anon + RLS, the same way `browse-cards.ts` reads this table — but the
@@ -374,14 +394,15 @@ export async function GET(request: Request) {
           .order('sort_order', { ascending: true })
           .order('id', { ascending: true });
 
-        if (!taggedPhotos || taggedPhotos.length === 0) return {};
+        if (!taggedPhotos || taggedPhotos.length === 0) return EMPTY_DOOR_PHOTOS;
         const dimsByListing = new Map<string, readonly DimKey[]>(
           gated.filter((l) => l.dims !== undefined).map((l) => [l.id, l.dims as DimKey[]]),
         );
-        return pickDimPhotos(taggedPhotos as TaggedPhotoRow[], dimsByListing);
+        const rows = taggedPhotos as TaggedPhotoRow[];
+        return { dims: pickDimPhotos(rows, dimsByListing), rooms: pickRoomPhotos(rows) };
       } catch (err) {
-        console.warn('[feed] dim photos unavailable', err);
-        return {};
+        console.warn('[feed] door photos unavailable', err);
+        return EMPTY_DOOR_PHOTOS;
       }
     })(),
     /**
@@ -469,7 +490,8 @@ export async function GET(request: Request) {
       geoUnits,
       listings,
       communities: orderedCommunities,
-      ...(Object.keys(dimPhotos).length > 0 ? { dimPhotos } : {}),
+      ...(Object.keys(doorPhotos.dims).length > 0 ? { dimPhotos: doorPhotos.dims } : {}),
+      ...(Object.keys(doorPhotos.rooms).length > 0 ? { roomPhotos: doorPhotos.rooms } : {}),
     },
   };
 
