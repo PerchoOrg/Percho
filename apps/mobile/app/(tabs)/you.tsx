@@ -3,8 +3,9 @@
  *
  * ── phase276 layout (owner, 2026-09-11: "a lot of sections there and people
  *    will get confused") — eight sections became six ─────────────────────────
- *   · Persona card — always named (`lib/feed/persona.ts`), with the three
- *     counts as pills. No "Stage X of 5": the funnel collapsed on 2026-08-15.
+ *   · Persona card — always named (`lib/feed/persona.ts`), over three
+ *     one-line readings of the evidence (`lib/feed/persona-lines.ts`). No
+ *     "Stage X of 5": the funnel collapsed on 2026-08-15.
  *   · Recent — the swipe history as a horizontal strip, verdict on the thumb
  *     and "Change my mind" under it (phase140's undo — the label is the
  *     buyer's intent, not the mechanism; owner 2026-09-11).
@@ -16,18 +17,20 @@
  *     row, not a wall. Chip tap → Search tab focused on the unit.
  *   · YOUR PREFERENCES — one card, two labelled groups. "You set" is what the
  *     buyer TOLD us (`lib/priorities.ts`); "From your swipes" is what we
- *     inferred (`signals.dims`). Kept as separate groups on purpose: they are
- *     different kinds of claim, and merging them would let the app quietly
- *     overrule a stated answer. The × on an inferred chip is §5.3's
- *     correction — it removes the dim's weight. "Reset preferences" is the
+ *     inferred (`signals.dims`, as share-of-total bars — a pie was the ask,
+ *     but eleven dims slice too thin and the weights are not parts of a
+ *     whole). Kept as separate groups on purpose: they are different kinds of
+ *     claim, and merging them would let the app quietly overrule a stated
+ *     answer. The × on an inferred row is §5.3's correction — it removes the
+ *     dim's weight. "Reset preferences" is the
  *     card's last row — it lives with what it clears (owner, 2026-09-11).
  *   · Settings — the one switch that exists (sound autoplay).
  *   · Account — the iOS grouped-list shape (identity row, "Change password ›",
- *     Sign out, Delete account in red) and nothing that is not the account.
- *     The deletion is what App Review 5.1.1(v) requires in-app. Session state
- *     from `state/auth.ts`; the actions live in `lib/auth.ts`.
- *   · The policy pages and the version are references, not settings — plain
- *     text under the last card, no heading.
+ *     Sign out) and nothing that is not the account. Session state from
+ *     `state/auth.ts`; the actions live in `lib/auth.ts`.
+ *   · The policy pages, the version and account deletion are references,
+ *     not settings — plain text under the last card, no heading. Deletion
+ *     stays because App Review 5.1.1(v) requires it in-app.
  */
 import Constants from "expo-constants";
 import { router } from "expo-router";
@@ -48,6 +51,7 @@ import { useFeedPool } from "../../hooks/use-feed-pool";
 import { familiarityFor } from "../../lib/area-familiarity";
 import { deleteAccount, signOut } from "../../lib/auth";
 import { DIM_LABELS, personaName, rankedDims } from "../../lib/feed/persona";
+import { insightLines } from "../../lib/feed/persona-lines";
 import { PRIORITIES, WEIGHT_LABELS } from "../../lib/priorities";
 import { useAuthStore } from "../../state/auth";
 import { useFeedSession } from "../../state/feed-session";
@@ -93,11 +97,22 @@ export default function YouTab() {
 			.sort((a, b) => b.fam.score - a.fam.score);
 	}, [pool.geoUnits, signals]);
 
+	/** Positive dims with each one's share of the positive total. */
 	const dims = useMemo(() => {
 		const ranked = rankedDims(signals.dims);
-		const max = ranked[0]?.weight ?? 1;
-		return ranked.map((d) => ({ ...d, strength: d.weight / max }));
+		const sum = ranked.reduce((n, d) => n + d.weight, 0) || 1;
+		return ranked.map((d) => ({ ...d, share: d.weight / sum }));
 	}, [signals.dims]);
+
+	const lines = useMemo(
+		() =>
+			insightLines({
+				...(areas[0] ? { topArea: areas[0].unit.name } : {}),
+				dims: signals.dims,
+				geo: signals.geo,
+			}),
+		[areas, signals.dims, signals.geo],
+	);
 
 	const confirmReset = () => {
 		// §5.3: no bare reset without a recap of what it erases.
@@ -153,17 +168,19 @@ export default function YouTab() {
 			<View style={styles.personaCard}>
 				<Text style={styles.eyebrow}>YOUR BUYER TYPE</Text>
 				<Text style={styles.personaName}>{name}</Text>
-				<View style={styles.pills}>
-					<Text style={styles.pill}>
-						{likes} {likes === 1 ? "like" : "likes"}
+				{lines.length > 0 ? (
+					<View style={styles.lines}>
+						{lines.map((l) => (
+							<Text key={l} style={styles.line} numberOfLines={1}>
+								{l}
+							</Text>
+						))}
+					</View>
+				) : (
+					<Text style={styles.line}>
+						Swipe the feed and Percho starts learning.
 					</Text>
-					<Text style={styles.pill}>
-						{tradeoffs} trade-off{tradeoffs === 1 ? "" : "s"}
-					</Text>
-					<Text style={styles.pill}>
-						{areas.length} {areas.length === 1 ? "area" : "areas"}
-					</Text>
-				</View>
+				)}
 			</View>
 
 			{/*
@@ -306,21 +323,30 @@ export default function YouTab() {
 						Answer a trade-off card and what Percho learns shows up here.
 					</Text>
 				) : (
-					<View style={styles.dimChips}>
-						{dims.map((d) => (
+					dims.map((d) => (
+						<View key={d.dim} style={styles.dimRow}>
+							<View style={styles.dimText}>
+								<Text style={styles.dimLabel}>
+									{DIM_LABELS[d.dim]}{" "}
+									<Text style={styles.dimShare}>
+										{Math.round(d.share * 100)}%
+									</Text>
+								</Text>
+								<View style={styles.meter}>
+									<View style={[styles.meterFill, { flex: d.share }]} />
+									<View style={{ flex: Math.max(1 - d.share, 0.001) }} />
+								</View>
+							</View>
 							<Pressable
-								key={d.dim}
 								onPress={() => removeDim(d.dim)}
-								hitSlop={4}
-								style={[styles.dimChip, d.strength < 0.5 && styles.dimChipWeak]}
+								hitSlop={10}
 								accessibilityRole="button"
 								accessibilityLabel={`${DIM_LABELS[d.dim]}. Remove.`}
 							>
-								<Text style={styles.dimLabel}>{DIM_LABELS[d.dim]}</Text>
 								<Text style={styles.dimX}>×</Text>
 							</Pressable>
-						))}
-					</View>
+						</View>
+					))
 				)}
 				{/* The reset lives with what it resets. The confirm carries the
 				    scope (§5.3: no bare reset without a recap). */}
@@ -379,13 +405,6 @@ export default function YouTab() {
 						>
 							<Text style={styles.rowLabel}>Sign out</Text>
 						</Pressable>
-						<Pressable
-							style={styles.row}
-							onPress={confirmDeleteAccount}
-							accessibilityRole="button"
-						>
-							<Text style={styles.rowDanger}>Delete account</Text>
-						</Pressable>
 					</>
 				) : (
 					<Pressable
@@ -405,7 +424,9 @@ export default function YouTab() {
 			</View>
 
 			{/* References — the pages the store listing points at (they open in
-			    the system browser, so one source), and the build. */}
+			    the system browser, so one source), the build, and account
+			    deletion: App Review 5.1.1(v) requires it in-app, the owner wants
+			    it out of the way, so it is a footer link, not a red row. */}
 			<View style={styles.footer}>
 				<View style={styles.footerLinks}>
 					{LINKS.map((l, i) => (
@@ -420,6 +441,18 @@ export default function YouTab() {
 							</Text>
 						</Text>
 					))}
+					{session ? (
+						<Text style={styles.footerTxt}>
+							{" · "}
+							<Text
+								style={styles.footerLink}
+								onPress={confirmDeleteAccount}
+								accessibilityRole="button"
+							>
+								Delete account
+							</Text>
+						</Text>
+					) : null}
 				</View>
 				<Text style={styles.footerTxt}>
 					Percho {Constants.expoConfig?.version ?? "?"}
@@ -462,17 +495,8 @@ const styles = StyleSheet.create({
 	},
 	eyebrow: { ...textStyles.caption, color: colors.onCardDim },
 	personaName: { ...textStyles.title2, color: colors.onCard },
-	pills: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
-	pill: {
-		...textStyles.footnote,
-		fontWeight: "500",
-		color: colors.onCard,
-		backgroundColor: "rgba(255,255,255,0.14)",
-		borderRadius: radii.pill,
-		paddingHorizontal: 10,
-		paddingVertical: 4,
-		overflow: "hidden",
-	},
+	lines: { gap: 3, marginTop: 4 },
+	line: { ...textStyles.footnote, color: colors.onCardDim },
 	sectionHead: {
 		...textStyles.caption,
 		color: colors.accent,
@@ -582,26 +606,16 @@ const styles = StyleSheet.create({
 	},
 	prioStepOn: { backgroundColor: colors.accent, borderColor: colors.accent },
 	prioStepHere: { borderColor: colors.ink },
-	dimChips: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		gap: 8,
-		paddingTop: 4,
-		paddingBottom: 10,
-	},
-	dimChip: {
+	dimRow: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 8,
-		backgroundColor: colors.surface2,
-		borderRadius: radii.pill,
-		paddingLeft: 14,
-		paddingRight: 10,
+		gap: 14,
 		paddingVertical: 8,
 	},
-	dimChipWeak: { opacity: 0.6 },
+	dimText: { flex: 1, gap: 5 },
 	dimLabel: { ...textStyles.footnote, fontWeight: "500", color: colors.ink },
-	dimX: { ...textStyles.footnote, color: colors.ink3 },
+	dimShare: { color: colors.ink2, fontWeight: "400" },
+	dimX: { fontSize: 18, lineHeight: 20, color: colors.ink3 },
 	/** A grouped-list row: label left, control or chevron right. */
 	row: {
 		flexDirection: "row",
@@ -619,7 +633,11 @@ const styles = StyleSheet.create({
 	rowDanger: { ...textStyles.body, color: colors.neg },
 	chevron: { fontSize: 22, lineHeight: 24, color: colors.ink3 },
 	footer: { alignItems: "center", gap: 4, marginTop: 26 },
-	footerLinks: { flexDirection: "row" },
+	footerLinks: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		justifyContent: "center",
+	},
 	footerTxt: { ...textStyles.footnote, fontSize: 12, color: colors.ink3 },
 	footerLink: { color: colors.ink2 },
 });
