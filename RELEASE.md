@@ -34,8 +34,10 @@ have its number.
   each; the areas you've explored are chips in a row instead of a list that
   grew with every new town; what you told Percho matters and what it picked up
   from your swipes share one "Your preferences" card — tap the × on anything
-  it got wrong. Account moved to the bottom, and the privacy, terms and
-  contact links now sit quietly under it rather than posing as settings.
+  it got wrong, or "Reset preferences" at the foot of that card to clear the
+  lot. Account moved to the bottom and now reads like every other app's:
+  who you are, Change password, Sign out, Delete account. The privacy, terms
+  and contact links sit quietly under it rather than posing as settings.
 - **You always have a buyer type.** The card no longer says "Still taking
   shape" — it names you from your first answer ("Trail-Runner Buyer"), and
   starts as "Curious Buyer" before that.
