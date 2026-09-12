@@ -21,6 +21,35 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-11 15:40 UTC — phase276.3: the Account card takes the grouped-list shape
+
+**Objective**: owner on phase276.2: "Account section looks weird, can you
+refer to what other apps do? Set a password - maybe reset password? Start
+fresh - maybe reset preference and move it up?"
+
+**Actions** (`app/(tabs)/you.tsx` only):
+- "Start fresh" → **"Reset preferences"**, moved to the last row of YOUR
+  PREFERENCES — it lives with what it clears. Same confirm, retitled.
+- The sound switch gets its own one-row SETTINGS card. It is a setting; the
+  phase276 objection was to policy links posing as one.
+- ACCOUNT is now the iOS grouped list every other app uses: identity row
+  (email or "Apple ID", subtitle "Signed in with email / Apple"), **"Change
+  password ›"**, "Sign out", "Delete account". Labels in ink, a chevron on the
+  one navigation row, red on the one deletion — the previous card had three
+  amber links and two red ones and read as a pile of buttons.
+- Signed-out: a single "Sign in ›" row with the saved-homes subtitle.
+- Styles: `settingRow` / `accountRow` / `accountAction` / `accountDelete` /
+  `accountSub` collapsed into `row` / `rowFirst` / `rowStack` / `rowLabel` /
+  `rowSub` / `rowDanger` / `chevron`.
+
+**Decisions**: "Change password", not "Reset password". `/set-password`
+sets or replaces the password of the account you are already inside
+(`updateUser`); "reset" is what Airbnb / Instagram / Spotify call the
+forgot-password email flow, which this is not and which `lib/auth-form.ts`
+deliberately does not have. Their in-account row is "Change password".
+
+**Verified**: typecheck, lint, 763 tests. Merged for the phone.
+
 ## 2026-09-11 15:10 UTC — phase276.2: the You tab ships design A
 
 **Objective**: owner picked A from `/demos/you-tab-v2` and ruled on the

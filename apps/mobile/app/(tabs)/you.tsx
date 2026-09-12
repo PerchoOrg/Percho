@@ -2,7 +2,7 @@
  * You tab (spec-v3 05 §5.3) — persona, recent, areas, preferences, account.
  *
  * ── phase276 layout (owner, 2026-09-11: "a lot of sections there and people
- *    will get confused") — eight sections became five ────────────────────────
+ *    will get confused") — eight sections became six ─────────────────────────
  *   · Persona card — always named (`lib/feed/persona.ts`), with the three
  *     counts as pills. No "Stage X of 5": the funnel collapsed on 2026-08-15.
  *   · Recent — the swipe history as a horizontal strip, verdict on the thumb
@@ -18,10 +18,13 @@
  *     inferred (`signals.dims`). Kept as separate groups on purpose: they are
  *     different kinds of claim, and merging them would let the app quietly
  *     overrule a stated answer. The × on an inferred chip is §5.3's
- *     correction — it removes the dim's weight.
- *   · Account — sign in / out, the sound switch, "Start fresh" (the scope it
- *     erases is in the confirm), and the in-app deletion App Review 5.1.1(v)
- *     requires. Session state from `state/auth.ts`; actions in `lib/auth.ts`.
+ *     correction — it removes the dim's weight. "Reset preferences" is the
+ *     card's last row — it lives with what it clears (owner, 2026-09-11).
+ *   · Settings — the one switch that exists (sound autoplay).
+ *   · Account — the iOS grouped-list shape (identity row, "Change password ›",
+ *     Sign out, Delete account in red) and nothing that is not the account.
+ *     The deletion is what App Review 5.1.1(v) requires in-app. Session state
+ *     from `state/auth.ts`; the actions live in `lib/auth.ts`.
  *   · The policy pages and the version are references, not settings — plain
  *     text under the last card, no heading.
  */
@@ -98,12 +101,12 @@ export default function YouTab() {
 	const confirmReset = () => {
 		// §5.3: no bare reset without a recap of what it erases.
 		Alert.alert(
-			"Start fresh?",
+			"Reset preferences?",
 			`This clears ${likes} likes, ${tradeoffs} answered trade-offs and your area history. Saved homes stay saved.`,
 			[
 				{ text: "Cancel", style: "cancel" },
 				{
-					text: "Clear",
+					text: "Reset",
 					style: "destructive",
 					onPress: () => clearSignals(),
 				},
@@ -318,82 +321,86 @@ export default function YouTab() {
 						))}
 					</View>
 				)}
+				{/* The reset lives with what it resets. The confirm carries the
+				    scope (§5.3: no bare reset without a recap). */}
+				<Pressable
+					style={styles.row}
+					onPress={confirmReset}
+					accessibilityRole="button"
+				>
+					<Text style={styles.rowDanger}>Reset preferences</Text>
+				</Pressable>
 			</View>
 
-			{/* Account — session, the one switch, and the two destructive acts. */}
-			<Text style={styles.sectionHead}>ACCOUNT</Text>
+			<Text style={styles.sectionHead}>SETTINGS</Text>
 			<View style={styles.card}>
-				{session ? (
-					<View style={styles.settingRow}>
-						<Text style={styles.settingLabel} numberOfLines={1}>
-							{session.user.email ?? "Signed in with Apple"}
-						</Text>
-					</View>
-				) : (
-					<Pressable
-						style={styles.settingRow}
-						onPress={() => router.push("/auth")}
-						accessibilityRole="button"
-					>
-						<View>
-							<Text style={styles.accountAction}>Sign in</Text>
-							<Text style={styles.accountSub}>
-								Keep your saved homes on every device
-							</Text>
-						</View>
-					</Pressable>
-				)}
-				<View style={[styles.settingRow, styles.accountRow]}>
-					<Text style={styles.settingLabel}>Sound autoplay</Text>
+				<View style={[styles.row, styles.rowFirst]}>
+					<Text style={styles.rowLabel}>Sound autoplay</Text>
 					<Switch
 						value={soundOn}
 						onValueChange={toggleSound}
 						trackColor={{ true: colors.pos }}
 					/>
 				</View>
-				{/* Email accounts only. An Apple account has no password to set —
-				    Apple IS the credential, and offering one would imply the
-				    Apple button could be replaced by it. */}
-				{session?.user.email ? (
-					<Pressable
-						style={styles.accountRow}
-						onPress={() => router.push("/set-password")}
-						accessibilityRole="button"
-					>
-						<Text style={styles.accountAction}>Set a password</Text>
-						<Text style={styles.accountSub}>
-							Sign in without waiting for a code
-						</Text>
-					</Pressable>
-				) : null}
+			</View>
+
+			{/* Account — an iOS grouped list: identity row, navigation rows with a
+			    chevron, plain ink for the rest, red only on the one deletion. */}
+			<Text style={styles.sectionHead}>ACCOUNT</Text>
+			<View style={styles.card}>
 				{session ? (
+					<>
+						<View style={[styles.row, styles.rowFirst, styles.rowStack]}>
+							<Text style={styles.rowLabel} numberOfLines={1}>
+								{session.user.email ?? "Apple ID"}
+							</Text>
+							<Text style={styles.rowSub}>
+								Signed in with {session.user.email ? "email" : "Apple"}
+							</Text>
+						</View>
+						{/* Email accounts only. An Apple account has no password —
+						    Apple IS the credential, and offering one would imply the
+						    Apple button could be replaced by it. */}
+						{session.user.email ? (
+							<Pressable
+								style={styles.row}
+								onPress={() => router.push("/set-password")}
+								accessibilityRole="button"
+							>
+								<Text style={styles.rowLabel}>Change password</Text>
+								<Text style={styles.chevron}>›</Text>
+							</Pressable>
+						) : null}
+						<Pressable
+							style={styles.row}
+							onPress={() => void signOut()}
+							accessibilityRole="button"
+						>
+							<Text style={styles.rowLabel}>Sign out</Text>
+						</Pressable>
+						<Pressable
+							style={styles.row}
+							onPress={confirmDeleteAccount}
+							accessibilityRole="button"
+						>
+							<Text style={styles.rowDanger}>Delete account</Text>
+						</Pressable>
+					</>
+				) : (
 					<Pressable
-						style={styles.accountRow}
-						onPress={() => void signOut()}
+						style={[styles.row, styles.rowFirst]}
+						onPress={() => router.push("/auth")}
 						accessibilityRole="button"
 					>
-						<Text style={styles.accountAction}>Sign out</Text>
+						<View>
+							<Text style={styles.rowLabel}>Sign in</Text>
+							<Text style={styles.rowSub}>
+								Keep your saved homes on every device
+							</Text>
+						</View>
+						<Text style={styles.chevron}>›</Text>
 					</Pressable>
-				) : null}
-				<Pressable
-					style={styles.accountRow}
-					onPress={confirmReset}
-					accessibilityRole="button"
-				>
-					<Text style={styles.accountDelete}>Start fresh</Text>
-					<Text style={styles.accountSub}>
-						Clear likes, trade-offs and area history
-					</Text>
-				</Pressable>
-				{session ? (
-					<Pressable
-						style={styles.accountRow}
-						onPress={confirmDeleteAccount}
-						accessibilityRole="button"
-					>
-						<Text style={styles.accountDelete}>Delete account</Text>
-					</Pressable>
-				) : null}
+				)}
 			</View>
 
 			{/* References — the pages the store listing points at (they open in
@@ -594,22 +601,22 @@ const styles = StyleSheet.create({
 	dimChipWeak: { opacity: 0.6 },
 	dimLabel: { ...textStyles.footnote, fontWeight: "500", color: colors.ink },
 	dimX: { ...textStyles.footnote, color: colors.ink3 },
-	settingRow: {
+	/** A grouped-list row: label left, control or chevron right. */
+	row: {
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
+		minHeight: 44,
 		paddingVertical: 10,
-	},
-	settingLabel: { ...textStyles.body, color: colors.ink },
-	accountRow: {
-		paddingVertical: 12,
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: colors.border,
-		gap: 2,
 	},
-	accountAction: { ...textStyles.headline, color: colors.accent },
-	accountDelete: { ...textStyles.headline, color: colors.neg },
-	accountSub: { ...textStyles.footnote, color: colors.ink2 },
+	rowFirst: { borderTopWidth: 0 },
+	rowStack: { flexDirection: "column", alignItems: "flex-start", gap: 2 },
+	rowLabel: { ...textStyles.body, color: colors.ink },
+	rowSub: { ...textStyles.footnote, color: colors.ink2 },
+	rowDanger: { ...textStyles.body, color: colors.neg },
+	chevron: { fontSize: 22, lineHeight: 24, color: colors.ink3 },
 	footer: { alignItems: "center", gap: 4, marginTop: 26 },
 	footerLinks: { flexDirection: "row" },
 	footerTxt: { ...textStyles.footnote, fontSize: 12, color: colors.ink3 },
