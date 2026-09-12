@@ -6,7 +6,8 @@
  *   · Persona card — always named (`lib/feed/persona.ts`), with the three
  *     counts as pills. No "Stage X of 5": the funnel collapsed on 2026-08-15.
  *   · Recent — the swipe history as a horizontal strip, verdict on the thumb
- *     and "Bring back" under it (phase140's undo, in a row instead of a list).
+ *     and "Change my mind" under it (phase140's undo — the label is the
+ *     buyer's intent, not the mechanism; owner 2026-09-11).
  *     The owner rejected the §1.8 Undo toast on the feed; a correction belongs
  *     on the surface that explains what Percho concluded.
  *   · YOUR AREAS — `familiarityFor`, the SAME source the Search tab's
@@ -212,14 +213,14 @@ export default function YouTab() {
 								<Pressable
 									onPress={() => bringBack(e.id)}
 									accessibilityRole="button"
-									accessibilityLabel={`Bring back ${e.title}`}
+									accessibilityLabel={`Change my mind about ${e.title}`}
 									hitSlop={8}
 									style={({ pressed }) => [
 										styles.bringBack,
 										pressed && styles.bringBackPressed,
 									]}
 								>
-									<Text style={styles.bringBackTxt}>Bring back</Text>
+									<Text style={styles.bringBackTxt}>Change my mind</Text>
 								</Pressable>
 							</View>
 						))}

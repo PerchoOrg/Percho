@@ -21,6 +21,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-11 16:05 UTC — phase276.4: "Bring back" → "Change my mind"
+
+**Objective**: owner: "Recent - instead of being back, change mind makes more
+sense". The label names the buyer's intent rather than what the store does.
+
+**Actions**: `app/(tabs)/you.tsx` — the strip's link and its accessibility
+label. `bringBack` itself is unchanged. RELEASE bullet updated in place.
+
+The rest of the same review (persona pills, "You set" options, a chart for
+the swipe dims, dark mode, phone sign-in, removing Delete account) is
+answered in conversation and waits on the owner — see the next entry when
+it lands.
+
 ## 2026-09-11 15:40 UTC — phase276.3: the Account card takes the grouped-list shape
 
 **Objective**: owner on phase276.2: "Account section looks weird, can you
