@@ -149,6 +149,11 @@ const FILL_ALPHA_SEARCHING = 0.16;
  *  around a 20px mark — anything farther is a pan/read tap, not an aim. */
 const DOT_TAP_RADIUS_PX = 28;
 
+/** The disclaim radius around a 40px photo pin (home or city): a bare map
+ *  press this close to one was aimed at IT, and its own marker handles it —
+ *  `onMapPress` must not reroute the same tap to a community. */
+const PIN_TAP_RADIUS_PX = 30;
+
 /** The metro at rest — the map's opening frame, and where "back" returns to. */
 const METRO_REGION = {
 	latitude: 33.749,
@@ -379,29 +384,40 @@ export default function SearchTab() {
 	 * The LAST wire for a dot tap: a bare map press, resolved to the nearest
 	 * community by screen distance.
 	 *
-	 * On iOS a tap is recognised by EITHER a marker's own gesture recognizer
-	 * OR the map's (`AIRMapManager.m handleMapTap`) — and for a small
-	 * custom-view marker the map's keeps winning, which is why three rounds
-	 * of rewiring the Marker never fixed the owner's phone. When the map
-	 * wins, this handler is where the tap surfaces. The county polygons stay
-	 * silent while results are up (see their `onPress`), so a near-dot press
-	 * cannot be spoken for by anything else first.
+	 * On iOS the map's own recognizer (`AIRMapManager.m handleMapTap`) can
+	 * fire for a tap a marker ALSO handled — phase277.3 assumed the two were
+	 * exclusive and a home-pin tap promptly opened a community page on top of
+	 * the listing (owner, 2026-09-12). So this handler first DISCLAIMS any
+	 * press within reach of a pin that answers for itself — a home or a city,
+	 * whose 40px markers demonstrably receive their own taps — and only then
+	 * claims the nearest dot. A doubled COMMUNITY tap is already absorbed by
+	 * `openCommunity`'s dedupe.
 	 *
 	 * Distance is measured in screen points via the current region's spans —
 	 * the window is a close proxy for the map's own extent, and a few points
-	 * of error inside a 28px radius does not change which dot is meant.
+	 * of error inside a finger-sized radius does not change which mark is
+	 * meant.
 	 */
 	const onMapPress = (e: MapPressEvent) => {
 		if (!hits) return;
 		const tap = e.nativeEvent.coordinate;
+		const px = (lat: number, lng: number) => {
+			const dx =
+				(Math.abs(lng - tap.longitude) / region.longitudeDelta) * width;
+			const dy = (Math.abs(lat - tap.latitude) / region.latitudeDelta) * height;
+			return Math.hypot(dx, dy);
+		};
+		for (const l of hits.listings) {
+			if (l.lat === undefined || l.lng === undefined) continue;
+			if (px(l.lat, l.lng) <= PIN_TAP_RADIUS_PX) return;
+		}
+		for (const u of visibleUnits) {
+			if (px(u.centroid.lat, u.centroid.lng) <= PIN_TAP_RADIUS_PX) return;
+		}
 		let best: { slug: string; d: number } | undefined;
 		for (const c of hits.communities) {
 			if (c.lat === undefined || c.lng === undefined) continue;
-			const dx =
-				(Math.abs(c.lng - tap.longitude) / region.longitudeDelta) * width;
-			const dy =
-				(Math.abs(c.lat - tap.latitude) / region.latitudeDelta) * height;
-			const d = Math.hypot(dx, dy);
+			const d = px(c.lat, c.lng);
 			if (d <= DOT_TAP_RADIUS_PX && (!best || d < best.d)) {
 				best = { slug: c.slug, d };
 			}
@@ -556,9 +572,9 @@ export default function SearchTab() {
 					onRegionChangeComplete={setRegion}
 					// Two more wires for a community tap, both funnelled through
 					// `openCommunity`'s dedupe: the marker-level event when the dot's
-					// own recognizer wins the tap, and the bare map press when the
-					// map's recognizer does (see `onMapPress` — on iOS the two are
-					// mutually exclusive, and small custom markers keep losing).
+					// own recognizer catches the tap, and the bare map press when
+					// only the map's does (see `onMapPress` — on iOS the two can
+					// BOTH fire, and small custom markers often catch nothing).
 					onMarkerPress={(e) => {
 						const id = e.nativeEvent.id;
 						if (id?.startsWith("community:")) {

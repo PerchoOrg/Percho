@@ -29,6 +29,11 @@ being hidden or guessed at — you can see the school is there, and that we don'
 have its number.
 
 ### 2026-09-12
+- Every community on the map opens now. Neighborhoods without a photo used
+  to fail with "Couldn't load this neighbourhood" — their page now opens
+  with the community's initial standing in for the missing picture.
+- Tapping a home no longer briefly opens a nearby neighborhood's page on
+  top of the listing.
 - Tapping a community dot now opens that community every time — before, the
   tap could snap the map back out to the city view instead. The dots also
   got a nicer look: a white ring with a green centre and a soft shadow, with

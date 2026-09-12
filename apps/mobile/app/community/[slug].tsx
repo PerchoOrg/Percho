@@ -212,7 +212,8 @@ export default function CommunityWhyScreen() {
 					width={width}
 					height={heroH}
 					{...(data.videoUrl ? { videoUrl: data.videoUrl } : {})}
-					heroUrl={data.heroUrl}
+					{...(data.heroUrl ? { heroUrl: data.heroUrl } : {})}
+					initial={data.name.trim().charAt(0).toUpperCase()}
 					segments={data.tourSegments ?? []}
 					saved={saved}
 					onBack={() => router.back()}

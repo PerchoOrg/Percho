@@ -51,7 +51,12 @@ export interface TourHeroProps {
 	height: number;
 	/** The community's film; the cover photo stands in when there is none. */
 	videoUrl?: string;
-	heroUrl: string;
+	/** Absent for a community with no cover photo — `initial` stands in. */
+	heroUrl?: string;
+	/** First letter of the community's name, the hero of last resort — the
+	 *  same fallback the map pins use for a community without a picture
+	 *  (owner, 2026-09-09: "just show first character"). */
+	initial: string;
 	segments: readonly TourSegment[];
 	saved: boolean;
 	onBack: () => void;
@@ -156,6 +161,7 @@ export function TourHero(props: TourHeroProps) {
 		height,
 		videoUrl,
 		heroUrl,
+		initial,
 		segments,
 		saved,
 		onBack,
@@ -215,12 +221,16 @@ export function TourHero(props: TourHeroProps) {
 					onActiveChange={setActiveIndex}
 					seekRef={seekRef}
 				/>
-			) : (
+			) : heroUrl ? (
 				<Image
 					source={{ uri: heroUrl }}
 					style={{ width, height }}
 					resizeMode="cover"
 				/>
+			) : (
+				<View style={[styles.initialWrap, { width, height }]}>
+					<Text style={styles.initialGlyph}>{initial}</Text>
+				</View>
 			)}
 
 			<LinearGradient
@@ -324,4 +334,13 @@ const styles = StyleSheet.create({
 	chipLabelActive: { color: explore.ink },
 	chipCount: { color: explore.onMediaDim, fontWeight: "400" },
 	chipCountActive: { color: explore.muted, fontWeight: "400" },
+	// The no-media hero: the initial, large and quiet, on the overlay ground.
+	// Legible as a deliberate mark rather than a failed image load.
+	initialWrap: { alignItems: "center", justifyContent: "center" },
+	initialGlyph: {
+		fontSize: 96,
+		fontWeight: "700",
+		fontFamily: fonts.ui,
+		color: explore.onMediaDim,
+	},
 });
