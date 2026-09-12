@@ -21,6 +21,45 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-11 15:10 UTC — phase276.2: the You tab ships design A
+
+**Objective**: owner picked A from `/demos/you-tab-v2` and ruled on the
+persona placeholder: 「Don't show no profile yet, anything works」. Build it.
+
+**Actions**:
+- `apps/mobile/app/(tabs)/you.tsx` — rebuilt to the five-section layout the
+  demo shows: persona card with count pills · RECENT as a horizontal
+  `ScrollView` strip (124 pt cards, verdict badge on the thumb, "Bring back"
+  under) · YOUR AREAS as horizontal chips with a 4 pt meter, unbounded count,
+  "See all on map →" at the end (the `MAX_AREA_ROWS = 8` cap went with the
+  list) · YOUR PREFERENCES: "You set" (four dot rows, no intro, no blurbs, no
+  "Leading with…" line) and "From your swipes" (dims as chips, × calls
+  `removeDim` directly — the "Still true? Yes / No" two-step is gone) ·
+  ACCOUNT holding email or Sign in, the sound switch, Set a password, Sign
+  out, Start fresh (same confirm), Delete account · Privacy / Terms /
+  Contact + version as centred grey text with no heading. YOUR SCOPE and
+  SETTINGS no longer exist as sections.
+- `lib/feed/persona.ts` — `personaName` is total. Any positive weight claims
+  a dim (`DIM_NAME_THRESHOLD` removed); one dim pairs its modifier with the
+  neutral noun "Buyer" (`Trail-Runner Buyer`); no dim is `STARTER_NAME` =
+  "Curious Buyer". Output space: 110 + 11 + 1. Tests updated.
+- `lib/area-familiarity.ts` — `unknownDimsLabel` deleted with its tests; the
+  area row that read it is gone and nothing else did.
+- Demo caption updated to say what the card shows below two dims.
+
+**Decisions**: the × removes the dim with no confirm. The weight comes back
+with the next trade-off answer that chooses it, so a mis-tap costs one swipe;
+a confirm on every chip would be the friction the redesign is removing.
+`RECENT_SHOWN` 4 → 10: a strip's cost per entry is width, not height.
+
+**Verified**: `pnpm typecheck` clean, `pnpm lint` clean (the 8 warnings are
+pre-existing in feed/search), `pnpm test` 763/763. Not run on a device from
+this session — merged for the owner's phone per the standing rule.
+
+**Next steps**: owner reviews on the phone. The persona word tables are
+untouched; any name he dislikes in the matrix is a one-line edit to
+`MODIFIER` / `ARCHETYPE`.
+
 ## 2026-09-11 14:20 UTC — phase276: You tab redesign — two proposals as a hosted demo
 
 **Objective**: owner's review of the You tab: "a lot of sections there and

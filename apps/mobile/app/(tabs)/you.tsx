@@ -1,32 +1,33 @@
 /**
- * You tab (spec-v3 05 §5.3) — persona, area familiarity, evidence, reset.
+ * You tab (spec-v3 05 §5.3) — persona, recent, areas, preferences, account.
  *
- * ── v1 scope vs §5.3 ────────────────────────────────────────────────────────
- *   · Persona card — deterministic lexicon name (`lib/feed/persona.ts`), or
- *     "Still taking shape" below the evidence threshold. The subtitle drops
- *     the spec's "Stage X of 5" — the funnel collapsed on 2026-08-15 and the
- *     stage is pinned, so the claim would never move.
- *   · Area familiarity ("YOUR JOURNEY") — `familiarityFor`, the SAME source
- *     the Search tab's familiar-first sort reads (§5.3 hard rule: the two
- *     faces cannot disagree). The Search tab's "Your journey" layer chip
- *     moved here (owner, 2026-09-07) — this section is now the journey's
- *     only face. Row tap → Search tab focused on the unit.
- *   · Evidence ("WHAT PERCHO KNOWS") — per-dim strength with the §5.3
- *     correction: tap → "Still true?" → No removes the dim's weight.
- *   · Recent — the swipe history and "Bring back" (phase140). The owner
- *     rejected the §1.8 Undo toast on the feed (「之前的视线有点丑陋」); a
- *     correction belongs on the surface that explains what Percho concluded,
- *     not on a control that appears over a card for three seconds.
- *   · Reset — shows the scope it is about to erase before erasing it
- *     (likes, trade-offs, area history), then `clearSignals()`.
- *   · Account (phase B, store launch) — sign in / out and the in-app account
- *     deletion App Review 5.1.1(v) requires. Session state from
- *     `state/auth.ts`; the actions live in `lib/auth.ts`.
- *   · Settings — only the switches that exist (sound autoplay).
+ * ── phase276 layout (owner, 2026-09-11: "a lot of sections there and people
+ *    will get confused") — eight sections became five ────────────────────────
+ *   · Persona card — always named (`lib/feed/persona.ts`), with the three
+ *     counts as pills. No "Stage X of 5": the funnel collapsed on 2026-08-15.
+ *   · Recent — the swipe history as a horizontal strip, verdict on the thumb
+ *     and "Bring back" under it (phase140's undo, in a row instead of a list).
+ *     The owner rejected the §1.8 Undo toast on the feed; a correction belongs
+ *     on the surface that explains what Percho concluded.
+ *   · YOUR AREAS — `familiarityFor`, the SAME source the Search tab's
+ *     familiar-first sort reads (§5.3 hard rule: the two faces cannot
+ *     disagree). Horizontal chips so a buyer who has seen twenty areas gets one
+ *     row, not a wall. Chip tap → Search tab focused on the unit.
+ *   · YOUR PREFERENCES — one card, two labelled groups. "You set" is what the
+ *     buyer TOLD us (`lib/priorities.ts`); "From your swipes" is what we
+ *     inferred (`signals.dims`). Kept as separate groups on purpose: they are
+ *     different kinds of claim, and merging them would let the app quietly
+ *     overrule a stated answer. The × on an inferred chip is §5.3's
+ *     correction — it removes the dim's weight.
+ *   · Account — sign in / out, the sound switch, "Start fresh" (the scope it
+ *     erases is in the confirm), and the in-app deletion App Review 5.1.1(v)
+ *     requires. Session state from `state/auth.ts`; actions in `lib/auth.ts`.
+ *   · The policy pages and the version are references, not settings — plain
+ *     text under the last card, no heading.
  */
 import Constants from "expo-constants";
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
 	Alert,
 	Image,
@@ -40,15 +41,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFeedPool } from "../../hooks/use-feed-pool";
-import { familiarityFor, unknownDimsLabel } from "../../lib/area-familiarity";
+import { familiarityFor } from "../../lib/area-familiarity";
 import { deleteAccount, signOut } from "../../lib/auth";
 import { DIM_LABELS, personaName, rankedDims } from "../../lib/feed/persona";
-import {
-	PRIORITIES,
-	WEIGHT_LABELS,
-	hasStated,
-	rankedPriorities,
-} from "../../lib/priorities";
+import { PRIORITIES, WEIGHT_LABELS } from "../../lib/priorities";
 import { useAuthStore } from "../../state/auth";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
@@ -56,9 +52,6 @@ import { usePriorityStore } from "../../state/priorities";
 import { useSoundStore } from "../../state/sound";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
-
-/** How many familiarity rows before the list hands over to Search. */
-const MAX_AREA_ROWS = 8;
 
 export default function YouTab() {
 	const insets = useSafeAreaInsets();
@@ -84,9 +77,6 @@ export default function YouTab() {
 		enabled: true,
 	});
 
-	/** The evidence-correction prompt is open for this dim. */
-	const [askingDim, setAskingDim] = useState<string | null>(null);
-
 	const likes =
 		signals.likedListingIds.length + signals.likedCommunityIds.length;
 	const tradeoffs = signals.tradeoffCount ?? 0;
@@ -96,8 +86,7 @@ export default function YouTab() {
 		return pool.geoUnits
 			.map((u) => ({ unit: u, fam: familiarityFor(signals, u.id) }))
 			.filter((a) => a.fam.cardsSeen > 0)
-			.sort((a, b) => b.fam.score - a.fam.score)
-			.slice(0, MAX_AREA_ROWS);
+			.sort((a, b) => b.fam.score - a.fam.score);
 	}, [pool.geoUnits, signals]);
 
 	const dims = useMemo(() => {
@@ -107,8 +96,7 @@ export default function YouTab() {
 	}, [signals.dims]);
 
 	const confirmReset = () => {
-		// The preview IS the section copy above the button; the alert restates
-		// it as the destructive confirm (§5.3: no bare reset without a recap).
+		// §5.3: no bare reset without a recap of what it erases.
 		Alert.alert(
 			"Start fresh?",
 			`This clears ${likes} likes, ${tradeoffs} answered trade-offs and your area history. Saved homes stay saved.`,
@@ -159,56 +147,65 @@ export default function YouTab() {
 
 			{/* Persona card */}
 			<View style={styles.personaCard}>
-				<Text style={styles.eyebrow}>YOUR PERSONA</Text>
-				<Text style={styles.personaName}>{name ?? "Still taking shape"}</Text>
-				<Text style={styles.personaSub}>
-					{likes + tradeoffs > 0
-						? `Shaped by ${likes} ${likes === 1 ? "like" : "likes"} · ${tradeoffs} trade-off${tradeoffs === 1 ? "" : "s"}`
-						: "Swipe the feed and Percho starts learning."}
-				</Text>
+				<Text style={styles.eyebrow}>YOUR BUYER TYPE</Text>
+				<Text style={styles.personaName}>{name}</Text>
+				<View style={styles.pills}>
+					<Text style={styles.pill}>
+						{likes} {likes === 1 ? "like" : "likes"}
+					</Text>
+					<Text style={styles.pill}>
+						{tradeoffs} trade-off{tradeoffs === 1 ? "" : "s"}
+					</Text>
+					<Text style={styles.pill}>
+						{areas.length} {areas.length === 1 ? "area" : "areas"}
+					</Text>
+				</View>
 			</View>
 
 			{/*
 			 * RECENT — what the buyer just did, and the one way to take it back.
 			 * Rows are SNAPSHOTS taken at swipe time (`lib/feed/recent.ts`), so
-			 * the list paints instantly and shows the price the buyer actually
+			 * the strip paints instantly and shows the price the buyer actually
 			 * saw. Trade-off answers are absent by construction: §1.8 rules them
 			 * out of undo, and `recentEntryFor` returns null for them.
 			 */}
 			{recent.length > 0 && (
 				<>
 					<Text style={styles.sectionHead}>RECENT</Text>
-					<View style={styles.card}>
+					<ScrollView
+						horizontal
+						showsHorizontalScrollIndicator={false}
+						style={styles.strip}
+						contentContainerStyle={styles.stripContent}
+					>
 						{recent.slice(0, RECENT_SHOWN).map((e) => (
-							<View key={e.id} style={styles.recentRow}>
-								{e.thumbUrl ? (
-									<Image
-										source={{ uri: e.thumbUrl }}
-										style={styles.recentThumb}
-									/>
-								) : (
-									<View style={[styles.recentThumb, styles.recentThumbEmpty]} />
-								)}
-								<View style={styles.recentText}>
-									<Text style={styles.recentTitle} numberOfLines={1}>
-										{e.title}
-									</Text>
-									{e.subtitle ? (
-										<Text style={styles.recentSub} numberOfLines={1}>
-											{e.subtitle}
-										</Text>
+							<View key={e.id} style={styles.recentCard}>
+								<View style={styles.recentThumb}>
+									{e.thumbUrl ? (
+										<Image
+											source={{ uri: e.thumbUrl }}
+											style={StyleSheet.absoluteFill}
+										/>
 									) : null}
 									<Text
 										style={[
-											styles.recentVerdict,
+											styles.verdict,
 											e.verdict === "right"
 												? styles.verdictYes
 												: styles.verdictNo,
 										]}
 									>
-										{e.verdict === "right" ? "Liked" : "Passed"}
+										{e.verdict === "right" ? "LIKED" : "PASSED"}
 									</Text>
 								</View>
+								<Text style={styles.recentTitle} numberOfLines={1}>
+									{e.title}
+								</Text>
+								{e.subtitle ? (
+									<Text style={styles.recentSub} numberOfLines={1}>
+										{e.subtitle}
+									</Text>
+								) : null}
 								<Pressable
 									onPress={() => bringBack(e.id)}
 									accessibilityRole="button"
@@ -223,67 +220,59 @@ export default function YouTab() {
 								</Pressable>
 							</View>
 						))}
-					</View>
+					</ScrollView>
 				</>
 			)}
 
 			{/* Area familiarity — same data the Search tab sorts by. */}
-			<Text style={styles.sectionHead}>YOUR JOURNEY</Text>
-			<View style={styles.card}>
-				{areas.length === 0 && (
+			<Text style={styles.sectionHead}>YOUR AREAS</Text>
+			{areas.length === 0 ? (
+				<View style={styles.card}>
 					<Text style={styles.emptyLine}>
 						Swipe a few cards and your map starts filling in.
 					</Text>
-				)}
-				{areas.map(({ unit, fam }) => (
-					<Pressable
-						key={unit.id}
-						style={styles.areaRow}
-						onPress={() => focusArea(unit.id)}
-						accessibilityRole="button"
-						accessibilityLabel={`${unit.name}, ${fam.score} percent explored`}
-					>
-						<View style={styles.areaText}>
+				</View>
+			) : (
+				<ScrollView
+					horizontal
+					showsHorizontalScrollIndicator={false}
+					style={styles.strip}
+					contentContainerStyle={styles.stripContent}
+				>
+					{areas.map(({ unit, fam }) => (
+						<Pressable
+							key={unit.id}
+							style={styles.areaChip}
+							onPress={() => focusArea(unit.id)}
+							accessibilityRole="button"
+							accessibilityLabel={`${unit.name}, ${fam.score} percent explored`}
+						>
 							<Text style={styles.areaName}>
 								{unit.name} <Text style={styles.areaScore}>{fam.score}%</Text>
 							</Text>
-							<Text style={styles.areaSub} numberOfLines={1}>
-								{fam.cardsSeen} {fam.cardsSeen === 1 ? "card" : "cards"} ·{" "}
-								{unknownDimsLabel(fam.unknownDims)}
-							</Text>
-						</View>
-						<View style={styles.meter}>
-							<View style={[styles.meterFill, { flex: fam.score }]} />
-							<View style={{ flex: Math.max(100 - fam.score, 0) }} />
-						</View>
+							<View style={styles.meter}>
+								<View style={[styles.meterFill, { flex: fam.score }]} />
+								<View style={{ flex: Math.max(100 - fam.score, 0) }} />
+							</View>
+						</Pressable>
+					))}
+					<Pressable
+						style={styles.areaMore}
+						onPress={() => router.navigate("/(tabs)/search")}
+						accessibilityRole="button"
+					>
+						<Text style={styles.areaMoreTxt}>See all on map →</Text>
 					</Pressable>
-				))}
-				<Pressable
-					style={styles.exploreRow}
-					onPress={() => router.navigate("/(tabs)/search")}
-					accessibilityRole="button"
-				>
-					<Text style={styles.exploreTxt}>Explore more areas →</Text>
-				</Pressable>
-			</View>
+				</ScrollView>
+			)}
 
-			{/* Declared, as opposed to inferred. Kept as its own section rather
-			    than folded into the one below on purpose: what the buyer TOLD us
-			    and what we guessed from their swipes are different kinds of claim,
-			    and merging them would let the app quietly overrule a stated
-			    answer. See `lib/priorities.ts`. */}
-			<Text style={styles.sectionHead}>WHAT MATTERS TO YOU</Text>
+			{/* Declared, then inferred — two groups, one card (see header). */}
+			<Text style={styles.sectionHead}>YOUR PREFERENCES</Text>
 			<View style={styles.card}>
-				<Text style={styles.prioIntro}>
-					Set these and Percho leads with them — in the compare table, and in
-					what a place’s summary mentions first. They never hide anything.
-				</Text>
+				<Text style={styles.groupHead}>You set</Text>
 				{PRIORITIES.map((p) => (
 					<View key={p.key} style={styles.prioRow}>
-						<View style={styles.prioText}>
-							<Text style={styles.prioLabel}>{p.label}</Text>
-							<Text style={styles.prioBlurb}>{p.blurb}</Text>
-						</View>
+						<Text style={styles.prioLabel}>{p.label}</Text>
 						<View style={styles.prioSteps}>
 							{WEIGHT_LABELS.map((weightLabel, w) => (
 								<Pressable
@@ -304,140 +293,57 @@ export default function YouTab() {
 						</View>
 					</View>
 				))}
-				<Text style={styles.prioNow}>
-					{hasStated(weights)
-						? `Leading with ${rankedPriorities(weights)[0]?.label.toLowerCase()}.`
-						: "Nothing set yet — tap the dots."}
-				</Text>
-			</View>
 
-			{/* Evidence — tap to correct (§5.3 #3). */}
-			<Text style={styles.sectionHead}>WHAT PERCHO KNOWS</Text>
-			<View style={styles.card}>
-				{dims.length === 0 && (
+				<Text style={[styles.groupHead, styles.groupHeadSplit]}>
+					From your swipes
+				</Text>
+				{dims.length === 0 ? (
 					<Text style={styles.emptyLine}>
 						Answer a trade-off card and what Percho learns shows up here.
 					</Text>
+				) : (
+					<View style={styles.dimChips}>
+						{dims.map((d) => (
+							<Pressable
+								key={d.dim}
+								onPress={() => removeDim(d.dim)}
+								hitSlop={4}
+								style={[styles.dimChip, d.strength < 0.5 && styles.dimChipWeak]}
+								accessibilityRole="button"
+								accessibilityLabel={`${DIM_LABELS[d.dim]}. Remove.`}
+							>
+								<Text style={styles.dimLabel}>{DIM_LABELS[d.dim]}</Text>
+								<Text style={styles.dimX}>×</Text>
+							</Pressable>
+						))}
+					</View>
 				)}
-				{dims.map((d) => (
-					<Pressable
-						key={d.dim}
-						style={styles.dimRow}
-						onPress={() =>
-							setAskingDim((cur) => (cur === d.dim ? null : d.dim))
-						}
-						accessibilityRole="button"
-						accessibilityLabel={`${DIM_LABELS[d.dim]}. Tap to correct.`}
-					>
-						<View style={styles.dimTop}>
-							<Text style={styles.dimLabel}>{DIM_LABELS[d.dim]}</Text>
-							<View style={styles.meterWide}>
-								<View style={[styles.meterFill, { flex: d.strength }]} />
-								<View style={{ flex: Math.max(1 - d.strength, 0.001) }} />
-							</View>
-						</View>
-						{askingDim === d.dim && (
-							<View style={styles.stillTrue}>
-								<Text style={styles.stillTrueTxt}>Still true?</Text>
-								<Pressable
-									onPress={() => setAskingDim(null)}
-									hitSlop={8}
-									accessibilityRole="button"
-								>
-									<Text style={styles.stillYes}>Yes</Text>
-								</Pressable>
-								<Pressable
-									onPress={() => {
-										removeDim(d.dim);
-										setAskingDim(null);
-									}}
-									hitSlop={8}
-									accessibilityRole="button"
-								>
-									<Text style={styles.stillNo}>No, remove</Text>
-								</Pressable>
-							</View>
-						)}
-					</Pressable>
-				))}
 			</View>
 
-			{/* Scope reset — the recap is on screen before the destructive act. */}
-			<Text style={styles.sectionHead}>YOUR SCOPE</Text>
-			<View style={styles.card}>
-				<Text style={styles.scopeLine}>
-					{likes} {likes === 1 ? "like" : "likes"} · {tradeoffs} trade-off
-					{tradeoffs === 1 ? "" : "s"} · {areas.length}{" "}
-					{areas.length === 1 ? "area" : "areas"} explored
-				</Text>
-				<Pressable
-					style={styles.resetBtn}
-					onPress={confirmReset}
-					accessibilityRole="button"
-				>
-					<Text style={styles.resetTxt}>Start fresh</Text>
-				</Pressable>
-			</View>
-
-			{/* Account — sign in/out and the deletion Apple requires in-app. */}
+			{/* Account — session, the one switch, and the two destructive acts. */}
 			<Text style={styles.sectionHead}>ACCOUNT</Text>
 			<View style={styles.card}>
 				{session ? (
-					<>
-						<View style={styles.settingRow}>
-							<Text style={styles.settingLabel} numberOfLines={1}>
-								{session.user.email ?? "Signed in with Apple"}
-							</Text>
-						</View>
-						{/* Email accounts only. An Apple account has no password to set —
-						    Apple IS the credential, and offering one would imply the
-						    Apple button could be replaced by it. */}
-						{session.user.email ? (
-							<Pressable
-								style={styles.accountRow}
-								onPress={() => router.push("/set-password")}
-								accessibilityRole="button"
-							>
-								<Text style={styles.accountAction}>Set a password</Text>
-								<Text style={styles.accountSub}>
-									Sign in without waiting for a code
-								</Text>
-							</Pressable>
-						) : null}
-						<Pressable
-							style={styles.accountRow}
-							onPress={() => void signOut()}
-							accessibilityRole="button"
-						>
-							<Text style={styles.accountAction}>Sign out</Text>
-						</Pressable>
-						<Pressable
-							style={styles.accountRow}
-							onPress={confirmDeleteAccount}
-							accessibilityRole="button"
-						>
-							<Text style={styles.accountDelete}>Delete account</Text>
-						</Pressable>
-					</>
+					<View style={styles.settingRow}>
+						<Text style={styles.settingLabel} numberOfLines={1}>
+							{session.user.email ?? "Signed in with Apple"}
+						</Text>
+					</View>
 				) : (
 					<Pressable
-						style={styles.accountRowPlain}
+						style={styles.settingRow}
 						onPress={() => router.push("/auth")}
 						accessibilityRole="button"
 					>
-						<Text style={styles.accountAction}>Sign in</Text>
-						<Text style={styles.accountSub}>
-							Keep your saved homes on every device
-						</Text>
+						<View>
+							<Text style={styles.accountAction}>Sign in</Text>
+							<Text style={styles.accountSub}>
+								Keep your saved homes on every device
+							</Text>
+						</View>
 					</Pressable>
 				)}
-			</View>
-
-			{/* Settings — one real switch, then the pages the store listing
-			    points at (they open in the system browser, so one source). */}
-			<Text style={styles.sectionHead}>SETTINGS</Text>
-			<View style={styles.card}>
-				<View style={styles.settingRow}>
+				<View style={[styles.settingRow, styles.accountRow]}>
 					<Text style={styles.settingLabel}>Sound autoplay</Text>
 					<Switch
 						value={soundOn}
@@ -445,37 +351,86 @@ export default function YouTab() {
 						trackColor={{ true: colors.pos }}
 					/>
 				</View>
-				{LINKS.map((l) => (
+				{/* Email accounts only. An Apple account has no password to set —
+				    Apple IS the credential, and offering one would imply the
+				    Apple button could be replaced by it. */}
+				{session?.user.email ? (
 					<Pressable
-						key={l.href}
 						style={styles.accountRow}
-						onPress={() => void Linking.openURL(l.href)}
-						accessibilityRole="link"
+						onPress={() => router.push("/set-password")}
+						accessibilityRole="button"
 					>
-						<Text style={styles.settingLabel}>{l.label}</Text>
+						<Text style={styles.accountAction}>Set a password</Text>
+						<Text style={styles.accountSub}>
+							Sign in without waiting for a code
+						</Text>
 					</Pressable>
-				))}
-				<View style={styles.accountRow}>
+				) : null}
+				{session ? (
+					<Pressable
+						style={styles.accountRow}
+						onPress={() => void signOut()}
+						accessibilityRole="button"
+					>
+						<Text style={styles.accountAction}>Sign out</Text>
+					</Pressable>
+				) : null}
+				<Pressable
+					style={styles.accountRow}
+					onPress={confirmReset}
+					accessibilityRole="button"
+				>
+					<Text style={styles.accountDelete}>Start fresh</Text>
 					<Text style={styles.accountSub}>
-						Percho {Constants.expoConfig?.version ?? "?"}
-						{buildLabel()}
+						Clear likes, trade-offs and area history
 					</Text>
+				</Pressable>
+				{session ? (
+					<Pressable
+						style={styles.accountRow}
+						onPress={confirmDeleteAccount}
+						accessibilityRole="button"
+					>
+						<Text style={styles.accountDelete}>Delete account</Text>
+					</Pressable>
+				) : null}
+			</View>
+
+			{/* References — the pages the store listing points at (they open in
+			    the system browser, so one source), and the build. */}
+			<View style={styles.footer}>
+				<View style={styles.footerLinks}>
+					{LINKS.map((l, i) => (
+						<Text key={l.href} style={styles.footerTxt}>
+							{i > 0 ? " · " : ""}
+							<Text
+								style={styles.footerLink}
+								onPress={() => void Linking.openURL(l.href)}
+								accessibilityRole="link"
+							>
+								{l.label}
+							</Text>
+						</Text>
+					))}
 				</View>
+				<Text style={styles.footerTxt}>
+					Percho {Constants.expoConfig?.version ?? "?"}
+					{buildLabel()}
+				</Text>
 			</View>
 		</ScrollView>
 	);
 }
 
 /**
- * How many verdicts the You tab shows. The store keeps `RECENT_CAP` (30); this
- * is a summary, not an archive, and more rows would push the sections the page
- * is actually about below the fold.
+ * How many verdicts the strip shows. The store keeps `RECENT_CAP` (30); this
+ * is a summary, not an archive.
  */
-const RECENT_SHOWN = 4;
+const RECENT_SHOWN = 10;
 
 const LINKS = [
-	{ label: "Privacy policy", href: "https://www.percho.co/privacy" },
-	{ label: "Terms of use", href: "https://www.percho.co/terms" },
+	{ label: "Privacy", href: "https://www.percho.co/privacy" },
+	{ label: "Terms", href: "https://www.percho.co/terms" },
 	{ label: "Contact & support", href: "https://www.percho.co/contact" },
 ] as const;
 
@@ -488,37 +443,6 @@ function buildLabel(): string {
 }
 
 const styles = StyleSheet.create({
-	prioIntro: {
-		...textStyles.footnote,
-		color: colors.ink2,
-		marginBottom: 10,
-		lineHeight: 18,
-	},
-	prioRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 12,
-		paddingVertical: 9,
-	},
-	prioText: { flex: 1 },
-	prioLabel: { ...textStyles.headline, color: colors.ink },
-	prioBlurb: { ...textStyles.caption, color: colors.ink3, marginTop: 1 },
-	prioSteps: { flexDirection: "row", gap: 7, alignItems: "center" },
-	prioStep: {
-		width: 14,
-		height: 14,
-		borderRadius: 7,
-		backgroundColor: colors.surface2,
-		borderWidth: 1,
-		borderColor: colors.border,
-	},
-	prioStepOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-	prioStepHere: { borderColor: colors.ink },
-	prioNow: {
-		...textStyles.caption,
-		color: colors.ink3,
-		marginTop: 8,
-	},
 	screen: { flex: 1, backgroundColor: colors.bg },
 	title: { ...textStyles.title1, color: colors.ink, marginBottom: 12 },
 	personaCard: {
@@ -530,7 +454,17 @@ const styles = StyleSheet.create({
 	},
 	eyebrow: { ...textStyles.caption, color: colors.onCardDim },
 	personaName: { ...textStyles.title2, color: colors.onCard },
-	personaSub: { ...textStyles.footnote, color: colors.onCardDim },
+	pills: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
+	pill: {
+		...textStyles.footnote,
+		fontWeight: "500",
+		color: colors.onCard,
+		backgroundColor: "rgba(255,255,255,0.14)",
+		borderRadius: radii.pill,
+		paddingHorizontal: 10,
+		paddingVertical: 4,
+		overflow: "hidden",
+	},
 	sectionHead: {
 		...textStyles.caption,
 		color: colors.accent,
@@ -548,94 +482,123 @@ const styles = StyleSheet.create({
 		color: colors.ink2,
 		paddingVertical: 12,
 	},
-	recentRow: {
+	/** A horizontal strip bleeds to the screen edge, past the page padding. */
+	strip: { marginHorizontal: -20 },
+	stripContent: { paddingHorizontal: 20, gap: 10 },
+	recentCard: { width: 124, gap: 4 },
+	recentThumb: {
+		width: 124,
+		height: 96,
+		borderRadius: radii.tile,
+		backgroundColor: colors.surface2,
+		overflow: "hidden",
+		marginBottom: 2,
+	},
+	verdict: {
+		...textStyles.caption,
+		fontSize: 10,
+		position: "absolute",
+		top: 8,
+		left: 8,
+		backgroundColor: colors.glass,
+		borderRadius: radii.pill,
+		paddingHorizontal: 7,
+		paddingVertical: 3,
+		overflow: "hidden",
+	},
+	verdictYes: { color: colors.pos },
+	verdictNo: { color: colors.neg },
+	recentTitle: { ...textStyles.footnote, fontWeight: "600", color: colors.ink },
+	recentSub: { ...textStyles.footnote, fontSize: 12, color: colors.ink2 },
+	/** A link, not a button: undoing is a quiet correction, not a CTA. */
+	bringBack: { paddingVertical: 6, minHeight: 32, justifyContent: "center" },
+	bringBackPressed: { opacity: 0.6 },
+	bringBackTxt: {
+		...textStyles.footnote,
+		fontWeight: "600",
+		color: colors.accent,
+	},
+	areaChip: {
+		backgroundColor: colors.surface,
+		borderRadius: radii.btn,
+		paddingHorizontal: 14,
+		paddingVertical: 10,
+		gap: 6,
+		minWidth: 120,
+	},
+	areaName: { ...textStyles.headline, color: colors.ink },
+	areaScore: { ...textStyles.footnote, color: colors.accent },
+	areaMore: { justifyContent: "center", paddingHorizontal: 4 },
+	areaMoreTxt: {
+		...textStyles.footnote,
+		fontWeight: "600",
+		color: colors.accent,
+	},
+	meter: {
+		flexDirection: "row",
+		height: 4,
+		borderRadius: 2,
+		backgroundColor: colors.surface2,
+		overflow: "hidden",
+	},
+	meterFill: { backgroundColor: colors.pos },
+	groupHead: {
+		...textStyles.footnote,
+		fontWeight: "600",
+		color: colors.ink2,
+		paddingTop: 10,
+		paddingBottom: 2,
+	},
+	groupHeadSplit: {
+		marginTop: 6,
+		paddingTop: 14,
+		borderTopWidth: StyleSheet.hairlineWidth,
+		borderTopColor: colors.border,
+	},
+	prioRow: {
 		flexDirection: "row",
 		alignItems: "center",
+		justifyContent: "space-between",
 		gap: 12,
 		paddingVertical: 10,
 	},
-	recentThumb: {
-		width: 52,
-		height: 52,
-		borderRadius: radii.tile,
+	prioLabel: { ...textStyles.headline, color: colors.ink },
+	prioSteps: { flexDirection: "row", gap: 7, alignItems: "center" },
+	prioStep: {
+		width: 14,
+		height: 14,
+		borderRadius: 7,
 		backgroundColor: colors.surface2,
+		borderWidth: 1,
+		borderColor: colors.border,
 	},
-	recentThumbEmpty: { backgroundColor: colors.surface2 },
-	recentText: { flex: 1, minWidth: 0 },
-	recentTitle: { ...textStyles.headline, color: colors.ink },
-	recentSub: { ...textStyles.footnote, color: colors.ink2, marginTop: 2 },
-	recentVerdict: { ...textStyles.footnote, fontWeight: "600", marginTop: 2 },
-	verdictYes: { color: colors.pos },
-	verdictNo: { color: colors.neg },
-	/** A link, not a button: undoing is a quiet correction, not a CTA. */
-	bringBack: {
-		paddingVertical: 8,
-		paddingLeft: 8,
-		minHeight: 44,
-		justifyContent: "center",
-	},
-	bringBackPressed: { opacity: 0.6 },
-	bringBackTxt: { ...textStyles.headline, color: colors.accent },
-	areaRow: {
-		paddingVertical: 10,
-		gap: 6,
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
-	},
-	areaText: { gap: 2 },
-	areaName: { ...textStyles.headline, color: colors.ink },
-	areaScore: { ...textStyles.footnote, color: colors.accent },
-	areaSub: { ...textStyles.footnote, color: colors.ink2 },
-	meter: {
+	prioStepOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+	prioStepHere: { borderColor: colors.ink },
+	dimChips: {
 		flexDirection: "row",
-		height: 5,
-		borderRadius: 3,
-		backgroundColor: colors.surface2,
-		overflow: "hidden",
+		flexWrap: "wrap",
+		gap: 8,
+		paddingTop: 4,
+		paddingBottom: 10,
 	},
-	meterWide: {
-		flexDirection: "row",
-		height: 5,
-		borderRadius: 3,
-		backgroundColor: colors.surface2,
-		overflow: "hidden",
-		flex: 1,
-		marginLeft: 12,
-	},
-	meterFill: { backgroundColor: colors.pos },
-	exploreRow: { paddingVertical: 12 },
-	exploreTxt: { ...textStyles.footnote, color: colors.accent },
-	dimRow: {
-		paddingVertical: 12,
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
-	},
-	dimTop: { flexDirection: "row", alignItems: "center" },
-	dimLabel: { ...textStyles.body, color: colors.ink },
-	stillTrue: {
+	dimChip: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 16,
-		marginTop: 10,
-	},
-	stillTrueTxt: { ...textStyles.footnote, color: colors.ink2 },
-	stillYes: { ...textStyles.footnote, color: colors.accent },
-	stillNo: { ...textStyles.footnote, color: colors.neg },
-	scopeLine: { ...textStyles.body, color: colors.ink, paddingVertical: 10 },
-	resetBtn: {
-		alignSelf: "flex-start",
+		gap: 8,
 		backgroundColor: colors.surface2,
-		borderRadius: radii.btn,
-		paddingHorizontal: 16,
-		paddingVertical: 10,
-		marginBottom: 10,
+		borderRadius: radii.pill,
+		paddingLeft: 14,
+		paddingRight: 10,
+		paddingVertical: 8,
 	},
-	resetTxt: { ...textStyles.headline, color: colors.neg },
+	dimChipWeak: { opacity: 0.6 },
+	dimLabel: { ...textStyles.footnote, fontWeight: "500", color: colors.ink },
+	dimX: { ...textStyles.footnote, color: colors.ink3 },
 	settingRow: {
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
-		paddingVertical: 8,
+		paddingVertical: 10,
 	},
 	settingLabel: { ...textStyles.body, color: colors.ink },
 	accountRow: {
@@ -644,8 +607,11 @@ const styles = StyleSheet.create({
 		borderTopColor: colors.border,
 		gap: 2,
 	},
-	accountRowPlain: { paddingVertical: 12, gap: 2 },
 	accountAction: { ...textStyles.headline, color: colors.accent },
 	accountDelete: { ...textStyles.headline, color: colors.neg },
 	accountSub: { ...textStyles.footnote, color: colors.ink2 },
+	footer: { alignItems: "center", gap: 4, marginTop: 26 },
+	footerLinks: { flexDirection: "row" },
+	footerTxt: { ...textStyles.footnote, fontSize: 12, color: colors.ink3 },
+	footerLink: { color: colors.ink2 },
 });

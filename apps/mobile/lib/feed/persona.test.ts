@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	DIM_LABELS,
-	DIM_NAME_THRESHOLD,
-	personaName,
-	rankedDims,
-} from "./persona";
+import { DIM_LABELS, STARTER_NAME, personaName, rankedDims } from "./persona";
 
 describe("rankedDims", () => {
 	it("orders by weight descending, ties alphabetical", () => {
@@ -25,20 +20,19 @@ describe("personaName", () => {
 		);
 	});
 
-	it("returns null with no signals", () => {
-		expect(personaName({})).toBeNull();
+	it("is the starter name with no signals", () => {
+		expect(personaName({})).toBe(STARTER_NAME);
+		expect(personaName({ quiet: 0, hip: -1 })).toBe(STARTER_NAME);
 	});
 
-	it("returns null with only one dim over the threshold", () => {
-		expect(
-			personaName({ trails: 5, quiet: DIM_NAME_THRESHOLD - 1 }),
-		).toBeNull();
+	it("pairs a lone dim with the neutral noun", () => {
+		expect(personaName({ trails: 1 })).toBe("Trail-Runner Buyer");
 	});
 
-	it("needs both dims at the threshold, not just present", () => {
-		expect(
-			personaName({ trails: DIM_NAME_THRESHOLD, quiet: DIM_NAME_THRESHOLD }),
-		).not.toBeNull();
+	it("names from any two positive dims, however light", () => {
+		expect(personaName({ trails: 1, quiet: 0.5 })).toBe(
+			"Trail-Runner Homebody",
+		);
 	});
 
 	it("is stable under object key order", () => {

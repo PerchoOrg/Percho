@@ -29,6 +29,16 @@ being hidden or guessed at — you can see the school is there, and that we don'
 have its number.
 
 ### 2026-09-11
+- **The You tab is shorter and clearer.** Eight sections became five. Your
+  recent swipes now sit in one row you scroll sideways, with "Bring back" under
+  each; the areas you've explored are chips in a row instead of a list that
+  grew with every new town; what you told Percho matters and what it picked up
+  from your swipes share one "Your preferences" card — tap the × on anything
+  it got wrong. Account moved to the bottom, and the privacy, terms and
+  contact links now sit quietly under it rather than posing as settings.
+- **You always have a buyer type.** The card no longer says "Still taking
+  shape" — it names you from your first answer ("Trail-Runner Buyer"), and
+  starts as "Curious Buyer" before that.
 - **The map now explains its own colours.** Turn on a lens and a small key
   appears under it showing what the lightest and darkest shades mean, in real
   numbers — so a shaded county is a figure you can read rather than a colour
