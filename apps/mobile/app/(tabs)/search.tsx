@@ -103,7 +103,12 @@ import {
 	View,
 	useWindowDimensions,
 } from "react-native";
-import MapView, { type LatLng, Marker, Polygon } from "react-native-maps";
+import MapView, {
+	type LatLng,
+	type MapPressEvent,
+	Marker,
+	Polygon,
+} from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAreas } from "../../hooks/use-areas";
 import { useFeedPool } from "../../hooks/use-feed-pool";
@@ -139,6 +144,11 @@ import { textStyles } from "../../theme/typography";
 const FILL_ALPHA = 0.62;
 const FILL_ALPHA_SEARCHING = 0.16;
 
+/** How close (screen points) a bare map press must land to a community dot
+ *  for `onMapPress` to claim it for that community. A finger-sized ring
+ *  around a 20px mark — anything farther is a pan/read tap, not an aim. */
+const DOT_TAP_RADIUS_PX = 28;
+
 /** The metro at rest — the map's opening frame, and where "back" returns to. */
 const METRO_REGION = {
 	latitude: 33.749,
@@ -171,7 +181,7 @@ function withAlpha(hex: string, alpha: number): string {
 }
 
 export default function SearchTab() {
-	const { height } = useWindowDimensions();
+	const { width, height } = useWindowDimensions();
 	const insets = useSafeAreaInsets();
 
 	const stage = useFunnelStore((s) => s.stage);
@@ -365,6 +375,40 @@ export default function SearchTab() {
 		router.push(`/community/${slug}`);
 	};
 
+	/**
+	 * The LAST wire for a dot tap: a bare map press, resolved to the nearest
+	 * community by screen distance.
+	 *
+	 * On iOS a tap is recognised by EITHER a marker's own gesture recognizer
+	 * OR the map's (`AIRMapManager.m handleMapTap`) — and for a small
+	 * custom-view marker the map's keeps winning, which is why three rounds
+	 * of rewiring the Marker never fixed the owner's phone. When the map
+	 * wins, this handler is where the tap surfaces. The county polygons stay
+	 * silent while results are up (see their `onPress`), so a near-dot press
+	 * cannot be spoken for by anything else first.
+	 *
+	 * Distance is measured in screen points via the current region's spans —
+	 * the window is a close proxy for the map's own extent, and a few points
+	 * of error inside a 28px radius does not change which dot is meant.
+	 */
+	const onMapPress = (e: MapPressEvent) => {
+		if (!hits) return;
+		const tap = e.nativeEvent.coordinate;
+		let best: { slug: string; d: number } | undefined;
+		for (const c of hits.communities) {
+			if (c.lat === undefined || c.lng === undefined) continue;
+			const dx =
+				(Math.abs(c.lng - tap.longitude) / region.longitudeDelta) * width;
+			const dy =
+				(Math.abs(c.lat - tap.latitude) / region.latitudeDelta) * height;
+			const d = Math.hypot(dx, dy);
+			if (d <= DOT_TAP_RADIUS_PX && (!best || d < best.d)) {
+				best = { slug: c.slug, d };
+			}
+		}
+		if (best) openCommunity(best.slug);
+	};
+
 	// `?focus=<unitId>` — the You tab's familiarity rows, the Saved tab's area
 	// rows and the §5.5 deep link all land here. Handled once per distinct
 	// value: the pool refreshing must not re-fly a map the buyer has panned.
@@ -510,16 +554,18 @@ export default function SearchTab() {
 					showsCompass={false}
 					initialRegion={METRO_REGION}
 					onRegionChangeComplete={setRegion}
-					// The map-level half of the community dots' tap path — see
-					// `openCommunity`. Only the dots carry an `identifier`, so city
-					// and home pins (whose own `onPress` works) pass through here
-					// without effect.
+					// Two more wires for a community tap, both funnelled through
+					// `openCommunity`'s dedupe: the marker-level event when the dot's
+					// own recognizer wins the tap, and the bare map press when the
+					// map's recognizer does (see `onMapPress` — on iOS the two are
+					// mutually exclusive, and small custom markers keep losing).
 					onMarkerPress={(e) => {
 						const id = e.nativeEvent.id;
 						if (id?.startsWith("community:")) {
 							openCommunity(id.slice("community:".length));
 						}
 					}}
+					onPress={onMapPress}
 				>
 					{/* County OUTLINES, always — the areas are a boundary, not a pin,
 					    and they are the map's structure whether or not a lens is on.
@@ -552,14 +598,17 @@ export default function SearchTab() {
 											: withAlpha(colors.ink2, 0.45)
 								}
 								strokeWidth={open ? 2.5 : 1}
-								// A county stops taking taps while results are on the map.
-								// The community dots are markers and hit-test above every
-								// polygon, but a tap that just misses one lands HERE, and
-								// `selectArea` clears the drill — the buyer aiming at a
-								// community would be thrown back out of the city, which is
-								// how "点击社区也没有反应" read on the phone (2026-09-10).
+								// A county stops taking taps while results are on the map —
+								// and on iOS that means handing it NO `onPress` at all.
+								// `tappable` is a lie there: AIRMapManager's handleMapTap
+								// fires every polygon whose ring contains the tap, gated
+								// only on `if (polygon.onPress)` — the prop is never read.
+								// phase268 set `tappable={!asking}` for this and the county
+								// went on eating dot taps ("always go to county view",
+								// owner 2026-09-12). The prop stays for Android, where it
+								// IS honoured.
 								tappable={!asking}
-								onPress={() => selectArea(shape.key)}
+								onPress={asking ? undefined : () => selectArea(shape.key)}
 							/>
 						));
 					})}
