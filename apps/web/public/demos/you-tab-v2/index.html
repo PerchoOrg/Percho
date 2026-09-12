@@ -135,6 +135,19 @@ body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px}
 .arow:first-child{border-top:0}
 .arow .n{display:flex;justify-content:space-between}
 .arow .n span{font:400 13px var(--ui);color:var(--accent)}
+
+/* ---- persona lexicon ---- */
+.lex{max-width:1300px;margin:36px auto 0;background:#fff;border-radius:20px;padding:22px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.lex h2{font:400 22px "DM Serif Display",serif;color:var(--green);margin-bottom:6px}
+.lex p{font:400 13.5px/1.6 var(--ui);color:#4A4038;max-width:820px;margin-bottom:14px}
+.lexwrap{overflow-x:auto}
+.lex table{border-collapse:collapse;font:400 12.5px var(--ui);color:var(--ink)}
+.lex th,.lex td{border:1px solid #EFEAE2;padding:7px 9px;text-align:left;white-space:nowrap;vertical-align:top}
+.lex th{background:#FBFAF7;font-weight:600}
+.lex th span{display:block;font-size:11px;color:var(--ink2);font-weight:500}
+.lex th em{font-style:normal;color:var(--accent)}
+.lex td{font-family:var(--serif);font-size:13.5px}
+.lex td.x{background:#F3EDE4}
 </style>
 </head>
 <body>
@@ -424,6 +437,168 @@ body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px}
 </div>
 
 </div>
+
+<div class="lex">
+<h2>All 110 persona names</h2>
+<p>Row = the buyer’s strongest preference (gives the modifier), column = the second strongest (gives the noun). The diagonal is empty: one dim can’t be both. Below the threshold the card says “No profile yet”.</p>
+<div class="lexwrap"><table><thead><tr><th>Strongest ↓ / Second →</th>
+<th><span>Outdoor living</span><em>Naturalist</em></th>
+<th><span>Walkable streets</span><em>Urbanist</em></th>
+<th><span>Good schools</span><em>Planner</em></th>
+<th><span>Quiet streets</span><em>Homebody</em></th>
+<th><span>Up-and-coming areas</span><em>Trendsetter</em></th>
+<th><span>Space to entertain</span><em>Host</em></th>
+<th><span>Trail access</span><em>Explorer</em></th>
+<th><span>Nightlife nearby</span><em>Night Owl</em></th>
+<th><span>Family-friendly</span><em>Suburbanite</em></th>
+<th><span>Move-in ready</span><em>Pragmatist</em></th>
+<th><span>Room to grow</span><em>Homesteader</em></th>
+</tr></thead><tbody>
+<tr><th><span>Outdoor living</span><em>Open-Air</em></th>
+<td class="x"></td>
+<td>Open-Air Urbanist</td>
+<td>Open-Air Planner</td>
+<td>Open-Air Homebody</td>
+<td>Open-Air Trendsetter</td>
+<td>Open-Air Host</td>
+<td>Open-Air Explorer</td>
+<td>Open-Air Night Owl</td>
+<td>Open-Air Suburbanite</td>
+<td>Open-Air Pragmatist</td>
+<td>Open-Air Homesteader</td>
+</tr>
+<tr><th><span>Walkable streets</span><em>Sidewalk-First</em></th>
+<td>Sidewalk-First Naturalist</td>
+<td class="x"></td>
+<td>Sidewalk-First Planner</td>
+<td>Sidewalk-First Homebody</td>
+<td>Sidewalk-First Trendsetter</td>
+<td>Sidewalk-First Host</td>
+<td>Sidewalk-First Explorer</td>
+<td>Sidewalk-First Night Owl</td>
+<td>Sidewalk-First Suburbanite</td>
+<td>Sidewalk-First Pragmatist</td>
+<td>Sidewalk-First Homesteader</td>
+</tr>
+<tr><th><span>Good schools</span><em>School-District</em></th>
+<td>School-District Naturalist</td>
+<td>School-District Urbanist</td>
+<td class="x"></td>
+<td>School-District Homebody</td>
+<td>School-District Trendsetter</td>
+<td>School-District Host</td>
+<td>School-District Explorer</td>
+<td>School-District Night Owl</td>
+<td>School-District Suburbanite</td>
+<td>School-District Pragmatist</td>
+<td>School-District Homesteader</td>
+</tr>
+<tr><th><span>Quiet streets</span><em>Quiet-Street</em></th>
+<td>Quiet-Street Naturalist</td>
+<td>Quiet-Street Urbanist</td>
+<td>Quiet-Street Planner</td>
+<td class="x"></td>
+<td>Quiet-Street Trendsetter</td>
+<td>Quiet-Street Host</td>
+<td>Quiet-Street Explorer</td>
+<td>Quiet-Street Night Owl</td>
+<td>Quiet-Street Suburbanite</td>
+<td>Quiet-Street Pragmatist</td>
+<td>Quiet-Street Homesteader</td>
+</tr>
+<tr><th><span>Up-and-coming areas</span><em>New-Wave</em></th>
+<td>New-Wave Naturalist</td>
+<td>New-Wave Urbanist</td>
+<td>New-Wave Planner</td>
+<td>New-Wave Homebody</td>
+<td class="x"></td>
+<td>New-Wave Host</td>
+<td>New-Wave Explorer</td>
+<td>New-Wave Night Owl</td>
+<td>New-Wave Suburbanite</td>
+<td>New-Wave Pragmatist</td>
+<td>New-Wave Homesteader</td>
+</tr>
+<tr><th><span>Space to entertain</span><em>Open-House</em></th>
+<td>Open-House Naturalist</td>
+<td>Open-House Urbanist</td>
+<td>Open-House Planner</td>
+<td>Open-House Homebody</td>
+<td>Open-House Trendsetter</td>
+<td class="x"></td>
+<td>Open-House Explorer</td>
+<td>Open-House Night Owl</td>
+<td>Open-House Suburbanite</td>
+<td>Open-House Pragmatist</td>
+<td>Open-House Homesteader</td>
+</tr>
+<tr><th><span>Trail access</span><em>Trail-Runner</em></th>
+<td>Trail-Runner Naturalist</td>
+<td>Trail-Runner Urbanist</td>
+<td>Trail-Runner Planner</td>
+<td>Trail-Runner Homebody</td>
+<td>Trail-Runner Trendsetter</td>
+<td>Trail-Runner Host</td>
+<td class="x"></td>
+<td>Trail-Runner Night Owl</td>
+<td>Trail-Runner Suburbanite</td>
+<td>Trail-Runner Pragmatist</td>
+<td>Trail-Runner Homesteader</td>
+</tr>
+<tr><th><span>Nightlife nearby</span><em>Late-Night</em></th>
+<td>Late-Night Naturalist</td>
+<td>Late-Night Urbanist</td>
+<td>Late-Night Planner</td>
+<td>Late-Night Homebody</td>
+<td>Late-Night Trendsetter</td>
+<td>Late-Night Host</td>
+<td>Late-Night Explorer</td>
+<td class="x"></td>
+<td>Late-Night Suburbanite</td>
+<td>Late-Night Pragmatist</td>
+<td>Late-Night Homesteader</td>
+</tr>
+<tr><th><span>Family-friendly</span><em>Family-First</em></th>
+<td>Family-First Naturalist</td>
+<td>Family-First Urbanist</td>
+<td>Family-First Planner</td>
+<td>Family-First Homebody</td>
+<td>Family-First Trendsetter</td>
+<td>Family-First Host</td>
+<td>Family-First Explorer</td>
+<td>Family-First Night Owl</td>
+<td class="x"></td>
+<td>Family-First Pragmatist</td>
+<td>Family-First Homesteader</td>
+</tr>
+<tr><th><span>Move-in ready</span><em>Turnkey</em></th>
+<td>Turnkey Naturalist</td>
+<td>Turnkey Urbanist</td>
+<td>Turnkey Planner</td>
+<td>Turnkey Homebody</td>
+<td>Turnkey Trendsetter</td>
+<td>Turnkey Host</td>
+<td>Turnkey Explorer</td>
+<td>Turnkey Night Owl</td>
+<td>Turnkey Suburbanite</td>
+<td class="x"></td>
+<td>Turnkey Homesteader</td>
+</tr>
+<tr><th><span>Room to grow</span><em>Wide-Lot</em></th>
+<td>Wide-Lot Naturalist</td>
+<td>Wide-Lot Urbanist</td>
+<td>Wide-Lot Planner</td>
+<td>Wide-Lot Homebody</td>
+<td>Wide-Lot Trendsetter</td>
+<td>Wide-Lot Host</td>
+<td>Wide-Lot Explorer</td>
+<td>Wide-Lot Night Owl</td>
+<td>Wide-Lot Suburbanite</td>
+<td>Wide-Lot Pragmatist</td>
+<td class="x"></td>
+</tr>
+</tbody></table></div></div>
+
 
 <style>
 /* placeholder photo gradients */
