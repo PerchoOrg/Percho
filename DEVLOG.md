@@ -21,6 +21,53 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-12 23:30 UTC — phase277.5: the content scan, and the cover gate returns as a content gate
+
+**Objective**: owner — "No need to show communities just with a name, can
+you scan and let me know the status, how many with videos, stats or just
+names."
+
+**The scan** (read-only, service key, paginated at 1000 with `order(id)` —
+the first pass without an ORDER BY produced overlapping pages and wrong
+counts, the PostgREST trap in yet another costume). All 22,730 active
+communities:
+
+| have | count | share |
+|---|---|---|
+| video (assembled tour) | 5 | — |
+| POI counts | 5 | — |
+| cover photo | 8,678 | 38% |
+| demographics (residents / owner-occ / age) | 8,375 | 37% |
+| interests | 8,465 / attributes 7,874 / description 8,580 | ~37% |
+| **name + location only** | **14,052** | **62%** |
+
+Note the total: 22,730, not the 8,679 older headers cite — the county-GIS
+subdivision import (phase188 era) added ~14k rows that are exactly the
+name-only set.
+
+**The finding that decided the fix**: the 8,678 covered rows are EXACTLY
+the contentful rows — zero communities have stats or a video without a
+cover (`demoNoCover=0, videoNoCover=0`). So `cover_storage_path is not
+null` is not a photo preference; it is the precise "this page has something
+on it" test the data offers.
+
+**Actions**:
+- `apps/web/lib/listings/search.ts`: `.not('cover_storage_path','is',null)`
+  on the communities query — the same gate phase268 removed, back for a
+  different reason, header rewritten to carry both halves of that story.
+  Map dots and typed-search rows both come from here, so both are gated.
+- phase277.4's coverless explore page (letter hero) STAYS: shared links and
+  stale deep links can still reach a coverless slug, and a page that renders
+  beats a 404.
+
+**Verification**: web typecheck clean, lint exit 0, 1,181 tests pass.
+Mobile untouched (server-side gate). Takes effect when Vercel deploys.
+
+**Next steps**: owner sees ~62% fewer dots on a drill. If a city drops to
+zero dots, that city's communities are all unseeded — the coverage
+cold-start problem (see memory/DEVLOG on the subdivision pilot), now
+visible per-city.
+
 ## 2026-09-12 21:40 UTC — phase277.4: every dot opens, and the map-press fallback learns manners
 
 **Objective**: owner on phase277.3 — "Clicking listing, say couldn't load
