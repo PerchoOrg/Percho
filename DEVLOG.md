@@ -21,6 +21,42 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-12 20:35 UTC — phase277.1: the drilled city stops eating the dot taps
+
+**Objective**: owner on phase277 — "Clicking community dot and text, it goes
+back to city view. Fix it the dot looks not great." Two faults: taps on a
+community dot re-framed the map instead of opening the community, and the
+flat green disc looked cheap.
+
+**The tap bug**: two contributors, both fixed.
+1. `visibleUnits` kept the drilled city's own 44px `PhotoMarker` on the map,
+   dead-centre — exactly where the drill animation puts the buyer's thumb —
+   and MapKit favours the big frame over a 14px dot beside it. That pin's
+   only answer to a tap was `select(the same city)`: an `animateToRegion`
+   back to the whole-city frame, which is literally "goes back to city view".
+   During a drill the city now draws NO pin of its own — the pill names the
+   level, the dots are the city.
+2. `CommunityDot` was built on the school pins' anatomy (side label +
+   `anchor` fraction + `tracksViewChanges={false}`) — but the school pins
+   have no `onPress`, so that combination had never had to receive a tap
+   here. Rebuilt on the PhotoMarker pattern instead (no `anchor`, column
+   layout), with a transparent 34px pad as the real tap target.
+
+**The look**: the dot is now a map POI rather than a flat disc — a 20px white
+ring carrying an 11px `pos`-green core, soft shadow, name centred BELOW in
+the same washed chip. The label slot is reserved in the layout even when the
+name is hidden, so dots don't hop when labels toggle with zoom; `labelled`
+rides in the marker `key` because `tracksViewChanges={false}` freezes both
+the raster and the native hit frame — remade once per zoom threshold, not
+repainted.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (same 8
+pre-existing warnings), mobile 769 pass. Web untouched.
+
+**Next steps**: owner re-checks on the phone — specifically that a dot tap
+opens `/community/[slug]` and that labels appear once zoomed past ~24 dots
+in view.
+
 ## 2026-09-12 20:05 UTC — phase278: the trade-off card's two feet mirror each other
 
 **Objective**: owner — 「Tradeoff card - left and right should be aligned,
