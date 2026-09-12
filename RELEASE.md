@@ -29,6 +29,11 @@ being hidden or guessed at — you can see the school is there, and that we don'
 have its number.
 
 ### 2026-09-12
+- Tapping a community dot now opens that community every time — before, the
+  tap could snap the map back out to the city view instead. The dots also
+  got a nicer look: a white ring with a green centre and a soft shadow, with
+  the community's name sitting under the dot once you're zoomed in close
+  enough to read it.
 - **The trade-off card's two sides line up now.** The photos, the choice
   names, the captions, and the home counts sit at the same height on both
   sides of the split, so the card reads as one question again instead of two

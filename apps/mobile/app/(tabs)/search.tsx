@@ -381,7 +381,14 @@ export default function SearchTab() {
 	 */
 	const visibleUnits = useMemo(() => {
 		if (searching) return units;
-		if (drillCity) return [drillCity];
+		// Inside a drill the city draws NO pin of its own. It used to keep one,
+		// and that pin sat dead-centre — exactly where the drill animation puts
+		// the buyer's thumb — with a 44px frame that MapKit favours over the
+		// small community dots around it. Its only answer to a tap was
+		// `select(the same city)`, i.e. re-framing back out to the whole-city
+		// view (owner, 2026-09-12: "clicking community dot… goes back to city
+		// view"). The pill already names the level; the dots ARE the city.
+		if (drillCity) return [];
 		if (openArea) {
 			return units.filter(
 				(u) =>
@@ -564,7 +571,13 @@ export default function SearchTab() {
 					{hits?.communities.map((c) =>
 						c.lat !== undefined && c.lng !== undefined ? (
 							<CommunityDot
-								key={`c-${c.id}`}
+								// `labelled` is in the key on purpose: the dots render with
+								// `tracksViewChanges={false}` (a hundred live-tracking views
+								// would rasterise every frame), which freezes both the image
+								// AND the native hit frame — so when the labels toggle, the
+								// marker must be REMADE, not repainted. Once per zoom
+								// threshold, not per frame.
+								key={`c-${c.id}-${communitiesLabelled ? "l" : "b"}`}
 								coordinate={{ latitude: c.lat, longitude: c.lng }}
 								name={c.name}
 								labelled={communitiesLabelled}
@@ -1016,19 +1029,6 @@ function SchoolMarker({
 	);
 }
 
-// The community dot mirrors the school row's geometry so the anchor math is
-// the same, but it is bigger and always `pos`-green: a community is what the
-// buyer came here to tap, a school is context around it.
-const COMMUNITY_DOT = 14;
-const COMMUNITY_GAP = 4;
-const COMMUNITY_LABEL_W = 110;
-const COMMUNITY_ROW_W = COMMUNITY_DOT + COMMUNITY_GAP + COMMUNITY_LABEL_W;
-const COMMUNITY_ANCHOR_LABELLED = {
-	x: COMMUNITY_DOT / 2 / COMMUNITY_ROW_W,
-	y: 0.5,
-};
-const COMMUNITY_ANCHOR_BARE = { x: 0.5, y: 0.5 };
-
 function CommunityDot({
 	coordinate,
 	name,
@@ -1041,26 +1041,30 @@ function CommunityDot({
 	onPress: () => void;
 }) {
 	return (
-		<Marker
-			coordinate={coordinate}
-			// Anchored on the DOT, not the middle of the row — the dot is what
-			// sits at the community's coordinate, and the name hangs off it.
-			anchor={labelled ? COMMUNITY_ANCHOR_LABELLED : COMMUNITY_ANCHOR_BARE}
-			tracksViewChanges={false}
-			onPress={onPress}
-		>
-			<View
-				style={labelled ? styles.communityRow : styles.communityWrap}
-				accessibilityLabel={name}
-			>
-				<View style={styles.communityDot} />
-				{labelled ? (
-					<View style={styles.communityLabelBox}>
+		// Built on the PhotoMarker pattern — plain Marker, no `anchor`, column
+		// layout — because that is the marker shape whose taps provably land in
+		// this app. The first cut anchored a side-label row the way the school
+		// pins do; those pins have no onPress, and the combination of `anchor`
+		// with a 14px child left a hit target small enough that MapKit handed
+		// the tap to whatever else was near (owner, 2026-09-12).
+		<Marker coordinate={coordinate} tracksViewChanges={false} onPress={onPress}>
+			<View style={styles.communityWrap} accessibilityLabel={name}>
+				{/* The pad is the real tap target — transparent, finger-sized. */}
+				<View style={styles.communityPad}>
+					<View style={styles.communityDot}>
+						<View style={styles.communityCore} />
+					</View>
+				</View>
+				{/* The label slot is ALWAYS in the layout so the dot sits at the
+				    same offset whether or not the name is shown — labels come and
+				    go with zoom, and the dots must not hop when they do. */}
+				<View style={styles.communityLabelBox}>
+					{labelled ? (
 						<Text style={styles.communityName} numberOfLines={1}>
 							{name}
 						</Text>
-					</View>
-				) : null}
+					) : null}
+				</View>
 			</View>
 		</Marker>
 	);
@@ -1149,24 +1153,42 @@ const styles = StyleSheet.create({
 		overflow: "hidden",
 	},
 	// ── Community dots ────────────────────────────────────────────────────────
-	// Same anatomy as a school pin — a dot and its name — one size up, because
-	// the dot replaced the boundary polygons as the community's whole presence
-	// on this map (owner, 2026-09-12).
-	communityWrap: { flexDirection: "row", alignItems: "center" },
-	communityRow: {
-		flexDirection: "row",
+	// The dot is the community's whole presence on this map (owner,
+	// 2026-09-12), so it dresses like a map POI rather than a flat disc: a
+	// white ring carrying a green core, with a soft shadow lifting it off the
+	// basemap the way the photo pins sit off it.
+	communityWrap: { alignItems: "center" },
+	// Finger-sized and transparent — the tap target around a 20px mark.
+	communityPad: {
+		width: 34,
+		height: 34,
 		alignItems: "center",
-		width: COMMUNITY_ROW_W,
-		gap: COMMUNITY_GAP,
+		justifyContent: "center",
 	},
-	communityLabelBox: { width: COMMUNITY_LABEL_W, alignItems: "flex-start" },
 	communityDot: {
-		width: COMMUNITY_DOT,
-		height: COMMUNITY_DOT,
-		borderRadius: COMMUNITY_DOT / 2,
+		width: 20,
+		height: 20,
+		borderRadius: 10,
+		backgroundColor: colors.surface,
+		alignItems: "center",
+		justifyContent: "center",
+		shadowColor: "#000",
+		shadowOpacity: 0.25,
+		shadowRadius: 3,
+		shadowOffset: { width: 0, height: 1 },
+	},
+	communityCore: {
+		width: 11,
+		height: 11,
+		borderRadius: 5.5,
 		backgroundColor: colors.pos,
-		borderWidth: 2,
-		borderColor: colors.surface,
+	},
+	// Reserved whether or not the name is drawn — see the note in the marker.
+	communityLabelBox: {
+		height: 18,
+		maxWidth: 128,
+		alignItems: "center",
+		marginTop: -2,
 	},
 	communityName: {
 		...textStyles.caption,
@@ -1177,7 +1199,7 @@ const styles = StyleSheet.create({
 		// chip per community reads as a hundred buttons.
 		backgroundColor: withAlpha(colors.surface, 0.82),
 		borderRadius: 4,
-		paddingHorizontal: 3,
+		paddingHorizontal: 4,
 		paddingVertical: 1,
 		overflow: "hidden",
 	},
