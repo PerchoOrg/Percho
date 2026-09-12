@@ -21,6 +21,43 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-12 21:10 UTC — phase277.2: the dot tap gets a second wire
+
+**Objective**: owner, after phase277.1 — "Clicking community dot on map
+should go to community explore page, similar to home listing." The taps were
+still not opening `/community/[slug]` on the phone, while the home pins'
+identical `router.push` works — so the route is fine and the failure is in
+delivering the tap from the native marker to JS.
+
+**Actions**, all `apps/mobile/app/(tabs)/search.tsx`:
+- `CommunityDot` now matches the home-pin marker EXACTLY: the
+  `tracksViewChanges={false}` override is gone (with it the key-remount hack
+  it required). Both of the first two cuts deviated from PhotoMarker once —
+  an anchored school-style row, then a rasterised column — and each lost the
+  tap; the ~109 city photo pins already live-track and pan fine, so the
+  rasterisation was buying re-renders at the cost of the press.
+- Second delivery path: dots carry `identifier={"community:" + slug}` and the
+  MapView gets `onMarkerPress`, which is emitted at the map level
+  independently of the marker's own JS wiring. `openCommunity(slug)` is the
+  single funnel for both paths — on iOS one tap can arrive on both wires, so
+  an arrival within 800 ms of the last is dropped rather than pushed as a
+  second screen. City/home pins carry no identifier and pass through the
+  map-level handler untouched.
+
+**Decisions**: belt-and-braces over a single "correct" wire, deliberately —
+this is the third round on one tap, each previous fix was reasoned rather
+than device-verified (no simulator in this environment), and the two paths
+fail independently. The dedupe funnel makes the redundancy safe.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (same 8
+pre-existing warnings), mobile 769 pass. Web untouched. RELEASE.md already
+carries today's dot bullet; its claim becomes true with this push.
+
+**Next steps**: owner re-checks the tap on the phone. If it STILL fails on
+both wires, the next probe is a `console.warn` in `onMarkerPress` to learn
+whether selection itself ever fires — at that point it stops being a wiring
+question and becomes a react-native-maps issue to pin down by version.
+
 ## 2026-09-12 20:35 UTC — phase277.1: the drilled city stops eating the dot taps
 
 **Objective**: owner on phase277 — "Clicking community dot and text, it goes
