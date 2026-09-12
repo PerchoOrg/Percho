@@ -1048,6 +1048,99 @@ That gap is real and worth a decision if he hits it.
 
 ---
 
+## 2026-09-09 13:15 UTC — phase254: the cast was hiding a wrong branch
+
+**Objective**: phase253 left `app/api/events/route.ts` as the one file whose
+cast could not simply be removed, and I called it "a behaviour question". Read
+properly, it is a bug.
+
+### `'listing_id' in e` was never the right test
+
+The payload is a union of two zod shapes, and each one **declares the other's
+key** as `z.undefined().optional()` — that is how the schema enforces
+exactly-one-of. So `'listing_id' in e` is **true for a community event** that
+sent `listing_id: undefined` explicitly, and the row went to Postgres carrying
+`undefined` rather than `null`.
+
+`e.listing_id ?? null` treats absent and explicitly-undefined the same, which
+is what the nullable column means.
+
+The `as any` on the client is what let that ship: with the row type erased,
+nothing compared it against the table, and the compiler had no opinion on a
+field it could not see.
+
+### And a second, narrower thing
+
+`meta` is `z.record(z.unknown())`, which is not assignable to the column's
+`Json` — `z.unknown()` says nothing about serialisability. The value came out of
+`req.json()`, so it *is* json; the assertion now sits on **that one field** and
+states the provenance, instead of on the client where it blinded five other
+fields.
+
+### Extracted so it can be checked
+
+`eventRow` is exported and has 5 tests. Verified by restoring the `in` branch:
+*expected undefined to be null*.
+
+**Verified**: typecheck clean, lint at main's 181 warnings and 0 errors,
+666 mobile + **1174 web tests** (+5).
+
+**Learnings**: phase253 measured 199 casts and treated them as a tidiness
+problem. The first one I actually read had a live bug behind it, of the exact
+kind the cast made invisible — a field the compiler could not see, so nobody
+compared it to the table. **The count was the least interesting thing about
+them.**
+
+## 2026-09-09 12:45 UTC — phase253: nineteen casts gone, and one of them was load-bearing
+
+**Objective**: phase252 measured that some of the 199 `supabase as any` casts sit
+on the plain client, where the generated types do resolve. Remove those.
+
+**19 casts and 22 suppression comments gone from 7 files**, verified by
+typecheck: `199 → 180`. Removing a cast that typechecks is provably safe — it
+only ever suppressed compile-time information, and the compiler now agrees the
+information was there all along.
+
+### Removing them found two real things
+
+**`lib/buyer/likes.ts` genuinely needs its cast**, and not for the reason
+written on it. Every cast in the codebase says *"stub generated types"*; this
+one calls `.from(table)` with a **variable**, so no single table resolves and
+every column types as `never`. The comment was inherited, not written. Corrected
+in place — three of them.
+
+**`app/api/events/route.ts` does not typecheck against its own table.** The
+insert builds `listing_id` as `string | null | undefined` where the column is
+optional, which under this config is a real mismatch and not a formality. Left
+alone and reported: it is a behaviour question about what that endpoint should
+write, not a cast to delete.
+
+### And I broke the build on the way, in a way worth writing down
+
+My comment-stripping regex ran **unconditionally** while the cast-stripping one
+only matched the parenthesised form `(x as any)`. In three files it therefore
+removed the suppression and left the `any` — **8 lint errors**, in files whose
+contents were byte-identical to `main`.
+
+Chasing that turned up something I nearly reported wrongly: pristine `main`
+prints *"Found 181 warnings"* and no error line, and biome's default cap was
+hiding 195 diagnostics. **So my habit of reading "no error line" as "lint
+clean" could have been silence rather than success** — the phase243 shape, in
+my own verification. Checked at `--max-diagnostics=500`: main is genuinely 0
+errors, 215 warnings. The habit was sound; it just had not been tested.
+
+The other self-inflicted one: I replaced a one-line `biome-ignore` with a
+five-line explanation, and **a `biome-ignore` only suppresses the line
+immediately after it**. Explanation above, directive adjacent to the code.
+
+**Verified**: typecheck clean, lint back to main's 181 warnings and 0 errors,
+666 mobile + 1169 web tests.
+
+**Learnings**: the regex that stripped comments and the regex that stripped
+casts had different reach, and I ran them as a pair. **Two edits that must agree
+were expressed as two patterns that could not** — the same defect as a constant
+declared twice, which I spent phase242 on.
+
 ## 2026-09-09 12:10 UTC — phase264: ranking on request, community pins go straight in
 
 **Objective**: owner, from a screenshot of the Search tab with the Property
@@ -1076,6 +1169,128 @@ pre-existing mobile warnings).
 **Next steps**: owner reviews on the phone once the reference worktree pulls.
 
 ---
+
+## 2026-09-09 12:10 UTC — phase252: 199 `as any` on the database boundary, and why
+
+**Objective**: phase251 checked one CLAUDE.md rule mechanically. Sweep the rest
+of the mechanical ones — §4's export rules, §6's bans on `any`, barrel files and
+`console.log`.
+
+Barrel files: none. `biome-ignore` without a reason: none. `console.log` in app
+code: one hit, and it is the sentence *forbidding* it inside a doc comment.
+
+Then `any`: **228 hits.** Nearly all of them one thing.
+
+### 199 casts of the Supabase client, across 57 files
+
+```ts
+// biome-ignore lint/suspicious/noExplicitAny: stub generated types
+const { data: agent } = (await (supabase as any).from('agents')…
+```
+
+The stated reason is **no longer true**: `database.types.ts` is 4,246 lines and
+carries `agents` under `public` like everything else. So a typo in a table or
+column name in any of those 57 files compiles and fails at runtime — the exact
+silent-substitution class phases 243–245 were spent on, on the boundary where it
+matters most.
+
+### Two hypotheses, both wrong, both tested before writing
+
+**"The generated types lag the schema."** Compared every table the app queries
+against the file: **2 of 42 missing**, neither in a casting file. Wrong.
+
+**"The casts are stale and can just be deleted."** Removed one and ran
+typecheck: `Property 'id' does not exist on type 'never'`. Wrong.
+
+### What it actually is
+
+Two client factories, and only one of them resolves the generated types.
+
+```
+plain  createServiceClient / createAnonClient — @supabase/supabase-js
+       cast removed → typecheck CLEAN
+ssr    createClient()                          — @supabase/ssr
+       cast removed → resolves to `never`
+```
+
+`areas.ts` is typed (phase209) precisely because it builds its own plain client.
+The generated file declares `PostgrestVersion: "14.5"`, which the pinned
+`@supabase/ssr` does not appear to understand.
+
+Split by which client a file uses:
+
+```
+27  files on the plain client only  — removable today
+91  files on the ssr client only    — blocked on the package
+32  mixed or neither                — need reading one at a time
+```
+
+**Not fixed here.** 57 files across auth, listings, communities and POI, and the
+blocked 91 need a dependency bump whose blast radius I cannot see from inside a
+long unattended run. Flagged as decision 4 with the split measured, so the work
+can be scoped rather than discovered.
+
+**Also noted**: `apps/web/lib/log.ts` exists, has **zero importers**, and
+CLAUDE.md §6 says it "was deleted in phase184". `git log` shows it re-added by
+the monorepo restructure — the deletion did not survive the move. The rulebook
+and the tree disagree; I have changed neither.
+
+**Verified**: typecheck clean, lint clean, 666 mobile + 1169 web tests. Nothing
+changed but the log.
+
+**Learnings**: I formed two causal stories and both were wrong. Each was
+plausible enough to write, and the only reason neither shipped is that testing a
+hypothesis costs one command and I had just spent three phases on what happens
+when nobody does.
+
+## 2026-09-09 11:35 UTC — phase251: fifty-five insertions, one of them out of order
+
+**Objective**: phase250 turned RELEASE.md's rules into a step. The other
+mechanically checkable rule in CLAUDE.md is §2.1's second non-negotiable —
+**DEVLOG.md is reverse chronological.** I inserted about fifty-five entries into
+it in this run, each by finding the heading above and writing before it, and had
+never looked at the result as a whole.
+
+**Four pairs contradict their own order.** One is mine:
+
+```
+11:50  phase208
+11:35  phase207
+11:10  phase206
+11:20  phase205   ← after 206 in the file, stamped later than it
+10:40  phase204
+```
+
+phase205 came before phase206 and carried a timestamp after it. Its true time is
+between 10:40 and 11:10; I had written 11:20. Corrected to 10:55 — **not the
+invention of a fact, but the removal of a contradiction from a stamp I had
+approximated in the first place.**
+
+### The other three are left alone
+
+2026-09-06, -05 and -04, all from earlier sessions. The timestamps here are
+written by hand and the true times were never recorded anywhere, so "fixing"
+them would mean **inventing three numbers to satisfy a test** — which is the
+exact thing phases 243 through 245 were spent removing. Flagged, not touched.
+
+So the check is scoped to entries from 2026-09-08. It cannot repair history; it
+can stop it happening again.
+
+### A diagnosis worth keeping
+
+My first instinct was that the file was mis-ordered. It is not: in all four
+pairs the **phase order is right and the timestamp contradicts it**. The stamps
+are the unreliable part, not the sequence — which is also why ordering by phase
+number is not the fix, since 5 *different* pairs run backwards by phase (a `.5`
+follow-up is written after the phase that supersedes it, quite correctly).
+
+**Verified**: putting the bad stamp back fails with the entry named and both
+timestamps quoted. typecheck clean, lint clean, 666 mobile + **1169 web tests**
+(+3).
+
+**Learnings**: fifty-five correct edits produced one incorrect file. That is the
+third time in four phases, and the pattern is exact — **the defect is never in
+an edit, it is in the absence of anything that looks at the whole afterwards.**
 
 ## 2026-09-09 11:05 UTC — phase263: a price chip tells a home from a community
 
@@ -1110,6 +1325,51 @@ auto-fix applied to one over-long style line; same 8 pre-existing warnings).
 positive mark (beyond "no chip"), the `label` prop already takes any string.
 
 ---
+
+## 2026-09-09 11:05 UTC — phase250: making the check a step
+
+**Objective**: phase249 ended on *knowing the failure mode does not prevent it;
+only re-reading does — the check has to be a step, not a belief*. That is a
+thing to build, not a thing to remember.
+
+RELEASE.md's rules in CLAUDE.md §2.2 are mostly mechanical, and I have broken
+two of them by hand and fixed them by hand twice:
+
+```
+v<major>.<minor>, no patch numbers
+each day appears once per version
+days newest first
+no code, file, module or SHA names — Vivian reads this
+```
+
+Five tests, one per rule. Each **verified by breaking the file in exactly the
+way the rule exists to catch**, under an assertion that the mutation applied —
+because phase245 is where I learned a `sed` that silently matches nothing
+reports success:
+
+```
+two blocks with the same date   → 1 failure
+days out of order               → 1 failure
+a patch version number          → 1 failure
+a file name in the prose        → 1 failure
+a phase reference               → 1 failure
+```
+
+### What it deliberately cannot do
+
+It cannot check that the prose is **true**, or that a shipped change was written
+down at all. Those need a person, and pretending otherwise would be the same
+overreach as a fallback that looks like success. What it checks is the
+mechanical part — which is the part that actually drifted, twice, while each
+individual edit was correct.
+
+**Verified**: RELEASE.md itself unmodified (`git diff --stat` empty for it);
+typecheck clean, lint clean, 666 mobile + **1166 web tests** (+5).
+
+**Learnings**: three phases in a row now have ended by finding drift in a
+document I had already fixed. The difference between this one and those is that
+this one cannot recur silently — which is the only kind of fix that survives me
+learning the lesson and then forgetting to apply it.
 
 ## 2026-09-09 10:57 UTC — phase262: Search map pins wear the spot's own photo
 
@@ -1221,6 +1481,45 @@ route file is added and a type moves, since a bad import shows up nowhere else.
 thing that actually located it was noticing that `reviews.test.ts` mocks
 Supabase — an existing test working around the same import, which is a defect
 report nobody had filed.
+
+## 2026-09-09 10:35 UTC — phase249: I re-broke the file I fixed two days' work ago
+
+**Objective**: phase248 ended on *a summary is cheap to amend and expensive to
+re-read*. The obvious place to test that is the file where I had already found
+it — RELEASE.md, consolidated in phase227 and appended to five times since.
+
+**Same failure, one day later.**
+
+### Everything from today was filed under yesterday
+
+phase227 consolidated `### 2026-09-08`. Every RELEASE bullet since — the tax
+omission, the water-only note, flat rubbish, the water survey, DeKalb's own
+sheet — comes from work the DEVLOG dates **2026-09-09**, and every one of them
+went under the 09-08 heading because that is the heading that was there.
+
+A dated changelog whose dates are wrong is worse than an undated one: the dates
+are the only thing a reader cannot check.
+
+Split into `### 2026-09-09` (5 items) above `### 2026-09-08` (7), newest first
+per CLAUDE.md §2.1.
+
+### And one story told twice
+
+*"Water bills are real numbers in 28 counties"* and *"DeKalb's water bill is now
+a real figure"* are the same story — DeKalb being sourced from its own sheet is
+a detail of the survey story, not a second announcement. Merged into one
+paragraph that says both halves once.
+
+**Verified** mechanically: all 12 user-visible items still present, each under
+the date its work actually happened, nothing misfiled across the boundary, and
+no code or file names — 5 of 5 on the 9th, 7 of 7 on the 8th.
+
+typecheck clean, lint clean, 666 mobile + 1161 web tests.
+
+**Learnings**: I fixed this file, drew the lesson, wrote it in the DEVLOG — and
+then appended to it five times without re-reading it, because each append was
+individually correct. **Knowing the failure mode does not prevent it; only
+re-reading does.** The check has to be a step, not a belief.
 
 ## 2026-09-09 10:21 UTC — phase260: one action had two marks
 
@@ -1417,305 +1716,6 @@ through — phase254's lesson, one layer up.
 
 **Next steps**: owner's call on the web Like button — delete it, or build the
 Likes sub-tab that migration 0028 promised.
-
-## 2026-09-09 13:15 UTC — phase254: the cast was hiding a wrong branch
-
-**Objective**: phase253 left `app/api/events/route.ts` as the one file whose
-cast could not simply be removed, and I called it "a behaviour question". Read
-properly, it is a bug.
-
-### `'listing_id' in e` was never the right test
-
-The payload is a union of two zod shapes, and each one **declares the other's
-key** as `z.undefined().optional()` — that is how the schema enforces
-exactly-one-of. So `'listing_id' in e` is **true for a community event** that
-sent `listing_id: undefined` explicitly, and the row went to Postgres carrying
-`undefined` rather than `null`.
-
-`e.listing_id ?? null` treats absent and explicitly-undefined the same, which
-is what the nullable column means.
-
-The `as any` on the client is what let that ship: with the row type erased,
-nothing compared it against the table, and the compiler had no opinion on a
-field it could not see.
-
-### And a second, narrower thing
-
-`meta` is `z.record(z.unknown())`, which is not assignable to the column's
-`Json` — `z.unknown()` says nothing about serialisability. The value came out of
-`req.json()`, so it *is* json; the assertion now sits on **that one field** and
-states the provenance, instead of on the client where it blinded five other
-fields.
-
-### Extracted so it can be checked
-
-`eventRow` is exported and has 5 tests. Verified by restoring the `in` branch:
-*expected undefined to be null*.
-
-**Verified**: typecheck clean, lint at main's 181 warnings and 0 errors,
-666 mobile + **1174 web tests** (+5).
-
-**Learnings**: phase253 measured 199 casts and treated them as a tidiness
-problem. The first one I actually read had a live bug behind it, of the exact
-kind the cast made invisible — a field the compiler could not see, so nobody
-compared it to the table. **The count was the least interesting thing about
-them.**
-
-## 2026-09-09 12:45 UTC — phase253: nineteen casts gone, and one of them was load-bearing
-
-**Objective**: phase252 measured that some of the 199 `supabase as any` casts sit
-on the plain client, where the generated types do resolve. Remove those.
-
-**19 casts and 22 suppression comments gone from 7 files**, verified by
-typecheck: `199 → 180`. Removing a cast that typechecks is provably safe — it
-only ever suppressed compile-time information, and the compiler now agrees the
-information was there all along.
-
-### Removing them found two real things
-
-**`lib/buyer/likes.ts` genuinely needs its cast**, and not for the reason
-written on it. Every cast in the codebase says *"stub generated types"*; this
-one calls `.from(table)` with a **variable**, so no single table resolves and
-every column types as `never`. The comment was inherited, not written. Corrected
-in place — three of them.
-
-**`app/api/events/route.ts` does not typecheck against its own table.** The
-insert builds `listing_id` as `string | null | undefined` where the column is
-optional, which under this config is a real mismatch and not a formality. Left
-alone and reported: it is a behaviour question about what that endpoint should
-write, not a cast to delete.
-
-### And I broke the build on the way, in a way worth writing down
-
-My comment-stripping regex ran **unconditionally** while the cast-stripping one
-only matched the parenthesised form `(x as any)`. In three files it therefore
-removed the suppression and left the `any` — **8 lint errors**, in files whose
-contents were byte-identical to `main`.
-
-Chasing that turned up something I nearly reported wrongly: pristine `main`
-prints *"Found 181 warnings"* and no error line, and biome's default cap was
-hiding 195 diagnostics. **So my habit of reading "no error line" as "lint
-clean" could have been silence rather than success** — the phase243 shape, in
-my own verification. Checked at `--max-diagnostics=500`: main is genuinely 0
-errors, 215 warnings. The habit was sound; it just had not been tested.
-
-The other self-inflicted one: I replaced a one-line `biome-ignore` with a
-five-line explanation, and **a `biome-ignore` only suppresses the line
-immediately after it**. Explanation above, directive adjacent to the code.
-
-**Verified**: typecheck clean, lint back to main's 181 warnings and 0 errors,
-666 mobile + 1169 web tests.
-
-**Learnings**: the regex that stripped comments and the regex that stripped
-casts had different reach, and I ran them as a pair. **Two edits that must agree
-were expressed as two patterns that could not** — the same defect as a constant
-declared twice, which I spent phase242 on.
-
-## 2026-09-09 12:10 UTC — phase252: 199 `as any` on the database boundary, and why
-
-**Objective**: phase251 checked one CLAUDE.md rule mechanically. Sweep the rest
-of the mechanical ones — §4's export rules, §6's bans on `any`, barrel files and
-`console.log`.
-
-Barrel files: none. `biome-ignore` without a reason: none. `console.log` in app
-code: one hit, and it is the sentence *forbidding* it inside a doc comment.
-
-Then `any`: **228 hits.** Nearly all of them one thing.
-
-### 199 casts of the Supabase client, across 57 files
-
-```ts
-// biome-ignore lint/suspicious/noExplicitAny: stub generated types
-const { data: agent } = (await (supabase as any).from('agents')…
-```
-
-The stated reason is **no longer true**: `database.types.ts` is 4,246 lines and
-carries `agents` under `public` like everything else. So a typo in a table or
-column name in any of those 57 files compiles and fails at runtime — the exact
-silent-substitution class phases 243–245 were spent on, on the boundary where it
-matters most.
-
-### Two hypotheses, both wrong, both tested before writing
-
-**"The generated types lag the schema."** Compared every table the app queries
-against the file: **2 of 42 missing**, neither in a casting file. Wrong.
-
-**"The casts are stale and can just be deleted."** Removed one and ran
-typecheck: `Property 'id' does not exist on type 'never'`. Wrong.
-
-### What it actually is
-
-Two client factories, and only one of them resolves the generated types.
-
-```
-plain  createServiceClient / createAnonClient — @supabase/supabase-js
-       cast removed → typecheck CLEAN
-ssr    createClient()                          — @supabase/ssr
-       cast removed → resolves to `never`
-```
-
-`areas.ts` is typed (phase209) precisely because it builds its own plain client.
-The generated file declares `PostgrestVersion: "14.5"`, which the pinned
-`@supabase/ssr` does not appear to understand.
-
-Split by which client a file uses:
-
-```
-27  files on the plain client only  — removable today
-91  files on the ssr client only    — blocked on the package
-32  mixed or neither                — need reading one at a time
-```
-
-**Not fixed here.** 57 files across auth, listings, communities and POI, and the
-blocked 91 need a dependency bump whose blast radius I cannot see from inside a
-long unattended run. Flagged as decision 4 with the split measured, so the work
-can be scoped rather than discovered.
-
-**Also noted**: `apps/web/lib/log.ts` exists, has **zero importers**, and
-CLAUDE.md §6 says it "was deleted in phase184". `git log` shows it re-added by
-the monorepo restructure — the deletion did not survive the move. The rulebook
-and the tree disagree; I have changed neither.
-
-**Verified**: typecheck clean, lint clean, 666 mobile + 1169 web tests. Nothing
-changed but the log.
-
-**Learnings**: I formed two causal stories and both were wrong. Each was
-plausible enough to write, and the only reason neither shipped is that testing a
-hypothesis costs one command and I had just spent three phases on what happens
-when nobody does.
-
-## 2026-09-09 11:35 UTC — phase251: fifty-five insertions, one of them out of order
-
-**Objective**: phase250 turned RELEASE.md's rules into a step. The other
-mechanically checkable rule in CLAUDE.md is §2.1's second non-negotiable —
-**DEVLOG.md is reverse chronological.** I inserted about fifty-five entries into
-it in this run, each by finding the heading above and writing before it, and had
-never looked at the result as a whole.
-
-**Four pairs contradict their own order.** One is mine:
-
-```
-11:50  phase208
-11:35  phase207
-11:10  phase206
-11:20  phase205   ← after 206 in the file, stamped later than it
-10:40  phase204
-```
-
-phase205 came before phase206 and carried a timestamp after it. Its true time is
-between 10:40 and 11:10; I had written 11:20. Corrected to 10:55 — **not the
-invention of a fact, but the removal of a contradiction from a stamp I had
-approximated in the first place.**
-
-### The other three are left alone
-
-2026-09-06, -05 and -04, all from earlier sessions. The timestamps here are
-written by hand and the true times were never recorded anywhere, so "fixing"
-them would mean **inventing three numbers to satisfy a test** — which is the
-exact thing phases 243 through 245 were spent removing. Flagged, not touched.
-
-So the check is scoped to entries from 2026-09-08. It cannot repair history; it
-can stop it happening again.
-
-### A diagnosis worth keeping
-
-My first instinct was that the file was mis-ordered. It is not: in all four
-pairs the **phase order is right and the timestamp contradicts it**. The stamps
-are the unreliable part, not the sequence — which is also why ordering by phase
-number is not the fix, since 5 *different* pairs run backwards by phase (a `.5`
-follow-up is written after the phase that supersedes it, quite correctly).
-
-**Verified**: putting the bad stamp back fails with the entry named and both
-timestamps quoted. typecheck clean, lint clean, 666 mobile + **1169 web tests**
-(+3).
-
-**Learnings**: fifty-five correct edits produced one incorrect file. That is the
-third time in four phases, and the pattern is exact — **the defect is never in
-an edit, it is in the absence of anything that looks at the whole afterwards.**
-
-## 2026-09-09 11:05 UTC — phase250: making the check a step
-
-**Objective**: phase249 ended on *knowing the failure mode does not prevent it;
-only re-reading does — the check has to be a step, not a belief*. That is a
-thing to build, not a thing to remember.
-
-RELEASE.md's rules in CLAUDE.md §2.2 are mostly mechanical, and I have broken
-two of them by hand and fixed them by hand twice:
-
-```
-v<major>.<minor>, no patch numbers
-each day appears once per version
-days newest first
-no code, file, module or SHA names — Vivian reads this
-```
-
-Five tests, one per rule. Each **verified by breaking the file in exactly the
-way the rule exists to catch**, under an assertion that the mutation applied —
-because phase245 is where I learned a `sed` that silently matches nothing
-reports success:
-
-```
-two blocks with the same date   → 1 failure
-days out of order               → 1 failure
-a patch version number          → 1 failure
-a file name in the prose        → 1 failure
-a phase reference               → 1 failure
-```
-
-### What it deliberately cannot do
-
-It cannot check that the prose is **true**, or that a shipped change was written
-down at all. Those need a person, and pretending otherwise would be the same
-overreach as a fallback that looks like success. What it checks is the
-mechanical part — which is the part that actually drifted, twice, while each
-individual edit was correct.
-
-**Verified**: RELEASE.md itself unmodified (`git diff --stat` empty for it);
-typecheck clean, lint clean, 666 mobile + **1166 web tests** (+5).
-
-**Learnings**: three phases in a row now have ended by finding drift in a
-document I had already fixed. The difference between this one and those is that
-this one cannot recur silently — which is the only kind of fix that survives me
-learning the lesson and then forgetting to apply it.
-
-## 2026-09-09 10:35 UTC — phase249: I re-broke the file I fixed two days' work ago
-
-**Objective**: phase248 ended on *a summary is cheap to amend and expensive to
-re-read*. The obvious place to test that is the file where I had already found
-it — RELEASE.md, consolidated in phase227 and appended to five times since.
-
-**Same failure, one day later.**
-
-### Everything from today was filed under yesterday
-
-phase227 consolidated `### 2026-09-08`. Every RELEASE bullet since — the tax
-omission, the water-only note, flat rubbish, the water survey, DeKalb's own
-sheet — comes from work the DEVLOG dates **2026-09-09**, and every one of them
-went under the 09-08 heading because that is the heading that was there.
-
-A dated changelog whose dates are wrong is worse than an undated one: the dates
-are the only thing a reader cannot check.
-
-Split into `### 2026-09-09` (5 items) above `### 2026-09-08` (7), newest first
-per CLAUDE.md §2.1.
-
-### And one story told twice
-
-*"Water bills are real numbers in 28 counties"* and *"DeKalb's water bill is now
-a real figure"* are the same story — DeKalb being sourced from its own sheet is
-a detail of the survey story, not a second announcement. Merged into one
-paragraph that says both halves once.
-
-**Verified** mechanically: all 12 user-visible items still present, each under
-the date its work actually happened, nothing misfiled across the boundary, and
-no code or file names — 5 of 5 on the 9th, 7 of 7 on the 8th.
-
-typecheck clean, lint clean, 666 mobile + 1161 web tests.
-
-**Learnings**: I fixed this file, drew the lesson, wrote it in the DEVLOG — and
-then appended to it five times without re-reading it, because each append was
-individually correct. **Knowing the failure mode does not prevent it; only
-re-reading does.** The check has to be a step, not a belief.
 
 ## 2026-09-09 10:05 UTC — phase248: the handoff had drifted the same way twice
 
@@ -6612,6 +6612,15 @@ boundary break that `tsc` and vitest both waved through.
   pair is done, but `CommunityNearbyTable`/`ListingNearbyTable` (~35% shared)
   and `HomeTourSection`/`CommunityTourSection` remain.
 
+## 2026-09-06 17:30 UTC — phase181.8: Vercel build broken — client island imported the server Supabase module
+
+**Objective**: main stopped deploying at `a1f6125`: `lib/supabase/server.ts` "You're importing a component that needs next/headers", trace `lib/supabase/server.ts ← lib/communities/detail.ts ← CommunityBody.tsx`.
+**Issues/Resolution**: phase181.1 (`359d6f24`) put `dedupeLabels` in `lib/communities/detail.ts`, which imports `createAnonClient` from `lib/supabase/server.ts`; `CommunityBody.tsx` is `'use client'`. tsc/vitest don't enforce the boundary; only `next build` does.
+**Actions**: new `apps/web/lib/communities/labels.ts` holds `dedupeLabels` verbatim (note on why it has its own file); `detail.ts`, `CommunityBody.tsx`, `detail.test.ts` import from there; re-export removed.
+**Verification**: `pnpm typecheck` 0 errors; changed files biome-clean (2 pre-existing errors untouched); 874/874 vitest; **`pnpm build` compiles** — the command that failed on Vercel.
+**Learnings**: a `'use client'` file must never import from a module touching `lib/supabase/server.ts`, even for a pure function or type; shared client-safe helpers get their own file. (181.8 because a parallel agent's 181.7 merged first.)
+**Next steps**: none — merge to main redeploys.
+
 ## 2026-09-06 11:06 UTC — phase182.1: the wordmark returns; the count closes every header line
 
 **Objective**: owner: 「Being the Percho title back and second line is area and city and communities count」.
@@ -6634,15 +6643,6 @@ boundary break that `tsc` and vitest both waved through.
 **Decisions**: most homes show metro › city only — `listings.community_id` is almost entirely unpopulated (`apps/web/lib/feed/listing-gate.ts`); real segments or none, so the backfill surfaces the community with no client change. Stats ride only the scope line: on a three-deep chain `adjustsFontSizeToFit` would scale the line below legibility.
 **Verification**: `tsc --noEmit` clean; vitest 53 files / **555 tests** (557 − 5 jump − 3 strip-layout + 6 place-trail); `biome check .` 0 errors / 8 warnings.
 **Next steps**: owner reviews on device; stats beside short chains is one conditional in `PlaceHeader`.
-
-## 2026-09-06 17:30 UTC — phase181.8: Vercel build broken — client island imported the server Supabase module
-
-**Objective**: main stopped deploying at `a1f6125`: `lib/supabase/server.ts` "You're importing a component that needs next/headers", trace `lib/supabase/server.ts ← lib/communities/detail.ts ← CommunityBody.tsx`.
-**Issues/Resolution**: phase181.1 (`359d6f24`) put `dedupeLabels` in `lib/communities/detail.ts`, which imports `createAnonClient` from `lib/supabase/server.ts`; `CommunityBody.tsx` is `'use client'`. tsc/vitest don't enforce the boundary; only `next build` does.
-**Actions**: new `apps/web/lib/communities/labels.ts` holds `dedupeLabels` verbatim (note on why it has its own file); `detail.ts`, `CommunityBody.tsx`, `detail.test.ts` import from there; re-export removed.
-**Verification**: `pnpm typecheck` 0 errors; changed files biome-clean (2 pre-existing errors untouched); 874/874 vitest; **`pnpm build` compiles** — the command that failed on Vercel.
-**Learnings**: a `'use client'` file must never import from a module touching `lib/supabase/server.ts`, even for a pure function or type; shared client-safe helpers get their own file. (181.8 because a parallel agent's 181.7 merged first.)
-**Next steps**: none — merge to main redeploys.
 
 ## 2026-09-06 08:40 UTC — phase181.7: the metro gets the city's size; the spacing comes out of the hole
 
@@ -6717,33 +6717,6 @@ boundary break that `tsc` and vitest both waved through.
 **Verification**: `tsc --noEmit` clean in both apps; mobile vitest 52 files / 548 tests; web `detail.test.ts` 12 tests; `biome check .` web 2 errors / 185 warnings, byte-identical to `git archive` of `origin/main`; mobile 0 errors / 8 warnings.
 **Next steps**: a DB clean-up is a one-off script over `communities.interests`, owner's go-ahead required.
 
-## 2026-09-05 11:20 UTC — phase181: the feed opens on the place — wordmark out, city + community strip in
-
-**Objective**: owner picked **R3** off `percho.co/demos/feed-header-v2` — 「remove Percho app name, starts with area-city directly」 — plus 「点击一个社区应该可以跳到那张卡片」.
-**Issues/Resolution**: R3 could not be built as drawn — `CARD_FRAME_RATIO` made the card 0.83 of the stage, so a taller header shrinks the card and keeps the hole; deleting the wordmark alone grows the gap 128pt → 172 (demo frame R1). Card sizing changed first.
-**Actions** (`apps/mobile`):
-- `theme/card-frame.ts` — `CARD_FRAME_RATIO` gone; `cardFrameHeight(stage, width) = min(stage, width / CANVAS_ASPECT)`, `CANVAS_ASPECT = 1080/1576`: 0.685 by construction instead of `GUTTER` + ratio kept in step by hand. `components/SwipeStack.tsx` uses it.
-- `components/feed/PlaceHeader.tsx` (new, replaces `ScopeCrumb.tsx`) — metro eyebrow, city as 30pt DM Serif title, stats line, strip slot; title opens the scope sheet. `SCOPE_ROOT_LABEL` / `scopeStatsLine` moved here; `ScopeSheet` imports updated.
-- `components/feed/CommunityStrip.tsx` (new) — toured communities as 56pt covers, current one ringed `redline.accent`. `lib/feed/community-strip.ts` (new) — toured only, scoped city first but nothing filtered (§1.3), de-duplicated, capped at 12.
-- `lib/feed/jump.ts` (new) — tap inserts a copy after the top card (a move from before `activeIndex` would renumber what the stack animated past); re-tap on the ringed face is a no-op returning the same deck; no verdict for the card left behind.
-- `app/(tabs)/feed.tsx` — wordmark row and styles deleted; `PlaceHeader` + `CommunityStrip` mounted; `scopedUnit` / `stripCommunities` / `topCommunityId` / `jumpTo` derived.
-- Tests: `lib/feed/jump.test.ts` (5); `theme/card-aspect.test.ts` rewritten (6) to measure the film's side crop per device and pin the SE exception; `theme/feed-chrome-layout.test.ts`: strip stays inside the header (z-index), wordmark must not return.
-**Decisions**: strip built from the POOL, not the sampled deck. Toured communities only. The serif survives the wordmark — under 「只有 Percho logo 使用 serif」 (2026-08-14) the page would have no serif anchor, so the city title takes it at 30pt (wordmark was 34).
-**Verification**: `tsc --noEmit` clean; `vitest run` 52 files / **548 tests**; `biome check .` **0 errors** / 8 warnings (same 8 as `origin/main`, which also carries 1 error this branch does not).
-**Issues**: leftover under the card is RN layout, not arithmetic — near zero on the modern lineup per the model, needs a device check. SE crop ~18% by the model; asserted, not fixed.
-**Next steps**: owner reloads Expo Go; if the strip is too much furniture, T5/R5 (learning chips instead of faces) is a component swap.
-
-## 2026-09-05 09:40 UTC — phase181: the tab bar's icons were being clipped; the band under the card gets a demo
-
-**Objective**: owner on device: (1) 「too much empty under the card, you need to consider the whole page layouts」 (2) 「icons get truncated, the heart one, why??」
-**Issues/Resolution (2)**: `TabBar.tsx` pins each glyph `<Text>` `left: 0, right: 0` in the 24pt icon box; `TAB_BAR_OPTICAL_SCALE` 1.13 makes the 1 em advance 27.1pt, wider than its line, and iOS clips the right side. Confirmed by measuring ink boxes in his 1284×2778 screenshot against `TabBarIcons.ttf` outline bounds (fontTools): heights match to 0.4pt, widths short by 0.7–1.4pt (heart −1.4) — the deficit equals the em-box overflow every time.
-**Actions**:
-- `TabBar.tsx` — glyph gets `width: fontSize` and `left: (ICON_SIZE - fontSize) / 2`, the horizontal twin of the existing `top`. `theme/tabbar-icon-font.test.ts` fails if `left: 0, right: 0` returns and asserts the em box is wider than the icon box for every glyph at any allowed scale.
-- (1) `apps/web/public/demos/feed-page-v2/` — six frames at his geometry (428×926, header 127, card 396×575, tab bar 96): A0 as-built, A1 pre-phase179 split, **A2 card fills the stage** (recommended; film loses 17% width), A2b 640pt (10%), A3 scope crumb in the band, A4 deck controls in the band, A5 96pt header. Taller frames composited (film cover-cropped, chrome at real insets), so the crop shown is real.
-**Decisions**: the card is not wrong — 396 × 575pt, aspect 0.689 vs the canvas's 0.685. phase179 (`ffacc6e0`) set `restTop = 0` because the owner called the gap above a hole, so all 128pt of slack sits below; the slack is structural (stage 693, card 575) and growing the card crops the 1080×1576 tour. `restTop` / `CARD_FRAME_RATIO` left alone pending his pick.
-**Verification**: `tsc --noEmit` clean; `vitest run` 51 files / 539 tests (was 536); `biome check .` 1 error / 8 warnings, identical to `origin/main`, none in a touched file.
-**Next steps**: owner picks a frame off `percho.co/demos/feed-page-v2`; the icon fix needs only a Metro reload.
-
 ## 2026-09-05 17:10 UTC — phase174: the community card's place label leaves the video and joins the app
 
 **Objective**: build the owner's pick (M7 on `/demos/community-label-v1`); diagnosis in the 07:40 entry.
@@ -6810,6 +6783,33 @@ boundary break that `tsc` and vitest both waved through.
 **Verification**: `pnpm typecheck` clean; `pnpm test` 528/528; biome clean on changed files. `pnpm lint` fails on `app.json` FORMAT, pre-existing since `ea2195c5`.
 **Renumber**: branched as phase174; 174–178 landed from other agents, merged as **phase179**; merge rebuilt from fresh `origin/main` each time main moved.
 **Next steps**: owner eyeballs on Metro after `git pull` (no `pnpm install` needed).
+
+## 2026-09-05 11:20 UTC — phase181: the feed opens on the place — wordmark out, city + community strip in
+
+**Objective**: owner picked **R3** off `percho.co/demos/feed-header-v2` — 「remove Percho app name, starts with area-city directly」 — plus 「点击一个社区应该可以跳到那张卡片」.
+**Issues/Resolution**: R3 could not be built as drawn — `CARD_FRAME_RATIO` made the card 0.83 of the stage, so a taller header shrinks the card and keeps the hole; deleting the wordmark alone grows the gap 128pt → 172 (demo frame R1). Card sizing changed first.
+**Actions** (`apps/mobile`):
+- `theme/card-frame.ts` — `CARD_FRAME_RATIO` gone; `cardFrameHeight(stage, width) = min(stage, width / CANVAS_ASPECT)`, `CANVAS_ASPECT = 1080/1576`: 0.685 by construction instead of `GUTTER` + ratio kept in step by hand. `components/SwipeStack.tsx` uses it.
+- `components/feed/PlaceHeader.tsx` (new, replaces `ScopeCrumb.tsx`) — metro eyebrow, city as 30pt DM Serif title, stats line, strip slot; title opens the scope sheet. `SCOPE_ROOT_LABEL` / `scopeStatsLine` moved here; `ScopeSheet` imports updated.
+- `components/feed/CommunityStrip.tsx` (new) — toured communities as 56pt covers, current one ringed `redline.accent`. `lib/feed/community-strip.ts` (new) — toured only, scoped city first but nothing filtered (§1.3), de-duplicated, capped at 12.
+- `lib/feed/jump.ts` (new) — tap inserts a copy after the top card (a move from before `activeIndex` would renumber what the stack animated past); re-tap on the ringed face is a no-op returning the same deck; no verdict for the card left behind.
+- `app/(tabs)/feed.tsx` — wordmark row and styles deleted; `PlaceHeader` + `CommunityStrip` mounted; `scopedUnit` / `stripCommunities` / `topCommunityId` / `jumpTo` derived.
+- Tests: `lib/feed/jump.test.ts` (5); `theme/card-aspect.test.ts` rewritten (6) to measure the film's side crop per device and pin the SE exception; `theme/feed-chrome-layout.test.ts`: strip stays inside the header (z-index), wordmark must not return.
+**Decisions**: strip built from the POOL, not the sampled deck. Toured communities only. The serif survives the wordmark — under 「只有 Percho logo 使用 serif」 (2026-08-14) the page would have no serif anchor, so the city title takes it at 30pt (wordmark was 34).
+**Verification**: `tsc --noEmit` clean; `vitest run` 52 files / **548 tests**; `biome check .` **0 errors** / 8 warnings (same 8 as `origin/main`, which also carries 1 error this branch does not).
+**Issues**: leftover under the card is RN layout, not arithmetic — near zero on the modern lineup per the model, needs a device check. SE crop ~18% by the model; asserted, not fixed.
+**Next steps**: owner reloads Expo Go; if the strip is too much furniture, T5/R5 (learning chips instead of faces) is a component swap.
+
+## 2026-09-05 09:40 UTC — phase181: the tab bar's icons were being clipped; the band under the card gets a demo
+
+**Objective**: owner on device: (1) 「too much empty under the card, you need to consider the whole page layouts」 (2) 「icons get truncated, the heart one, why??」
+**Issues/Resolution (2)**: `TabBar.tsx` pins each glyph `<Text>` `left: 0, right: 0` in the 24pt icon box; `TAB_BAR_OPTICAL_SCALE` 1.13 makes the 1 em advance 27.1pt, wider than its line, and iOS clips the right side. Confirmed by measuring ink boxes in his 1284×2778 screenshot against `TabBarIcons.ttf` outline bounds (fontTools): heights match to 0.4pt, widths short by 0.7–1.4pt (heart −1.4) — the deficit equals the em-box overflow every time.
+**Actions**:
+- `TabBar.tsx` — glyph gets `width: fontSize` and `left: (ICON_SIZE - fontSize) / 2`, the horizontal twin of the existing `top`. `theme/tabbar-icon-font.test.ts` fails if `left: 0, right: 0` returns and asserts the em box is wider than the icon box for every glyph at any allowed scale.
+- (1) `apps/web/public/demos/feed-page-v2/` — six frames at his geometry (428×926, header 127, card 396×575, tab bar 96): A0 as-built, A1 pre-phase179 split, **A2 card fills the stage** (recommended; film loses 17% width), A2b 640pt (10%), A3 scope crumb in the band, A4 deck controls in the band, A5 96pt header. Taller frames composited (film cover-cropped, chrome at real insets), so the crop shown is real.
+**Decisions**: the card is not wrong — 396 × 575pt, aspect 0.689 vs the canvas's 0.685. phase179 (`ffacc6e0`) set `restTop = 0` because the owner called the gap above a hole, so all 128pt of slack sits below; the slack is structural (stage 693, card 575) and growing the card crops the 1080×1576 tour. `restTop` / `CARD_FRAME_RATIO` left alone pending his pick.
+**Verification**: `tsc --noEmit` clean; `vitest run` 51 files / 539 tests (was 536); `biome check .` 1 error / 8 warnings, identical to `origin/main`, none in a touched file.
+**Next steps**: owner picks a frame off `percho.co/demos/feed-page-v2`; the icon fix needs only a Metro reload.
 
 ## 2026-09-05 08:45 UTC — phase175: the corner ships as H1 — badge-height pill, real Phosphor glyphs
 
@@ -6927,6 +6927,16 @@ boundary break that `tsc` and vitest both waved through.
 **Verification**: live RLS smoke test with a throwaway user: pending insert ✓, `approved` insert 42501 ✓, short body 23514 ✓, delete refused ✓, anon sees 0 pending / 1 after approve / 0 after author edit ✓. Mobile `tsc` clean, vitest 528; web `tsc` clean, vitest 863. Phase D production check (phase169.1) after `92950ef0`: `/api/mobile/rates` 200 (`rate30 0.0671`), `/api/mobile/search?q=duluth` 3 listings / 24 communities, listing DTO carries `rentEstimate` / `schools` / `shareUrl https://www.percho.co/v/fmls/584501905`, `/api/mobile/community/windward` 200.
 **Next steps**: Phases F, G. Owner: dimension names, the "Only people who live or have lived here" line (no proof asked), web reviews before launch?
 
+## 2026-09-04 10:20 UTC — phase168.1: verified in production; the lead email was broken since the rename
+
+**Objective**: prod verification of phase168.
+**Actions**:
+- POST `/api/mobile/events`, 2-event batch → `{accepted:2}`; re-sent → still 2 rows ((install_id, seq) dedupe works).
+- POST `/api/leads` on an external listing (agent_id null) → 201, routed to the owner's is_admin agent; `notified_at` null, `notify-lead` → `{"error":"resend_failed","status":403}`.
+- Fix, infra only: `supabase secrets set RESEND_API_KEY=<current> RESEND_FROM="Percho <notifications@percho.co>" PUBLIC_APP_URL="https://www.percho.co"`.
+**Issues/Resolution**: Edge Function secrets dated 2026-06-09 — pre-rename, before percho.co was verified in Resend (2026-07-11). Lead email broken in prod since the rename; unnoticed because nothing created leads. After fix: fresh lead `notified_at` ~20s after insert. Two "Percho Test … ignore" leads left as evidence.
+**Learnings**: verify the config half (secrets, vault) end-to-end after every identity change — "row lands, email skipped" is invisible.
+
 ## 2026-09-04 09:40 UTC — phase169: tab fixes for the store (Phase D) — cost, ROI, schools, search, compare, share, trust
 
 **Objective**: Phase D — every tab usable with real, free data, no placeholder affordances. Owner offline ("don't get blocked by my approval"); decisions flagged.
@@ -6943,16 +6953,6 @@ boundary break that `tsc` and vitest both waved through.
 **Decisions** (owner to confirm): no composite school rating or compare "winner" — state proficiency % only, `gs_rating` never shown. ZORI is an editable DEFAULT, never "this house rents for". Share uses `SITE_ORIGIN`, not request host. Areas segment kept (`AreaFace` still draws a bookmark). Trust copy and `lib/feed/persona.ts` names pending review. Additive backfills without a plan doc (6 coordinates, 15 rows enriched, 2255 inserted) — reversible.
 **Verification**: mobile `tsc` clean, biome 0 errors (8 pre-existing warnings), vitest 525; web `tsc` clean, biome 2 pre-existing errors, vitest 859. Production check — see next entry.
 **Next steps**: Phase E, F, G.
-
-## 2026-09-04 10:20 UTC — phase168.1: verified in production; the lead email was broken since the rename
-
-**Objective**: prod verification of phase168.
-**Actions**:
-- POST `/api/mobile/events`, 2-event batch → `{accepted:2}`; re-sent → still 2 rows ((install_id, seq) dedupe works).
-- POST `/api/leads` on an external listing (agent_id null) → 201, routed to the owner's is_admin agent; `notified_at` null, `notify-lead` → `{"error":"resend_failed","status":403}`.
-- Fix, infra only: `supabase secrets set RESEND_API_KEY=<current> RESEND_FROM="Percho <notifications@percho.co>" PUBLIC_APP_URL="https://www.percho.co"`.
-**Issues/Resolution**: Edge Function secrets dated 2026-06-09 — pre-rename, before percho.co was verified in Resend (2026-07-11). Lead email broken in prod since the rename; unnoticed because nothing created leads. After fix: fresh lead `notified_at` ~20s after insert. Two "Percho Test … ignore" leads left as evidence.
-**Learnings**: verify the config half (secrets, vault) end-to-end after every identity change — "row lands, email skipped" is invisible.
 
 ## 2026-09-04 09:40 UTC — phase168: the tour CTA becomes a lead; telemetry stops being thrown away (Phase C)
 
