@@ -25,6 +25,7 @@ import type {
 	ScoreDimension,
 	ScoreDimensionKey,
 } from "./card-types";
+import { TRADEOFFS } from "./content";
 import type { FeedPool } from "./generate-feed";
 import type { GeoLevel, GeoStats, GeoUnit } from "./geo-unit";
 import { GEO_LEVELS } from "./geo-unit";
@@ -397,22 +398,57 @@ export interface ParsedPoolPage {
  * missing map is not an error — it means no listing in the page had a tagged
  * photo, and the trade-off card draws its unlit doors.
  */
+function doorPhotoList(entries: unknown): DoorPhoto[] {
+	if (!Array.isArray(entries)) return [];
+	const photos: DoorPhoto[] = [];
+	for (const entry of entries) {
+		const row = rec(entry);
+		if (row === null) continue;
+		const url = str(row.url);
+		if (url === undefined) continue;
+		const caption = str(row.caption);
+		const listingId = str(row.listingId);
+		photos.push({
+			url,
+			...(caption === undefined ? {} : { caption }),
+			...(listingId === undefined ? {} : { listingId }),
+		});
+	}
+	return photos;
+}
+
 function dimPhotos(v: unknown): Record<string, DoorPhoto[]> {
 	const raw = rec(v);
 	if (raw === null) return {};
 	const out: Record<string, DoorPhoto[]> = {};
 	for (const key of Object.keys(DIMS)) {
-		const entries = raw[key];
-		if (!Array.isArray(entries)) continue;
-		const photos: DoorPhoto[] = [];
-		for (const entry of entries) {
-			const row = rec(entry);
-			if (row === null) continue;
-			const url = str(row.url);
-			if (url === undefined) continue;
-			const caption = str(row.caption);
-			photos.push({ url, ...(caption === undefined ? {} : { caption }) });
-		}
+		const photos = doorPhotoList(raw[key]);
+		if (photos.length > 0) out[key] = photos;
+	}
+	return out;
+}
+
+/**
+ * The server's per-ROOM photos (`pickRoomPhotos`), for the questions that name
+ * a room rather than a lifestyle dim.
+ *
+ * The accepted keys are derived from the question bank itself, so the strictness
+ * rule above still holds — a room no question asks for never reaches the engine
+ * — and adding a room to a side in `content.ts` needs no edit here.
+ */
+const ASKED_ROOMS: ReadonlySet<string> = new Set(
+	TRADEOFFS.flatMap((card) => [
+		...(card.left.rooms ?? []),
+		...(card.right.rooms ?? []),
+	]),
+);
+
+function roomPhotos(v: unknown): Record<string, DoorPhoto[]> {
+	const raw = rec(v);
+	if (raw === null) return {};
+	const out: Record<string, DoorPhoto[]> = {};
+	for (const key of ASKED_ROOMS) {
+		const photos = doorPhotoList(raw[key]);
 		if (photos.length > 0) out[key] = photos;
 	}
 	return out;
@@ -426,7 +462,13 @@ export function parsePoolResponse(body: unknown): ParsedPoolPage {
 	// it as done so the §1.9 terminal card takes over instead.
 	if (pool === null) {
 		return {
-			pool: { geoUnits: [], listings: [], communities: [], dimPhotos: {} },
+			pool: {
+				geoUnits: [],
+				listings: [],
+				communities: [],
+				dimPhotos: {},
+				roomPhotos: {},
+			},
 			done: true,
 		};
 	}
@@ -448,6 +490,7 @@ export function parsePoolResponse(body: unknown): ParsedPoolPage {
 				.map(parseCommunity)
 				.filter((c): c is CommunityCardV3 => c !== null),
 			dimPhotos: dimPhotos(pool.dimPhotos),
+			roomPhotos: roomPhotos(pool.roomPhotos),
 		},
 		done: raw?.done === true,
 	};

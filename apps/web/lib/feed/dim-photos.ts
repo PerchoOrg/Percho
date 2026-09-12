@@ -82,6 +82,14 @@ export interface DimPhoto {
   url: string;
   /** The tagger's factual sentence. Absent when it wrote none. */
   caption?: string;
+  /**
+   * Which home the frame came from.
+   *
+   * The client needs it to honour a side's `match`: "Newer build" may only show
+   * rooms from homes built since 2005, and without the id it cannot tell. Also
+   * what keeps the two doors from drawing the same house twice.
+   */
+  listingId?: string;
 }
 
 /**
@@ -177,11 +185,106 @@ export function pickDimPhotos(
       const caption = usableCaption(entry.tags.caption);
       picks.push({
         url: photoRenderUrl(preferredPhotoPath(entry.row), PLATE),
+        listingId: entry.row.listing_id,
         ...(caption === undefined ? {} : { caption }),
       });
     }
 
     if (picks.length > 0) out[dim] = picks;
+  }
+
+  return out;
+}
+
+/**
+ * ── The same idea, keyed by ROOM instead of by dimension ────────────────────
+ *
+ * Owner, 2026-09-12: 「If no real rooms, can we show some pictures instead the
+ * empty card?」 Six of the eleven lifestyle dims have a room above; the other 26
+ * questions in the trade-off bank carry no dim at all — they ask about a
+ * measurable property of the house ("A home office / A guest room", "Finished
+ * basement / Bigger main floor") — so both their doors drew the unlit field.
+ *
+ * But most of those labels NAME A ROOM. "A home office" is depicted by an
+ * `office` photo exactly as honestly as `move_in` is depicted by a kitchen; the
+ * only thing missing was a way for the question to say so. So this publishes
+ * the pool's best photo per room type and `content.ts` names the rooms each
+ * side wants. The dimension path above is untouched.
+ *
+ * The rule from the header still holds and is the reason this is a per-question
+ * list rather than a default: a room is published for a side only when the
+ * photograph DEPICTS the choice. "Nothing to mow", "Lower monthly", "Just
+ * listed" get no room and keep the unlit field, because no photograph settles
+ * them and an arbitrary one is worse than none.
+ *
+ * ── Why more than three ─────────────────────────────────────────────────────
+ *
+ * A door with a `match` ("Newer build" = built 2005 or later) may only draw
+ * homes that satisfy it, and the client does that filtering — it holds the
+ * medians the match is measured against. A match typically keeps about half the
+ * pool, so three candidates would routinely filter down to one plate. Six
+ * leaves three standing.
+ */
+const ROOM_PICKS = 6;
+
+/**
+ * The rooms the trade-off bank actually asks for (`side.rooms` in
+ * `apps/mobile/lib/feed/content.ts`).
+ *
+ * An explicit list, not "every room the tagger emits": publishing `hallway`,
+ * `closet`-for-nobody and `floorplan` would put ~40 unused URLs on every feed
+ * response. When a question names a new room, add it here.
+ */
+const TRADEOFF_ROOMS = [
+  'kitchen',
+  'living',
+  'dining',
+  'bedroom',
+  'office',
+  'basement',
+  'garage',
+  'backyard',
+  'pool',
+  'closet',
+] as const;
+
+/**
+ * The pool's best photos per room type, one per listing.
+ *
+ * Same ranking as above minus the dim term, which does not apply: there is no
+ * claim to prefer, so the tagger's own opinion of the frame decides.
+ */
+export function pickRoomPhotos(photos: readonly TaggedPhotoRow[]): Record<string, DimPhoto[]> {
+  const out: Record<string, DimPhoto[]> = {};
+
+  for (const room of TRADEOFF_ROOMS) {
+    const ranked: { score: number; row: TaggedPhotoRow; tags: Tags }[] = [];
+
+    for (const row of photos) {
+      const tags = readTags(row.ai_tags);
+      if (tags === null) continue;
+      if (tags.usable === false) continue;
+      if (tags.room_type?.trim().toLowerCase() !== room) continue;
+      ranked.push({ score: tags.hero_score ?? tags.quality ?? 0, row, tags });
+    }
+
+    ranked.sort((a, b) => b.score - a.score);
+
+    const seenListings = new Set<string>();
+    const picks: DimPhoto[] = [];
+    for (const entry of ranked) {
+      if (picks.length === ROOM_PICKS) break;
+      if (seenListings.has(entry.row.listing_id)) continue;
+      seenListings.add(entry.row.listing_id);
+      const caption = usableCaption(entry.tags.caption);
+      picks.push({
+        url: photoRenderUrl(preferredPhotoPath(entry.row), PLATE),
+        listingId: entry.row.listing_id,
+        ...(caption === undefined ? {} : { caption }),
+      });
+    }
+
+    if (picks.length > 0) out[room] = picks;
   }
 
   return out;

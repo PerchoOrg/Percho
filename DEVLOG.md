@@ -21,6 +21,81 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-12 23:35 UTC — phase279: the market line comes off the trade-off, and a door can name its own room
+
+**Objective**: owner, two asks on the trade-off card. (1) 「remove the 6homes
+median price stuff, no need to show that, just asking preference」. (2) 「If no
+real rooms, can we show some pictures instead the empty card?」
+
+**Actions**:
+
+*The market line.* `TradeoffFace.tsx` drops the `homes · median` row and its
+`showMeta` plumbing; `generate-feed.ts` loses `priceLabel`, `MEDIAN_FLOOR` and
+the `medianLabel` half of `statsForSide` (now `homesOnSide`, with the
+side-membership test split out as `onSide`). `homes` SURVIVES as ranking input
+— `grounding()` orders the 32-question bank by how much of it this pool can
+act on — but is never rendered; the field comment says so. `medianLabel` is
+gone from `card-types.ts`.
+
+*Pictures for the doors that had none.* Three changes, one mechanism each:
+
+- `apps/web/lib/feed/dim-photos.ts` — new `pickRoomPhotos`, the same picker
+  keyed by ROOM TYPE instead of by dim, over an explicit 10-room list
+  (`TRADEOFF_ROOMS`). Six per room, not three, because a side with a `match`
+  filters them client-side and three would routinely leave one plate. Both
+  pickers now stamp `listingId` on each photo.
+- `route.ts` — the IIFE that already reads every tagged photo for the page now
+  returns `{ dims, rooms }` from that same query and publishes `roomPhotos`.
+  NO new database round trip.
+- `content.ts` — a side may declare `rooms`, and 22 of the 64 sides now do.
+  `generate-feed.ts`'s new `roomPhotosForSide` resolves them, filtered by the
+  side's own `match` and deduped one-frame-per-home.
+- `generate-feed.ts` — `placePhotoForDim` → `placePhotosForDim`: a PLACE dim
+  now takes up to three community posters from three different neighbourhoods
+  instead of exactly one. That alone was why every place-against-room question
+  levelled to 1-and-1.
+
+**Decisions**:
+- The bar for a room is that the photograph DEPICTS THE CHOICE, so the list is
+  hand-written per question, not derived. Twelve questions deliberately get
+  nothing and keep the unlit field: no frame depicts an absence ("Nothing to
+  mow", "No pool to look after"), a laundry photo does not say which floor it
+  is on, the tagger emits a room type and not a storey/wall/fence count
+  ("One level / Two stories", "Open / Rooms with doors", "Fenced / Open
+  views"), and time and money are not photographable at all ("Just listed",
+  "Lower monthly"). Reasoning recorded in the `content.ts` header.
+- A `match` that rules out every candidate leaves the door UNLIT — there is no
+  fallback to the unfiltered room, because the unfiltered photo is the wrong
+  photo. A 1974 kitchen under "Newer build" is a lie the buyer would act on.
+- The `dim` path is untouched and is NOT match-filtered: it is already
+  room-matched and claim-ranked, and filtering it would have thinned doors
+  that light correctly today for no gain the buyer can see.
+- Removed a pre-existing exact duplicate `interface DoorPhoto` in
+  `card-types.ts` (declaration merging had hidden it). Mine to clean up only
+  because this change adds a field to it.
+
+**Verification** — measured, not assumed. Rebuilt the pool the deployed server
+will send (live stage-4 feed + room tags reconstructed from
+`/api/mobile/listing/:id`) and ran the real `generateFeed` over all 32
+questions:
+- **both doors lit: 3 → 15.** One door: 5. Unlit: 12 (the list above).
+- Every lit pair is symmetric — 3-3 or 2-2, never 3-1. `office` and `garage`
+  are photographed by only 2 of the 18 homes, which is what makes those cards
+  2-2; that is the honest number, not a bug.
+- Match filter verified on real years: "Newer build" drew 2026/2023/2022,
+  "Older character" drew 1994/1988/1993.
+- Room coverage over the live 18-listing pool: living/kitchen/bedroom/dining/
+  backyard 6 each (capped), pool 5, basement 3, closet 3, office 2, garage 2.
+- `tsc --noEmit` clean in both apps, biome clean on every touched file, 774
+  mobile tests (6 new) and 1185 web tests (5 new) pass.
+
+**Learnings**: the response grows by ~19 KB of room photos on a ~117 KB feed
+page. Worth watching if the room list grows — `TRADEOFF_ROOMS` is the knob.
+
+**Next steps**: owner review on the phone. If the 12 unlit questions still read
+as broken rather than as designed, the honest options are to cut them from the
+bank or to re-run the vision tagger for the thin rooms (`office`, `garage`,
+`basement`, `closet`) — NOT to give them an arbitrary picture.
 ## 2026-09-12 23:30 UTC — phase277.5: the content scan, and the cover gate returns as a content gate
 
 **Objective**: owner — "No need to show communities just with a name, can

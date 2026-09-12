@@ -29,6 +29,21 @@ being hidden or guessed at — you can see the school is there, and that we don'
 have its number.
 
 ### 2026-09-12
+- **The this-or-that cards show real photos on far more questions.** Questions
+  like "A home office or a guest room", "Finished basement or bigger main
+  floor" and "Newer build or older character" used to be words on a plain
+  background. They now show actual photos from homes in your feed — and when
+  the question is about the age, size or price of a home, the photos only come
+  from homes that genuinely fit that side, so "Newer build" never shows you a
+  1970s kitchen. Five times as many questions are illustrated as before.
+  Questions about timing and monthly cost stay text-only on purpose: no
+  photograph can honestly show "just listed" or "lower monthly".
+- **Neighborhood questions show three neighborhoods, not one.** A side like
+  "Walk to everything" used to rest on a single neighborhood's photo, which
+  made it a question about that one place. It now shows three.
+- **The home count and median price are gone from the this-or-that cards.**
+  They were answering a question nobody asked — these cards are about what you
+  want, not about what happens to be for sale at that price.
 - The map only shows communities that have something to say. Nearly two
   thirds of the communities in the database are just a name and a location —
   no photo, no residents' voices, no figures — and their dots were cluttering
@@ -45,10 +60,9 @@ have its number.
   the community's name sitting under the dot once you're zoomed in close
   enough to read it.
 - **The trade-off card's two sides line up now.** The photos, the choice
-  names, the captions, and the home counts sit at the same height on both
-  sides of the split, so the card reads as one question again instead of two
-  mismatched halves — even when one side's name is longer or only one side
-  has a home count to show.
+  names and the captions sit at the same height on both sides of the split,
+  so the card reads as one question again instead of two mismatched halves —
+  even when one side's name is longer than the other's.
 - **Communities are dots on the map now.** Zooming into a city used to show a
   patchwork of green outlines — every neighborhood a different shape, and
   many showing nothing at all because we don't have a boundary for every

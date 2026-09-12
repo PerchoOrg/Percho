@@ -54,6 +54,12 @@ export interface FeedPool {
 	 * card draws unlit doors.
 	 */
 	dimPhotos?: Readonly<Record<string, readonly DoorPhoto[]>>;
+	/**
+	 * The same detail photos keyed by ROOM TYPE (`pickRoomPhotos`), for the
+	 * questions that name a room rather than one of the eleven dims. Up to six
+	 * per room, because a side with a `match` filters them down here.
+	 */
+	roomPhotos?: Readonly<Record<string, readonly DoorPhoto[]>>;
 }
 
 export const EMPTY_POOL: FeedPool = {
@@ -288,40 +294,45 @@ interface FillContext {
 	rotate0: number;
 }
 
+/** How many plates a door shows at most. The server's `DIM_PICKS`, client-side. */
+const DOOR_PLATES = 3;
+
 /**
- * The photograph behind one trade-off door.
+ * The photographs behind one trade-off door.
  *
  * Never a listing hero (owner 2026-08-29 — a front-elevation shot cannot say
- * "move-in ready"). Two sources, in order:
+ * "move-in ready"). Three sources, in order:
  *
  *   1. `pool.dimPhotos[dim]` — up to three INTERIOR room photos the server
  *      matched to the dimension, with the tagger's sentence for each frame.
- *   2. a COMMUNITY hero, for the dims that describe a PLACE — a tour poster is
+ *   2. COMMUNITY heroes, for the dims that describe a PLACE — a tour poster is
  *      a real photograph of the neighbourhood.
+ *   3. `pool.roomPhotos[room]` — for a side that names a room instead of a dim.
+ *      See `side.rooms` in `card-types.ts`.
  *
- * Most of the v2 bank carries no `dim` at all: "One level / Two stories" is a
- * measurable property of the house, not one of the eleven lifestyle dims. Those
- * doors stay unlit and show their label and support line, which is what the
- * owner asked for — 「if no data it is fine for now」.
+ * ── Three posters, not one (2026-09-12) ─────────────────────────────────────
+ *
+ * A place door used to take exactly ONE community poster while a room door took
+ * three, so every question pairing a place dim against a room dim levelled to
+ * one plate a side. Three posters from three different neighbourhoods make the
+ * same argument three kitchens do: the door is about WALKABLE PLACES, not about
+ * that one neighbourhood. The live pool carries 6 walkable / 8 trails / 27
+ * quiet communities with a poster, so three is reachable for every place dim
+ * the bank asks about.
  */
-function placePhotoForDim(
+function placePhotosForDim(
 	ctx: FillContext,
 	dim: DimKey,
 	taken: ReadonlySet<string>,
-): string | undefined {
+): DoorPhoto[] {
+	const out: DoorPhoto[] = [];
 	for (const row of ctx.communityRanked) {
+		if (out.length === DOOR_PLATES) break;
 		if (row.dims?.includes(dim) !== true) continue;
 		if (row.heroUrl === "" || taken.has(row.heroUrl)) continue;
-		return row.heroUrl;
+		out.push({ url: row.heroUrl });
 	}
-	return undefined;
-}
-
-/** "342000" → "$342,000". Local because this module imports nothing. */
-function priceLabel(value: number): string {
-	return `$${Math.round(value)
-		.toString()
-		.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+	return out;
 }
 
 function median(values: readonly number[]): number | undefined {
@@ -332,13 +343,6 @@ function median(values: readonly number[]): number | undefined {
 		? (s[mid] as number)
 		: ((s[mid - 1] as number) + (s[mid] as number)) / 2;
 }
-
-/**
- * Fewer than this many homes and a median is noise, not a fact about the
- * market — the card prints the count alone rather than a number it would have
- * to caveat.
- */
-const MEDIAN_FLOOR = 3;
 
 interface PoolMedians {
 	sqft?: number;
@@ -402,36 +406,87 @@ function matchesSide(
 	return match.op === "aboveMedian" ? value > threshold : value < threshold;
 }
 
+/** Is this listing on this side of the question? */
+function onSide(
+	row: ListingCardV3,
+	side: TradeoffSideV3,
+	medians: PoolMedians,
+): boolean {
+	// `match` first — it is a measured property of the house. `dim` second, for
+	// the lifestyle questions that still key off the agent's prose.
+	return side.match !== undefined
+		? matchesSide(row, side.match, medians)
+		: side.dim !== undefined
+			? row.dims?.includes(side.dim) === true
+			: false;
+}
+
 /**
- * How many homes are on this side, and what they cost.
+ * How many homes in the pool fall on this side.
  *
- * `match` first — it is a measured property of the house. `dim` second, for the
- * lifestyle questions that still key off the agent's prose. Neither means the
- * side prints no numbers, which is the honest answer while its field is still
- * missing from the mirror.
+ * NOT rendered — the card printed "18 homes · median $342,000" under each door
+ * until the owner cut it on 2026-09-12 (「no need to show that, just asking
+ * preference」). It survives as the input to `grounding`, which prefers
+ * questions this pool can actually act on.
  */
-function statsForSide(
+function homesOnSide(
 	ctx: FillContext,
 	side: TradeoffSideV3,
 	medians: PoolMedians,
-): { homes: number; medianLabel?: string } {
-	const on = (row: ListingCardV3): boolean =>
-		side.match !== undefined
-			? matchesSide(row, side.match, medians)
-			: side.dim !== undefined
-				? row.dims?.includes(side.dim) === true
-				: false;
-
-	const prices: number[] = [];
+): number {
 	let homes = 0;
 	for (const row of ctx.listingRanked) {
-		if (!on(row)) continue;
-		homes += 1;
-		if (row.price !== undefined) prices.push(row.price);
+		if (onSide(row, side, medians)) homes += 1;
 	}
-	if (prices.length < MEDIAN_FLOOR) return { homes };
-	const m = median(prices);
-	return m === undefined ? { homes } : { homes, medianLabel: priceLabel(m) };
+	return homes;
+}
+
+/**
+ * The photos for a side that names ROOMS rather than a dim.
+ *
+ * Two filters, both of them about honesty rather than looks:
+ *
+ *   · the side's own `match`, when it has one. "Newer build" is `yearBuilt >=
+ *     2005`, so it may only draw rooms from homes that satisfy it — a 1974
+ *     kitchen under that label is a lie the buyer would act on. A match that
+ *     leaves nothing standing leaves the door UNLIT: there is no fallback to
+ *     unfiltered rooms, because the unfiltered photo is the wrong photo.
+ *   · one frame per home, across the whole door. Three views of one house is
+ *     the anchoring `pickDimPhotos` was written to remove.
+ */
+function roomPhotosForSide(
+	ctx: FillContext,
+	side: TradeoffSideV3,
+	taken: ReadonlySet<string>,
+	medians: PoolMedians,
+): DoorPhoto[] {
+	const rooms = side.rooms ?? [];
+	if (rooms.length === 0) return [];
+
+	const byId = new Map(ctx.listingRanked.map((row) => [row.id, row]));
+	const qualifies = (photo: DoorPhoto): boolean => {
+		if (side.match === undefined) return true;
+		const row =
+			photo.listingId === undefined ? undefined : byId.get(photo.listingId);
+		return row !== undefined && matchesSide(row, side.match, medians);
+	};
+
+	const out: DoorPhoto[] = [];
+	const seenListings = new Set<string>();
+	// Rooms are ordered best-first, so a door exhausts its most depictive room
+	// before borrowing from the next one.
+	for (const room of rooms) {
+		for (const photo of ctx.pool.roomPhotos?.[room] ?? []) {
+			if (out.length === DOOR_PLATES) return out;
+			if (taken.has(photo.url)) continue;
+			if (photo.listingId !== undefined && seenListings.has(photo.listingId))
+				continue;
+			if (!qualifies(photo)) continue;
+			if (photo.listingId !== undefined) seenListings.add(photo.listingId);
+			out.push(photo);
+		}
+	}
+	return out;
 }
 
 /** Everything one door shows beyond its label. */
@@ -446,20 +501,18 @@ function lightSide(
 		photos = (ctx.pool.dimPhotos?.[side.dim] ?? []).filter(
 			(photo) => !taken.has(photo.url),
 		);
-		if (photos.length === 0) {
-			const place = placePhotoForDim(ctx, side.dim, taken);
-			photos = place === undefined ? [] : [{ url: place }];
-		}
+		if (photos.length === 0) photos = placePhotosForDim(ctx, side.dim, taken);
 	}
+	// A side with no dim, or a dim this pool could light neither way, falls to
+	// the rooms it names. Both are real photographs of the thing the label says.
+	if (photos.length === 0)
+		photos = roomPhotosForSide(ctx, side, taken, medians);
 
-	const stats = statsForSide(ctx, side, medians);
+	const homes = homesOnSide(ctx, side, medians);
 	return {
 		...side,
-		...(photos.length === 0 ? {} : { photos }),
-		...(stats.homes === 0 ? {} : { homes: stats.homes }),
-		...(stats.medianLabel === undefined
-			? {}
-			: { medianLabel: stats.medianLabel }),
+		...(photos.length === 0 ? {} : { photos: photos.slice(0, DOOR_PLATES) }),
+		...(homes === 0 ? {} : { homes }),
 	};
 }
 
@@ -482,8 +535,9 @@ function poolIsBare(ctx: FillContext): boolean {
  *
  * Owner, on device 2026-08-29: 「sometimes the only 1 pic on one side, but 3
  * pics on the other side, is this by design?」 — it was not, it was an artifact.
- * A side backed by room photos gets up to three; a PLACE side gets exactly one
- * community poster; and a side can lose one to the other door's dedupe. Three
+ * Every source aims at three now, but a door can still come up short: a room
+ * only two homes in the pool photographed (`office`, `garage`), a `match` that
+ * only one home satisfies, or a frame lost to the other door's dedupe. Three
  * plates against one reads as a broken card, and worse, it makes the fuller
  * side look like the recommended answer.
  *

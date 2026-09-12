@@ -35,6 +35,33 @@
  *
  * `axis` is what stops the deck asking the same thing twice: two questions that
  * share an axis are never both asked in one session (`generate-feed.ts`).
+ *
+ * ── `rooms`: what the door shows when it has no dim (2026-09-12) ────────────
+ *
+ * Owner: 「If no real rooms, can we show some pictures instead the empty
+ * card?」 Only six of the eleven dims map to a room, so 26 of these 32 questions
+ * drew two unlit fields. Most of their labels NAME a room, though — "A home
+ * office", "Finished basement", "A formal dining room" — so a side may now
+ * declare the room types that depict it and the server publishes the pool's
+ * best photo per room (`pickRoomPhotos`).
+ *
+ * The bar is unchanged and is why this is a hand-written list rather than a
+ * default: the photograph must DEPICT THE CHOICE. A side whose labels no
+ * photograph can settle gets no room and keeps the unlit field —
+ *
+ *   · "Nothing to mow", "No pool to look after" — no frame depicts an absence.
+ *   · "Upstairs by the bedrooms" / "On the main floor" — a laundry photo does
+ *     not say which floor it is on.
+ *   · "One level" / "Two stories", "Open" / "Rooms with doors", "Fenced" /
+ *     "Open views" — the tagger emits a room type, not a storey count, a wall
+ *     count or a fence. Both doors would draw the same room and settle nothing.
+ *   · "Just listed", "Lower monthly", "Move in this month" — time and money are
+ *     not photographable at all.
+ *
+ * A side that carries BOTH `rooms` and a `match` only draws homes that satisfy
+ * the match, so "Newer build" shows the kitchen of a 2015 home and never of a
+ * 1974 one. That pairing is what lights the era, size and price questions,
+ * whose labels name no room of their own.
  */
 import type { TradeoffCardV3 } from "./card-types";
 
@@ -55,12 +82,14 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 			support: "Nothing to fix yet",
 			icon: "check",
 			match: { field: "yearBuilt", op: "gte", value: 2005 },
+			rooms: ["kitchen", "living"],
 		},
 		right: {
 			label: "Older character",
 			support: "Built when they used real trim",
 			icon: "shop",
 			match: { field: "yearBuilt", op: "lte", value: 2000 },
+			rooms: ["living", "kitchen"],
 		},
 	},
 	{
@@ -129,12 +158,14 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 			support: "One more door that closes",
 			icon: "family",
 			match: { field: "beds", op: "gte", value: 4 },
+			rooms: ["bedroom"],
 		},
 		right: {
 			label: "Bigger rooms",
 			support: "The same space, fewer walls",
 			icon: "expand",
 			match: { field: "sqftPerBed", op: "aboveMedian" },
+			rooms: ["living"],
 		},
 	},
 	{
@@ -155,6 +186,7 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 			support: "An hour to clean, not three",
 			icon: "check",
 			match: { field: "sqft", op: "belowMedian" },
+			rooms: ["living"],
 		},
 	},
 	{
@@ -220,11 +252,13 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 			label: "A home office",
 			support: "A door you can shut at nine",
 			icon: "check",
+			rooms: ["office"],
 		},
 		right: {
 			label: "A guest room",
 			support: "Somewhere for people to stay",
 			icon: "family",
+			rooms: ["bedroom"],
 		},
 	},
 	{
@@ -237,11 +271,13 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 			label: "Finished basement",
 			support: "A whole floor nobody sees",
 			icon: "expand",
+			rooms: ["basement"],
 		},
 		right: {
 			label: "Bigger main floor",
 			support: "All of it on one level",
 			icon: "walk",
+			rooms: ["living"],
 		},
 	},
 	{
@@ -254,11 +290,13 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 			label: "A real garage",
 			support: "Cars, tools, everything else",
 			icon: "car",
+			rooms: ["garage"],
 		},
 		right: {
 			label: "That space as living area",
 			support: "Square footage you live in",
 			icon: "expand",
+			rooms: ["living"],
 		},
 	},
 
@@ -291,6 +329,7 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 			label: "Flat and usable",
 			support: "You can actually play on it",
 			icon: "yard",
+			rooms: ["backyard"],
 		},
 		right: {
 			label: "Wooded and private",
@@ -309,6 +348,7 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 			label: "A pool",
 			support: "Every summer, right there",
 			icon: "cup",
+			rooms: ["pool"],
 		},
 		right: {
 			label: "No pool to look after",
@@ -440,12 +480,14 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 			support: "Every extra foot costs",
 			icon: "expand",
 			match: { field: "sqft", op: "aboveMedian" },
+			rooms: ["living"],
 		},
 		right: {
 			label: "Less to pay",
 			support: "Keep the difference",
 			icon: "check",
 			match: { field: "price", op: "belowMedian" },
+			rooms: ["living", "kitchen"],
 		},
 	},
 	{
@@ -459,12 +501,14 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 			support: "The best house you can buy",
 			icon: "sparkle",
 			match: { field: "price", op: "aboveMedian" },
+			rooms: ["kitchen", "living"],
 		},
 		right: {
 			label: "Room left to make it yours",
 			support: "Money for what comes after",
 			icon: "expand",
 			match: { field: "price", op: "belowMedian" },
+			rooms: ["kitchen", "living"],
 		},
 	},
 	{
@@ -519,6 +563,7 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 			label: "A room everyone gathers in",
 			support: "Where people actually end up",
 			icon: "family",
+			rooms: ["living"],
 		},
 	},
 	{
@@ -548,11 +593,13 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 			label: "A formal dining room",
 			support: "For the nights that deserve it",
 			icon: "cup",
+			rooms: ["dining"],
 		},
 		right: {
 			label: "One big table in the open",
 			support: "Used every single day",
 			icon: "family",
+			rooms: ["living"],
 		},
 	},
 	{
@@ -565,11 +612,13 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 			label: "Storage everywhere",
 			support: "Somewhere to put all of it",
 			icon: "expand",
+			rooms: ["closet"],
 		},
 		right: {
 			label: "Clean open walls",
 			support: "Light and nothing on it",
 			icon: "sparkle",
+			rooms: ["living"],
 		},
 	},
 
