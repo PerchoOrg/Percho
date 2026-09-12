@@ -21,6 +21,59 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-12 20:05 UTC — phase278: the trade-off card's two feet mirror each other
+
+**Objective**: owner — 「Tradeoff card - left and right should be aligned,
+text and image」, plus an audit: how many cards actually get photos on both
+sides (his acceptance rule: the two sides need the SAME number of plates, not
+necessarily three).
+
+**Actions**:
+- `apps/mobile/components/cards/TradeoffFace.tsx`: every row in a door's foot
+  is now a fixed measure shared by both doors, so variable text can no longer
+  push one door's plates or label out of line with the other's. Three sources
+  of drift, three fixes: (1) the label gets a two-line `labelSlot`
+  (`justifyContent: flex-end`, `numberOfLines={2}`) it fills from the bottom,
+  so a wrapping label ("Sidewalks and a way through") and a one-liner ("A
+  cul-de-sac") share a baseline and the plates above end on the same edge;
+  (2) the support line reserves a per-CARD line count — 3 when either door
+  shows a lone plate with a tagger caption (`hasLoneCaption`), 2 otherwise —
+  as a fixed `height`, not a max; (3) the count/median row is reserved on
+  BOTH doors when either has one (`showMeta`), the numberless side holding
+  the row with a space. `LABEL_LINE` / `SUPPORT_LINE` constants now also feed
+  the two `lineHeight`s so the slot math can't drift from the type.
+
+**Audit** (bank in `content.ts`, live pool via
+`GET /api/mobile/feed?stage=4&limit=40` on production, 2026-09-12):
+- Photo-count parity was already guaranteed: `evenPlates`
+  (`generate-feed.ts`, since 2026-08-29) levels both lit doors to the thinner
+  side and leaves a 0-photo door as the designed unlit field. No code change
+  needed for the owner's rule.
+- Of the 32 questions: **3** can light BOTH doors (`to-quiet-vs-walkable`,
+  `to-culdesac-vs-sidewalks`, `to-trees-vs-new-streets`) — each pairs a
+  room-backed dim (3 interior photos live) with a place dim (1 community
+  poster), so they render 1-and-1 after levelling. **7** light one door
+  (`to-turnkey-vs-work`, `to-kitchen-vs-systems`, `to-spread-vs-upkeep`,
+  `to-yard-vs-upkeep`, `to-flat-vs-wooded`, `to-transit-vs-quiet`,
+  `to-kitchen-vs-gathering`) — 3 plates against the unlit field, by design.
+  **22** carry no dim at all (they ask about measurable properties — stories,
+  HOA, price — not lifestyle dims) and show two unlit fields.
+- Live coverage is healthy: all six room-backed dims return a full 3 photos
+  at stage 4; community heroes cover walkable×6, trails×8, quiet×27.
+
+**Decisions**: did NOT extend place doors to multiple community posters
+(walkable has 6 heroes live, which would let the 3 both-lit cards run 3-and-3
+instead of 1-and-1) — the owner's message explicitly accepts same-number over
+three-a-side. Flagged here as the obvious upgrade if he wants those cards
+fuller.
+
+**Verification**: `tsc --noEmit` clean, biome clean on the touched file,
+all 769 mobile tests pass.
+
+**Next steps**: owner review on the phone — the reserved rows cost the plates
+~30-40pt of height on the busiest cards; if a door now feels text-heavy, the
+2-line label slot is the first thing to revisit.
+
 ## 2026-09-12 10:30 UTC — phase277: communities are dots, and the boundary leaves the wire
 
 **Objective**: owner — "On Map - when going into a city, all communities have

@@ -89,6 +89,18 @@
  * which keeps the redline's one rule about the accent — green is interactive
  * state, never decoration.
  *
+ * ── The two feet mirror each other (owner, 2026-09-12) ─────────────────────
+ *
+ * 「left and right should be aligned, text and image」. The foot used to let
+ * every row take its natural height, so a label that wrapped, a longer
+ * support line, or a count row present on one side only would push that
+ * door's plates and label to a different height than its neighbour's — the
+ * two halves of one question no longer read as one card. Every row is now a
+ * FIXED measure shared by both doors: the label fills a two-line slot from
+ * the bottom, the support reserves the same line count on both sides (three
+ * only when a lone plate brings its tagger sentence, two otherwise), and the
+ * count/median row is reserved on BOTH doors whenever either has one.
+ *
  * ── The drag ────────────────────────────────────────────────────────────────
  *
  * The gesture is the deck's own swipe; this face just makes it visible. Pull
@@ -137,6 +149,11 @@ const CHECK_DISC = 20;
 /** The `or` node that rides the split. */
 const OR_NODE = 32;
 
+/** The label's line height; its slot holds two lines on every door. */
+const LABEL_LINE = 23;
+/** The support line's height; how many lines is decided per CARD, not per door. */
+const SUPPORT_LINE = 15.5;
+
 /** Past this share of the threshold the choice is committed enough to confirm. */
 const CONFIRM_AT = 0.45;
 
@@ -152,17 +169,38 @@ function glyphFor(side: TradeoffSideV3): RedlineIconName {
 	return (side.icon as RedlineIconName | undefined) ?? "walk";
 }
 
+/**
+ * Will this door print a tagger sentence? Only a lone plate does, and the
+ * tagger writes longer than any authored support — when either door has one,
+ * BOTH reserve three support lines instead of two.
+ */
+function hasLoneCaption(side: TradeoffSideV3): boolean {
+	return side.photos?.length === 1 && side.photos[0]?.caption !== undefined;
+}
+
 interface DoorProps {
 	side: TradeoffSideV3;
 	/** Which unlit field this door wears when it has no photograph. */
 	tone: "tradeoff" | "tradeoffAlt";
+	/** How many support lines BOTH doors reserve — see the header on mirroring. */
+	supportLines: number;
+	/** Whether the count/median row is reserved on both doors. */
+	showMeta: boolean;
 	/** Veil (the discarded door) and check (the chosen one), driven by the drag. */
 	veilStyle: AnimatedStyle<ViewStyle>;
 	checkStyle: AnimatedStyle<ViewStyle>;
 	greenStyle: AnimatedStyle<ViewStyle>;
 }
 
-function Door({ side, tone, veilStyle, checkStyle, greenStyle }: DoorProps) {
+function Door({
+	side,
+	tone,
+	supportLines,
+	showMeta,
+	veilStyle,
+	checkStyle,
+	greenStyle,
+}: DoorProps) {
 	const surface = cardSurfaces[tone];
 	const glyph = glyphFor(side);
 	const photos = side.photos ?? [];
@@ -257,38 +295,45 @@ function Door({ side, tone, veilStyle, checkStyle, greenStyle }: DoorProps) {
 					/>
 				)}
 
-				<View style={styles.labelRow}>
-					<Text style={styles.label}>{side.label}</Text>
-					<Animated.View style={[styles.check, checkStyle]}>
-						<RedlineIcon
-							name="check"
-							size={13}
-							color={redline.onPhoto}
-							weight="fill"
-						/>
-					</Animated.View>
+				<View style={styles.labelSlot}>
+					<View style={styles.labelRow}>
+						<Text style={styles.label} numberOfLines={2}>
+							{side.label}
+						</Text>
+						<Animated.View style={[styles.check, checkStyle]}>
+							<RedlineIcon
+								name="check"
+								size={13}
+								color={redline.onPhoto}
+								weight="fill"
+							/>
+						</Animated.View>
+					</View>
 				</View>
 
-				{/*
-				 * One photo → its own sentence. Three → the plates already say
-				 * "kitchens" and a single caption would be claiming to describe
-				 * all three. No photo → the authored support line.
-				 */}
 				{/*
 				 * One photo → its own tagger sentence. Three → the plates already
 				 * say "kitchens" and a single caption would claim to describe all
 				 * three. No photo → the authored support line, which is the whole
 				 * of what an ungrounded question has to offer.
 				 */}
-				<Text style={styles.support} numberOfLines={3}>
+				<Text
+					style={[styles.support, { height: supportLines * SUPPORT_LINE }]}
+					numberOfLines={supportLines}
+				>
 					{caption ?? side.support}
 				</Text>
-				{side.homes !== undefined && (
+				{/* A side without numbers still holds the row, so the neighbour's
+				    count never pushes its own rows out of line. */}
+				{showMeta && (
 					<Text style={styles.meta}>
-						{side.homes} {side.homes === 1 ? "home" : "homes"}
-						{side.medianLabel === undefined
-							? ""
-							: ` · median ${side.medianLabel}`}
+						{side.homes === undefined
+							? " "
+							: `${side.homes} ${side.homes === 1 ? "home" : "homes"}${
+									side.medianLabel === undefined
+										? ""
+										: ` · median ${side.medianLabel}`
+								}`}
 					</Text>
 				)}
 			</View>
@@ -304,6 +349,12 @@ interface TradeoffFaceProps {
 
 export function TradeoffFace({ card, tx, cardWidth }: TradeoffFaceProps) {
 	const span = cardWidth * SWIPE_THRESHOLD_RATIO;
+
+	/** Shared measures, so the two feet mirror — see the header. */
+	const supportLines =
+		hasLoneCaption(card.left) || hasLoneCaption(card.right) ? 3 : 2;
+	const showMeta =
+		card.left.homes !== undefined || card.right.homes !== undefined;
 
 	/**
 	 * The split, as a share of the card. Drag LEFT (negative `tx`) opens the
@@ -385,6 +436,8 @@ export function TradeoffFace({ card, tx, cardWidth }: TradeoffFaceProps) {
 					<Door
 						side={card.left}
 						tone="tradeoff"
+						supportLines={supportLines}
+						showMeta={showMeta}
 						veilStyle={leftVeil}
 						checkStyle={leftCheck}
 						greenStyle={leftGreen}
@@ -394,6 +447,8 @@ export function TradeoffFace({ card, tx, cardWidth }: TradeoffFaceProps) {
 					<Door
 						side={card.right}
 						tone="tradeoffAlt"
+						supportLines={supportLines}
+						showMeta={showMeta}
 						veilStyle={rightVeil}
 						checkStyle={rightCheck}
 						greenStyle={rightGreen}
@@ -495,6 +550,12 @@ const styles = StyleSheet.create({
 		borderWidth: StyleSheet.hairlineWidth * 2,
 		borderColor: "rgba(255,255,255,0.18)",
 	},
+	/**
+	 * Two label lines, on EVERY door, filled from the bottom: a one-line label
+	 * sits on the same baseline as a neighbour that wrapped, and the plates
+	 * above end on the same edge either way.
+	 */
+	labelSlot: { height: LABEL_LINE * 2, justifyContent: "flex-end" },
 	labelRow: { flexDirection: "row", alignItems: "center", gap: 8 },
 	/**
 	 * Serif 21/23 — the community name's family one step down, because two of
@@ -503,7 +564,7 @@ const styles = StyleSheet.create({
 	label: {
 		...redlineText.place,
 		fontSize: 21,
-		lineHeight: 23,
+		lineHeight: LABEL_LINE,
 		letterSpacing: -0.3,
 		color: redline.onPhoto,
 		flexShrink: 1,
@@ -521,7 +582,7 @@ const styles = StyleSheet.create({
 	support: {
 		...redlineText.subtext,
 		fontSize: 11.5,
-		lineHeight: 15.5,
+		lineHeight: SUPPORT_LINE,
 		color: "rgba(255,255,255,0.78)",
 	},
 	/**
