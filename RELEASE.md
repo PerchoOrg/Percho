@@ -39,6 +39,11 @@ size, what residents say — sits under "The basics", still ordered by what you
 said matters on the You tab.
 
 ### 2026-09-13
+- On the map, a home now shows simply as its price — no icon, just the
+  number at the spot. And zoom in close on a neighborhood and its real
+  outline appears in soft green under the dot, so you can see exactly what
+  ground it covers — and tap anywhere inside that outline to open it, not
+  just the little dot.
 - **Tighter comparisons.** Each heading's one-line explanation now sits
   beside the heading instead of under it, so you reach the actual figures
   sooner and less of the screen is small print.
