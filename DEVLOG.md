@@ -21,6 +21,34 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-13 05:35 UTC — phase277.9: mini marks, words only past a zoom
+
+**Objective**: owner saw phase277.8's tiles and teardrops on the phone —
+"Not good, show mini marks, no names until zoom in enough." That is the
+mockup's system F, plus a zoom rule for the words.
+
+**Actions**, all `apps/mobile/app/(tabs)/search.tsx`:
+- `CommunityTile` → `CommunityMark`: an 18px solid `pos` dot, white border,
+  in a 32px transparent tap pad. `HomePin` sheds the teardrop for a 20px
+  amber house (roof triangle overhanging a body — the overhang is what
+  makes it read "house" and not "arrow" at this size). Shared anatomy:
+  `markWrap` / `markPad` / `markLabelBox` for both layers.
+- Words zoom-gated, both layers: new `MARK_LABEL_DELTA = 0.06` — the school
+  layer's finest step, one good pinch past the drill frame (0.18) — and
+  `marksLabelled` replaces the count-in-view `communitiesLabelled` memo.
+  Home price chips now hide when zoomed out too (they were always-on).
+  Label slots stay reserved in the layout so marks don't hop at the
+  threshold.
+- Tap wiring untouched: identifier + `onMarkerPress` + `onMapPress`
+  fallback, `openCommunity` dedupe, photo-pin disclaim radii.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (same 8
+pre-existing warnings), mobile 774 pass. Web untouched. RELEASE's 09-13
+bullet rewritten for the marks that actually shipped.
+
+**Next steps**: owner re-checks on the phone; `MARK_LABEL_DELTA` is the one
+knob if the words come in too early or too late.
+
 ## 2026-09-13 04:55 UTC — phase277.8: the owner's marker pick ships — photo tiles and house pins
 
 **Objective**: owner picked off /demos/map-markers/: "Community - photo

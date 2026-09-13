@@ -29,11 +29,11 @@ being hidden or guessed at — you can see the school is there, and that we don'
 have its number.
 
 ### 2026-09-13
-- **New map markers.** Homes are now an amber pin with a little white house,
-  their full price underneath (525,000 — no more "525K"). Communities are
-  small square photo tiles with a green frame, the neighborhood's name
-  underneath as you zoom in. One size, one style, so the map reads as one
-  family of marks instead of a mix of circles.
+- **New map markers.** A home is a small amber house, a community a small
+  green dot — one quiet family of marks instead of a mix of circles and
+  photos. Zoom in close and the words appear: the community's name, and the
+  home's full price (525,000 — no more "525K"). Zoomed out, the map stays
+  clean.
 
 ### 2026-09-12
 - **The this-or-that cards show real photos on far more questions.** Questions
