@@ -21,6 +21,29 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-13 06:20 UTC — phase278: persona card is just the name
+
+**Objective**: owner on the You tab — "remove details from persona section,
+just high level one." The persona card kept the buyer-type name and dropped
+the three `insightLines` readings beneath it.
+
+**Actions**:
+- `apps/mobile/app/(tabs)/you.tsx`: persona card renders eyebrow + name only.
+  The "Swipe the feed and Percho starts learning." hint stays for the
+  zero-signal state (gated on `dims.length === 0` — same emptiness the old
+  no-lines branch expressed). Removed the `lines` memo, the `insightLines`
+  import and the orphaned `styles.lines`.
+- Deleted `apps/mobile/lib/feed/persona-lines.ts` + its test — `you.tsx` was
+  the only consumer, so the module became dead code with this change (§0.3:
+  clean up your own orphans). `git revert` brings it back if the details ever
+  return in some form.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (same 8
+pre-existing warnings), mobile 769 pass (774 − the 5 deleted persona-lines
+tests). Web untouched.
+
+**Next steps**: owner re-checks the You tab on the phone.
+
 ## 2026-09-13 05:35 UTC — phase277.9: mini marks, words only past a zoom
 
 **Objective**: owner saw phase277.8's tiles and teardrops on the phone —
