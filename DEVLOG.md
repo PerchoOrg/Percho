@@ -33,6 +33,47 @@ reworded to match.
 **Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (same 8
 pre-existing warnings), mobile 769 pass.
 
+## 2026-09-13 06:25 UTC — phase277.10: proposal — no drill levels, everything by zoom
+
+**Objective**: owner — "No need to have county and city levels in map, you
+still show boundary and names but don't zoom in that once clicked. The only
+things are community and homes and schools and other important poi's, all
+based on zoomin scale. Give me some proposal." A proposal, not an
+implementation — shipped as an interactive demo plus the decision list
+below.
+
+**Demo**: `apps/web/public/demos/map-zoom-levels/` — MapLibre with the REAL
+29 county rings (exported from `data/metro-county-shapes.json` to
+`counties.js`), placeholder communities/homes/schools, four zoom bands wired
+to real pinch: Metro (counties + lens) → City (+city names, community dots)
+→ Neighborhood (+homes) → Street (+names, prices, schools). A HUD names the
+active band and its tap targets.
+
+**The proposed model** (app terms, `latitudeDelta` cuts like
+`levelsForZoom`):
+- Counties: lines + names always (names fade past City band), lens fills
+  unchanged. Tap = info pill (figure + "Full breakdown ›"), NO re-frame.
+- Cities: NAME LABELS only — there is no city polygon in the product
+  (phase267); if he wants city boundaries too, that is the pending TIGER
+  Places import decision. Tap = nothing.
+- Communities: dots from City band, names at Street. Homes: houses from
+  Neighborhood, prices at Street. Schools: at Street always (neutral
+  colour; ramp under the Schools lens as today). POIs beyond schools have
+  NO data yet — community_pois covers 5 communities; parks/transit need a
+  source (OSM import or Places cache — §8 cost decision).
+
+**What it requires**: the viewport endpoint phase268 named — communities +
+listings by `st_intersects(bounds)`, content-gated, capped, debounced on
+`onRegionChangeComplete` — because today's map only gets communities by
+DRILLING (the search endpoint keyed on a city name). Deletes: drill state,
+`selectArea`/`select`/`goBack`, the level pill, the fit-to-drill effect.
+Search box and sheet unchanged.
+
+**Next steps**: owner reacts to the demo + decisions (county tap pill
+yes/no, TIGER city outlines yes/no, school band, POI source). Then:
+phase A = viewport RPC + route, phase B = the map rewrite, phase C =
+schools/POI band.
+
 ## 2026-09-13 06:20 UTC — phase278: persona card is just the name
 
 **Objective**: owner on the You tab — "remove details from persona section,
