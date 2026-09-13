@@ -28,13 +28,13 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CompareBlock } from "../components/compare/CompareSection";
 import { TakeCard } from "../components/compare/TakeCard";
 import { listingDetailUrl } from "../lib/api/base";
 import { splitRows } from "../lib/compare/take";
 import {
 	COMPARE_MAX,
 	COMPARE_MIN,
-	type CompareRow,
 	buildCompareTable,
 } from "../lib/listing/compare";
 import type { ListingDetailDTO } from "../lib/listing/detail-dto";
@@ -172,29 +172,20 @@ export default function CompareScreen() {
 					</View>
 
 					{table.aspects.map((a) => (
-						<View key={a.key} style={styles.aspect}>
-							<Text style={styles.aspectTitle}>{a.title}</Text>
-							{a.note && <Text style={styles.aspectNote}>{a.note}</Text>}
-							{a.rows.length === 0 && (
-								<Text style={styles.aspectEmpty}>
-									Nothing on file for these homes.
-								</Text>
-							)}
-							{a.rows.map((r) => (
-								<Row
-									key={r.label}
-									row={r}
-									ids={table.headers.map((h) => h.id)}
-								/>
-							))}
-						</View>
+						<CompareBlock
+							key={a.key}
+							title={a.title}
+							{...(a.note ? { note: a.note } : {})}
+							rows={a.rows}
+							ids={table.headers.map((h) => h.id)}
+						/>
 					))}
 
-					<View style={styles.aspect}>
-						<Text style={styles.aspectTitle}>The basics</Text>
-						{shown.map((r) => (
-							<Row key={r.label} row={r} ids={table.headers.map((h) => h.id)} />
-						))}
+					<CompareBlock
+						title="The basics"
+						rows={shown}
+						ids={table.headers.map((h) => h.id)}
+					>
 						{collapsible && (
 							<Pressable
 								style={styles.more}
@@ -208,35 +199,15 @@ export default function CompareScreen() {
 								</Text>
 							</Pressable>
 						)}
-					</View>
+					</CompareBlock>
 
 					<Text style={styles.foot}>
-						The take above is worked out from these figures and nothing else —
-						read them and feel free to disagree. The basics are ordered by what
-						you said matters on the You tab. Schools are the nearest public
-						school by distance, not an assignment.
+						Built from these figures alone — feel free to disagree. Schools are
+						the nearest by distance, not an assignment; the basics follow your
+						You-tab priorities.
 					</Text>
 				</ScrollView>
 			)}
-		</View>
-	);
-}
-
-/** One figure across the homes — label above, one equal-flex cell each. */
-function Row({ row, ids }: { row: CompareRow; ids: string[] }) {
-	return (
-		<View style={styles.rowBlock}>
-			<Text style={styles.label}>{row.label}</Text>
-			{row.note && <Text style={styles.note}>{row.note}</Text>}
-			<View style={styles.cells}>
-				{row.cells.map((c, i) => (
-					<View key={ids[i] ?? String(i)} style={styles.cell}>
-						<Text style={[styles.value, !c && styles.valueBlank]}>
-							{c ?? "—"}
-						</Text>
-					</View>
-				))}
-			</View>
 		</View>
 	);
 }
@@ -267,28 +238,8 @@ const styles = StyleSheet.create({
 	btnTxt: { ...textStyles.headline, color: colors.surface },
 	factsHead: { ...textStyles.caption, color: colors.ink3, marginBottom: 10 },
 	headerRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-	/**
-	 * The label sits ABOVE its cells rather than in a 92 pt left column — the
-	 * layout `/compare-areas` has always used, adopted here in phase272 when
-	 * COMPARE_MAX went to 5. A left column left only ~45 pt per cell at five
-	 * homes, which clips "$3,912/mo"; giving the row its full width leaves
-	 * ~65 pt. It also frees the note to run the whole width instead of
-	 * truncating the rate/down-payment disclosure into a 92 pt gutter.
-	 */
-	rowBlock: {
-		marginTop: 14,
-		paddingTop: 12,
-		borderTopWidth: StyleSheet.hairlineWidth,
-		borderTopColor: colors.border,
-	},
-	label: {
-		...textStyles.caption,
-		color: colors.ink3,
-		textTransform: "uppercase",
-		letterSpacing: 0.6,
-	},
-	note: { ...textStyles.caption, color: colors.ink3, marginTop: 1 },
-	cells: { flexDirection: "row", gap: 8, marginTop: 6 },
+	// Row/section geometry lives in `components/compare/CompareSection.tsx`
+	// since phase281 — one renderer for homes and communities.
 	cell: { flex: 1 },
 	more: { minHeight: 44, justifyContent: "center", marginTop: 12 },
 	moreTxt: { ...textStyles.footnote, fontWeight: "600", color: colors.accent },
@@ -312,25 +263,6 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 		marginTop: 1,
 	},
-	/**
-	 * An aspect section — one of the owner's four, plus "the basics". The
-	 * title wears `headline` so the four names carry the page; row labels
-	 * stay caption-sized beneath them.
-	 */
-	aspect: { marginTop: 26 },
-	aspectTitle: { ...textStyles.headline, color: colors.ink },
-	// Footnote, not caption: these can run two sentences (the safety
-	// disclaimer) and caption's uppercase tracking is unreadable at length.
-	aspectNote: {
-		...textStyles.footnote,
-		fontSize: 12,
-		color: colors.ink3,
-		marginTop: 3,
-		lineHeight: 16,
-	},
-	aspectEmpty: { ...textStyles.footnote, color: colors.ink3, marginTop: 8 },
-	value: { ...textStyles.footnote, color: colors.ink, textAlign: "center" },
-	valueBlank: { color: colors.ink3 },
 	foot: {
 		...textStyles.caption,
 		color: colors.ink3,

@@ -16,6 +16,12 @@
  * owner: results "should look like a real suggestion from a friend or
  * agent") and the table follows as the evidence. The table still ranks
  * nothing — the opinion lives in the card that is labelled as one.
+ *
+ * Since phase281 the evidence is the same four aspect sections the homes
+ * compare uses — Schools, Convenience, Safety, Potential (owner: "similar
+ * strategy needs to be applied for community comparison") — drawn by the
+ * shared `CompareBlock`, with "the basics" underneath and only those
+ * collapsing behind the toggle.
  */
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -29,6 +35,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CompareBlock } from "../components/compare/CompareSection";
 import { TakeCard } from "../components/compare/TakeCard";
 import { communityDetailUrl } from "../lib/api/base";
 import {
@@ -104,9 +111,10 @@ export default function CompareCommunitiesScreen() {
 		state.status === "ready"
 			? buildCommunityTake(state.communities, weights)
 			: null;
-	// Owner: "reduce the numbers part it is not very useful." This table ran to
-	// fourteen rows; the ordering above decides which four survive the cut.
-	const { shown, collapsible } = splitRows(table?.rows ?? [], showAll);
+	// Owner: "reduce the numbers part it is not very useful." Only the basics
+	// collapse — the four aspect sections are the point of the screen and are
+	// always whole. The ordering above decides which basics survive the cut.
+	const { shown, collapsible } = splitRows(table?.basics ?? [], showAll);
 
 	return (
 		<View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
@@ -172,48 +180,44 @@ export default function CompareCommunitiesScreen() {
 						))}
 					</View>
 
-					{shown.map((r) => (
-						<View key={r.label} style={styles.rowBlock}>
-							<Text style={styles.label}>{r.label}</Text>
-							{r.note && <Text style={styles.note}>{r.note}</Text>}
-							<View style={styles.cells}>
-								{r.cells.map((c, i) => (
-									<View
-										key={table.headers[i]?.id ?? String(i)}
-										style={styles.cell}
-									>
-										<Text style={[styles.value, !c && styles.valueBlank]}>
-											{c ?? "—"}
-										</Text>
-									</View>
-								))}
-							</View>
-						</View>
+					{table.aspects.map((a) => (
+						<CompareBlock
+							key={a.key}
+							title={a.title}
+							{...(a.note ? { note: a.note } : {})}
+							rows={a.rows}
+							ids={table.headers.map((h) => h.id)}
+						/>
 					))}
 
-					{collapsible && (
-						<Pressable
-							style={styles.more}
-							onPress={() => setShowAll((v) => !v)}
-							accessibilityRole="button"
-						>
-							<Text style={styles.moreTxt}>
-								{showAll
-									? "Show fewer"
-									: `Show all ${table.rows.length} figures`}
-							</Text>
-						</Pressable>
-					)}
+					<CompareBlock
+						title="The basics"
+						rows={shown}
+						ids={table.headers.map((h) => h.id)}
+					>
+						{collapsible && (
+							<Pressable
+								style={styles.more}
+								onPress={() => setShowAll((v) => !v)}
+								accessibilityRole="button"
+							>
+								<Text style={styles.moreTxt}>
+									{showAll
+										? "Show fewer"
+										: `Show all ${table.basics.length} figures`}
+								</Text>
+							</Pressable>
+						)}
+					</CompareBlock>
 
 					{/* The same promise the home table's foot makes, and it has to be
 					    made here too: the table ranks nothing, the take is built from
 					    these rows alone, and the counts are of the places we know
 					    about rather than of every place that exists. */}
 					<Text style={styles.foot}>
-						The take above is worked out from these figures and nothing else,
-						and they are ordered by what you said matters on the You tab.
-						Ratings are from residents whose review we have approved, and a
-						count is of the places we know about nearby, not a census.
+						Built from these figures alone. Ratings come from residents whose
+						review we approved, and a count is of the places we know about
+						nearby, not a census.
 					</Text>
 				</ScrollView>
 			)}
@@ -242,21 +246,8 @@ const styles = StyleSheet.create({
 	btnTxt: { ...textStyles.headline, color: colors.surface },
 	factsHead: { ...textStyles.caption, color: colors.ink3, marginBottom: 10 },
 	headerRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-	/** Label above its cells — see the same style in `compare.tsx` for why. */
-	rowBlock: {
-		marginTop: 14,
-		paddingTop: 12,
-		borderTopWidth: StyleSheet.hairlineWidth,
-		borderTopColor: colors.border,
-	},
-	label: {
-		...textStyles.caption,
-		color: colors.ink3,
-		textTransform: "uppercase",
-		letterSpacing: 0.6,
-	},
-	note: { ...textStyles.caption, color: colors.ink3, marginTop: 1 },
-	cells: { flexDirection: "row", gap: 8, marginTop: 6 },
+	// Row/section geometry lives in `components/compare/CompareSection.tsx`
+	// since phase281 — one renderer for homes and communities.
 	cell: { flex: 1 },
 	more: { minHeight: 44, justifyContent: "center", marginTop: 12 },
 	moreTxt: { ...textStyles.footnote, fontWeight: "600", color: colors.accent },
@@ -273,8 +264,6 @@ const styles = StyleSheet.create({
 		color: colors.ink2,
 		textAlign: "center",
 	},
-	value: { ...textStyles.footnote, color: colors.ink, textAlign: "center" },
-	valueBlank: { color: colors.ink3 },
 	foot: {
 		...textStyles.caption,
 		color: colors.ink3,
