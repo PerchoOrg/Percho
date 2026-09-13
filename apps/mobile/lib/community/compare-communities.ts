@@ -220,7 +220,7 @@ export function buildCommunityCompareTable(
 		{
 			key: "schools",
 			title: "Schools",
-			note: "schools among the community’s mapped places",
+			note: "among the places we’ve mapped nearby",
 			rows: kept([
 				{
 					label: "Nearby",
@@ -245,13 +245,13 @@ export function buildCommunityCompareTable(
 		{
 			key: "safety",
 			title: "Safety",
-			note: "not scored on purpose — no source meets our bar",
+			note: "not scored on purpose — no source we trust",
 			rows: [],
 		},
 		{
 			key: "potential",
 			title: "Potential",
-			note: "no market history — this is a stability signal, not a forecast",
+			note: "a stability signal, not a forecast",
 			rows: kept([
 				{
 					label: "Owner-occupied",
