@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Map without drill levels — everything by zoom</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="/demos/map-zoom-levels/counties.js"></script>
+<style>
+  :root {
+    --bg: #F7F5F0; --surface: #FFFFFF; --ink: #2B2116; --ink2: #8A7358;
+    --accent: #B45309; --pos: #1B7A4D; --school: #4A5D8A;
+    --glass: rgba(250,246,240,0.94);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  #map { position: absolute; inset: 0; }
+
+  .panel {
+    position: absolute; top: 12px; left: 12px; right: 12px; z-index: 10;
+    max-width: 420px; margin: 0 auto;
+    background: var(--glass); border-radius: 16px; padding: 12px 14px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.14); backdrop-filter: blur(6px);
+  }
+  .panel h1 { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .panel .sub { font-size: 11px; color: var(--ink2); margin: 2px 0 8px; }
+  .bands { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .band {
+    border-radius: 10px; padding: 6px 6px; font-size: 10.5px; line-height: 1.3;
+    color: var(--ink2); background: var(--surface); border: 1px solid rgba(43,33,22,.12);
+  }
+  .band b { display: block; font-size: 11px; color: var(--ink); }
+  .band.on { background: var(--ink); border-color: var(--ink); color: rgba(255,255,255,.75); }
+  .band.on b { color: #fff; }
+  .hint { font-size: 10.5px; color: var(--ink2); margin-top: 8px; }
+
+  .mk { display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+  .lbl {
+    margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--ink);
+    background: rgba(255,255,255,.85); border-radius: 5px; padding: 0 5px;
+    white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,.10);
+  }
+  .lbl.price { font-weight: 700; }
+  .countyName {
+    font-size: 12px; font-weight: 700; letter-spacing: .06em; color: rgba(43,33,22,.55);
+    text-transform: uppercase; pointer-events: none;
+  }
+  .cityName {
+    font-size: 12.5px; font-weight: 700; color: rgba(43,33,22,.78);
+    text-shadow: 0 1px 2px rgba(255,255,255,.8); pointer-events: none;
+  }
+  .commDot {
+    width: 18px; height: 18px; border-radius: 50%; background: var(--pos);
+    border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+  .homeMark { display: flex; flex-direction: column; align-items: center;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
+  .homeRoof { width: 0; height: 0; border-left: 10px solid transparent;
+    border-right: 10px solid transparent; border-bottom: 9px solid var(--accent); }
+  .homeBody { width: 14px; height: 9px; background: var(--accent);
+    border-radius: 0 0 2px 2px; }
+  .schoolDot {
+    width: 13px; height: 13px; border-radius: 50%; background: var(--school);
+    border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="panel">
+  <h1>No drill levels — everything by zoom</h1>
+  <div class="sub">Counties and cities are just names and lines now; nothing re-frames the map when tapped. Pinch to move through the bands.</div>
+  <div class="bands" id="bands">
+    <div class="band" data-b="0"><b>Metro</b>counties + lens</div>
+    <div class="band" data-b="1"><b>City</b>+ city names, community dots</div>
+    <div class="band" data-b="2"><b>Neighborhood</b>+ homes</div>
+    <div class="band" data-b="3"><b>Street</b>+ names, prices, schools</div>
+  </div>
+  <div class="hint" id="hint">Zoom: —</div>
+</div>
+
+<script>
+  // Band thresholds in MapLibre zoom. In the app these become latitudeDelta
+  // cuts on onRegionChangeComplete, same idea as levelsForZoom for schools.
+  const BANDS = [0, 9.8, 11.6, 13.4]; // start zoom of each band
+
+  // ── Placeholder content, deterministic ────────────────────────────────
+  function rng(seed) {
+    let s = seed;
+    return () => ((s = (s * 1103515245 + 12345) % 2147483648) / 2147483648);
+  }
+  const CITIES = [
+    { name: 'Alpharetta',    c: [-84.294, 34.075] },
+    { name: 'Roswell',       c: [-84.342, 34.023] },
+    { name: 'Johns Creek',   c: [-84.198, 34.028] },
+    { name: 'Duluth',        c: [-84.146, 34.002] },
+    { name: 'Marietta',      c: [-84.550, 33.952] },
+    { name: 'Sandy Springs', c: [-84.373, 33.930] },
+    { name: 'Decatur',       c: [-84.296, 33.774] },
+    { name: 'Smyrna',        c: [-84.514, 33.884] },
+    { name: 'Atlanta',       c: [-84.388, 33.749] },
+    { name: 'Lawrenceville', c: [-83.988, 33.956] },
+  ];
+  const NAMES = ['Windward','Avensong','Glen Abbey','Kimball Bridge','Crabapple Chase',
+    'Waters Edge','Bridgemill','Seven Oaks','Medlock Bridge','Riverstone','Hampton Hall',
+    'The Falls','Brookhaven Chase','Vinings Estates','Morningside','Sweet Bottom'];
+  const r = rng(42);
+  const COMMS = [], HOMES = [], SCHOOLS = [];
+  CITIES.forEach((city, ci) => {
+    for (let i = 0; i < 6; i++) {
+      const lng = city.c[0] + (r() - 0.5) * 0.11;
+      const lat = city.c[1] + (r() - 0.5) * 0.09;
+      COMMS.push({ lng, lat, name: NAMES[(ci * 6 + i) % NAMES.length] });
+      if (i < 3) HOMES.push({ lng: lng + (r() - 0.5) * 0.02, lat: lat + (r() - 0.5) * 0.02,
+        price: (350 + Math.round(r() * 900)).toLocaleString('en-US') + ',000' });
+      if (i < 2) SCHOOLS.push({ lng: lng + (r() - 0.5) * 0.03, lat: lat + (r() - 0.5) * 0.03,
+        name: NAMES[(ci * 2 + i) % NAMES.length] + ' Elem.' });
+    }
+  });
+
+  const map = new maplibregl.Map({
+    container: 'map',
+    style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+    center: [-84.36, 33.92],
+    zoom: 8.9,
+    attributionControl: false,
+  });
+
+  map.on('load', () => {
+    // County boundaries — always on, never tappable.
+    map.addSource('counties', { type: 'geojson', data: {
+      type: 'FeatureCollection',
+      features: window.COUNTIES.map((c) => ({
+        type: 'Feature', properties: { name: c.name },
+        geometry: { type: 'Polygon', coordinates: c.rings },
+      })),
+    }});
+    map.addLayer({ id: 'county-line', type: 'line', source: 'counties',
+      paint: { 'line-color': 'rgba(43,33,22,0.35)', 'line-width': 1 } });
+    render();
+  });
+
+  let markers = [];
+  const el = (html, cls) => {
+    const d = document.createElement('div');
+    d.className = cls || 'mk';
+    d.innerHTML = html;
+    return d;
+  };
+  const add = (lnglat, node) =>
+    markers.push(new maplibregl.Marker({ element: node }).setLngLat(lnglat).addTo(map));
+
+  function band(z) {
+    let b = 0;
+    for (let i = 1; i < BANDS.length; i++) if (z >= BANDS[i]) b = i;
+    return b;
+  }
+
+  function render() {
+    const z = map.getZoom();
+    const b = band(z);
+    document.querySelectorAll('.band').forEach((x) =>
+      x.classList.toggle('on', Number(x.dataset.b) === b));
+    document.getElementById('hint').textContent =
+      `Zoom: ${z.toFixed(1)} — tap targets: ` +
+      (b === 0 ? 'none (counties are context)' :
+       b === 1 ? 'community dots' :
+       b === 2 ? 'communities + homes' : 'communities + homes + schools');
+
+    markers.forEach((m) => m.remove());
+    markers = [];
+    // County names: metro + city bands only — beyond that they are noise.
+    if (b <= 1) for (const c of window.COUNTIES)
+      add(c.centre, el(`<div class="countyName">${c.name}</div>`));
+    if (b >= 1) for (const c of CITIES)
+      add(c.c, el(`<div class="cityName">${c.name}</div>`));
+    if (b >= 1) for (const c of COMMS)
+      add([c.lng, c.lat], el(`<div class="commDot"></div>` +
+        (b >= 3 ? `<div class="lbl">${c.name}</div>` : '')));
+    if (b >= 2) for (const h of HOMES)
+      add([h.lng, h.lat], el(
+        `<div class="homeMark"><div class="homeRoof"></div><div class="homeBody"></div></div>` +
+        (b >= 3 ? `<div class="lbl price">${h.price}</div>` : '')));
+    if (b >= 3) for (const s of SCHOOLS)
+      add([s.lng, s.lat], el(`<div class="schoolDot"></div><div class="lbl">${s.name}</div>`));
+  }
+
+  map.on('zoomend', render);
+  map.on('moveend', () => { /* viewport refetch would fire here in the app */ });
+</script>
+</body>
+</html>
