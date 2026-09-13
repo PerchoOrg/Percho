@@ -28,6 +28,13 @@ too. A school the state hasn't published a score for shows up grey rather than
 being hidden or guessed at — you can see the school is there, and that we don't
 have its number.
 
+### 2026-09-13
+- **New map markers.** Homes are now an amber pin with a little white house,
+  their full price underneath (525,000 — no more "525K"). Communities are
+  small square photo tiles with a green frame, the neighborhood's name
+  underneath as you zoom in. One size, one style, so the map reads as one
+  family of marks instead of a mix of circles.
+
 ### 2026-09-12
 - **The this-or-that cards show real photos on far more questions.** Questions
   like "A home office or a guest room", "Finished basement or bigger main

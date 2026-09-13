@@ -21,6 +21,40 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-13 04:55 UTC — phase277.8: the owner's marker pick ships — photo tiles and house pins
+
+**Objective**: owner picked off /demos/map-markers/: "Community - photo
+tiles / Home - solid pins / Similar size / Community with name. Homes with
+price, the numbers only no k, m…"
+
+**Actions**, all `apps/mobile/app/(tabs)/search.tsx`:
+- `CommunityDot` → `CommunityTile`: 36px rounded square (r11), 2.5px `pos`
+  frame, the cover photo inside — viable because the content gate
+  (phase277.5) guarantees every visible community has one; a coverless row
+  from an older wire falls back to the initial. Same identifier/onPress
+  wiring, same reserved label slot (names on when the view holds ≤24).
+- New `HomePin` replaces the listing `PhotoMarker`: 32px amber teardrop
+  (circle with one square corner, rotated 45°, white border + shadow),
+  white house glyph built from two Views (roof triangle + body — no SVG
+  dependency), full price beneath.
+- `fullPrice` replaces `compactPrice`: "525,000" — digits with separators,
+  no $, no K/M, per the owner's words; the amber house pin is what says
+  "price". No price → no chip (the shape already says home).
+- `PhotoMarker` (cities only now) loses its orphaned `label` channel and
+  the `pinLabel` styles.
+- Both chips are the same washed style, price bold — the mockup's rule.
+
+**Decisions**: "$" dropped on the literal reading of "the numbers only";
+one word back if he wants it. Tile has no corner glyph (the mockup's D had
+one to tell D-homes from D-communities; with homes as teardrops the
+silhouette already does it, and a 10px glyph without SVG would be mush).
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (same 8
+pre-existing warnings), mobile 774 pass. Web untouched.
+
+**Next steps**: owner reviews on the phone: tile size vs pin size, the
+no-$ chip, and whether community names should show at more zoom levels.
+
 ## 2026-09-13 04:35 UTC — phase277.7: marker mockup v2 — paired systems, not per-layer picks
 
 **Objective**: owner on the phase277.6 mockup — "Home and community should
