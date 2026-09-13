@@ -3,9 +3,9 @@
  *
  * ── phase276 layout (owner, 2026-09-11: "a lot of sections there and people
  *    will get confused") — eight sections became six ─────────────────────────
- *   · Persona card — always named (`lib/feed/persona.ts`), over three
- *     one-line readings of the evidence (`lib/feed/persona-lines.ts`). No
- *     "Stage X of 5": the funnel collapsed on 2026-08-15.
+ *   · Persona card — always named (`lib/feed/persona.ts`), name only (owner,
+ *     2026-09-12: "remove details from persona section, just high level").
+ *     No "Stage X of 5": the funnel collapsed on 2026-08-15.
  *   · Recent — the swipe history as a horizontal strip, verdict on the thumb
  *     and "Change my mind" under it (phase140's undo — the label is the
  *     buyer's intent, not the mechanism; owner 2026-09-11).
@@ -51,7 +51,6 @@ import { useFeedPool } from "../../hooks/use-feed-pool";
 import { familiarityFor } from "../../lib/area-familiarity";
 import { deleteAccount, signOut } from "../../lib/auth";
 import { DIM_LABELS, personaName, rankedDims } from "../../lib/feed/persona";
-import { insightLines } from "../../lib/feed/persona-lines";
 import { PRIORITIES, WEIGHT_LABELS } from "../../lib/priorities";
 import { useAuthStore } from "../../state/auth";
 import { useFeedSession } from "../../state/feed-session";
@@ -103,16 +102,6 @@ export default function YouTab() {
 		const sum = ranked.reduce((n, d) => n + d.weight, 0) || 1;
 		return ranked.map((d) => ({ ...d, share: d.weight / sum }));
 	}, [signals.dims]);
-
-	const lines = useMemo(
-		() =>
-			insightLines({
-				...(areas[0] ? { topArea: areas[0].unit.name } : {}),
-				dims: signals.dims,
-				geo: signals.geo,
-			}),
-		[areas, signals.dims, signals.geo],
-	);
 
 	const confirmReset = () => {
 		// §5.3: no bare reset without a recap of what it erases.
@@ -168,15 +157,7 @@ export default function YouTab() {
 			<View style={styles.personaCard}>
 				<Text style={styles.eyebrow}>YOUR BUYER TYPE</Text>
 				<Text style={styles.personaName}>{name}</Text>
-				{lines.length > 0 ? (
-					<View style={styles.lines}>
-						{lines.map((l) => (
-							<Text key={l} style={styles.line} numberOfLines={1}>
-								{l}
-							</Text>
-						))}
-					</View>
-				) : (
+				{dims.length === 0 && (
 					<Text style={styles.line}>
 						Swipe the feed and Percho starts learning.
 					</Text>
@@ -495,7 +476,6 @@ const styles = StyleSheet.create({
 	},
 	eyebrow: { ...textStyles.caption, color: colors.onCardDim },
 	personaName: { ...textStyles.title2, color: colors.onCard },
-	lines: { gap: 3, marginTop: 4 },
 	line: { ...textStyles.footnote, color: colors.onCardDim },
 	sectionHead: {
 		...textStyles.caption,

@@ -29,6 +29,8 @@ being hidden or guessed at — you can see the school is there, and that we don'
 have its number.
 
 ### 2026-09-13
+- **A simpler buyer-type card.** The You tab now shows just your buyer type —
+  the evidence lines beneath it are gone, so the card reads at a glance.
 - **New map markers.** A home is a small amber house, a community a small
   green dot — one quiet family of marks instead of a mix of circles and
   photos. Zoom in close and the words appear: the community's name, and the
