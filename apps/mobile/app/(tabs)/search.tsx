@@ -26,11 +26,13 @@
  *   city   (≤ 0.30)       + city name labels, community dots. Content comes
  *                         from `/api/mobile/map` — the viewport query,
  *                         re-asked when a pan/zoom settles (`useMapContent`).
- *   homes  (≤ 0.12)       + amber house marks.
- *   street (≤ 0.06)       + the words: community names, home prices (the
- *                         price REPLACES the house icon — owner: "home icon
- *                         就不需要啊 直接显示数字"), and schools, neutral
- *                         colour unless the Schools lens is on.
+ *   homes  (≤ 0.12)       + the homes, each AS its price chip — no icon
+ *                         (owner: "Don't show house shape, just the
+ *                         numbers").
+ *   street (≤ 0.06)       + community names, the communities' real boundary
+ *                         shapes (the covered area, and the tap surface),
+ *                         and schools — neutral colour unless the Schools
+ *                         lens is on.
  *
  * County and city are geography, not controls: their names are labels, a
  * city tap does nothing, a county tap only at metro zoom and only a pill.
@@ -646,11 +648,40 @@ export default function SearchTab() {
 							<Text style={styles.cityLabel}>{u.name}</Text>
 						</Marker>
 					))}
-					{/* MINI MARKS (owner, 2026-09-13): a small green dot for a
-					    community from the city band, a small amber house for a home
-					    from the homes band, and the words only past
-					    `MARK_LABEL_DELTA` — where the home's price REPLACES the
-					    house entirely ("home icon就不需要啊 直接显示数字"). A typed
+					{/* THE COVERED AREA — a community's real boundary, street zoom
+					    only, when the viewport read carried it (small bboxes do). A
+					    frame this close holds a handful of shapes, so the phase268
+					    "hundred inconsistent outlines" problem cannot recur; here
+					    the shape is the information the dot withheld (owner,
+					    2026-09-13: "Community dot doesn't tell the covered area").
+					    The polygon is ALSO the tap surface — handleMapTap fires a
+					    polygon's onPress whenever the tap lands inside it, the one
+					    delivery iOS has never dropped on us — which answers "it is
+					    not clickable after zooming in": the whole subdivision is
+					    the button now. `openCommunity`'s dedupe absorbs the marker
+					    wires firing alongside. */}
+					{marksLabelled
+						? shown?.communities.map((c) =>
+								c.boundary?.map((ring, i) => (
+									<Polygon
+										key={`cb-${c.id}-${i}`}
+										coordinates={ring.map(([lng, lat]) => ({
+											latitude: lat,
+											longitude: lng,
+										}))}
+										fillColor={withAlpha(colors.pos, 0.12)}
+										strokeColor={withAlpha(colors.pos, 0.5)}
+										strokeWidth={1}
+										tappable
+										onPress={() => openCommunity(c.slug)}
+									/>
+								)),
+							)
+						: null}
+					{/* MINI MARKS (owner, 2026-09-13): a green dot per community
+					    from the city band, and a home IS its amber price chip from
+					    the homes band ("Don't show house shape, just the numbers").
+					    Community names come on past `MARK_LABEL_DELTA`. A typed
 					    search shows its hits at any zoom: a search must show what
 					    it found. */}
 					{searching || cityBand
@@ -675,7 +706,6 @@ export default function SearchTab() {
 										coordinate={{ latitude: l.lat, longitude: l.lng }}
 										price={fullPrice(l.price)}
 										name={l.address}
-										labelled={marksLabelled}
 										onPress={() => router.push(`/listing/${l.id}`)}
 									/>
 								) : null,
@@ -1105,42 +1135,27 @@ function CommunityMark({
 	);
 }
 
+/** A home IS its price — an amber chip of digits, at every zoom the homes
+ *  band shows. The house glyph is gone (owner, 2026-09-13: "Don't show
+ *  house shape, just the numbers"); a priceless row wears a dash so it
+ *  still exists and still opens. */
 function HomePin({
 	coordinate,
 	price,
 	name,
-	labelled,
 	onPress,
 }: {
 	coordinate: LatLng;
 	price?: string;
 	name: string;
-	labelled: boolean;
 	onPress: () => void;
 }) {
 	return (
 		<Marker coordinate={coordinate} onPress={onPress}>
 			<View style={styles.markWrap} accessibilityLabel={name}>
-				{labelled && price ? (
-					// At street zoom the basemap draws the actual buildings, so the
-					// icon says nothing the ground doesn't — the PRICE is the mark
-					// (owner, 2026-09-13: "home icon就不需要啊 直接显示数字在房子上").
-					<Text style={styles.homePriceSolo} numberOfLines={1}>
-						{price}
-					</Text>
-				) : (
-					<>
-						<View style={styles.markPad}>
-							{/* A little amber house — roof triangle over a body, two
-							    plain Views, no SVG dependency. */}
-							<View style={styles.homeMark}>
-								<View style={styles.homeRoof} />
-								<View style={styles.homeBody} />
-							</View>
-						</View>
-						<View style={styles.markLabelBox} />
-					</>
-				)}
+				<Text style={styles.homePriceSolo} numberOfLines={1}>
+					{price ?? "—"}
+				</Text>
 			</View>
 		</Marker>
 	);
@@ -1226,30 +1241,9 @@ const styles = StyleSheet.create({
 		paddingVertical: 1,
 		overflow: "hidden",
 	},
-	// The house: a roof triangle over a body, both in the home amber. The
-	// roof overhangs the body a touch, which is what makes it read "house"
-	// at 20px instead of "arrow".
-	homeMark: { alignItems: "center" },
-	homeRoof: {
-		width: 0,
-		height: 0,
-		borderLeftWidth: 10,
-		borderRightWidth: 10,
-		borderBottomWidth: 9,
-		borderLeftColor: "transparent",
-		borderRightColor: "transparent",
-		borderBottomColor: colors.accent,
-	},
-	homeBody: {
-		width: 14,
-		height: 9,
-		backgroundColor: colors.accent,
-		borderBottomLeftRadius: 2,
-		borderBottomRightRadius: 2,
-	},
-	// At street zoom the price IS the home's mark — a standalone chip in the
-	// home amber, no icon (owner, 2026-09-13). Padded a step past the word
-	// chips so it is a tap target, not just a label.
+	// The price IS the home's mark — a standalone chip in the home amber,
+	// no icon (owner, 2026-09-13). Padded a step past the word chips so it
+	// is a tap target, not just a label.
 	homePriceSolo: {
 		...textStyles.caption,
 		fontSize: 12,

@@ -21,6 +21,43 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-13 20:25 UTC — phase284: the price is the home, the boundary is the button
+
+**Objective**: owner on phase282 — "Don't show house shape, just the
+numbers. Community dot doesn't tell the covered area, also it is not
+clickable after zooming in." Three items, two mechanisms.
+
+**Actions**:
+- **The house glyph is gone**: `HomePin` is the amber price chip at every
+  zoom the homes band shows, `labelled` prop and the roof/body Views with
+  it. A priceless row wears "—" so it still exists and still opens.
+- **The covered area returns, street zoom only**: `simplify-ring.ts`
+  (+12 tests) restored from git (phase277 deleted it with its last
+  caller); `mapEntities` selects and projects `boundary` ONLY when the
+  requested bbox spans ≤ `BOUNDARY_SPAN_DEG` (0.1°) — a street-band read
+  (0.06 padded ≈0.072) gets rings, a homes-band read (≈0.144) does not,
+  so the city-band payload is untouched. `SearchCommunityDTO.boundary`
+  optional again; mobile `parseBoundary` restored. At `marksLabelled` the
+  map draws each community's real shape (pos fill 0.12, stroke 0.5) under
+  its dot — a frame this close holds a handful of shapes, so phase268's
+  "hundred inconsistent outlines" cannot recur; here the shape IS the
+  information the dot withheld.
+- **"Not clickable after zooming in"**: the boundary polygon is ALSO the
+  tap surface — `tappable` + `onPress → openCommunity`. Per the
+  phase277.3 source reading, handleMapTap fires a polygon's onPress
+  whenever the tap lands inside its ring: the one delivery iOS has never
+  dropped on us. The whole subdivision is the button now; the dedupe
+  funnel absorbs the marker wires firing alongside.
+
+**Verification**: mobile typecheck/lint clean (same 8 warnings), 780
+pass; web typecheck/lint clean, 1,203 pass (simplify-ring's 12 back). The
+boundary payload needs this main's Vercel deploy.
+
+**Next steps**: owner re-checks at street zoom: shapes under the dots,
+tap anywhere inside one, homes as bare numbers. If a community without a
+boundary row still feels dead to taps, the dot + map-press radius is its
+only surface — that set is the county-GIS gap, not a wiring gap.
+
 ## 2026-09-13 20:20 UTC — phase283: a compare note sits on its title's line
 
 **Objective**: owner, with a screenshot of `/compare-communities`: "Put
