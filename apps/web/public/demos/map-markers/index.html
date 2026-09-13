@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex" />
-<title>Map marker shapes — homes &amp; communities</title>
+<title>Map marker systems — homes &amp; communities</title>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
@@ -27,117 +27,144 @@
   /* ── Control card ─────────────────────────────────────────────────── */
   .panel {
     position: absolute; top: 12px; left: 12px; right: 12px; z-index: 10;
-    max-width: 400px; margin: 0 auto;
+    max-width: 420px; margin: 0 auto;
     background: var(--glass); border-radius: 16px; padding: 12px 14px;
     box-shadow: 0 4px 18px rgba(0,0,0,.14); backdrop-filter: blur(6px);
   }
   .panel h1 { font-size: 14px; font-weight: 700; color: var(--ink); }
   .panel .sub { font-size: 11px; color: var(--ink2); margin: 2px 0 10px; }
-  .rowlabel { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--ink2); margin-bottom: 4px; }
-  .seg { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px; }
   .seg button {
-    flex: 1 1 auto; border: 1px solid rgba(43,33,22,.16); background: var(--surface);
-    color: var(--ink); border-radius: 999px; padding: 6px 10px; font-size: 12px;
-    font-weight: 600; cursor: pointer; white-space: nowrap;
+    border: 1px solid rgba(43,33,22,.16); background: var(--surface);
+    color: var(--ink); border-radius: 12px; padding: 7px 4px; font-size: 11.5px;
+    font-weight: 600; cursor: pointer; line-height: 1.25;
   }
+  .seg button small { display: block; font-weight: 400; color: var(--ink2); font-size: 10px; }
   .seg button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
-  .seg button.onA { background: var(--accent); border-color: var(--accent); color:#fff; }
-  .seg button.onP { background: var(--pos); border-color: var(--pos); color:#fff; }
-  .foot { font-size: 10.5px; color: var(--ink2); }
+  .seg button.on small { color: rgba(255,255,255,.75); }
+  .rowbtns { display: flex; gap: 6px; }
+  .rowbtns button {
+    flex: 1; border: 1px solid rgba(43,33,22,.16); background: var(--surface);
+    color: var(--ink); border-radius: 999px; padding: 6px 10px; font-size: 12px;
+    font-weight: 600; cursor: pointer;
+  }
+  .rowbtns button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .desc { font-size: 10.5px; color: var(--ink2); margin-top: 8px; }
 
-  /* ── Shared marker bits ───────────────────────────────────────────── */
+  /* ── Shared marker anatomy ────────────────────────────────────────────
+     One rule everywhere: home and community wear the SAME construction at
+     the SAME size; amber vs green (plus the glyph) is what tells them
+     apart. Chips are identical for both layers. */
   .mk { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
-  .namechip, .pricechip {
+  .chip {
     margin-top: 3px; font-size: 11px; font-weight: 600; color: var(--ink);
-    background: rgba(255,255,255,.85); border-radius: 5px; padding: 1px 5px;
-    max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    background: rgba(255,255,255,.86); border-radius: 5px; padding: 1px 6px;
+    max-width: 132px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(0,0,0,.10);
   }
-  .pricechip { border: 1.5px solid var(--accent); background: #fff; font-weight: 700; }
-  .hidden-label .namechip { display: none; }
+  .chip b { font-weight: 700; }
+  .nolabels .chip.name { display: none; }
 
-  /* ── HOMES ────────────────────────────────────────────────────────── */
-  /* H1 · House-shaped photo. Roof + walls in one silhouette; the amber
-     shell is the "border" (clip-path eats real borders), the photo is the
-     same shape inset 2.5px. */
-  .houseShell {
-    width: 46px; height: 44px; background: var(--accent);
-    clip-path: polygon(50% 0%, 100% 38%, 88% 38%, 88% 100%, 12% 100%, 12% 38%, 0% 38%);
-    display: flex; align-items: flex-end; justify-content: center;
-    filter: drop-shadow(0 2px 3px rgba(0,0,0,.3));
-  }
-  .houseShell img {
-    width: 41px; height: 39.5px; object-fit: cover;
-    clip-path: polygon(50% 0%, 100% 38%, 88% 38%, 88% 100%, 12% 100%, 12% 38%, 0% 38%);
-  }
-  /* H2 · House-glyph badge: white disc, amber house icon, pointer tip. */
+  /* A · Glyph badges — white disc, coloured ring + glyph, tail. */
   .badge {
-    width: 38px; height: 38px; border-radius: 50%; background: #fff;
-    border: 2px solid var(--accent); display: flex; align-items: center;
-    justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,.25);
-  }
-  .badge svg { width: 20px; height: 20px; fill: var(--accent); }
-  .tail {
-    width: 0; height: 0; margin-top: -1px;
-    border-left: 5px solid transparent; border-right: 5px solid transparent;
-    border-top: 7px solid var(--accent);
-  }
-  /* H3 · today's photo circle */
-  .circlePhoto {
-    width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent);
-    overflow: hidden; background: var(--surface2); box-shadow: 0 2px 4px rgba(0,0,0,.25);
-  }
-  .circlePhoto img { width: 100%; height: 100%; object-fit: cover; }
-
-  /* ── COMMUNITIES ──────────────────────────────────────────────────── */
-  /* C1 · today's POI dot */
-  .poiDot {
-    width: 20px; height: 20px; border-radius: 50%; background: #fff;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 1px 3px rgba(0,0,0,.3);
-  }
-  .poiDot i { width: 11px; height: 11px; border-radius: 50%; background: var(--pos); }
-  /* C2 · round photo, green ring */
-  .commPhoto {
-    width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--pos);
-    overflow: hidden; background: var(--surface2); box-shadow: 0 2px 4px rgba(0,0,0,.25);
-  }
-  .commPhoto img { width: 100%; height: 100%; object-fit: cover; }
-  /* C3 · green circle with the initial */
-  .commInitial {
-    width: 26px; height: 26px; border-radius: 50%; background: var(--pos);
-    border: 2px solid #fff; color: #fff; font-size: 13px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 50%; background: #fff;
+    border: 2px solid; display: flex; align-items: center; justify-content: center;
     box-shadow: 0 2px 4px rgba(0,0,0,.25);
   }
-  .comm .namechip { border: none; }
+  .badge svg { width: 21px; height: 21px; }
+  .tail { width: 0; height: 0; margin-top: -1px;
+    border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-top: 7px solid; }
+
+  /* B · Solid pins — filled teardrop, white glyph. */
+  .drop {
+    width: 34px; height: 34px; border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg); display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,.28); border: 2px solid #fff;
+    margin-bottom: 4px;
+  }
+  .drop svg { width: 18px; height: 18px; transform: rotate(45deg); fill: #fff; }
+
+  /* C · Photo rings — round photo, coloured ring. */
+  .ringPhoto {
+    width: 38px; height: 38px; border-radius: 50%; border: 2.5px solid;
+    overflow: hidden; background: var(--surface2); box-shadow: 0 2px 4px rgba(0,0,0,.25);
+  }
+  .ringPhoto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* D · Photo tiles — rounded-square photo, coloured frame, corner glyph. */
+  .tile {
+    width: 38px; height: 38px; border-radius: 11px; border: 2.5px solid;
+    overflow: hidden; background: var(--surface2); box-shadow: 0 2px 4px rgba(0,0,0,.25);
+    position: relative;
+  }
+  .tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tile .cg {
+    position: absolute; right: -1px; bottom: -1px; width: 15px; height: 15px;
+    border-top-left-radius: 8px; display: flex; align-items: center; justify-content: center;
+  }
+  .tile .cg svg { width: 10px; height: 10px; fill: #fff; }
+
+  /* E · Shape pair · photo — house silhouette vs circle, equal weight. */
+  .houseShell {
+    width: 42px; height: 40px;
+    clip-path: polygon(50% 0%, 100% 36%, 89% 36%, 89% 100%, 11% 100%, 11% 36%, 0% 36%);
+    display: flex; align-items: flex-end; justify-content: center;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.3));
+    background: var(--accent);
+  }
+  .houseShell img {
+    width: 37px; height: 35.5px; object-fit: cover;
+    clip-path: polygon(50% 0%, 100% 36%, 89% 36%, 89% 100%, 11% 100%, 11% 36%, 0% 36%);
+  }
+  .circleShell {
+    width: 38px; height: 38px; border-radius: 50%; border: 2.5px solid var(--pos);
+    overflow: hidden; background: var(--surface2);
+    box-shadow: 0 2px 4px rgba(0,0,0,.25);
+  }
+  .circleShell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* F · Mini marks — small solid shapes, labels carry the words. */
+  .miniHouse { width: 22px; height: 21px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
+  .miniHouse svg { width: 100%; height: 100%; }
+  .miniDot {
+    width: 20px; height: 20px; border-radius: 50%; background: var(--pos);
+    border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+
+  .homeC { border-color: var(--accent); color: var(--accent); }
+  .homeC svg { fill: var(--accent); }
+  .commC { border-color: var(--pos); color: var(--pos); }
+  .commC svg { fill: var(--pos); }
 </style>
 </head>
 <body>
 <div id="map"></div>
 
 <div class="panel">
-  <h1>Map marker shapes</h1>
-  <div class="sub">Pick a shape per layer — the map updates live. Amber = homes, green = communities, same as the app.</div>
-  <div class="rowlabel">HOME</div>
-  <div class="seg" id="segH">
-    <button data-v="h1" class="onA">House · photo</button>
-    <button data-v="h2">House · icon</button>
-    <button data-v="h3">Circle (today)</button>
+  <h1>Marker systems — one style, both layers</h1>
+  <div class="sub">Each option dresses homes (amber) and communities (green) in the SAME construction at the same size. Tap to switch.</div>
+  <div class="seg" id="seg">
+    <button data-v="A" class="on">Glyph badges<small>disc + icon + tail</small></button>
+    <button data-v="B">Solid pins<small>classic teardrop</small></button>
+    <button data-v="C">Photo rings<small>round photo</small></button>
+    <button data-v="D">Photo tiles<small>square + corner icon</small></button>
+    <button data-v="E">Shape pair<small>house vs circle, photo</small></button>
+    <button data-v="F">Mini marks<small>small + names</small></button>
   </div>
-  <div class="rowlabel">COMMUNITY</div>
-  <div class="seg" id="segC">
-    <button data-v="c1" class="onP">Dot (today)</button>
-    <button data-v="c2">Circle · photo</button>
-    <button data-v="c3">Circle · initial</button>
+  <div class="rowbtns">
+    <button id="lbl" class="on">Community names shown</button>
   </div>
-  <div class="seg">
-    <button id="lbl" class="on">Names shown</button>
-  </div>
-  <div class="foot">Preview only — positions and photos are placeholders (Alpharetta-ish). Zoom/pan freely.</div>
+  <div class="desc" id="desc"></div>
 </div>
 
 <script>
-  const HOUSE_SVG = '<svg viewBox="0 0 24 24"><path d="M12 3l9 8h-2.6v9h-4.9v-5.6H10.5V20H5.6v-9H3z"/></svg>';
+  const HOUSE = '<path d="M12 4l8.5 7.4h-2.3V20h-4.4v-5.2h-3.6V20H5.8v-8.6H3.5z"/>';
+  // A neighbourhood: two rooftops, one behind the other.
+  const COMM =
+    '<g><path d="M12 4l8.5 7.4h-2.3V20h-4.4v-5.2h-3.6V20H5.8v-8.6H3.5z" transform="translate(9.5 1) scale(0.58)"/>' +
+    '<path d="M12 4l8.5 7.4h-2.3V20h-4.4v-5.2h-3.6V20H5.8v-8.6H3.5z" transform="translate(-0.5 6.5) scale(0.72)"/></g>';
+  const svg = (inner, cls) => `<svg viewBox="0 0 24 24" class="${cls || ''}">${inner}</svg>`;
 
   const HOMES = [
     { lng: -84.2842, lat: 34.0731, price: '$525K', seed: 'h11' },
@@ -156,6 +183,15 @@
   ];
   const img = (seed, w, h) => `https://picsum.photos/seed/${seed}/${w}/${h}`;
 
+  const DESCS = {
+    A: 'Same white disc for both; the icon and ring colour name the layer. The most "map-native" of the photo-free options.',
+    B: 'The classic pin, filled amber or green with a white icon. Loudest layer separation; no photos anywhere.',
+    C: 'Both layers are round photos behind a coloured ring — closest to today\'s home pins, communities join the same family.',
+    D: 'Rounded-square photos; a tiny corner badge carries the house / neighbourhood icon so the shape stays one silhouette.',
+    E: 'Your original pairing, size-matched: home is a house-shaped photo, community a circular photo, equal visual weight.',
+    F: 'Both shrink to small solid marks and the labels do the talking — the calmest option at high dot counts.',
+  };
+
   const map = new maplibregl.Map({
     container: 'map',
     style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
@@ -164,69 +200,73 @@
     attributionControl: false,
   });
 
-  let vH = 'h1', vC = 'c1', labels = true;
+  let sys = 'A', labels = true;
   let markers = [];
+
+  const priceChip = (h) => `<div class="chip"><b>${h.price}</b></div>`;
+  const nameChip = (c) => `<div class="chip name">${c.name}</div>`;
 
   function homeEl(h) {
     const el = document.createElement('div');
     el.className = 'mk';
-    if (vH === 'h1') {
-      el.innerHTML = `<div class="houseShell"><img src="${img(h.seed, 92, 88)}"></div><div class="pricechip">${h.price}</div>`;
-    } else if (vH === 'h2') {
-      el.innerHTML = `<div class="badge">${HOUSE_SVG}</div><div class="tail"></div><div class="pricechip">${h.price}</div>`;
-    } else {
-      el.innerHTML = `<div class="circlePhoto"><img src="${img(h.seed, 80, 80)}"></div><div class="pricechip">${h.price}</div>`;
-    }
+    if (sys === 'A') el.innerHTML =
+      `<div class="badge homeC">${svg(HOUSE)}</div><div class="tail" style="border-top-color:var(--accent)"></div>${priceChip(h)}`;
+    else if (sys === 'B') el.innerHTML =
+      `<div class="drop" style="background:var(--accent)">${svg(HOUSE)}</div>${priceChip(h)}`;
+    else if (sys === 'C') el.innerHTML =
+      `<div class="ringPhoto homeC"><img src="${img(h.seed, 80, 80)}"></div>${priceChip(h)}`;
+    else if (sys === 'D') el.innerHTML =
+      `<div class="tile homeC"><img src="${img(h.seed, 80, 80)}"><div class="cg" style="background:var(--accent)">${svg(HOUSE)}</div></div>${priceChip(h)}`;
+    else if (sys === 'E') el.innerHTML =
+      `<div class="houseShell"><img src="${img(h.seed, 84, 80)}"></div>${priceChip(h)}`;
+    else el.innerHTML =
+      `<div class="miniHouse">${svg(HOUSE, 'homeC')}</div>${priceChip(h)}`;
     return el;
   }
 
   function commEl(c) {
     const el = document.createElement('div');
-    el.className = 'mk comm' + (labels ? '' : ' hidden-label');
-    const chip = `<div class="namechip">${c.name}</div>`;
-    if (vC === 'c1') {
-      el.innerHTML = `<div class="poiDot"><i></i></div>${chip}`;
-    } else if (vC === 'c2') {
-      el.innerHTML = `<div class="commPhoto"><img src="${img(c.seed, 60, 60)}"></div>${chip}`;
-    } else {
-      el.innerHTML = `<div class="commInitial">${c.name[0]}</div>${chip}`;
-    }
+    el.className = 'mk' + (labels ? '' : ' nolabels');
+    if (sys === 'A') el.innerHTML =
+      `<div class="badge commC">${svg(COMM)}</div><div class="tail" style="border-top-color:var(--pos)"></div>${nameChip(c)}`;
+    else if (sys === 'B') el.innerHTML =
+      `<div class="drop" style="background:var(--pos)">${svg(COMM)}</div>${nameChip(c)}`;
+    else if (sys === 'C') el.innerHTML =
+      `<div class="ringPhoto commC"><img src="${img(c.seed, 80, 80)}"></div>${nameChip(c)}`;
+    else if (sys === 'D') el.innerHTML =
+      `<div class="tile commC"><img src="${img(c.seed, 80, 80)}"><div class="cg" style="background:var(--pos)">${svg(COMM)}</div></div>${nameChip(c)}`;
+    else if (sys === 'E') el.innerHTML =
+      `<div class="circleShell"><img src="${img(c.seed, 80, 80)}"></div>${nameChip(c)}`;
+    else el.innerHTML =
+      `<div class="miniDot"></div>${nameChip(c)}`;
     return el;
   }
 
   function render() {
     markers.forEach((m) => m.remove());
     markers = [];
-    for (const c of COMMS) {
-      markers.push(new maplibregl.Marker({ element: commEl(c), anchor: 'top' })
+    document.getElementById('desc').textContent = DESCS[sys];
+    for (const c of COMMS) markers.push(
+      new maplibregl.Marker({ element: commEl(c), anchor: 'center' })
         .setLngLat([c.lng, c.lat]).addTo(map));
-    }
-    for (const h of HOMES) {
-      // House shapes read as sitting ON the spot → anchor bottom of the shape
-      // row (the chip hangs under, so 'center' keeps the shape near the point).
-      markers.push(new maplibregl.Marker({ element: homeEl(h), anchor: 'center' })
+    for (const h of HOMES) markers.push(
+      new maplibregl.Marker({ element: homeEl(h), anchor: 'center' })
         .setLngLat([h.lng, h.lat]).addTo(map));
-    }
   }
 
-  function wire(segId, set) {
-    const seg = document.getElementById(segId);
-    const cls = segId === 'segH' ? 'onA' : 'onP';
-    seg.querySelectorAll('button').forEach((b) => {
-      b.onclick = () => {
-        seg.querySelectorAll('button').forEach((x) => x.classList.remove(cls));
-        b.classList.add(cls);
-        set(b.dataset.v);
-        render();
-      };
-    });
-  }
-  wire('segH', (v) => { vH = v; });
-  wire('segC', (v) => { vC = v; });
+  const seg = document.getElementById('seg');
+  seg.querySelectorAll('button').forEach((b) => {
+    b.onclick = () => {
+      seg.querySelectorAll('button').forEach((x) => x.classList.remove('on'));
+      b.classList.add('on');
+      sys = b.dataset.v;
+      render();
+    };
+  });
   document.getElementById('lbl').onclick = (e) => {
     labels = !labels;
     e.target.classList.toggle('on', labels);
-    e.target.textContent = labels ? 'Names shown' : 'Names hidden';
+    e.target.textContent = labels ? 'Community names shown' : 'Community names hidden';
     render();
   };
 

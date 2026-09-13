@@ -21,6 +21,37 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-13 04:35 UTC — phase277.7: marker mockup v2 — paired systems, not per-layer picks
+
+**Objective**: owner on the phase277.6 mockup — "Home and community should
+have similar size and be consistent on the style, can you propose more
+design options?" The v1 page let the two layers be styled independently,
+which is exactly what he is ruling out. Rebuilt as SYSTEMS: one switch
+dresses both layers in the same construction at the same size, amber vs
+green (plus the glyph) carrying the layer difference. Chips are identical
+for both layers (price bold, name regular).
+
+**The six systems** (`apps/web/public/demos/map-markers/index.html`, same
+URL):
+- **A Glyph badges** — white disc + coloured ring, house / twin-rooftop
+  icon, pointer tail.
+- **B Solid pins** — classic teardrop, filled amber/green, white glyph.
+- **C Photo rings** — round photo behind a coloured ring, both layers.
+- **D Photo tiles** — rounded-square photo with a small corner icon badge.
+- **E Shape pair** — his original idea size-matched: house-silhouette photo
+  vs circular photo at equal visual weight.
+- **F Mini marks** — small solid house / dot, labels carry the words; the
+  density option.
+A "community names shown/hidden" toggle previews the zoomed-out state. New
+neighbourhood glyph: two offset rooftops, reusing the house path scaled.
+
+**Verification**: static demo only. Live at percho.co/demos/map-markers/
+after Vercel deploys.
+
+**Next steps**: owner picks a system (or a mix he can defend); then the
+`search.tsx` implementation phase — notes on the RN house-mask constraint
+are in the phase277.6 entry.
+
 ## 2026-09-12 23:50 UTC — phase277.6: marker-shape mockup for the owner to pick from
 
 **Objective**: owner — "Design some shapes for both community and homes with
