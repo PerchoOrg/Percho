@@ -10,6 +10,11 @@
  * owner: results "should look like a real suggestion from a friend or
  * agent") and the table follows as the evidence. The table itself still
  * ranks nothing — the opinion lives in the card that is labelled as one.
+ *
+ * Since phase280 the evidence is four named aspect sections — Schools,
+ * Convenience, Safety, Potential, the owner's four — with "the basics"
+ * (cost, size, HOA…) underneath; only the basics collapse behind the
+ * "show all" toggle, and price lives in the header column.
  */
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -29,6 +34,7 @@ import { splitRows } from "../lib/compare/take";
 import {
 	COMPARE_MAX,
 	COMPARE_MIN,
+	type CompareRow,
 	buildCompareTable,
 } from "../lib/listing/compare";
 import type { ListingDetailDTO } from "../lib/listing/detail-dto";
@@ -97,10 +103,11 @@ export default function CompareScreen() {
 		state.status === "ready"
 			? buildHomeTake(state.homes, rate.annualRate, weights)
 			: null;
-	// Owner: "reduce the numbers part it is not very useful." Rows are already
-	// ordered by what the buyer said matters, so the few that survive the cut
-	// are the few they asked for; the rest are one tap away, never gone.
-	const { shown, collapsible } = splitRows(table?.rows ?? [], showAll);
+	// Owner: "reduce the numbers part it is not very useful." Only the basics
+	// collapse — the four aspect sections are the point of the screen and are
+	// always whole. The basics are ordered by what the buyer said matters, so
+	// the few that survive the cut are the few they asked for.
+	const { shown, collapsible } = splitRows(table?.basics ?? [], showAll);
 
 	return (
 		<View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
@@ -159,51 +166,77 @@ export default function CompareScreen() {
 								<Text style={styles.headCity} numberOfLines={1}>
 									{h.city}
 								</Text>
+								{h.price && <Text style={styles.headPrice}>{h.price}</Text>}
 							</Pressable>
 						))}
 					</View>
 
-					{shown.map((r) => (
-						<View key={r.label} style={styles.rowBlock}>
-							<Text style={styles.label}>{r.label}</Text>
-							{r.note && <Text style={styles.note}>{r.note}</Text>}
-							<View style={styles.cells}>
-								{r.cells.map((c, i) => (
-									<View
-										key={table.headers[i]?.id ?? String(i)}
-										style={styles.cell}
-									>
-										<Text style={[styles.value, !c && styles.valueBlank]}>
-											{c ?? "—"}
-										</Text>
-									</View>
-								))}
-							</View>
+					{table.aspects.map((a) => (
+						<View key={a.key} style={styles.aspect}>
+							<Text style={styles.aspectTitle}>{a.title}</Text>
+							{a.note && <Text style={styles.aspectNote}>{a.note}</Text>}
+							{a.rows.length === 0 && (
+								<Text style={styles.aspectEmpty}>
+									Nothing on file for these homes.
+								</Text>
+							)}
+							{a.rows.map((r) => (
+								<Row
+									key={r.label}
+									row={r}
+									ids={table.headers.map((h) => h.id)}
+								/>
+							))}
 						</View>
 					))}
 
-					{collapsible && (
-						<Pressable
-							style={styles.more}
-							onPress={() => setShowAll((v) => !v)}
-							accessibilityRole="button"
-						>
-							<Text style={styles.moreTxt}>
-								{showAll
-									? "Show fewer"
-									: `Show all ${table.rows.length} figures`}
-							</Text>
-						</Pressable>
-					)}
+					<View style={styles.aspect}>
+						<Text style={styles.aspectTitle}>The basics</Text>
+						{shown.map((r) => (
+							<Row key={r.label} row={r} ids={table.headers.map((h) => h.id)} />
+						))}
+						{collapsible && (
+							<Pressable
+								style={styles.more}
+								onPress={() => setShowAll((v) => !v)}
+								accessibilityRole="button"
+							>
+								<Text style={styles.moreTxt}>
+									{showAll
+										? "Show fewer"
+										: `Show all ${table.basics.length} figures`}
+								</Text>
+							</Pressable>
+						)}
+					</View>
 
 					<Text style={styles.foot}>
 						The take above is worked out from these figures and nothing else —
-						read them and feel free to disagree. They are ordered by what you
-						said matters on the You tab. Schools are the nearest public school
-						by distance, not an assignment.
+						read them and feel free to disagree. The basics are ordered by what
+						you said matters on the You tab. Schools are the nearest public
+						school by distance, not an assignment.
 					</Text>
 				</ScrollView>
 			)}
+		</View>
+	);
+}
+
+/** One figure across the homes — label above, one equal-flex cell each. */
+function Row({ row, ids }: { row: CompareRow; ids: string[] }) {
+	return (
+		<View style={styles.rowBlock}>
+			<Text style={styles.label}>{row.label}</Text>
+			{row.note && <Text style={styles.note}>{row.note}</Text>}
+			<View style={styles.cells}>
+				{row.cells.map((c, i) => (
+					<View key={ids[i] ?? String(i)} style={styles.cell}>
+						<Text style={[styles.value, !c && styles.valueBlank]}>
+							{c ?? "—"}
+						</Text>
+					</View>
+				))}
+			</View>
 		</View>
 	);
 }
@@ -272,6 +305,30 @@ const styles = StyleSheet.create({
 		color: colors.ink2,
 		textAlign: "center",
 	},
+	headPrice: {
+		...textStyles.footnote,
+		fontWeight: "600",
+		color: colors.ink,
+		textAlign: "center",
+		marginTop: 1,
+	},
+	/**
+	 * An aspect section — one of the owner's four, plus "the basics". The
+	 * title wears `headline` so the four names carry the page; row labels
+	 * stay caption-sized beneath them.
+	 */
+	aspect: { marginTop: 26 },
+	aspectTitle: { ...textStyles.headline, color: colors.ink },
+	// Footnote, not caption: these can run two sentences (the safety
+	// disclaimer) and caption's uppercase tracking is unreadable at length.
+	aspectNote: {
+		...textStyles.footnote,
+		fontSize: 12,
+		color: colors.ink3,
+		marginTop: 3,
+		lineHeight: 16,
+	},
+	aspectEmpty: { ...textStyles.footnote, color: colors.ink3, marginTop: 8 },
 	value: { ...textStyles.footnote, color: colors.ink, textAlign: "center" },
 	valueBlank: { color: colors.ink3 },
 	foot: {

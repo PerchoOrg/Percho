@@ -6,6 +6,31 @@
 
 ---
 
+## v1.9 — Compare now weighs the four things buyers check first
+
+Put two to five saved homes side by side and the comparison now reads in four
+named sections — **Schools**, **Convenience**, **Safety**, **Potential** —
+instead of one long list of figures.
+
+- **Schools** still shows the nearest elementary, middle and high school with
+  the state's own test score.
+- **Convenience** is new here: a 0–10 score for how close and how plentiful
+  the everyday places are — errands, shops and food — worked out from real
+  mapped distances. When the gap between homes is wide enough, Percho's take
+  at the top of the screen now argues it in words too.
+- **Safety** is deliberately not a number. No source meets our bar, and a
+  made-up safety score would be worse than none — so this section carries
+  what research actually found on record for each home, with sources on the
+  home's page, and says plainly when there's nothing on file.
+- **Potential** sticks to today's signals rather than pretending to
+  forecast: what a year of typical rent covers of the price, how the asking
+  price per square foot compares within the home's own city, and days on
+  market.
+
+Each home's price now sits right under its photo, so the figures list below
+is shorter — and the basics still reorder around what you said matters on
+the You tab.
+
 ## v1.8 — One map question at a time, and the schools are on it
 
 The map used to offer five coloured overlays: true cost, property tax,

@@ -31,6 +31,8 @@
  * of a number we do not have (`_MASTER.md`).
  */
 
+import { fetchNeighborhoodScores } from '@/lib/feed/fetch-neighborhood-scores';
+import type { NeighborhoodScores } from '@/lib/feed/neighborhood-score';
 import { streamManifestUrl, streamPosterUrl } from '@/lib/feed/vertical-videos';
 import { mobileVideoUid } from '@/lib/feed/video-uid';
 import { type RentEstimateDTO, rentEstimateForZip } from '@/lib/listings/rent-index';
@@ -137,6 +139,12 @@ export interface ListingDetailDTO {
   rentEstimate?: RentEstimateDTO;
   /** Nearest public school per level (phase D). Absent when the listing has no coordinate. */
   schools?: SchoolDTO[];
+  /**
+   * Four-dimension neighborhood scores (phase280) — the same shape the feed
+   * card carries, for the compare screen's Convenience section. Absent when
+   * the listing has no POI rows at all.
+   */
+  scores?: NeighborhoodScores;
   /**
    * The public web page for this home, absolute — what the share sheet
    * sends. Agent listings live at `/v/<agentSlug>/<slug>`, FMLS imports at
@@ -265,6 +273,7 @@ export function projectDetail(
     video?: ListingVideoRow | null;
     insights?: InsightRow[];
     schools?: NearestSchoolRow[];
+    scores?: NeighborhoodScores | null;
   } = {},
 ): ListingDetailDTO {
   const video = projectVideo(extras.video ?? null);
@@ -312,6 +321,7 @@ export function projectDetail(
     ...(insights.length > 0 ? { insights } : {}),
     ...(rentEstimate ? { rentEstimate } : {}),
     ...(schools.length > 0 ? { schools } : {}),
+    ...(extras.scores ? { scores: extras.scores } : {}),
     ...(shareUrl ? { shareUrl } : {}),
     photos: projectPhotos(photos),
     comps: projectComps(comps, listing.city),
@@ -476,57 +486,66 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
   // Independent reads — run them together rather than paying four sequential
   // round trips on a screen the buyer is waiting on.
   const hasCoord = typeof row.lat === 'number' && typeof row.lng === 'number';
-  const [photoRes, compRes, mlsRes, videoRes, insightRes, schoolRes] = await Promise.all([
-    supabase
-      .from('listing_photos')
-      .select('id, storage_path, enhanced_path, enhanced_status, ai_tags, sort_order')
-      .eq('listing_id', row.id)
-      .eq('status', 'ready'),
-    supabase
-      .from('listings')
-      .select('price, sqft')
-      .eq('city', row.city)
-      .eq('status', 'active')
-      .not('price', 'is', null)
-      .limit(COMPS_LIMIT),
-    // The MLS mirror row, when the sync has linked one. Service-role client —
-    // see `createUncachedServiceClient` for why anon cannot read the mirror.
-    // `maybeSingle`: a missing mirror is normal, not an error. The display
-    // flag is fetched so a row the MLS forbids displaying projects nothing.
-    createUncachedServiceClient()
-      .from('mls_listings')
-      .select('days_on_market, lot_size_acres, listing_key, internet_entire_listing_display_yn')
-      .eq('our_listing_id', row.id)
-      .limit(1)
-      .maybeSingle(),
-    // The home's own walkthrough — same rule as the feed hero
-    // (`lib/feed/vertical-videos.ts`): `kind='walkthrough'` only, because
-    // that is the one kind built from the listing's own photos.
-    supabase
-      .from('listing_videos')
-      .select('cf_video_id, cf_video_id_landscape, cf_video_id_square, duration_sec')
-      .eq('listing_id', row.id)
-      .eq('kind', 'walkthrough')
-      .eq('status', 'ready')
-      .order('sort_order', { ascending: true })
-      .limit(1)
-      .maybeSingle(),
-    // "After you move in" cards (phase130). RLS already limits anon to
-    // approved rows; the filter is repeated so the intent is in the query.
-    supabase
-      .from('listing_insights')
-      .select('id, headline, detail, kind, theme, verify, basis, decisiveness')
-      .eq('listing_id', row.id)
-      .eq('status', 'approved'),
-    // Nearest public school per level (phase D). Skipped, not errored, when
-    // the listing has no coordinate.
-    hasCoord
-      ? supabase.rpc('get_k12_nearest_schools', {
-          p_lat: row.lat as number,
-          p_lng: row.lng as number,
-        })
-      : Promise.resolve({ data: null, error: null }),
-  ]);
+  const [photoRes, compRes, mlsRes, videoRes, insightRes, schoolRes, scoresMap] = await Promise.all(
+    [
+      supabase
+        .from('listing_photos')
+        .select('id, storage_path, enhanced_path, enhanced_status, ai_tags, sort_order')
+        .eq('listing_id', row.id)
+        .eq('status', 'ready'),
+      supabase
+        .from('listings')
+        .select('price, sqft')
+        .eq('city', row.city)
+        .eq('status', 'active')
+        .not('price', 'is', null)
+        .limit(COMPS_LIMIT),
+      // The MLS mirror row, when the sync has linked one. Service-role client —
+      // see `createUncachedServiceClient` for why anon cannot read the mirror.
+      // `maybeSingle`: a missing mirror is normal, not an error. The display
+      // flag is fetched so a row the MLS forbids displaying projects nothing.
+      createUncachedServiceClient()
+        .from('mls_listings')
+        .select('days_on_market, lot_size_acres, listing_key, internet_entire_listing_display_yn')
+        .eq('our_listing_id', row.id)
+        .limit(1)
+        .maybeSingle(),
+      // The home's own walkthrough — same rule as the feed hero
+      // (`lib/feed/vertical-videos.ts`): `kind='walkthrough'` only, because
+      // that is the one kind built from the listing's own photos.
+      supabase
+        .from('listing_videos')
+        .select('cf_video_id, cf_video_id_landscape, cf_video_id_square, duration_sec')
+        .eq('listing_id', row.id)
+        .eq('kind', 'walkthrough')
+        .eq('status', 'ready')
+        .order('sort_order', { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+      // "After you move in" cards (phase130). RLS already limits anon to
+      // approved rows; the filter is repeated so the intent is in the query.
+      supabase
+        .from('listing_insights')
+        .select('id, headline, detail, kind, theme, verify, basis, decisiveness')
+        .eq('listing_id', row.id)
+        .eq('status', 'approved'),
+      // Nearest public school per level (phase D). Skipped, not errored, when
+      // the listing has no coordinate.
+      hasCoord
+        ? supabase.rpc('get_k12_nearest_schools', {
+            p_lat: row.lat as number,
+            p_lng: row.lng as number,
+          })
+        : Promise.resolve({ data: null, error: null }),
+      // Neighborhood scores (phase280) — the compare screen's Convenience
+      // figures. Service-role for the same RLS reason the feed page needs it
+      // (see `fetch-neighborhood-scores.ts`); the module emits aggregates only,
+      // never POI names. An enrichment, so a failure downgrades to absence.
+      fetchNeighborhoodScores(createUncachedServiceClient(), [row.id]).catch(
+        () => new Map<string, NeighborhoodScores>(),
+      ),
+    ],
+  );
 
   if (photoRes.error) throw new Error(`listing-detail: photos failed: ${photoRes.error.message}`);
   if (compRes.error) throw new Error(`listing-detail: comps failed: ${compRes.error.message}`);
@@ -548,6 +567,7 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
       video,
       insights,
       schools,
+      scores: scoresMap.get(row.id) ?? null,
     },
   );
 }
