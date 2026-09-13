@@ -2,15 +2,14 @@
  * Compare (phase D, 05 §5.2) — 2–5 saved homes side by side on the
  * dimensions a buyer actually weighs. PURE: detail DTOs in, a table out.
  *
- * Reshaped in phase280. Owner: the flat figure list "doesn't look
- * interesting and natural" — he wants the four aspects he named on
- * 2026-07-30 highlighted: Schools, Convenience, Safety, Potential (the same
- * four `lib/feed/neighborhood-score` computes for the feed card, in the
- * order he listed them). So the table is now four named ASPECT sections,
- * with everything else — monthly cost, size, HOA — as "the basics"
- * underneath, still ordered by the buyer's declared priorities and still
- * truncated by the screen. Price moves into the header column so it is
- * always in view without owning a row.
+ * Reshaped in phase280 around the four aspects the owner named on
+ * 2026-07-30 — Schools, Convenience, Safety, Potential — and de-texted in
+ * phase281 (owner: "a lot of text"): school cells carry the percentage
+ * only (the names live on each home's page), bounded figures carry a
+ * `meter` so the renderer draws a bar instead of asking for a read, and
+ * every note is cut to one short line. "The basics" (monthly cost, size,
+ * HOA…) sit underneath, still ordered by the buyer's declared priorities
+ * and still truncated by the screen. Price lives in the header column.
  *
  * Safety is a section with no numbers ON PURPOSE. There is no data source
  * (`packages/shared/src/lenses.ts` — fair-housing grounds, owner 2026-07),
@@ -24,6 +23,7 @@
  * says Percho does not do. Each row is one figure per home, with the cell
  * blank when the data is missing rather than filled with a guess.
  */
+import type { CompareAspect, CompareTableRow } from "../compare/table";
 import {
 	type PriorityKey,
 	type PriorityWeights,
@@ -50,31 +50,10 @@ export const COMPARE_MIN = 2;
  */
 export const COMPARE_MAX = 5;
 
-export interface CompareRow {
-	label: string;
-	/** One cell per home, in the caller's order. `undefined` renders as "—". */
-	cells: (string | undefined)[];
-	/** Small print under the label, e.g. the rate the monthly figure assumes. */
-	note?: string;
+export interface CompareRow extends CompareTableRow {
 	/** Which declared priority this row serves, for ordering. Undefined when
 	 *  it serves none — such a row keeps its place rather than sinking. */
 	priority?: PriorityKey;
-}
-
-/** The owner's four, in his order. Fixed — sections never reshuffle. */
-export type CompareAspectKey =
-	| "schools"
-	| "convenience"
-	| "safety"
-	| "potential";
-
-export interface CompareAspect {
-	key: CompareAspectKey;
-	title: string;
-	/** Small print under the title — what these figures are and are not. */
-	note?: string;
-	/** May be empty: the screen says "nothing on file" rather than hiding it. */
-	rows: CompareRow[];
 }
 
 export interface CompareTable {
@@ -87,7 +66,7 @@ export interface CompareTable {
 		thumbUrl?: string;
 	}[];
 	/** Always all four, in the owner's order, rows or not. */
-	aspects: CompareAspect[];
+	aspects: CompareAspect<CompareRow>[];
 	/** Everything that isn't one of the four — ordered by declared priorities. */
 	basics: CompareRow[];
 }
@@ -136,14 +115,25 @@ export function buildCompareTable(
 			: undefined,
 	);
 
-	const school = (level: "elementary" | "middle" | "high") =>
-		homes.map((h) => {
-			const s = h.schools?.find((x) => x.level === level);
-			if (!s) return undefined;
-			return s.proficiencyPct !== undefined
-				? `${Math.round(s.proficiencyPct)}% · ${s.name}`
-				: s.name;
-		});
+	// The percentage alone — the school names ran the cells to three lines
+	// each (phase281, owner: "a lot of text") and live on the home's page
+	// anyway. A school the state has no figure for is a dash, not a name.
+	const schoolRow = (
+		label: string,
+		level: "elementary" | "middle" | "high",
+	): CompareRow => {
+		const pcts = homes.map(
+			(h) => h.schools?.find((x) => x.level === level)?.proficiencyPct,
+		);
+		return {
+			label,
+			cells: pcts.map((p) =>
+				p !== undefined ? `${Math.round(p)}%` : undefined,
+			),
+			meter: pcts,
+			meterMax: 100,
+		};
+	};
 
 	// The feed card's convenience dimension: errands + shopping + dining,
 	// scored 0–10 from measured distances. `score: null` means "no source",
@@ -163,33 +153,32 @@ export function buildCompareTable(
 			: first.headline;
 	});
 
-	const aspects: CompareAspect[] = [
+	const aspects: CompareAspect<CompareRow>[] = [
 		{
 			key: "schools",
 			title: "Schools",
+			note: "% proficient at the nearest public school",
 			rows: kept([
-				{
-					label: "Elementary",
-					note: "nearest · % proficient",
-					cells: school("elementary"),
-				},
-				{ label: "Middle", cells: school("middle") },
-				{ label: "High", cells: school("high") },
+				schoolRow("Elementary", "elementary"),
+				schoolRow("Middle", "middle"),
+				schoolRow("High", "high"),
 			]),
 		},
 		{
 			key: "convenience",
 			title: "Convenience",
+			note: "errands, shops & food nearby — scored 0–10",
 			rows: kept([
 				{
-					label: "Errands, shops & food",
-					note: "0–10 · how close and how many, from mapped places within 2 km",
+					label: "Score",
 					cells: conv.map((d) =>
 						d && d.score !== null ? d.score.toFixed(1) : undefined,
 					),
+					meter: conv.map((d) => d?.score ?? undefined),
+					meterMax: 10,
 				},
 				{
-					label: "Closest of those",
+					label: "Closest",
 					cells: conv.map((d) =>
 						d?.nearestM !== undefined ? miles(d.nearestM) : undefined,
 					),
@@ -199,20 +188,17 @@ export function buildCompareTable(
 		{
 			key: "safety",
 			title: "Safety",
-			note:
-				"Percho doesn’t score safety — no source meets our bar, and a " +
-				"made-up number would be worse than none. When research turns up " +
-				"something on record it shows here, with sources on the home’s page.",
+			note: "not scored on purpose — no source meets our bar",
 			rows: kept([{ label: "On record", cells: safetyNotes }]),
 		},
 		{
 			key: "potential",
 			title: "Potential",
-			note: "Today’s signals, not a forecast — no sold-price history exists behind these.",
+			note: "today’s signals, not a forecast",
 			rows: kept([
 				{
 					label: "Rent vs price",
-					note: "a year of typical ZIP rent ÷ price — gross",
+					note: "typical yearly rent ÷ price",
 					cells: homes.map((h) =>
 						h.rentEstimate && h.price !== undefined && h.price > 0
 							? `${(((h.rentEstimate.monthlyUsd * 12) / h.price) * 100).toFixed(1)}%`
@@ -221,7 +207,7 @@ export function buildCompareTable(
 				},
 				{
 					label: "Asking vs its city",
-					note: "$/sqft against active listings in each home’s own city",
+					note: "$/sqft against its city’s actives",
 					cells: homes.map((h) => {
 						const median = h.comps.medianPricePerSqft;
 						if (

@@ -66,11 +66,13 @@ describe("buildCompareTable", () => {
 		expect(basics("HOA")).toEqual(["$100/mo", undefined]);
 		expect(basics("Neighbourhood")).toEqual(["Sugarloaf", undefined]);
 		expect(basics("Monthly, all-in")?.[0]).toMatch(/^\$[\d,]+\/mo$/);
+		// The percentage alone since phase281 — the name ran the cell to three
+		// lines and lives on the home's page. The bar carries the comparison.
 		const schools = t.aspects.find((a) => a.key === "schools");
-		expect(schools?.rows.find((r) => r.label === "Elementary")?.cells).toEqual([
-			"71% · Simpson Elementary",
-			undefined,
-		]);
+		const elementary = schools?.rows.find((r) => r.label === "Elementary");
+		expect(elementary?.cells).toEqual(["71%", undefined]);
+		expect(elementary?.meter).toEqual([71.4, undefined]);
+		expect(elementary?.meterMax).toBe(100);
 	});
 
 	it("always emits the owner's four aspects, in his order", () => {
@@ -98,12 +100,15 @@ describe("buildCompareTable", () => {
 			0.06,
 		);
 		const conv = t.aspects.find((a) => a.key === "convenience");
-		expect(
-			conv?.rows.find((r) => r.label === "Errands, shops & food")?.cells,
-		).toEqual(["7.8", undefined]);
-		expect(
-			conv?.rows.find((r) => r.label === "Closest of those")?.cells,
-		).toEqual(["0.2 mi", undefined]);
+		const score = conv?.rows.find((r) => r.label === "Score");
+		expect(score?.cells).toEqual(["7.8", undefined]);
+		// A null score is "no source", so it gets no bar — not a bar at zero.
+		expect(score?.meter).toEqual([7.8, undefined]);
+		expect(score?.meterMax).toBe(10);
+		expect(conv?.rows.find((r) => r.label === "Closest")?.cells).toEqual([
+			"0.2 mi",
+			undefined,
+		]);
 	});
 
 	it("carries researched safety notes, never a number", () => {
@@ -128,7 +133,7 @@ describe("buildCompareTable", () => {
 			"Flood zone AE · +1 more",
 			undefined,
 		]);
-		expect(safety?.note).toContain("doesn’t score safety");
+		expect(safety?.note).toContain("not scored on purpose");
 	});
 
 	it("reads potential from today's signals only", () => {

@@ -21,6 +21,56 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-13 15:50 UTC — phase281: compare loses its prose, communities get the four aspects
+
+**Objective**: owner on phase280 — "A lot of text. Can you redesign, also
+similar strategy needs to be applied for community comparison." Two asks:
+cut the reading, and give `/compare-communities` the same frame.
+
+**Actions**:
+- New `apps/mobile/lib/compare/table.ts` — `CompareTableRow` (now carrying
+  `meter` / `meterMax`) and `CompareAspect`, shared by both builders so the
+  two tables cannot drift.
+- New `apps/mobile/components/compare/CompareSection.tsx` — `CompareBlock`
+  (titled section, optional one-line note, "nothing on file" when empty,
+  `children` for the show-all toggle) and `FigureRow`. Both screens deleted
+  their private row/section styles and render through it.
+- **De-texting** (`lib/listing/compare.ts`): school cells are the percentage
+  alone — "71%", not "71% · Simpson Elementary"; the name ran a cell to
+  three lines and is on the home's page anyway. Convenience rows renamed
+  "Score" / "Closest". Every aspect note cut to one short line ("not scored
+  on purpose — no source meets our bar"). Screen footers halved.
+- **Meters**: a bounded, agreed-direction figure now ships a `meter` value
+  and the renderer draws a 3 pt amber bar under the number — school %
+  (max 100), convenience score (max 10), resident ratings (max 5). This is
+  what replaces the prose: the columns are read, not parsed. Open-ended
+  dollar figures get no bar, because a bar on a price would crown a winner.
+- **Communities** (`lib/community/compare-communities.ts`): same four
+  sections. Schools = the `schools` nearby count (no proficiency at
+  community grain). Convenience = the residents' Walkable rating + a summed
+  errands/shopping/dining count (the same three buckets the homes
+  convenience score uses). Safety = no rows at all, with the note saying
+  why. Potential = owner-occupied share, labelled a stability signal, not a
+  forecast. Everything else — resident rating, Quiet/Neighbourly/Value,
+  median age, Nextdoor residents, the ranked nearby buckets — is "the
+  basics", still `orderByPriority`-ordered and `splitRows`-truncated.
+  Buckets an aspect consumes are excluded from the basics so no count
+  appears twice.
+
+**Decisions**: Communities' Safety section ships with zero rows rather than
+being hidden. A section that disappears reads as a bug; one that says "not
+scored on purpose" is the fair-housing position stated where the buyer is
+actually asking the question. `/compare-areas` deliberately untouched — its
+rows are directed quantities with a marked best cell, a different contract.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (same 8
+pre-existing warnings), 780 mobile tests pass (3 phase280 homes assertions
+updated for the new cell formats, 5 new community assertions). Web
+untouched this phase.
+
+**Next steps**: owner reviews both screens on the phone. If the meters read
+well, `/compare-areas` is the last one still on the old layout.
+
 ## 2026-09-13 06:55 UTC — phase280: compare reads in the owner's four aspects
 
 **Objective**: owner on `/compare`: "it doesn't look interesting and natural

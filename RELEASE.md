@@ -8,28 +8,35 @@
 
 ## v1.9 — Compare now weighs the four things buyers check first
 
-Put two to five saved homes side by side and the comparison now reads in four
-named sections — **Schools**, **Convenience**, **Safety**, **Potential** —
-instead of one long list of figures.
+Put two to five saved homes — or two to five saved neighbourhoods — side by
+side, and the comparison reads in four named sections instead of one long
+list of figures: **Schools**, **Convenience**, **Safety**, **Potential**.
 
-- **Schools** still shows the nearest elementary, middle and high school with
-  the state's own test score.
-- **Convenience** is new here: a 0–10 score for how close and how plentiful
-  the everyday places are — errands, shops and food — worked out from real
-  mapped distances. When the gap between homes is wide enough, Percho's take
-  at the top of the screen now argues it in words too.
-- **Safety** is deliberately not a number. No source meets our bar, and a
-  made-up safety score would be worse than none — so this section carries
-  what research actually found on record for each home, with sources on the
-  home's page, and says plainly when there's nothing on file.
+- **Schools** shows how the nearest public schools scored on the state's own
+  test, as a percentage with a small bar so you can see the difference
+  without doing the arithmetic. For a neighbourhood, it's how many schools
+  sit among its mapped places.
+- **Convenience** is new: for a home, a 0–10 score for how close and how
+  plentiful the everyday places are — errands, shops and food — worked out
+  from real mapped distances. For a neighbourhood, it's what residents said
+  about walkability plus the count of those everyday places. When the gap
+  between homes is wide enough, Percho's take at the top of the screen
+  argues it in words too.
+- **Safety** is deliberately not a number, on either screen. No source meets
+  our bar, and a made-up safety score would be worse than none — so the
+  section says so plainly, and for homes it carries what research actually
+  found on record, with sources on the home's page.
 - **Potential** sticks to today's signals rather than pretending to
-  forecast: what a year of typical rent covers of the price, how the asking
-  price per square foot compares within the home's own city, and days on
-  market.
+  forecast: for a home, what a year of typical rent covers of the price, how
+  the asking price per square foot compares within its own city, and days on
+  market. For a neighbourhood, the share of homes lived in by their owners.
 
-Each home's price now sits right under its photo, so the figures list below
-is shorter — and the basics still reorder around what you said matters on
-the You tab.
+The screens read shorter, too. Ratings and scores draw a small bar under the
+number, school names moved off the comparison and onto the home's own page,
+and each section explains itself in one line instead of a paragraph. A home's
+price now sits right under its photo, and everything else — monthly cost,
+size, what residents say — sits under "The basics", still ordered by what you
+said matters on the You tab.
 
 ## v1.8 — One map question at a time, and the schools are on it
 
