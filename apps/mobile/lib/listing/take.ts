@@ -2,12 +2,12 @@
  * The homes take (phase270) — `lib/compare/take.ts` built from the same
  * figures `buildCompareTable` shows. PURE: detail DTOs in, prose out.
  *
- * Three dimensions carry the lean, because they are the three in the table
+ * Four dimensions carry the lean, because they are the four in the table
  * with an agreed direction: all-in monthly cost (lower), price per square
- * foot (lower), nearby-school proficiency (higher). Everything else the
- * table shows — age, size, HOA — has no direction a stranger may assume, so
- * it can only ever appear here as the COUNTERWEIGHT to a lean, never as a
- * reason for one.
+ * foot (lower), nearby-school proficiency (higher), and — since phase280 —
+ * the convenience score (higher). Everything else the table shows — age,
+ * size, HOA — has no direction a stranger may assume, so it can only ever
+ * appear here as the COUNTERWEIGHT to a lean, never as a reason for one.
  *
  * A dimension only counts when at least two homes have a figure AND the gap
  * is worth a sentence — a $12/mo difference spoken out loud would be the
@@ -33,6 +33,8 @@ import { DEFAULT_DOWN_FRACTION, parseHoaMonthlyUsd } from "./monthly";
 const MONTHLY_MIN_GAP_USD = 50;
 const PER_SQFT_MIN_GAP_FRACTION = 0.08;
 const SCHOOL_MIN_GAP_PCT = 5;
+/** Out of 10 — under this the neighbourhoods are equally livable, say nothing. */
+const CONVENIENCE_MIN_GAP_PTS = 1.5;
 
 interface Measured {
 	home: ListingDetailDTO;
@@ -40,6 +42,8 @@ interface Measured {
 	perSqft?: number;
 	/** Mean % proficient over whichever school levels have a figure. */
 	school?: number;
+	/** The feed card's convenience score, 0–10. `null` on the wire = absent. */
+	convenience?: number;
 }
 
 function measure(home: ListingDetailDTO, annualRate: number): Measured {
@@ -61,6 +65,10 @@ function measure(home: ListingDetailDTO, annualRate: number): Measured {
 		.filter((p): p is number => p !== undefined);
 	if (pcts.length > 0) {
 		m.school = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+	}
+	const conv = home.scores?.dims.find((d) => d.key === "convenience");
+	if (conv && conv.score !== null) {
+		m.convenience = conv.score;
 	}
 	return m;
 }
@@ -195,6 +203,15 @@ export function buildHomeTake(
 			() => SCHOOL_MIN_GAP_PCT,
 			(w, r) =>
 				`The schools near ${street(homes[w])} test stronger — ${Math.round(ms[w]?.school ?? 0)}% proficient against ${Math.round(ms[r]?.school ?? 0)}%.`,
+		),
+		dim(
+			"day-to-day convenience",
+			"commute",
+			ms.map((m) => m.convenience),
+			false,
+			() => CONVENIENCE_MIN_GAP_PTS,
+			(w, r) =>
+				`Errands, shops and food sit closer to ${street(homes[w])} — it scores ${(ms[w]?.convenience ?? 0).toFixed(1)} to ${(ms[r]?.convenience ?? 0).toFixed(1)} for what’s nearby.`,
 		),
 	].filter((d): d is Dim => d !== null);
 

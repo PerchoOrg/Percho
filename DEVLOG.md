@@ -21,6 +21,57 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-13 06:55 UTC — phase280: compare reads in the owner's four aspects
+
+**Objective**: owner on `/compare`: "it doesn't look interesting and natural
+to me. Format is not good either, can you highlight 4 aspects: 学区 便利 安全
+潜力." Those are the same four he named on 2026-07-30 —
+`lib/feed/neighborhood-score.ts`'s Schools / Convenience / Safety / Potential
+— so the homes compare is reshaped around them (English labels per §1
+positioning).
+
+**Actions**:
+- `apps/web/lib/listings/detail.ts`: new `ListingDetailDTO.scores` — the feed
+  card's `NeighborhoodScores`, fetched via `fetchNeighborhoodScores` in the
+  detail fetch's parallel batch (service-role client, same RLS reason as the
+  feed page; the module emits aggregates only, and a failure downgrades to
+  absence). Mirrored in `apps/mobile/lib/listing/detail-dto.ts` (type
+  imported from `feed/card-types`).
+- `apps/mobile/lib/listing/compare.ts`: `buildCompareTable` now returns
+  `{ headers, aspects, basics }`. Four `CompareAspect` sections in the
+  owner's order. Schools = the three proficiency rows. Convenience = the
+  0–10 score + nearest distance. Safety = NO number, ever (fair-housing —
+  same ruling as `lenses.ts`): the section carries `insights` with theme
+  "safety" (cited prose) plus a note saying plainly that Percho doesn't
+  score it. Potential = today's signals only: gross rent yield (ZORI ÷
+  price), asking $/sqft vs the city median, days on market — no invented
+  trend. Price moved into the header column; the Price row is gone; basics
+  keep `orderByPriority` + the `splitRows` truncation.
+- `apps/mobile/lib/listing/take.ts`: convenience is now the fourth directed
+  dimension (gap ≥ 1.5/10), so the take can argue it in words.
+- `apps/mobile/app/compare.tsx`: aspect sections render title + note + rows
+  (shared `Row` component); "The basics" collapses behind the toggle as
+  before; footer copy updated; long notes use footnote, not uppercase
+  caption.
+
+**Decisions**: Safety and Potential ship without scores rather than waiting
+for data — the four-section frame is the owner's explicit ask, and July's
+"four 数据不足 cards aren't worth a screen" ruling was about the listing
+page, not compare, where two of the four sections have real rows and the
+other two carry honest substance (cited notes / current signals).
+Communities and areas compare not touched — same treatment can follow if he
+likes this shape.
+
+**Verification**: mobile `pnpm typecheck` clean, lint 0 errors (8
+pre-existing warnings), 775 tests pass. Web typecheck clean, changed files
+lint clean (`TopBar.tsx` role="search" error pre-exists on main), 1187
+tests pass.
+
+**Next steps**: owner reviews on the phone. Coverage caveat: convenience
+scores exist only where `listing_pois` rows do, and safety notes only where
+insight research ran — sparse columns render "—", which is honest, but he
+may want the POI pipeline run wider if the section is mostly dashes.
+
 ## 2026-09-13 06:45 UTC — phase278.1: "Percho type", not "buyer type"
 
 **Objective**: owner on phase278's card — "Done say buyer type - we are not

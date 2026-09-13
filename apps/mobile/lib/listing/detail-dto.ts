@@ -10,6 +10,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { listingDetailUrl } from "../api/base";
+import type { NeighborhoodScores } from "../feed/card-types";
 
 export interface PhotoTagsDTO {
 	room_type?: string | null;
@@ -121,6 +122,11 @@ export interface ListingDetailDTO {
 	rentEstimate?: RentEstimateDTO;
 	/** Nearest public school per level; absent when the home has no coordinate. */
 	schools?: SchoolDTO[];
+	/**
+	 * Four-dimension neighborhood scores (phase280) — the same wire shape the
+	 * feed card carries. Absent when the home has no POI rows at all.
+	 */
+	scores?: NeighborhoodScores;
 	/** Absolute public web page — what the share sheet sends. Absent = no page. */
 	shareUrl?: string;
 }

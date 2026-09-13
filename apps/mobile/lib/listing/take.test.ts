@@ -150,6 +150,69 @@ describe("buildHomeTake", () => {
 	});
 });
 
+describe("buildHomeTake — convenience argues only when scored and split", () => {
+	const scored = (score: number) => ({
+		overall: score,
+		dims: [
+			{ key: "convenience" as const, label: "Convenience", score, count: 5 },
+		],
+	});
+
+	it("argues convenience when the scores split wide enough", () => {
+		const take = buildHomeTake(
+			[
+				home({
+					id: "a",
+					address: "12 Oak St",
+					price: 450_000,
+					scores: scored(8.5),
+				}),
+				home({
+					id: "b",
+					address: "9 Elm Ave",
+					price: 450_000,
+					scores: scored(5.0),
+				}),
+			],
+			RATE,
+		);
+		expect(take.lead).toContain("12 Oak St");
+		expect(take.lead).toContain("day-to-day convenience");
+		expect(take.points.some((p) => p.includes("Errands, shops and food"))).toBe(
+			true,
+		);
+	});
+
+	it("says nothing about convenience under the gap, or without scores", () => {
+		const close = buildHomeTake(
+			[
+				home({
+					id: "a",
+					address: "12 Oak St",
+					price: 400_000,
+					scores: scored(7.8),
+				}),
+				home({
+					id: "b",
+					address: "9 Elm Ave",
+					price: 500_000,
+					scores: scored(7.4),
+				}),
+			],
+			RATE,
+		);
+		expect(close.points.some((p) => p.includes("Errands"))).toBe(false);
+		const unscored = buildHomeTake(
+			[
+				home({ id: "a", address: "12 Oak St", price: 400_000 }),
+				home({ id: "b", address: "9 Elm Ave", price: 500_000 }),
+			],
+			RATE,
+		);
+		expect(unscored.points.some((p) => p.includes("Errands"))).toBe(false);
+	});
+});
+
 describe("buildHomeTake — personalised by declared priorities", () => {
 	const SPLIT = [
 		home({

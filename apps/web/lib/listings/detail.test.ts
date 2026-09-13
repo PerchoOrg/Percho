@@ -66,6 +66,16 @@ describe('projectDetail — absent means the key is omitted', () => {
   it('defaults only state, which is non-null in every production row', () => {
     expect(projectDetail({ ...baseListing, state: null }, [], []).state).toBe('GA');
   });
+
+  it('passes neighborhood scores through, and omits the key when there are none', () => {
+    const scores = {
+      overall: 7.8,
+      dims: [{ key: 'convenience' as const, label: 'Convenience', score: 7.8, count: 5 }],
+    };
+    expect(projectDetail(baseListing, [], [], { scores }).scores).toEqual(scores);
+    expect('scores' in projectDetail(baseListing, [], [])).toBe(false);
+    expect('scores' in projectDetail(baseListing, [], [], { scores: null })).toBe(false);
+  });
 });
 
 describe('projectPhotos', () => {
