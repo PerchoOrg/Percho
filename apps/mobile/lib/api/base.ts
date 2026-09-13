@@ -117,6 +117,23 @@ export function searchUrl(q: string): string {
 	return `${apiBase()}/api/mobile/search?q=${encodeURIComponent(q)}`;
 }
 
+/** `/api/mobile/map?minLat=…` — communities + homes in the viewport
+ *  (phase281, the zoom-band map). */
+export function mapUrl(b: {
+	minLat: number;
+	maxLat: number;
+	minLng: number;
+	maxLng: number;
+}): string {
+	const q = new URLSearchParams({
+		minLat: String(b.minLat),
+		maxLat: String(b.maxLat),
+		minLng: String(b.minLng),
+		maxLng: String(b.maxLng),
+	});
+	return `${apiBase()}/api/mobile/map?${q.toString()}`;
+}
+
 /** `/api/mobile/areas` — county shapes + their metrics, for the lens map. */
 export function areasUrl(): string {
 	return `${apiBase()}/api/mobile/areas`;

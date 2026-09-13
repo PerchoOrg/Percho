@@ -21,6 +21,57 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-13 15:55 UTC — phase282: the drill is dead — a viewport map with zoom bands
+
+**Objective**: the owner's calls on the phase277.10 proposal: county pill
+「保留」, TIGER city boundaries 「先不用」, schools at street zoom 「好的」,
+POIs start with schools 「好的」 — plus one refinement: at street zoom "home
+icon就不需要啊 直接显示数字在房子上就好". That is the full A→B→C go-ahead.
+
+**A · The viewport endpoint** (the "next honest step" phase268 named):
+- `apps/web/lib/zod/mobile-map.ts` (+4 tests): bbox params, coerced, span
+  capped at 2° — a metro-wide dump is a bug, not a use case.
+- `apps/web/lib/listings/search.ts` → `mapEntities(bounds)`: same
+  projections and content gate as the text search; plain lat/lng range
+  filters (marks draw at centroids — PostGIS adds nothing two btree
+  comparisons don't). `MAP_LISTING_LIMIT = 100`, communities reuse
+  `COMMUNITY_LIMIT`.
+- `apps/web/app/api/mobile/map/route.ts` — GET, zod-gated, `mapEntities`.
+
+**B · The map rewrite** (`apps/mobile/app/(tabs)/search.tsx`):
+- Zoom bands replace the drill: metro (counties + lens; county tap → pill,
+  no re-frame) → city ≤0.30 (city name labels, community dots, viewport
+  feed on) → homes ≤0.12 (house marks) → street ≤0.06 (words, price-only
+  home chips, schools). `useMapContent` (new hook) re-asks `/api/mobile/map`
+  when a pan/zoom settles, box padded 20%, stale-dropped, kept while zoomed
+  out.
+- DELETED: `selectedId`/`drillCity`, `select`/`goBack`, `visibleUnits`, the
+  city `PhotoMarker` (and the pin styles), the drill branch of the pill and
+  sheet, the drill query (`useSearch` is typed-only now). `flyTo` remains
+  for the sheet's Area rows and the `?focus` deep link — search answers may
+  move the map, taps may not.
+- County/city names are geography: county text at ≤homes band, city labels
+  in the city band, neither takes a tap. County polygons hand `onPress` in
+  ONLY at metro zoom with no search up (phase277.3's iOS `tappable` lesson).
+- Lens fills whisper whenever marks are up (searching or past city band).
+- A typed search still shows its hits at ANY zoom; fit-to-hits is
+  search-only now and includes matched cities' centroids.
+
+**C · Schools by zoom**: pins at street zoom always; the ramp colours only
+under the Schools lens (`SchoolMarker.ramp` optional — no legend, no
+claim; neutral `ink3` otherwise). At street the home's PRICE is the whole
+mark (`homePriceSolo`, amber chip, white digits) — the basemap draws the
+buildings, the icon said nothing the ground doesn't.
+
+**Verification**: mobile typecheck/lint clean (same 8 warnings), 775 pass;
+web typecheck/lint clean, 1,191 pass. The endpoint half needs the Vercel
+deploy of this main before the phone's browse mode has data.
+
+**Next steps**: owner tries it: pinch from metro to a street, no taps
+needed; county pill at metro; typed search unchanged. Knobs if bands feel
+wrong: `CITY_DELTA` / `HOME_DELTA` / `MARK_LABEL_DELTA`. Known ceiling:
+100 communities per viewport read — fine at city zoom, revisit if a dense
+frame ever looks thin.
 ## 2026-09-13 15:50 UTC — phase281: compare loses its prose, communities get the four aspects
 
 **Objective**: owner on phase280 — "A lot of text. Can you redesign, also

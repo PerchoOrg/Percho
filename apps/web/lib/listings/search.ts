@@ -201,3 +201,63 @@ export async function searchEntities(q: string): Promise<SearchResultDTO> {
     communities: projectSearchCommunities((communityRes.data ?? []) as CommunityRow[]),
   };
 }
+
+/** What one viewport read may carry. Communities reuse `COMMUNITY_LIMIT`;
+ *  homes get their own ceiling because `SEARCH_LIMIT` (24) sizes a result
+ *  LIST and a viewport is not a list — there are ~260 active listings in
+ *  total, so in practice this is "all of them in frame". */
+const MAP_LISTING_LIMIT = 100;
+
+/**
+ * The zoom-band map's viewport read (phase281): every contentful community
+ * and active home whose POINT lies in the given bounds. No text, no drill —
+ * the phone re-asks this on every settled pan/zoom past the city band.
+ *
+ * Same projections and the same content gate as `searchEntities`, so a
+ * community looks identical whether it arrived by viewport or by typing.
+ * Plain lat/lng range filters, deliberately: the marks draw at centroids,
+ * so PostGIS adds nothing here that two btree comparisons don't.
+ */
+export async function mapEntities(bounds: {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+}): Promise<Omit<SearchResultDTO, 'q'>> {
+  const supabase = createUncachedAnonClient();
+
+  const [listingRes, communityRes] = await Promise.all([
+    supabase
+      .from('listings')
+      .select('id, slug, address, city, state, zip, price, beds, baths, sqft, cover_url, lat, lng')
+      .eq('status', 'active')
+      .gte('lat', bounds.minLat)
+      .lte('lat', bounds.maxLat)
+      .gte('lng', bounds.minLng)
+      .lte('lng', bounds.maxLng)
+      .order('created_at', { ascending: false })
+      .limit(MAP_LISTING_LIMIT),
+    supabase
+      .from('communities')
+      .select('id, slug, name, city, state, cover_storage_path, lat, lng')
+      .eq('status', 'active')
+      // The content gate — see the header.
+      .not('cover_storage_path', 'is', null)
+      .gte('lat', bounds.minLat)
+      .lte('lat', bounds.maxLat)
+      .gte('lng', bounds.minLng)
+      .lte('lng', bounds.maxLng)
+      .order('name', { ascending: true })
+      .limit(COMMUNITY_LIMIT),
+  ]);
+
+  if (listingRes.error) throw new Error(`map: listings read failed: ${listingRes.error.message}`);
+  if (communityRes.error) {
+    throw new Error(`map: communities read failed: ${communityRes.error.message}`);
+  }
+
+  return {
+    listings: projectSearchListings((listingRes.data ?? []) as ListingRow[]),
+    communities: projectSearchCommunities((communityRes.data ?? []) as CommunityRow[]),
+  };
+}
