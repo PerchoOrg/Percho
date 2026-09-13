@@ -155,7 +155,7 @@ export default function YouTab() {
 
 			{/* Persona card */}
 			<View style={styles.personaCard}>
-				<Text style={styles.eyebrow}>YOUR BUYER TYPE</Text>
+				<Text style={styles.eyebrow}>YOUR PERCHO TYPE</Text>
 				<Text style={styles.personaName}>{name}</Text>
 				{dims.length === 0 && (
 					<Text style={styles.line}>

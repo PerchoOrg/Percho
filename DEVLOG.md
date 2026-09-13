@@ -21,6 +21,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-13 06:45 UTC — phase278.1: "Percho type", not "buyer type"
+
+**Objective**: owner on phase278's card — "Done say buyer type - we are not
+target for buyers, use Percho type here." The label, not the persona names.
+
+**Actions**: `apps/mobile/app/(tabs)/you.tsx` eyebrow → "YOUR PERCHO TYPE"
+(the only "buyer type" string in the mobile app). RELEASE's 09-13 bullet
+reworded to match.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (same 8
+pre-existing warnings), mobile 769 pass.
+
 ## 2026-09-13 06:20 UTC — phase278: persona card is just the name
 
 **Objective**: owner on the You tab — "remove details from persona section,
