@@ -144,12 +144,12 @@ import { textStyles } from "../../theme/typography";
 const FILL_ALPHA = 0.62;
 const FILL_ALPHA_SEARCHING = 0.16;
 
-/** How close (screen points) a bare map press must land to a community dot
+/** How close (screen points) a bare map press must land to a community tile
  *  for `onMapPress` to claim it for that community. A finger-sized ring
- *  around a 20px mark — anything farther is a pan/read tap, not an aim. */
+ *  around a 36px mark — anything farther is a pan/read tap, not an aim. */
 const DOT_TAP_RADIUS_PX = 28;
 
-/** The disclaim radius around a 40px photo pin (home or city): a bare map
+/** The disclaim radius around a home pin or city photo pin: a bare map
  *  press this close to one was aimed at IT, and its own marker handles it —
  *  `onMapPress` must not reroute the same tap to a community. */
 const PIN_TAP_RADIUS_PX = 30;
@@ -162,19 +162,14 @@ const METRO_REGION = {
 	longitudeDelta: 0.45,
 };
 
-/** "$525K" / "$1.2M" — the map chip has no room for `formatPrice`'s
- *  "$525,000", and the chip is what tells a HOME from a community out there. */
-function compactPrice(price: number | undefined): string | undefined {
+/** "525,000" — the digits alone. Owner's spec for the home chip
+ *  (2026-09-13): "the numbers only no k, m" — no compression, and the
+ *  amber house pin is what says it is a price, not the "$". */
+function fullPrice(price: number | undefined): string | undefined {
 	if (price === undefined || !Number.isFinite(price) || price <= 0) {
 		return undefined;
 	}
-	if (price >= 1_000_000) {
-		return `$${(price / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
-	}
-	if (price >= 1_000) {
-		return `$${Math.round(price / 1_000)}K`;
-	}
-	return `$${Math.round(price)}`;
+	return Math.round(price).toLocaleString("en-US");
 }
 
 /** `#rrggbb` + alpha → the `#rrggbbaa` react-native-maps accepts. */
@@ -389,9 +384,9 @@ export default function SearchTab() {
 	 * exclusive and a home-pin tap promptly opened a community page on top of
 	 * the listing (owner, 2026-09-12). So this handler first DISCLAIMS any
 	 * press within reach of a pin that answers for itself — a home or a city,
-	 * whose 40px markers demonstrably receive their own taps — and only then
-	 * claims the nearest dot. A doubled COMMUNITY tap is already absorbed by
-	 * `openCommunity`'s dedupe.
+	 * whose markers demonstrably receive their own taps — and only then
+	 * claims the nearest community tile. A doubled COMMUNITY tap is already
+	 * absorbed by `openCommunity`'s dedupe.
 	 *
 	 * Distance is measured in screen points via the current region's spans —
 	 * the window is a close proxy for the map's own extent, and a few points
@@ -656,34 +651,34 @@ export default function SearchTab() {
 							onPress={() => select(u)}
 						/>
 					))}
-					{/* A community is a DOT — one mark, one size, every row. Its real
-					    outline was drawn here through phase276 and the owner called
-					    the result inconsistent (2026-09-12: "all communities have
-					    different shapes, not consistent"): subdivisions differ wildly
-					    in size and shape, and half the rows have no polygon at all,
-					    so a drill drew some communities and skipped others. The dot
-					    needs only a centroid, so every row shows; the true shape
-					    still lives on the community's own page. */}
+					{/* A community is a photo TILE — rounded square, green frame, the
+					    cover inside (everything the content gate lets through has
+					    one — phase277.5), name below when the view is sparse. The
+					    owner picked this pairing off the marker mockup (2026-09-13):
+					    photo tiles for communities, solid house pins for homes, one
+					    visual weight for both. Boundary polygons (phase267-276) and
+					    the bare dot (phase277) are its ancestors — see DEVLOG. */}
 					{hits?.communities.map((c) =>
 						c.lat !== undefined && c.lng !== undefined ? (
-							<CommunityDot
+							<CommunityTile
 								key={`c-${c.id}`}
 								identifier={`community:${c.slug}`}
 								coordinate={{ latitude: c.lat, longitude: c.lng }}
 								name={c.name}
+								heroUrl={c.heroUrl}
 								labelled={communitiesLabelled}
 								onPress={() => openCommunity(c.slug)}
 							/>
 						) : null,
 					)}
+					{/* A home is a solid PIN — amber teardrop, white house glyph,
+					    the full price under it. */}
 					{hits?.listings.map((l) =>
 						l.lat !== undefined && l.lng !== undefined ? (
-							<PhotoMarker
+							<HomePin
 								key={`l-${l.id}`}
 								coordinate={{ latitude: l.lat, longitude: l.lng }}
-								photoUrl={l.coverUrl}
-								ring={colors.accent}
-								label={compactPrice(l.price) ?? "HOME"}
+								price={fullPrice(l.price)}
 								name={l.address}
 								onPress={() => router.push(`/listing/${l.id}`)}
 							/>
@@ -1120,40 +1115,45 @@ function SchoolMarker({
 	);
 }
 
-function CommunityDot({
+function CommunityTile({
 	coordinate,
 	identifier,
 	name,
+	heroUrl,
 	labelled,
 	onPress,
 }: {
 	coordinate: LatLng;
 	identifier: string;
 	name: string;
+	heroUrl?: string;
 	labelled: boolean;
 	onPress: () => void;
 }) {
 	return (
-		// Built on the PhotoMarker pattern — plain Marker, no `anchor`, no
-		// `tracksViewChanges` override, column layout — because that is the
-		// exact marker shape whose taps provably land in this app (the home
-		// pins). Two earlier cuts each deviated once and each lost the tap:
-		// a school-style anchored row, then a rasterised (`tracksViewChanges
-		// ={false}`) column. Rasterising would spare re-renders, but a dot
-		// that cannot be pressed is not worth them; the ~109 city photo pins
-		// already live-track and pan fine. The `identifier` feeds the
-		// map-level `onMarkerPress` fallback — see `openCommunity`.
+		// Plain Marker, no `anchor`, no `tracksViewChanges` override, column
+		// layout — the construction whose taps provably land in this app;
+		// phases 277.1-277.3 each learned that the hard way. The `identifier`
+		// feeds the map-level `onMarkerPress` fallback — see `openCommunity`.
 		<Marker coordinate={coordinate} identifier={identifier} onPress={onPress}>
 			<View style={styles.communityWrap} accessibilityLabel={name}>
-				{/* The pad is the real tap target — transparent, finger-sized. */}
-				<View style={styles.communityPad}>
-					<View style={styles.communityDot}>
-						<View style={styles.communityCore} />
-					</View>
+				<View style={styles.communityTile}>
+					{heroUrl ? (
+						<Image
+							source={{ uri: heroUrl }}
+							style={styles.communityTilePhoto}
+						/>
+					) : (
+						// The gate should make this unreachable (a visible community
+						// HAS a cover), but a wire can be older than the app.
+						<Text style={styles.communityTileInitial}>
+							{name.trim().charAt(0).toUpperCase()}
+						</Text>
+					)}
 				</View>
-				{/* The label slot is ALWAYS in the layout so the dot sits at the
+				{/* The label slot is ALWAYS in the layout so the tile sits at the
 				    same offset whether or not the name is shown — labels come and
-				    go with zoom, and the dots must not hop when they do. */}
+				    go with zoom, and the tiles must not hop when they do. */}
 				<View style={styles.communityLabelBox}>
 					{labelled ? (
 						<Text style={styles.communityName} numberOfLines={1}>
@@ -1166,13 +1166,44 @@ function CommunityDot({
 	);
 }
 
+function HomePin({
+	coordinate,
+	price,
+	name,
+	onPress,
+}: {
+	coordinate: LatLng;
+	price?: string;
+	name: string;
+	onPress: () => void;
+}) {
+	return (
+		<Marker coordinate={coordinate} onPress={onPress}>
+			<View style={styles.homeWrap} accessibilityLabel={name}>
+				<View style={styles.homeDrop}>
+					{/* Counter-rotated so the glyph stands upright inside the
+					    rotated teardrop. The house is two Views — roof and body —
+					    because the app carries no SVG dependency and 16px is
+					    forgiving. */}
+					<View style={styles.homeGlyph}>
+						<View style={styles.homeRoof} />
+						<View style={styles.homeBody} />
+					</View>
+				</View>
+				{price ? <Text style={styles.homePrice}>{price}</Text> : null}
+			</View>
+		</Marker>
+	);
+}
+
+/** The CITY pin. Homes moved to `HomePin` (2026-09-13), which took the
+ *  price label with them — this is a photo circle and nothing else now. */
 function PhotoMarker({
 	coordinate,
 	photoUrl,
 	ring,
 	selected,
 	name,
-	label,
 	onPress,
 }: {
 	coordinate: LatLng;
@@ -1180,7 +1211,6 @@ function PhotoMarker({
 	ring: string;
 	selected?: boolean;
 	name: string;
-	label?: string;
 	onPress: () => void;
 }) {
 	const border = selected ? colors.accent : ring;
@@ -1202,11 +1232,6 @@ function PhotoMarker({
 						</Text>
 					)}
 				</View>
-				{label ? (
-					<View style={[styles.pinLabel, { borderColor: border }]}>
-						<Text style={styles.pinLabelText}>{label}</Text>
-					</View>
-				) : null}
 			</View>
 		</Marker>
 	);
@@ -1248,43 +1273,35 @@ const styles = StyleSheet.create({
 		paddingVertical: 1,
 		overflow: "hidden",
 	},
-	// ── Community dots ────────────────────────────────────────────────────────
-	// The dot is the community's whole presence on this map (owner,
-	// 2026-09-12), so it dresses like a map POI rather than a flat disc: a
-	// white ring carrying a green core, with a soft shadow lifting it off the
-	// basemap the way the photo pins sit off it.
+	// ── Community tiles & home pins ───────────────────────────────────────────
+	// The pairing the owner picked off /demos/map-markers/ (2026-09-13):
+	// a rounded-square cover photo in the community green, and a solid amber
+	// teardrop with a white house for a home — one visual weight for both.
 	communityWrap: { alignItems: "center" },
-	// Finger-sized and transparent — the tap target around a 20px mark.
-	communityPad: {
-		width: 34,
-		height: 34,
+	communityTile: {
+		width: 36,
+		height: 36,
+		borderRadius: 11,
+		borderWidth: 2.5,
+		borderColor: colors.pos,
+		backgroundColor: colors.surface2,
+		overflow: "hidden",
 		alignItems: "center",
 		justifyContent: "center",
 	},
-	communityDot: {
-		width: 20,
-		height: 20,
-		borderRadius: 10,
-		backgroundColor: colors.surface,
-		alignItems: "center",
-		justifyContent: "center",
-		shadowColor: "#000",
-		shadowOpacity: 0.25,
-		shadowRadius: 3,
-		shadowOffset: { width: 0, height: 1 },
-	},
-	communityCore: {
-		width: 11,
-		height: 11,
-		borderRadius: 5.5,
-		backgroundColor: colors.pos,
+	communityTilePhoto: { width: "100%", height: "100%" },
+	communityTileInitial: {
+		...textStyles.caption,
+		fontSize: 15,
+		fontWeight: "700",
+		color: colors.pos,
 	},
 	// Reserved whether or not the name is drawn — see the note in the marker.
 	communityLabelBox: {
 		height: 18,
 		maxWidth: 128,
 		alignItems: "center",
-		marginTop: -2,
+		marginTop: 3,
 	},
 	communityName: {
 		...textStyles.caption,
@@ -1298,6 +1315,59 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 4,
 		paddingVertical: 1,
 		overflow: "hidden",
+	},
+	homeWrap: { alignItems: "center" },
+	// A teardrop is a circle with one square corner, rotated 45° — the same
+	// trick the mockup used. The border stays white so it separates from the
+	// lens fill the way the photo pins do.
+	homeDrop: {
+		width: 32,
+		height: 32,
+		borderTopLeftRadius: 16,
+		borderTopRightRadius: 16,
+		borderBottomRightRadius: 16,
+		backgroundColor: colors.accent,
+		borderWidth: 2,
+		borderColor: colors.surface,
+		transform: [{ rotate: "-45deg" }],
+		alignItems: "center",
+		justifyContent: "center",
+		shadowColor: "#000",
+		shadowOpacity: 0.28,
+		shadowRadius: 3,
+		shadowOffset: { width: 0, height: 1 },
+	},
+	homeGlyph: { transform: [{ rotate: "45deg" }], alignItems: "center" },
+	homeRoof: {
+		width: 0,
+		height: 0,
+		borderLeftWidth: 6,
+		borderRightWidth: 6,
+		borderBottomWidth: 5,
+		borderLeftColor: "transparent",
+		borderRightColor: "transparent",
+		borderBottomColor: colors.surface,
+	},
+	homeBody: {
+		width: 9,
+		height: 6,
+		backgroundColor: colors.surface,
+		borderBottomLeftRadius: 1,
+		borderBottomRightRadius: 1,
+	},
+	homePrice: {
+		...textStyles.caption,
+		fontSize: 12,
+		fontWeight: "700",
+		color: colors.ink,
+		backgroundColor: withAlpha(colors.surface, 0.82),
+		borderRadius: 4,
+		paddingHorizontal: 4,
+		paddingVertical: 1,
+		overflow: "hidden",
+		// Clears the drop's rotated tip, which reaches ~7pt past its layout
+		// box toward the chip.
+		marginTop: 10,
 	},
 	// ── Legend ────────────────────────────────────────────────────────────────
 	legend: {
@@ -1424,18 +1494,6 @@ const styles = StyleSheet.create({
 	pinSelected: { borderWidth: 3 },
 	pinPhoto: { width: "100%", height: "100%" },
 	pinInitial: { ...textStyles.headline, fontWeight: "700" },
-	pinLabel: {
-		backgroundColor: colors.glass,
-		borderWidth: 1,
-		borderRadius: radii.pill,
-		paddingHorizontal: 6,
-		paddingVertical: 1,
-	},
-	pinLabelText: {
-		...textStyles.caption,
-		letterSpacing: 0.2,
-		color: colors.ink,
-	},
 
 	// ── Lens chips ────────────────────────────────────────────────────────────
 	lensBar: { position: "absolute", left: 0, right: 0 },
