@@ -14,17 +14,28 @@
  *   · community / home row tap → its detail page; city row tap → fly to it
  *     (city/zip "don't leave the surface" per §4.4)
  *
- * ── Drilling in (phase265) ──────────────────────────────────────────────────
- * The map narrows the way the owner described it: county → city → community →
- * home. Each tap goes one level in, and the MAP is what answers:
+ * ── Zoom bands, no drill (phase281) ────────────────────────────────────────
+ * The drill model (phase265's county → city → community) is gone by owner
+ * decision (2026-09-13: "No need to have county and city levels in map…
+ * don't zoom in that once clicked. The only things are community and homes
+ * and schools… all based on zoomin scale"). The map is now a plain map: the
+ * BUYER moves it, and what it shows depends only on how close they are.
  *
- *   county outline → zoom to it; its cities become the visible pins
- *   city pin       → zoom to it; its communities become the visible dots
- *   community      → its explore page.  home pin → its listing page.
+ *   metro  (Δlat > 0.30)  county lines + names, lens fills. County tap →
+ *                         info pill (no re-frame). Nothing else drawn.
+ *   city   (≤ 0.30)       + city name labels, community dots. Content comes
+ *                         from `/api/mobile/map` — the viewport query,
+ *                         re-asked when a pan/zoom settles (`useMapContent`).
+ *   homes  (≤ 0.12)       + amber house marks.
+ *   street (≤ 0.06)       + the words: community names, home prices (the
+ *                         price REPLACES the house icon — owner: "home icon
+ *                         就不需要啊 直接显示数字"), and schools, neutral
+ *                         colour unless the Schools lens is on.
  *
- * The city step asks the SAME search endpoint for the city's name rather than
- * a new one: `searchEntities` already matches communities on `city`, so
- * "Roswell" is literally the query for "what is in Roswell".
+ * County and city are geography, not controls: their names are labels, a
+ * city tap does nothing, a county tap only at metro zoom and only a pill.
+ * City boundaries stay undrawn — there is still no city polygon in the
+ * product (TIGER Places deferred again, owner 2026-09-13: "先不用").
  *
  * ── The sheet is for typed search, and nothing else ─────────────────────────
  * Three rounds of the same note (owner, 2026-09-09 ×2 and 2026-09-10): "the
@@ -112,15 +123,12 @@ import MapView, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAreas } from "../../hooks/use-areas";
 import { useFeedPool } from "../../hooks/use-feed-pool";
+import { useMapContent } from "../../hooks/use-map-content";
 import { useSchools } from "../../hooks/use-schools";
 import { MIN_QUERY_LEN, useSearch } from "../../hooks/use-search";
 import { familiarityFor } from "../../lib/area-familiarity";
 import { areasByKey } from "../../lib/areas/areas-dto";
-import {
-	countyKeyForPoint,
-	savedCitiesByCounty,
-	savedCityNote,
-} from "../../lib/areas/locate";
+import { savedCitiesByCounty, savedCityNote } from "../../lib/areas/locate";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
 import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
 import {
@@ -149,10 +157,13 @@ const FILL_ALPHA_SEARCHING = 0.16;
  *  around a small mark — anything farther is a pan/read tap, not an aim. */
 const DOT_TAP_RADIUS_PX = 28;
 
-/** Below this `latitudeDelta` the marks put their words on — community
- *  names and home prices. Matches the school layer's finest step
- *  (`levelsForZoom`), so "zoomed in enough" means the same thing on every
- *  layer of this map. */
+/** The zoom bands (see the header). Each is a `latitudeDelta` ceiling:
+ *  CITY turns the viewport feed and the community dots on, HOME adds the
+ *  house marks, and `MARK_LABEL_DELTA` — kept from phase277.9, and aligned
+ *  with the school layer's finest `levelsForZoom` step — puts the words on
+ *  and the schools out. */
+const CITY_DELTA = 0.3;
+const HOME_DELTA = 0.12;
 const MARK_LABEL_DELTA = 0.06;
 
 /** The disclaim radius around a home pin or city photo pin: a bare map
@@ -202,17 +213,11 @@ export default function SearchTab() {
 	const [query, setQuery] = useState("");
 	// v1: the sheet is one expanded panel (half) or collapsed (peek).
 	const [expanded, setExpanded] = useState(false);
-	const [selectedId, setSelectedId] = useState<string | null>(null);
 
 	const searching = query.trim().length >= MIN_QUERY_LEN;
-	/** The city the buyer has drilled into, when they have. */
-	const drillCity = selectedId
-		? pool.geoUnits.find((u) => u.id === selectedId)
-		: undefined;
-	// One endpoint serves both the typed question and the drill: `searchEntities`
-	// matches communities on `city`, so a city's own name IS the query for what
-	// is inside it. A typed query always wins — the buyer is asking, not browsing.
-	const search = useSearch(searching ? query : (drillCity?.name ?? ""));
+	// The search endpoint answers TYPED questions only — browsing is the
+	// viewport feed (`useMapContent` below), not a hidden query.
+	const search = useSearch(searching ? query : "");
 
 	const mapRef = useRef<MapView>(null);
 
@@ -225,11 +230,27 @@ export default function SearchTab() {
 	// asks a question with a chip. Tapping the live chip puts it away again.
 	const [lensId, setLensId] = useState<LensId | null>(null);
 	const [openArea, setOpenArea] = useState<string | null>(null);
-	/** What the map is currently showing. Only the school layer and the
-	 *  community labels read it, and only `onRegionChangeComplete` writes it —
-	 *  which fires when a gesture ENDS, not through the pan, so this is a
-	 *  handful of renders and not a stream of them. */
+	/** What the map is currently showing — the whole tab keys off it now:
+	 *  the zoom bands, the viewport feed, the school layer, the labels. Only
+	 *  `onRegionChangeComplete` writes it, which fires when a gesture ENDS,
+	 *  not through the pan, so this is a handful of renders and not a stream
+	 *  of them. */
 	const [region, setRegion] = useState<MapRegion>(METRO_REGION);
+
+	// ── The zoom bands ────────────────────────────────────────────────────────
+	/** Past the city band the map has CONTENT — dots, and the viewport feed
+	 *  that supplies them. Before it, counties are the subject. */
+	const cityBand = region.latitudeDelta <= CITY_DELTA;
+	const homesBand = region.latitudeDelta <= HOME_DELTA;
+	/** Words (community names, home prices) appear only past a fixed zoom —
+	 *  the owner's rule (2026-09-13: "no names until zoom in enough"). The
+	 *  street band also brings the schools out. */
+	const marksLabelled = region.latitudeDelta <= MARK_LABEL_DELTA;
+
+	/** The browse feed: whatever is inside the visible box, re-asked when a
+	 *  pan or zoom settles. Kept (not cleared) while zoomed out — the bands
+	 *  hide the marks anyway. */
+	const mapContent = useMapContent(region, cityBand);
 
 	const lens = lensId ? lensById(lensId) : undefined;
 	const metricsByKey = useMemo(
@@ -279,14 +300,16 @@ export default function SearchTab() {
 	// `attendance_zones` table has never been seeded, and a district outline is
 	// a different claim than a zone — see `lib/schools/school-pins.ts`.
 	//
-	// Only under the Schools lens. A pin per school is a lot of ink, and it is
-	// an answer to a question the buyer asks with the chip; without the chip it
-	// is clutter over a map whose job is finding a home.
+	// Under the Schools lens at any zoom, and at STREET zoom always (owner,
+	// 2026-09-13: schools are core map content, by zoom like everything
+	// else). Without the lens the pins are the NEUTRAL colour — the ramp is
+	// the lens's answer, and painting scores without its legend up would be
+	// a claim with no key.
 	const { schools: schoolData } = useSchools();
+	const schoolsOn = lensId === "schools" || marksLabelled;
 	const schoolPins = useMemo(
-		() =>
-			lensId === "schools" ? visibleSchools(schoolData.schools, region) : [],
-		[lensId, schoolData.schools, region],
+		() => (schoolsOn ? visibleSchools(schoolData.schools, region) : []),
+		[schoolsOn, schoolData.schools, region],
 	);
 	/** The schools lens's own ramp. The pins share the ramp with the county
 	 *  fill but NOT its scale — see `PROFICIENCY_BANDS`, which is why the
@@ -309,33 +332,18 @@ export default function SearchTab() {
 		? metricsByKey.get(openArea)
 		: undefined;
 
-	/** Move the map to a county and preview it — one level in from the metro. */
+	/** A county tap opens its pill and NOTHING moves — the owner's rule
+	 *  (2026-09-13): a tap must never re-frame the map. The pill is kept by
+	 *  his explicit "保留"; the way deeper is the buyer's own pinch. */
 	const selectArea = (key: string) => {
 		setOpenArea(key);
-		// A county tap re-frames the level below it, never keeps a stale city.
-		setSelectedId(null);
-		// Collapse, never open: a tap on the map is answered BY the map, and a
-		// sheet over it is the thing the owner keeps asking us to stop doing.
 		setExpanded(false);
-		const shape = areaData.shapes.find((s) => s.key === key);
-		if (!shape) return;
-		mapRef.current?.animateToRegion(
-			{
-				latitude: shape.centre[1],
-				longitude: shape.centre[0],
-				latitudeDelta: 0.5,
-				longitudeDelta: 0.42,
-			},
-			500,
-		);
 	};
 
-	/** Select a unit AND move the map to it — pin tap, row tap, `focus` param. */
-	const select = (u: GeoUnit) => {
-		setSelectedId(u.id);
-		// The city's communities arrive as PINS. Listing them over the map was
-		// exactly the complaint (owner, 2026-09-09) — pull the sheet up for the
-		// list, or read the map.
+	/** Fly to a city — a SEARCH answer (sheet row tap, `focus` deep link),
+	 *  never a map tap. Lands inside the city band, where the viewport feed
+	 *  takes over and the communities are simply there. */
+	const flyTo = (u: GeoUnit) => {
 		setExpanded(false);
 		mapRef.current?.animateToRegion(
 			{
@@ -346,18 +354,6 @@ export default function SearchTab() {
 			},
 			500,
 		);
-	};
-
-	/** One level out: a city returns to its county, a county to the metro. */
-	const goBack = () => {
-		if (drillCity) {
-			setSelectedId(null);
-			if (openArea) selectArea(openArea);
-			else mapRef.current?.animateToRegion(METRO_REGION, 500);
-			return;
-		}
-		setOpenArea(null);
-		mapRef.current?.animateToRegion(METRO_REGION, 500);
 	};
 
 	/**
@@ -400,7 +396,8 @@ export default function SearchTab() {
 	 * meant.
 	 */
 	const onMapPress = (e: MapPressEvent) => {
-		if (!hits) return;
+		// No marks on the map, nothing to claim.
+		if (!shown || !(searching || cityBand)) return;
 		const tap = e.nativeEvent.coordinate;
 		const px = (lat: number, lng: number) => {
 			const dx =
@@ -408,15 +405,14 @@ export default function SearchTab() {
 			const dy = (Math.abs(lat - tap.latitude) / region.latitudeDelta) * height;
 			return Math.hypot(dx, dy);
 		};
-		for (const l of hits.listings) {
-			if (l.lat === undefined || l.lng === undefined) continue;
-			if (px(l.lat, l.lng) <= PIN_TAP_RADIUS_PX) return;
-		}
-		for (const u of visibleUnits) {
-			if (px(u.centroid.lat, u.centroid.lng) <= PIN_TAP_RADIUS_PX) return;
+		if (searching || homesBand) {
+			for (const l of shown.listings) {
+				if (l.lat === undefined || l.lng === undefined) continue;
+				if (px(l.lat, l.lng) <= PIN_TAP_RADIUS_PX) return;
+			}
 		}
 		let best: { slug: string; d: number } | undefined;
-		for (const c of hits.communities) {
+		for (const c of shown.communities) {
 			if (c.lat === undefined || c.lng === undefined) continue;
 			const d = px(c.lat, c.lng);
 			if (d <= DOT_TAP_RADIUS_PX && (!best || d < best.d)) {
@@ -436,7 +432,7 @@ export default function SearchTab() {
 		const unit = pool.geoUnits.find((u) => u.id === focus);
 		if (!unit) return; // pool still loading — retry on the next pool change
 		handledFocus.current = focus;
-		select(unit);
+		flyTo(unit);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [focus, pool.geoUnits]);
 
@@ -455,49 +451,33 @@ export default function SearchTab() {
 		return familiarityFor(signals, u.id);
 	}
 
-	/**
-	 * The city pins the map is drawing, which is what the drill level decides.
-	 * A county shows the cities inside its outline — resolved by centroid with
-	 * the outlines the lens map already downloaded (`locate.ts`), so this costs
-	 * no request and no new column.
-	 */
-	const visibleUnits = useMemo(() => {
-		if (searching) return units;
-		// Inside a drill the city draws NO pin of its own. It used to keep one,
-		// and that pin sat dead-centre — exactly where the drill animation puts
-		// the buyer's thumb — with a 44px frame that MapKit favours over the
-		// small community dots around it. Its only answer to a tap was
-		// `select(the same city)`, i.e. re-framing back out to the whole-city
-		// view (owner, 2026-09-12: "clicking community dot… goes back to city
-		// view"). The pill already names the level; the dots ARE the city.
-		if (drillCity) return [];
-		if (openArea) {
-			return units.filter(
-				(u) =>
-					countyKeyForPoint(u.centroid.lat, u.centroid.lng, areaData.shapes) ===
-					openArea,
-			);
-		}
-		return units;
-	}, [units, searching, drillCity, openArea, areaData.shapes]);
+	/** City NAME LABELS, not pins: in-view cities, drawn in the city band and
+	 *  put away at street zoom where the marks' own words take over. A city
+	 *  is geography here — the label takes no tap. */
+	const cityLabels = useMemo(() => {
+		if (!cityBand || marksLabelled) return [];
+		const latPad = (region.latitudeDelta / 2) * 1.1;
+		const lngPad = (region.longitudeDelta / 2) * 1.1;
+		return pool.geoUnits.filter(
+			(u) =>
+				Math.abs(u.centroid.lat - region.latitude) <= latPad &&
+				Math.abs(u.centroid.lng - region.longitude) <= lngPad,
+		);
+	}, [cityBand, marksLabelled, region, pool.geoUnits]);
 
 	const hits = search.result;
 
-	/** Words (community names, home prices) appear only past a fixed zoom —
-	 *  the owner's rule (2026-09-13: "no names until zoom in enough"), which
-	 *  replaced a count-in-view gate. `MARK_LABEL_DELTA` is the school
-	 *  layer's "a few streets" threshold, one good pinch past the drill
-	 *  frame (0.18), so the two layers agree on what "close" means. */
-	const marksLabelled = region.latitudeDelta <= MARK_LABEL_DELTA;
+	/** What the marks draw from: a typed question shows what IT found, and
+	 *  browsing shows the viewport feed. */
+	const shown = searching ? hits : mapContent.result;
 
-	// A fresh result set opens the sheet and fits the map to whatever has a
-	// pin. Cities keep their centroid pins so a city-only match still lands.
+	// A fresh TYPED result opens the sheet and fits the map to whatever has
+	// a point — including matched cities' centroids, so a city-only match
+	// still lands somewhere.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: fit once per result set, not on every city-list re-sort
 	useEffect(() => {
-		if (!hits) return;
-		// A TYPED question opens the list — you asked in words, you get words
-		// back. A drill does not: its answer is the pins that just appeared.
-		if (searching) setExpanded(true);
+		if (!hits || !searching) return;
+		setExpanded(true);
 		const coords = [
 			...hits.listings.flatMap((l) =>
 				l.lat !== undefined && l.lng !== undefined
@@ -509,7 +489,7 @@ export default function SearchTab() {
 					? [{ latitude: c.lat, longitude: c.lng }]
 					: [],
 			),
-			...visibleUnits.map((u) => ({
+			...units.map((u) => ({
 				latitude: u.centroid.lat,
 				longitude: u.centroid.lng,
 			})),
@@ -539,8 +519,6 @@ export default function SearchTab() {
 		previewHit && lens
 			? `${lens.format(previewHit.value)}${previewHit.estimated ? "*" : ""}`
 			: undefined;
-	/** Either kind of question is out to the search endpoint. */
-	const asking = searching || !!drillCity;
 	const sheetH = expanded ? Math.min(height * 0.55, 480) : 110;
 	const hitCount = hits
 		? hits.communities.length + hits.listings.length + units.length
@@ -590,7 +568,12 @@ export default function SearchTab() {
 									lens && hit
 										? withAlpha(
 												colorFor(lens, hit.value, breaks),
-												asking ? FILL_ALPHA_SEARCHING : FILL_ALPHA,
+												// A whisper once marks are on the map — typed hits
+												// or any zoom past the city band — so they stay
+												// readable over the colour.
+												searching || cityBand
+													? FILL_ALPHA_SEARCHING
+													: FILL_ALPHA,
 											)
 										: withAlpha(colors.ink2, 0)
 								}
@@ -602,17 +585,19 @@ export default function SearchTab() {
 											: withAlpha(colors.ink2, 0.45)
 								}
 								strokeWidth={open ? 2.5 : 1}
-								// A county stops taking taps while results are on the map —
-								// and on iOS that means handing it NO `onPress` at all.
-								// `tappable` is a lie there: AIRMapManager's handleMapTap
+								// A county takes taps ONLY at metro zoom with no search up —
+								// past the city band the marks own the surface. On iOS
+								// "not tappable" means handing it NO `onPress` at all:
+								// `tappable` is a lie there (AIRMapManager's handleMapTap
 								// fires every polygon whose ring contains the tap, gated
-								// only on `if (polygon.onPress)` — the prop is never read.
-								// phase268 set `tappable={!asking}` for this and the county
-								// went on eating dot taps ("always go to county view",
-								// owner 2026-09-12). The prop stays for Android, where it
-								// IS honoured.
-								tappable={!asking}
-								onPress={asking ? undefined : () => selectArea(shape.key)}
+								// only on `if (polygon.onPress)`) — phase277.3's lesson.
+								// The prop stays for Android, where it IS honoured.
+								tappable={!searching && !cityBand}
+								onPress={
+									!searching && !cityBand
+										? () => selectArea(shape.key)
+										: undefined
+								}
 							/>
 						));
 					})}
@@ -620,61 +605,82 @@ export default function SearchTab() {
 					    community is what the buyer came to tap, and a school is the
 					    context around it. react-native-maps hit-tests in the order
 					    overlays were added. */}
-					{schoolRamp
-						? schoolPins.map((pin) => (
-								<SchoolMarker
-									key={`sch-${pin.id}`}
-									pin={pin}
-									ramp={schoolRamp}
-									labelled={schoolsLabelled}
-								/>
+					{schoolPins.map((pin) => (
+						<SchoolMarker
+							key={`sch-${pin.id}`}
+							pin={pin}
+							// The ramp is the LENS's answer; at plain street zoom the
+							// pins wear the neutral colour instead — a score without
+							// its legend up would be a claim with no key.
+							ramp={lensId === "schools" ? schoolRamp : undefined}
+							labelled={schoolsLabelled}
+						/>
+					))}
+					{/* County and city NAMES — geography, not controls. The county
+					    names retire once the houses band starts (the map is about
+					    its content by then) and the city labels once the marks put
+					    their own words on. */}
+					{!homesBand
+						? areaData.shapes.map((shape) => (
+								<Marker
+									key={`cn-${shape.key}`}
+									coordinate={{
+										latitude: shape.centre[1],
+										longitude: shape.centre[0],
+									}}
+									tracksViewChanges={false}
+								>
+									<Text style={styles.countyName}>{shape.name}</Text>
+								</Marker>
 							))
 						: null}
-					{visibleUnits.map((u) => (
-						<PhotoMarker
-							key={u.id}
+					{cityLabels.map((u) => (
+						<Marker
+							key={`cl-${u.id}`}
 							coordinate={{
 								latitude: u.centroid.lat,
 								longitude: u.centroid.lng,
 							}}
-							photoUrl={u.heroUrl}
-							ring={colors.ink2}
-							selected={selectedId === u.id}
-							name={u.name}
-							onPress={() => select(u)}
-						/>
+							tracksViewChanges={false}
+						>
+							<Text style={styles.cityLabel}>{u.name}</Text>
+						</Marker>
 					))}
-					{/* MINI MARKS — the owner's final pick after trying tiles and
-					    teardrops on the phone (2026-09-13: "Not good, show mini
-					    marks, no names until zoom in enough"): a small green dot
-					    for a community, a small amber house for a home, and the
-					    words (name / price) only past `MARK_LABEL_DELTA`. The
-					    lineage — boundary polygons, bare dots, photo tiles — is in
-					    the DEVLOG. */}
-					{hits?.communities.map((c) =>
-						c.lat !== undefined && c.lng !== undefined ? (
-							<CommunityMark
-								key={`c-${c.id}`}
-								identifier={`community:${c.slug}`}
-								coordinate={{ latitude: c.lat, longitude: c.lng }}
-								name={c.name}
-								labelled={marksLabelled}
-								onPress={() => openCommunity(c.slug)}
-							/>
-						) : null,
-					)}
-					{hits?.listings.map((l) =>
-						l.lat !== undefined && l.lng !== undefined ? (
-							<HomePin
-								key={`l-${l.id}`}
-								coordinate={{ latitude: l.lat, longitude: l.lng }}
-								price={fullPrice(l.price)}
-								name={l.address}
-								labelled={marksLabelled}
-								onPress={() => router.push(`/listing/${l.id}`)}
-							/>
-						) : null,
-					)}
+					{/* MINI MARKS (owner, 2026-09-13): a small green dot for a
+					    community from the city band, a small amber house for a home
+					    from the homes band, and the words only past
+					    `MARK_LABEL_DELTA` — where the home's price REPLACES the
+					    house entirely ("home icon就不需要啊 直接显示数字"). A typed
+					    search shows its hits at any zoom: a search must show what
+					    it found. */}
+					{searching || cityBand
+						? shown?.communities.map((c) =>
+								c.lat !== undefined && c.lng !== undefined ? (
+									<CommunityMark
+										key={`c-${c.id}`}
+										identifier={`community:${c.slug}`}
+										coordinate={{ latitude: c.lat, longitude: c.lng }}
+										name={c.name}
+										labelled={marksLabelled}
+										onPress={() => openCommunity(c.slug)}
+									/>
+								) : null,
+							)
+						: null}
+					{searching || homesBand
+						? shown?.listings.map((l) =>
+								l.lat !== undefined && l.lng !== undefined ? (
+									<HomePin
+										key={`l-${l.id}`}
+										coordinate={{ latitude: l.lat, longitude: l.lng }}
+										price={fullPrice(l.price)}
+										name={l.address}
+										labelled={marksLabelled}
+										onPress={() => router.push(`/listing/${l.id}`)}
+									/>
+								) : null,
+							)
+						: null}
 				</MapView>
 
 				{/* Search pill (floats above map, §4.1 #1) */}
@@ -774,28 +780,16 @@ export default function SearchTab() {
 					</View>
 				)}
 
-				{/* Where you are, floating ON the map instead of under it. A county
-				    or a city used to raise the sheet, and a sheet holding one line
-				    still reads as an empty panel (owner, 2026-09-10: "still see empty
-				    sheet for county and city… need a different entry to see
-				    details"). This is that different entry: a pill wide enough for
-				    its own text, so the map runs underneath and around it.
-
-				    A county's body opens `/area/[key]`. A CITY has no page to open —
-				    there is no city-level record in this product, only the
-				    communities grouped under its name — so its pill is the name and
-				    the way back, and the communities themselves are on the map. */}
-				{!searching && (drillCity || openedArea) && (
+				{/* The county pill — kept by owner decision (2026-09-13, "保留").
+				    A metro-zoom county tap opens it; it never moves the map. Its
+				    body opens `/area/[key]`; the ‹ just puts it away. */}
+				{!searching && openedArea && (
 					<View style={[styles.contextBar, { bottom: insets.bottom + 16 }]}>
 						<View style={styles.contextPill}>
-							<Pressable onPress={goBack} hitSlop={12}>
+							<Pressable onPress={() => setOpenArea(null)} hitSlop={12}>
 								<Text style={styles.contextBack}>‹</Text>
 							</Pressable>
-							{drillCity ? (
-								<Text style={styles.contextName} numberOfLines={1}>
-									{drillCity.name}
-								</Text>
-							) : openedArea ? (
+							{openedArea ? (
 								<Pressable
 									style={styles.contextBody}
 									// With no lens on, the page picks its own default rather
@@ -853,7 +847,7 @@ export default function SearchTab() {
 					</Text>
 					{expanded && (
 						<ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
-							{asking && search.error && (
+							{search.error && (
 								<View style={styles.stateBox}>
 									<Text style={styles.empty}>Couldn’t reach search.</Text>
 									<Pressable onPress={search.retry} style={styles.retryBtn}>
@@ -861,28 +855,12 @@ export default function SearchTab() {
 									</Pressable>
 								</View>
 							)}
-							{asking && !search.error && !hits && (
-								<Text style={styles.empty}>
-									{searching ? "Searching…" : "Loading…"}
-								</Text>
+							{!search.error && !hits && (
+								<Text style={styles.empty}>Searching…</Text>
 							)}
-							{searching && hits && hitCount === 0 && (
+							{hits && hitCount === 0 && (
 								<Text style={styles.empty}>
 									No match — try a street, community, city or zip.
-								</Text>
-							)}
-							{!searching &&
-								drillCity &&
-								hits &&
-								hits.communities.length === 0 &&
-								hits.listings.length === 0 && (
-									<Text style={styles.empty}>
-										Nothing mapped in {drillCity.name} yet.
-									</Text>
-								)}
-							{!searching && !poolLoading && units.length === 0 && (
-								<Text style={styles.empty}>
-									No areas yet.{"\n"}Discovery lives in the feed.
 								</Text>
 							)}
 
@@ -943,11 +921,8 @@ export default function SearchTab() {
 							{units.map((u) => (
 								<Pressable
 									key={u.id}
-									style={[
-										styles.row,
-										selectedId === u.id && styles.rowSelected,
-									]}
-									onPress={() => select(u)}
+									style={styles.row}
+									onPress={() => flyTo(u)}
 								>
 									<Image source={{ uri: u.heroUrl }} style={styles.rowThumb} />
 									<View style={styles.rowText}>
@@ -968,23 +943,6 @@ export default function SearchTab() {
 	);
 }
 
-/**
- * A map pin that shows the spot's own face — its hero photo in a circle —
- * instead of the stock teardrop. The old pinColor language survives as the
- * ring: what the colour used to say about the spot's kind, the border says now.
- *
- * A spot with no photo shows the first letter of its name (owner, 2026-09-09).
- * It used to be a solid disc in the ring colour, which said only "something is
- * here"; the letter says which one, and photo coverage is thin enough on
- * communities that this is a common face rather than an edge case.
- *
- * `label` hangs a small chip under the circle. Listings pass their price
- * through it, which is also what tells a HOME from a community at a glance —
- * ring colour alone was too quiet a distinction (owner, 2026-09-09).
- *
- * No `title`/`description`: those draw a callout, and every pin here is a
- * one-tap action — drill into the city, open the community, open the home.
- */
 /**
  * One row of the legend: a name, the five ramp steps, and what each end means.
  *
@@ -1077,11 +1035,13 @@ function SchoolMarker({
 	labelled,
 }: {
 	pin: SchoolPin;
-	ramp: readonly [string, string, string, string, string];
+	/** Absent at plain street zoom: no ramp, no claim — every dot wears the
+	 *  neutral colour, and only the Schools lens paints the scores. */
+	ramp?: readonly [string, string, string, string, string];
 	labelled: boolean;
 }) {
-	const step = proficiencyStep(pin.proficiencyPct);
-	const fill = step === undefined ? colors.ink3 : (ramp[step] ?? colors.ink3);
+	const step = ramp ? proficiencyStep(pin.proficiencyPct) : undefined;
+	const fill = step === undefined ? colors.ink3 : (ramp?.[step] ?? colors.ink3);
 	return (
 		<Marker
 			coordinate={{ latitude: pin.lat, longitude: pin.lng }}
@@ -1161,62 +1121,26 @@ function HomePin({
 	return (
 		<Marker coordinate={coordinate} onPress={onPress}>
 			<View style={styles.markWrap} accessibilityLabel={name}>
-				<View style={styles.markPad}>
-					{/* A little amber house — roof triangle over a body, two plain
-					    Views, no SVG dependency. */}
-					<View style={styles.homeMark}>
-						<View style={styles.homeRoof} />
-						<View style={styles.homeBody} />
-					</View>
-				</View>
-				<View style={styles.markLabelBox}>
-					{labelled && price ? (
-						<Text style={styles.homePrice} numberOfLines={1}>
-							{price}
-						</Text>
-					) : null}
-				</View>
-			</View>
-		</Marker>
-	);
-}
-
-/** The CITY pin. Homes moved to `HomePin` (2026-09-13), which took the
- *  price label with them — this is a photo circle and nothing else now. */
-function PhotoMarker({
-	coordinate,
-	photoUrl,
-	ring,
-	selected,
-	name,
-	onPress,
-}: {
-	coordinate: LatLng;
-	photoUrl?: string;
-	ring: string;
-	selected?: boolean;
-	name: string;
-	onPress: () => void;
-}) {
-	const border = selected ? colors.accent : ring;
-	return (
-		<Marker coordinate={coordinate} onPress={onPress}>
-			<View style={styles.pinWrap} accessibilityLabel={name}>
-				<View
-					style={[
-						styles.pin,
-						{ borderColor: border },
-						selected && styles.pinSelected,
-					]}
-				>
-					{photoUrl ? (
-						<Image source={{ uri: photoUrl }} style={styles.pinPhoto} />
-					) : (
-						<Text style={[styles.pinInitial, { color: border }]}>
-							{name.trim().charAt(0).toUpperCase()}
-						</Text>
-					)}
-				</View>
+				{labelled && price ? (
+					// At street zoom the basemap draws the actual buildings, so the
+					// icon says nothing the ground doesn't — the PRICE is the mark
+					// (owner, 2026-09-13: "home icon就不需要啊 直接显示数字在房子上").
+					<Text style={styles.homePriceSolo} numberOfLines={1}>
+						{price}
+					</Text>
+				) : (
+					<>
+						<View style={styles.markPad}>
+							{/* A little amber house — roof triangle over a body, two
+							    plain Views, no SVG dependency. */}
+							<View style={styles.homeMark}>
+								<View style={styles.homeRoof} />
+								<View style={styles.homeBody} />
+							</View>
+						</View>
+						<View style={styles.markLabelBox} />
+					</>
+				)}
 			</View>
 		</Marker>
 	);
@@ -1323,16 +1247,36 @@ const styles = StyleSheet.create({
 		borderBottomLeftRadius: 2,
 		borderBottomRightRadius: 2,
 	},
-	homePrice: {
+	// At street zoom the price IS the home's mark — a standalone chip in the
+	// home amber, no icon (owner, 2026-09-13). Padded a step past the word
+	// chips so it is a tap target, not just a label.
+	homePriceSolo: {
 		...textStyles.caption,
 		fontSize: 12,
 		fontWeight: "700",
-		color: colors.ink,
-		backgroundColor: withAlpha(colors.surface, 0.82),
-		borderRadius: 4,
-		paddingHorizontal: 4,
-		paddingVertical: 1,
+		color: colors.surface,
+		backgroundColor: colors.accent,
+		borderRadius: 6,
+		paddingHorizontal: 6,
+		paddingVertical: 3,
 		overflow: "hidden",
+	},
+	// ── Geography labels: county and city names, never controls ───────────────
+	countyName: {
+		...textStyles.caption,
+		fontSize: 11,
+		fontWeight: "700",
+		letterSpacing: 1.2,
+		textTransform: "uppercase",
+		color: withAlpha(colors.ink, 0.55),
+	},
+	cityLabel: {
+		...textStyles.caption,
+		fontSize: 12.5,
+		fontWeight: "700",
+		color: withAlpha(colors.ink, 0.78),
+		textShadowColor: withAlpha(colors.surface, 0.8),
+		textShadowRadius: 2,
 	},
 	// ── Legend ────────────────────────────────────────────────────────────────
 	legend: {
@@ -1433,7 +1377,6 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 8,
 		borderRadius: radii.tile,
 	},
-	rowSelected: { backgroundColor: colors.surface2 },
 	rowThumb: {
 		width: 48,
 		height: 48,
@@ -1443,22 +1386,6 @@ const styles = StyleSheet.create({
 	rowText: { flex: 1, gap: 2 },
 	rowName: { ...textStyles.headline, color: colors.ink },
 	rowSub: { ...textStyles.footnote, color: colors.ink2 },
-
-	// ── Map pins ──────────────────────────────────────────────────────────────
-	pinWrap: { alignItems: "center", gap: 2 },
-	pin: {
-		width: 40,
-		height: 40,
-		borderRadius: radii.pill,
-		borderWidth: 2,
-		backgroundColor: colors.surface2,
-		overflow: "hidden",
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	pinSelected: { borderWidth: 3 },
-	pinPhoto: { width: "100%", height: "100%" },
-	pinInitial: { ...textStyles.headline, fontWeight: "700" },
 
 	// ── Lens chips ────────────────────────────────────────────────────────────
 	lensBar: { position: "absolute", left: 0, right: 0 },

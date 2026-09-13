@@ -61,6 +61,14 @@ being hidden or guessed at — you can see the school is there, and that we don'
 have its number.
 
 ### 2026-09-13
+- **The map is now just a map.** No more tapping counties and cities to
+  drill down level by level — you pinch and pan like in any maps app, and
+  what you see depends on how close you are: county lines from afar, city
+  names and community dots as you come in, homes closer still, and at
+  street level the names, the prices, and the schools nearby. Tapping a
+  county from afar still shows its cost summary; tapping a community or a
+  home opens it, and nothing you tap ever yanks the map somewhere else. Up
+  close, a home shows as its price right on the spot — no icon in the way.
 - **A simpler Percho type card.** The You tab now shows just your Percho
   type — the evidence lines beneath it are gone, so the card reads at a
   glance.
