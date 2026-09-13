@@ -38,6 +38,11 @@ price now sits right under its photo, and everything else — monthly cost,
 size, what residents say — sits under "The basics", still ordered by what you
 said matters on the You tab.
 
+### 2026-09-13
+- **Tighter comparisons.** Each heading's one-line explanation now sits
+  beside the heading instead of under it, so you reach the actual figures
+  sooner and less of the screen is small print.
+
 ## v1.8 — One map question at a time, and the schools are on it
 
 The map used to offer five coloured overlays: true cost, property tax,

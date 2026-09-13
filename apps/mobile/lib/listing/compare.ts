@@ -167,7 +167,7 @@ export function buildCompareTable(
 		{
 			key: "convenience",
 			title: "Convenience",
-			note: "errands, shops & food nearby — scored 0–10",
+			note: "errands, shops & food — scored 0–10",
 			rows: kept([
 				{
 					label: "Score",
@@ -188,7 +188,7 @@ export function buildCompareTable(
 		{
 			key: "safety",
 			title: "Safety",
-			note: "not scored on purpose — no source meets our bar",
+			note: "not scored on purpose — no source we trust",
 			rows: kept([{ label: "On record", cells: safetyNotes }]),
 		},
 		{

@@ -21,6 +21,41 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-13 20:20 UTC — phase283: a compare note sits on its title's line
+
+**Objective**: owner, with a screenshot of `/compare-communities`: "Put
+description to the same line of title." On his phone every section spent two
+lines before reaching a number, and one row ("ERRANDS, SHOPS & FOOD" over
+"MAPPED PLACES NEARBY") read as two stacked labels because the row note
+wears the same uppercase face as the row label.
+
+**Actions**, all `apps/mobile/components/compare/CompareSection.tsx` plus
+copy in the two builders:
+- `CompareBlock`: title and note wrapped in a `blockHead` row,
+  `alignItems: "baseline"` so the 12 px note sits on the 15 px title's
+  baseline; note takes `flex: 1` and wraps within its own column.
+- `FigureRow`: same `labelRow` treatment for the row label and its note,
+  and the note drops `textStyles.caption` for sentence-case footnote 11 —
+  uppercase beside uppercase is what made it read as a second label.
+- Notes shortened so they fit the remaining width at three columns:
+  community Potential "no market history — this is a stability signal, not a
+  forecast" → "a stability signal, not a forecast"; community Schools
+  "schools among the community's mapped places" → "among the places we've
+  mapped nearby" (the title already says Schools); Safety "no source meets
+  our bar" → "no source we trust" on both screens; homes Convenience drops
+  "nearby".
+
+**Decisions**: the row-note change wasn't literally asked for, but it is the
+same complaint one level down and the same component — leaving it would have
+meant a second round trip for the identical fix. "on purpose" stays in the
+Safety note: without it the line reads as a data gap rather than a decision,
+which is the whole point of that section.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (same 8
+pre-existing warnings), 780 mobile tests pass. Web untouched.
+
+**Next steps**: owner re-checks both compare screens on the phone.
+
 ## 2026-09-13 15:55 UTC — phase282: the drill is dead — a viewport map with zoom bands
 
 **Objective**: the owner's calls on the phase277.10 proposal: county pill
