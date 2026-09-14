@@ -21,6 +21,45 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-14 08:00 UTC — phase292: schools were eating the taps, and a probe so the next round has facts
+
+**Objective**: owner — "缩率状态很多可以点 zoomin后基本点不了". The first
+report with a clean boundary in it: taps work at the city band and stop
+at the street band.
+
+**The mechanism that fits that boundary exactly**: the street band is
+where SCHOOLS appear. A school marker is a row 112pt wide — 12pt dot,
+4pt gap, and a FIXED 96pt label slot (`SCHOOL_ROW_W`, fixed because the
+anchor fraction is derived from it) — and `MAX_PINS` allows 120 of them.
+At street zoom that is a blanket of annotation views over the map, and an
+annotation view takes the touch. Schools have no page, so the touch died
+there: the community underneath never heard it. Home price chips do the
+same thing at their own band, in smaller numbers.
+
+**Fix**: a school no longer eats a tap, it FORWARDS it. `SchoolMarker`
+takes an `onPress` that calls `claimTap` at the school's own coordinate —
+close enough to the finger to resolve the same community the buyer was
+aiming at, and a no-op when nothing is within `MARK_TAP_RADIUS_PX`. The
+callout still opens, so the school's name and score are unaffected.
+
+**And a probe, because this is round seven.** Each of the last three
+rounds answered a report with a reasoned fix and no measurement, and each
+reasoned fix was wrong about something. `claimTap` now records what
+happened — which wire carried the tap (`gesture` / `mapPress` /
+`school`), whether there were marks at all, the nearest mark and its
+distance in points — and the map prints that one line when `__DEV__`.
+Metro builds show it; release builds compile it out. So the next report
+can be a fact instead of a symptom. It comes out once taps are settled.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (8
+pre-existing warnings), mobile 780 pass. Web untouched.
+
+**Next steps**: owner zooms in, taps a community, and reads the black
+line under the lens chips. "open community @12pt" means it worked;
+"nearest 58pt > 36" means the resolver is measuring against the wrong
+place; "no marks" means the viewport read is empty and this was never a
+tap bug; no line at all means the tap never reaches JS.
+
 ## 2026-09-14 07:55 UTC — phase291: two real bugs, named by the owner's own examples
 
 **Objective**: owner on phase290 — "有些可以点 有些不能 比如 echo woods,
