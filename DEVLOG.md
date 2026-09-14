@@ -21,6 +21,52 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-14 02:35 UTC — phase287: map labels lose their boxes and gain a second line
+
+**Objective**: owner on phase285 — "When zooming in, community name shows
+up, but a lot of truncated, fix that, use smaller font. Also have white
+background doesn't look good, can you proposal something?"
+
+**The truncation**, diagnosed: `markLabelBox` was `maxWidth: 128` with
+`numberOfLines={1}`, so anything past ~18 characters at 12pt lost its
+tail — and community names run long ("Medlock Bridge Village"). Widening
+the box is the wrong lever: these marks stand a few hundred metres apart
+at street zoom, and a wider label collides with the neighbour instead.
+So: WRAP. `numberOfLines={2}`, font 12 → 11 with a 13pt line height, box
+narrowed 128 → 108 and given a fixed 30pt height (two lines' worth).
+
+The height is fixed and reserved on purpose, unchanged in spirit from
+phase277.9: the marker takes no `anchor`, so iOS centres the whole column
+on the coordinate. A label box that grew with its text would place each
+mark a different distance from its own point — the silent per-pin error
+`SchoolMarker`'s header warns about, which is why the slot is reserved
+even when no words are drawn.
+
+**The white box**: replaced with the cartographer's answer and this map's
+OWN existing one — the city name labels have always been ink type with a
+white halo, no box. Community names now match: 11pt bold ink,
+`textShadowColor: surface`, radius 3. The basemap runs under the letters
+instead of behind a grid of white tiles. Alternatives considered and
+rejected: a dark ink pill (20 of them is heavier than the boxes he is
+complaining about), a green pill matching the ring (loud at density), and
+no treatment at all (unreadable over a filled county under a lens).
+
+**School names changed in the same pass**, deliberately and against the
+usual "touch only what you must": they are drawn at the SAME street zoom
+as the community names, so leaving one boxed and one haloed would have
+produced the next complaint rather than avoided it. Same halo, 10.5pt,
+`ink2` — a step quieter than a community, which is the layer order the
+map already asserts.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (same 8
+pre-existing warnings), mobile 780 pass. Web untouched; Metro reload is
+enough.
+
+**Next steps**: owner looks at wrapped names at density. If two-line
+labels crowd, the next lever is `shouldLabel`-style thinning — names only
+on the communities nearest the centre of the view — not a smaller face
+again.
+
 ## 2026-09-14 02:30 UTC — phase286: the compare row becomes a table row
 
 **Objective**: owner, on the phase283 screenshot — "Make it a compact table.
