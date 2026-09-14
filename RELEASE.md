@@ -39,6 +39,12 @@ size, what residents say — sits under "The basics", still ordered by what you
 said matters on the You tab.
 
 ### 2026-09-14
+- **Map taps are fixed properly now.** Neighborhood photos sat slightly above
+  the spot they marked, so tapping the top of one did nothing — they now sit
+  exactly on their place, and the name under the photo counts as part of the
+  target. A neighborhood with a home priced right beside it used to be
+  untappable altogether; tapping now simply opens whichever of the two you
+  were closer to.
 - Tapping a neighborhood on the map opens it again — and the target is now
   finger-sized, so you no longer have to hit the little photo marker exactly.
 - The green neighborhood outlines are gone from the map. Every neighborhood

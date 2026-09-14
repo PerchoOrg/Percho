@@ -164,10 +164,12 @@ import { textStyles } from "../../theme/typography";
 const FILL_ALPHA = 0.62;
 const FILL_ALPHA_SEARCHING = 0.16;
 
-/** How close (screen points) a bare map press must land to a community mark
- *  for `onMapPress` to claim it for that community. A finger-sized ring
- *  around a small mark — anything farther is a pan/read tap, not an aim. */
-const DOT_TAP_RADIUS_PX = 28;
+/** How close (screen points) a tap must land to a mark for `claimTap` to
+ *  open it. Generous on purpose: it has to cover the whole 26pt photo dot
+ *  AND the name under it, because a buyer aims at the name as readily as
+ *  at the picture. Two marks this close to each other are separated by
+ *  nearest-wins, not by the radius. */
+const MARK_TAP_RADIUS_PX = 36;
 
 /** The zoom bands (see the header). Each is a `latitudeDelta` ceiling:
  *  CITY turns the viewport feed and the community dots on, HOME adds the
@@ -177,11 +179,6 @@ const DOT_TAP_RADIUS_PX = 28;
 const CITY_DELTA = 0.3;
 const HOME_DELTA = 0.12;
 const MARK_LABEL_DELTA = 0.06;
-
-/** The disclaim radius around a home pin or city photo pin: a bare map
- *  press this close to one was aimed at IT, and its own marker handles it —
- *  `onMapPress` must not reroute the same tap to a community. */
-const PIN_TAP_RADIUS_PX = 30;
 
 /** The metro at rest — the map's opening frame, and where "back" returns to. */
 const METRO_REGION = {
@@ -388,31 +385,43 @@ export default function SearchTab() {
 	 * community explore page"), and the map-level event is delivered
 	 * independently of the marker's own JS wiring.
 	 */
-	const lastCommunityNav = useRef(0);
-	const openCommunity = (slug: string) => {
+	/**
+	 * One door out of this screen, for every mark and every tap path.
+	 *
+	 * The window swallows a second arrival because one tap can reach JS on
+	 * several wires at once — a marker's own `onPress`, the map-level
+	 * `onMarkerPress`, a hit polygon, and the gesture-handler tap all funnel
+	 * here, and on iOS more than one of them can fire for the same finger.
+	 */
+	const lastNav = useRef(0);
+	const navigateTo = (path: string) => {
 		const now = Date.now();
-		if (now - lastCommunityNav.current < 800) return;
-		lastCommunityNav.current = now;
-		router.push(`/community/${slug}`);
+		if (now - lastNav.current < 800) return;
+		lastNav.current = now;
+		router.push(path);
 	};
+	const openCommunity = (slug: string) => navigateTo(`/community/${slug}`);
 
 	/**
-	 * The LAST wire for a dot tap: a bare map press, resolved to the nearest
-	 * community by screen distance.
+	 * Resolve a tap on the map to the mark nearest it, and OPEN that mark.
 	 *
-	 * On iOS the map's own recognizer (`AIRMapManager.m handleMapTap`) can
-	 * fire for a tap a marker ALSO handled — phase277.3 assumed the two were
-	 * exclusive and a home-pin tap promptly opened a community page on top of
-	 * the listing (owner, 2026-09-12). So this handler first DISCLAIMS any
-	 * press within reach of a pin that answers for itself — a home or a city,
-	 * whose markers demonstrably receive their own taps — and only then
-	 * claims the nearest community tile. A doubled COMMUNITY tap is already
-	 * absorbed by `openCommunity`'s dedupe.
+	 * It decides between kinds rather than deferring to them. Until now it
+	 * only ever opened communities and *yielded* when a home chip was
+	 * closer, on the assumption that the home's own `Marker.onPress` would
+	 * take it from there. On the owner's device that assumption is false —
+	 * marker presses are exactly what keeps missing — so a community with a
+	 * home beside it was permanently dead: the resolver stepped aside and
+	 * nothing else ever answered (owner, 2026-09-14: "有些可以点 有些不能,
+	 * 比如 Echo Woods"). One resolver, one decision, one navigation.
 	 *
-	 * Distance is measured in screen points via the current region's spans —
-	 * the window is a close proxy for the map's own extent, and a few points
-	 * of error inside a finger-sized radius does not change which mark is
-	 * meant.
+	 * Distance is in SCREEN points via the current region's spans, and it is
+	 * measured to where each mark is DRAWN, not to its raw coordinate: a
+	 * community's photo dot is anchored on its point (see
+	 * `COMMUNITY_ANCHOR`), so the two now agree. They did not before, which
+	 * is the other half of his report — the dot was drawn ~15pt above the
+	 * coordinate this compared against, so a tap that landed high on the
+	 * photo fell outside the radius and did nothing, and re-aiming after a
+	 * zoom flipped a mark between working and not.
 	 */
 	const claimTap = (tap: LatLng | undefined, fallbackSlug?: string) => {
 		if (!shown || !(searching || cityBand)) return;
@@ -429,31 +438,21 @@ export default function SearchTab() {
 			const dy = (Math.abs(lat - tap.latitude) / region.latitudeDelta) * height;
 			return Math.hypot(dx, dy);
 		};
-		let best: { slug: string; d: number } | undefined;
+		let best: { path: string; d: number } | undefined;
+		const consider = (path: string, d: number, within: number) => {
+			if (d <= within && (!best || d < best.d)) best = { path, d };
+		};
 		for (const c of shown.communities) {
 			if (c.lat === undefined || c.lng === undefined) continue;
-			const d = px(c.lat, c.lng);
-			if (d <= DOT_TAP_RADIUS_PX && (!best || d < best.d)) {
-				best = { slug: c.slug, d };
-			}
+			consider(`/community/${c.slug}`, px(c.lat, c.lng), MARK_TAP_RADIUS_PX);
 		}
-		if (!best) return;
-		// NEAREST WINS, rather than "any home nearby cancels this". phase277.4
-		// disclaimed every press within reach of a home chip, which was right
-		// about the fault (one tap can fire both recognizers, opening a
-		// community on top of a listing) and too blunt about the fix: at
-		// street zoom homes sit INSIDE the communities they belong to, so a
-		// blanket disclaim silently ate community taps. It now yields only
-		// when the home is genuinely the closer mark — and because EVERY tap
-		// path funnels through here, a hit polygon cannot open a community
-		// over a listing either.
 		if (searching || homesBand) {
 			for (const l of shown.listings) {
 				if (l.lat === undefined || l.lng === undefined) continue;
-				if (px(l.lat, l.lng) <= Math.min(best.d, PIN_TAP_RADIUS_PX)) return;
+				consider(`/listing/${l.id}`, px(l.lat, l.lng), MARK_TAP_RADIUS_PX);
 			}
 		}
-		openCommunity(best.slug);
+		if (best) navigateTo(best.path);
 	};
 
 	const onMapPress = (e: MapPressEvent) => claimTap(e.nativeEvent.coordinate);
@@ -466,8 +465,8 @@ export default function SearchTab() {
 	 * boundary; removing that boundary in phase288 took the taps with it),
 	 * and an overlay must be sized in geography.
 	 */
-	const hitLatDeg = (region.latitudeDelta * DOT_TAP_RADIUS_PX) / height;
-	const hitLngDeg = (region.longitudeDelta * DOT_TAP_RADIUS_PX) / width;
+	const hitLatDeg = (region.latitudeDelta * MARK_TAP_RADIUS_PX) / height;
+	const hitLngDeg = (region.longitudeDelta * MARK_TAP_RADIUS_PX) / width;
 
 	// `?focus=<unitId>` — the You tab's familiarity rows, the Saved tab's area
 	// rows and the §5.5 deep link all land here. Handled once per distinct
@@ -749,7 +748,7 @@ export default function SearchTab() {
 					    phase288 took the taps away again with them. So the
 					    polygon stays and the PICTURE goes: no fill, no stroke,
 					    sized in degrees from the current zoom so it is always
-					    ~`DOT_TAP_RADIUS_PX` on the glass. Every path funnels
+					    ~`MARK_TAP_RADIUS_PX` on the glass. Every path funnels
 					    through `claimTap`, so a square overlapping a home still
 					    yields to that home. */}
 						{searching || cityBand
@@ -815,7 +814,10 @@ export default function SearchTab() {
 											coordinate={{ latitude: l.lat, longitude: l.lng }}
 											price={compactPrice(l.price)}
 											name={l.address}
-											onPress={() => router.push(`/listing/${l.id}`)}
+											// Through the shared door: `claimTap` can now open
+											// a listing too, so this marker and the gesture tap
+											// would otherwise push the same screen twice.
+											onPress={() => navigateTo(`/listing/${l.id}`)}
 										/>
 									) : null,
 								)
@@ -1206,6 +1208,19 @@ function SchoolMarker({
 	);
 }
 
+/**
+ * The community mark's geometry, in one place because the ANCHOR is derived
+ * from it — the same discipline `SchoolMarker` keeps, and for the same
+ * reason: react-native-maps places a custom marker by a FRACTION of the
+ * child's own size, so the fraction that puts the dot on the coordinate has
+ * to be computed from the column's real height rather than guessed.
+ */
+const COMMUNITY_PAD = 36;
+const COMMUNITY_LABEL_H = 30;
+const COMMUNITY_LABEL_GAP = -1;
+const COMMUNITY_COL_H = COMMUNITY_PAD + COMMUNITY_LABEL_GAP + COMMUNITY_LABEL_H;
+const COMMUNITY_ANCHOR = { x: 0.5, y: COMMUNITY_PAD / 2 / COMMUNITY_COL_H };
+
 /** A community is its own FACE — the cover photo in a green ring (owner,
  *  2026-09-13: "Use hero pic for communities, same circle size or little
  *  bit bigger"). The content gate (phase277.5) means every community the
@@ -1227,13 +1242,22 @@ function CommunityMark({
 	onPress: () => void;
 }) {
 	return (
-		// Plain Marker, no `anchor`, no `tracksViewChanges` override, column
-		// layout — the construction whose taps provably land in this app;
-		// phases 277.1-277.3 each learned that the hard way. Default view
-		// tracking is also what lets the photo appear once it loads, and it
-		// is what the ~109 city photo pins ran on before. The `identifier`
-		// feeds the map-level `onMarkerPress` fallback — see `openCommunity`.
-		<Marker coordinate={coordinate} identifier={identifier} onPress={onPress}>
+		// `anchor` puts the DOT on the community's point. Without it the
+		// whole column — pad plus the reserved label slot — is centred on the
+		// coordinate, which drew the photo ~15pt north of the place it names
+		// and, worse, 15pt away from what `claimTap` measures against: a tap
+		// landing high on the photo fell outside the radius and did nothing
+		// (owner, 2026-09-14). phase277.1 blamed `anchor` for lost taps and
+		// removed it; that was the wrong culprit, and taps no longer come
+		// through this marker anyway — the gesture handler owns them now.
+		// Default view tracking stays: it is what lets the photo appear once
+		// it loads.
+		<Marker
+			coordinate={coordinate}
+			identifier={identifier}
+			anchor={COMMUNITY_ANCHOR}
+			onPress={onPress}
+		>
 			<View style={styles.markWrap} accessibilityLabel={name}>
 				{/* The pad is the real tap target — transparent, finger-sized. */}
 				<View style={styles.markPad}>
@@ -1332,8 +1356,8 @@ const styles = StyleSheet.create({
 	markWrap: { alignItems: "center" },
 	// Finger-sized and transparent — the tap target around a small mark.
 	markPad: {
-		width: 36,
-		height: 36,
+		width: COMMUNITY_PAD,
+		height: COMMUNITY_PAD,
 		alignItems: "center",
 		justifyContent: "center",
 	},
@@ -1346,10 +1370,10 @@ const styles = StyleSheet.create({
 	// widening into its neighbours, and wrapping is what ended the
 	// truncation (owner, 2026-09-14: "a lot of truncated").
 	markLabelBox: {
-		height: 30,
+		height: COMMUNITY_LABEL_H,
 		width: 108,
 		alignItems: "center",
-		marginTop: -1,
+		marginTop: COMMUNITY_LABEL_GAP,
 	},
 	// The cover photo in a green ring, a step up from the 18px solid dot it
 	// replaced (owner asked for "same size or little bit bigger"). The ring

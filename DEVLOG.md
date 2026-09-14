@@ -21,6 +21,53 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-14 07:55 UTC — phase291: two real bugs, named by the owner's own examples
+
+**Objective**: owner on phase290 — "有些可以点 有些不能 比如 echo woods,
+有些刚开始可以 zoomin或者改变视图又不行了 比如 hawthorne elementary".
+After six rounds of "not clickable", *partly* clickable is the first
+report with diagnostic content in it, and it names two distinct faults.
+phase290's gesture handler evidently delivers the tap; what it handed to
+was wrong.
+
+**Bug 1 — the mark is not where the map thinks it is.** `CommunityMark`
+is a column: a 36pt pad holding the photo, then a 30pt reserved label
+slot. With no `anchor`, react-native-maps centres that whole 65pt column
+on the coordinate, so the photo is DRAWN ~15pt north of the point —
+while `claimTap` measured distance to the point itself. A tap on the
+lower half of the dot fell inside the 28pt radius; a tap on the upper
+half or on the name fell outside and did nothing. That is exactly "some
+work, some don't, and re-aiming after a zoom flips it". Fixed by
+`COMMUNITY_ANCHOR`, derived from the column geometry the way
+`SchoolMarker`'s anchor already is, so the dot sits on its own point;
+radius raised 28 → 36 (`MARK_TAP_RADIUS_PX`) so the name under the dot is
+part of the target too. Note phase277.1 removed `anchor` believing it
+broke taps — wrong culprit, and moot now that taps do not arrive through
+this marker.
+
+**Bug 2 — the resolver stepped aside and nothing caught it.** `claimTap`
+only ever OPENED communities; when a home chip was nearer it returned,
+trusting the home's own `Marker.onPress` to answer. On this device marker
+presses are precisely what misses, so a community with a home beside it
+was permanently dead — Echo Woods. Now the resolver decides between kinds
+instead of deferring: nearest mark wins and IS opened, community or
+listing. All navigation funnels through one `navigateTo` with the 800ms
+window (the map's `HomePin.onPress` included, or it would double-push).
+
+**Hawthorne Elementary is a school**, and schools have no page to open —
+tapping one correctly does nothing. That it was offered as an example of
+the bug is its own finding: since phase287 gave school and community
+names the same halo treatment, the two labels read as the same kind of
+thing. Flagged, not fixed here — the fix is a visual distinction, and
+this phase is about taps.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (8
+pre-existing warnings), mobile 780 pass. Web untouched.
+
+**Next steps**: owner re-checks Echo Woods specifically, and taps at the
+TOP edge of a photo dot — the two cases that were broken. Then: should a
+school label look different from a community label?
+
 ## 2026-09-14 07:15 UTC — phase290: the tap leaves react-native-maps entirely
 
 **Objective**: owner, on phase289 — "Still not clickable." Sixth report of
