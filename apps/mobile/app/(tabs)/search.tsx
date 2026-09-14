@@ -413,10 +413,15 @@ export default function SearchTab() {
 	 * of error inside a finger-sized radius does not change which mark is
 	 * meant.
 	 */
-	const onMapPress = (e: MapPressEvent) => {
-		// No marks on the map, nothing to claim.
+	const claimTap = (tap: LatLng | undefined, fallbackSlug?: string) => {
 		if (!shown || !(searching || cityBand)) return;
-		const tap = e.nativeEvent.coordinate;
+		if (!tap) {
+			// Apple Maps always sends the coordinate; this is the Google-Maps-
+			// on-iOS shape, where a polygon press names only its own id. Then
+			// the polygon that fired IS the answer.
+			if (fallbackSlug) openCommunity(fallbackSlug);
+			return;
+		}
 		const px = (lat: number, lng: number) => {
 			const dx =
 				(Math.abs(lng - tap.longitude) / region.longitudeDelta) * width;
@@ -437,10 +442,10 @@ export default function SearchTab() {
 		// about the fault (one tap can fire both recognizers, opening a
 		// community on top of a listing) and too blunt about the fix: at
 		// street zoom homes sit INSIDE the communities they belong to, so a
-		// blanket disclaim silently ate the community taps that the boundary
-		// polygon was then brought in to rescue. With the polygon gone
-		// (2026-09-14) this is the surface again, so it only yields when the
-		// home is genuinely the closer mark.
+		// blanket disclaim silently ate community taps. It now yields only
+		// when the home is genuinely the closer mark — and because EVERY tap
+		// path funnels through here, a hit polygon cannot open a community
+		// over a listing either.
 		if (searching || homesBand) {
 			for (const l of shown.listings) {
 				if (l.lat === undefined || l.lng === undefined) continue;
@@ -449,6 +454,19 @@ export default function SearchTab() {
 		}
 		openCommunity(best.slug);
 	};
+
+	const onMapPress = (e: MapPressEvent) => claimTap(e.nativeEvent.coordinate);
+
+	/**
+	 * Finger-sized in DEGREES — the half-width of a community's invisible hit
+	 * polygon, recomputed per zoom so the target stays the same size on the
+	 * glass as the map scales. Geographic overlays are the only tap delivery
+	 * iOS has never dropped for us (phase284 proved it with the visible
+	 * boundary; removing that boundary in phase288 took the taps with it),
+	 * and an overlay must be sized in geography.
+	 */
+	const hitLatDeg = (region.latitudeDelta * DOT_TAP_RADIUS_PX) / height;
+	const hitLngDeg = (region.longitudeDelta * DOT_TAP_RADIUS_PX) / width;
 
 	// `?focus=<unitId>` — the You tab's familiarity rows, the Saved tab's area
 	// rows and the §5.5 deep link all land here. Handled once per distinct
@@ -674,6 +692,55 @@ export default function SearchTab() {
 							<Text style={styles.cityLabel}>{u.name}</Text>
 						</Marker>
 					))}
+					{/* THE TAP SURFACE — one invisible, finger-sized square per
+					    community, drawn nowhere and pressable everywhere.
+					    Empirically this app has exactly one tap delivery that
+					    never fails on iOS: `handleMapTap` walks `map.overlays` and
+					    fires any polygon whose ring contains the point (see the
+					    1.27.2 source reading in phase277.3). The three marker
+					    wires — Marker.onPress, map-level onMarkerPress, and the
+					    bare map press — all miss small custom views often enough
+					    that the owner has reported dead community taps four
+					    times; the only build where taps worked was the one with
+					    boundary polygons under the dots, and removing those in
+					    phase288 took the taps away again with them. So the
+					    polygon stays and the PICTURE goes: no fill, no stroke,
+					    sized in degrees from the current zoom so it is always
+					    ~`DOT_TAP_RADIUS_PX` on the glass. Every path funnels
+					    through `claimTap`, so a square overlapping a home still
+					    yields to that home. */}
+					{searching || cityBand
+						? shown?.communities.map((c) =>
+								c.lat !== undefined && c.lng !== undefined ? (
+									<Polygon
+										key={`hit-${c.id}`}
+										coordinates={[
+											{
+												latitude: c.lat - hitLatDeg,
+												longitude: c.lng - hitLngDeg,
+											},
+											{
+												latitude: c.lat - hitLatDeg,
+												longitude: c.lng + hitLngDeg,
+											},
+											{
+												latitude: c.lat + hitLatDeg,
+												longitude: c.lng + hitLngDeg,
+											},
+											{
+												latitude: c.lat + hitLatDeg,
+												longitude: c.lng - hitLngDeg,
+											},
+										]}
+										fillColor="rgba(0,0,0,0)"
+										strokeColor="rgba(0,0,0,0)"
+										strokeWidth={0}
+										tappable
+										onPress={(e) => claimTap(e.nativeEvent.coordinate, c.slug)}
+									/>
+								) : null,
+							)
+						: null}
 					{/* MINI MARKS (owner, 2026-09-13): a community wears its cover
 					    photo in a green ring from the city band, and a home IS its
 					    amber price chip from the homes band ("Don't show house
