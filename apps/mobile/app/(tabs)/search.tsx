@@ -393,6 +393,17 @@ export default function SearchTab() {
 	 * `onMarkerPress`, a hit polygon, and the gesture-handler tap all funnel
 	 * here, and on iOS more than one of them can fire for the same finger.
 	 */
+	/**
+	 * DEV-ONLY tap probe. Seven rounds of "it doesn't open" have each been
+	 * answered with a reasoned fix and no measurement, and three of those
+	 * fixes were wrong. This prints, on the map, what the last tap actually
+	 * did: which wire carried it, what the nearest mark was, and how far
+	 * away in points. `__DEV__` is true under Metro and false in a release
+	 * build, so it is on the owner's phone tonight and in nobody's App
+	 * Store copy. Delete it once taps are reliably fine.
+	 */
+	const [probe, setProbe] = useState("");
+
 	const lastNav = useRef(0);
 	const navigateTo = (path: string) => {
 		const now = Date.now();
@@ -423,12 +434,20 @@ export default function SearchTab() {
 	 * photo fell outside the radius and did nothing, and re-aiming after a
 	 * zoom flipped a mark between working and not.
 	 */
-	const claimTap = (tap: LatLng | undefined, fallbackSlug?: string) => {
-		if (!shown || !(searching || cityBand)) return;
+	const claimTap = (
+		tap: LatLng | undefined,
+		fallbackSlug?: string,
+		via = "map",
+	) => {
+		if (!shown || !(searching || cityBand)) {
+			setProbe(`${via}: no marks`);
+			return;
+		}
 		if (!tap) {
 			// Apple Maps always sends the coordinate; this is the Google-Maps-
 			// on-iOS shape, where a polygon press names only its own id. Then
 			// the polygon that fired IS the answer.
+			setProbe(`${via}: no coord`);
 			if (fallbackSlug) openCommunity(fallbackSlug);
 			return;
 		}
@@ -439,7 +458,9 @@ export default function SearchTab() {
 			return Math.hypot(dx, dy);
 		};
 		let best: { path: string; d: number } | undefined;
+		let nearest = Number.POSITIVE_INFINITY;
 		const consider = (path: string, d: number, within: number) => {
+			if (d < nearest) nearest = d;
 			if (d <= within && (!best || d < best.d)) best = { path, d };
 		};
 		for (const c of shown.communities) {
@@ -452,10 +473,16 @@ export default function SearchTab() {
 				consider(`/listing/${l.id}`, px(l.lat, l.lng), MARK_TAP_RADIUS_PX);
 			}
 		}
+		setProbe(
+			best
+				? `${via}: open ${best.path.split("/")[1]} @${Math.round(best.d)}pt`
+				: `${via}: nearest ${Number.isFinite(nearest) ? Math.round(nearest) : "∞"}pt > ${MARK_TAP_RADIUS_PX}`,
+		);
 		if (best) navigateTo(best.path);
 	};
 
-	const onMapPress = (e: MapPressEvent) => claimTap(e.nativeEvent.coordinate);
+	const onMapPress = (e: MapPressEvent) =>
+		claimTap(e.nativeEvent.coordinate, undefined, "mapPress");
 
 	/**
 	 * Finger-sized in DEGREES — the half-width of a community's invisible hit
@@ -548,10 +575,11 @@ export default function SearchTab() {
 		.runOnJS(true)
 		.maxDuration(400)
 		.onEnd((e) => {
+			setProbe("gesture: resolving…");
 			mapRef.current
 				?.coordinateForPoint({ x: e.x, y: e.y })
-				.then((coord) => claimTap(coord))
-				.catch(() => {});
+				.then((coord) => claimTap(coord, undefined, "gesture"))
+				.catch((err) => setProbe(`gesture: coordForPoint failed ${err}`));
 		});
 
 	// A fresh TYPED result opens the sheet and fits the map to whatever has
@@ -702,6 +730,13 @@ export default function SearchTab() {
 								// its legend up would be a claim with no key.
 								ramp={lensId === "schools" ? schoolRamp : undefined}
 								labelled={schoolsLabelled}
+								onPress={() =>
+									claimTap(
+										{ latitude: pin.lat, longitude: pin.lng },
+										undefined,
+										"school",
+									)
+								}
 							/>
 						))}
 						{/* County and city NAMES — geography, not controls. The county
@@ -921,6 +956,13 @@ export default function SearchTab() {
 						</Text>
 					</View>
 				)}
+
+				{/* Dev-only tap probe — see `probe`. Compiled out of release
+				    builds by `__DEV__`, so it exists under Metro and nowhere
+				    else. Remove once map taps are settled. */}
+				{__DEV__ && probe ? (
+					<Text style={[styles.probe, { top: insets.top + 150 }]}>{probe}</Text>
+				) : null}
 
 				{/* The county pill — kept by owner decision (2026-09-13, "保留").
 				    A metro-zoom county tap opens it; it never moves the map. Its
@@ -1175,12 +1217,16 @@ function SchoolMarker({
 	pin,
 	ramp,
 	labelled,
+	onPress,
 }: {
 	pin: SchoolPin;
 	/** Absent at plain street zoom: no ramp, no claim — every dot wears the
 	 *  neutral colour, and only the Schools lens paints the scores. */
 	ramp?: readonly [string, string, string, string, string];
 	labelled: boolean;
+	/** A school has no page, so this is not navigation — it hands the tap
+	 *  back to the map's resolver. See the note on the Marker below. */
+	onPress: () => void;
 }) {
 	const step = ramp ? proficiencyStep(pin.proficiencyPct) : undefined;
 	const fill = step === undefined ? colors.ink3 : (ramp?.[step] ?? colors.ink3);
@@ -1193,6 +1239,16 @@ function SchoolMarker({
 			// sits at the school's coordinate, and the name hangs off it.
 			anchor={labelled ? SCHOOL_ANCHOR_LABELLED : SCHOOL_ANCHOR_BARE}
 			tracksViewChanges={false}
+			// A school row is 112pt wide (dot + gap + a FIXED 96pt label slot)
+			// and there can be 120 of them — at street zoom they blanket the
+			// map in annotation views, and an annotation view swallows the
+			// touch. That is the shape of "缩率状态很多可以点, zoomin后基本点
+			// 不了" (owner, 2026-09-14): community taps stopped working at
+			// exactly the band where schools appear. A school cannot navigate
+			// anywhere, so instead of eating the tap it hands it back to
+			// `claimTap` at its own coordinate — near enough to the finger to
+			// resolve the same community the buyer was aiming at.
+			onPress={onPress}
 		>
 			<View style={labelled ? styles.schoolRow : styles.schoolWrap}>
 				<View style={[styles.schoolDot, { backgroundColor: fill }]} />
@@ -1446,6 +1502,20 @@ const styles = StyleSheet.create({
 		color: withAlpha(colors.ink, 0.78),
 		textShadowColor: withAlpha(colors.surface, 0.8),
 		textShadowRadius: 2,
+	},
+	// Dev-only, see the `probe` note. Deliberately plain.
+	probe: {
+		position: "absolute",
+		left: 16,
+		right: 16,
+		...textStyles.caption,
+		fontSize: 11,
+		color: colors.surface,
+		backgroundColor: withAlpha(colors.ink, 0.75),
+		borderRadius: 4,
+		paddingHorizontal: 6,
+		paddingVertical: 3,
+		overflow: "hidden",
 	},
 	// ── Legend ────────────────────────────────────────────────────────────────
 	legend: {
