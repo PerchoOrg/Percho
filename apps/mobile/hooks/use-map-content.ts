@@ -54,10 +54,14 @@ export function useMapContent(
 				if (mine !== seq.current) return;
 				setResult(parsed);
 				setLoading(false);
-			} catch {
+			} catch (err) {
 				if (mine !== seq.current) return;
 				// A failed viewport read keeps the previous marks — a map that
 				// quietly goes stale beats one that blinks empty on a bad hop.
+				// It is NOT silent, though: with no marks there is nothing to
+				// tap, and "nothing to tap" has cost several rounds of chasing
+				// the tap wiring instead (DEVLOG 2026-09-14, phase290).
+				console.warn("[map] viewport read failed", err);
 				setLoading(false);
 			}
 		}, DEBOUNCE_MS);
