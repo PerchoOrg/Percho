@@ -39,6 +39,9 @@ size, what residents say — sits under "The basics", still ordered by what you
 said matters on the You tab.
 
 ### 2026-09-14
+- The green neighborhood outlines are gone from the map. Every neighborhood
+  is simply its photo marker now; the map stays clean at every zoom, and a
+  neighborhood's real boundary is still drawn on its own page.
 - **Cleaner names on the map.** Neighborhood and school names no longer sit
   in little white boxes — they're set directly on the map with a soft white
   outline, the way place names are printed on a real map. Longer

@@ -29,10 +29,19 @@
  *   homes  (≤ 0.12)       + the homes, each AS its price chip — no icon
  *                         (owner: "Don't show house shape, just the
  *                         numbers").
- *   street (≤ 0.06)       + community names, the communities' real boundary
- *                         shapes (the covered area, and the tap surface),
- *                         and schools — neutral colour unless the Schools
- *                         lens is on.
+ *   street (≤ 0.06)       + community names and schools — the schools in a
+ *                         neutral colour unless the Schools lens is on.
+ *
+ * ── Community boundaries are not drawn here, and that is now a rule ─────────
+ * They have been tried twice and rejected twice for the same reason, in the
+ * owner's own words: "all communities have different shapes, not consistent"
+ * (2026-09-12, as a city-wide layer) and "it is ugly and unorganized"
+ * (2026-09-14, as a street-zoom layer under the dots). The data is real; the
+ * SET of shapes is not uniform enough to read as a layer at any zoom — some
+ * are surveyed subdivisions, some are Nextdoor blobs, and their sizes differ
+ * by an order of magnitude. A community's own shape belongs on its page,
+ * where it is one figure with a frame around it. Don't re-add it here
+ * without a third instruction that says so in as many words.
  *
  * County and city are geography, not controls: their names are labels, a
  * city tap does nothing, a county tap only at metro zoom and only a pill.
@@ -414,12 +423,6 @@ export default function SearchTab() {
 			const dy = (Math.abs(lat - tap.latitude) / region.latitudeDelta) * height;
 			return Math.hypot(dx, dy);
 		};
-		if (searching || homesBand) {
-			for (const l of shown.listings) {
-				if (l.lat === undefined || l.lng === undefined) continue;
-				if (px(l.lat, l.lng) <= PIN_TAP_RADIUS_PX) return;
-			}
-		}
 		let best: { slug: string; d: number } | undefined;
 		for (const c of shown.communities) {
 			if (c.lat === undefined || c.lng === undefined) continue;
@@ -428,7 +431,23 @@ export default function SearchTab() {
 				best = { slug: c.slug, d };
 			}
 		}
-		if (best) openCommunity(best.slug);
+		if (!best) return;
+		// NEAREST WINS, rather than "any home nearby cancels this". phase277.4
+		// disclaimed every press within reach of a home chip, which was right
+		// about the fault (one tap can fire both recognizers, opening a
+		// community on top of a listing) and too blunt about the fix: at
+		// street zoom homes sit INSIDE the communities they belong to, so a
+		// blanket disclaim silently ate the community taps that the boundary
+		// polygon was then brought in to rescue. With the polygon gone
+		// (2026-09-14) this is the surface again, so it only yields when the
+		// home is genuinely the closer mark.
+		if (searching || homesBand) {
+			for (const l of shown.listings) {
+				if (l.lat === undefined || l.lng === undefined) continue;
+				if (px(l.lat, l.lng) <= Math.min(best.d, PIN_TAP_RADIUS_PX)) return;
+			}
+		}
+		openCommunity(best.slug);
 	};
 
 	// `?focus=<unitId>` — the You tab's familiarity rows, the Saved tab's area
@@ -655,36 +674,6 @@ export default function SearchTab() {
 							<Text style={styles.cityLabel}>{u.name}</Text>
 						</Marker>
 					))}
-					{/* THE COVERED AREA — a community's real boundary, street zoom
-					    only, when the viewport read carried it (small bboxes do). A
-					    frame this close holds a handful of shapes, so the phase268
-					    "hundred inconsistent outlines" problem cannot recur; here
-					    the shape is the information the dot withheld (owner,
-					    2026-09-13: "Community dot doesn't tell the covered area").
-					    The polygon is ALSO the tap surface — handleMapTap fires a
-					    polygon's onPress whenever the tap lands inside it, the one
-					    delivery iOS has never dropped on us — which answers "it is
-					    not clickable after zooming in": the whole subdivision is
-					    the button now. `openCommunity`'s dedupe absorbs the marker
-					    wires firing alongside. */}
-					{marksLabelled
-						? shown?.communities.map((c) =>
-								c.boundary?.map((ring, i) => (
-									<Polygon
-										key={`cb-${c.id}-${i}`}
-										coordinates={ring.map(([lng, lat]) => ({
-											latitude: lat,
-											longitude: lng,
-										}))}
-										fillColor={withAlpha(colors.pos, 0.12)}
-										strokeColor={withAlpha(colors.pos, 0.5)}
-										strokeWidth={1}
-										tappable
-										onPress={() => openCommunity(c.slug)}
-									/>
-								)),
-							)
-						: null}
 					{/* MINI MARKS (owner, 2026-09-13): a community wears its cover
 					    photo in a green ring from the city band, and a home IS its
 					    amber price chip from the homes band ("Don't show house
