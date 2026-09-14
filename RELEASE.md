@@ -44,6 +44,14 @@ said matters on the You tab.
   recognise a place before you even tap it. Home prices on the map read as
   "$525K" and "$1.2M" again — quicker to take in than the full number.
 
+### 2026-09-14
+- **Comparisons read as a proper table.** Comparing two or three homes or
+  neighbourhoods, each figure now sits on one line — its name on the left,
+  the values lined up beside it under the photos they belong to. Before,
+  every figure spent one line on its name and a second on its numbers, so
+  half the screen was blank. Names like "Monthly, all-in" and "Residents on
+  Nextdoor" shortened to fit, with the fuller wording kept beside them.
+
 ### 2026-09-13
 - On the map, a home now shows simply as its price — no icon, just the
   number at the spot. And zoom in close on a neighborhood and its real

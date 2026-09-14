@@ -28,7 +28,10 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CompareBlock } from "../components/compare/CompareSection";
+import {
+	ColumnHeaderSpacer,
+	CompareBlock,
+} from "../components/compare/CompareSection";
 import { TakeCard } from "../components/compare/TakeCard";
 import { listingDetailUrl } from "../lib/api/base";
 import { splitRows } from "../lib/compare/take";
@@ -148,6 +151,7 @@ export default function CompareScreen() {
 					{take && <TakeCard take={take} />}
 					<Text style={styles.factsHead}>The numbers behind it</Text>
 					<View style={styles.headerRow}>
+						<ColumnHeaderSpacer count={table.headers.length} />
 						{table.headers.map((h) => (
 							<Pressable
 								key={h.id}
@@ -163,7 +167,7 @@ export default function CompareScreen() {
 								<Text style={styles.headAddr} numberOfLines={2}>
 									{h.address}
 								</Text>
-								<Text style={styles.headCity} numberOfLines={1}>
+								<Text style={styles.headCity} numberOfLines={2}>
 									{h.city}
 								</Text>
 								{h.price && <Text style={styles.headPrice}>{h.price}</Text>}

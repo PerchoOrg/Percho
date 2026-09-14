@@ -236,8 +236,8 @@ export function buildCommunityCompareTable(
 			rows: kept([
 				dimensionRow(communities, "walkable"),
 				{
-					label: "Errands, shops & food",
-					note: "mapped places nearby",
+					label: "Errands",
+					note: "shops & food mapped nearby",
 					cells: convCounts,
 				},
 			]),
@@ -263,7 +263,7 @@ export function buildCommunityCompareTable(
 
 	const basics: CommunityCompareRow[] = [
 		{
-			label: "Resident rating",
+			label: "Rating",
 			note: "approved reviews only",
 			priority: "community",
 			cells: communities.map((c) =>
@@ -281,12 +281,12 @@ export function buildCommunityCompareTable(
 			dimensionRow(communities, dim),
 		),
 		{
-			label: "Median adult age",
+			label: "Median age",
 			cells: statCells(communities, "Median adult age"),
 		},
 		{
-			label: "Residents on Nextdoor",
-			note: "how many we have heard from, not the population",
+			label: "Nextdoor",
+			note: "how many we’ve heard from, not the population",
 			priority: "community",
 			cells: statCells(communities, "Residents on Nextdoor"),
 		},

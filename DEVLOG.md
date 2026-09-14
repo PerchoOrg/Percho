@@ -21,6 +21,54 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-14 02:30 UTC — phase286: the compare row becomes a table row
+
+**Objective**: owner, on the phase283 screenshot — "Make it a compact table.
+A lot of empty spaces in each line." The stacked row (label on its own line,
+figures on the next) spent a full line on a 60 pt word, and that is the
+blank space he was pointing at.
+
+**Actions**:
+- `components/compare/CompareSection.tsx`: `FigureRow` goes to a left label
+  column (`LABEL_COL_W = 96`) with the figures beside it whenever there are
+  `COMPACT_MAX_COLUMNS = 3` or fewer columns. Vertical rhythm tightened —
+  `marginTop: 14 + paddingTop: 12` becomes `paddingVertical: 9`, section
+  `marginTop` 26 → 20, meter gap 5 → 4. A plain row goes ~71 pt → ~43 pt.
+- Four and five columns keep the stacked layout. This is NOT a reversal of
+  phase272: that phase measured five columns, where a label column leaves
+  ~46 pt a cell and clips "$3,912/mo". At three it leaves ~82 pt. The
+  constant carries the arithmetic so the next person doesn't re-litigate it.
+- New exported `ColumnHeaderSpacer`, dropped in front of both screens'
+  thumbnail rows. Without it the header columns span the full width while
+  the figures start 96 pt in — the thumbnails would sit out of line with
+  their own numbers, which is the one thing a table may not do. It gives
+  back the header row's own 8 pt gap so both layouts land on the same
+  column edges (verified by hand: first cell at x=100 either way).
+- Long row labels shortened, since a 96 pt column wraps them into three
+  lines and a tall row is not a compact one: "Monthly, all-in" → "Monthly",
+  "Asking vs its city" → "Vs city", "Days on market" → "Days listed",
+  "Rent, typical" → "Typical rent", "Resident rating" → "Rating",
+  "Errands, shops & food" → "Errands", "Median adult age" → "Median age",
+  "Residents on Nextdoor" → "Nextdoor". The precision they carried moves
+  into the note beside them. The community stat LOOKUP key stays "Median
+  adult age" — that string is the server's, not ours.
+- Header city/place go `numberOfLines` 1 → 2: the narrower column truncated
+  "ALPHARETTA, GA" to "ALPHARET…".
+
+**Issues**: caught the header-alignment break while reasoning through the
+widths rather than on device — the figure columns had moved and the
+thumbnails had not. Worth noting because nothing in the test suite would
+have caught it; these are layout constants, not logic.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (same 8
+pre-existing warnings), 780 mobile tests pass (label assertions updated in
+both compare test files). Web untouched. NOT verified on device — the row
+geometry is arithmetic on a 390 pt screen and wants the owner's eyes.
+
+**Next steps**: owner checks both compare screens. If he ever shortlists
+four or five, that path still stacks — `COMPACT_MAX_COLUMNS` is the knob,
+but the cell width is the reason.
+
 ## 2026-09-14 02:20 UTC — phase285: K/M is back, and a community wears its own face
 
 **Objective**: owner on phase284 — "Better. Now use k, m for numbers for
