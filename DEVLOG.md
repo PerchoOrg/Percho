@@ -21,6 +21,38 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-14 02:20 UTC — phase285: K/M is back, and a community wears its own face
+
+**Objective**: owner on phase284 — "Better. Now use k, m for numbers for
+homes. Use hero pic for communities, same circle size or little bigger
+ones."
+
+**Actions**, `apps/mobile/app/(tabs)/search.tsx`:
+- `fullPrice` → `compactPrice` again (the phase277.8 function, restored
+  verbatim): "$525K" / "$1.2M". Worth recording WHY the reversal is right
+  rather than a round trip: when the price was a chip UNDER a house icon,
+  the icon carried the meaning and the digits could be precise. Now the
+  chip IS the home — it is read at a glance, and at a glance six digits
+  are a wall.
+- `CommunityMark`'s solid dot becomes the community's cover photo in a
+  green ring: 26px (from 18px — his "little bit bigger"), `pos` border,
+  `surface2` ground, same shadow, inside a tap pad widened 32→36. The
+  content gate (phase277.5) means every community the map draws HAS a
+  cover, so the initial is a fallback for an older wire, not a common
+  face. `heroUrl` was already on the DTO — no server change.
+- Marker construction deliberately untouched: plain `Marker`, no `anchor`,
+  no `tracksViewChanges` override. Default view tracking is also what lets
+  the photo appear once it loads, and it is what the ~109 city photo pins
+  ran on before, so the pan cost has precedent.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (same 8
+pre-existing warnings), mobile 780 pass. Web untouched — Metro reload is
+enough for this one.
+
+**Next steps**: owner looks at photo density at city zoom — if a full
+frame of covers reads busy, the lever is showing photos only past the
+homes band and keeping the solid dot wider out.
+
 ## 2026-09-13 20:25 UTC — phase284: the price is the home, the boundary is the button
 
 **Objective**: owner on phase282 — "Don't show house shape, just the
