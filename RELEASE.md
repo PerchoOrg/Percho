@@ -39,6 +39,8 @@ size, what residents say — sits under "The basics", still ordered by what you
 said matters on the You tab.
 
 ### 2026-09-14
+- Tapping a neighborhood on the map opens it again — and the target is now
+  finger-sized, so you no longer have to hit the little photo marker exactly.
 - The green neighborhood outlines are gone from the map. Every neighborhood
   is simply its photo marker now; the map stays clean at every zoom, and a
   neighborhood's real boundary is still drawn on its own page.

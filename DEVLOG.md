@@ -21,6 +21,48 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-14 06:25 UTC — phase289: the tap surface survives the boundary
+
+**Objective**: owner, immediately after phase288 — "Clicking does not go to
+community explore page." The regression that entry flagged as its own
+risk, arriving on schedule.
+
+**What this finally settles**: across five reports over three days, this
+app has exactly ONE tap delivery that never fails on iOS. Not
+`Marker.onPress`, not the map-level `onMarkerPress`, not the bare map
+press — all three miss small custom-view markers often enough to have
+produced four separate complaints. The only build where community taps
+worked was phase284's, the one with boundary polygons under the dots,
+because `handleMapTap` walks `map.overlays` and fires any polygon whose
+ring contains the point (react-native-maps 1.27.2 source, read in
+phase277.3). phase288 removed those polygons for being ugly and took the
+taps with them.
+
+**So: keep the polygon, delete the picture.** Each community now gets an
+invisible square — `fillColor`/`strokeColor` fully transparent,
+`strokeWidth: 0` — centred on its point and sized in DEGREES from the
+current zoom (`hitLatDeg` / `hitLngDeg` = `latitudeDelta * 28 / height`),
+so it is always ~`DOT_TAP_RADIUS_PX` on the glass no matter how far out
+the map is. Nothing is drawn; the whole finger-sized area is pressable.
+This satisfies phase288's rule as written — that rule is about the
+community's real SHAPE being visible clutter, and a transparent hit target
+draws nothing.
+
+**Why it cannot re-create phase277.4's bug** (a home tap opening a
+community over the listing): every tap path now funnels through one
+`claimTap(coordinate)` — the polygon press, which carries its own
+coordinate on Apple Maps, and the bare map press. It resolves the nearest
+community, then yields if a home is closer. A square overlapping a home
+therefore still opens the home. `fallbackSlug` covers the
+Google-Maps-on-iOS event shape, where a polygon press names only its id.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (same 8
+pre-existing warnings), mobile 780 pass. Web untouched; Metro reload.
+
+**Next steps**: owner confirms the tap. If this one holds, the marker-side
+`onPress` / `onMarkerPress` wires are redundant belt-and-braces and could
+be dropped in a cleanup — but not before he says taps are reliably fine.
+
 ## 2026-09-14 06:15 UTC — phase288: community boundaries off the map, for good
 
 **Objective**: owner — "Don't show the community boundary it is ugly and
