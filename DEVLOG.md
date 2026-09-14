@@ -21,6 +21,45 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-14 08:15 UTC — phase293: the resolver was measuring against the wrong rectangle
+
+**Objective**: owner — "缩小时 隔一个可以点一个 / 放大还是很多点不了". An
+alternating, knife-edge pattern is not a delivery failure; it is an
+arithmetic one, and this time the arithmetic is provably wrong.
+
+**The bug**: `claimTap` converts a coordinate difference into screen
+points by dividing by the region's span and multiplying by the screen
+size — and it used `useWindowDimensions()`, the WINDOW. The map is not
+the window. `mapWrap` is `flex: 1` under the tab bar, so on an 844pt
+window the map is ~761pt tall: **every vertical distance was overstated
+by ~11%**, and with a search sheet open (map down to ~280pt) by up to
+**3×**. Horizontal distances were always right, because the map is full
+width.
+
+That asymmetry is the whole shape of his report. An 11% error is
+invisible at the centre of a mark and decisive at its edge: a tap 33pt
+from a community computed as 36.6pt and fell outside the 36pt radius,
+while the same tap 33pt to the SIDE passed. Marks in a rough row
+therefore alternated between working and not depending on which way the
+finger missed by, and zooming in — which spreads marks vertically across
+more of the screen — pushed more of them past the edge.
+
+**Fix**: measure the map. `onLayout` on the map container stores the real
+{w, h}; `claimTap`'s conversion and the hit polygons' degree sizing both
+use it. The window dimensions no longer touch any hit test.
+
+**Probe upgraded** (still `__DEV__` only): it now prints the wire, the
+measured map size, how many communities/homes are in hand, and the
+outcome — e.g. `gesture · map 393×761 · 24c/3h · OPEN community @12pt`.
+The map size in that line is the direct check that this fix is live.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (8
+pre-existing warnings), mobile 780 pass. Web untouched.
+
+**Next steps**: if taps are still missed, the probe line now says which
+half is wrong — `nearest NNpt > 36` means geometry (and the printed map
+size says whether this fix applied), a missing line means delivery.
+
 ## 2026-09-14 08:00 UTC — phase292: schools were eating the taps, and a probe so the next round has facts
 
 **Objective**: owner — "缩率状态很多可以点 zoomin后基本点不了". The first

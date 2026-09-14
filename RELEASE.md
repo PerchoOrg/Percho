@@ -39,6 +39,10 @@ size, what residents say — sits under "The basics", still ordered by what you
 said matters on the You tab.
 
 ### 2026-09-14
+- **Map taps land where you aim.** The map was judging how close your finger
+  was using the wrong screen height, so a tap that was clearly on a
+  neighborhood could be counted as a near miss — which is why some markers
+  opened and the ones beside them did nothing.
 - **Map taps are fixed properly now.** Neighborhood photos sat slightly above
   the spot they marked, so tapping the top of one did nothing — they now sit
   exactly on their place, and the name under the photo counts as part of the
