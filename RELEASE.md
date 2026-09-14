@@ -38,6 +38,12 @@ price now sits right under its photo, and everything else — monthly cost,
 size, what residents say — sits under "The basics", still ordered by what you
 said matters on the You tab.
 
+### 2026-09-14
+- **Neighborhoods show their own photo on the map.** Each one is now a small
+  round cover picture in a green ring instead of a plain dot, so you can
+  recognise a place before you even tap it. Home prices on the map read as
+  "$525K" and "$1.2M" again — quicker to take in than the full number.
+
 ### 2026-09-13
 - On the map, a home now shows simply as its price — no icon, just the
   number at the spot. And zoom in close on a neighborhood and its real

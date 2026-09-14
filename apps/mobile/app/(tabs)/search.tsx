@@ -23,7 +23,7 @@
  *
  *   metro  (Δlat > 0.30)  county lines + names, lens fills. County tap →
  *                         info pill (no re-frame). Nothing else drawn.
- *   city   (≤ 0.30)       + city name labels, community dots. Content comes
+ *   city   (≤ 0.30)       + city name labels, community photo dots. Content comes
  *                         from `/api/mobile/map` — the viewport query,
  *                         re-asked when a pan/zoom settles (`useMapContent`).
  *   homes  (≤ 0.12)       + the homes, each AS its price chip — no icon
@@ -181,14 +181,21 @@ const METRO_REGION = {
 	longitudeDelta: 0.45,
 };
 
-/** "525,000" — the digits alone. Owner's spec for the home chip
- *  (2026-09-13): "the numbers only no k, m" — no compression, and the
- *  amber house pin is what says it is a price, not the "$". */
-function fullPrice(price: number | undefined): string | undefined {
+/** "$525K" / "$1.2M" — compact again (owner, 2026-09-13, after seeing the
+ *  full digits on the phone: "use k, m for numbers for homes"). The chip IS
+ *  the home now, so it is read at a glance and at a glance six digits are
+ *  a wall; "$1.2M" is the number a buyer actually says out loud. */
+function compactPrice(price: number | undefined): string | undefined {
 	if (price === undefined || !Number.isFinite(price) || price <= 0) {
 		return undefined;
 	}
-	return Math.round(price).toLocaleString("en-US");
+	if (price >= 1_000_000) {
+		return `$${(price / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+	}
+	if (price >= 1_000) {
+		return `$${Math.round(price / 1_000)}K`;
+	}
+	return `$${Math.round(price)}`;
 }
 
 /** `#rrggbb` + alpha → the `#rrggbbaa` react-native-maps accepts. */
@@ -678,12 +685,12 @@ export default function SearchTab() {
 								)),
 							)
 						: null}
-					{/* MINI MARKS (owner, 2026-09-13): a green dot per community
-					    from the city band, and a home IS its amber price chip from
-					    the homes band ("Don't show house shape, just the numbers").
-					    Community names come on past `MARK_LABEL_DELTA`. A typed
-					    search shows its hits at any zoom: a search must show what
-					    it found. */}
+					{/* MINI MARKS (owner, 2026-09-13): a community wears its cover
+					    photo in a green ring from the city band, and a home IS its
+					    amber price chip from the homes band ("Don't show house
+					    shape, just the numbers", then "use k, m"). Community names
+					    come on past `MARK_LABEL_DELTA`. A typed search shows its
+					    hits at any zoom: a search must show what it found. */}
 					{searching || cityBand
 						? shown?.communities.map((c) =>
 								c.lat !== undefined && c.lng !== undefined ? (
@@ -692,6 +699,7 @@ export default function SearchTab() {
 										identifier={`community:${c.slug}`}
 										coordinate={{ latitude: c.lat, longitude: c.lng }}
 										name={c.name}
+										{...(c.heroUrl ? { heroUrl: c.heroUrl } : {})}
 										labelled={marksLabelled}
 										onPress={() => openCommunity(c.slug)}
 									/>
@@ -704,7 +712,7 @@ export default function SearchTab() {
 									<HomePin
 										key={`l-${l.id}`}
 										coordinate={{ latitude: l.lat, longitude: l.lng }}
-										price={fullPrice(l.price)}
+										price={compactPrice(l.price)}
 										name={l.address}
 										onPress={() => router.push(`/listing/${l.id}`)}
 									/>
@@ -1096,29 +1104,46 @@ function SchoolMarker({
 	);
 }
 
+/** A community is its own FACE — the cover photo in a green ring (owner,
+ *  2026-09-13: "Use hero pic for communities, same circle size or little
+ *  bit bigger"). The content gate (phase277.5) means every community the
+ *  map draws has a cover; the initial is the fallback for a row from an
+ *  older wire, not a common face. */
 function CommunityMark({
 	coordinate,
 	identifier,
 	name,
+	heroUrl,
 	labelled,
 	onPress,
 }: {
 	coordinate: LatLng;
 	identifier: string;
 	name: string;
+	heroUrl?: string;
 	labelled: boolean;
 	onPress: () => void;
 }) {
 	return (
 		// Plain Marker, no `anchor`, no `tracksViewChanges` override, column
 		// layout — the construction whose taps provably land in this app;
-		// phases 277.1-277.3 each learned that the hard way. The `identifier`
+		// phases 277.1-277.3 each learned that the hard way. Default view
+		// tracking is also what lets the photo appear once it loads, and it
+		// is what the ~109 city photo pins ran on before. The `identifier`
 		// feeds the map-level `onMarkerPress` fallback — see `openCommunity`.
 		<Marker coordinate={coordinate} identifier={identifier} onPress={onPress}>
 			<View style={styles.markWrap} accessibilityLabel={name}>
 				{/* The pad is the real tap target — transparent, finger-sized. */}
 				<View style={styles.markPad}>
-					<View style={styles.communityDot} />
+					<View style={styles.communityDot}>
+						{heroUrl ? (
+							<Image source={{ uri: heroUrl }} style={styles.communityPhoto} />
+						) : (
+							<Text style={styles.communityInitial}>
+								{name.trim().charAt(0).toUpperCase()}
+							</Text>
+						)}
+					</View>
 				</View>
 				{/* The label slot is ALWAYS in the layout so the mark sits at the
 				    same offset whether or not its words are shown — they come and
@@ -1197,15 +1222,15 @@ const styles = StyleSheet.create({
 		paddingVertical: 1,
 		overflow: "hidden",
 	},
-	// ── Mini marks: community dots & home houses ──────────────────────────────
+	// ── Mini marks: community photo dots & home price chips ───────────────────
 	// The owner's pick after seeing tiles and teardrops on the phone
 	// (2026-09-13): small solid marks in the layer colours, words only past
 	// `MARK_LABEL_DELTA`. Shared anatomy — pad, mark, reserved label slot.
 	markWrap: { alignItems: "center" },
 	// Finger-sized and transparent — the tap target around a small mark.
 	markPad: {
-		width: 32,
-		height: 32,
+		width: 36,
+		height: 36,
 		alignItems: "center",
 		justifyContent: "center",
 	},
@@ -1216,17 +1241,30 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		marginTop: -2,
 	},
+	// The cover photo in a green ring, a step up from the 18px solid dot it
+	// replaced (owner asked for "same size or little bit bigger"). The ring
+	// is what still says "community" at a glance when the photos differ.
 	communityDot: {
-		width: 18,
-		height: 18,
-		borderRadius: 9,
-		backgroundColor: colors.pos,
+		width: 26,
+		height: 26,
+		borderRadius: 13,
+		backgroundColor: colors.surface2,
 		borderWidth: 2,
-		borderColor: colors.surface,
+		borderColor: colors.pos,
+		overflow: "hidden",
+		alignItems: "center",
+		justifyContent: "center",
 		shadowColor: "#000",
 		shadowOpacity: 0.25,
 		shadowRadius: 2,
 		shadowOffset: { width: 0, height: 1 },
+	},
+	communityPhoto: { width: "100%", height: "100%" },
+	communityInitial: {
+		...textStyles.caption,
+		fontSize: 12,
+		fontWeight: "700",
+		color: colors.pos,
 	},
 	communityName: {
 		...textStyles.caption,
