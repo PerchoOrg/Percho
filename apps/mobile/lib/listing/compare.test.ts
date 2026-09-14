@@ -65,7 +65,7 @@ describe("buildCompareTable", () => {
 		expect(basics("Beds · baths")).toEqual(["4 · 3", "3 · —"]);
 		expect(basics("HOA")).toEqual(["$100/mo", undefined]);
 		expect(basics("Neighbourhood")).toEqual(["Sugarloaf", undefined]);
-		expect(basics("Monthly, all-in")?.[0]).toMatch(/^\$[\d,]+\/mo$/);
+		expect(basics("Monthly")?.[0]).toMatch(/^\$[\d,]+\/mo$/);
 		// The percentage alone since phase281 — the name ran the cell to three
 		// lines and lives on the home's page. The bar carries the comparison.
 		const schools = t.aspects.find((a) => a.key === "schools");
@@ -167,10 +167,11 @@ describe("buildCompareTable", () => {
 			undefined,
 		]);
 		// $200/sqft against a $250 city median = 20% under.
-		expect(
-			pot?.rows.find((r) => r.label === "Asking vs its city")?.cells,
-		).toEqual(["20% under", undefined]);
-		expect(pot?.rows.find((r) => r.label === "Days on market")?.cells).toEqual([
+		expect(pot?.rows.find((r) => r.label === "Vs city")?.cells).toEqual([
+			"20% under",
+			undefined,
+		]);
+		expect(pot?.rows.find((r) => r.label === "Days listed")?.cells).toEqual([
 			"12",
 			undefined,
 		]);
@@ -195,7 +196,7 @@ describe("buildCompareTable — basics order follows declared priorities", () =>
 
 	it("leaves the built order alone when no weights are passed", () => {
 		const t = buildCompareTable(HOMES, 0.065);
-		expect(t.basics[0]?.label).toBe("Monthly, all-in");
+		expect(t.basics[0]?.label).toBe("Monthly");
 	});
 
 	it("floats the community rows up for a community-first buyer", () => {
@@ -207,7 +208,7 @@ describe("buildCompareTable — basics order follows declared priorities", () =>
 		});
 		expect(t.basics[0]?.label).toBe("Neighbourhood");
 		// Nothing was dropped — a weight orders, it never filters.
-		expect(t.basics.some((r) => r.label === "Monthly, all-in")).toBe(true);
+		expect(t.basics.some((r) => r.label === "Monthly")).toBe(true);
 	});
 
 	it("keeps every figure regardless of weighting", () => {

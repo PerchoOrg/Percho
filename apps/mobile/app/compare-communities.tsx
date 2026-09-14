@@ -35,7 +35,10 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CompareBlock } from "../components/compare/CompareSection";
+import {
+	ColumnHeaderSpacer,
+	CompareBlock,
+} from "../components/compare/CompareSection";
 import { TakeCard } from "../components/compare/TakeCard";
 import { communityDetailUrl } from "../lib/api/base";
 import {
@@ -155,6 +158,7 @@ export default function CompareCommunitiesScreen() {
 					{take && <TakeCard take={take} />}
 					<Text style={styles.factsHead}>The numbers behind it</Text>
 					<View style={styles.headerRow}>
+						<ColumnHeaderSpacer count={table.headers.length} />
 						{table.headers.map((h) => (
 							<Pressable
 								key={h.id}
@@ -172,7 +176,7 @@ export default function CompareCommunitiesScreen() {
 									{h.name}
 								</Text>
 								{!!h.place && (
-									<Text style={styles.headPlace} numberOfLines={1}>
+									<Text style={styles.headPlace} numberOfLines={2}>
 										{h.place}
 									</Text>
 								)}

@@ -81,7 +81,7 @@ describe("buildCommunityCompareTable", () => {
 			"35%",
 			undefined,
 		]);
-		expect(basicFor(t, "Median adult age")?.cells).toEqual([undefined, "42"]);
+		expect(basicFor(t, "Median age")?.cells).toEqual([undefined, "42"]);
 	});
 
 	it("prints the review score with a correctly pluralised count, and a meter", () => {
@@ -93,7 +93,7 @@ describe("buildCommunityCompareTable", () => {
 				reviews: { count: 12, avgRating: 3.5, dimensionAvgs: {}, items: [] },
 			}),
 		]);
-		const row = basicFor(t, "Resident rating");
+		const row = basicFor(t, "Rating");
 		expect(row?.cells).toEqual(["4.3 · 1 review", "3.5 · 12 reviews"]);
 		// The bar is the resident's own number drawn, out of 5 — not our verdict.
 		expect(row?.meter).toEqual([4.25, 3.5]);
@@ -141,9 +141,10 @@ describe("buildCommunityCompareTable", () => {
 			}),
 			community({ nearby: [{ bucket: "outdoor", count: 3 }] }),
 		]);
-		expect(aspectRow(t, "convenience", "Errands, shops & food")?.cells).toEqual(
-			["20", undefined],
-		);
+		expect(aspectRow(t, "convenience", "Errands")?.cells).toEqual([
+			"20",
+			undefined,
+		]);
 	});
 
 	it("puts the schools count in its own aspect, not in the nearby rows", () => {

@@ -206,7 +206,7 @@ export function buildCompareTable(
 					),
 				},
 				{
-					label: "Asking vs its city",
+					label: "Vs city",
 					note: "$/sqft against its city’s actives",
 					cells: homes.map((h) => {
 						const median = h.comps.medianPricePerSqft;
@@ -225,7 +225,7 @@ export function buildCompareTable(
 					}),
 				},
 				{
-					label: "Days on market",
+					label: "Days listed",
 					cells: homes.map((h) =>
 						h.daysOnMarket !== undefined ? String(h.daysOnMarket) : undefined,
 					),
@@ -237,7 +237,7 @@ export function buildCompareTable(
 	// No Price row — the price sits in the header column now, always in view.
 	const basics: CompareRow[] = [
 		{
-			label: "Monthly, all-in",
+			label: "Monthly",
 			priority: "cost",
 			note: `${(annualRate * 100).toFixed(2)}% rate, ${Math.round(DEFAULT_DOWN_FRACTION * 100)}% down, tax + insurance + upkeep + HOA`,
 			cells: cost.map((c) => (c ? `${formatUsd(c.totalUsd)}/mo` : undefined)),
@@ -280,7 +280,7 @@ export function buildCompareTable(
 			}),
 		},
 		{
-			label: "Rent, typical",
+			label: "Typical rent",
 			priority: "cost",
 			note: "Zillow ZORI for the ZIP",
 			cells: homes.map((h) =>
