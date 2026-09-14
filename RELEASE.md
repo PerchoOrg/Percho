@@ -39,12 +39,15 @@ size, what residents say — sits under "The basics", still ordered by what you
 said matters on the You tab.
 
 ### 2026-09-14
+- **Cleaner names on the map.** Neighborhood and school names no longer sit
+  in little white boxes — they're set directly on the map with a soft white
+  outline, the way place names are printed on a real map. Longer
+  neighborhood names now wrap onto a second line instead of being cut off
+  halfway.
 - **Neighborhoods show their own photo on the map.** Each one is now a small
   round cover picture in a green ring instead of a plain dot, so you can
   recognise a place before you even tap it. Home prices on the map read as
   "$525K" and "$1.2M" again — quicker to take in than the full number.
-
-### 2026-09-14
 - **Comparisons read as a proper table.** Comparing two or three homes or
   neighbourhoods, each figure now sits on one line — its name on the left,
   the values lined up beside it under the photos they belong to. Before,

@@ -1150,7 +1150,10 @@ function CommunityMark({
 				    go with zoom, and the marks must not hop when they do. */}
 				<View style={styles.markLabelBox}>
 					{labelled ? (
-						<Text style={styles.communityName} numberOfLines={1}>
+						// Two lines, not one: "Medlock Bridge Village" is a real
+						// community name and no single line at a sane map width
+						// holds it. Wrapping beats both truncation and a wider box.
+						<Text style={styles.communityName} numberOfLines={2}>
 							{name}
 						</Text>
 					) : null}
@@ -1208,19 +1211,17 @@ const styles = StyleSheet.create({
 		borderWidth: 1.5,
 		borderColor: colors.surface,
 	},
+	// Halo, not a wash — the same treatment the community names took in
+	// phase287, and changed with them rather than after them: the two layers
+	// are drawn at the SAME zoom, so one boxed and one haloed would just be
+	// the next complaint.
 	schoolName: {
 		...textStyles.caption,
-		fontSize: 11,
+		fontSize: 10.5,
 		fontWeight: "600",
-		color: colors.ink,
-		// A wash behind the text, not a chip: a hard-edged box per school reads
-		// as a hundred buttons. This lets the map through while keeping the
-		// name legible over a photograph or a filled county.
-		backgroundColor: withAlpha(colors.surface, 0.82),
-		borderRadius: 4,
-		paddingHorizontal: 3,
-		paddingVertical: 1,
-		overflow: "hidden",
+		color: colors.ink2,
+		textShadowColor: colors.surface,
+		textShadowRadius: 3,
 	},
 	// ── Mini marks: community photo dots & home price chips ───────────────────
 	// The owner's pick after seeing tiles and teardrops on the phone
@@ -1235,11 +1236,18 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 	},
 	// Reserved whether or not the words are drawn — see note in the marker.
+	// TWO lines' worth, reserved whether one is used or none: the marker has
+	// no `anchor`, so iOS centres this whole column on the coordinate and a
+	// label box that grew with its text would put each mark a different
+	// distance from its own point — the silent per-pin error the school
+	// pins' header warns about. Narrow on purpose: a name wraps rather than
+	// widening into its neighbours, and wrapping is what ended the
+	// truncation (owner, 2026-09-14: "a lot of truncated").
 	markLabelBox: {
-		height: 18,
-		maxWidth: 128,
+		height: 30,
+		width: 108,
 		alignItems: "center",
-		marginTop: -2,
+		marginTop: -1,
 	},
 	// The cover photo in a green ring, a step up from the 18px solid dot it
 	// replaced (owner asked for "same size or little bit bigger"). The ring
@@ -1266,18 +1274,21 @@ const styles = StyleSheet.create({
 		fontWeight: "700",
 		color: colors.pos,
 	},
+	// No box — the cartographer's answer, and the one the city labels on this
+	// same map already use: ink type carrying a white halo, so the basemap
+	// runs under the letters instead of behind a row of white tiles (owner,
+	// 2026-09-14: "have white background doesn't look good"). Smaller than
+	// the boxed version it replaces, because a halo needs no padding to stay
+	// legible and the smaller face fits more of a name per line.
 	communityName: {
 		...textStyles.caption,
-		fontSize: 12,
-		fontWeight: "600",
+		fontSize: 11,
+		lineHeight: 13,
+		fontWeight: "700",
+		textAlign: "center",
 		color: colors.ink,
-		// The same wash as a school name, for the same reason: a hard-edged
-		// chip per community reads as a hundred buttons.
-		backgroundColor: withAlpha(colors.surface, 0.82),
-		borderRadius: 4,
-		paddingHorizontal: 4,
-		paddingVertical: 1,
-		overflow: "hidden",
+		textShadowColor: colors.surface,
+		textShadowRadius: 3,
 	},
 	// The price IS the home's mark — a standalone chip in the home amber,
 	// no icon (owner, 2026-09-13). Padded a step past the word chips so it
