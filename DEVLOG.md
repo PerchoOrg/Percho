@@ -21,6 +21,50 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-14 06:15 UTC — phase288: community boundaries off the map, for good
+
+**Objective**: owner — "Don't show the community boundary it is ugly and
+unorganized." Second rejection of the same layer on the same grounds, so
+this phase treats it as a rule rather than a change.
+
+**The rule, now in `search.tsx`'s header**: community boundaries are not
+drawn on this map at any zoom. Tried twice, rejected twice — "all
+communities have different shapes, not consistent" (2026-09-12, city-wide
+layer, phase277) and "ugly and unorganized" (2026-09-14, street-zoom layer
+under the dots, phase284). The data is real; the SET is not uniform enough
+to read as a layer — surveyed subdivisions next to Nextdoor blobs, sizes an
+order of magnitude apart. A community's shape belongs on its own page,
+where it is one figure in a frame. Not to be re-added without a third
+instruction saying so in as many words.
+
+**Actions**: the `<Polygon>` block is gone from the map; `boundary` is off
+the wire on both sides (`SearchCommunityDTO`, `SearchCommunity`,
+`parseBoundary`, the conditional select, `BOUNDARY_SPAN_DEG` and its
+projection); `lib/geo/simplify-ring.ts` + its 12 tests deleted with their
+only caller. That file has now been deleted twice — `git show
+34c9a602:apps/web/lib/geo/simplify-ring.ts` restores it if a fourth act
+ever needs it.
+
+**The regression this could have caused, and the fix**: the boundary
+polygon was ALSO phase284's answer to "not clickable after zooming in" —
+`handleMapTap` fires a polygon's `onPress` reliably where small custom
+markers get missed. Removing it hands the job back to `onMapPress`'s
+nearest-mark fallback, which phase277.4 had made too blunt: it returned
+early if ANY home chip sat within 30pt, and at street zoom homes sit
+INSIDE their communities, so that blanket disclaim was plausibly the
+original cause of the dead taps the polygon was brought in to rescue. It
+is now NEAREST WINS — the fallback yields to a home only when the home is
+genuinely the closer mark. Both phase277.4's real fault (one tap firing
+both recognizers, opening a community over a listing) and the dead-tap
+complaint are covered by that one comparison.
+
+**Verification**: mobile typecheck/lint clean (same 8 warnings), 780 pass;
+web typecheck/lint clean, 1,191 pass (1,203 minus simplify-ring's 12).
+Metro reload shows the map change; the lighter payload lands with Vercel.
+
+**Next steps**: owner confirms a community still opens by tap at street
+zoom — that is the one thing this phase put back at risk.
+
 ## 2026-09-14 02:35 UTC — phase287: map labels lose their boxes and gain a second line
 
 **Objective**: owner on phase285 — "When zooming in, community name shows

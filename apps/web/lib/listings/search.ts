@@ -8,13 +8,14 @@
  *   listings     — address / city / state / zip / neighborhood, active only
  *   communities  — name / city, active
  *
- * Communities are map DOTS: one mark per row at its centroid. Their real
- * `boundary` was shipped and drawn as an outline from 2026-09-09 to
- * 2026-09-12, when the owner called the result inconsistent — subdivisions
- * differ wildly in shape and half the rows have no polygon at all. `boundary`
- * is deliberately NOT selected here (it never was in the feed's community
- * pool, where 8k dense multipolygons time PostgREST out); the true shape
- * still renders on the community's own page.
+ * Communities are map DOTS: one mark per row at its centroid. `boundary` is
+ * deliberately NOT selected by any query in this file. It was shipped and
+ * drawn twice — as a city-wide outline layer (2026-09-09 to 09-12) and as a
+ * street-zoom layer under the dots (09-13 to 09-14) — and the owner rejected
+ * both on the same grounds: the shapes are real but wildly uneven, and a
+ * field of them reads as mess. The rule and its two dates live in
+ * `apps/mobile/app/(tabs)/search.tsx`'s header. The true shape still renders
+ * on the community's own page, where it is one figure in a frame.
  *
  * ── The cover gate is BACK, as a content gate (2026-09-12) ──────────────────
  * Removed 2026-09-10 while hits were map outlines (a shape needs no photo);
@@ -40,7 +41,6 @@
  */
 
 import { publicCoverImageUrl } from '@/lib/communities/cover';
-import { displayRingsFromGeoJson } from '@/lib/geo/simplify-ring';
 import type { Database } from '@/lib/supabase/database.types';
 import { createClient as createPlainClient } from '@supabase/supabase-js';
 
@@ -78,14 +78,6 @@ export interface SearchCommunityDTO {
   heroUrl?: string;
   lat?: number;
   lng?: number;
-  /**
-   * Outer rings, `[lng, lat]`, simplified for display — present ONLY on a
-   * street-zoom viewport read (`mapEntities`, small bbox), where the map
-   * draws the community's real covered area under its dot (owner,
-   * 2026-09-13: "Community dot doesn't tell the covered area"). Text
-   * search and wide reads never carry it.
-   */
-  boundary?: [number, number][][];
 }
 
 export interface SearchResultDTO {
@@ -218,16 +210,6 @@ export async function searchEntities(q: string): Promise<SearchResultDTO> {
 const MAP_LISTING_LIMIT = 100;
 
 /**
- * A viewport read narrower than this (in degrees of latitude) is a
- * street-zoom read, and gets each community's `boundary` rings so the map
- * can draw the covered area. The client's street band is 0.06 padded 20%
- * (≈0.072); a homes-band read (0.12 padded ≈0.144) stays boundary-free.
- * At this span a frame holds a handful of communities, so the rings cost
- * KBs, not the ~120 KB a 100-row read would.
- */
-const BOUNDARY_SPAN_DEG = 0.1;
-
-/**
  * The zoom-band map's viewport read (phase281): every contentful community
  * and active home whose POINT lies in the given bounds. No text, no drill —
  * the phone re-asks this on every settled pan/zoom past the city band.
@@ -244,7 +226,6 @@ export async function mapEntities(bounds: {
   maxLng: number;
 }): Promise<Omit<SearchResultDTO, 'q'>> {
   const supabase = createUncachedAnonClient();
-  const wantBoundary = bounds.maxLat - bounds.minLat <= BOUNDARY_SPAN_DEG;
 
   const [listingRes, communityRes] = await Promise.all([
     supabase
@@ -259,14 +240,9 @@ export async function mapEntities(bounds: {
       .limit(MAP_LISTING_LIMIT),
     supabase
       .from('communities')
-      // `boundary` only on a street-zoom read — see BOUNDARY_SPAN_DEG. The
-      // feed pool's "never select boundary" rule is about 8k dense rows;
-      // a bounded handful of display-simplified rings is the safe case.
-      .select(
-        wantBoundary
-          ? 'id, slug, name, city, state, cover_storage_path, lat, lng, boundary'
-          : 'id, slug, name, city, state, cover_storage_path, lat, lng',
-      )
+      // No `boundary`: the map does not draw community shapes at any zoom —
+      // see the rule in `apps/mobile/app/(tabs)/search.tsx`'s header.
+      .select('id, slug, name, city, state, cover_storage_path, lat, lng')
       .eq('status', 'active')
       // The content gate — see the header.
       .not('cover_storage_path', 'is', null)
@@ -283,19 +259,8 @@ export async function mapEntities(bounds: {
     throw new Error(`map: communities read failed: ${communityRes.error.message}`);
   }
 
-  // Through `unknown`: the conditional select string defeats PostgREST's
-  // literal-type parser, so the row type cannot be inferred here.
-  const communityRows = (communityRes.data ?? []) as unknown as (CommunityRow & {
-    boundary?: unknown;
-  })[];
-  const communities = projectSearchCommunities(communityRows).map((c, i) => {
-    if (!wantBoundary) return c;
-    const rings = displayRingsFromGeoJson(communityRows[i]?.boundary);
-    return rings.length > 0 ? { ...c, boundary: rings } : c;
-  });
-
   return {
     listings: projectSearchListings((listingRes.data ?? []) as ListingRow[]),
-    communities,
+    communities: projectSearchCommunities((communityRes.data ?? []) as CommunityRow[]),
   };
 }
