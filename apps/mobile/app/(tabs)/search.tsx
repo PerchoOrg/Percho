@@ -402,7 +402,24 @@ export default function SearchTab() {
 	 * build, so it is on the owner's phone tonight and in nobody's App
 	 * Store copy. Delete it once taps are reliably fine.
 	 */
-	const [probe, setProbe] = useState("");
+	const [probe, setProbe] = useState("tap probe: waiting for a tap");
+
+	/**
+	 * The MAP's own size in points, measured — not the window's.
+	 *
+	 * `region.latitudeDelta` is the span of the MAP VIEW, so converting a
+	 * coordinate difference into screen points has to divide by the map's
+	 * height. `claimTap` divided by the WINDOW height instead, and the map
+	 * is shorter than the window by the tab bar (~83pt of 844, an 11%
+	 * overestimate of every vertical distance) and by the sheet when a
+	 * search is open (down to ~280pt, a 3× overestimate). An 11% error is
+	 * invisible in the middle of a mark and decisive at its edge: a tap 33pt
+	 * from a community computed as 36.6pt and fell outside the 36pt radius.
+	 * Horizontal distances were always right — the map is full width — which
+	 * is why the failures looked arbitrary rather than uniform, and why a
+	 * row of marks could read as "隔一个可以点一个" (owner, 2026-09-14).
+	 */
+	const [mapSize, setMapSize] = useState({ w: width, h: height });
 
 	const lastNav = useRef(0);
 	const navigateTo = (path: string) => {
@@ -453,8 +470,9 @@ export default function SearchTab() {
 		}
 		const px = (lat: number, lng: number) => {
 			const dx =
-				(Math.abs(lng - tap.longitude) / region.longitudeDelta) * width;
-			const dy = (Math.abs(lat - tap.latitude) / region.latitudeDelta) * height;
+				(Math.abs(lng - tap.longitude) / region.longitudeDelta) * mapSize.w;
+			const dy =
+				(Math.abs(lat - tap.latitude) / region.latitudeDelta) * mapSize.h;
 			return Math.hypot(dx, dy);
 		};
 		let best: { path: string; d: number } | undefined;
@@ -473,11 +491,13 @@ export default function SearchTab() {
 				consider(`/listing/${l.id}`, px(l.lat, l.lng), MARK_TAP_RADIUS_PX);
 			}
 		}
-		setProbe(
-			best
-				? `${via}: open ${best.path.split("/")[1]} @${Math.round(best.d)}pt`
-				: `${via}: nearest ${Number.isFinite(nearest) ? Math.round(nearest) : "∞"}pt > ${MARK_TAP_RADIUS_PX}`,
-		);
+		const near = Number.isFinite(nearest) ? Math.round(nearest) : "none";
+		const outcome = best
+			? `OPEN ${best.path.split("/")[1]} @${Math.round(best.d)}pt`
+			: `nearest ${near}pt > ${MARK_TAP_RADIUS_PX}`;
+		const size = `${Math.round(mapSize.w)}×${Math.round(mapSize.h)}`;
+		const counts = `${shown.communities.length}c/${shown.listings.length}h`;
+		setProbe(`${via} · map ${size} · ${counts} · ${outcome}`);
 		if (best) navigateTo(best.path);
 	};
 
@@ -492,8 +512,8 @@ export default function SearchTab() {
 	 * boundary; removing that boundary in phase288 took the taps with it),
 	 * and an overlay must be sized in geography.
 	 */
-	const hitLatDeg = (region.latitudeDelta * MARK_TAP_RADIUS_PX) / height;
-	const hitLngDeg = (region.longitudeDelta * MARK_TAP_RADIUS_PX) / width;
+	const hitLatDeg = (region.latitudeDelta * MARK_TAP_RADIUS_PX) / mapSize.h;
+	const hitLngDeg = (region.longitudeDelta * MARK_TAP_RADIUS_PX) / mapSize.w;
 
 	// `?focus=<unitId>` — the You tab's familiarity rows, the Saved tab's area
 	// rows and the §5.5 deep link all land here. Handled once per distinct
@@ -638,7 +658,15 @@ export default function SearchTab() {
 	return (
 		<View style={styles.screen}>
 			{/* Map body */}
-			<View style={styles.mapWrap}>
+			<View
+				style={styles.mapWrap}
+				onLayout={(e) =>
+					setMapSize({
+						w: e.nativeEvent.layout.width,
+						h: e.nativeEvent.layout.height,
+					})
+				}
+			>
 				{/* The tap gesture wraps the MAP, not an overlay on top of it: an
 				    overlay would take the touches the map needs for pan and
 				    pinch. A Tap recognizer on the same view coexists with them —
@@ -960,7 +988,7 @@ export default function SearchTab() {
 				{/* Dev-only tap probe — see `probe`. Compiled out of release
 				    builds by `__DEV__`, so it exists under Metro and nowhere
 				    else. Remove once map taps are settled. */}
-				{__DEV__ && probe ? (
+				{__DEV__ ? (
 					<Text style={[styles.probe, { top: insets.top + 150 }]}>{probe}</Text>
 				) : null}
 
