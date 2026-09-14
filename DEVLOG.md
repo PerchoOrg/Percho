@@ -21,6 +21,59 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-14 07:15 UTC — phase290: the tap leaves react-native-maps entirely
+
+**Objective**: owner, on phase289 — "Still not clickable." Sixth report of
+the same fault, fourth failed fix. This entry is as much about stopping the
+guessing as about the change.
+
+**What was checked this time, instead of guessed**:
+- Expo SDK 57 with no `newArchEnabled` key → this app runs the NEW
+  architecture. That looked decisive: `handleMapTap` (which fires polygon
+  `onPress` and the bare map `onPress`) is installed in `AIRMapManager.m`'s
+  `-view`, an old-architecture method. **It is not the answer**:
+  `RNMapsMapView.mm:130` shows the Fabric component instantiating
+  `AIRMapManager` and calling `[_legacyMapManager view]` precisely to get
+  that map, then bridging `_view.onPress` into the Fabric event emitter.
+  The recognizer is installed and the event is wired.
+- `onMarkerSelect` is bridged too (`RNMapsMapView.mm:417`), fed by MapKit's
+  own `didSelectAnnotationView` → `showCalloutView`. A fifth channel of the
+  same family, left unused: see below.
+
+**So the diagnosis is now: unknown, and it has stopped being worth
+finding.** Four of the library's channels have been tried — `Marker.
+onPress`, map-level `onMarkerPress`, the bare map `onPress`, and a
+transparent hit polygon — and all four miss on his device while the same
+wires demonstrably work for 40pt photo pins. The right move is to stop
+depending on them.
+
+**The change**: `react-native-gesture-handler` (already a dependency, and
+already wrapping the whole router at `app/_layout.tsx:79`) now owns the
+tap. A `Gesture.Tap()` wraps the MapView itself — not an overlay above it,
+which would steal the pan and pinch the map needs; a Tap recognizer
+coexists with them and fails the moment the finger travels. On tap end,
+`mapRef.coordinateForPoint({x, y})` converts the point to a coordinate and
+hands it to the SAME `claimTap` every other path uses, so dedupe and the
+home-yield rule apply unchanged. This is RN's own touch system rather than
+MapKit's, which is the whole point.
+
+`tapGesture` is deliberately not memoised — `claimTap` closes over `shown`
+and `region`, and a missed dep would resolve a tap against an older
+frame's marks. This surface has had enough silent wrong answers.
+
+**One real possibility this does NOT cover, and how we will know**: if
+`mapContent.result` is null — the viewport read failing — then there are no
+marks to resolve and no tap wiring can help. That failure was silent;
+`use-map-content.ts` now `console.warn`s it. If the owner reports the
+photo circles are not on the map at all, the bug was never the tap.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (back to the
+8 pre-existing warnings), mobile 780 pass. Web untouched.
+
+**Next steps**: if this fails too, stop shipping fixes and get device
+evidence — the fastest is the owner reading one Metro line, either the new
+`[map] viewport read failed` warning or a temporary probe in `claimTap`.
+
 ## 2026-09-14 06:25 UTC — phase289: the tap surface survives the boundary
 
 **Objective**: owner, immediately after phase288 — "Clicking does not go to

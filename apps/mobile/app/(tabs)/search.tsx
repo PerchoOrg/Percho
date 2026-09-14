@@ -125,6 +125,7 @@ import {
 	View,
 	useWindowDimensions,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import MapView, {
 	type LatLng,
 	type MapPressEvent,
@@ -517,6 +518,43 @@ export default function SearchTab() {
 	 *  browsing shows the viewport feed. */
 	const shown = searching ? hits : mapContent.result;
 
+	/**
+	 * The tap path that does not go through react-native-maps at all.
+	 *
+	 * Six reports across three days (2026-09-12 ×3, 2026-09-13, 2026-09-14
+	 * ×2) say a community will not open by tap, and every fix so far has
+	 * used one of the library's own channels — `Marker.onPress`, the
+	 * map-level `onMarkerPress`, the bare `onPress`, and finally a
+	 * transparent hit polygon. Whatever the reason each of those misses on
+	 * his device, the answer is to stop depending on them: react-native-
+	 * gesture-handler is already in this app (it wraps the whole router at
+	 * `app/_layout.tsx`), it is RN's own touch system rather than MapKit's,
+	 * and a Tap gesture yields to pan and pinch by construction — it only
+	 * fires when the finger lands and lifts without travelling, which is
+	 * exactly the event we want and never the ones the map needs.
+	 *
+	 * `coordinateForPoint` turns the tap's position in the map's own view
+	 * into a coordinate, and from there it is the same `claimTap` every
+	 * other path uses, dedupe and home-yield included.
+	 */
+	// Deliberately NOT memoised: `claimTap` closes over `shown` and `region`,
+	// so a memo would have to list them and a missed dep would resolve a tap
+	// against an older frame's marks — a silent wrong answer, and this
+	// surface has had enough of those. The map re-renders only when a gesture
+	// settles or state changes, so rebuilding one gesture object costs
+	// nothing worth the risk.
+	const tapGesture = Gesture.Tap()
+		// On the JS thread: the handler reads React state and calls the
+		// router, none of which is worklet-safe.
+		.runOnJS(true)
+		.maxDuration(400)
+		.onEnd((e) => {
+			mapRef.current
+				?.coordinateForPoint({ x: e.x, y: e.y })
+				.then((coord) => claimTap(coord))
+				.catch(() => {});
+		});
+
 	// A fresh TYPED result opens the sheet and fits the map to whatever has
 	// a point — including matched cities' centroids, so a city-only match
 	// still lands somewhere.
@@ -574,125 +612,130 @@ export default function SearchTab() {
 		<View style={styles.screen}>
 			{/* Map body */}
 			<View style={styles.mapWrap}>
-				<MapView
-					ref={mapRef}
-					style={StyleSheet.absoluteFill}
-					mapType="mutedStandard"
-					showsPointsOfInterests={false}
-					showsCompass={false}
-					initialRegion={METRO_REGION}
-					onRegionChangeComplete={setRegion}
-					// Two more wires for a community tap, both funnelled through
-					// `openCommunity`'s dedupe: the marker-level event when the dot's
-					// own recognizer catches the tap, and the bare map press when
-					// only the map's does (see `onMapPress` — on iOS the two can
-					// BOTH fire, and small custom markers often catch nothing).
-					onMarkerPress={(e) => {
-						const id = e.nativeEvent.id;
-						if (id?.startsWith("community:")) {
-							openCommunity(id.slice("community:".length));
-						}
-					}}
-					onPress={onMapPress}
-				>
-					{/* County OUTLINES, always — the areas are a boundary, not a pin,
+				{/* The tap gesture wraps the MAP, not an overlay on top of it: an
+				    overlay would take the touches the map needs for pan and
+				    pinch. A Tap recognizer on the same view coexists with them —
+				    it fails the moment the finger travels. See `tapGesture`. */}
+				<GestureDetector gesture={tapGesture}>
+					<MapView
+						ref={mapRef}
+						style={StyleSheet.absoluteFill}
+						mapType="mutedStandard"
+						showsPointsOfInterests={false}
+						showsCompass={false}
+						initialRegion={METRO_REGION}
+						onRegionChangeComplete={setRegion}
+						// Two more wires for a community tap, both funnelled through
+						// `openCommunity`'s dedupe: the marker-level event when the dot's
+						// own recognizer catches the tap, and the bare map press when
+						// only the map's does (see `onMapPress` — on iOS the two can
+						// BOTH fire, and small custom markers often catch nothing).
+						onMarkerPress={(e) => {
+							const id = e.nativeEvent.id;
+							if (id?.startsWith("community:")) {
+								openCommunity(id.slice("community:".length));
+							}
+						}}
+						onPress={onMapPress}
+					>
+						{/* County OUTLINES, always — the areas are a boundary, not a pin,
 					    and they are the map's structure whether or not a lens is on.
 					    A lens fills them in; without one they are just lines. */}
-					{areaData.shapes.map((shape) => {
-						const hit = lens ? valueByKey.get(shape.key) : undefined;
-						const open = openArea === shape.key;
-						return shape.rings.map((ring, i) => (
-							<Polygon
-								// A county's rings are fixed in order and count for the life
-								// of the bundled shape file, so the index is a stable key.
-								key={`${shape.key}-${i}`}
-								coordinates={ring.map(([lng, lat]) => ({
-									latitude: lat,
-									longitude: lng,
-								}))}
-								fillColor={
-									lens && hit
-										? withAlpha(
-												colorFor(lens, hit.value, breaks),
-												// A whisper once marks are on the map — typed hits
-												// or any zoom past the city band — so they stay
-												// readable over the colour.
-												searching || cityBand
-													? FILL_ALPHA_SEARCHING
-													: FILL_ALPHA,
-											)
-										: withAlpha(colors.ink2, 0)
-								}
-								strokeColor={
-									open
-										? colors.ink
-										: lens && hit
-											? colors.surface
-											: withAlpha(colors.ink2, 0.45)
-								}
-								strokeWidth={open ? 2.5 : 1}
-								// A county takes taps ONLY at metro zoom with no search up —
-								// past the city band the marks own the surface. On iOS
-								// "not tappable" means handing it NO `onPress` at all:
-								// `tappable` is a lie there (AIRMapManager's handleMapTap
-								// fires every polygon whose ring contains the tap, gated
-								// only on `if (polygon.onPress)`) — phase277.3's lesson.
-								// The prop stays for Android, where it IS honoured.
-								tappable={!searching && !cityBand}
-								onPress={
-									!searching && !cityBand
-										? () => selectArea(shape.key)
-										: undefined
-								}
-							/>
-						));
-					})}
-					{/* Schools, under the photo pins on purpose: a home or a
+						{areaData.shapes.map((shape) => {
+							const hit = lens ? valueByKey.get(shape.key) : undefined;
+							const open = openArea === shape.key;
+							return shape.rings.map((ring, i) => (
+								<Polygon
+									// A county's rings are fixed in order and count for the life
+									// of the bundled shape file, so the index is a stable key.
+									key={`${shape.key}-${i}`}
+									coordinates={ring.map(([lng, lat]) => ({
+										latitude: lat,
+										longitude: lng,
+									}))}
+									fillColor={
+										lens && hit
+											? withAlpha(
+													colorFor(lens, hit.value, breaks),
+													// A whisper once marks are on the map — typed hits
+													// or any zoom past the city band — so they stay
+													// readable over the colour.
+													searching || cityBand
+														? FILL_ALPHA_SEARCHING
+														: FILL_ALPHA,
+												)
+											: withAlpha(colors.ink2, 0)
+									}
+									strokeColor={
+										open
+											? colors.ink
+											: lens && hit
+												? colors.surface
+												: withAlpha(colors.ink2, 0.45)
+									}
+									strokeWidth={open ? 2.5 : 1}
+									// A county takes taps ONLY at metro zoom with no search up —
+									// past the city band the marks own the surface. On iOS
+									// "not tappable" means handing it NO `onPress` at all:
+									// `tappable` is a lie there (AIRMapManager's handleMapTap
+									// fires every polygon whose ring contains the tap, gated
+									// only on `if (polygon.onPress)`) — phase277.3's lesson.
+									// The prop stays for Android, where it IS honoured.
+									tappable={!searching && !cityBand}
+									onPress={
+										!searching && !cityBand
+											? () => selectArea(shape.key)
+											: undefined
+									}
+								/>
+							));
+						})}
+						{/* Schools, under the photo pins on purpose: a home or a
 					    community is what the buyer came to tap, and a school is the
 					    context around it. react-native-maps hit-tests in the order
 					    overlays were added. */}
-					{schoolPins.map((pin) => (
-						<SchoolMarker
-							key={`sch-${pin.id}`}
-							pin={pin}
-							// The ramp is the LENS's answer; at plain street zoom the
-							// pins wear the neutral colour instead — a score without
-							// its legend up would be a claim with no key.
-							ramp={lensId === "schools" ? schoolRamp : undefined}
-							labelled={schoolsLabelled}
-						/>
-					))}
-					{/* County and city NAMES — geography, not controls. The county
+						{schoolPins.map((pin) => (
+							<SchoolMarker
+								key={`sch-${pin.id}`}
+								pin={pin}
+								// The ramp is the LENS's answer; at plain street zoom the
+								// pins wear the neutral colour instead — a score without
+								// its legend up would be a claim with no key.
+								ramp={lensId === "schools" ? schoolRamp : undefined}
+								labelled={schoolsLabelled}
+							/>
+						))}
+						{/* County and city NAMES — geography, not controls. The county
 					    names retire once the houses band starts (the map is about
 					    its content by then) and the city labels once the marks put
 					    their own words on. */}
-					{!homesBand
-						? areaData.shapes.map((shape) => (
-								<Marker
-									key={`cn-${shape.key}`}
-									coordinate={{
-										latitude: shape.centre[1],
-										longitude: shape.centre[0],
-									}}
-									tracksViewChanges={false}
-								>
-									<Text style={styles.countyName}>{shape.name}</Text>
-								</Marker>
-							))
-						: null}
-					{cityLabels.map((u) => (
-						<Marker
-							key={`cl-${u.id}`}
-							coordinate={{
-								latitude: u.centroid.lat,
-								longitude: u.centroid.lng,
-							}}
-							tracksViewChanges={false}
-						>
-							<Text style={styles.cityLabel}>{u.name}</Text>
-						</Marker>
-					))}
-					{/* THE TAP SURFACE — one invisible, finger-sized square per
+						{!homesBand
+							? areaData.shapes.map((shape) => (
+									<Marker
+										key={`cn-${shape.key}`}
+										coordinate={{
+											latitude: shape.centre[1],
+											longitude: shape.centre[0],
+										}}
+										tracksViewChanges={false}
+									>
+										<Text style={styles.countyName}>{shape.name}</Text>
+									</Marker>
+								))
+							: null}
+						{cityLabels.map((u) => (
+							<Marker
+								key={`cl-${u.id}`}
+								coordinate={{
+									latitude: u.centroid.lat,
+									longitude: u.centroid.lng,
+								}}
+								tracksViewChanges={false}
+							>
+								<Text style={styles.cityLabel}>{u.name}</Text>
+							</Marker>
+						))}
+						{/* THE TAP SURFACE — one invisible, finger-sized square per
 					    community, drawn nowhere and pressable everywhere.
 					    Empirically this app has exactly one tap delivery that
 					    never fails on iOS: `handleMapTap` walks `map.overlays` and
@@ -709,73 +752,76 @@ export default function SearchTab() {
 					    ~`DOT_TAP_RADIUS_PX` on the glass. Every path funnels
 					    through `claimTap`, so a square overlapping a home still
 					    yields to that home. */}
-					{searching || cityBand
-						? shown?.communities.map((c) =>
-								c.lat !== undefined && c.lng !== undefined ? (
-									<Polygon
-										key={`hit-${c.id}`}
-										coordinates={[
-											{
-												latitude: c.lat - hitLatDeg,
-												longitude: c.lng - hitLngDeg,
-											},
-											{
-												latitude: c.lat - hitLatDeg,
-												longitude: c.lng + hitLngDeg,
-											},
-											{
-												latitude: c.lat + hitLatDeg,
-												longitude: c.lng + hitLngDeg,
-											},
-											{
-												latitude: c.lat + hitLatDeg,
-												longitude: c.lng - hitLngDeg,
-											},
-										]}
-										fillColor="rgba(0,0,0,0)"
-										strokeColor="rgba(0,0,0,0)"
-										strokeWidth={0}
-										tappable
-										onPress={(e) => claimTap(e.nativeEvent.coordinate, c.slug)}
-									/>
-								) : null,
-							)
-						: null}
-					{/* MINI MARKS (owner, 2026-09-13): a community wears its cover
+						{searching || cityBand
+							? shown?.communities.map((c) =>
+									c.lat !== undefined && c.lng !== undefined ? (
+										<Polygon
+											key={`hit-${c.id}`}
+											coordinates={[
+												{
+													latitude: c.lat - hitLatDeg,
+													longitude: c.lng - hitLngDeg,
+												},
+												{
+													latitude: c.lat - hitLatDeg,
+													longitude: c.lng + hitLngDeg,
+												},
+												{
+													latitude: c.lat + hitLatDeg,
+													longitude: c.lng + hitLngDeg,
+												},
+												{
+													latitude: c.lat + hitLatDeg,
+													longitude: c.lng - hitLngDeg,
+												},
+											]}
+											fillColor="rgba(0,0,0,0)"
+											strokeColor="rgba(0,0,0,0)"
+											strokeWidth={0}
+											tappable
+											onPress={(e) =>
+												claimTap(e.nativeEvent.coordinate, c.slug)
+											}
+										/>
+									) : null,
+								)
+							: null}
+						{/* MINI MARKS (owner, 2026-09-13): a community wears its cover
 					    photo in a green ring from the city band, and a home IS its
 					    amber price chip from the homes band ("Don't show house
 					    shape, just the numbers", then "use k, m"). Community names
 					    come on past `MARK_LABEL_DELTA`. A typed search shows its
 					    hits at any zoom: a search must show what it found. */}
-					{searching || cityBand
-						? shown?.communities.map((c) =>
-								c.lat !== undefined && c.lng !== undefined ? (
-									<CommunityMark
-										key={`c-${c.id}`}
-										identifier={`community:${c.slug}`}
-										coordinate={{ latitude: c.lat, longitude: c.lng }}
-										name={c.name}
-										{...(c.heroUrl ? { heroUrl: c.heroUrl } : {})}
-										labelled={marksLabelled}
-										onPress={() => openCommunity(c.slug)}
-									/>
-								) : null,
-							)
-						: null}
-					{searching || homesBand
-						? shown?.listings.map((l) =>
-								l.lat !== undefined && l.lng !== undefined ? (
-									<HomePin
-										key={`l-${l.id}`}
-										coordinate={{ latitude: l.lat, longitude: l.lng }}
-										price={compactPrice(l.price)}
-										name={l.address}
-										onPress={() => router.push(`/listing/${l.id}`)}
-									/>
-								) : null,
-							)
-						: null}
-				</MapView>
+						{searching || cityBand
+							? shown?.communities.map((c) =>
+									c.lat !== undefined && c.lng !== undefined ? (
+										<CommunityMark
+											key={`c-${c.id}`}
+											identifier={`community:${c.slug}`}
+											coordinate={{ latitude: c.lat, longitude: c.lng }}
+											name={c.name}
+											{...(c.heroUrl ? { heroUrl: c.heroUrl } : {})}
+											labelled={marksLabelled}
+											onPress={() => openCommunity(c.slug)}
+										/>
+									) : null,
+								)
+							: null}
+						{searching || homesBand
+							? shown?.listings.map((l) =>
+									l.lat !== undefined && l.lng !== undefined ? (
+										<HomePin
+											key={`l-${l.id}`}
+											coordinate={{ latitude: l.lat, longitude: l.lng }}
+											price={compactPrice(l.price)}
+											name={l.address}
+											onPress={() => router.push(`/listing/${l.id}`)}
+										/>
+									) : null,
+								)
+							: null}
+					</MapView>
+				</GestureDetector>
 
 				{/* Search pill (floats above map, §4.1 #1) */}
 				<View style={[styles.searchPill, { top: insets.top + 8 }]}>
