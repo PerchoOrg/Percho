@@ -21,6 +21,36 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-15 03:40 UTC — phase301: community focus lands inside the label band
+
+**Objective**: owner, after phase300 — "Home is good. Community zoomin not
+enough to see the name in the center of the screen, there are still a lot
+of community circles".
+
+**Diagnosis**: the delivered zoom is set by `longitudeDelta`, not
+`latitudeDelta`. The map view is ~2× taller than wide and iOS letter-fits a
+requested region so both spans are visible, so on a phone the delivered
+latitude span ≈ `longitudeDelta × 1.6` (aspect × cos-latitude ~0.83 for a
+degree of longitude at Atlanta). Community's request of 0.05/0.042
+delivered ≈ 0.068 — just past `MARK_LABEL_DELTA` (0.06), so it landed one
+notch OUTSIDE the band that puts names on the dots: a field of anonymous
+circles. Home's 0.02/0.017 delivered ≈ 0.028, safely inside — hence "Home
+is good", which is what located the fault.
+
+**Actions**: `FOCUS_POINT_DELTA.community` 0.05/0.042 → 0.025/0.018
+(delivers ≈ 0.029 — labelled, and few enough neighbours that the centred
+dot is obviously the subject; a notch wider than home on purpose, a
+neighbourhood earns a street or two of context). Comment on the constant
+now explains the letter-fit arithmetic so the next tuning starts from the
+delivered span, not the requested one.
+
+**Verification**: mobile `tsc` clean, lint 8 pre-existing warnings, 785
+tests pass. No RELEASE entry — this tunes the bullet already written today.
+
+**Learnings**: any future `animateToRegion` target on this screen should be
+sized from `longitudeDelta` first; the latitude number is mostly decorative
+on a portrait phone.
+
 ## 2026-09-15 03:15 UTC — phase300: the Map-button flight reads as a zoom, and the marks arrive with it
 
 **Objective**: owner, after phase299 — "Better but can you add some effect
