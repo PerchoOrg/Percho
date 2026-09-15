@@ -1,22 +1,38 @@
 // Right-swipe rate over the mobile feed — the recommendation work's north-star
 // metric (phase303). Read-only.
 //
-// Usage (env from repo-root .env.local):
-//   pnpm exec tsx scripts/admin/swipe-metrics.ts [--days 14]
+// Usage (from apps/web, env from repo-root .env.local):
+//   pnpm exec tsx ../../scripts/admin/swipe-metrics.ts [--days 14]
 //
 // Prints, per day and in total: swipes, right-swipe rate, split by card type,
 // and distinct installs — enough to see whether a ranking change moved the
 // number, without pretending to be an experiment framework.
+import { existsSync, readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
-import { loadEnv } from '../seedance-worker/loadEnv.js';
 
-loadEnv();
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !key) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing');
+// Same hand-rolled loader as delete-non-video-listings.ts — `dotenv` is not
+// resolvable from scripts/ in this workspace.
+function loadEnv(): { url: string; key: string } {
+  const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const envKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (envUrl && envKey) return { url: envUrl, key: envKey };
+  for (const p of ['../../.env.local', '.env.local']) {
+    if (!existsSync(p)) continue;
+    const text = readFileSync(p, 'utf8');
+    const get = (name: string) =>
+      text
+        .match(new RegExp(`^${name}=(.+)$`, 'm'))?.[1]
+        ?.trim()
+        .replace(/^"|"$/g, '');
+    const url = get('NEXT_PUBLIC_SUPABASE_URL');
+    const key = get('SUPABASE_SERVICE_ROLE_KEY');
+    if (url && key) return { url, key };
+  }
+  console.error('NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not found in .env.local');
+  process.exit(1);
 }
+
+const { url, key } = loadEnv();
 const sb = createClient(url, key, { auth: { persistSession: false } });
 
 const daysArg = process.argv.indexOf('--days');
