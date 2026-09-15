@@ -21,6 +21,50 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-15 01:40 UTC — phase294: the probe comes out, and what the tap saga actually taught
+
+**Objective**: owner — "fix 了 删掉测试痕迹". Taps are correct; remove the
+instrumentation.
+
+**Actions**, `apps/mobile/app/(tabs)/search.tsx` only: the `probe` state,
+its `__DEV__` readout, its style, the `via` parameter threaded through
+`claimTap`, and the `nearest` bookkeeping that existed solely to print a
+near-miss distance. `claimTap` is back to a two-argument function. 6
+insertions against 61 deletions; nothing else touched.
+
+**Deliberately NOT removed**:
+- The redundant tap wires — the community marker's own `onPress`, the
+  map-level `onMarkerPress`, the invisible hit polygons, the bare map
+  press, and the gesture-handler tap. We never established which of them
+  actually carries the tap on his device, only that the GEOMETRY was
+  wrong (phase293) and that several wires miss. Removing belt-and-braces
+  from a bug that took eight rounds to close, on the strength of one
+  "fixed", is not a trade worth taking. They all funnel through one
+  `navigateTo` dedupe, so the cost is a few lines, not behaviour.
+- `use-map-content.ts`'s `console.warn` on a failed viewport read. That is
+  an error log for a real failure mode, not instrumentation: an empty map
+  is indistinguishable from a broken tap from the outside, which is
+  precisely how several of these rounds went sideways.
+
+**What actually fixed it** (for whoever reads this next): the bug was
+never one thing. Three real faults stacked — a marker drawn ~15pt off its
+own coordinate (phase291), a resolver that yielded to homes and let
+nothing catch them (phase291), and distances computed against the WINDOW
+rather than the map, overstating every vertical gap by 11% and up to 3×
+with the sheet open (phase293). Each produced "sometimes it works", and
+each hid the others. The lesson worth keeping is the one phase292 paid
+for late: a report of "doesn't work" should have been answered with a
+measurement on the third round, not the seventh.
+
+**Still open, flagged in phase291 and not addressed**: since phase287
+gave school and community names the same halo treatment, the two labels
+read as the same kind of thing — the owner offered a school as an example
+of a broken community tap. A visual distinction is the fix.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (8
+pre-existing warnings), mobile 780 pass. Web untouched. No RELEASE entry:
+the probe was `__DEV__`-only and never reached a user build.
+
 ## 2026-09-14 08:15 UTC — phase293: the resolver was measuring against the wrong rectangle
 
 **Objective**: owner — "缩小时 隔一个可以点一个 / 放大还是很多点不了". An

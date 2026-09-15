@@ -394,17 +394,6 @@ export default function SearchTab() {
 	 * here, and on iOS more than one of them can fire for the same finger.
 	 */
 	/**
-	 * DEV-ONLY tap probe. Seven rounds of "it doesn't open" have each been
-	 * answered with a reasoned fix and no measurement, and three of those
-	 * fixes were wrong. This prints, on the map, what the last tap actually
-	 * did: which wire carried it, what the nearest mark was, and how far
-	 * away in points. `__DEV__` is true under Metro and false in a release
-	 * build, so it is on the owner's phone tonight and in nobody's App
-	 * Store copy. Delete it once taps are reliably fine.
-	 */
-	const [probe, setProbe] = useState("tap probe: waiting for a tap");
-
-	/**
 	 * The MAP's own size in points, measured — not the window's.
 	 *
 	 * `region.latitudeDelta` is the span of the MAP VIEW, so converting a
@@ -451,20 +440,12 @@ export default function SearchTab() {
 	 * photo fell outside the radius and did nothing, and re-aiming after a
 	 * zoom flipped a mark between working and not.
 	 */
-	const claimTap = (
-		tap: LatLng | undefined,
-		fallbackSlug?: string,
-		via = "map",
-	) => {
-		if (!shown || !(searching || cityBand)) {
-			setProbe(`${via}: no marks`);
-			return;
-		}
+	const claimTap = (tap: LatLng | undefined, fallbackSlug?: string) => {
+		if (!shown || !(searching || cityBand)) return;
 		if (!tap) {
 			// Apple Maps always sends the coordinate; this is the Google-Maps-
 			// on-iOS shape, where a polygon press names only its own id. Then
 			// the polygon that fired IS the answer.
-			setProbe(`${via}: no coord`);
 			if (fallbackSlug) openCommunity(fallbackSlug);
 			return;
 		}
@@ -476,9 +457,7 @@ export default function SearchTab() {
 			return Math.hypot(dx, dy);
 		};
 		let best: { path: string; d: number } | undefined;
-		let nearest = Number.POSITIVE_INFINITY;
 		const consider = (path: string, d: number, within: number) => {
-			if (d < nearest) nearest = d;
 			if (d <= within && (!best || d < best.d)) best = { path, d };
 		};
 		for (const c of shown.communities) {
@@ -491,18 +470,10 @@ export default function SearchTab() {
 				consider(`/listing/${l.id}`, px(l.lat, l.lng), MARK_TAP_RADIUS_PX);
 			}
 		}
-		const near = Number.isFinite(nearest) ? Math.round(nearest) : "none";
-		const outcome = best
-			? `OPEN ${best.path.split("/")[1]} @${Math.round(best.d)}pt`
-			: `nearest ${near}pt > ${MARK_TAP_RADIUS_PX}`;
-		const size = `${Math.round(mapSize.w)}×${Math.round(mapSize.h)}`;
-		const counts = `${shown.communities.length}c/${shown.listings.length}h`;
-		setProbe(`${via} · map ${size} · ${counts} · ${outcome}`);
 		if (best) navigateTo(best.path);
 	};
 
-	const onMapPress = (e: MapPressEvent) =>
-		claimTap(e.nativeEvent.coordinate, undefined, "mapPress");
+	const onMapPress = (e: MapPressEvent) => claimTap(e.nativeEvent.coordinate);
 
 	/**
 	 * Finger-sized in DEGREES — the half-width of a community's invisible hit
@@ -595,11 +566,10 @@ export default function SearchTab() {
 		.runOnJS(true)
 		.maxDuration(400)
 		.onEnd((e) => {
-			setProbe("gesture: resolving…");
 			mapRef.current
 				?.coordinateForPoint({ x: e.x, y: e.y })
-				.then((coord) => claimTap(coord, undefined, "gesture"))
-				.catch((err) => setProbe(`gesture: coordForPoint failed ${err}`));
+				.then((coord) => claimTap(coord))
+				.catch(() => {});
 		});
 
 	// A fresh TYPED result opens the sheet and fits the map to whatever has
@@ -759,11 +729,7 @@ export default function SearchTab() {
 								ramp={lensId === "schools" ? schoolRamp : undefined}
 								labelled={schoolsLabelled}
 								onPress={() =>
-									claimTap(
-										{ latitude: pin.lat, longitude: pin.lng },
-										undefined,
-										"school",
-									)
+									claimTap({ latitude: pin.lat, longitude: pin.lng })
 								}
 							/>
 						))}
@@ -984,13 +950,6 @@ export default function SearchTab() {
 						</Text>
 					</View>
 				)}
-
-				{/* Dev-only tap probe — see `probe`. Compiled out of release
-				    builds by `__DEV__`, so it exists under Metro and nowhere
-				    else. Remove once map taps are settled. */}
-				{__DEV__ ? (
-					<Text style={[styles.probe, { top: insets.top + 150 }]}>{probe}</Text>
-				) : null}
 
 				{/* The county pill — kept by owner decision (2026-09-13, "保留").
 				    A metro-zoom county tap opens it; it never moves the map. Its
@@ -1530,20 +1489,6 @@ const styles = StyleSheet.create({
 		color: withAlpha(colors.ink, 0.78),
 		textShadowColor: withAlpha(colors.surface, 0.8),
 		textShadowRadius: 2,
-	},
-	// Dev-only, see the `probe` note. Deliberately plain.
-	probe: {
-		position: "absolute",
-		left: 16,
-		right: 16,
-		...textStyles.caption,
-		fontSize: 11,
-		color: colors.surface,
-		backgroundColor: withAlpha(colors.ink, 0.75),
-		borderRadius: 4,
-		paddingHorizontal: 6,
-		paddingVertical: 3,
-		overflow: "hidden",
 	},
 	// ── Legend ────────────────────────────────────────────────────────────────
 	legend: {
