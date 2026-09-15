@@ -7,7 +7,13 @@ import type {
 } from "./card-types";
 import { TRADEOFFS } from "./content";
 import type { FeedPool } from "./generate-feed";
-import { answerScore, generateFeed, mixFor } from "./generate-feed";
+import {
+	answerScore,
+	generateFeed,
+	mixFor,
+	swipeAffinity,
+	swipeScore,
+} from "./generate-feed";
 import type { GeoUnit } from "./geo-unit";
 import { STAGE_MIX, WINDOW } from "./ratios";
 import type { SignalState } from "./signals";
@@ -767,6 +773,174 @@ describe("the v2 trade-off bank", () => {
 	it("no two questions share an id", () => {
 		const ids = TRADEOFFS.map((q) => q.id);
 		expect(new Set(ids).size).toBe(ids.length);
+	});
+});
+
+// ─── Swipe-history ranking ────────────────────────────────────────────────────
+
+describe("swipe-history ranking", () => {
+	/**
+	 * A pool of two communities, four homes. The community CARD ids are uuids
+	 * while the listings carry the community SLUG, exactly like the wire — a
+	 * fixture where the two matched by accident would pass with the slug
+	 * resolution broken.
+	 */
+	const brookA: CommunityCardV3 = {
+		...community("uuid-brook"),
+		slug: "brookhaven-manor",
+		name: "Brookhaven Manor",
+	};
+	const vinB: CommunityCardV3 = {
+		...community("uuid-vin"),
+		slug: "vinings-walk",
+		name: "Vinings Walk",
+	};
+	const SWIPE_POOL: FeedPool = {
+		geoUnits: CITIES,
+		listings: [
+			listing("a1", "brookhaven-manor"),
+			listing("a2", "brookhaven-manor"),
+			listing("b1", "vinings-walk"),
+			listing("b2", "vinings-walk"),
+		],
+		communities: [brookA, vinB],
+	};
+
+	const frontListings = (signals: SignalState, pool: FeedPool = SWIPE_POOL) =>
+		generateFeed({ stage: 4, signals, pool, seenIds: [], count: 12 })
+			.cards.filter((c) => c.kind === "listing")
+			.map((c) => c.id);
+
+	it("liking a community moves its homes to the front of the deck", () => {
+		const signals = applySwipe(EMPTY_SIGNALS, brookA, "right");
+		expect(frontListings(signals).slice(0, 2).sort()).toEqual(["a1", "a2"]);
+	});
+
+	it("passing a community sinks its homes — softly, never out", () => {
+		const signals = applySwipe(EMPTY_SIGNALS, brookA, "left");
+		const ids = frontListings(signals);
+		expect(ids.slice(0, 2).sort()).toEqual(["b1", "b2"]);
+		// A reorder, not a filter: every home is still reachable. (The deck may
+		// loop past the 4-home pool inside 12 cards, hence the Set.)
+		expect([...new Set(ids)].sort()).toEqual(["a1", "a2", "b1", "b2"]);
+	});
+
+	it("a city right-swipe lifts that city's other homes", () => {
+		const decatur = {
+			...listing("d1", "vinings-walk"),
+			geoUnitId: "city:decatur-ga",
+		};
+		const pool: FeedPool = {
+			...SWIPE_POOL,
+			listings: [
+				listing("a1", "brookhaven-manor"),
+				decatur,
+				{ ...listing("d2"), geoUnitId: "city:decatur-ga" },
+				{ ...listing("m1"), geoUnitId: "city:marietta-ga" },
+			],
+		};
+		// Liking d1 credits Decatur; d1 itself is then demoted as already liked.
+		const signals = applySwipe(EMPTY_SIGNALS, decatur, "right");
+		const ids = frontListings(signals, pool);
+		expect(ids[0]).toBe("d2");
+		expect(ids.indexOf("d1")).toBeGreaterThan(ids.indexOf("m1"));
+	});
+
+	it("a runaway city tally cannot outvote a liked community", () => {
+		// Ten Atlanta right-swipes clamp to GEO_CAP; the one community the buyer
+		// actually said yes to still leads.
+		let signals = applySwipe(EMPTY_SIGNALS, vinB, "right");
+		const atlanta = { ...listing("atl"), geoUnitId: "city:atlanta-ga" };
+		for (let i = 0; i < 10; i++) {
+			signals = applySwipe(signals, { ...atlanta, id: `atl-${i}` }, "right");
+		}
+		const affinity = swipeAffinity(
+			SWIPE_POOL.listings,
+			SWIPE_POOL.communities,
+			signals,
+		);
+		const inVinings = swipeScore(
+			listing("x", "vinings-walk"),
+			signals,
+			affinity,
+		);
+		const inAtlanta = swipeScore(atlanta, signals, affinity);
+		expect(inVinings).toBeGreaterThan(inAtlanta);
+	});
+
+	it("three liked homes form a profile that promotes similar ones", () => {
+		const home = (id: string, price: number, sqft: number): ListingCardV3 => ({
+			...listing(id),
+			price,
+			sqft,
+			beds: 3,
+		});
+		const rows = [
+			home("l1", 400_000, 2000),
+			home("l2", 410_000, 1950),
+			home("l3", 390_000, 2100),
+		];
+		const signals: SignalState = {
+			...EMPTY_SIGNALS,
+			likedListingIds: ["l1", "l2", "l3"],
+		};
+		const affinity = swipeAffinity(rows, [], signals);
+		// Inside every band: price ±8%, sqft ±10%, the median bed count.
+		expect(swipeScore(home("near", 405_000, 2050), signals, affinity)).toBe(3);
+		// A home outside every band scores 0 — never demoted for being unlike.
+		const far: ListingCardV3 = {
+			...listing("far"),
+			price: 900_000,
+			sqft: 4500,
+			beds: 5,
+		};
+		expect(swipeScore(far, signals, affinity)).toBe(0);
+	});
+
+	it("two likes are not a pattern — no profile below three", () => {
+		const rows = [
+			{ ...listing("l1"), price: 400_000 },
+			{ ...listing("l2"), price: 410_000 },
+		];
+		const signals: SignalState = {
+			...EMPTY_SIGNALS,
+			likedListingIds: ["l1", "l2"],
+		};
+		expect(swipeAffinity(rows, [], signals).profile).toBeNull();
+	});
+
+	it("missing data is neutral, never a demotion", () => {
+		const signals: SignalState = {
+			...EMPTY_SIGNALS,
+			likedListingIds: ["l1", "l2", "l3"],
+		};
+		const rows = [
+			{ ...listing("l1"), price: 400_000 },
+			{ ...listing("l2"), price: 410_000 },
+			{ ...listing("l3"), price: 390_000 },
+		];
+		const affinity = swipeAffinity(rows, [], signals);
+		// No price, no sqft, no beds, no community, no geo: exactly zero.
+		expect(swipeScore(listing("blank"), signals, affinity)).toBe(0);
+	});
+
+	it("swipe signals alone switch the listing cursor to ranked order", () => {
+		/*
+		 * The rule-03 generalisation: before this, only an answered trade-off
+		 * entered the ranked list at the top — a buyer who had swiped but never
+		 * answered kept the rotation, and their ranking reordered a list nobody
+		 * read from the front.
+		 */
+		const signals = applySwipe(EMPTY_SIGNALS, brookA, "right");
+		const first = generateFeed({
+			stage: 4,
+			signals,
+			pool: SWIPE_POOL,
+			seenIds: [],
+			count: 12,
+			rotate: 7, // a mid-session rotation must not move the entry point
+		}).cards.find((c) => c.kind === "listing");
+		expect(["a1", "a2"]).toContain(first?.id);
 	});
 });
 

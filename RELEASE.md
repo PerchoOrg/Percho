@@ -6,6 +6,22 @@
 
 ---
 
+## v1.10 — The feed learns from your swipes
+
+The deck now pays attention to what your thumb has been saying. Like a
+neighbourhood and the homes inside it move toward the front of your feed;
+pass on one and its homes step back — without ever disappearing, so you can
+always change your mind. Cities you keep saying yes to start leading, and
+once you've liked a few homes, Percho notices the shape of what you like —
+around the same price, around the same size, the same number of bedrooms —
+and brings similar homes forward first.
+
+Everything is learned from the swipes you've already made, on your own
+device — there's no form to fill in, and a left swipe never blacklists
+anything; it just means "less of this for now".
+
+---
+
 ## v1.9 — Compare now weighs the four things buyers check first
 
 Put two to five saved homes — or two to five saved neighbourhoods — side by
