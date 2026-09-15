@@ -506,15 +506,29 @@ export default function SearchTab() {
 		focusLng?: string;
 		focusKind?: string;
 	}>();
+	/**
+	 * The native map's own ready signal, and the gate BOTH deep-link effects
+	 * wait behind. This tab mounts lazily — the first Map-button tap is what
+	 * mounts it — and the effects run in the same commit the native MapView is
+	 * still initialising in, where `animateToRegion` is a silent no-op (owner,
+	 * 2026-09-15: "redirects me to the search tab but not zoom in"). The unit
+	 * flow only ever escaped this because waiting for the pool delayed it past
+	 * initialisation; the point flow needs no data, so it hit the gap every
+	 * time. Neither effect marks its param handled until it actually flies,
+	 * and both re-run when this flips.
+	 */
+	const [mapReady, setMapReady] = useState(false);
+
 	const handledFocus = useRef<string | null>(null);
 	useEffect(() => {
 		if (!focus || focus === handledFocus.current) return;
+		if (!mapReady) return; // animateToRegion would be dropped — retry on ready
 		const unit = pool.geoUnits.find((u) => u.id === focus);
 		if (!unit) return; // pool still loading — retry on the next pool change
 		handledFocus.current = focus;
 		flyTo(unit);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [focus, pool.geoUnits]);
+	}, [focus, pool.geoUnits, mapReady]);
 
 	// `?focusLat=…&focusLng=…&focusKind=…` — the feed header's Map button on a
 	// community or home card. A POINT, not a unit lookup: the card carries its
@@ -527,6 +541,7 @@ export default function SearchTab() {
 		if (!focusLat || !focusLng) return;
 		const key = `${focusLat},${focusLng}`;
 		if (key === handledPoint.current) return;
+		if (!mapReady) return; // animateToRegion would be dropped — retry on ready
 		const lat = Number(focusLat);
 		const lng = Number(focusLng);
 		if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
@@ -540,7 +555,7 @@ export default function SearchTab() {
 			},
 			500,
 		);
-	}, [focusLat, focusLng, focusKind]);
+	}, [focusLat, focusLng, focusKind, mapReady]);
 
 	const units = useMemo(() => {
 		const q = query.trim().toLowerCase();
@@ -691,6 +706,7 @@ export default function SearchTab() {
 						showsPointsOfInterests={false}
 						showsCompass={false}
 						initialRegion={METRO_REGION}
+						onMapReady={() => setMapReady(true)}
 						onRegionChangeComplete={setRegion}
 						// Two more wires for a community tap, both funnelled through
 						// `openCommunity`'s dedupe: the marker-level event when the dot's

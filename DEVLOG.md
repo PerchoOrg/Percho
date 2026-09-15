@@ -21,6 +21,43 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-15 02:55 UTC — phase299: the map focus waits for the native map
+
+**Objective**: owner, on device after phase298 — "Clicking the map button
+redirects me to the search tab but not zoom in to that community or home".
+
+**Diagnosis**: the Search tab mounts LAZILY — the first Map-button tap is
+what mounts it — and the new point deep-link effect ran in the same commit
+the native `MapView` was still initialising in. `animateToRegion` before the
+map is ready is a silent no-op, so the tab appeared at `METRO_REGION` and
+stayed there, with `handledPoint` already marked so nothing retried. The
+phase298 unit flow (`?focus=`) never surfaced this only because waiting for
+the pool fetch delayed its fly past map initialisation; the point flow needs
+no data, so it hit the gap on every first mount.
+
+**Actions**: `app/(tabs)/search.tsx` — new `mapReady` state set by the
+MapView's `onMapReady`, and BOTH deep-link effects gate on it: return early
+(without marking the param handled) while false, re-run when it flips. The
+unit effect gets the same gate — its pool-timing escape was luck, not a
+guarantee, e.g. a cached pool on a warm session.
+
+**Decisions**: no RELEASE entry — today's existing bullet already describes
+the behaviour this makes true; a "fixed the thing we shipped this morning"
+bullet is noise for stakeholders. No unit test: the fault lives in native
+view timing inside JSX, which the mobile vitest suite (no RN runtime) cannot
+reach; the rule is pinned in the `mapReady` comment instead.
+
+**Verification**: mobile `tsc` clean, lint 8 pre-existing warnings, 785
+tests pass. On-device check is the owner's: feed → home card → Map should
+now animate to the home's price chip; community card → the labelled dot
+(community coordinates also need production's feed response to carry
+phase298's new `lat/lng` — a stale CDN page within its 60s window would
+still fall back to the city fly for community cards only).
+
+**Next steps**: if a card STILL lands unzoomed after this, the next suspect
+is expo-router param delivery to an already-mounted tab (`useLocalSearchParams`
+vs `useGlobalSearchParams`) — instrument before changing.
+
 ## 2026-09-15 02:20 UTC — phase298: the Map button lands on the card's community/home
 
 **Objective**: owner — "For community and home cards, clicking the map button
