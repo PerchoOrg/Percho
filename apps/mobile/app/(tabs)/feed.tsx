@@ -44,6 +44,7 @@ import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { FeedHeader } from "../../components/feed/FeedHeader";
 import { OfflineBar } from "../../components/feed/OfflineBar";
+import { useCfScores } from "../../hooks/use-cf-scores";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
 import type { FeedCardV3 } from "../../lib/feed/card-types";
@@ -51,7 +52,12 @@ import { deckKey } from "../../lib/feed/deck-key";
 import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
 import { feedHeaderModel } from "../../lib/feed/feed-header";
-import { generateFeed, movedUpCount } from "../../lib/feed/generate-feed";
+import {
+	RERANK_HOLD,
+	generateFeed,
+	movedUpCount,
+	rerankTail,
+} from "../../lib/feed/generate-feed";
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
 import { preferScope } from "../../lib/feed/scope";
 import { CARD_TAP_TARGET, SOUND_TAP_TARGET } from "../../lib/gesture/tap-slot";
@@ -264,10 +270,19 @@ export default function FeedScreen() {
 	 * nothing is dropped, per §1.3 — and returns the pool by identity when no
 	 * scope is set, so a buyer who never opens the sheet pays nothing.
 	 */
-	const scopedPool = useMemo(
-		() => preferScope(pool, scope?.unitId ?? null),
-		[pool, scope?.unitId],
-	);
+	/**
+	 * Cross-user taste scores for the buyer's likes ("buyers who liked these
+	 * also liked"). Attached to the pool the composer reads, so both the next
+	 * appended page and the per-swipe tail re-rank see them; a mid-session
+	 * arrival never rebuilds the deck, because nothing composes on the pool's
+	 * identity.
+	 */
+	const cfScores = useCfScores(signals.likedListingIds);
+
+	const scopedPool = useMemo(() => {
+		const scoped = preferScope(pool, scope?.unitId ?? null);
+		return cfScores === undefined ? scoped : { ...scoped, cfScores };
+	}, [pool, scope?.unitId, cfScores]);
 
 	const cardWidth = width - GUTTER * 2;
 
@@ -452,7 +467,24 @@ export default function FeedScreen() {
 				}),
 			);
 
-			recordSwipe(card, decision, at);
+			// Time-on-card, approximated by the gap since the previous swipe (the
+			// same figure telemetry ships as `dtSincePrevSwipe`). It scales the
+			// swipe's geo-tally weight — see `swipeWeight`.
+			const fresh = recordSwipe(card, decision, at, {
+				...(prevSwipeAt !== undefined ? { dwellMs: at - prevSwipeAt } : {}),
+			});
+
+			/*
+			 * Re-rank the deck's unswiped tail with the signals this swipe just
+			 * produced, so the NEXT cards follow the buyer's thumb card-by-card
+			 * instead of waiting for the next appended page. `rerankTail` never
+			 * touches the mounted window (the new activeIndex ±2 plus one card of
+			 * slack) and reorders each kind only among its own slots, so the
+			 * deck-key invariant and the mix rhythm both hold by construction.
+			 */
+			setDeck((d) =>
+				rerankTail(d, index + 1 + RERANK_HOLD, fresh, poolRef.current),
+			);
 
 			if (card.kind === "tradeoff") {
 				const moved = movedUpCount(pool.listings, card, decision);

@@ -130,6 +130,12 @@ export type BrowseCard = {
     /** Build year — the trade-off bank's era axis. */
     year_built?: number | null;
     /**
+     * The vision tagger's aggregate style call (`listings.ai_style.style`,
+     * five-word vocabulary), only when it was confident. A mobile ranking
+     * feature; web ignores it.
+     */
+    styleTag?: string | null;
+    /**
      * Coordinates, when the row is geocoded. Feeds the mobile card's locality
      * map thumbnail (2026-07-28 card structure); web ignores them.
      */

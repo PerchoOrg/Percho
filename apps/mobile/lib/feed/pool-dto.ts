@@ -311,6 +311,7 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 			: { yearBuilt: num(raw.yearBuilt) as number }),
 		...(num(raw.sqft) === undefined ? {} : { sqft: num(raw.sqft) as number }),
 		...(num(raw.beds) === undefined ? {} : { beds: num(raw.beds) as number }),
+		...(str(raw.styleTag) ? { styleTag: str(raw.styleTag) as string } : {}),
 		bedBathSqft: str(raw.bedBathSqft) ?? "",
 		heroUrl,
 		...(videoUrl ? { videoUrl } : {}),

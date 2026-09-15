@@ -50,6 +50,8 @@ type ListingRow = {
   baths: number | null;
   sqft: number | null;
   year_built: number | null;
+  /** `{style, confidence, ...}` from the vision tagger; absent in selects that don't ask for it. */
+  ai_style?: { style?: unknown; confidence?: unknown } | null;
   description: string[] | null;
   community_id: string | null;
   agent_id: string | null;
@@ -67,6 +69,20 @@ type ListingRow = {
   source: string | null;
   source_id: string | null;
 };
+
+/**
+ * The tagger's style call, when it is worth ranking on. `ai_style` rows are
+ * `{style, confidence, reason|error}` (scripts/render-worker/photo_tagger.py);
+ * the failure rows carry `confidence: 0`, so the threshold screens them out
+ * along with the genuinely unsure calls.
+ */
+const STYLE_MIN_CONFIDENCE = 0.5;
+
+function styleTagFrom(ai: ListingRow['ai_style']): string | null {
+  if (!ai || typeof ai.style !== 'string' || ai.style === '') return null;
+  if (typeof ai.confidence !== 'number' || ai.confidence < STYLE_MIN_CONFIDENCE) return null;
+  return ai.style;
+}
 
 type AgentRow = {
   id: string;
@@ -445,6 +461,7 @@ async function assembleCards(
         baths: l.baths,
         sqft: l.sqft,
         year_built: l.year_built ?? null,
+        styleTag: styleTagFrom(l.ai_style),
         lat: l.lat ?? null,
         lng: l.lng ?? null,
         mapUrl: l.map_url ?? null,
@@ -492,7 +509,7 @@ export async function fetchBrowseCards(offset = 0, limit = 1000): Promise<Browse
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
     )
     .eq('status', 'active')
     .order('created_at', { ascending: false })
@@ -534,7 +551,7 @@ export async function fetchBrowseCardsVideosOnly(offset = 0, limit = 1000): Prom
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
     )
     .in('id', ids)
     .eq('status', 'active')

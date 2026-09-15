@@ -2266,6 +2266,8 @@ export type Database = {
       mobile_events: {
         Row: {
           at: string
+          card_id: string | null
+          card_type: string | null
           id: number
           install_id: string
           listing_id: string | null
@@ -2274,9 +2276,12 @@ export type Database = {
           seq: number
           type: string
           user_id: string | null
+          verdict: string | null
         }
         Insert: {
           at: string
+          card_id?: never
+          card_type?: never
           id?: never
           install_id: string
           listing_id?: string | null
@@ -2285,9 +2290,12 @@ export type Database = {
           seq: number
           type: string
           user_id?: string | null
+          verdict?: never
         }
         Update: {
           at?: string
+          card_id?: never
+          card_type?: never
           id?: never
           install_id?: string
           listing_id?: string | null
@@ -2296,6 +2304,7 @@ export type Database = {
           seq?: number
           type?: string
           user_id?: string | null
+          verdict?: never
         }
         Relationships: []
       }

@@ -169,6 +169,7 @@ function projectListing(card: BrowseCard, verticalUid?: string): PoolListingDTO 
     ...(card.listing.year_built != null ? { yearBuilt: card.listing.year_built } : {}),
     ...(card.listing.sqft != null ? { sqft: card.listing.sqft } : {}),
     ...(card.listing.beds != null ? { beds: card.listing.beds } : {}),
+    ...(card.listing.styleTag != null ? { styleTag: card.listing.styleTag } : {}),
     heroUrl: heroUrlFor(card),
     // Coordinates for the card's locality map thumbnail. Both or neither.
     ...(card.listing.lat != null && card.listing.lng != null
