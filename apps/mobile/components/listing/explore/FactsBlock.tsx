@@ -42,13 +42,13 @@ const styles = StyleSheet.create({
 		paddingVertical: 11,
 	},
 	label: {
-		fontSize: 10,
+		fontSize: 11,
 		letterSpacing: 0.5,
 		color: explore.muted,
 		fontFamily: fonts.ui,
 	},
 	value: {
-		fontSize: 13,
+		fontSize: 15,
 		fontWeight: "600",
 		color: explore.ink,
 		marginTop: 3,

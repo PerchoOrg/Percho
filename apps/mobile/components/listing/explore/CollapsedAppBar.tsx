@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
 		fontFamily: fonts.ui,
 	},
 	subtitle: {
-		fontSize: 11,
+		fontSize: 12,
 		color: explore.muted,
 		marginTop: 1,
 		fontFamily: fonts.ui,
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
 	},
 	tab: { paddingBottom: 9 },
 	tabLabel: {
-		fontSize: 11,
+		fontSize: 12,
 		fontWeight: "600",
 		letterSpacing: 0.4,
 		color: explore.muted,

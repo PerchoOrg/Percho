@@ -439,10 +439,11 @@ const styles = StyleSheet.create({
 		gap: 10,
 	},
 	name: { ...textStyles.title1, color: colors.ink, flexShrink: 1 },
-	place: { ...textStyles.footnote, color: colors.ink2 },
+	place: { ...textStyles.footnote, fontSize: 14, color: colors.ink2 },
 	bandWrap: { marginTop: 16 },
 	sectionHead: {
 		...textStyles.caption,
+		fontSize: 12,
 		color: colors.accent,
 		marginTop: 26,
 		marginBottom: 10,
@@ -472,7 +473,12 @@ const styles = StyleSheet.create({
 	},
 	rowText: { flex: 1, minWidth: 0 },
 	rowLabel: { ...textStyles.headline, color: colors.ink },
-	rowFact: { ...textStyles.caption, color: colors.ink2, marginTop: 3 },
+	rowFact: {
+		...textStyles.caption,
+		fontSize: 12,
+		color: colors.ink2,
+		marginTop: 3,
+	},
 
 	chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 	chip: {
@@ -486,7 +492,7 @@ const styles = StyleSheet.create({
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: colors.border,
 	},
-	chipTxt: { ...textStyles.footnote, color: colors.ink },
+	chipTxt: { ...textStyles.footnote, fontSize: 14, color: colors.ink },
 
 	statRow: {
 		flexDirection: "row",
@@ -496,7 +502,7 @@ const styles = StyleSheet.create({
 		borderBottomWidth: StyleSheet.hairlineWidth,
 		borderBottomColor: colors.border,
 	},
-	statLabel: { ...textStyles.footnote, color: colors.ink2 },
+	statLabel: { ...textStyles.footnote, fontSize: 14, color: colors.ink2 },
 	/** The reviews score, printed like a price rather than like a field. */
 	scoreValue: {
 		...textStyles.title1,
@@ -515,14 +521,30 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "space-between",
 	},
-	reviewRating: { fontSize: 13, color: colors.accent, letterSpacing: 1 },
+	reviewRating: { fontSize: 14, color: colors.accent, letterSpacing: 1 },
 	reviewRatingOff: { color: colors.border },
-	reviewMeta: { ...textStyles.caption, color: colors.ink3 },
-	reviewBody: { ...textStyles.footnote, color: colors.ink, lineHeight: 20 },
-	reviewReport: { ...textStyles.caption, color: colors.ink3, marginTop: 2 },
-	reviewEmpty: { ...textStyles.footnote, color: colors.ink2, lineHeight: 20 },
+	reviewMeta: { ...textStyles.caption, fontSize: 12, color: colors.ink3 },
+	reviewBody: {
+		...textStyles.footnote,
+		fontSize: 15,
+		color: colors.ink,
+		lineHeight: 22,
+	},
+	reviewReport: {
+		...textStyles.caption,
+		fontSize: 12,
+		color: colors.ink3,
+		marginTop: 2,
+	},
+	reviewEmpty: {
+		...textStyles.footnote,
+		fontSize: 15,
+		color: colors.ink2,
+		lineHeight: 22,
+	},
 	reviewPending: {
 		...textStyles.footnote,
+		fontSize: 14,
 		color: colors.accent,
 		marginTop: 10,
 	},
@@ -535,14 +557,15 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: colors.accent,
 	},
-	reviewCtaTxt: { ...textStyles.footnote, color: colors.accent },
+	reviewCtaTxt: { ...textStyles.footnote, fontSize: 15, color: colors.accent },
 
 	source: {
 		...textStyles.caption,
+		fontSize: 12,
 		color: colors.ink3,
 		textTransform: "none",
 		letterSpacing: 0,
 		marginTop: 22,
-		lineHeight: 16,
+		lineHeight: 18,
 	},
 });

@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
 	},
 	chipLabel: {
 		color: explore.onMedia,
-		fontSize: 11,
+		fontSize: 12,
 		fontWeight: "600",
 		fontFamily: fonts.ui,
 	},

@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 		fontFamily: fonts.ui,
 	},
-	dim: { fontSize: 13, color: explore.ink2, fontFamily: fonts.ui },
+	dim: { fontSize: 15, color: explore.ink2, fontFamily: fonts.ui },
 	backBtn: {
 		minHeight: 44,
 		justifyContent: "center",
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
 		borderTopColor: explore.line,
 	},
 	eyebrow: {
-		fontSize: 10,
+		fontSize: 11,
 		fontWeight: "700",
 		letterSpacing: 1.5,
 		color: explore.muted,
@@ -657,8 +657,8 @@ const styles = StyleSheet.create({
 		fontFamily: fonts.ui,
 	},
 	trust: {
-		fontSize: 11.5,
-		lineHeight: 17,
+		fontSize: 13,
+		lineHeight: 19,
 		color: explore.ink2,
 		fontFamily: fonts.ui,
 	},
@@ -677,18 +677,18 @@ const styles = StyleSheet.create({
 		fontVariant: ["tabular-nums"],
 	},
 	specs: {
-		fontSize: 13,
+		fontSize: 15,
 		fontWeight: "600",
 		color: explore.ink2,
 		fontFamily: fonts.ui,
 	},
 	address: {
-		fontSize: 13,
+		fontSize: 15,
 		color: explore.muted,
 		marginTop: 7,
 		fontFamily: fonts.ui,
 	},
 	meta: { flexDirection: "row", gap: 16, marginTop: 13 },
-	metaItem: { fontSize: 11.5, color: explore.ink2, fontFamily: fonts.ui },
+	metaItem: { fontSize: 13, color: explore.ink2, fontFamily: fonts.ui },
 	metaStrong: { fontWeight: "600", color: explore.ink },
 });

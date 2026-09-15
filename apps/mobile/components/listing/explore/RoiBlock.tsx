@@ -117,7 +117,7 @@ export function RoiBlock({
 
 const styles = StyleSheet.create({
 	inputRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-	inputLabel: { fontSize: 12.5, color: explore.ink, fontFamily: fonts.ui },
+	inputLabel: { fontSize: 14, color: explore.ink, fontFamily: fonts.ui },
 	field: {
 		marginLeft: "auto",
 		flexDirection: "row",
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
 		height: 36,
 		minWidth: 120,
 	},
-	dollar: { fontSize: 14, color: explore.muted, fontFamily: fonts.ui },
+	dollar: { fontSize: 15, color: explore.muted, fontFamily: fonts.ui },
 	input: {
 		flex: 1,
 		fontSize: 15,
@@ -140,8 +140,8 @@ const styles = StyleSheet.create({
 		paddingLeft: 2,
 	},
 	source: {
-		fontSize: 10.5,
-		lineHeight: 15,
+		fontSize: 12,
+		lineHeight: 17,
 		color: explore.muted,
 		marginTop: 8,
 		fontFamily: fonts.ui,
@@ -163,14 +163,14 @@ const styles = StyleSheet.create({
 	},
 	figureNeg: { color: explore.negInk },
 	figureLabel: {
-		fontSize: 11,
+		fontSize: 12,
 		color: explore.muted,
 		marginTop: 2,
 		fontFamily: fonts.ui,
 	},
 	assume: {
-		fontSize: 10.5,
-		lineHeight: 15.5,
+		fontSize: 12,
+		lineHeight: 17,
 		color: explore.muted,
 		marginTop: 12,
 		fontFamily: fonts.ui,

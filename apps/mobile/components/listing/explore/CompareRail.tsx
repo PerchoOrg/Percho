@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
 	thumbImg: { width: "100%", height: "100%" },
 	body: { paddingHorizontal: 10, paddingTop: 9, paddingBottom: 11 },
 	price: {
-		fontSize: 14,
+		fontSize: 15,
 		fontWeight: "700",
 		letterSpacing: -0.3,
 		color: explore.ink,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
 		fontVariant: ["tabular-nums"],
 	},
 	sub: {
-		fontSize: 10.5,
+		fontSize: 12,
 		color: explore.muted,
 		marginTop: 3,
 		fontFamily: fonts.ui,
