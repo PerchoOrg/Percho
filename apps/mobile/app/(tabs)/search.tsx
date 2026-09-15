@@ -182,12 +182,22 @@ const MARK_LABEL_DELTA = 0.06;
 
 /** Landing spans for the `?focusLat=` deep link — the feed header's Map
  *  button on a community / home card (owner, 2026-09-14: land on the card's
- *  subject, "not just the county area"). Both sit inside `MARK_LABEL_DELTA`
- *  so the mark arrives with its name on; a home lands tighter because it is
- *  one chip, where a community is a dot worth seeing streets around.
- *  Lng is lat / 1.2, the aspect `flyTo` already uses. */
+ *  subject, "not just the county area").
+ *
+ *  The number that decides what you LAND at is `longitudeDelta`, not
+ *  `latitudeDelta`: the map view is ~2× taller than wide, and iOS fits a
+ *  requested region by showing BOTH spans, so on a phone the delivered
+ *  latitude span ≈ `longitudeDelta × 1.6` (aspect × the ~0.83 cos-latitude
+ *  squeeze on a degree of longitude here). Community originally asked for
+ *  0.05/0.042 — delivered ≈ 0.068, just OUTSIDE `MARK_LABEL_DELTA` (0.06),
+ *  which is why it arrived as a field of anonymous circles while home
+ *  (0.017 → ≈ 0.028) arrived labelled (owner, 2026-09-15: "zoomin not
+ *  enough to see the name … still a lot of community circles" / "Home is
+ *  good"). Both pairs now deliver well inside the label band; community
+ *  sits a notch wider than home because a neighbourhood is worth a street
+ *  or two of context around its dot. */
 const FOCUS_POINT_DELTA = {
-	community: { latitudeDelta: 0.05, longitudeDelta: 0.042 },
+	community: { latitudeDelta: 0.025, longitudeDelta: 0.018 },
 	home: { latitudeDelta: 0.02, longitudeDelta: 0.017 },
 } as const;
 
