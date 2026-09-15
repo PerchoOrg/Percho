@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Map labels — telling a school from a neighborhood</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+  /* App palette — apps/mobile/theme/tokens.ts */
+  :root {
+    --surface: #FFFFFF;
+    --surface2: #F3EDE4;
+    --ink: #2B2116;
+    --ink2: #8A7358;
+    --ink3: #B9A88F;
+    --accent: #B45309;   /* homes */
+    --pos: #1B7A4D;      /* communities */
+    --school: #4A6FA5;   /* proposed school blue — not yet in tokens.ts */
+    --glass: rgba(250, 246, 240, 0.94);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  #map { position: absolute; inset: 0; }
+
+  .panel {
+    position: absolute; top: 12px; left: 12px; right: 12px; z-index: 10;
+    max-width: 430px; margin: 0 auto;
+    background: var(--glass); border-radius: 16px; padding: 12px 14px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.14); backdrop-filter: blur(6px);
+  }
+  .panel h1 { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .panel .sub { font-size: 11px; color: var(--ink2); margin: 2px 0 10px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .seg button {
+    border: 1px solid rgba(43,33,22,.16); background: var(--surface);
+    color: var(--ink); border-radius: 12px; padding: 7px 4px; font-size: 11.5px;
+    font-weight: 600; cursor: pointer; line-height: 1.25;
+  }
+  .seg button small { display: block; font-weight: 400; color: var(--ink2); font-size: 10px; }
+  .seg button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .seg button.on small { color: rgba(255,255,255,.75); }
+  .desc { font-size: 10.5px; color: var(--ink2); margin-top: 9px; }
+
+  /* ── Community mark: exactly what ships today ──────────────────────── */
+  .comm { display: flex; flex-direction: column; align-items: center; }
+  .commDot {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid var(--pos); background: var(--surface2);
+    overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+  .commDot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .commName {
+    margin-top: 2px; width: 108px; text-align: center;
+    font-size: 11px; line-height: 13px; font-weight: 700; color: var(--ink);
+    text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff;
+  }
+
+  /* ── School mark: dot + name in a row (today's anatomy) ────────────── */
+  .sch { display: flex; align-items: center; gap: 4px; }
+  .schDot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--ink3); border: 1.5px solid #fff; flex: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  }
+  .schName {
+    font-size: 10.5px; font-weight: 600; color: var(--ink2);
+    white-space: nowrap;
+    text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff;
+  }
+
+  /* A · baseline (today) — nothing added */
+
+  /* B · school goes BLUE and small-caps */
+  .b .schDot { background: var(--school); }
+  .b .schName {
+    color: var(--school); font-size: 9.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+
+  /* C · school gets a category glyph, community never does */
+  .c .schDot {
+    background: var(--school); width: 14px; height: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .c .schDot::after {
+    content: "🎓"; font-size: 8px; line-height: 1;
+  }
+  .c .schName { color: var(--school); }
+
+  /* D · school is a hairline pill, community stays bare type */
+  .d .schName {
+    color: var(--school); background: rgba(74,111,165,.10);
+    border: 1px solid rgba(74,111,165,.35);
+    border-radius: 3px; padding: 0 4px; text-shadow: none;
+  }
+  .d .schDot { background: var(--school); }
+
+  /* E · schools lose their names entirely — dot only until tapped */
+  .e .schName { display: none; }
+  .e .schDot { background: var(--school); }
+
+  /* F · community gains the weight instead: bigger, darker, wider */
+  .f .commName { font-size: 12px; line-height: 14px; }
+  .f .schName { color: var(--ink3); font-weight: 500; font-size: 10px; }
+  .f .schDot { background: var(--ink3); opacity: .85; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="panel">
+  <h1>Telling a school from a neighborhood</h1>
+  <div class="sub">Both labels are white-haloed type today, so they read as the same kind of thing. Tap an option — the map updates live.</div>
+  <div class="seg" id="seg">
+    <button data-v="a" class="on">A · Today<small>both the same</small></button>
+    <button data-v="b">B · Blue small-caps<small>colour + case</small></button>
+    <button data-v="c">C · Category glyph<small>🎓 on the dot</small></button>
+    <button data-v="d">D · Hairline pill<small>school is boxed</small></button>
+    <button data-v="e">E · No school names<small>dot only</small></button>
+    <button data-v="f">F · Community louder<small>school recedes</small></button>
+  </div>
+  <div class="desc" id="desc"></div>
+</div>
+
+<script>
+  const COMMS = [
+    { lng: -84.2905, lat: 34.0790, name: 'Windward', seed: 'w1' },
+    { lng: -84.2740, lat: 34.0720, name: 'Medlock Bridge Village', seed: 'w2' },
+    { lng: -84.3030, lat: 34.0700, name: 'Avensong', seed: 'w3' },
+    { lng: -84.2820, lat: 34.0870, name: 'Crabapple Chase', seed: 'w4' },
+    { lng: -84.3130, lat: 34.0835, name: 'Glen Abbey', seed: 'w5' },
+    { lng: -84.2650, lat: 34.0820, name: 'Echo Woods', seed: 'w6' },
+  ];
+  const SCHOOLS = [
+    { lng: -84.2860, lat: 34.0745, name: 'Hawthorne Elem.' },
+    { lng: -84.2970, lat: 34.0845, name: 'Cogburn Woods Elem.' },
+    { lng: -84.2755, lat: 34.0790, name: 'Webb Bridge Middle' },
+    { lng: -84.3080, lat: 34.0760, name: 'Alpharetta High' },
+    { lng: -84.2690, lat: 34.0870, name: 'Manning Oaks Elem.' },
+  ];
+  const img = (seed) => `https://picsum.photos/seed/${seed}/60/60`;
+
+  const DESCS = {
+    a: 'Today. A school name and a neighborhood name are the same ink, the same halo, the same weight — only the layout differs (name beside the dot vs under the photo). This is what made a school look tappable.',
+    b: 'School names go blue and small-caps — the cartographic convention for a facility rather than a place. Strongest separation without adding any ink.',
+    c: 'A 🎓 on the school dot says "category" outright. Most literal, but an emoji-scale glyph is mush at this size on a real device — would need a drawn icon.',
+    d: 'The school name sits in a hairline blue box, so only schools are boxed. Clear, but it re-introduces the little boxes you had me remove.',
+    e: 'Schools keep their dots and lose their names until tapped. The quietest map by far — but the names were your own request, so this trades that away.',
+    f: 'Nothing is added: the community name gets bigger and darker, the school name lighter and smaller. Pure hierarchy — cheapest change, weakest separation.',
+  };
+
+  const map = new maplibregl.Map({
+    container: 'map',
+    style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+    center: [-84.289, 34.078],
+    zoom: 14.1,
+    attributionControl: false,
+  });
+
+  let variant = 'a';
+  let markers = [];
+
+  function render() {
+    document.getElementById('desc').textContent = DESCS[variant];
+    markers.forEach((m) => m.remove());
+    markers = [];
+    for (const s of SCHOOLS) {
+      const el = document.createElement('div');
+      el.className = `sch ${variant}`;
+      el.innerHTML = `<div class="schDot"></div><div class="schName">${s.name}</div>`;
+      markers.push(new maplibregl.Marker({ element: el }).setLngLat([s.lng, s.lat]).addTo(map));
+    }
+    for (const c of COMMS) {
+      const el = document.createElement('div');
+      el.className = `comm ${variant}`;
+      el.innerHTML =
+        `<div class="commDot"><img src="${img(c.seed)}"></div>` +
+        `<div class="commName">${c.name}</div>`;
+      markers.push(new maplibregl.Marker({ element: el }).setLngLat([c.lng, c.lat]).addTo(map));
+    }
+  }
+
+  const seg = document.getElementById('seg');
+  seg.querySelectorAll('button').forEach((b) => {
+    b.onclick = () => {
+      seg.querySelectorAll('button').forEach((x) => x.classList.remove('on'));
+      b.classList.add('on');
+      variant = b.dataset.v;
+      render();
+    };
+  });
+
+  map.on('load', render);
+</script>
+</body>
+</html>

@@ -21,6 +21,42 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-15 01:45 UTC — phase295: six ways to tell a school from a neighbourhood (demo)
+
+**Objective**: owner, on the open item from phase291/294 — "Give me a demo
+first". The problem: phase287 gave school and community names the same
+ink, halo and weight, so the two read as one kind of thing, and he offered
+Hawthorne Elementary as an example of a community that would not open.
+
+**Demo**: `apps/web/public/demos/map-labels/` — MapLibre on Carto positron
+at street zoom, app palette, marks copied at the shipping sizes (26px
+cover photo in a `pos` ring with the name under it; 12px school dot with
+the name beside it). One switcher, six variants, live:
+
+- **A · Today** — the baseline, so the problem is visible rather than
+  described.
+- **B · Blue small-caps** — school names in a cool blue, uppercase,
+  letterspaced: the cartographic convention for a facility rather than a
+  place. Adds no ink.
+- **C · Category glyph** — a 🎓 on the school dot. Most literal; flagged in
+  the demo's own copy as needing a drawn icon, since an emoji at 8px is
+  mush on a device.
+- **D · Hairline pill** — only schools are boxed. Clear, but re-introduces
+  the little boxes phase287 removed at his request.
+- **E · No school names** — dots only until tapped. Quietest map, but
+  trades away the names he asked for on 2026-09-11.
+- **F · Community louder** — pure hierarchy, nothing added. Cheapest,
+  weakest.
+
+Proposed school blue `#4A6FA5` is NOT in `theme/tokens.ts` — it would be
+added there if he picks B, C or D.
+
+**Verification**: static file; typecheck/lint/tests untouched. Live at
+percho.co/demos/map-labels/ once Vercel deploys.
+
+**Next steps**: owner picks; implementation is `SchoolMarker`'s styles
+plus a token, one small phase.
+
 ## 2026-09-15 01:40 UTC — phase294: the probe comes out, and what the tap saga actually taught
 
 **Objective**: owner — "fix 了 删掉测试痕迹". Taps are correct; remove the
