@@ -348,6 +348,9 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 	const county = str(raw.county);
 	const videoUrl = str(raw.videoUrl);
 	const geoUnitId = str(raw.geoUnitId);
+	// Both or neither — a lone coordinate cannot place a point.
+	const lat = num(raw.lat);
+	const lng = num(raw.lng);
 	const priceLabel = str(raw.priceLabel);
 	const homes = num(raw.homes);
 	const pills = strings(raw.pills);
@@ -369,6 +372,7 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 		heroUrl,
 		...(videoUrl ? { videoUrl } : {}),
 		...(geoUnitId ? { geoUnitId } : {}),
+		...(lat !== undefined && lng !== undefined ? { lat, lng } : {}),
 		...(priceLabel ? { priceLabel } : {}),
 		...(homes !== undefined ? { homes } : {}),
 		...(pills.length > 0 ? { pills } : {}),

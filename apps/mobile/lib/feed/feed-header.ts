@@ -63,6 +63,15 @@
  *           (see `app/(tabs)/search.tsx`), so the map lands on the card's
  *           CITY — the home's community context, per the handoff's own words
  *           for the home-tour row. No new map surface, no geocoding call.
+ *
+ * ── The Map button lands on the card's SUBJECT (owner, 2026-09-14) ──────────
+ *
+ * "clicking the map button should be redirected to that community or home on
+ * map, not just the county area." So a card that carries its own coordinates
+ * now also yields `mapPoint` — the home's location, or the community's
+ * centroid — and `feed.tsx` sends the map there instead of to the city unit.
+ * `mapUnitId` stays as the fallback for a card without coordinates, and as
+ * the city card's only (and correct) target.
  */
 import type { CommunityCardV3, FeedCardV3 } from "./card-types";
 import type { GeoUnit } from "./geo-unit";
@@ -135,8 +144,17 @@ export interface FeedHeaderModel {
 	title: string;
 	/** Community slug for `/community/[slug]`, or null — no chevron then. */
 	titleSlug: string | null;
-	/** Geo-unit id for `?focus=`, or null — no Map button then. */
+	/** Geo-unit id for `?focus=`, or null. The Map button's FALLBACK target —
+	 * `mapPoint` wins when both exist; no Map button when both are null. */
 	mapUnitId: string | null;
+	/**
+	 * The card's own point — a home's location, a community's centroid — or
+	 * null for a card that carries no coordinates (then the city unit above is
+	 * the best the map can honestly do). `kind` picks the landing zoom: a home
+	 * is a single mark and wants the street, a community is a dot with a
+	 * neighbourhood around it.
+	 */
+	mapPoint: { lat: number; lng: number; kind: "community" | "home" } | null;
 }
 
 export interface FeedHeaderInput {
@@ -206,6 +224,7 @@ export function feedHeaderModel({
 			title: "",
 			titleSlug: null,
 			mapUnitId: null,
+			mapPoint: null,
 		};
 	}
 
@@ -222,6 +241,8 @@ export function feedHeaderModel({
 				title: card.unit.name,
 				titleSlug: null,
 				mapUnitId: card.unit.id,
+				// The unit IS the subject — a city has no tighter point to land on.
+				mapPoint: null,
 			};
 
 		case "community":
@@ -232,6 +253,10 @@ export function feedHeaderModel({
 				title: card.name,
 				titleSlug: card.slug,
 				mapUnitId: unitOf(card.geoUnitId, geoUnits)?.id ?? null,
+				mapPoint:
+					card.lat !== undefined && card.lng !== undefined
+						? { lat: card.lat, lng: card.lng, kind: "community" }
+						: null,
 			};
 
 		case "listing": {
@@ -274,6 +299,10 @@ export function feedHeaderModel({
 					? (card.communityId ?? community?.slug ?? null)
 					: null,
 				mapUnitId: unit?.id ?? null,
+				mapPoint:
+					card.lat !== undefined && card.lng !== undefined
+						? { lat: card.lat, lng: card.lng, kind: "home" }
+						: null,
 			};
 		}
 
@@ -286,6 +315,7 @@ export function feedHeaderModel({
 				title: TRADEOFF_TITLE,
 				titleSlug: null,
 				mapUnitId: null,
+				mapPoint: null,
 			};
 	}
 }

@@ -185,6 +185,27 @@ describe("home tour", () => {
 			model({ card: listing({ geoUnitId: "city:gone-ga" }) }).mapUnitId,
 		).toBeNull();
 	});
+
+	/**
+	 * The Map button lands on the HOME, not on its city (owner, 2026-09-14:
+	 * "redirected to that community or home on map, not just the county
+	 * area"). The card's own coordinates become the point; a card without
+	 * them keeps the city unit as the honest fallback.
+	 */
+	it("targets the home's own point when the card has coordinates", () => {
+		const m = model({
+			card: listing({ geoUnitId: CANTON.id, lat: 34.21, lng: -84.49 }),
+		});
+		expect(m.mapPoint).toEqual({ lat: 34.21, lng: -84.49, kind: "home" });
+		// The unit stays — it is the fallback, not a competing destination.
+		expect(m.mapUnitId).toBe(CANTON.id);
+	});
+
+	it("falls back to the unit when the card has no coordinates", () => {
+		const m = model({ card: listing({ geoUnitId: CANTON.id }) });
+		expect(m.mapPoint).toBeNull();
+		expect(m.mapUnitId).toBe(CANTON.id);
+	});
 });
 
 describe("community tour", () => {
@@ -225,6 +246,22 @@ describe("community tour", () => {
 			"Atlanta metro › Canton",
 		);
 	});
+
+	/** Same rule as a home's: the community's own centroid when the card
+	 * carries one, the city unit when it does not. */
+	it("targets the community's centroid when the card has coordinates", () => {
+		const m = model({
+			card: { ...RIVER_GREEN, lat: 34.22, lng: -84.51 },
+		});
+		expect(m.mapPoint).toEqual({ lat: 34.22, lng: -84.51, kind: "community" });
+		expect(m.mapUnitId).toBe(CANTON.id);
+	});
+
+	it("has no point without coordinates, keeping the unit fallback", () => {
+		const m = model({ card: RIVER_GREEN });
+		expect(m.mapPoint).toBeNull();
+		expect(m.mapUnitId).toBe(CANTON.id);
+	});
 });
 
 describe("city tour", () => {
@@ -243,6 +280,8 @@ describe("city tour", () => {
 		expect(m.title).toBe("Canton");
 		expect(m.titleSlug).toBeNull();
 		expect(m.mapUnitId).toBe(CANTON.id);
+		// The unit IS the subject — no tighter point exists for a city.
+		expect(m.mapPoint).toBeNull();
 	});
 });
 

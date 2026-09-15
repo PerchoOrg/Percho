@@ -713,7 +713,7 @@ export default function FeedScreen() {
 
 	// Destructured so the two handlers below narrow: TypeScript drops a
 	// property's narrowing inside a closure, but keeps a `const`'s.
-	const { titleSlug, mapUnitId } = header;
+	const { titleSlug, mapUnitId, mapPoint } = header;
 
 	const atEnd = activeIndex >= deck.length;
 	// §1.9's terminal card is for a genuinely dry pool, not for a momentary gap:
@@ -747,13 +747,26 @@ export default function FeedScreen() {
 						: undefined
 				}
 				onOpenMap={
-					mapUnitId !== null
+					// The card's own point first (owner, 2026-09-14: "redirected to
+					// that community or home on map, not just the county area") —
+					// the city unit only for a card that carries no coordinates.
+					mapPoint !== null
 						? () =>
 								router.navigate({
 									pathname: "/(tabs)/search",
-									params: { focus: mapUnitId },
+									params: {
+										focusLat: String(mapPoint.lat),
+										focusLng: String(mapPoint.lng),
+										focusKind: mapPoint.kind,
+									},
 								})
-						: undefined
+						: mapUnitId !== null
+							? () =>
+									router.navigate({
+										pathname: "/(tabs)/search",
+										params: { focus: mapUnitId },
+									})
+							: undefined
 				}
 			/>
 			<View style={styles.stackWrap}>
