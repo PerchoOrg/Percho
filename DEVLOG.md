@@ -21,6 +21,49 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-15 02:20 UTC — phase298: the Map button lands on the card's community/home
+
+**Objective**: owner — "For community and home cards, clicking the map button
+should be redirected to that community or home on map, not just the county
+area". The feed header's Map pill sent every card to
+`/(tabs)/search?focus=<geoUnitId>`, which flies to the CITY unit's centroid
+at delta 0.18 — the card's subject was somewhere in the frame, unmarked.
+
+**Actions**:
+- `apps/web/lib/feed/community-pool.ts`: the pool now selects and projects
+  `communities.lat/lng` (the same centroid the map endpoint draws dots at).
+  `PoolCommunityDTO.lat/lng`, both-or-neither. Listings already carried
+  theirs.
+- `apps/mobile/lib/feed/card-types.ts` + `pool-dto.ts`: `CommunityCardV3`
+  gains `lat?/lng?`, parsed off the wire both-or-neither (with a
+  `pool-dto.test.ts` assertion — the 08-30 lesson about silently dropped
+  fields).
+- `apps/mobile/lib/feed/feed-header.ts`: `FeedHeaderModel` gains
+  `mapPoint: { lat, lng, kind: "community" | "home" } | null` alongside
+  `mapUnitId`. A community card's point is its centroid, a listing's is the
+  home itself; the city card keeps `mapPoint: null` — the unit IS its
+  subject. `mapUnitId` stays as the fallback for cards without coordinates.
+- `apps/mobile/app/(tabs)/feed.tsx`: the Map pill prefers the point —
+  `?focusLat=&focusLng=&focusKind=` — and falls back to `?focus=<unitId>`.
+- `apps/mobile/app/(tabs)/search.tsx`: new point deep-link handler beside the
+  unit one, same handled-once ref pattern. Lands at `FOCUS_POINT_DELTA`:
+  community 0.05, home 0.02 lat-delta (both inside `MARK_LABEL_DELTA` 0.06,
+  so the mark arrives labelled; lng = lat/1.2, `flyTo`'s aspect). Needs
+  nothing from the pool — flying there is what makes the viewport feed fetch
+  the marks.
+
+**Decisions**: point params rather than `focus=community:<slug>` because the
+search tab can only resolve what its viewport has loaded — a slug lookup
+would need a new API or a whole-table read; the card already knows its
+coordinates. `kind` picks the zoom only.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0, mobile 785
+pass (5 new), web 1191 pass.
+
+**Next steps**: owner verifies on device — feed → community card → Map should
+land on the community's labelled dot; home card → Map on the home's price
+chip.
+
 ## 2026-09-15 01:55 UTC — phase297: school labels stay as they are (decision, no code)
 
 **Objective**: close the open item, not change anything. After reviewing

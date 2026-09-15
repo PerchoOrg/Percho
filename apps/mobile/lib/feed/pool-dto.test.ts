@@ -201,6 +201,16 @@ describe("parseCommunity", () => {
 		expect(parseCommunity(COMMUNITY)?.pills).toBeUndefined();
 	});
 
+	/** The Map button's landing point (owner, 2026-09-14). Off the wire like a
+	 * listing's: both coordinates or neither — a lone one places nothing. */
+	it("keeps the centroid, both coordinates or neither", () => {
+		const c = parseCommunity({ ...COMMUNITY, lat: 33.77, lng: -84.29 });
+		expect(c?.lat).toBe(33.77);
+		expect(c?.lng).toBe(-84.29);
+		expect(parseCommunity({ ...COMMUNITY, lat: 33.77 })?.lat).toBeUndefined();
+		expect(parseCommunity(COMMUNITY)?.lat).toBeUndefined();
+	});
+
 	it("keeps the lifestyle signals and the glyph the server chose", () => {
 		// Owner, 2026-08-15: the card's signals are the server's per-community
 		// ones ("Mature trees", "3 parks nearby"), never generic category words.

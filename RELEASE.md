@@ -39,6 +39,10 @@ size, what residents say — sits under "The basics", still ordered by what you
 said matters on the You tab.
 
 ### 2026-09-15
+- **The Map button now lands on the card itself.** Tapping Map above a home
+  card takes you to that home on the map, and above a neighbourhood card to
+  that neighbourhood's marker — zoomed in close enough to see it with its
+  name, instead of dropping you over the whole city as before.
 - **Bigger, easier-to-read text on the home page and the neighbourhood
   page.** Descriptions, school rows, cost breakdowns, resident reviews and
   the small labels under figures all moved up a size — no more squinting at

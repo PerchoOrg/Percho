@@ -180,6 +180,17 @@ const CITY_DELTA = 0.3;
 const HOME_DELTA = 0.12;
 const MARK_LABEL_DELTA = 0.06;
 
+/** Landing spans for the `?focusLat=` deep link — the feed header's Map
+ *  button on a community / home card (owner, 2026-09-14: land on the card's
+ *  subject, "not just the county area"). Both sit inside `MARK_LABEL_DELTA`
+ *  so the mark arrives with its name on; a home lands tighter because it is
+ *  one chip, where a community is a dot worth seeing streets around.
+ *  Lng is lat / 1.2, the aspect `flyTo` already uses. */
+const FOCUS_POINT_DELTA = {
+	community: { latitudeDelta: 0.05, longitudeDelta: 0.042 },
+	home: { latitudeDelta: 0.02, longitudeDelta: 0.017 },
+} as const;
+
 /** The metro at rest — the map's opening frame, and where "back" returns to. */
 const METRO_REGION = {
 	latitude: 33.749,
@@ -489,7 +500,12 @@ export default function SearchTab() {
 	// `?focus=<unitId>` — the You tab's familiarity rows, the Saved tab's area
 	// rows and the §5.5 deep link all land here. Handled once per distinct
 	// value: the pool refreshing must not re-fly a map the buyer has panned.
-	const { focus } = useLocalSearchParams<{ focus?: string }>();
+	const { focus, focusLat, focusLng, focusKind } = useLocalSearchParams<{
+		focus?: string;
+		focusLat?: string;
+		focusLng?: string;
+		focusKind?: string;
+	}>();
 	const handledFocus = useRef<string | null>(null);
 	useEffect(() => {
 		if (!focus || focus === handledFocus.current) return;
@@ -499,6 +515,32 @@ export default function SearchTab() {
 		flyTo(unit);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [focus, pool.geoUnits]);
+
+	// `?focusLat=…&focusLng=…&focusKind=…` — the feed header's Map button on a
+	// community or home card. A POINT, not a unit lookup: the card carries its
+	// own coordinates, so this needs nothing from the pool and lands even on a
+	// mark the viewport feed has not fetched yet — flying there is what fetches
+	// it. Same once-per-value rule as `focus` above. The feed sends either this
+	// or `focus`, never both.
+	const handledPoint = useRef<string | null>(null);
+	useEffect(() => {
+		if (!focusLat || !focusLng) return;
+		const key = `${focusLat},${focusLng}`;
+		if (key === handledPoint.current) return;
+		const lat = Number(focusLat);
+		const lng = Number(focusLng);
+		if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+		handledPoint.current = key;
+		setExpanded(false);
+		mapRef.current?.animateToRegion(
+			{
+				latitude: lat,
+				longitude: lng,
+				...FOCUS_POINT_DELTA[focusKind === "home" ? "home" : "community"],
+			},
+			500,
+		);
+	}, [focusLat, focusLng, focusKind]);
 
 	const units = useMemo(() => {
 		const q = query.trim().toLowerCase();

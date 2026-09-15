@@ -203,6 +203,13 @@ export interface CommunityCardV3 {
 	heroUrl: string;
 	videoUrl?: string;
 	geoUnitId?: string;
+	/**
+	 * The community's own centroid — the point the map endpoint draws its dot
+	 * at. Lets the header's Map button land ON the community instead of on its
+	 * whole city (owner, 2026-09-14). Both or neither, like a listing's.
+	 */
+	lat?: number;
+	lng?: number;
 	priceLabel?: string;
 	homes?: number;
 	pills?: readonly string[];

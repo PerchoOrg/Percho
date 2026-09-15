@@ -71,6 +71,14 @@ export interface PoolCommunityDTO {
    * nowhere to send the map.
    */
   geoUnitId?: string;
+  /**
+   * The community's own centroid — the same `communities.lat/lng` the map
+   * endpoint draws its dots at. Carried so the card's Map button can land ON
+   * the community instead of on its whole city (owner, 2026-09-14). Both or
+   * neither: a lone coordinate cannot place a point.
+   */
+  lat?: number;
+  lng?: number;
   blurb?: string;
   /**
    * The redline's three "community highlights" tiles, derived from the
@@ -136,6 +144,10 @@ type CommunityPoolRow = {
    * value the same as a null one.
    */
   avg_age?: number | null;
+  /** Centroid for the Map button. OPTIONAL like `avg_age`, and for the same
+   * reason: fixtures predating the column must keep compiling. */
+  lat?: number | null;
+  lng?: number | null;
 };
 
 /**
@@ -163,7 +175,7 @@ export async function fetchCommunityPool(args: {
     // two figures that qualify as evidence for a resident-stated reason (see
     // `community-reasons.ts`). Still no `boundary` — that is the timeout trap.
     .select(
-      'id, slug, name, city, state, county, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age',
+      'id, slug, name, city, state, county, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age, lat, lng',
     )
     .eq('status', 'active')
     // A card with no photo is not a card (§1.4 is photo-first).
@@ -208,7 +220,7 @@ export async function fetchCommunityPoolByIds(ids: string[]): Promise<PoolCommun
     .from('communities')
     // Same column list as the paged read, minus `boundary` — see the header.
     .select(
-      'id, slug, name, city, state, county, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age',
+      'id, slug, name, city, state, county, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age, lat, lng',
     )
     .eq('status', 'active')
     .not('cover_storage_path', 'is', null)
@@ -313,6 +325,8 @@ export function projectCommunityPool(
       city: r.city ?? '',
       state: r.state ?? '',
       ...(r.county ? { county: r.county } : {}),
+      // Both or neither — a lone coordinate cannot place a point.
+      ...(r.lat != null && r.lng != null ? { lat: r.lat, lng: r.lng } : {}),
       heroUrl: publicCoverImageUrl(r.cover_storage_path),
       // Omitted rather than `[]` when there is no usable signal: the card must
       // render no tiles at all instead of three empty glass boxes.
