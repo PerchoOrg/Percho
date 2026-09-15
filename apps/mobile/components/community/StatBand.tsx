@@ -50,5 +50,10 @@ const styles = StyleSheet.create({
 		color: colors.ink,
 		fontVariant: ["tabular-nums"],
 	},
-	label: { ...textStyles.caption, color: colors.ink2, lineHeight: 13 },
+	label: {
+		...textStyles.caption,
+		fontSize: 12,
+		color: colors.ink2,
+		lineHeight: 15,
+	},
 });

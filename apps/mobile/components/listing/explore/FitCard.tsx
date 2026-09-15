@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
 		color: explore.ink,
 		fontFamily: fonts.ui,
 	},
-	headNote: { fontSize: 11, color: explore.muted, fontFamily: fonts.ui },
+	headNote: { fontSize: 12, color: explore.muted, fontFamily: fonts.ui },
 	row: { flexDirection: "row", gap: 9, marginBottom: 10 },
 	dot: {
 		width: 17,
@@ -140,14 +140,14 @@ const styles = StyleSheet.create({
 	dotGlyphNeg: { color: explore.negInk },
 	rowText: { flex: 1 },
 	text: {
-		fontSize: 13,
-		lineHeight: 18.5,
+		fontSize: 15,
+		lineHeight: 21,
 		color: explore.ink,
 		fontFamily: fonts.ui,
 	},
 	why: {
-		fontSize: 11,
-		lineHeight: 15,
+		fontSize: 12,
+		lineHeight: 17,
 		color: explore.muted,
 		marginTop: 3,
 		fontFamily: fonts.ui,
@@ -159,8 +159,8 @@ const styles = StyleSheet.create({
 		borderTopColor: explore.line,
 	},
 	prompt: {
-		fontSize: 12.5,
-		lineHeight: 18,
+		fontSize: 14,
+		lineHeight: 20,
 		color: explore.ink,
 		fontFamily: fonts.ui,
 	},
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
 	},
 	voteBtnChosen: { backgroundColor: explore.brand, borderColor: explore.brand },
 	voteLabel: {
-		fontSize: 12.5,
+		fontSize: 14,
 		fontWeight: "600",
 		color: explore.ink,
 		fontFamily: fonts.ui,

@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
 		gap: 10,
 	},
 	title: { fontSize: 20, fontWeight: "700", color: explore.ink },
-	sub: { fontSize: 14, color: explore.ink2, marginBottom: 6 },
+	sub: { fontSize: 15, color: explore.ink2, marginBottom: 6 },
 	input: {
 		backgroundColor: explore.chip,
 		borderRadius: radii.btn,
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
 		color: explore.ink,
 	},
 	inputMultiline: { minHeight: 72, textAlignVertical: "top" },
-	error: { fontSize: 13, color: explore.negInk },
+	error: { fontSize: 14, color: explore.negInk },
 	cta: {
 		backgroundColor: explore.brand,
 		borderRadius: radii.pill,

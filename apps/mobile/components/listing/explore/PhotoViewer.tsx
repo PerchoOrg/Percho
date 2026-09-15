@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
 	close: { color: explore.onMedia, fontSize: 19 },
 	counter: {
 		color: explore.onMedia,
-		fontSize: 13,
+		fontSize: 14,
 		fontWeight: "600",
 		fontVariant: ["tabular-nums"],
 		fontFamily: fonts.ui,
@@ -119,8 +119,8 @@ const styles = StyleSheet.create({
 	captionWrap: { paddingHorizontal: 18, paddingTop: 14, minHeight: 30 },
 	caption: {
 		color: explore.onMediaDim,
-		fontSize: 12,
-		lineHeight: 17,
+		fontSize: 13,
+		lineHeight: 18,
 		fontFamily: fonts.ui,
 	},
 });

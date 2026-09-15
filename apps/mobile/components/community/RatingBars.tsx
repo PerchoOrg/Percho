@@ -47,7 +47,12 @@ export function RatingBars({ dimensionAvgs }: RatingBarsProps) {
 const styles = StyleSheet.create({
 	bars: { gap: 9, paddingVertical: 12 },
 	row: { flexDirection: "row", alignItems: "center", gap: 10 },
-	label: { ...textStyles.footnote, color: colors.ink2, width: 74 },
+	label: {
+		...textStyles.footnote,
+		fontSize: 14,
+		color: colors.ink2,
+		width: 82,
+	},
 	track: {
 		flex: 1,
 		height: 8,

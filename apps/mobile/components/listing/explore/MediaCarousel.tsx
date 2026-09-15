@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
 	glassGlyph: { color: explore.onMedia, fontSize: 13 },
 	counter: {
 		color: explore.onMedia,
-		fontSize: 11,
+		fontSize: 12,
 		fontWeight: "600",
 		fontVariant: ["tabular-nums"],
 		fontFamily: fonts.ui,
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
 	playGlyph: { color: explore.onMedia, fontSize: 8 },
 	videoMarkLabel: {
 		color: explore.onMedia,
-		fontSize: 10,
+		fontSize: 11,
 		fontWeight: "700",
 		letterSpacing: 1.2,
 		fontFamily: fonts.ui,
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
 	},
 	chipLabel: {
 		color: explore.onMedia,
-		fontSize: 11,
+		fontSize: 12,
 		fontWeight: "600",
 		fontFamily: fonts.ui,
 	},

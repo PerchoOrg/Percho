@@ -113,13 +113,13 @@ const styles = StyleSheet.create({
 	close: { color: explore.onMedia, fontSize: 19 },
 	title: {
 		color: explore.onMedia,
-		fontSize: 13,
+		fontSize: 15,
 		fontWeight: "600",
 		fontFamily: fonts.ui,
 	},
 	head: {
 		color: explore.onMediaDim,
-		fontSize: 10,
+		fontSize: 11,
 		fontWeight: "700",
 		letterSpacing: 1.4,
 		paddingTop: 16,

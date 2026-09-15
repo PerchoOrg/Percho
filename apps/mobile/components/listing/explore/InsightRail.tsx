@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
 	pill_watch: { backgroundColor: explore.negBg },
 	pill_plus: { backgroundColor: explore.posBg },
 	pill_know: { backgroundColor: explore.chip },
-	pillText: { fontSize: 12, fontWeight: "600", fontFamily: fonts.ui },
+	pillText: { fontSize: 13, fontWeight: "600", fontFamily: fonts.ui },
 	railBleed: { marginHorizontal: -EDGE },
 	rail: { paddingHorizontal: EDGE, gap: GAP, paddingVertical: 2 },
 	card: {
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
 	glyph_know: { color: explore.ink2 },
 	theme: {
 		flex: 1,
-		fontSize: 9.5,
+		fontSize: 11,
 		fontWeight: "700",
 		letterSpacing: 1.1,
 		color: explore.muted,
@@ -269,8 +269,8 @@ const styles = StyleSheet.create({
 		fontFamily: fonts.ui,
 	},
 	detail: {
-		fontSize: 13,
-		lineHeight: 18.5,
+		fontSize: 15,
+		lineHeight: 21,
 		color: explore.ink2,
 		fontFamily: fonts.ui,
 	},
@@ -289,13 +289,13 @@ const styles = StyleSheet.create({
 		backgroundColor: explore.posBg,
 	},
 	verifyText: {
-		fontSize: 12,
+		fontSize: 13,
 		fontWeight: "600",
 		color: explore.posInk,
 		fontFamily: fonts.ui,
 	},
 	sources: {
-		fontSize: 12,
+		fontSize: 13,
 		fontWeight: "600",
 		color: explore.ink2,
 		textDecorationLine: "underline",
@@ -308,8 +308,8 @@ const styles = StyleSheet.create({
 		gap: 4,
 	},
 	basisText: {
-		fontSize: 11,
-		lineHeight: 15,
+		fontSize: 12,
+		lineHeight: 17,
 		color: explore.muted,
 		fontFamily: fonts.ui,
 	},

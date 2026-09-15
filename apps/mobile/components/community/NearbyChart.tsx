@@ -73,7 +73,12 @@ const styles = StyleSheet.create({
 	chart: { gap: 9 },
 	row: { flexDirection: "row", alignItems: "center", gap: 10 },
 	/** Fixed so every bar starts on the same x — a ragged left reads as noise. */
-	label: { ...textStyles.footnote, color: colors.ink2, width: 74 },
+	label: {
+		...textStyles.footnote,
+		fontSize: 14,
+		color: colors.ink2,
+		width: 82,
+	},
 	track: {
 		flex: 1,
 		height: 8,
@@ -90,5 +95,5 @@ const styles = StyleSheet.create({
 		fontVariant: ["tabular-nums"],
 	},
 	more: { paddingTop: 2, alignSelf: "flex-start" },
-	moreTxt: { ...textStyles.footnote, color: colors.accent },
+	moreTxt: { ...textStyles.footnote, fontSize: 14, color: colors.accent },
 });
