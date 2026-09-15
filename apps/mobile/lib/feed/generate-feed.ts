@@ -40,7 +40,7 @@ import {
 	trailingRun,
 } from "./rhythm";
 import type { SignalState } from "./signals";
-import { isLayerSuppressed } from "./signals";
+import { geoSignalFor, isLayerSuppressed } from "./signals";
 
 /** Server-supplied inventory. */
 export interface FeedPool {
@@ -177,7 +177,9 @@ function rankCommunities(
 		return Math.max(-ANSWER_CAP, Math.min(ANSWER_CAP, s));
 	};
 	const score = (c: CommunityCardV3): number =>
-		(passed.has(c.id) ? -100 : 0) + dimScore(c);
+		(passed.has(c.id) ? -100 : 0) +
+		dimScore(c) +
+		geoAffinity(signals, c.geoUnitId);
 	return [...communities].sort((a, b) => {
 		const d = score(b) - score(a);
 		return d !== 0 ? d : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
@@ -256,16 +258,167 @@ export function movedUpCount(
 	return n;
 }
 
+/**
+ * What the swipe ledger is worth when ordering a house. Three place signals
+ * and one house-shape signal, each on the scale its specificity earns:
+ *
+ *   · a swiped COMMUNITY is the most specific place statement a thumb can
+ *     make, so it moves the most: `+4` for a home inside a liked community,
+ *     `−2` inside a passed one — the same 2:1 for/against ratio every other
+ *     weight here uses.
+ *   · the CITY tally (`right − left` across every swipe that credited the
+ *     unit) is the coarsest, so it is clamped tightest. Without a cap a
+ *     buyer's tenth Atlanta right-swipe would drown every other signal —
+ *     tallies grow without bound, preferences do not.
+ *   · the LIKED-HOME PROFILE: once three homes are liked (the same floor
+ *     `lib/listing/fit.ts` uses before it claims a pattern), a home earns
+ *     `+1` apiece for landing inside the liked-median price band (±8%),
+ *     sqft band (±10%), or on the liked-median bed count — the bands are
+ *     `fit.ts`'s, so the deck and the FitCard tell one story.
+ *
+ * All of it is a REORDER, never a filter, for the same reason `answerScore`
+ * is: a left swipe said "less of this", not "never again", and a hard filter
+ * under a swipe rhythm empties the feed.
+ */
+const COMMUNITY_LIKED = 4;
+const COMMUNITY_PASSED = 2;
+const GEO_CAP = 3;
+const PROFILE_MIN_LIKES = 3;
+const PROFILE_PRICE_BAND = 0.08;
+const PROFILE_SQFT_BAND = 0.1;
+
+/** The city tally's contribution, shared by listing and community ranking. */
+function geoAffinity(signals: SignalState, unitId: string | undefined): number {
+	if (unitId === undefined) return 0;
+	const g = geoSignalFor(signals, unitId);
+	if (g === undefined) return 0;
+	return Math.max(-GEO_CAP, Math.min(GEO_CAP, g.right - g.left));
+}
+
+/** The medians of the homes the buyer right-swiped, when there are enough. */
+export interface LikedHomeProfile {
+	price?: number;
+	sqft?: number;
+	beds?: number;
+}
+
+/**
+ * Everything `swipeScore` needs that is derived from the POOL rather than
+ * from the listing under scoring — built once per rank, not once per compare.
+ *
+ * `likedCommunityIds` records the community CARD's id (the row uuid) while a
+ * listing carries its community's SLUG (see `ListingCardV3.communityId`), so
+ * the liked/passed sets are resolved to slugs through the pool's communities.
+ * A liked community that later drops out of the pool simply stops boosting —
+ * soft by construction, like every other signal here.
+ */
+export interface SwipeAffinity {
+	likedCommunitySlugs: ReadonlySet<string>;
+	passedCommunitySlugs: ReadonlySet<string>;
+	profile: LikedHomeProfile | null;
+}
+
+export function swipeAffinity(
+	listings: readonly ListingCardV3[],
+	communities: readonly CommunityCardV3[],
+	signals: SignalState,
+): SwipeAffinity {
+	const likedIds = new Set(signals.likedCommunityIds);
+	const passedIds = new Set(signals.passedCommunityIds);
+	const likedCommunitySlugs = new Set<string>();
+	const passedCommunitySlugs = new Set<string>();
+	for (const c of communities) {
+		if (likedIds.has(c.id)) likedCommunitySlugs.add(c.slug);
+		if (passedIds.has(c.id)) passedCommunitySlugs.add(c.slug);
+	}
+
+	const likedListings = new Set(signals.likedListingIds);
+	const rows = listings.filter((l) => likedListings.has(l.id));
+	let profile: LikedHomeProfile | null = null;
+	if (rows.length >= PROFILE_MIN_LIKES) {
+		profile = {};
+		const price = median(
+			rows.flatMap((l) => (l.price === undefined ? [] : [l.price])),
+		);
+		const sqft = median(
+			rows.flatMap((l) => (l.sqft === undefined ? [] : [l.sqft])),
+		);
+		const beds = median(
+			rows.flatMap((l) => (l.beds === undefined ? [] : [l.beds])),
+		);
+		if (price !== undefined) profile.price = price;
+		if (sqft !== undefined) profile.sqft = sqft;
+		if (beds !== undefined) profile.beds = beds;
+	}
+
+	return { likedCommunitySlugs, passedCommunitySlugs, profile };
+}
+
+/** Inside the profile band? Missing data on either side is neutral, never a demotion. */
+function inBand(
+	value: number | undefined,
+	center: number | undefined,
+	band: number,
+): boolean {
+	if (value === undefined || center === undefined || center === 0) return false;
+	return Math.abs(value - center) / center <= band;
+}
+
+/**
+ * How strongly the swipes so far favour this house. See the weight table
+ * above `COMMUNITY_LIKED` for what each term is worth and why.
+ */
+export function swipeScore(
+	listing: ListingCardV3,
+	signals: SignalState,
+	affinity: SwipeAffinity,
+): number {
+	let score = 0;
+
+	if (listing.communityId !== undefined) {
+		if (affinity.likedCommunitySlugs.has(listing.communityId))
+			score += COMMUNITY_LIKED;
+		if (affinity.passedCommunitySlugs.has(listing.communityId))
+			score -= COMMUNITY_PASSED;
+	}
+
+	score += geoAffinity(signals, listing.geoUnitId);
+
+	// The lifestyle dims the trade-off swipes accumulated, on the same clamp
+	// `rankCommunities` has always used for them.
+	let dims = 0;
+	for (const dim of listing.dims ?? []) dims += signals.dims[dim] ?? 0;
+	score += Math.max(-ANSWER_CAP, Math.min(ANSWER_CAP, dims));
+
+	const p = affinity.profile;
+	if (p !== null) {
+		if (inBand(listing.price, p.price, PROFILE_PRICE_BAND)) score += 1;
+		if (inBand(listing.sqft, p.sqft, PROFILE_SQFT_BAND)) score += 1;
+		if (
+			listing.beds !== undefined &&
+			p.beds !== undefined &&
+			listing.beds === p.beds
+		)
+			score += 1;
+	}
+
+	return score;
+}
+
 function rankListings(
 	listings: readonly ListingCardV3[],
+	communities: readonly CommunityCardV3[],
 	signals: SignalState,
 ): ListingCardV3[] {
 	const liked = new Set(signals.likedListingIds);
 	const medians = poolMedians(listings);
+	const affinity = swipeAffinity(listings, communities, signals);
 	// `-100` keeps an already-liked house out of the way whatever the answers
-	// say; the answer score only orders everything else.
+	// say; the answer and swipe scores only order everything else.
 	const score = (l: ListingCardV3): number =>
-		(liked.has(l.id) ? -100 : 0) + answerScore(l, signals, medians);
+		(liked.has(l.id) ? -100 : 0) +
+		answerScore(l, signals, medians) +
+		swipeScore(l, signals, affinity);
 	return [...listings].sort((a, b) => {
 		const d = score(b) - score(a);
 		return d !== 0 ? d : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
@@ -656,7 +809,8 @@ function pickCommunity(
 	ctx: FillContext,
 	rotate: number,
 ): CommunityCardV3 | null {
-	return firstUnseen(ctx.communityRanked, (c) => c.id, ctx.seen, rotate);
+	const cursor = hasPreferenceSignal(ctx.signals) ? 0 : rotate;
+	return firstUnseen(ctx.communityRanked, (c) => c.id, ctx.seen, cursor);
 }
 
 /**
@@ -673,13 +827,26 @@ function pickCommunity(
  * answer promoted are the ones that actually arrive next. Rotation is kept for
  * the no-signal case, where it is what stops every buyer seeing the same first
  * five houses and what lets the loop reach every row (see `loopedFallback`).
+ *
+ * "Told us something" was originally answered trade-offs only — the one input
+ * `rankListings` scored at the time. Now that the swipe ledger scores too, any
+ * signal `applySwipe` records switches the cursor: a buyer one right-swipe in
+ * has a ranking worth reading from the top, and leaving them on rotation was
+ * the rule-03 bug for swipes instead of answers.
  */
-function hasStatedPreference(signals: SignalState): boolean {
-	return (signals.answers?.length ?? 0) > 0;
+function hasPreferenceSignal(signals: SignalState): boolean {
+	return (
+		(signals.answers?.length ?? 0) > 0 ||
+		signals.geo.length > 0 ||
+		signals.likedCommunityIds.length > 0 ||
+		signals.passedCommunityIds.length > 0 ||
+		signals.likedListingIds.length > 0 ||
+		Object.keys(signals.dims).length > 0
+	);
 }
 
 function pickListing(ctx: FillContext, rotate: number): ListingCardV3 | null {
-	const cursor = hasStatedPreference(ctx.signals) ? 0 : rotate;
+	const cursor = hasPreferenceSignal(ctx.signals) ? 0 : rotate;
 	return firstUnseen(ctx.listingRanked, (x) => x.id, ctx.seen, cursor);
 }
 
@@ -928,7 +1095,7 @@ export function generateFeed(input: GenerateFeedInput): GenerateFeedResult {
 		level,
 		geoRanked: rankGeoUnits(pool.geoUnits, signals),
 		communityRanked: rankCommunities(pool.communities, signals),
-		listingRanked: rankListings(pool.listings, signals),
+		listingRanked: rankListings(pool.listings, pool.communities, signals),
 		loopedIds: [],
 		rotate0,
 	};

@@ -21,6 +21,63 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-15 08:05 UTC — phase302: the deck ranks on swipe history
+
+**Objective**: owner — "We need recommendation system so the next card
+rendered is based on swiping history and users preference."
+
+**Actions** (`apps/mobile/lib/feed/generate-feed.ts` + tests):
+- New `swipeScore` + `swipeAffinity` (both exported for tests): a home is
+  scored by (a) its community's swipe verdict — `+4` inside a liked
+  community, `−2` inside a passed one, resolved uuid→slug through the pool
+  because `likedCommunityIds` records the community CARD's uuid while a
+  listing carries the community SLUG; (b) its city tally (`right − left`
+  across every swipe that credited the unit), clamped to ±3 so a runaway
+  tally cannot outvote a specific community like; (c) the lifestyle `dims`
+  the trade-off swipes accumulated, on `rankCommunities`' existing ±8 clamp;
+  (d) a liked-home profile — once 3+ homes are liked (same floor as
+  `fit.ts`), `+1` apiece for landing in the liked-median price band (±8%),
+  sqft band (±10%) or on the median bed count (same bands as `fit.ts`, so
+  deck and FitCard tell one story). All terms are reorders, never filters.
+- `rankListings` = liked(−100) + `answerScore` + `swipeScore`; it now takes
+  `pool.communities` for the slug resolution.
+- `rankCommunities` additionally gets the same clamped geo term.
+- `hasStatedPreference` → `hasPreferenceSignal`: ANY signal `applySwipe`
+  records (geo tally, liked/passed community, liked listing, dims, answers)
+  now switches `pickListing` — and newly `pickCommunity` — from rotation
+  entry to ranked-order entry. Before this, only an answered trade-off did,
+  so a buyer who swiped but never answered had their ranking defeated by the
+  rotation — the rule-03 bug, for swipes instead of answers.
+
+**Decisions**:
+- Client-side only, extending the owner's 2026-08-23 "derive locally" call —
+  no server preference table, no change to the `created_at DESC` pool query
+  (whose response is CDN-cached as a pure function of the URL, so a
+  server-side per-user ranking would break caching for nothing the client
+  cannot already do).
+- Deck stays append-only (the phase120/135 invariant); `appendPage` already
+  reads signals imperatively at composition time, so ranking freshens on
+  every appended page (~every 7 swipes) without ever reshuffling cards the
+  buyer is holding.
+- Weights sit between the answer cap (±8) and the explicit-swipe demotion
+  (−100): a swiped community is the most specific place statement (±4/−2),
+  the city tally the coarsest (clamp ±3).
+
+**Verification**: mobile `tsc` clean, lint clean (8 pre-existing warnings),
+793 tests pass (785 + 8 new: community lift/sink, city lift, geo clamp vs
+community like, profile formation/floor/neutrality, ranked-entry switch).
+On-device feel check is the owner's.
+
+**Learnings**: the fixture trap — community card `id` and listing
+`communityId` only match by accident in fixtures that reuse one string; the
+wire sends uuid on one and slug on the other. The new tests set them
+differently on purpose so broken slug resolution cannot pass.
+
+**Next steps**: cross-session pool drift means a liked community that later
+falls out of the (videosOnly) pool stops boosting; if that ever matters,
+snapshot the slug into `SignalState` at swipe time the way `TradeoffAnswer`
+snapshots the cardId.
+
 ## 2026-09-15 03:40 UTC — phase301: community focus lands inside the label band
 
 **Objective**: owner, after phase300 — "Home is good. Community zoomin not
