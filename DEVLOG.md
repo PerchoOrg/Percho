@@ -21,6 +21,43 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-15 01:50 UTC — phase296: bigger type on the listing explore and community pages
+
+**Objective**: owner — "Home tour and some other page - explore page a lot of
+small text, not user friendly". The listing explore page (the card's
+"Explore home →" destination, home tour video in its hero) and the community
+"why people love it" page both set most of their copy at 9.5–13pt.
+
+**Actions**: raised the reading sizes on both surfaces and nothing else:
+
+- `app/listing/[id].tsx` + all of `components/listing/explore/*`: body copy
+  13 → 15 (fit-card text, insight detail, school names, facts values, photo
+  captions), secondary rows 12/12.5 → 13/14 (cost rows, trade-off prompt and
+  vote labels, school levels, ROI inputs), micro labels 9.5–11.5 → 11–13
+  (eyebrows, sources, assumptions, grades/meta, media chips, insight themes),
+  line heights up to match. `SchoolsBlock.levelCol` 74 → 84 so "Elementary"
+  still fits on one line at 14/600.
+- `app/community/[slug].tsx` + `StatBand`/`NearbyChart`/`RatingBars`/
+  `TourHero` chips: review bodies 13 → 15, chips/labels/place 13 → 14,
+  caption-style lines (section heads, evidence facts, review meta, source
+  note) 11 → 12. Bar-chart label columns 74 → 82 for the same reason as
+  the schools column. All page-local overrides on top of `textStyles` —
+  the shared scale itself is untouched.
+
+**Decisions**: did NOT touch `theme/typography.ts`. `textStyles` is the whole
+app's chrome and `redlineText` is the owner-pinned swipe-card redline with
+`redline-type.test.ts` asserting every number; the complaint names the two
+detail pages, so the bump is scoped to them. Headlines, prices, CTAs and
+icon glyphs were already large enough and are unchanged.
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` exit 0 (8 pre-existing
+warnings), mobile 780 pass. Web untouched.
+
+**Next steps**: owner reviews on device. If 15pt body reads too loud on the
+explore page's dense blocks, the single place to pull back is the values
+this phase set — they are still per-component, so any one block can come
+down without dragging the rest.
+
 ## 2026-09-15 01:45 UTC — phase295: six ways to tell a school from a neighbourhood (demo)
 
 **Objective**: owner, on the open item from phase291/294 — "Give me a demo

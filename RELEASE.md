@@ -38,6 +38,12 @@ price now sits right under its photo, and everything else — monthly cost,
 size, what residents say — sits under "The basics", still ordered by what you
 said matters on the You tab.
 
+### 2026-09-15
+- **Bigger, easier-to-read text on the home page and the neighbourhood
+  page.** Descriptions, school rows, cost breakdowns, resident reviews and
+  the small labels under figures all moved up a size — no more squinting at
+  fine print. Titles and prices were already large and stay as they were.
+
 ### 2026-09-14
 - **Map taps land where you aim.** The map was judging how close your finger
   was using the wrong screen height, so a tap that was clearly on a
