@@ -21,6 +21,45 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-15 03:15 UTC — phase300: the Map-button flight reads as a zoom, and the marks arrive with it
+
+**Objective**: owner, after phase299 — "Better but can you add some effect
+like zooming in after redirecting? And sometimes I need to manually zoom in
+the button will show up". Two faults: the arrival read as a CUT, and the
+community dot / home price chip sometimes only appeared after a manual
+pinch.
+
+**Diagnosis**:
+- *Cut, not zoom*: on the tab's first mount the flight ran under the tab
+  transition, so by the time the screen was watchable the animation was
+  done. And 500ms metro→street is too fast to read as descent.
+- *Marks needing a manual nudge*: the zoom bands, the labels and the
+  viewport fetch all key off the `region` state, which only
+  `onRegionChangeComplete` writes — and iOS does not reliably fire that
+  after a PROGRAMMATIC `animateToRegion`. When the callback was swallowed,
+  `region` still said metro: `cityBand`/`homesBand` stayed false, no marks
+  drawn, `useMapContent` never fetched the box. A manual pinch fired the
+  callback and everything appeared at once — exactly his report.
+
+**Actions** (`app/(tabs)/search.tsx`):
+- Point deep link: `FOCUS_FLY_DELAY_MS = 350` before the flight (the metro
+  frame paints first, so the descent is seen) and `FOCUS_FLY_MS = 900` for
+  the run itself. Timeout cleaned up on param change.
+- At take-off the effect now also WRITES `setRegion(target)` — the
+  destination is known, so the bands flip and the viewport fetch starts
+  during the flight; marks are on the glass at landing whether or not the
+  completion callback arrives.
+- `flyTo` (sheet rows + `?focus=` unit deep link) gets the same optimistic
+  `setRegion` — it had the same latent callback dependence.
+
+**Decisions**: transient mismatch accepted — during the ~1s flight `region`
+is ahead of the visual map, so marks/labels render early and a mid-flight
+tap would measure distances against the target span. Harmless at this
+duration, and the alternative (trusting the callback) is the bug itself.
+
+**Verification**: mobile `tsc` clean, lint 8 pre-existing warnings, 785
+tests pass. On-device feel check is the owner's.
+
 ## 2026-09-15 02:55 UTC — phase299: the map focus waits for the native map
 
 **Objective**: owner, on device after phase298 — "Clicking the map button

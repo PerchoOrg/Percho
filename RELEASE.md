@@ -39,6 +39,10 @@ size, what residents say — sits under "The basics", still ordered by what you
 said matters on the You tab.
 
 ### 2026-09-15
+- **The map now visibly glides in.** Tapping the Map button opens the map on
+  the metro view, then descends to the neighbourhood or home so you can see
+  where it sits on the way down — and the markers are there when you land,
+  instead of sometimes waiting for you to pinch the map first.
 - **The Map button now lands on the card itself.** Tapping Map above a home
   card takes you to that home on the map, and above a neighbourhood card to
   that neighbourhood's marker — zoomed in close enough to see it with its

@@ -191,6 +191,15 @@ const FOCUS_POINT_DELTA = {
 	home: { latitudeDelta: 0.02, longitudeDelta: 0.017 },
 } as const;
 
+/** The deep-link flight's shape (owner, 2026-09-15: "add some effect like
+ *  zooming in after redirecting"). The delay lets the metro frame PAINT
+ *  before the flight starts — on the tab's first mount the fly used to run
+ *  under the tab transition, so arriving read as a cut, not a zoom. Then a
+ *  longer run than `flyTo`'s 500ms, because this flight crosses from the
+ *  metro span down to a street span and needs the time to read as descent. */
+const FOCUS_FLY_DELAY_MS = 350;
+const FOCUS_FLY_MS = 900;
+
 /** The metro at rest — the map's opening frame, and where "back" returns to. */
 const METRO_REGION = {
 	latitude: 33.749,
@@ -372,15 +381,17 @@ export default function SearchTab() {
 	 *  takes over and the communities are simply there. */
 	const flyTo = (u: GeoUnit) => {
 		setExpanded(false);
-		mapRef.current?.animateToRegion(
-			{
-				latitude: u.centroid.lat,
-				longitude: u.centroid.lng,
-				latitudeDelta: 0.18,
-				longitudeDelta: 0.15,
-			},
-			500,
-		);
+		const target = {
+			latitude: u.centroid.lat,
+			longitude: u.centroid.lng,
+			latitudeDelta: 0.18,
+			longitudeDelta: 0.15,
+		};
+		mapRef.current?.animateToRegion(target, 500);
+		// Same guard as the point deep link below: `onRegionChangeComplete` is
+		// not guaranteed after a programmatic animation, and the bands + the
+		// viewport fetch key off `region` — write the known destination now.
+		setRegion(target);
 	};
 
 	/**
@@ -547,14 +558,23 @@ export default function SearchTab() {
 		if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 		handledPoint.current = key;
 		setExpanded(false);
-		mapRef.current?.animateToRegion(
-			{
-				latitude: lat,
-				longitude: lng,
-				...FOCUS_POINT_DELTA[focusKind === "home" ? "home" : "community"],
-			},
-			500,
-		);
+		const target = {
+			latitude: lat,
+			longitude: lng,
+			...FOCUS_POINT_DELTA[focusKind === "home" ? "home" : "community"],
+		};
+		const t = setTimeout(() => {
+			mapRef.current?.animateToRegion(target, FOCUS_FLY_MS);
+			// The bands, the labels and the viewport fetch all key off `region`,
+			// and only `onRegionChangeComplete` writes it — which iOS does NOT
+			// reliably fire after a programmatic animation (owner, 2026-09-15:
+			// the marks appeared only once a manual zoom forced the callback).
+			// The destination is known right here, so write it: the viewport
+			// feed starts fetching DURING the flight and the marks are on the
+			// glass at landing, callback or no callback.
+			setRegion(target);
+		}, FOCUS_FLY_DELAY_MS);
+		return () => clearTimeout(t);
 	}, [focusLat, focusLng, focusKind, mapReady]);
 
 	const units = useMemo(() => {
