@@ -21,6 +21,30 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-15 01:55 UTC — phase297: school labels stay as they are (decision, no code)
+
+**Objective**: close the open item, not change anything. After reviewing
+`/demos/map-labels/` the owner's answer to distinguishing school labels
+from community labels was "no need to change".
+
+**Decision**: the map keeps one label treatment — ink type with a white
+halo — for both schools and communities. The two are told apart by their
+anatomy (a community is a photo dot with its name UNDER it; a school is a
+small dot with its name BESIDE it) and by the fact that only communities
+carry a picture. No new colour token; `#4A6FA5` from the demo is not
+adopted.
+
+**Why this is worth an entry**: the item was raised twice in this log as
+still open (phase291, phase294) off the back of the owner citing
+Hawthorne Elementary during the tap saga. It is now settled — the label
+similarity was a red herring there; the real faults were the three
+geometry/resolution bugs phase291 and phase293 fixed. Don't re-raise it.
+
+The demo stays in the repo as the record of what was considered.
+
+**Verification**: no code changed. No RELEASE entry — nothing
+user-visible.
+
 ## 2026-09-15 01:50 UTC — phase296: bigger type on the listing explore and community pages
 
 **Objective**: owner — "Home tour and some other page - explore page a lot of
