@@ -13,6 +13,7 @@ import type {
 	TradeoffCardV3,
 } from "./card-types";
 import {
+	DWELL_SATURATION_MS,
 	EMPTY_SIGNALS,
 	FATIGUE_WINDOW,
 	applyDimRemoval,
@@ -23,6 +24,7 @@ import {
 	isLayerFatigued,
 	isLayerSuppressed,
 	revertSwipe,
+	swipeWeight,
 } from "./signals";
 
 const city: AreaCardV3 = {
@@ -356,5 +358,60 @@ describe("revertSwipe", () => {
 			geoUnitId: "city:duluth-ga",
 		});
 		expect(back.swipesInStage).toBe(after.swipesInStage);
+	});
+});
+
+describe("swipeWeight — attention scales the tally (§1.7)", () => {
+	it("no dwell means weight 1 — every legacy call keeps its meaning", () => {
+		expect(swipeWeight(undefined)).toBe(1);
+		expect(swipeWeight(-50)).toBe(1);
+	});
+
+	it("runs linearly from 0.5 (flick) to 2 (saturated)", () => {
+		expect(swipeWeight(0)).toBe(0.5);
+		expect(swipeWeight(DWELL_SATURATION_MS / 2)).toBe(1.25);
+		expect(swipeWeight(DWELL_SATURATION_MS)).toBe(2);
+		// Past saturation adds nothing — the buyer went to make coffee.
+		expect(swipeWeight(DWELL_SATURATION_MS * 100)).toBe(2);
+	});
+
+	it("applySwipe credits the geo tally with the dwell weight", () => {
+		const s = applySwipe(EMPTY_SIGNALS, listing, "right", {
+			dwellMs: DWELL_SATURATION_MS,
+		});
+		expect(geoSignalFor(s, "city:decatur-ga")?.right).toBe(2);
+	});
+
+	it("a considered pass weighs more than a reflex pass", () => {
+		const considered = applySwipe(EMPTY_SIGNALS, listing, "left", {
+			dwellMs: DWELL_SATURATION_MS,
+		});
+		const reflex = applySwipe(EMPTY_SIGNALS, listing, "left", { dwellMs: 0 });
+		const c = geoSignalFor(considered, "city:decatur-ga")?.left ?? 0;
+		const r = geoSignalFor(reflex, "city:decatur-ga")?.left ?? 0;
+		expect(c).toBe(2);
+		expect(r).toBe(0.5);
+	});
+
+	it("dims bumps stay unweighted — dwell on a question is reading time", () => {
+		const s = applySwipe(EMPTY_SIGNALS, tradeoff, "right", {
+			dwellMs: DWELL_SATURATION_MS,
+		});
+		expect(s.dims.walkable).toBe(1);
+		expect(s.dims.outdoors).toBe(-0.5);
+	});
+
+	it("revertSwipe subtracts the weight the swipe actually added", () => {
+		const after = applySwipe(EMPTY_SIGNALS, listing, "right", {
+			dwellMs: DWELL_SATURATION_MS,
+		});
+		const back = revertSwipe(after, {
+			id: "l-1",
+			kind: "listing",
+			verdict: "right",
+			geoUnitId: "city:decatur-ga",
+			weight: 2,
+		});
+		expect(back.geo).toEqual([]);
 	});
 });

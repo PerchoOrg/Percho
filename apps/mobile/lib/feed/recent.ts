@@ -43,6 +43,12 @@ export interface RecentEntry {
 	thumbUrl?: string;
 	/** The unit the swipe credited, so the verdict can be handed back. */
 	geoUnitId?: string;
+	/**
+	 * The attention weight the swipe added to its geo tally (`swipeWeight`),
+	 * snapshotted so "Bring back" subtracts the same amount. Absent on entries
+	 * from before weighting existed — those added exactly 1.
+	 */
+	weight?: number;
 }
 
 /**
@@ -52,6 +58,7 @@ export function recentEntryFor(
 	card: FeedCardV3,
 	verdict: SwipeVerdict,
 	at: number,
+	weight?: number,
 ): RecentEntry | null {
 	if (card.kind === "listing") {
 		return {
@@ -66,6 +73,7 @@ export function recentEntryFor(
 			subtitle: [card.priceLabel, card.locality].filter(Boolean).join(" · "),
 			...(card.heroUrl ? { thumbUrl: card.heroUrl } : {}),
 			...(card.geoUnitId ? { geoUnitId: card.geoUnitId } : {}),
+			...(weight !== undefined ? { weight } : {}),
 		};
 	}
 	if (card.kind === "community") {
@@ -78,6 +86,7 @@ export function recentEntryFor(
 			subtitle: `${card.city}, ${card.state}`,
 			...(card.heroUrl ? { thumbUrl: card.heroUrl } : {}),
 			...(card.geoUnitId ? { geoUnitId: card.geoUnitId } : {}),
+			...(weight !== undefined ? { weight } : {}),
 		};
 	}
 	return null;

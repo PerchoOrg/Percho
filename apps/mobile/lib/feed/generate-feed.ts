@@ -60,6 +60,13 @@ export interface FeedPool {
 	 * per room, because a side with a `match` filters them down here.
 	 */
 	roomPhotos?: Readonly<Record<string, readonly DoorPhoto[]>>;
+	/**
+	 * `/api/mobile/similar` — "buyers who liked yours also liked", 0..1 per
+	 * listing id (`useCfScores`). The one cross-user signal in the ranking.
+	 * Optional: offline, cold-start, or a buyer with no likes simply ranks
+	 * without it.
+	 */
+	cfScores?: Readonly<Record<string, number>>;
 }
 
 export const EMPTY_POOL: FeedPool = {
@@ -179,11 +186,44 @@ function rankCommunities(
 	const score = (c: CommunityCardV3): number =>
 		(passed.has(c.id) ? -100 : 0) +
 		dimScore(c) +
-		geoAffinity(signals, c.geoUnitId);
-	return [...communities].sort((a, b) => {
-		const d = score(b) - score(a);
-		return d !== 0 ? d : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-	});
+		geoAffinity(signals, c.geoUnitId) +
+		scopeAffinity(signals, c.geoUnitId);
+	return stableRank(communities, score);
+}
+
+/**
+ * Sort by score, ties keeping the POOL's order — `Array.prototype.sort` is
+ * stable, so no explicit tie-break is needed.
+ *
+ * This replaces the old `a.id < b.id` tie-break, which was quietly the wrong
+ * arbiter: on equal scores it reshuffled the list into uuid order, throwing
+ * away both the server's newest-first ordering and `preferScope`'s partition
+ * (the phase140 scope sheet reordered a pool that the very next sort un-ordered
+ * whenever ranking ran). Input order IS deterministic — same pool, same result
+ * — which is all the id comparison was there to guarantee.
+ */
+function stableRank<T>(items: readonly T[], score: (item: T) => number): T[] {
+	return [...items].sort((a, b) => score(b) - score(a));
+}
+
+/**
+ * The explicit scope pick, as a score — the §1.3 "soft ordering signal".
+ *
+ * Worth more than every inferred signal combined (community ±4/−2, geo ±3,
+ * dims ±8, profile ≤4 — max 19) because it is the one thing the buyer SAID
+ * rather than something we observed; and less than the ±100 swipe demotions,
+ * because a scope narrows a search and a thumb decides a house. Without this
+ * term the scope only lived in `preferScope`'s pool reorder, which any ranked
+ * sort promptly discarded.
+ */
+const SCOPE_BOOST = 20;
+
+function scopeAffinity(
+	signals: SignalState,
+	unitId: string | undefined,
+): number {
+	if (signals.scope === undefined || unitId === undefined) return 0;
+	return unitId === signals.scope.unitId ? SCOPE_BOOST : 0;
 }
 
 /**
@@ -273,8 +313,9 @@ export function movedUpCount(
  *   · the LIKED-HOME PROFILE: once three homes are liked (the same floor
  *     `lib/listing/fit.ts` uses before it claims a pattern), a home earns
  *     `+1` apiece for landing inside the liked-median price band (±8%),
- *     sqft band (±10%), or on the liked-median bed count — the bands are
- *     `fit.ts`'s, so the deck and the FitCard tell one story.
+ *     sqft band (±10%), on the liked-median bed count, or on the liked
+ *     homes' plurality visual style — the bands are `fit.ts`'s, so the deck
+ *     and the FitCard tell one story.
  *
  * All of it is a REORDER, never a filter, for the same reason `answerScore`
  * is: a left swipe said "less of this", not "never again", and a hard filter
@@ -300,6 +341,12 @@ export interface LikedHomeProfile {
 	price?: number;
 	sqft?: number;
 	beds?: number;
+	/**
+	 * The PLURALITY visual style among the liked homes (`styleTag`, the vision
+	 * tagger's five-word vocabulary) — present only when at least two liked
+	 * homes share it, because one tagged home is an anecdote, not a taste.
+	 */
+	styleTag?: string;
 }
 
 /**
@@ -316,12 +363,22 @@ export interface SwipeAffinity {
 	likedCommunitySlugs: ReadonlySet<string>;
 	passedCommunitySlugs: ReadonlySet<string>;
 	profile: LikedHomeProfile | null;
+	/** See `FeedPool.cfScores`. Absent when the server had nothing to say. */
+	cf?: Readonly<Record<string, number>>;
 }
+
+/**
+ * What one co-like point is worth. The server's scores live in 0..1, so the
+ * whole term stays inside ±2 — a taste hint from OTHER buyers ranks below
+ * every statement this buyer made themselves (community ±4, scope +20).
+ */
+const CF_WEIGHT = 2;
 
 export function swipeAffinity(
 	listings: readonly ListingCardV3[],
 	communities: readonly CommunityCardV3[],
 	signals: SignalState,
+	cfScores?: Readonly<Record<string, number>>,
 ): SwipeAffinity {
 	const likedIds = new Set(signals.likedCommunityIds);
 	const passedIds = new Set(signals.passedCommunityIds);
@@ -349,9 +406,42 @@ export function swipeAffinity(
 		if (price !== undefined) profile.price = price;
 		if (sqft !== undefined) profile.sqft = sqft;
 		if (beds !== undefined) profile.beds = beds;
+		const style = pluralityStyle(rows);
+		if (style !== undefined) profile.styleTag = style;
 	}
 
-	return { likedCommunitySlugs, passedCommunitySlugs, profile };
+	return {
+		likedCommunitySlugs,
+		passedCommunitySlugs,
+		profile,
+		...(cfScores === undefined ? {} : { cf: cfScores }),
+	};
+}
+
+/**
+ * The style the liked homes lean toward: most common `styleTag`, ties broken
+ * by nothing — a tie means no lean, and claiming one would be invention.
+ * Requires two homes agreeing; see `LikedHomeProfile.styleTag`.
+ */
+function pluralityStyle(rows: readonly ListingCardV3[]): string | undefined {
+	const counts = new Map<string, number>();
+	for (const row of rows) {
+		if (row.styleTag === undefined) continue;
+		counts.set(row.styleTag, (counts.get(row.styleTag) ?? 0) + 1);
+	}
+	let best: string | undefined;
+	let bestN = 1; // floor of 2: beats 1, so a lone tagged home never leads
+	let tied = false;
+	for (const [style, n] of counts) {
+		if (n > bestN) {
+			best = style;
+			bestN = n;
+			tied = false;
+		} else if (n === bestN && best !== undefined) {
+			tied = true;
+		}
+	}
+	return tied ? undefined : best;
 }
 
 /** Inside the profile band? Missing data on either side is neutral, never a demotion. */
@@ -400,29 +490,37 @@ export function swipeScore(
 			listing.beds === p.beds
 		)
 			score += 1;
+		if (
+			listing.styleTag !== undefined &&
+			p.styleTag !== undefined &&
+			listing.styleTag === p.styleTag
+		)
+			score += 1;
 	}
+
+	score += CF_WEIGHT * (affinity.cf?.[listing.id] ?? 0);
 
 	return score;
 }
 
-function rankListings(
-	listings: readonly ListingCardV3[],
-	communities: readonly CommunityCardV3[],
-	signals: SignalState,
-): ListingCardV3[] {
+function rankListings(pool: FeedPool, signals: SignalState): ListingCardV3[] {
+	const listings = pool.listings;
 	const liked = new Set(signals.likedListingIds);
 	const medians = poolMedians(listings);
-	const affinity = swipeAffinity(listings, communities, signals);
+	const affinity = swipeAffinity(
+		listings,
+		pool.communities,
+		signals,
+		pool.cfScores,
+	);
 	// `-100` keeps an already-liked house out of the way whatever the answers
 	// say; the answer and swipe scores only order everything else.
 	const score = (l: ListingCardV3): number =>
 		(liked.has(l.id) ? -100 : 0) +
 		answerScore(l, signals, medians) +
-		swipeScore(l, signals, affinity);
-	return [...listings].sort((a, b) => {
-		const d = score(b) - score(a);
-		return d !== 0 ? d : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-	});
+		swipeScore(l, signals, affinity) +
+		scopeAffinity(signals, l.geoUnitId);
+	return stableRank(listings, score);
 }
 
 /**
@@ -841,7 +939,10 @@ function hasPreferenceSignal(signals: SignalState): boolean {
 		signals.likedCommunityIds.length > 0 ||
 		signals.passedCommunityIds.length > 0 ||
 		signals.likedListingIds.length > 0 ||
-		Object.keys(signals.dims).length > 0
+		Object.keys(signals.dims).length > 0 ||
+		// An explicit scope pick is a stated preference too — the ranked list
+		// leads with the scoped city (`scopeAffinity`), so read it from the top.
+		signals.scope !== undefined
 	);
 }
 
@@ -1095,7 +1196,7 @@ export function generateFeed(input: GenerateFeedInput): GenerateFeedResult {
 		level,
 		geoRanked: rankGeoUnits(pool.geoUnits, signals),
 		communityRanked: rankCommunities(pool.communities, signals),
-		listingRanked: rankListings(pool.listings, pool.communities, signals),
+		listingRanked: rankListings(pool, signals),
 		loopedIds: [],
 		rotate0,
 	};
@@ -1150,4 +1251,74 @@ export function generateFeed(input: GenerateFeedInput): GenerateFeedResult {
 		exhausted,
 		loopedIds: ctx.loopedIds,
 	};
+}
+
+/**
+ * How many positions past the new active card `rerankTail` must not touch:
+ * `SwipeStack` mounts activeIndex−1‥+2, so +2 is on the glass and +3 is one
+ * card of slack for a fast second swipe landing before the re-rank commits.
+ */
+export const RERANK_HOLD = 3;
+
+/**
+ * Re-order the deck's unswiped tail to the CURRENT ranking — the per-swipe
+ * half of the recommendation loop. Composition (`appendPage`) already reads
+ * fresh signals, but only every ~7 swipes; this closes the gap so the very
+ * next unmounted cards follow the swipe that just happened.
+ *
+ * Three invariants, each load-bearing:
+ *
+ *   · positions `< from` are returned byte-for-byte: the mounted window keeps
+ *     its cards, so the deck-key contract ("a card's position never changes"
+ *     — for a MOUNTED card) and the mid-gesture peek both hold.
+ *   · each kind is reordered only among its OWN slots. The mix table and the
+ *     rhythm run-limits are properties of the kind sequence, which a
+ *     kind-preserving permutation cannot disturb. Trade-offs and areas keep
+ *     their exact positions.
+ *   · a deck that has begun LOOPING (any duplicate id) is returned untouched:
+ *     reordering duplicates can seat the same card twice in a row, and past
+ *     the pool's end there is nothing left for ranking to say anyway.
+ *
+ * Returns the input deck by identity when nothing moves, so the caller's
+ * `setDeck` can skip a render.
+ */
+export function rerankTail(
+	deck: readonly FeedCardV3[],
+	from: number,
+	signals: SignalState,
+	pool: FeedPool,
+): readonly FeedCardV3[] {
+	if (from < 0 || from >= deck.length) return deck;
+	const ids = deck.map((c) => c.id);
+	if (new Set(ids).size !== ids.length) return deck;
+
+	const rankOf = new Map<string, number>();
+	rankListings(pool, signals).forEach((l, i) => rankOf.set(l.id, i));
+	rankCommunities(pool.communities, signals).forEach((c, i) =>
+		rankOf.set(c.id, i),
+	);
+
+	const next = [...deck];
+	let moved = false;
+	for (const kind of ["listing", "community"] as const) {
+		const at: number[] = [];
+		for (let i = from; i < deck.length; i++) {
+			if (deck[i]?.kind === kind) at.push(i);
+		}
+		if (at.length < 2) continue;
+		const cards = at.map((i) => deck[i] as FeedCardV3);
+		// Stable, so cards the ranking cannot place keep their deck order.
+		const sorted = [...cards].sort(
+			(a, b) =>
+				(rankOf.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+				(rankOf.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+		);
+		for (let j = 0; j < at.length; j++) {
+			const pos = at[j] as number;
+			const card = sorted[j] as FeedCardV3;
+			if (next[pos] !== card) moved = true;
+			next[pos] = card;
+		}
+	}
+	return moved ? next : deck;
 }

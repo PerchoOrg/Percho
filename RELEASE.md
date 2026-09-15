@@ -20,6 +20,22 @@ Everything is learned from the swipes you've already made, on your own
 device — there's no form to fill in, and a left swipe never blacklists
 anything; it just means "less of this for now".
 
+### 2026-09-15
+- **The feed now notices how long you looked.** A home you watched for half
+  a minute before deciding counts for more than one you flicked past — in
+  both directions — so the feed learns faster from the cards you actually
+  considered.
+- **It picks up your taste in style, too.** Like a few homes that look
+  modern, or cozy, or traditional, and more homes with that same look start
+  arriving sooner.
+- **"Buyers who liked these homes also liked…"** — for the first time, what
+  other buyers with similar taste enjoyed gives your feed a gentle nudge.
+  It's a hint, never the boss: your own swipes always outrank it.
+- **The feed reacts swipe by swipe now**, not every half-dozen cards — like
+  a neighbourhood and the very next homes already lean toward it.
+- **Fixed: choosing an area on the map now genuinely leads your feed.** The
+  place you picked used to get quietly shuffled back in some sessions.
+
 ---
 
 ## v1.9 — Compare now weighs the four things buyers check first

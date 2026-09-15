@@ -134,6 +134,17 @@ export function mapUrl(b: {
 	return `${apiBase()}/api/mobile/map?${q.toString()}`;
 }
 
+/**
+ * `/api/mobile/similar?likedIds=…` — "buyers who liked these also liked",
+ * scored 0..1 per listing id (phase303). Caller caps the id count; the
+ * server re-caps at 50 regardless.
+ */
+export function similarUrl(likedIds: readonly string[]): string {
+	return `${apiBase()}/api/mobile/similar?likedIds=${likedIds
+		.map(encodeURIComponent)
+		.join(",")}`;
+}
+
 /** `/api/mobile/areas` — county shapes + their metrics, for the lens map. */
 export function areasUrl(): string {
 	return `${apiBase()}/api/mobile/areas`;

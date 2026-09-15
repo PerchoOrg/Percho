@@ -91,6 +91,11 @@ export interface PoolListingDTO {
   sqft?: number;
   beds?: number;
   /**
+   * The vision tagger's confident style call (`listings.ai_style.style`) —
+   * the mobile ranker's taste feature. Never rendered.
+   */
+  styleTag?: string;
+  /**
    * Photo count for the redline's "⊕ N Photos" hero pill.
    *
    * Only sent when the listing has MORE THAN ONE photo: a pill reading

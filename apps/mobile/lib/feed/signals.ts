@@ -164,11 +164,51 @@ function isPositive(card: FeedCardV3, verdict: SwipeVerdict): boolean {
 	return verdict === "right";
 }
 
+/**
+ * How much attention the swipe carried, when the caller knows.
+ *
+ * `dwellMs` is time-on-card — in practice the interval since the previous
+ * swipe, which also folds in a detail-page visit made from the card. That is
+ * the point: a flick past a card and a like after twenty seconds of watching
+ * its tour are not the same statement, and the geo tallies were counting them
+ * identically.
+ */
+export interface SwipeEngagement {
+	dwellMs?: number;
+}
+
+/** Dwell past this adds nothing more — the buyer went to make coffee. */
+export const DWELL_SATURATION_MS = 30_000;
+const WEIGHT_MIN = 0.5;
+const WEIGHT_MAX = 2;
+
+/**
+ * Attention → tally weight, linear from 0.5 (instant flick) to 2 (half a
+ * minute of engagement), 1 when the caller has no dwell to offer — so every
+ * existing call site and every persisted tally keeps its old meaning.
+ *
+ * Symmetric on purpose: attention scales the SIGNAL, not the verdict. A
+ * considered pass says more about the city than a reflex pass, exactly as a
+ * considered like does — the direction is the verdict's job.
+ */
+export function swipeWeight(dwellMs?: number): number {
+	if (dwellMs === undefined || dwellMs < 0) return 1;
+	const t = Math.min(dwellMs, DWELL_SATURATION_MS) / DWELL_SATURATION_MS;
+	return WEIGHT_MIN + (WEIGHT_MAX - WEIGHT_MIN) * t;
+}
+
 export function applySwipe(
 	signals: SignalState,
 	card: FeedCardV3,
 	verdict: SwipeVerdict,
+	engagement?: SwipeEngagement,
 ): SignalState {
+	/*
+	 * The weight touches only the GEO tallies. The liked/passed lists are sets
+	 * (membership has no strength), and the `dims` bumps come from trade-off
+	 * ANSWERS, where dwell is reading time, not preference strength.
+	 */
+	const weight = swipeWeight(engagement?.dwellMs);
 	let next: SignalState = {
 		...signals,
 		swipesInStage: signals.swipesInStage + 1,
@@ -181,7 +221,7 @@ export function applySwipe(
 			// empty feed.
 			next = {
 				...next,
-				geo: addGeo(next.geo, card.unit.id, card.unit.level, verdict, 1),
+				geo: addGeo(next.geo, card.unit.id, card.unit.level, verdict, weight),
 			};
 			break;
 		}
@@ -204,7 +244,7 @@ export function applySwipe(
 			if (card.geoUnitId) {
 				next = {
 					...next,
-					geo: addGeo(next.geo, card.geoUnitId, "city", verdict, 1),
+					geo: addGeo(next.geo, card.geoUnitId, "city", verdict, weight),
 				};
 			}
 			break;
@@ -227,7 +267,7 @@ export function applySwipe(
 			if (card.geoUnitId) {
 				next = {
 					...next,
-					geo: addGeo(next.geo, card.geoUnitId, "city", verdict, 1),
+					geo: addGeo(next.geo, card.geoUnitId, "city", verdict, weight),
 				};
 			}
 			break;
@@ -353,7 +393,12 @@ export function revertSwipe(
 	if (card.geoUnitId !== undefined) {
 		next = {
 			...next,
-			geo: subtractGeo(next.geo, card.geoUnitId, card.verdict, 1),
+			geo: subtractGeo(
+				next.geo,
+				card.geoUnitId,
+				card.verdict,
+				card.weight ?? 1,
+			),
 		};
 	}
 	return next;
@@ -366,6 +411,12 @@ export interface RevertibleSwipe {
 	verdict: SwipeVerdict;
 	/** The unit the swipe credited, when it credited one. */
 	geoUnitId?: string;
+	/**
+	 * The attention weight the swipe carried (`swipeWeight`), so the revert
+	 * subtracts what was actually added. Absent for entries recorded before
+	 * weighting existed — those added exactly 1.
+	 */
+	weight?: number;
 }
 
 /**

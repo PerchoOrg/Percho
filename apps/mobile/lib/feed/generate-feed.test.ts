@@ -11,13 +11,14 @@ import {
 	answerScore,
 	generateFeed,
 	mixFor,
+	rerankTail,
 	swipeAffinity,
 	swipeScore,
 } from "./generate-feed";
 import type { GeoUnit } from "./geo-unit";
 import { STAGE_MIX, WINDOW } from "./ratios";
 import type { SignalState } from "./signals";
-import { EMPTY_SIGNALS, applySwipe } from "./signals";
+import { EMPTY_SIGNALS, applyScope, applySwipe } from "./signals";
 
 // ─── Fixtures: shaped like the real Supabase rows, no invented stats ──────────
 
@@ -958,5 +959,170 @@ describe("layer fatigue", () => {
 	it("compensates a fatigued layer with other fills, not blank slots", () => {
 		const signals: SignalState = { ...EMPTY_SIGNALS, dryStreak: { city: 15 } };
 		expect(gen(4, { signals }).cards).toHaveLength(WINDOW);
+	});
+});
+
+// ─── Per-swipe tail re-rank + scope scoring ───────────────────────────────────
+
+describe("rerankTail and scope", () => {
+	const brook: CommunityCardV3 = {
+		...community("uuid-brook"),
+		slug: "brookhaven-manor",
+	};
+	const vin: CommunityCardV3 = {
+		...community("uuid-vin"),
+		slug: "vinings-walk",
+	};
+	const TAIL_POOL: FeedPool = {
+		geoUnits: CITIES,
+		listings: [
+			listing("a1", "brookhaven-manor"),
+			listing("a2", "brookhaven-manor"),
+			listing("b1", "vinings-walk"),
+			listing("b2", "vinings-walk"),
+			listing("b3", "vinings-walk"),
+			listing("b4", "vinings-walk"),
+		],
+		communities: [brook, vin],
+	};
+
+	const freshDeck = () =>
+		generateFeed({
+			stage: 4,
+			signals: EMPTY_SIGNALS,
+			pool: TAIL_POOL,
+			seenIds: [],
+			count: 9,
+		}).cards;
+
+	it("reorders only the tail, and only within each kind's own slots", () => {
+		const deck = freshDeck();
+		const from = 3;
+		const liked = applySwipe(EMPTY_SIGNALS, vin, "right");
+		const next = rerankTail(deck, from, liked, TAIL_POOL);
+
+		// The head — the mounted window — is untouched, position by position.
+		for (let i = 0; i < from; i++) expect(next[i]).toBe(deck[i]);
+		// The kind at every position is exactly what it was: the mix and the
+		// rhythm run-limits survive any kind-preserving permutation.
+		expect(next.map((c) => c.kind)).toEqual(deck.map((c) => c.kind));
+		// And the multiset of cards is unchanged — a re-rank, not a re-compose.
+		expect([...next.map((c) => c.id)].sort()).toEqual(
+			[...deck.map((c) => c.id)].sort(),
+		);
+
+		// The first tail listing now comes from the community just liked.
+		const firstTailListing = next.slice(from).find((c) => c.kind === "listing");
+		expect(
+			firstTailListing !== undefined &&
+				"communityId" in firstTailListing &&
+				firstTailListing.communityId,
+		).toBe("vinings-walk");
+	});
+
+	it("returns the deck by identity when nothing needs to move", () => {
+		const deck = freshDeck();
+		expect(rerankTail(deck, deck.length, EMPTY_SIGNALS, TAIL_POOL)).toBe(deck);
+	});
+
+	it("leaves a looping deck alone — duplicates must not be reseated", () => {
+		const deck = freshDeck();
+		const looped = [...deck, deck[0] as FeedCardV3];
+		const liked = applySwipe(EMPTY_SIGNALS, vin, "right");
+		expect(rerankTail(looped, 2, liked, TAIL_POOL)).toBe(looped);
+	});
+
+	it("an explicit scope outranks every inferred signal", () => {
+		// The buyer LIKED a Brookhaven community, then scoped to Decatur. The
+		// scope is a statement; the like is an observation — Decatur leads.
+		const dec1 = { ...listing("dec1"), geoUnitId: "city:decatur-ga" };
+		const pool: FeedPool = {
+			...TAIL_POOL,
+			listings: [...TAIL_POOL.listings, dec1],
+		};
+		let signals = applySwipe(EMPTY_SIGNALS, brook, "right");
+		signals = applyScope(signals, {
+			unitId: "city:decatur-ga",
+			name: "Decatur",
+		});
+		const first = generateFeed({
+			stage: 4,
+			signals,
+			pool,
+			seenIds: [],
+			count: 9,
+		}).cards.find((c) => c.kind === "listing");
+		expect(first?.id).toBe("dec1");
+	});
+
+	it("equal scores keep the pool's own order — the server's, not uuid's", () => {
+		// b1..b4 all score alike; the old `a.id < b.id` tie-break would have
+		// reshuffled them. With a scope set the cursor reads ranked order from
+		// the top, so the pool order is what must come back.
+		const signals = applyScope(EMPTY_SIGNALS, {
+			unitId: "city:nowhere-ga",
+			name: "Nowhere",
+		});
+		const ids = generateFeed({
+			stage: 4,
+			signals,
+			pool: TAIL_POOL,
+			seenIds: [],
+			count: 9,
+		})
+			.cards.filter((c) => c.kind === "listing")
+			.map((c) => c.id);
+		expect(ids).toEqual(["a1", "a2", "b1", "b2", "b3", "b4"]);
+	});
+
+	it("the liked-home profile learns a plurality style", () => {
+		const styled = (id: string, styleTag?: string): ListingCardV3 => ({
+			...listing(id),
+			...(styleTag === undefined ? {} : { styleTag }),
+		});
+		const rows = [
+			styled("l1", "modern"),
+			styled("l2", "modern"),
+			styled("l3", "cozy"),
+		];
+		const signals: SignalState = {
+			...EMPTY_SIGNALS,
+			likedListingIds: ["l1", "l2", "l3"],
+		};
+		const affinity = swipeAffinity(rows, [], signals);
+		expect(affinity.profile?.styleTag).toBe("modern");
+		expect(swipeScore(styled("x", "modern"), signals, affinity)).toBe(1);
+		expect(swipeScore(styled("y", "rural"), signals, affinity)).toBe(0);
+	});
+
+	it("a style tie claims no style at all", () => {
+		const styled = (id: string, styleTag: string): ListingCardV3 => ({
+			...listing(id),
+			styleTag,
+		});
+		const rows = [styled("l1", "modern"), styled("l2", "cozy"), listing("l3")];
+		const signals: SignalState = {
+			...EMPTY_SIGNALS,
+			likedListingIds: ["l1", "l2", "l3"],
+		};
+		expect(swipeAffinity(rows, [], signals).profile?.styleTag).toBeUndefined();
+	});
+});
+
+// ─── Collaborative filtering (server co-likes) ────────────────────────────────
+
+describe("cf scores", () => {
+	it("a co-like lifts a home, bounded to ±2 and below every own-thumb term", () => {
+		const rows = [listing("x"), listing("y")];
+		const signals = EMPTY_SIGNALS;
+		const affinity = swipeAffinity(rows, [], signals, { x: 1, y: 0.25 });
+		expect(swipeScore(listing("x"), signals, affinity)).toBe(2);
+		expect(swipeScore(listing("y"), signals, affinity)).toBe(0.5);
+		expect(swipeScore(listing("z"), signals, affinity)).toBe(0);
+	});
+
+	it("no cf map means no term — offline ranks exactly as before", () => {
+		const affinity = swipeAffinity([listing("x")], [], EMPTY_SIGNALS);
+		expect(swipeScore(listing("x"), EMPTY_SIGNALS, affinity)).toBe(0);
 	});
 });

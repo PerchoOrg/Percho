@@ -32,11 +32,13 @@ import {
 import {
 	EMPTY_SIGNALS,
 	type SignalState,
+	type SwipeEngagement,
 	applyDimRemoval,
 	applyScope,
 	applySkipLayer,
 	applySwipe,
 	revertSwipe,
+	swipeWeight,
 } from "../lib/feed/signals";
 
 interface FeedSessionState {
@@ -68,6 +70,7 @@ interface FeedSessionState {
 		card: FeedCardV3,
 		verdict: SwipeVerdict,
 		at: number,
+		engagement?: SwipeEngagement,
 	) => SignalState;
 	skipLayer: (layer: FunnelLayer) => void;
 	/**
@@ -99,11 +102,18 @@ export const useFeedSession = create<FeedSessionState>()(
 			sessionN: 0,
 			hydrated: false,
 
-			recordSwipe: (card, verdict, at) => {
-				const signals = applySwipe(get().signals, card, verdict);
+			recordSwipe: (card, verdict, at, engagement) => {
+				const signals = applySwipe(get().signals, card, verdict, engagement);
 				// `null` for the kinds the You tab does not list (§1.8: an answer
 				// is not revertible), so nothing unrevertible reaches RECENT.
-				const entry = recentEntryFor(card, verdict, at);
+				// The entry snapshots the same weight `applySwipe` used, so a
+				// "Bring back" subtracts what was actually added.
+				const entry = recentEntryFor(
+					card,
+					verdict,
+					at,
+					swipeWeight(engagement?.dwellMs),
+				);
 				set((s) => ({
 					signals,
 					lastSwipeAt: at,
@@ -134,6 +144,7 @@ export const useFeedSession = create<FeedSessionState>()(
 							kind: entry.kind,
 							verdict: entry.verdict,
 							...(entry.geoUnitId ? { geoUnitId: entry.geoUnitId } : {}),
+							...(entry.weight !== undefined ? { weight: entry.weight } : {}),
 						}),
 						// Dropping the id from `seenIds` is what actually brings the
 						// card back: the composer dedupes against it, so until it is

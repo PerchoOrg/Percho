@@ -156,6 +156,13 @@ export interface ListingCardV3 {
 	yearBuilt?: number;
 	sqft?: number;
 	beds?: number;
+	/**
+	 * The vision tagger's aggregate style call for the listing's photos —
+	 * `luxury | modern | traditional | cozy | rural` (`listings.ai_style`).
+	 * The server sends it only when the tagger was confident; a ranking
+	 * feature, never rendered.
+	 */
+	styleTag?: string;
 	dims?: readonly DimKey[];
 	/**
 	 * Photo count for the redline's "⊕ N Photos" hero pill. Server sends it only

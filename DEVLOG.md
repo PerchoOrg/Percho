@@ -21,6 +21,91 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-15 11:30 UTC — phase303: dwell weighting, style taste, swipe metrics, co-like CF
+
+**Objective**: owner, after the phase302 evaluation ("comparing to TikTok or
+rednote this sounds super naive") — do steps 1–3 of the agreed ladder:
+(1) implicit signals + style feature + per-card granularity, (2) make swipe
+telemetry queryable and stand up the right-swipe-rate metric, (3) the first
+server-side cross-user signal. The GBDT half of step 3 is deliberately NOT
+built: there is no training data yet; the step-2 columns are its label
+pipeline for when there is.
+
+**Actions — step 1 (client)**:
+- `signals.ts`: `swipeWeight(dwellMs)` — linear 0.5 (flick) → 2 (30s,
+  saturated), 1 when unknown. `applySwipe` takes optional `SwipeEngagement`
+  and scales the GEO tallies by it; dims bumps stay unweighted (dwell on a
+  question is reading time). `RevertibleSwipe.weight` + `RecentEntry.weight`
+  snapshot it so "Bring back" subtracts what was added. Dwell source:
+  `at − prevSwipeAt` in `feed.tsx` (the same figure telemetry ships).
+- Style taste: `listings.ai_style.style` (vision tagger; luxury / modern /
+  traditional / cozy / rural) now rides the wire as `styleTag` when
+  `confidence ≥ 0.5` (`browse-cards.ts` mobile-pool selects + gate DTO +
+  route projection + `pool-dto` parse). `LikedHomeProfile.styleTag` is the
+  plurality style among liked homes (≥2 agreeing, ties claim nothing);
+  matching it is a fourth profile `+1`.
+- Per-card granularity: `rerankTail(deck, from, signals, pool)` — after
+  every swipe `feed.tsx` re-orders the deck's tail (beyond the mounted
+  window + `RERANK_HOLD = 3`) to the fresh ranking. Kind-preserving
+  permutation, so the mix table and rhythm run-limits hold by construction;
+  a looping deck (duplicate ids) is left untouched; identity return when
+  nothing moves.
+
+**Actions — a correctness fix the re-rank exposed**: both rank functions'
+`a.id < b.id` tie-break reshuffled equal scores into uuid order, discarding
+the server's newest-first order AND `preferScope`'s partition (the phase140
+scope was being un-ordered by the very next sort whenever ranking ran).
+Ties now keep pool order (`Array.prototype.sort` is stable), and the scope
+became a real term: `SCOPE_BOOST = 20` on the scoped unit — above every
+inferred signal, below the ±100 thumb — in `rankListings`, `rankCommunities`,
+and `hasPreferenceSignal`.
+
+**Actions — step 2 (measurement)**:
+- `supabase/migrations/20260915100000_mobile_events_swipe_columns.sql`:
+  GENERATED stored columns `card_id` / `card_type` / `verdict` off `payload`
+  (existing rows computed during ADD COLUMN; ingest route untouched, cannot
+  drift) + two partial indexes (`type='swipe'` by card and by install). RLS
+  posture unchanged (enabled, zero policies, service-role only).
+- `database.types.ts` hand-extended (phase209 precedent — `db:types` still
+  fails all three routes on this host, phase247): generated columns as
+  `string | null` Rows, `?: never` Insert/Update. A future successful
+  regeneration produces the same shape.
+- `scripts/admin/swipe-metrics.ts` — the north-star readout: daily + total
+  right-swipe rate, split by card type, distinct installs; pages reads in
+  1000s (PostgREST cap).
+
+**Actions — step 3 (first cross-user signal)**:
+- `apps/web/lib/feed/co-like.ts` — pure item-item CF: co-occurrence over
+  installs sharing ≥1 seed like, damped by `sqrt(popularity)`, normalised
+  0..1, top 50. Tested.
+- `GET /api/mobile/similar?likedIds=…` — zod-validated (≤50 uuids), reads
+  ≤5000 newest right-swipes on listings via the new columns (service-role;
+  what leaves is an anonymous aggregate), `s-maxage=300`.
+- Client: `useCfScores(likedListingIds)` (silent-failure fetch, keyed on the
+  last 20 likes) → `FeedPool.cfScores` → `swipeScore` adds
+  `CF_WEIGHT(2) × score` — a taste hint from other buyers ranks below every
+  statement the buyer made themselves.
+
+**Decisions**:
+- Dwell proxy is inter-swipe gap, saturated at 30s — includes detail-page
+  visits on purpose (that IS engagement), caps the make-coffee outlier.
+- No GBDT/LR yet, stated to the owner: shipping a model with no data would
+  be theatre. The metric script defines the target; the columns define the
+  features and labels.
+- CF served as scores, not a ranked list: composition stays client-side and
+  the response stays CDN-cacheable per likedIds.
+
+**Verification**: mobile tsc/lint clean (8 pre-existing warnings), 808 tests
+(793 + 15 new); web tsc/lint clean, 1196 tests (incl. 5 co-like). Deploy
+order note: `/api/mobile/similar` 500s (client silently degrades) until the
+migration is pushed — run `echo | pnpm db:push` from the reference worktree
+right after merge.
+
+**Next steps**: watch `swipe-metrics` weekly once TestFlight traffic exists;
+when installs reach a few hundred, revisit LR/GBDT on the (columns, verdict)
+labels; consider logging served rank position into the swipe event for
+position-bias correction.
+
 ## 2026-09-15 08:05 UTC — phase302: the deck ranks on swipe history
 
 **Objective**: owner — "We need recommendation system so the next card
