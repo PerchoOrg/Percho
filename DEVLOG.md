@@ -21,6 +21,55 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-19 12:40 UTC — Toll Brothers Atlanta: community mapping + Northbrooke tour to the review gate
+
+**Objective**: owner shared tollbrothers.com/luxury-homes/Atlanta-GA ("二三十个
+在亚特兰大的社区") and asked (1) whether those map onto existing `communities`
+rows and (2) to run Northbrooke through the standard admin tour workflow.
+
+**Actions** (no code changes — DB writes all went through the existing
+pipeline):
+- Scraped the TB Atlanta index: **21 communities** (19 open, 2 coming soon),
+  9 of them in Forsyth. Spot-checked three detail pages: each has 6–12
+  professional photos + Matterport walkthroughs, **no traditional video** —
+  the gap a Percho neighborhood film fills.
+- Mapping (read-only queries against prod): **14 of 21** land on existing
+  rows, nearly all `county_gis` subdivisions with no cover —
+  `northbrooke-cumming`, `southbrooke` (+Ph1/Ph2), `bridlefield`,
+  `westover-cumming`, `willow-glen-forsyth`, `heardmont-farms`, `kennemore`,
+  `the-crossing-at-coal-mountain`, `new-talley-station` (+ 3 Flats phase
+  rows), `rowan-walk`, `east-cobb-walk`, `cameron-cove`, `ledgestone`; Aurora
+  Ridge maps to parent `great-sky` (nextdoor). **7 missing**: Silverton
+  (Chamblee), Overlook at Lenox Park, Emberly, Lakeview (Alpharetta), Jason's
+  Walk, Northfield (Cumming), Shallowford Pointe — new plats not yet in the
+  imported county layers.
+- Northbrooke run `7672e9e3-7ffa-4dcd-9b2a-ed80f319b394` on community
+  `c7e84b7c-d8ab-445d-9832-abc6be6e7f79`: `pnpm tour northbrooke-cumming`
+  (research 26s — found and wrote the TB page as `website`; resolve 15 POIs,
+  2 dropped; photos 39 enhanced → 23 shots). `ingest` isn't in the CLI's step
+  list, so a one-off tsx driver (in /tmp, not committed) called `runIngest`
+  with the same service actor: **191 photos from 12 TB pages**, one pass.
+  `tag` ×3 rounds tagged all 230; `filter` left **105 pending / 119 rejected
+  ("listing photo — one home, not the community") / 6 unusable**. Run status
+  is now **`review`**.
+
+**Decisions**: TB detail page = the community's own site for a builder
+community, so its photos ride the `community_site` licensing default. Public
+use of TB imagery still needs their OK — demo/review only for now, same
+posture as FMLS. `communities.builder` stays NULL (a /tmp write outside the
+pipeline was blocked by permissions; not worth a code path for one field —
+set it in the dashboard editor if wanted).
+
+**Issues**: CLI `ALL_STEPS` lacks `ingest` (admin UI/API only) — consider
+adding it next time it's needed (`tag` precedent, 2026-09-03).
+
+**Next steps**: owner reviews photos at
+`/admin/pipeline/community-nearby/c7e84b7c-d8ab-445d-9832-abc6be6e7f79`, then
+`pnpm tour northbrooke-cumming --steps plan,generate,assemble`. If the film
+lands well, the Forsyth corridor (7 more mapped TB rows) reuses the template;
+missing 7 rows come from `import-county-subdivisions.ts` conventions when
+needed.
+
 ## 2026-09-15 11:30 UTC — phase303: dwell weighting, style taste, swipe metrics, co-like CF
 
 **Objective**: owner, after the phase302 evaluation ("comparing to TikTok or
