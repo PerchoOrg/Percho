@@ -21,6 +21,46 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-21 10:20 UTC — Northbrooke: Seedance repriced 2.5×, 429-failed clips, stale plan missing amenities
+
+**Objective**: owner raised three issues on the Northbrooke run: (1) Seedance
+now ~$0.14/clip, "much more than before"; (2) not all clips rendered; (3) TB
+website amenities absent from the plan.
+
+**Findings** (all from prod, read-only):
+- **(1) Upstream repricing, not our params.** `photo_clips` ledger: 4s /
+  720p / `seedance-2.0-mini` clips cost $0.056–0.057 steadily from 2026-08-15
+  through 2026-09-04 (~50 clips), then $0.139–0.142 on 2026-09-21 — 2.5×,
+  identical model id and duration. OpenRouter lists exactly one endpoint for
+  the model (ByteDance's own "Seed"), so there is no cheaper provider to
+  route to. Options that don't touch the pinned model: cap seedance shots in
+  the plan, or price BytePlus ModelArk direct (new service — §8, owner call).
+- **(2) Not stuck — 7 of 23 clips failed** at 07:53–54 UTC, all Supabase
+  storage 429 `too_many_connections` (23 clips enqueued at once; the render
+  worker's burst of enhanced-photo downloads + uploads exhausted the pool).
+  All 7 are free engines; a `generate` re-run auto-requeues `failed` rows
+  (generate.ts:320). The 4 seedance clips all rendered fine.
+- **(3) The cut predated ingest.** The shot list the 09-21 Generate click
+  consumed was computed on 09-19 by the CLI `photos` step's settle pass —
+  BEFORE the TB-site ingest added 191 photos — and `plan` was never re-run
+  after the owner's review. Amenities never compete with the surrounding POI
+  budget (plan.ts:124); they simply didn't exist in the pool when that list
+  was made. Gotcha for next time: after review, always `--steps plan` before
+  touching Generate; the plan result lives under the `photos` key of
+  `step_results`, which makes a stale list easy to mistake for a fresh one.
+
+**Actions**: re-ran `plan` (free) → 44 shots: 22 amenity (Clubhouse, Pool ×9,
+Courts ×6, Green Space ×6), kenburns 25 / depthflow 15 / seedance 4, of which
+2 seedance are cache hits (Sawnee ×2) — only 2 new paid calls (~$0.28 at the
+new price). Two previously paid clips (Matt Park, Poole's Mill) fell out of
+the cut; they stay cached, never re-billed. `generate` NOT run — owner
+decides on the $0.28 vs swapping the 2 green-space seedance shots to
+depthflow for $0.
+
+**Next steps**: owner picks generate-with-seedance vs all-free; then
+`--steps generate,assemble`. Longer term: decide the seedance cost posture
+(cap per film / BytePlus direct / accept ~$0.28–0.56 per film).
+
 ## 2026-09-19 12:40 UTC — Toll Brothers Atlanta: community mapping + Northbrooke tour to the review gate
 
 **Objective**: owner shared tollbrothers.com/luxury-homes/Atlanta-GA ("二三十个
