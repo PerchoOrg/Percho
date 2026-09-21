@@ -21,6 +21,40 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-21 12:05 UTC — Northbrooke film shipped (option B, $0 new spend); generate's failed-requeue only sees seedance
+
+**Objective**: owner picked option B (swap the 2 new-seedance shots to
+depthflow) — finish the Northbrooke film with zero new paid calls.
+
+**Actions**:
+- Surgical edit of the stored shot list (`step_results.photos.shots`, one-off
+  script): the 2 green-space shots `a023806d` / `75b2f095` seedance→depthflow
+  (`orbit_left` / `orbit_right`, duration kept at 4s so the narration anchors
+  don't move). Final mix: kenburns 25 / depthflow 17 / seedance 2 (both
+  cached Sawnee clips — nothing billed).
+- `--steps generate,assemble`: 34 created + 5 requeued, rendered in ~90s; 4
+  clips 429-failed again (same `too_many_connections` burst).
+- **Bug found**: `generate.ts:322` — the bulk path's failed-clip requeue keys
+  on `forceEngine ?? 'seedance'`, so a failed depthflow/kenburns row is
+  invisible to a plain Generate ("0 requeued" while 4 rows sat failed; the
+  block's own comment says it requeues failed rows). Worked around via the
+  targeted path (`runGenerate(sb, run, photoIds, engine)` per engine), which
+  keys the check on the forced engine and did reset all 4.
+- Re-ran `assemble` once all 44 photos had ready clips. Worker assembled and
+  uploaded: assembly `a748cb41` superseded by the full one; final
+  `cf_stream_uid b54e72c1dde03b5dd00592ef5aad0797`, status ready 11:48 UTC.
+
+**Issues / follow-ups** (owner pinged, awaiting go-ahead):
+1. `worker.py` storage calls have no 429 retry — every burst of ~40 clips
+   loses a handful to `too_many_connections` and only a manual requeue saves
+   them. Fix: exponential backoff on storage GET/PUT.
+2. Fix `generate.ts` failed-requeue to key on each shot's own engine.
+
+**Next steps**: owner reviews the film on the community page / admin. If the
+template holds, the Forsyth corridor (7 more mapped TB subdivisions) is
+next, ~$0.28–0.56 seedance each at the new price unless the cap/BytePlus
+decision lands first.
+
 ## 2026-09-21 10:20 UTC — Northbrooke: Seedance repriced 2.5×, 429-failed clips, stale plan missing amenities
 
 **Objective**: owner raised three issues on the Northbrooke run: (1) Seedance
