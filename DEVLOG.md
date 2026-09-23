@@ -21,6 +21,44 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-23 14:30 UTC — Northbrooke re-cut: 53 duplicate TB-site photos rejected, film re-shipped
+
+**Objective**: owner — "大量重复的照片被选中". The 22 amenity shots in the
+09-21 cut were really ~7 distinct images.
+
+**Findings**: three stacked holes let the dupes through:
+1. TB's main page, "Event" page and "Quick Move In" page share one amenity
+   gallery, and ingest dedupes per `(poi_id, content_hash)` — each page's
+   synthetic POI stored its own copy (35 exact-sha256 groups, ×3–5 each).
+2. TB bakes the size into the FILENAME (`Pool_7_920.jpg` / `Pool_7_1920.jpg`)
+   — different bytes so content-hash misses it, and no `w` descriptor /
+   `width=` param so the srcset variant collapse misses it too.
+3. Nothing downstream (curator/plan) dedupes across POIs, so the cut took
+   the same picture up to 3 times.
+
+**Actions**:
+- One-off dedupe over the 191 amenity photos (dry-run then apply): keep one
+  row per image (prefer ready-clip > approved > width), reject the rest —
+  **46** "duplicate — same image ingested from another page" + **7**
+  "duplicate — smaller size variant"; 72 live → **19 distinct** survivors.
+  Reasons are in `rejection_reason`, visible in the admin table.
+- Re-ran `plan` → 32 shots, **0 duplicate hashes**, 10 amenity shots all
+  distinct. Plan again gave 2 uncached green-space photos to seedance;
+  applied the owner's standing option-B rule (seedance→depthflow orbit) —
+  final mix kenburns 17 / depthflow 13 / seedance 2 (both cached Sawnee).
+  **$0 new spend again.**
+- `generate,assemble`: 10 created + 9 requeued, all 32 ready, no 429s this
+  time (smaller batch). Film ready 14:19 UTC,
+  `cf_stream_uid 3a330951c7790415b46713c3039ba3b5`.
+
+**Code-fix candidates** (not done; owner go-ahead pending, joins the two from
+09-21): (a) make ingest's content-hash dedupe community-wide instead of
+per-POI; (b) strip trailing `_<width>` filename variants during harvest;
+(c) optional plan-level cross-POI hash dedupe as the belt to (a)'s braces.
+
+**Next steps**: owner reviews the new film; the TB-corridor batch waits on
+that plus the seedance cost posture.
+
 ## 2026-09-21 12:05 UTC — Northbrooke film shipped (option B, $0 new spend); generate's failed-requeue only sees seedance
 
 **Objective**: owner picked option B (swap the 2 new-seedance shots to
