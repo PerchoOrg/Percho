@@ -3505,9 +3505,11 @@ def process_listing_assembly(row: dict[str, Any]) -> None:
             storage_download(bucket, chosen["storage_path"], dest)
             clip_paths.append(dest)
 
-        if len(clip_paths) < 2:
+        # One clip is a film: the crossfade loop below simply does not run.
+        # FMLS sandbox listings (phase304) carry a single photo each.
+        if len(clip_paths) < 1:
             raise RuntimeError(
-                f"{surface}: need >=2 ready clips, got {len(clip_paths)} "
+                f"{surface}: need >=1 ready clip, got {len(clip_paths)} "
                 f"(missing: {', '.join(skipped[:5]) or 'none'})"
             )
 

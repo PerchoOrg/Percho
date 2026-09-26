@@ -5,7 +5,7 @@
  * meta tags eventually, possibly the dashboard onboarding). Keeping it here
  * means a brand decision change is one edit, not a grep-and-replace.
  */
-export const LANDING_TAGLINE = 'Feel the neighborhood first';
+export const LANDING_TAGLINE = 'A video-first platform for discovering where to live.';
 export const LANDING_SUBTITLE = 'Listings that feel like a place, not a spreadsheet.';
 
 // Pexels free-stock luxury home tour clip used as the hero background video.
