@@ -21,6 +21,44 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-26 07:35 UTC — phase304: FMLS licence review flagged scraped listings — cleanup started
+
+**Objective**: FMLS Data Services (thread "FMLS License Content using the
+Bridge API", 09-25) reviewed percho.co for the Bridge licence and found a
+card identical to FMLS #7798528, remarks included; asked where the data and
+videos come from and flagged "Tic Toc" as a trademark. Owner: fix every
+called-out issue before anyone replies; send nothing. Bridge test access
+expires **2026-09-29**.
+
+**Findings**: FMLS is right. The 18 video-backed `source='fmls'` listings
+phase166 kept "for demo purpose" are scraped (retired scraper), public on
+the feed, `/v/fmls/<id>` and the app; their films were rendered from the
+scraped photos. Bridge client + sync worker have never run; no creds on the
+host. `/agents` claimed "FMLS data via Bridge Interactive · IDX-compliant".
+Home hero read "TikTok for Homebuying", /about "what TikTok would look
+like…". Six `public/demos/*` mockups hot-linked `fmls-import/` photos.
+
+**Actions** (branch `phase304/fmls-compliance`, not merged):
+- Copy: tagline → "Feel the neighborhood first" (the App Store subtitle
+  draft); /about drops TikTok; /agents drops every FMLS/Bridge/IDX claim.
+  The copy generator's TikTok platform option stays (platform, not brand).
+- Demos: 8 `fmls-import` photo URLs → Unsplash; "4123 Islington Way"
+  (likely a real listing) → invented address.
+- `scripts/admin/purge-fmls-listings.ts` drafted (Stream + storage + rows,
+  dry-run default, no backup by owner decision) — NOT run, NOT committed:
+  the agent's permission classifier blocked the prod read and the purge;
+  the file also has one unfinished line (`mirror` log reference).
+- Logged into the Bridge dashboard (owner-provided login): app "Home buyer
+  searching tool", FMLS data access approved 07-31. Token extraction was
+  blocked by the permission classifier; session files deleted.
+
+**Next steps**: owner runs (or permits) the purge dry-run → `--apply`;
+owner pastes Bridge server token + test dataset id into the sync host env;
+then sync-worker → projection (`source='fmls_bridge'`) → kenburns films for
+a few test listings → verify percho.co → draft reply (draft only). Owner
+should rotate the Bridge password (shared in chat) and check the FMLS
+Marketplace product name for "Tic Toc".
+
 ## 2026-09-23 14:30 UTC — Northbrooke re-cut: 53 duplicate TB-site photos rejected, film re-shipped
 
 **Objective**: owner — "大量重复的照片被选中". The 22 amenity shots in the
