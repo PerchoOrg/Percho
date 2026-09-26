@@ -21,7 +21,44 @@ rotation, not on the way in.
 
 ---
 
-## 2026-09-26 09:05 UTC — phase304: Bridge sandbox rows into the feed as `fmls_bridge`; one-clip home tours
+## 2026-09-26 08:19 UTC — phase304: Bridge listings live; enhancement had altered the MLS photos — undone
+
+**Actions**:
+- `b7ac4d19` on main; reference worktree fast-forwarded, the three
+  `com.percho.render-worker*` agents `launchctl kickstart -k`'d so the
+  one-clip floor is live.
+- `import-bridge-listings.ts 5893300 5909385 --apply` → Fairmount
+  `90871e1e…` (`/v/fmls/d9e2c4cd…`), Americus `96a3a5a1…`
+  (`/v/fmls/2f88b764…`), both active.
+- One-off driver (not committed): tag → plan → `runGenerate(…, 'kenburns')`
+  both surfaces → `runAssembleAllSurfaces(approve)`.
+
+**Issues**:
+1. **The tag step re-queued enhancement** on both photos
+   (`enhanced_status='none'` is the backstop's trigger, worker.py "A
+   BACKSTOP") and the enhance pass auto-approved superres/denoise/sharpen/
+   color_correct — Fairmount's first film was cut from an altered MLS
+   photo. Fixed: both photos → `enhanced_status='rejected'`, enhanced files
+   removed, `enhanced_path` nulled; Fairmount re-rendered from the original
+   and re-assembled (square `3e31969b…`, landscape `ec8b323f…`); the two
+   enhanced-photo films (`6eecc3f0…`, `b1e6e42a…`) deleted from Stream. The
+   import script now writes `'rejected'` — the only state both the enhance
+   pass and the backstop leave alone.
+2. **Americus has no film**: its one "photo" is a sideways floor-plan scan
+   and `build_plan` dropped it (0 shots, 1 dropped) — correct call. It rides
+   the feed as a photo card ($1,500, floor plan).
+
+**Verification** (live, mobile viewport screenshots): home hero shows the
+new tagline; `/browse` shows both cards; Fairmount's page plays the film
+with $1,000,000 · 4 bd · 3 ba · 1,224 sqft · address. `/api/mobile/feed`
+stages 1/2/4 → both listings, `videosOnly=1` → Fairmount only. `/about` 0
+"TikTok"; `/agents` 0 Bridge/IDX claims.
+
+**Open**: IDX attribution ("Listing courtesy of FIRST MULTIPLE LISTING
+SERVICE") sits behind "More" on the listing page, not on the card face —
+owner call before FMLS looks again.
+
+## 2026-09-26 08:02 UTC — phase304: Bridge sandbox rows into the feed as `fmls_bridge`; one-clip home tours
 
 **Objective**: owner picked the two display-allowed Active test rows
 (5893300 Fairmount, 5909385 Americus) for the public feed, kenburns films;
@@ -46,7 +83,7 @@ tagline "A video-first platform for discovering where to live."
 has no `Media` resource and no `ModificationTimestamp`. Revisit when the
 real feed arrives.
 
-## 2026-09-26 08:20 UTC — phase304: every listing deleted (clean slate); test-row pick blocked on the display flag
+## 2026-09-26 07:51 UTC — phase304: every listing deleted (clean slate); test-row pick blocked on the display flag
 
 **Objective**: owner — "删除所有的现有的房源 不用再查了 干干净净的"; then put a
 few complete Active Bridge test listings into the public feed for the demo.
@@ -70,7 +107,7 @@ with an address); they carry 0–1 photos, prices like $1,400/$1,500, one is
 the review looks for. Best compliant pick: Fairmount GA ($1M, 4 bd, 1
 photo) + Americus GA (4 bd, 1 photo); owner to choose.
 
-## 2026-09-26 07:55 UTC — phase304: scraped FMLS listings purged; Bridge test feed is sandbox junk
+## 2026-09-26 07:43 UTC — phase304: scraped FMLS listings purged; Bridge test feed is sandbox junk
 
 **Objective**: owner approved the purge ("可以跑删除脚本") and pasted the
 Bridge tokens.
@@ -104,7 +141,7 @@ $1 homes in front of real buyers. Proposed instead: a separate review page
 on percho.co fed from the mirror, with kenburns films for a few ≥5-photo
 test rows, and point FMLS at it.
 
-## 2026-09-26 07:35 UTC — phase304: FMLS licence review flagged scraped listings — cleanup started
+## 2026-09-26 07:32 UTC — phase304: FMLS licence review flagged scraped listings — cleanup started
 
 **Objective**: FMLS Data Services (thread "FMLS License Content using the
 Bridge API", 09-25) reviewed percho.co for the Bridge licence and found a
