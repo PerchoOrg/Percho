@@ -19,8 +19,10 @@
  *     rather than shown with it.
  *   - Attribution: `external_agent_name` / `external_office` carry the listing
  *     agent and brokerage verbatim (`listings_owner_chk` requires the name).
- *   - Photos are copied as-is. `enhanced_status` is pinned to 'none' so the
- *     render worker's enhance pass never alters an MLS photo.
+ *   - Photos are copied as-is and must stay that way: `enhanced_status` is
+ *     'rejected', the one state the worker's enhance pass and the tag step's
+ *     re-queue backstop (worker.py, "A BACKSTOP") both leave alone. 'none'
+ *     is NOT enough — tagging re-queues it and the result auto-approves.
  *
  * Rows land as `source = 'fmls_bridge'`, `source_id = ListingKey` (distinct
  * from the retired scraper's 'fmls'), served at `/v/fmls/<ListingKey>`.
@@ -202,7 +204,7 @@ async function importOne(listingId: string) {
       height: size.height,
       status: 'ready',
       sort_order: i,
-      enhanced_status: 'none',
+      enhanced_status: 'rejected',
     });
     if (rowErr) throw new Error(`photo ${i}: row ${rowErr.message}`);
     firstPath ??= storagePath;
