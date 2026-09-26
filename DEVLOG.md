@@ -21,6 +21,40 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-26 07:55 UTC — phase304: scraped FMLS listings purged; Bridge test feed is sandbox junk
+
+**Objective**: owner approved the purge ("可以跑删除脚本") and pasted the
+Bridge tokens.
+
+**Actions**:
+- `purge-fmls-listings.ts` (dotenv import swapped for an inline
+  `.env.local` read — `scripts/` can't resolve `dotenv`) dry-run then
+  `--apply`: **6** `source='fmls'` listings left (not 18 — the set shrank
+  after phase166), 60 photos, 110 clips, 6 `listing_videos`, 47 assemblies,
+  1 lead, **46 Stream assets deleted**, 340 storage paths removed.
+  Verified: 0 fmls rows, 0 `fmls-import/` objects; all six
+  `www.percho.co/v/fmls/<id>` → 404; `/api/mobile/feed` 200 with zero
+  fmls mentions / addresses. `4123 Islington Way` WAS one of them.
+- `BRIDGE_SERVER_TOKEN` + `BRIDGE_DATASET_ID=fmls` added to the reference
+  worktree's `.env.local` (gitignored; sync host only). `DataSystem` lists
+  one dataset, `fmls`.
+- Not done: a provenance check on the non-`fmls` listings was blocked by the
+  permission classifier (PII) — owner to confirm none were copied from FMLS.
+
+**Findings — the test feed**: 1,178 Property rows, sandbox-scrambled:
+901 Expired / 22 Active; only 29 have an address or city; prices like
+`1` and `999999999`; beds `264`; NY cities with GA zips; 535 have
+`InternetEntireListingDisplayYN=false`; `LivingArea` always null. Photos are
+real (cloudfront), 123 GA rows have ≥5. It has **no
+`ModificationTimestamp`** (only `BridgeModificationTimestamp`) —
+`sync-worker.ts` watermarks on the former, so `$select`/incremental would
+400; a full sync without the watermark filter should work.
+
+**Decision needed (owner)**: projecting this into the public feed would put
+$1 homes in front of real buyers. Proposed instead: a separate review page
+on percho.co fed from the mirror, with kenburns films for a few ≥5-photo
+test rows, and point FMLS at it.
+
 ## 2026-09-26 07:35 UTC — phase304: FMLS licence review flagged scraped listings — cleanup started
 
 **Objective**: FMLS Data Services (thread "FMLS License Content using the
