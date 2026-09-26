@@ -21,10 +21,15 @@
  *      cascades. `mls_listings` is only counted: it is the Bridge mirror, and
  *      a re-run after the first sync must not wipe licensed rows.
  *
+ * `--all` widens the set to EVERY listing, agent uploads included (owner,
+ * 2026-09-26: "删除所有的现有的房源 … 干干净净的" — a clean slate before the
+ * Bridge test listings go in).
+ *
  * Usage (repo-root .env.local: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
  * CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_STREAM_API_TOKEN):
  *   pnpm --filter @percho/web exec tsx ../../scripts/admin/purge-fmls-listings.ts
  *   pnpm --filter @percho/web exec tsx ../../scripts/admin/purge-fmls-listings.ts --apply
+ *   pnpm --filter @percho/web exec tsx ../../scripts/admin/purge-fmls-listings.ts --all [--apply]
  *
  * DRY RUN BY DEFAULT. Nothing is deleted without --apply.
  */
@@ -34,6 +39,7 @@ import { createClient } from '@supabase/supabase-js';
 import { deleteVideo } from '../../apps/web/lib/cloudflare/stream.js';
 
 const APPLY = process.argv.includes('--apply');
+const ALL = process.argv.includes('--all');
 const SCRAPER_PREFIX = 'fmls-import';
 
 // Fill missing vars from .env.local (run from apps/web, as the usage says).
@@ -91,16 +97,14 @@ async function listPrefix(prefix: string): Promise<string[]> {
 
 async function main() {
   // ── 1. the doomed set and everything hanging off it ─────────────────────
-  const { data: doomed, error: listErr } = await sb
-    .from('listings')
-    .select('id, source_id, address, city, status')
-    .eq('source', 'fmls')
-    .order('created_at', { ascending: true });
+  let listQuery = sb.from('listings').select('id, source, city, status');
+  if (!ALL) listQuery = listQuery.eq('source', 'fmls');
+  const { data: doomed, error: listErr } = await listQuery.order('created_at', { ascending: true });
   if (listErr) throw new Error(`listings: ${listErr.message}`);
   const ids = (doomed ?? []).map((l) => l.id as string);
 
-  console.log(`fmls listings: ${ids.length}`);
-  for (const l of doomed ?? []) console.log(`  ${l.id}  ${l.source_id}  ${l.address}, ${l.city} (${l.status})`);
+  console.log(`${ALL ? 'all' : 'fmls'} listings: ${ids.length}`);
+  for (const l of doomed ?? []) console.log(`  ${l.id}  ${l.source ?? 'agent'}  ${l.city} (${l.status})`);
 
   type PhotoRow = { id: string; storage_path: string; enhanced_path: string | null };
   const photos = await selectIn<PhotoRow>('listing_photos', 'id, storage_path, enhanced_path', 'listing_id', ids);
@@ -180,9 +184,11 @@ async function main() {
   }
 
   // ── 5. verify ───────────────────────────────────────────────────────────
-  const { count } = await sb.from('listings').select('id', { count: 'exact', head: true }).eq('source', 'fmls');
+  let countQuery = sb.from('listings').select('id', { count: 'exact', head: true });
+  if (!ALL) countQuery = countQuery.eq('source', 'fmls');
+  const { count } = await countQuery;
   const left = await listPrefix(SCRAPER_PREFIX);
-  console.log(`fmls listings remaining: ${count}; ${SCRAPER_PREFIX}/ objects remaining: ${left.length}`);
+  console.log(`${ALL ? 'all' : 'fmls'} listings remaining: ${count}; ${SCRAPER_PREFIX}/ objects remaining: ${left.length}`);
 }
 
 main().catch((e) => {

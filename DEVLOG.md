@@ -21,6 +21,30 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-26 08:20 UTC — phase304: every listing deleted (clean slate); test-row pick blocked on the display flag
+
+**Objective**: owner — "删除所有的现有的房源 不用再查了 干干净净的"; then put a
+few complete Active Bridge test listings into the public feed for the demo.
+
+**Actions**:
+- `purge-fmls-listings.ts --all` (new flag: drops the `source='fmls'`
+  filter; output no longer prints street addresses). Dry-run then apply:
+  12 agent-owned listings, 248 photos, 305 clips, 12 `listing_videos`, 11
+  `generated_videos`, 68 assemblies, 1 lead; **79 Stream assets deleted**,
+  1,106 storage paths removed. `listings` count now **0**.
+- Verified live: `/api/mobile/feed?stage=3` → listings 0, communities 12
+  (5 with a film under `videosOnly=1`), geoUnits 109 — communities and their
+  films untouched. (Plain `/api/mobile/feed` is stage 0, which never ships
+  listings or communities — not a valid check on its own.)
+
+**Finding — no Active test row is both displayable and complete**: of 22
+Active rows only 6 have `InternetEntireListingDisplayYN=true` (the same 6
+with an address); they carry 0–1 photos, prices like $1,400/$1,500, one is
+"NY" with 264 beds. The photo-rich Active rows (11/10/7/5 photos) are all
+`display=false` — putting them on a public feed is exactly the IDX breach
+the review looks for. Best compliant pick: Fairmount GA ($1M, 4 bd, 1
+photo) + Americus GA (4 bd, 1 photo); owner to choose.
+
 ## 2026-09-26 07:55 UTC — phase304: scraped FMLS listings purged; Bridge test feed is sandbox junk
 
 **Objective**: owner approved the purge ("可以跑删除脚本") and pasted the
