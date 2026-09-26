@@ -21,6 +21,31 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-26 09:05 UTC — phase304: Bridge sandbox rows into the feed as `fmls_bridge`; one-clip home tours
+
+**Objective**: owner picked the two display-allowed Active test rows
+(5893300 Fairmount, 5909385 Americus) for the public feed, kenburns films;
+tagline "A video-first platform for discovering where to live."
+
+**Actions**:
+- `scripts/admin/import-bridge-listings.ts <ListingId>... [--apply]`: reads
+  Property via `BridgeClient.listProperties`, refuses rows with
+  `InternetEntireListingDisplayYN` or `InternetAddressDisplayYN` not true,
+  copies photos as-is with `enhanced_status='none'` (no altering MLS
+  photos), attribution in `external_agent_name`/`external_office`. Rows are
+  `source='fmls_bridge'`, `source_id=ListingKey`.
+- `/v/fmls/[sourceId]` looks up `fmls_bridge`; `listingShareUrl` and
+  `linkForCard` map it to the `/v/fmls/` segment; scraper `'fmls'` now gets
+  no link (test asserts it). New `link-for-card.test.ts`.
+- `worker.py` `process_listing_assembly`: floor 2 → 1 clip. Each sandbox row
+  has ONE photo (Americus's is a sideways floor-plan scan); with one clip
+  the xfade loop doesn't run (`crossfade_offsets([3.0]) == []`).
+- RELEASE.md dated bullets under v1.10.
+
+**Decisions**: not the sync-worker/mirror path from go-live.md — sandbox
+has no `Media` resource and no `ModificationTimestamp`. Revisit when the
+real feed arrives.
+
 ## 2026-09-26 08:20 UTC — phase304: every listing deleted (clean slate); test-row pick blocked on the display flag
 
 **Objective**: owner — "删除所有的现有的房源 不用再查了 干干净净的"; then put a
