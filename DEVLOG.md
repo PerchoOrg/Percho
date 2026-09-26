@@ -21,6 +21,55 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-26 08:50 UTC — phase304: five labelled sandbox listings filmed; feed has 6 films
+
+**Objective**: owner picked "import 5 labelled" after Bridge's generic
+`test` dataset turned out unusable — every one of its 35 shared photos
+(`cloudfront.net/test_data/listings/NN.jpg`) is S3 403.
+
+**Actions**:
+- `import-bridge-listings.ts` (phase304.8): non-Active rows open their
+  description with "FMLS test listing — status <X>, not for sale."; rows with
+  no street address read "No street address" with `<County> County` as city;
+  slug base includes the MLS number (four address-less rows would have
+  collided on `no-street-address`).
+- Imported 7404568 (Houston Co, 30 photos), 6826677 (Bacon Co, 19),
+  7049147 (Bacon Co, 17), 5303661 (Gibson, Closed, 16), 6755168 (DeKalb Co, 9).
+- One-off driver (deleted): tag → plan → `runGenerate(…, 'kenburns')` both
+  surfaces → assemble, all five in parallel, 08:38–08:44 UTC. Plans kept
+  18/15/15/14/3 shots (6755168's gallery is mostly junk). Driver asserted
+  every photo was still `enhanced_status='rejected'` before rendering.
+
+**Verification**: 6 `fmls_bridge` listings, 6 `listing_videos` ready with
+square + landscape; 92/92 photos `rejected`, no enhanced files.
+`/api/mobile/feed?stage=4` → 6 listings, all with `videoUrl`; all five new
+`/v/fmls/<key>` pages 200 and carry the status line; `/browse` screenshot
+shows the six cards.
+
+## 2026-09-26 08:45 UTC — phase304: Americus removed; Fairmount "repeats" is the deck loop; no better FMLS rows
+
+**Objective**: owner — "没有视频就不算能测试的 不要用"; Fairmount shows up
+many times; are there test rows with several photos?
+
+**Actions**: Americus (`96a3a5a1…`, no film) deleted — 1 storage object +
+the row; guarded to refuse if it had any film. Verified: its page 404,
+`/api/mobile/feed` and `/browse` carry only Fairmount. `listings` = 1.
+
+**Findings**:
+- The repeat is by design: `generate-feed.ts` `loopedFallback` loops the
+  pool once it runs out (owner 2026-08-23, "we should see all ready ones in
+  a loop"); a one-listing pool loops one listing. Only more inventory fixes it.
+- FMLS sandbox: 98 rows are display-allowed with ≥3 photos — every one
+  Expired/Canceled/Closed/Withdrawn, only 2 with an address (5303661 Gibson,
+  Closed, $295k, 16 real photos; 5500135 Adrian, $849). Some galleries are
+  placeholder digits ("1", "2"), others real homes (7404568, 30 photos).
+- Bridge's generic `test` dataset is readable with our token: 10,000 rows,
+  all Active, ~half display-allowed, 5–9 stock photos each, full
+  address/price — but Faker data (towns like "Wolfbury TX", brokerages like
+  "Rolfson, Conroy and Bashirian Realty"), not FMLS.
+
+**Next steps**: owner picks the source for more demo listings.
+
 ## 2026-09-26 08:19 UTC — phase304: Bridge listings live; enhancement had altered the MLS photos — undone
 
 **Actions**:
