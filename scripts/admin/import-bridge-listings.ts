@@ -4,7 +4,10 @@
  * Written 2026-09-26 for the FMLS licence review: until FMLS approves the
  * product, the Bridge token only sees FMLS's sandbox dataset, and the review
  * wants to see the product running on it. Owner picked the two Active test
- * rows FMLS allows on the internet (5893300 Fairmount, 5909385 Americus).
+ * rows FMLS allows on the internet (5893300 Fairmount, 5909385 Americus);
+ * Americus had no usable photo and was dropped. The sandbox has NO Active,
+ * displayable row with several photos, so the owner then added five
+ * Expired/Closed ones with real galleries, labelled as such (see below).
  *
  * Why not `lib/mls/sync-worker.ts` → mirror → projection (the path in
  * docs/mls-integration/go-live.md): the sandbox has no `Media` resource (404;
@@ -19,6 +22,10 @@
  *     rather than shown with it.
  *   - Attribution: `external_agent_name` / `external_office` carry the listing
  *     agent and brokerage verbatim (`listings_owner_chk` requires the name).
+ *   - Status is not hidden: a non-Active row's description opens with
+ *     "FMLS test listing — status <X>, not for sale." The sandbox scrubbed
+ *     most street addresses; such a row reads "No street address" with the
+ *     county as its city, rather than an invented one.
  *   - Photos are copied as-is and must stay that way: `enhanced_status` is
  *     'rejected', the one state the worker's enhance pass and the tag step's
  *     re-queue backstop (worker.py, "A BACKSTOP") both leave alone. 'none'
@@ -83,6 +90,7 @@ interface BridgeRow {
   InternetAddressDisplayYN: boolean | null;
   UnparsedAddress: string | null;
   City: string | null;
+  CountyOrParish: string | null;
   StateOrProvince: string | null;
   PostalCode: string | null;
   Latitude: number | null;
@@ -114,17 +122,24 @@ async function importOne(listingId: string) {
   if (row.InternetAddressDisplayYN !== true) {
     throw new Error(`${listingId}: InternetAddressDisplayYN is not true — address must be withheld`);
   }
-  if (!row.UnparsedAddress || !row.City || !row.StateOrProvince) {
-    throw new Error(`${listingId}: missing address/city/state — refusing to write`);
+  // "Houston - GA" → "Houston County"; only used when the sandbox has no city.
+  const county = row.CountyOrParish?.split(' - ')[0]?.trim();
+  const city = row.City ?? (county ? `${county} County` : null);
+  if (!city || !row.StateOrProvince) {
+    throw new Error(`${listingId}: missing city/county/state — refusing to write`);
   }
+  const statusNote =
+    row.StandardStatus === 'Active'
+      ? []
+      : [`FMLS test listing — status ${row.StandardStatus ?? 'unknown'}, not for sale.`];
 
   const photos = (row.Media ?? [])
     .filter((m) => m.MediaCategory === 'Photo')
     .sort((a, b) => (a.Order ?? 0) - (b.Order ?? 0));
 
   const fields = {
-    address: row.UnparsedAddress,
-    city: row.City,
+    address: row.UnparsedAddress ?? 'No street address',
+    city,
     state: row.StateOrProvince,
     zip: row.PostalCode,
     lat: row.Latitude,
@@ -135,7 +150,7 @@ async function importOne(listingId: string) {
     sqft: positive(row.LivingArea) ?? positive(row.BuildingAreaTotal),
     year_built: row.YearBuilt,
     lot_size: row.LotSizeAcres ? `${row.LotSizeAcres} acres` : null,
-    description: row.PublicRemarks?.trim() ? [row.PublicRemarks.trim()] : [],
+    description: [...statusNote, ...(row.PublicRemarks?.trim() ? [row.PublicRemarks.trim()] : [])],
     external_agent_name: row.ListAgentFullName ?? row.ListOfficeName ?? 'FMLS',
     external_office: row.ListOfficeName,
   };
@@ -158,7 +173,8 @@ async function importOne(listingId: string) {
     id = existing.id;
     console.log(`updated ${id}`);
   } else {
-    const base = slugify(fields.address, { fallback: 'listing' });
+    // The MLS number keeps address-less sandbox rows from colliding on one slug.
+    const base = slugify(`${fields.address} ${row.ListingId}`, { fallback: 'listing' });
     let created: { id: string } | null = null;
     for (let attempt = 0; attempt < 5 && !created; attempt++) {
       const { data, error } = await sb
