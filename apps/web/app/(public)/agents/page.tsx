@@ -50,8 +50,8 @@ export default function AgentsLandingPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <BenefitCard
             icon={<MapPin className="h-6 w-6" aria-hidden="true" />}
-            title="Zero data entry"
-            body="Enter the address. FMLS auto-fills price, beds, baths, sqft, MLS #, and photos. You add one video. That's the whole workflow."
+            title="Minimal data entry"
+            body="Enter the address and the basics — price, beds, baths, sqft, photos. You add one video. That's the whole workflow."
           />
           <BenefitCard
             icon={<Users className="h-6 w-6" aria-hidden="true" />}
@@ -71,16 +71,14 @@ export default function AgentsLandingPage() {
         <h2 className="font-serif text-2xl text-ink sm:text-3xl">How it works</h2>
         <ol className="mt-6 space-y-4">
           <Step n={1} title="Enter the address" />
-          <Step n={2} title="We auto-fill from FMLS" />
+          <Step n={2} title="Add the price, beds, baths, and photos" />
           <Step n={3} title="You upload one video — Atlanta buyers swipe, tap, and reach out." />
         </ol>
       </section>
 
       {/* Trust strip + waitlist form */}
       <section id="waitlist" className="mx-auto max-w-2xl px-5 py-12">
-        <p className="text-center text-xs text-muted">
-          FMLS data via Bridge Interactive · IDX-compliant · Non-exclusive · No credit card
-        </p>
+        <p className="text-center text-xs text-muted">Non-exclusive · No credit card</p>
 
         <div className="mt-6">
           <h2 className="font-serif text-2xl text-ink sm:text-3xl">Join the Atlanta beta</h2>
@@ -104,7 +102,10 @@ export default function AgentsLandingPage() {
             a="Yes — free during beta. Beta agents get grandfathered pricing when we introduce paid tiers."
           />
           <Faq q="Do I need to pull my listings from Zillow?" a="No. Percho is non-exclusive." />
-          <Faq q="Where does the data come from?" a="FMLS, via Bridge Interactive." />
+          <Faq
+            q="Where do the listings come from?"
+            a="From the listing agents who post them on Percho."
+          />
           <Faq q="What markets?" a="Atlanta metro only right now." />
           <Faq q="Who owns the video I upload?" a="You do." />
         </div>

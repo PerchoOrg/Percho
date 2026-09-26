@@ -332,9 +332,15 @@ describe('projectDetail — phase D (schools, rent, share link)', () => {
     expect(listingShareUrl({ slug: 's', agentSlug: 'royxue812' })).toBe(
       'https://www.percho.co/v/royxue812/s',
     );
-    expect(listingShareUrl({ slug: 's', source: 'fmls', sourceId: '583364989' })).toBe(
-      'https://www.percho.co/v/fmls/583364989',
-    );
+    expect(
+      listingShareUrl({
+        slug: 's',
+        source: 'fmls_bridge',
+        sourceId: 'd9e2c4cdf7a1658c5f66c85a4aafb02a',
+      }),
+    ).toBe('https://www.percho.co/v/fmls/d9e2c4cdf7a1658c5f66c85a4aafb02a');
+    // The retired scraper's rows must never get a public link again.
+    expect(listingShareUrl({ slug: 's', source: 'fmls', sourceId: '583364989' })).toBeUndefined();
     expect(listingShareUrl({ slug: 's' })).toBeUndefined();
     expect(projectDetail({ ...baseListing, agents: { slug: 'vivzh123' } }, [], []).shareUrl).toBe(
       'https://www.percho.co/v/vivzh123/1204-copper-leaf-ct',

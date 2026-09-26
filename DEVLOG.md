@@ -21,6 +21,127 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-26 09:05 UTC — phase304: Bridge sandbox rows into the feed as `fmls_bridge`; one-clip home tours
+
+**Objective**: owner picked the two display-allowed Active test rows
+(5893300 Fairmount, 5909385 Americus) for the public feed, kenburns films;
+tagline "A video-first platform for discovering where to live."
+
+**Actions**:
+- `scripts/admin/import-bridge-listings.ts <ListingId>... [--apply]`: reads
+  Property via `BridgeClient.listProperties`, refuses rows with
+  `InternetEntireListingDisplayYN` or `InternetAddressDisplayYN` not true,
+  copies photos as-is with `enhanced_status='none'` (no altering MLS
+  photos), attribution in `external_agent_name`/`external_office`. Rows are
+  `source='fmls_bridge'`, `source_id=ListingKey`.
+- `/v/fmls/[sourceId]` looks up `fmls_bridge`; `listingShareUrl` and
+  `linkForCard` map it to the `/v/fmls/` segment; scraper `'fmls'` now gets
+  no link (test asserts it). New `link-for-card.test.ts`.
+- `worker.py` `process_listing_assembly`: floor 2 → 1 clip. Each sandbox row
+  has ONE photo (Americus's is a sideways floor-plan scan); with one clip
+  the xfade loop doesn't run (`crossfade_offsets([3.0]) == []`).
+- RELEASE.md dated bullets under v1.10.
+
+**Decisions**: not the sync-worker/mirror path from go-live.md — sandbox
+has no `Media` resource and no `ModificationTimestamp`. Revisit when the
+real feed arrives.
+
+## 2026-09-26 08:20 UTC — phase304: every listing deleted (clean slate); test-row pick blocked on the display flag
+
+**Objective**: owner — "删除所有的现有的房源 不用再查了 干干净净的"; then put a
+few complete Active Bridge test listings into the public feed for the demo.
+
+**Actions**:
+- `purge-fmls-listings.ts --all` (new flag: drops the `source='fmls'`
+  filter; output no longer prints street addresses). Dry-run then apply:
+  12 agent-owned listings, 248 photos, 305 clips, 12 `listing_videos`, 11
+  `generated_videos`, 68 assemblies, 1 lead; **79 Stream assets deleted**,
+  1,106 storage paths removed. `listings` count now **0**.
+- Verified live: `/api/mobile/feed?stage=3` → listings 0, communities 12
+  (5 with a film under `videosOnly=1`), geoUnits 109 — communities and their
+  films untouched. (Plain `/api/mobile/feed` is stage 0, which never ships
+  listings or communities — not a valid check on its own.)
+
+**Finding — no Active test row is both displayable and complete**: of 22
+Active rows only 6 have `InternetEntireListingDisplayYN=true` (the same 6
+with an address); they carry 0–1 photos, prices like $1,400/$1,500, one is
+"NY" with 264 beds. The photo-rich Active rows (11/10/7/5 photos) are all
+`display=false` — putting them on a public feed is exactly the IDX breach
+the review looks for. Best compliant pick: Fairmount GA ($1M, 4 bd, 1
+photo) + Americus GA (4 bd, 1 photo); owner to choose.
+
+## 2026-09-26 07:55 UTC — phase304: scraped FMLS listings purged; Bridge test feed is sandbox junk
+
+**Objective**: owner approved the purge ("可以跑删除脚本") and pasted the
+Bridge tokens.
+
+**Actions**:
+- `purge-fmls-listings.ts` (dotenv import swapped for an inline
+  `.env.local` read — `scripts/` can't resolve `dotenv`) dry-run then
+  `--apply`: **6** `source='fmls'` listings left (not 18 — the set shrank
+  after phase166), 60 photos, 110 clips, 6 `listing_videos`, 47 assemblies,
+  1 lead, **46 Stream assets deleted**, 340 storage paths removed.
+  Verified: 0 fmls rows, 0 `fmls-import/` objects; all six
+  `www.percho.co/v/fmls/<id>` → 404; `/api/mobile/feed` 200 with zero
+  fmls mentions / addresses. `4123 Islington Way` WAS one of them.
+- `BRIDGE_SERVER_TOKEN` + `BRIDGE_DATASET_ID=fmls` added to the reference
+  worktree's `.env.local` (gitignored; sync host only). `DataSystem` lists
+  one dataset, `fmls`.
+- Not done: a provenance check on the non-`fmls` listings was blocked by the
+  permission classifier (PII) — owner to confirm none were copied from FMLS.
+
+**Findings — the test feed**: 1,178 Property rows, sandbox-scrambled:
+901 Expired / 22 Active; only 29 have an address or city; prices like
+`1` and `999999999`; beds `264`; NY cities with GA zips; 535 have
+`InternetEntireListingDisplayYN=false`; `LivingArea` always null. Photos are
+real (cloudfront), 123 GA rows have ≥5. It has **no
+`ModificationTimestamp`** (only `BridgeModificationTimestamp`) —
+`sync-worker.ts` watermarks on the former, so `$select`/incremental would
+400; a full sync without the watermark filter should work.
+
+**Decision needed (owner)**: projecting this into the public feed would put
+$1 homes in front of real buyers. Proposed instead: a separate review page
+on percho.co fed from the mirror, with kenburns films for a few ≥5-photo
+test rows, and point FMLS at it.
+
+## 2026-09-26 07:35 UTC — phase304: FMLS licence review flagged scraped listings — cleanup started
+
+**Objective**: FMLS Data Services (thread "FMLS License Content using the
+Bridge API", 09-25) reviewed percho.co for the Bridge licence and found a
+card identical to FMLS #7798528, remarks included; asked where the data and
+videos come from and flagged "Tic Toc" as a trademark. Owner: fix every
+called-out issue before anyone replies; send nothing. Bridge test access
+expires **2026-09-29**.
+
+**Findings**: FMLS is right. The 18 video-backed `source='fmls'` listings
+phase166 kept "for demo purpose" are scraped (retired scraper), public on
+the feed, `/v/fmls/<id>` and the app; their films were rendered from the
+scraped photos. Bridge client + sync worker have never run; no creds on the
+host. `/agents` claimed "FMLS data via Bridge Interactive · IDX-compliant".
+Home hero read "TikTok for Homebuying", /about "what TikTok would look
+like…". Six `public/demos/*` mockups hot-linked `fmls-import/` photos.
+
+**Actions** (branch `phase304/fmls-compliance`, not merged):
+- Copy: tagline → "Feel the neighborhood first" (the App Store subtitle
+  draft); /about drops TikTok; /agents drops every FMLS/Bridge/IDX claim.
+  The copy generator's TikTok platform option stays (platform, not brand).
+- Demos: 8 `fmls-import` photo URLs → Unsplash; "4123 Islington Way"
+  (likely a real listing) → invented address.
+- `scripts/admin/purge-fmls-listings.ts` drafted (Stream + storage + rows,
+  dry-run default, no backup by owner decision) — NOT run, NOT committed:
+  the agent's permission classifier blocked the prod read and the purge;
+  the file also has one unfinished line (`mirror` log reference).
+- Logged into the Bridge dashboard (owner-provided login): app "Home buyer
+  searching tool", FMLS data access approved 07-31. Token extraction was
+  blocked by the permission classifier; session files deleted.
+
+**Next steps**: owner runs (or permits) the purge dry-run → `--apply`;
+owner pastes Bridge server token + test dataset id into the sync host env;
+then sync-worker → projection (`source='fmls_bridge'`) → kenburns films for
+a few test listings → verify percho.co → draft reply (draft only). Owner
+should rotate the Bridge password (shared in chat) and check the FMLS
+Marketplace product name for "Tic Toc".
+
 ## 2026-09-23 14:30 UTC — Northbrooke re-cut: 53 duplicate TB-site photos rejected, film re-shipped
 
 **Objective**: owner — "大量重复的照片被选中". The 22 amenity shots in the

@@ -20,6 +20,16 @@ Everything is learned from the swipes you've already made, on your own
 device — there's no form to fill in, and a left swipe never blacklists
 anything; it just means "less of this for now".
 
+### 2026-09-26
+- **Home listings reset.** Every home previously in the feed has been
+  removed while Percho moves to a licensed MLS data feed. For now the feed
+  carries a couple of MLS sample listings; neighbourhoods and their films
+  are unchanged.
+- **New homepage headline:** "A video-first platform for discovering where
+  to live."
+- The agents page no longer describes an MLS data connection that isn't
+  live yet.
+
 ### 2026-09-15
 - **The feed now notices how long you looked.** A home you watched for half
   a minute before deciding counts for more than one you flicked past — in

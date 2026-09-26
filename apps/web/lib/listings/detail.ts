@@ -163,7 +163,8 @@ export function listingShareUrl(input: {
   sourceId?: string | null;
 }): string | undefined {
   if (input.agentSlug) return `${SITE_ORIGIN}/v/${input.agentSlug}/${input.slug}`;
-  if (input.source === 'fmls' && input.sourceId) return `${SITE_ORIGIN}/v/fmls/${input.sourceId}`;
+  if (input.source === 'fmls_bridge' && input.sourceId)
+    return `${SITE_ORIGIN}/v/fmls/${input.sourceId}`;
   return undefined;
 }
 

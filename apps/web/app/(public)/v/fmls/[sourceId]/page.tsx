@@ -6,7 +6,8 @@
  * `(source, source_id)` + attribution in `external_agent_name/phone/office`.
  * We reuse the exact same VideoFeed as `/v/[agentSlug]/[listingSlug]` — the
  * only diffs are:
- *   - We look up the listing by (source='fmls', source_id).
+ *   - We look up the listing by (source='fmls_bridge', source_id). The
+ *     scraper's 'fmls' rows are gone (phase304); only Bridge rows serve here.
  *   - The synthesised agent has `isExternal=true`, which flips the caption
  *     card from a link to plain text (no /a/{slug} to point at).
  *   - Metadata description uses "Listed by {name} · {office}".
@@ -33,7 +34,7 @@ import { VideoFeed } from '../../[agentSlug]/[listingSlug]/_components/VideoFeed
 
 export const revalidate = 3600;
 
-const SOURCE = 'fmls';
+const SOURCE = 'fmls_bridge';
 
 type PageParams = { sourceId: string };
 
@@ -70,7 +71,7 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
-      url: `/v/${SOURCE}/${sourceId}`,
+      url: `/v/fmls/${sourceId}`,
       type: 'website',
       siteName: 'Percho',
       images,

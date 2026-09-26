@@ -18,7 +18,9 @@ export function linkForCard(card: {
   const src = card.listing.source;
   if (card.agent.isExternal || (src && card.listing.sourceId)) {
     // External: route by source + sourceId, ignore the empty agent.slug.
-    return `/v/${src}/${card.listing.sourceId}`;
+    // Bridge rows keep the `/v/fmls/` segment the page lives under.
+    const segment = src === 'fmls_bridge' ? 'fmls' : src;
+    return `/v/${segment}/${card.listing.sourceId}`;
   }
   return `/v/${card.agent.slug}/${card.listing.slug}`;
 }
