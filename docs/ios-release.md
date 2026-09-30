@@ -10,6 +10,18 @@ an *Organization* enrollment and a D-U-N-S number. The owner enrolled as an
 step, not a two-week wait. Everything that changes with an individual account
 is marked ⚠ below.
 
+**Status 2026-09-29**: the long pole is no longer Apple — it is the listing
+source. Since phase304 the only listings in production are six Bridge
+*sandbox* rows, five of them labelled "FMLS test listing — not for sale", and
+the app reads the same API as percho.co. Those cannot ship in a public app
+(Guideline 2.2: demo/test content belongs in TestFlight), so the App Store
+submission waits on a licensed feed while everything else proceeds. The
+same day's provenance audit (`docs/references/content-provenance.md`) added
+a second gate: the community layer is built on scraped Nextdoor data and on
+Google Places / builder photos we have no clear right to store and film.
+**Stage 4** below is the current plan; Stages 0–3 are history plus the
+owner-only forms.
+
 ## Stage 0 — confirm the membership is live (OWNER)
 
 Enrollment is paid but was last seen *pending activation*. Apple takes
@@ -316,17 +328,22 @@ Setting `userGeneratedContent: true` alone does not raise the rating above
 - **Support URL**: https://www.percho.co/contact · **Marketing URL**: https://www.percho.co
 - Fair-housing note for the reviewer field ("Notes"): reviews are limited to
   four neighbourhood dimensions (quiet, walkable, neighbourly, value) and are
-  moderated; the app does not rate schools or safety. Link
-  https://www.percho.co/fair-housing.
+  moderated. Schools appear only as the state's published proficiency % for
+  the nearest public school — no rating. Safety is **not scored**; Compare
+  carries a Safety heading that says "not scored on purpose — no source we
+  trust" and lists only cited research notes (`lib/listing/compare.ts`).
+  (Corrected 2026-09-29 — the earlier draft said the app "does not rate
+  schools or safety", which a reviewer opening Compare would see a Safety
+  section contradict.) Link https://www.percho.co/fair-housing.
 
 ### Still owner-only — nothing here can be done from this Mac
 
 | Item | Why |
 |---|---|
-| Screenshots | 6.9" iPhone **1320×2868**, up to 10, must be the real UI. No Xcode on this Mac ⇒ no simulator; capture on the owner's device from build 5. Set: feed card with a film, community tour, community page with reviews, listing explore, Search map, Saved, tour request sheet. |
+| Screenshots | 6.9" iPhone **1320×2868**, up to 10, must be the real UI. No Xcode on this Mac ⇒ no simulator; capture on the owner's device from build 6 (if the phone is not a 6.9" model, the agent frames the captures onto 1320×2868 canvases with a caption line). Set: feed card with a film, community tour, community page with reviews, listing explore, Search map, Saved, tour request sheet. |
 | App Privacy labels | Table above — an attestation the account holder signs. |
 | Age rating `userGeneratedContent: true` | Same questionnaire; re-answer and save. |
-| Seller name | ⚠ Individual account ⇒ shows **Qiaoxuan Xue**, not "Percho". Needs a legal-entity-name-change request with a DBA certificate, which has a waiting period — start it *before* submission, not at it. |
+| Seller name | ⚠ Individual account ⇒ shows **Qiaoxuan Xue**, not "Percho". Needs a legal-entity-name-change request with a DBA certificate, which has a waiting period — start it *before* submission, not at it. ⚠ 2026-09-29: unverified — Apple's organization-enrollment page says it does not accept DBAs or trade names. The path known to work is a registered legal entity + D-U-N-S, then asking Apple to convert the membership (weeks). Confirm with Apple Developer Support before relying on the DBA route. |
 | Legal review of `/privacy` and `/terms` | Entity name, governing law (§10), CCPA/GDPR wording. |
 | Sentry DSN | Crash reporting is wired to nothing; if you want it for launch, create the project, add the DSN to EAS secrets, and add the Diagnostics label. |
 | MLS channel | `docs/mls-integration/go-live.md` — licence + Bridge dataset credentials. The store build does not wait on it (photo cards fill the feed). |
@@ -337,6 +354,10 @@ Known review risks (first submission commonly bounces once; budget 1–2 wks):
   review runs — an empty feed looks broken. Give the reviewer a signed-in
   path too: the sign-in code lands in email, so either provide a demo
   account or note that Sign in with Apple works with any Apple ID.
+  (2026-09-29: password sign-in exists since phase197 — create a password
+  account for the reviewer and put it in the review notes.)
+- Guideline 2.2 (beta/demo content): no listing labelled "test" or "not for
+  sale" may be in the feed on review day. See Stage 4.
 - 1.2 (UGC): covered above; make sure the admin queue is actually watched
   during review week — a pending review that never appears is fine, a
   rejected one is fine, an offensive one that appears is not.
@@ -344,6 +365,86 @@ Known review risks (first submission commonly bounces once; budget 1–2 wks):
   compares them with what the app visibly asks for.
 - 5.1.1(v) (account deletion): You tab → Delete account; it is in the app,
   keep it reachable within two taps.
+
+## Stage 4 — launch plan (2026-09-29, phase305)
+
+**Gates** (both needed before submitting for App Store review):
+1. the feed carries licensed, for-sale listings (4.4);
+2. the community layer clears the provenance audit (4.3) — Nextdoor data
+   and covers, Google Places photos and scraped builder imagery sit under
+   the community card and film, and the FMLS licence fixes none of them.
+
+Build, TestFlight and the ASC forms run ahead of both.
+
+### 4.1 Build 6 from main (OWNER runs — the agent's `eas build` is blocked)
+
+Build 5 (2026-09-05) predates ~100 `apps/mobile` commits (v1.4–v1.10). The
+agent's `eas build` was refused by the harness permission classifier as a
+production deploy, so this is the owner's command until that rule changes:
+
+```bash
+git -C ~/Workspace/Percho pull --ff-only
+cd ~/Workspace/Percho && pnpm install          # phase305.1 moved 12 Expo packages
+cd apps/mobile
+npx eas-cli build --platform ios --profile production   # → 1.0.0 (6)
+# add the three ascApiKey* fields to eas.json (Stage 2 → Submitting), then:
+npx eas-cli submit --platform ios --latest --non-interactive --groups Internal
+git checkout -- eas.json
+```
+
+`autoIncrement` leaves `app.json` saying `"buildNumber": "6"` in the
+reference worktree — that edit must reach main (the next agent session lands
+it; see Stage 2 on why `app.json` must match what shipped).
+
+Pre-build gates were run on phase305.1: typecheck 0, mobile lint 0 errors,
+mobile 808 / web 1198 tests, `expo export` 3.97 MB hbc, `expo-doctor` 21/21.
+
+### 4.2 Device pass on build 6 (OWNER, ~20 min)
+
+Things no build has proven yet: **Sign in with Apple** end to end (the
+Supabase Apple provider was an owner action on 2026-09-04 with no record of
+being done — a failure here means that config), email code, password sign-in,
+set password, **delete account**, tour request → the lead email arrives,
+submit a review → it appears in `/admin/pipeline/reviews`. Then the feed,
+a community film, Search map, Compare, Saved.
+
+### 4.3 Compliance before anything is public
+
+- Content provenance — `docs/references/content-provenance.md`. App Store
+  Connect asks the account holder to attest rights to third-party content;
+  that audit is what the answer rests on. Its items 1–3 (Nextdoor, Google
+  Places photos, scraped builder/agent imagery) are the second launch gate
+  and need counsel or the rights holder; items 4–7 (MLS credit on mobile,
+  MacLeod music credit, "real photos" store copy, legacy GreatSchools read
+  policies) are small engineering fixes.
+- Rotate the Supabase service-role key before the app is public — found in
+  plaintext in August (DEVLOG 2026-08-19 09:05 UTC), unrotated then, no
+  record of it since. Owner, in the Supabase dashboard, then every
+  place it is set (Vercel, `.env.local` on the render host, Edge Function
+  secrets).
+- Privacy labels (Stage 3 table) still hold: since build 5 the app gained no
+  new server write — the writes are still `/api/leads`, `/api/mobile/events`,
+  `DELETE /api/mobile/account`, and saves/reviews through Supabase RLS.
+
+### 4.4 Listings (OWNER + Vivian — the gate)
+
+FMLS extended the Bridge test data 30 days on 2026-09-28 (to about
+2026-10-28) and is still reviewing; Vivian asked the same day whether
+turning listing photos into a motion film is permitted. When the licence
+arrives: `docs/mls-integration/go-live.md` §3 (projection + sync cron,
+~2–4 days), the IDX attribution moves onto the card face, and listing cards
+become photo-only if FMLS says no to films (`mediaKind: 'photo'` already
+exists). The sandbox rows come out of the feed the same day.
+
+Fallback if the licence stalls: communities plus the listings Vivian holds
+as listing agent (hers to publish), no MLS data at all. Thin, but not a demo.
+
+### 4.5 Submit
+
+External TestFlight first (one Beta App Review, ~1 day) with a handful of
+real buyers; then submit with **manual release** so the owner picks the day.
+Budget one or two bounces. Launch week: someone reads the review queue and
+hello@percho.co daily — the terms promise 24 h.
 
 ## Later — explicitly out of scope for v1
 

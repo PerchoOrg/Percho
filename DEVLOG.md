@@ -21,6 +21,63 @@ rotation, not on the way in.
 
 ---
 
+## 2026-09-30 01:35 UTC — phase305: iOS store-launch plan; Expo patches aligned; provenance audit finds a second gate
+
+**Objective**: owner — "Let's plan for iOS store launch", then "开始做吧":
+build 6 to TestFlight, and a compliance pass before anything is public.
+
+**Actions**:
+- `579cd904` phase305.1: 11 Expo packages to SDK 57's expected patches
+  (expo 57.0.19 → 57.0.26, expo-router 57.0.18 → 57.0.24, expo-video, …)
+  plus `babel-preset-expo` 57.0.10 → 57.0.13 so there is still one copy.
+  `expo install --fix` looped again (phase161) — killed, ranges edited by
+  hand. The two pnpm peer warnings are pre-existing on main (checked in a
+  throwaway worktree).
+- Gates on that commit: typecheck 0, mobile lint 0 errors (8 pre-existing
+  warnings), mobile 808 / web 1198 tests, `expo export` 3.97 MB hbc,
+  `expo-doctor` 21/21, prebuild config `co.percho.app` 1.0.0 (5).
+- `docs/ios-release.md`: status block, **Stage 4** (gates, build-6 commands,
+  device-pass list, compliance, listings, submit); review note corrected —
+  Compare has a Safety heading ("not scored on purpose"), so "does not rate
+  safety" was wrong; seller-name DBA route flagged as unverified; reviewer
+  gets a password account (phase197); Guideline 2.2 risk added.
+- New `docs/references/content-provenance.md` (the folder ARCHITECTURE.md
+  already promised): inventory of every third-party source that reaches a
+  user, with a ranked risk list.
+
+**Findings**:
+- FMLS thread (owner's Gmail, read-only): test data **extended 30 days on
+  2026-09-28** (≈ 2026-10-28, not 09-29 as phase304 logged); FMLS still
+  asking where the original data came from; Vivian asked whether filming
+  listing photos is permitted — unanswered.
+- Build 5 (2026-09-05) predates ~100 mobile commits; needs build 6.
+- Provenance, highest risk: (1) the community layer is Nextdoor-scraped —
+  covers, stats, reasons, boundaries — against the seed tool's own README;
+  (2) Google Places photos stored permanently, enhanced/outpainted and filmed
+  with no author credit; (3) Redfin-gallery (Windward), Toll Brothers and
+  builder-site imagery in shipped films; (4) no MLS courtesy line anywhere on
+  mobile; (5) Kevin MacLeod CC BY tracks in the library with no user-facing
+  credit, although `incompetech.ts` claims the render handles it; (6) store
+  copy "every clip is made from real photos" vs Seedance/outpaint; (7) legacy
+  GreatSchools tables have anon SELECT policies.
+
+**Issues**: the harness permission classifier refused `eas build` ("Production
+Deploy") and the read-only production query for per-source counts
+("Production Reads"). Neither was worked around; build 6 is the owner's
+command (Stage 4.1) and the counts wait on his run or permission.
+
+**Decisions**: the App Store submission has two gates — licensed listings,
+and the community layer clearing provenance items 1–3. Test listings never
+ship in the store build (Guideline 2.2 and FMLS). No Sentry (new third-party
+service, owner hasn't approved). Nothing in the audit was changed — items 1–3
+are the owner's / counsel's call, 4–7 are small fixes awaiting his go.
+
+**Next steps**: owner runs build 6 + TestFlight and the device pass
+(Stage 4.2); `app.json` `buildNumber` 6 then lands on main. Owner decides
+the provenance path for the community layer. Engineering, on his go: MacLeod
+credit, MLS courtesy line on mobile, store-copy fix, revoke the GreatSchools
+anon policies.
+
 ## 2026-09-26 08:50 UTC — phase304: five labelled sandbox listings filmed; feed has 6 films
 
 **Objective**: owner picked "import 5 labelled" after Bridge's generic
