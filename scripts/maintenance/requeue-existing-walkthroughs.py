@@ -37,7 +37,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-ENV = Path(__file__).resolve().parents[1] / ".env.local"
+ENV = Path(__file__).resolve().parents[2] / ".env.local"  # scripts/maintenance/ → repo root
 MIN_PHOTOS = 3
 UID_COLUMNS = ("cf_video_id", "cf_video_id_landscape", "cf_video_id_square")
 

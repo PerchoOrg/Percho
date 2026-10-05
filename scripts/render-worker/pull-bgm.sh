@@ -52,10 +52,15 @@ for retired in "${RETIRED_VIBES[@]}"; do
 done
 
 # --- fetch rejected list ---------------------------------------------------
-state_json=$(curl -s -H "$AUTH_HDR" -H "$APIKEY_HDR" \
-    "$BASE/storage/v1/object/bgm/_state/state.json" || echo '{}')
-if ! echo "$state_json" | jq empty 2>/dev/null; then
-    state_json='{"rejected":[]}'
+# Fail CLOSED. This file is the review gate: if it cannot be read, nothing is
+# known to be approved, so nothing syncs. It used to fall back to an empty
+# list — a Storage hiccup then downloaded every pending and rejected track.
+# The worker logs a non-zero exit and keeps rendering with what is on disk.
+if ! state_json=$(curl -sf --max-time 30 -H "$AUTH_HDR" -H "$APIKEY_HDR" \
+    "$BASE/storage/v1/object/bgm/_state/state.json") \
+    || ! echo "$state_json" | jq -e 'type == "object"' >/dev/null 2>&1; then
+    echo "state.json unreadable — refusing to sync (review gate unknown)" >&2
+    exit 1
 fi
 # Rejected AND pending. A generated track sits in `pending` until someone has
 # listened to it, and an unreviewed track must not be able to reach a
@@ -73,11 +78,17 @@ total=0
 for vibe in "${VIBES[@]}"; do
     mkdir -p "$BGM_DIR/$vibe"
 
-    # List remote objects for this vibe (Storage list API is a POST).
-    remote_json=$(curl -s -X POST \
+    # List remote objects for this vibe (Storage list API is a POST). A failed
+    # list must not read as "Storage is empty" — the loop below would delete
+    # every local track of the palette. Skip the palette instead.
+    if ! remote_json=$(curl -sf --max-time 30 -X POST \
         -H "$AUTH_HDR" -H "$APIKEY_HDR" -H "Content-Type: application/json" \
         -d "{\"prefix\":\"$vibe/\",\"limit\":1000,\"sortBy\":{\"column\":\"name\",\"order\":\"asc\"}}" \
-        "$BASE/storage/v1/object/list/bgm")
+        "$BASE/storage/v1/object/list/bgm") \
+        || ! echo "$remote_json" | jq -e 'type == "array"' >/dev/null 2>&1; then
+        echo "  skip   $vibe/ (Storage list failed — local files kept)" >&2
+        continue
+    fi
     remote_files=$(echo "$remote_json" | jq -r '.[].name' | grep -E '\.mp3$' || true)
 
     # Delete local files that are no longer in Storage OR are now rejected.
@@ -113,7 +124,9 @@ for vibe in "${VIBES[@]}"; do
             fi
         fi
         echo "  get    $vibe/$name (${remote_size} bytes)"
-        curl -s -o "$local_path" "$url"
+        # -f: an HTTP error body must not land on disk as an .mp3.
+        curl -sf --max-time 120 -o "$local_path.part" "$url" && mv "$local_path.part" "$local_path" \
+            || { rm -f "$local_path.part"; echo "  fail   $vibe/$name" >&2; }
     done <<< "$remote_files"
 
     echo "$vibe: $count active track(s)"
