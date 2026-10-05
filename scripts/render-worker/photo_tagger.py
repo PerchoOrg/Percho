@@ -137,10 +137,15 @@ def _invoke_gemini(system: str, content: list[dict[str, Any]],
 
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}"
-        ":generateContent?key=" + key
+        ":generateContent"
     )
+    # The key rides in a header, not `?key=`: a URL ends up in exception text
+    # and proxy logs, a header does not.
     req = urllib.request.Request(
-        url, data=body, headers={"content-type": "application/json"}, method="POST"
+        url,
+        data=body,
+        headers={"content-type": "application/json", "x-goog-api-key": key},
+        method="POST",
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read())

@@ -68,14 +68,22 @@ type Listing = {
 };
 
 async function main() {
-  const { data: listings, error } = await sb
-    .from('listings')
-    .select('id, address, city, lat, lng, community_id, community_match')
-    .not('lat', 'is', null)
-    .not('lng', 'is', null)
-    .order('city')
-    .range(0, 9999);
-  if (error) throw new Error(error.message);
+  // Paged: PostgREST caps each read at 1000 rows, and `.range(0, 9999)` does
+  // not lift the cap — it silently returned the first thousand.
+  const listings: Listing[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb
+      .from('listings')
+      .select('id, address, city, lat, lng, community_id, community_match')
+      .not('lat', 'is', null)
+      .not('lng', 'is', null)
+      .order('city')
+      .order('id')
+      .range(from, from + 999);
+    if (error) throw new Error(error.message);
+    listings.push(...(data as Listing[]));
+    if (data.length < 1000) break;
+  }
 
   const names = new Map<string, string>();
   const nameOf = async (id: string | null) => {
@@ -91,7 +99,7 @@ async function main() {
   let manual = 0;
   let nearest = 0;
   let none = 0;
-  for (const l of listings as Listing[]) {
+  for (const l of listings) {
     const { data, error } = await sb.rpc('match_community', { p_lat: l.lat, p_lng: l.lng });
     if (error) throw new Error(`match_community: ${error.message}`);
     const m = data?.[0];
