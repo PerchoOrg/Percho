@@ -34,7 +34,7 @@ type Row = {
  * file in a spreadsheet: a cell starting `=`, `+`, `-`, `@` (or a tab / CR)
  * would run as a formula. The leading apostrophe makes it text.
  */
-export function csvEscape(v: string | null | undefined): string {
+function csvEscape(v: string | null | undefined): string {
   if (v == null) return '';
   let s = String(v);
   if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
