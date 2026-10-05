@@ -1,7 +1,9 @@
-'use server';
-
 /**
  * Flat photo rows for an admin nearby page (community or listing scope).
+ *
+ * A plain server module, not `'use server'`: it reads on the service role and
+ * its only callers are the two admin Server Components. As a server action it
+ * was an unauthenticated endpoint any browser could call.
  *
  * The nearby pages used to show photos only inside a per-POI accordion, which
  * makes "which photos does this community actually have, and which are in a

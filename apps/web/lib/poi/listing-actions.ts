@@ -33,11 +33,10 @@ export type ListingDiscoverResult = DiscoverResult;
 export type ListingPhotoFetchResult = PhotoFetchResult;
 export type NearbyPoiForListing = NearbyPoi;
 
-export async function discoverPoisForListing(
-  listingId: string,
-  opts: { radiusMeters?: number; includedTypes?: readonly string[] } = {},
-): Promise<ListingDiscoverResult> {
-  return discoverPois(SCOPE, listingId, opts);
+/** Server actions — see `community-actions.ts` for why only the options
+ *  listed here are forwarded, by name. */
+export async function discoverPoisForListing(listingId: string): Promise<ListingDiscoverResult> {
+  return discoverPois(SCOPE, listingId);
 }
 
 export async function fetchPhotosForListingPoi(
@@ -45,7 +44,10 @@ export async function fetchPhotosForListingPoi(
   poiId: string,
   opts: { max?: number; maxHeightPx?: number } = {},
 ): Promise<ListingPhotoFetchResult> {
-  return fetchPhotosForPoi(SCOPE, listingId, poiId, opts);
+  return fetchPhotosForPoi(SCOPE, listingId, poiId, {
+    max: opts.max,
+    maxHeightPx: opts.maxHeightPx,
+  });
 }
 
 export async function setListingPhotoStatus(

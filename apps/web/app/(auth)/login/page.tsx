@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { safeRedirectPath } from '@/lib/utils/safe-redirect';
 import { redirect } from 'next/navigation';
 import { LoginForm } from './login-form';
 
@@ -18,10 +19,7 @@ export default async function LoginPage({
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
 
-  const safeRedirect =
-    searchParams.redirect?.startsWith('/') && !searchParams.redirect.startsWith('//')
-      ? searchParams.redirect
-      : '/dashboard';
+  const safeRedirect = safeRedirectPath(searchParams.redirect);
 
   if (user) {
     redirect(safeRedirect);

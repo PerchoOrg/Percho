@@ -29,9 +29,15 @@ type Row = {
   communities: { name: string | null } | null;
 };
 
-function csvEscape(v: string | null | undefined): string {
+/**
+ * Name and message are typed by anonymous visitors, and the agent opens this
+ * file in a spreadsheet: a cell starting `=`, `+`, `-`, `@` (or a tab / CR)
+ * would run as a formula. The leading apostrophe makes it text.
+ */
+export function csvEscape(v: string | null | undefined): string {
   if (v == null) return '';
-  const s = String(v);
+  let s = String(v);
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }

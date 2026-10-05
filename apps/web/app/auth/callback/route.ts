@@ -6,20 +6,12 @@ import { createClient } from '@/lib/supabase/server';
  * written via the server client) and 302 to the requested redirect (typically
  * /reset-password where they set a new password).
  *
- * Open-redirect guard: `redirect` must start with `/` and not `//` (which
- * would let an attacker redirect to `//evil.com`). Falls back to /dashboard.
+ * Open-redirect guard: `safeRedirectPath` keeps `redirect` on this origin.
+ * Falls back to /dashboard.
  */
+import { safeRedirectPath } from '@/lib/utils/safe-redirect';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-
-const DEFAULT_REDIRECT = '/dashboard';
-
-function safeRedirectPath(raw: string | null): string {
-  if (!raw) return DEFAULT_REDIRECT;
-  if (!raw.startsWith('/')) return DEFAULT_REDIRECT;
-  if (raw.startsWith('//')) return DEFAULT_REDIRECT;
-  return raw;
-}
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
