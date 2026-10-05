@@ -175,9 +175,7 @@ export default async function CommunityEditorPage({
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: photoRows } = (await (supabase as any)
     .from('community_photos')
-    .select(
-      'id, storage_path, kind, category, school_id, poi_id, alt_text, width, height, sort_order',
-    )
+    .select('id, storage_path, kind, category, school_id, alt_text, width, height, sort_order')
     .eq('community_id', community.id)
     .order('sort_order', { ascending: true })) as {
     data: Array<{
@@ -186,7 +184,6 @@ export default async function CommunityEditorPage({
       kind: string;
       category: string | null;
       school_id: string | null;
-      poi_id: string | null;
       alt_text: string | null;
       width: number | null;
       height: number | null;
@@ -203,7 +200,6 @@ export default async function CommunityEditorPage({
     kind: p.kind,
     category: p.category,
     school_id: p.school_id,
-    poi_id: p.poi_id,
     alt_text: p.alt_text,
     width: p.width,
     height: p.height,

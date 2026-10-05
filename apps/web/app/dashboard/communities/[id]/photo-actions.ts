@@ -31,7 +31,6 @@ const RecordPhotoInput = z.object({
   // a category just get NULL in the column and the UI falls back to `kind`.
   category: CommunityVideoCategory.optional(),
   schoolId: z.string().uuid().nullable(),
-  poiId: z.string().uuid().nullable(),
   lat: z.number().finite().min(-90).max(90).nullable(),
   lng: z.number().finite().min(-180).max(180).nullable(),
   width: z.number().int().positive().max(20000).nullable(),
@@ -49,19 +48,8 @@ export async function recordCommunityPhoto(
   const parsed = RecordPhotoInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: 'invalid_input' };
 
-  const {
-    communityId,
-    storagePath,
-    kind,
-    category,
-    schoolId,
-    poiId,
-    lat,
-    lng,
-    width,
-    height,
-    altText,
-  } = parsed.data;
+  const { communityId, storagePath, kind, category, schoolId, lat, lng, width, height, altText } =
+    parsed.data;
 
   if (!storagePath.startsWith(`${communityId}/`)) {
     return { ok: false, error: 'invalid_storage_path' };
@@ -103,7 +91,6 @@ export async function recordCommunityPhoto(
       kind,
       category: category ?? null,
       school_id: schoolId,
-      poi_id: poiId,
       lat,
       lng,
       alt_text: altText,
@@ -123,7 +110,7 @@ export async function recordCommunityPhoto(
     return { ok: false, error: 'insert_failed' };
   }
 
-  revalidatePath(`/dashboard/communities/${communityId}/photos`);
+  revalidatePath(`/dashboard/communities/${communityId}`);
   return { ok: true, id: row.id, sortOrder: row.sort_order };
 }
 
@@ -179,7 +166,7 @@ export async function deleteCommunityPhoto(
     return { ok: false, error: 'delete_failed' };
   }
 
-  revalidatePath(`/dashboard/communities/${parsed.data.communityId}/photos`);
+  revalidatePath(`/dashboard/communities/${parsed.data.communityId}`);
   return { ok: true };
 }
 

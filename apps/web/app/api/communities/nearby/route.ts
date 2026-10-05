@@ -17,7 +17,7 @@
  * range checks, same radius cap, same JSON envelope. No auth required.
  */
 
-import { fetchCommunityListCards } from '@/lib/communities/list';
+import { fetchCommunityListCardsByIds } from '@/lib/communities/list';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -89,13 +89,10 @@ export async function GET(req: Request) {
     if (prev === undefined || d < prev) closestByCommunity.set(v.community_id, d);
   }
 
-  // Reuse the standard community grid loader, then filter to only those
-  // communities that had a nearby video. This double-loads (the loader
-  // re-queries community_videos for cover/membership) but keeps card shape
-  // identical to /communities so the grid renders the same.
-  const allCards = await fetchCommunityListCards();
-  const cards = allCards
-    .filter((c) => closestByCommunity.has(c.id))
+  // Same card shape as /communities, loaded for exactly these communities —
+  // the shared grid set is only a slice of them.
+  const nearbyCards = await fetchCommunityListCardsByIds([...closestByCommunity.keys()]);
+  const cards = nearbyCards
     .map((c) => ({
       ...c,
       nearestVideoMi: closestByCommunity.get(c.id) ?? null,

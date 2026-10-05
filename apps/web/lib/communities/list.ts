@@ -25,7 +25,9 @@
  */
 
 import { resolveCommunityCoverWithCfIds } from '@/lib/communities/cover';
+import { COMMUNITY_STUB_NAMES_FILTER } from '@/lib/communities/naming';
 import { startTimer } from '@/lib/perf/timing';
+import { PAGE_ROWS, readAllPages } from '@/lib/supabase/paginate';
 import { createAnonClient } from '@/lib/supabase/server';
 import { unstable_cache } from 'next/cache';
 
@@ -43,6 +45,26 @@ export type CommunityListCard = {
 };
 
 const COMMUNITY_CARDS_TAG = 'community-cards';
+
+const CARD_COLUMNS = 'id, name, slug, city, state, description, cover_video_id, cover_storage_path';
+
+/** One PostgREST read's worth; there are ~23.8k active communities. */
+const PAGE = PAGE_ROWS;
+
+/** `.in()` batch size: 8k ids in one URL is a 300 KB request PostgREST rejects. */
+const CHUNK = 500;
+
+async function inChunks<T>(
+  ids: string[],
+  fn: (batch: string[]) => PromiseLike<{ data: T[] | null }>,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const { data } = await fn(ids.slice(i, i + CHUNK));
+    if (data) out.push(...data);
+  }
+  return out;
+}
 
 const _NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
@@ -76,23 +98,8 @@ async function hydrateCommunityCards(communities: CommunityRow[]): Promise<Commu
   if (communities.length === 0) return [];
   const supabase = createAnonClient();
   const communityIds = communities.map((c) => c.id);
-
-  // batch the .in() calls. At scale (8k+ active
-  // communities) a single `.in('community_id', <8000 ids>)` produces a
-  // ~300KB URL and PostgREST rejects with 400. We chunk to 500 ids per
-  // request and merge in-memory.
-  const CHUNK = 500;
-  async function chunkedIn<T>(
-    fn: (batch: string[]) => PromiseLike<{ data: T[] | null }>,
-  ): Promise<T[]> {
-    const out: T[] = [];
-    for (let i = 0; i < communityIds.length; i += CHUNK) {
-      const batch = communityIds.slice(i, i + CHUNK);
-      const { data } = await fn(batch);
-      if (data) out.push(...data);
-    }
-    return out;
-  }
+  const chunkedIn = <T>(fn: (batch: string[]) => PromiseLike<{ data: T[] | null }>) =>
+    inChunks(communityIds, fn);
 
   // Wave 1: memberships (needed to compute videoCount + fallback cover cf id).
   const memberRows = await chunkedIn((batch) =>
@@ -107,23 +114,11 @@ async function hydrateCommunityCards(communities: CommunityRow[]): Promise<Commu
 
   // Wave 2: videos (ready+public only) + listings (active).
   // Videos batched by video_id, listings batched by community_id.
-  async function chunkedInField<T>(
-    ids: string[],
-    fn: (batch: string[]) => PromiseLike<{ data: T[] | null }>,
-  ): Promise<T[]> {
-    const out: T[] = [];
-    for (let i = 0; i < ids.length; i += CHUNK) {
-      const batch = ids.slice(i, i + CHUNK);
-      const { data } = await fn(batch);
-      if (data) out.push(...data);
-    }
-    return out;
-  }
 
   const [videoRows, listingRows] = await Promise.all([
     allVideoIds.length === 0
       ? Promise.resolve([] as Array<{ id: string; cf_video_id: string }>)
-      : chunkedInField(allVideoIds, (batch) =>
+      : inChunks(allVideoIds, (batch) =>
           supabase
             .from('community_videos')
             .select('id, cf_video_id, status')
@@ -178,7 +173,7 @@ async function hydrateCommunityCards(communities: CommunityRow[]): Promise<Commu
     .map((c) => c.id);
   const boundaryByCommunity = new Map<string, unknown>();
   if (needsBoundaryIds.length > 0) {
-    const boundaryRows = await chunkedInField(needsBoundaryIds, (batch) =>
+    const boundaryRows = await inChunks(needsBoundaryIds, (batch) =>
       supabase.from('communities').select('id, boundary').in('id', batch),
     );
     for (const r of boundaryRows) boundaryByCommunity.set(r.id, r.boundary);
@@ -227,22 +222,86 @@ function rankByRelevance(a: CommunityListCard, b: CommunityListCard): number {
   return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
 }
 
+/**
+ * Ids of every community that can rank above the bare seeds — it has an active
+ * listing or a video. Paged: either table can pass 1000 rows.
+ */
+async function idsWithListingsOrVideos(
+  supabase: ReturnType<typeof createAnonClient>,
+): Promise<string[]> {
+  const [listings, memberships] = await Promise.all([
+    readAllPages((from, to) =>
+      supabase
+        .from('listings')
+        .select('community_id')
+        .eq('status', 'active')
+        .not('community_id', 'is', null)
+        .order('id')
+        .range(from, to),
+    ),
+    readAllPages((from, to) =>
+      supabase
+        .from('community_video_membership')
+        .select('community_id')
+        .order('community_id')
+        .order('video_id')
+        .range(from, to),
+    ),
+  ]);
+  const ids = new Set<string>();
+  for (const r of [...listings, ...memberships]) if (r.community_id) ids.add(r.community_id);
+  return [...ids];
+}
+
+/** Active, non-stub community rows by id. */
+async function activeRowsByIds(
+  supabase: ReturnType<typeof createAnonClient>,
+  ids: string[],
+): Promise<CommunityRow[]> {
+  return inChunks(ids, (batch) =>
+    supabase
+      .from('communities')
+      .select(CARD_COLUMNS)
+      .eq('status', 'active')
+      .not('name', 'in', COMMUNITY_STUB_NAMES_FILTER)
+      .in('id', batch),
+  );
+}
+
+/**
+ * The shared grid set. One read cannot return all ~23.8k active communities,
+ * and it used to be one alphabetical read — so the grid, search and the nearby
+ * endpoint only ever saw names from the front of the alphabet, and a community
+ * with listings that sorted past the first 1000 was simply absent. Now every
+ * community with a listing or a video is fetched explicitly, and the
+ * alphabetical head of the bare seeds fills the rest. Search does not use this
+ * set any more — see `searchCommunityListCards`.
+ *
+ * Errors throw, so `unstable_cache` does not keep an empty grid for a minute.
+ */
 async function fetchActiveCommunitiesImpl(): Promise<CommunityListCard[]> {
   const t = startTimer('fetchActiveCommunities');
   const supabase = createAnonClient();
   t.mark('createClient');
 
-  const { data } = (await supabase
-    .from('communities')
-    .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
-    // never surface the upload-flow `Untitled community`
-    // stub — owner has never touched it (name still = stub), so it's just noise.
-    .neq('name', 'Untitled community')
-    .eq('status', 'active')
-    .order('name', { ascending: true })) as { data: CommunityRow[] | null };
+  const [head, relevantIds] = await Promise.all([
+    supabase
+      .from('communities')
+      .select(CARD_COLUMNS)
+      // never surface the upload-flow stub — its owner has never named it.
+      .not('name', 'in', COMMUNITY_STUB_NAMES_FILTER)
+      .eq('status', 'active')
+      .order('name', { ascending: true })
+      .limit(PAGE),
+    idsWithListingsOrVideos(supabase),
+  ]);
+  if (head.error) throw head.error;
+  const byId = new Map<string, CommunityRow>(head.data.map((r) => [r.id, r]));
+  const missing = relevantIds.filter((id) => !byId.has(id));
+  for (const r of await activeRowsByIds(supabase, missing)) byId.set(r.id, r);
   t.mark('query');
 
-  const rows = data ?? [];
+  const rows = [...byId.values()];
   const cards = await hydrateCommunityCards(rows);
   cards.sort(rankByRelevance);
   t.end({ communities: rows.length, cached: false });
@@ -268,9 +327,9 @@ async function fetchOwnInactiveCommunities(agentId: string): Promise<CommunityLi
 
   const { data } = (await supabase
     .from('communities')
-    .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
+    .select(CARD_COLUMNS)
     .neq('status', 'active')
-    .neq('name', 'Untitled community')
+    .not('name', 'in', COMMUNITY_STUB_NAMES_FILTER)
     .eq('created_by', agentId)
     .order('name', { ascending: true })) as { data: CommunityRow[] | null };
 
@@ -376,6 +435,59 @@ export async function fetchCommunityListCards(
   for (const c of active) byId.set(c.id, c);
   for (const c of own) byId.set(c.id, c);
   return Array.from(byId.values()).sort(rankByRelevance);
+}
+
+/**
+ * Communities matching a search term, as cards — the search page's set.
+ *
+ * Matched in Postgres (`ilike` on name, city, state and description) rather
+ * than by filtering the grid set, which holds only a slice of the ~23.8k
+ * active communities. Each field contributes up to `PER_FIELD` alphabetical
+ * matches; the union is ranked like the grid and cut to `limit`. A signed-in
+ * agent's own inactive drafts are searched too, as before.
+ */
+export async function searchCommunityListCards(
+  q: string,
+  opts: { viewerAgentId?: string | null; limit: number },
+): Promise<CommunityListCard[]> {
+  const PER_FIELD = 200;
+  const supabase = createAnonClient();
+  const pattern = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+  const fields = ['name', 'city', 'state', 'description'] as const;
+  const [ownCards, ...matches] = await Promise.all([
+    opts.viewerAgentId ? fetchOwnInactiveCommunities(opts.viewerAgentId) : Promise.resolve([]),
+    ...fields.map((field) =>
+      supabase
+        .from('communities')
+        .select(CARD_COLUMNS)
+        .eq('status', 'active')
+        .not('name', 'in', COMMUNITY_STUB_NAMES_FILTER)
+        .ilike(field, pattern)
+        .order('name', { ascending: true })
+        .limit(PER_FIELD),
+    ),
+  ]);
+  const byId = new Map<string, CommunityRow>();
+  for (const m of matches) {
+    if (m.error) throw m.error;
+    for (const r of m.data) byId.set(r.id, r);
+  }
+  const needle = q.toLowerCase();
+  const own = ownCards.filter((c) =>
+    [c.name, c.city ?? '', c.state, c.description ?? ''].some((v) =>
+      v.toLowerCase().includes(needle),
+    ),
+  );
+  const cards = await hydrateCommunityCards([...byId.values()]);
+  const merged = new Map<string, CommunityListCard>();
+  for (const c of [...cards, ...own]) merged.set(c.id, c);
+  return [...merged.values()].sort(rankByRelevance).slice(0, opts.limit);
+}
+
+/** Active communities by id, as cards — for callers that already know which. */
+export async function fetchCommunityListCardsByIds(ids: string[]): Promise<CommunityListCard[]> {
+  if (ids.length === 0) return [];
+  return hydrateCommunityCards(await activeRowsByIds(createAnonClient(), ids));
 }
 
 /**

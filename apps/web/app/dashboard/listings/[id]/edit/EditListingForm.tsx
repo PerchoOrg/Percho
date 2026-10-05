@@ -317,12 +317,11 @@ export function EditListingForm({ listingId, initial, communities }: Props) {
     };
   }, [price, beds, baths, sqft, yearBuilt, lotNum, lotUnit, hoa, style, description, communityId]);
 
-  // Register the flush hook for PublishPanel.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: register once on mount.
-  useEffect(() => {
-    const unregister = registerFlush(flushNow);
-    return unregister;
-  }, []);
+  // Register the flush hook for PublishPanel — again on every render, because
+  // `flushNow` must close over the CURRENT form state. Registered once on
+  // mount, it saved the mount-time values at publish and overwrote whatever
+  // had been typed since (it also cancels the debounced save that held them).
+  useEffect(() => registerFlush(flushNow));
 
   // Best-effort flush on tab close. Note: server actions can't be called from
   // beforeunload (no fetch keepalive on Next server actions), so we just warn

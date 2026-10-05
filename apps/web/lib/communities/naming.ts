@@ -229,3 +229,16 @@ export function titleCaseName(raw: string): string {
     .map((w, i) => (i > 0 && LOWER_WORDS.has(w) ? w : w.replace(/^[a-z]/, (c) => c.toUpperCase())))
     .join(' ');
 }
+
+/**
+ * The placeholder names the dashboard's "new neighborhood" button has given a
+ * stub row. It has said "Untitled neighborhood" since phase66 (2026-07-02);
+ * every filter and the activation gate kept checking "Untitled community", so
+ * a stub created since then could be activated and listed under its
+ * placeholder. Rows of both vintages exist — match both.
+ */
+export const COMMUNITY_STUB_NAME = 'Untitled neighborhood';
+export const COMMUNITY_STUB_NAMES: readonly string[] = [COMMUNITY_STUB_NAME, 'Untitled community'];
+
+/** PostgREST `in` list for `.not('name', 'in', …)`. */
+export const COMMUNITY_STUB_NAMES_FILTER = `(${COMMUNITY_STUB_NAMES.map((n) => `"${n}"`).join(',')})`;

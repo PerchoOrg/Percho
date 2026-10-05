@@ -84,10 +84,12 @@ export function InstantStatusToggle({ id, status, kind = 'listing', variant = 'h
   function handleToggle() {
     clearErrors();
     startAsyncTransition(startTransition, async () => {
+      // Awaited: publish validates the saved row, so the form's pending
+      // auto-save has to land first. Unawaited, the two raced.
       try {
-        flushPending();
+        await flushPending();
       } catch {
-        // no pending form on this page — ignore.
+        // the save failed; the form shows its own error — publish anyway.
       }
       if (kind === 'listing') {
         if (isActive) {

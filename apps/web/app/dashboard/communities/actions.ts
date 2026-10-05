@@ -18,6 +18,7 @@
  * automated writer to this table.
  */
 
+import { COMMUNITY_STUB_NAME } from '@/lib/communities/naming';
 import { createClient } from '@/lib/supabase/server';
 import { slugify } from '@/lib/utils/slug';
 import { UpdateCommunityInput } from '@/lib/zod/community';
@@ -82,7 +83,7 @@ export async function createStubCommunity(): Promise<ActionResult<{ id: string }
     const { data: created, error } = (await (supabase as any)
       .from('communities')
       .insert({
-        name: 'Untitled neighborhood',
+        name: COMMUNITY_STUB_NAME,
         slug,
         state: 'GA',
         status: 'inactive',

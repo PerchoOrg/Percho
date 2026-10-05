@@ -11,6 +11,7 @@
  */
 
 import { type RefKind, buildRefMap } from '@/lib/cleanup/stream-orphans';
+import { readAllPages } from '@/lib/supabase/paginate';
 import type { createServiceClient } from '@/lib/supabase/server';
 
 type Db = ReturnType<typeof createServiceClient>;
@@ -29,32 +30,50 @@ const IN_FLIGHT = ['tagging', 'review', 'planning', 'generating', 'assembling'];
 const STALLED_AFTER_HOURS = 6;
 
 export async function loadStreamRefs(sb: Db): Promise<Map<string, RefKind>> {
+  // Every read is paged: a list cut short at PostgREST's 1000 rows would
+  // shrink the live set, and everything it hid would be offered for deletion.
+  // readAllPages throws on a failed page for the same reason.
   const [videos, communityVideos, generated, covers, listingAsm, communityAsm] = await Promise.all([
-    sb.from('listing_videos').select('cf_video_id, cf_video_id_landscape, cf_video_id_square'),
-    sb.from('community_videos').select('cf_video_id'),
-    sb.from('generated_videos').select('cf_stream_uid'),
-    sb.from('communities').select('cover_video_id').not('cover_video_id', 'is', null),
-    sb.from('listing_tour_assemblies').select('cf_stream_uid'),
-    sb.from('tour_assemblies').select('cf_stream_uid'),
+    readAllPages((from, to) =>
+      sb
+        .from('listing_videos')
+        .select('cf_video_id, cf_video_id_landscape, cf_video_id_square')
+        .order('id')
+        .range(from, to),
+    ),
+    readAllPages((from, to) =>
+      sb.from('community_videos').select('cf_video_id').order('id').range(from, to),
+    ),
+    readAllPages((from, to) =>
+      sb.from('generated_videos').select('cf_stream_uid').order('id').range(from, to),
+    ),
+    readAllPages((from, to) =>
+      sb
+        .from('communities')
+        .select('cover_video_id')
+        .not('cover_video_id', 'is', null)
+        .order('id')
+        .range(from, to),
+    ),
+    readAllPages((from, to) =>
+      sb.from('listing_tour_assemblies').select('cf_stream_uid').order('id').range(from, to),
+    ),
+    readAllPages((from, to) =>
+      sb.from('tour_assemblies').select('cf_stream_uid').order('id').range(from, to),
+    ),
   ]);
 
-  for (const res of [videos, communityVideos, generated, covers, listingAsm, communityAsm]) {
-    // A failed read here would silently shrink the live set, and everything it
-    // was hiding would be offered for deletion. Refuse to answer instead.
-    if (res.error) throw new Error(`stream reference read failed: ${res.error.message}`);
-  }
-
   const live: Array<string | null | undefined> = [];
-  for (const v of videos.data ?? []) {
+  for (const v of videos) {
     live.push(v.cf_video_id, v.cf_video_id_landscape, v.cf_video_id_square);
   }
-  for (const v of communityVideos.data ?? []) live.push(v.cf_video_id);
-  for (const g of generated.data ?? []) live.push(g.cf_stream_uid);
-  for (const c of covers.data ?? []) live.push(c.cover_video_id);
+  for (const v of communityVideos) live.push(v.cf_video_id);
+  for (const g of generated) live.push(g.cf_stream_uid);
+  for (const c of covers) live.push(c.cover_video_id);
 
   const assemblies: Array<string | null | undefined> = [];
-  for (const a of listingAsm.data ?? []) assemblies.push(a.cf_stream_uid);
-  for (const a of communityAsm.data ?? []) assemblies.push(a.cf_stream_uid);
+  for (const a of listingAsm) assemblies.push(a.cf_stream_uid);
+  for (const a of communityAsm) assemblies.push(a.cf_stream_uid);
 
   return buildRefMap({ live, assemblies });
 }

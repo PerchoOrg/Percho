@@ -22,10 +22,9 @@
  * ownership, DB error) come back as `{ ok:false, error:string }`.
  */
 
+import { COMMUNITY_STUB_NAMES } from '@/lib/communities/naming';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
-
-const UNTITLED_STUB_NAME = 'Untitled community';
 
 export type CommunityStatusResult = { ok: true } | { ok: false; error: string; missing?: string[] };
 
@@ -71,7 +70,7 @@ export async function setCommunityStatus(
   if (status === 'active') {
     const missing: string[] = [];
     const trimmedName = (row.name ?? '').trim();
-    if (!trimmedName || trimmedName === UNTITLED_STUB_NAME) missing.push('name');
+    if (!trimmedName || COMMUNITY_STUB_NAMES.includes(trimmedName)) missing.push('name');
     if (!row.city || !row.city.trim()) missing.push('city');
     if (!row.state || !row.state.trim()) missing.push('state');
 

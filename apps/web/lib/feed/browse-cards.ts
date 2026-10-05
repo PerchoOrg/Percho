@@ -119,22 +119,6 @@ type CommunityVideoRow = {
   kind: string;
   category: string | null;
   school_id: string | null;
-  poi_id: string | null;
-};
-
-type SchoolRow = {
-  community_id: string;
-  id: string;
-  name: string;
-  grades: string | null;
-  rating: number | null;
-};
-
-type PoiRow = {
-  community_id: string;
-  id: string;
-  name: string;
-  distance_text: string | null;
 };
 
 type CommunityRow = {
@@ -177,8 +161,6 @@ async function assembleCards(
     listingPhotosResp,
     agentsResp,
     commVidsResp,
-    schoolsResp,
-    poisResp,
     communitiesResp,
     listingCountResp,
     listingBucketVidsResp,
@@ -209,24 +191,14 @@ async function assembleCards(
     communityIds.length > 0
       ? supabase
           .from('community_videos')
-          .select('community_id, cf_video_id, title, kind, category, school_id, poi_id')
+          // `poi_id` was dropped from this table on 2026-07-14; asking for it
+          // failed the whole read, and the Nearby pool came back empty.
+          .select('community_id, cf_video_id, title, kind, category, school_id')
           .in('community_id', communityIds)
           .eq('status', 'ready')
           .eq('visibility', 'public')
           // skip history renders.
           .eq('is_primary', true)
-      : Promise.resolve({ data: [] }),
-    communityIds.length > 0
-      ? supabase
-          .from('schools')
-          .select('community_id, id, name, grades, rating')
-          .in('community_id', communityIds)
-      : Promise.resolve({ data: [] }),
-    communityIds.length > 0
-      ? supabase
-          .from('pois')
-          .select('community_id, id, name, distance_text')
-          .in('community_id', communityIds)
       : Promise.resolve({ data: [] }),
     communityIds.length > 0
       ? supabase
@@ -261,8 +233,6 @@ async function assembleCards(
   const listingPhotos = (listingPhotosResp.data ?? []) as ListingPhotoRow[];
   const agents = (agentsResp.data ?? []) as AgentRow[];
   const commVideos = (commVidsResp.data ?? []) as CommunityVideoRow[];
-  const schools = (schoolsResp.data ?? []) as SchoolRow[];
-  const pois = (poisResp.data ?? []) as PoiRow[];
   const communities = (communitiesResp.data ?? []) as CommunityRow[];
   const listingCountRows = (listingCountResp.data ?? []) as Array<{ community_id: string }>;
   const listingCountByCommunity = new Map<string, number>();
@@ -287,8 +257,6 @@ async function assembleCards(
   }
   const agentsById = new Map(agents.map((a) => [a.id, a] as const));
   const communitiesById = new Map(communities.map((c) => [c.id, c] as const));
-  const _schoolsById = new Map(schools.map((s) => [s.id, s] as const));
-  const _poisById = new Map(pois.map((p) => [p.id, p] as const));
 
   const commVidsByCommunity = new Map<string, CommunityVideoRow[]>();
   for (const v of commVideos) {
@@ -315,7 +283,6 @@ async function assembleCards(
       kind: 'poi',
       category: null,
       school_id: null,
-      poi_id: null,
     });
     bucketVidsByListing.set(r.listing_id, arr);
   }
@@ -587,7 +554,7 @@ export async function fetchBrowseCardsByCommunitySlug(slug: string): Promise<Bro
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
     )
     .eq('status', 'active')
     .eq('community_id', community.id)
@@ -610,7 +577,7 @@ export async function fetchBrowseCardsByIds(ids: string[]): Promise<BrowseCard[]
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
     )
     .in('id', ids)
     .eq('status', 'active')) as { data: ListingRow[] | null };
@@ -643,7 +610,7 @@ export async function fetchNearbyCards(args: {
     const r = (await (supabase as any)
       .from('listings')
       .select(
-        'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
+        'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
       )
       .eq('status', 'active')
       .not('lat', 'is', null)

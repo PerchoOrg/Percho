@@ -48,7 +48,6 @@ export interface CommunityPhotoRow {
   kind: 'school' | 'poi' | 'neighborhood' | string;
   category?: string | null;
   school_id: string | null;
-  poi_id: string | null;
   alt_text: string | null;
   width: number | null;
   height: number | null;
@@ -162,7 +161,6 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
             kind,
             category: cat,
             schoolId: null,
-            poiId: null,
             lat: null,
             lng: null,
             width: dims?.width ?? null,
@@ -188,7 +186,6 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
               kind,
               category: cat,
               school_id: null,
-              poi_id: null,
               alt_text: null,
               width: dims?.width ?? null,
               height: dims?.height ?? null,

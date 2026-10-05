@@ -79,10 +79,8 @@ type CommunityVideo = {
   title: string | null;
   category: string | null;
   school_id: string | null;
-  poi_id: string | null;
 };
 type School = { id: string; name: string; grades: string | null; rating: number | null };
-type Poi = { id: string; name: string; poi_type: string; distance_text: string | null };
 
 export interface ListingFeedBundle {
   agent: Agent;
@@ -91,7 +89,6 @@ export interface ListingFeedBundle {
   listingVideos: ListingVideo[];
   communityVideos: CommunityVideo[];
   schools: School[];
-  pois: Poi[];
 }
 
 async function fetchAroundListing(
@@ -121,7 +118,6 @@ async function fetchAroundListing(
 
   const communityVideos: CommunityVideo[] = [];
   let schools: School[] = [];
-  let pois: Poi[] = [];
 
   // nearby videos are anchored to the listing, not
   // the community. Owner rule: only look at POIs near the listing
@@ -154,14 +150,15 @@ async function fetchAroundListing(
       title: r.narrative?.title ?? null,
       category: null,
       school_id: null,
-      poi_id: null,
     });
   }
 
   if (listing.community_id) {
     const cv = (await supabase
       .from('community_videos')
-      .select('id, cf_video_id, kind, title, category, school_id, poi_id')
+      // `poi_id` was dropped from this table on 2026-07-14; asking for it
+      // failed the read and the listing page lost its community videos.
+      .select('id, cf_video_id, kind, title, category, school_id')
       .eq('community_id', listing.community_id)
       .eq('status', 'ready')
       .eq('visibility', 'public')
@@ -196,7 +193,6 @@ async function fetchAroundListing(
         title: r.narrative?.title ?? null,
         category: null,
         school_id: null,
-        poi_id: null,
       });
     }
 
@@ -205,12 +201,6 @@ async function fetchAroundListing(
       .select('id, name, grades, rating')
       .eq('community_id', listing.community_id)) as { data: School[] | null };
     schools = sc.data ?? [];
-
-    const po = (await supabase
-      .from('pois')
-      .select('id, name, poi_type, distance_text')
-      .eq('community_id', listing.community_id)) as { data: Poi[] | null };
-    pois = po.data ?? [];
   }
 
   return {
@@ -220,7 +210,6 @@ async function fetchAroundListing(
     listingVideos: listingVideos ?? [],
     communityVideos,
     schools,
-    pois,
   };
 }
 
@@ -345,7 +334,7 @@ export async function buildListingCards(
     | { id: string; storage_path: string; alt_text: string | null; sort_order: number }[]
     | null,
 ): Promise<BrowseCard[]> {
-  const { agent, listing, listingVideos, communityVideos, schools, pois } = bundle;
+  const { agent, listing, listingVideos, communityVideos, schools } = bundle;
 
   // categoryVideos are built the same way whether the
   // listing hero is a video or a photo. Nearby (listing- + community-scoped)
@@ -394,7 +383,6 @@ export async function buildListingCards(
         grades: s.grades,
         rating: s.rating,
       })),
-      photoPois: pois.map((p) => ({ name: p.name, distance_text: p.distance_text })),
       listing: {
         id: listing.id,
         slug: listing.slug,
