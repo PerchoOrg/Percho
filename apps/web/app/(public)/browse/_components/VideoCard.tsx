@@ -1,7 +1,7 @@
 'use client';
+import { attachHls } from '@/app/(public)/_components/feed/attach-hls';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import { type BrowseCard, type Source, pickVideo } from '@/lib/feed/browse-card';
-import Hls from 'hls.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PlayIcon } from '../../_components/feed/icons';
 import { CaptionCard } from './CaptionCard';
@@ -37,7 +37,6 @@ export function VideoCard({
   onAutoplayBlocked,
 }: CardProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const hlsRef = useRef<Hls | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const { sectionRef, isFullscreen, setIsFullscreen, vp, setVp } = useFullscreenViewport();
@@ -242,23 +241,13 @@ export function VideoCard({
     // first real frame paints on this new src.
     setHasFirstFrame(false);
 
-    // Tear down previous HLS attachment.
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
     video.removeAttribute('src');
     video.load();
 
     // external mp4 path — set video.src directly, skip HLS.
     if (isExternal && sel.externalUrl) {
       video.src = sel.externalUrl;
-      return () => {
-        if (hlsRef.current) {
-          hlsRef.current.destroy();
-          hlsRef.current = null;
-        }
-      };
+      return;
     }
 
     let src: string;
@@ -267,38 +256,7 @@ export function VideoCard({
     } catch {
       return;
     }
-
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = src;
-    } else if (Hls.isSupported()) {
-      // capLevelToPlayerSize:false → don't cap quality to the player's pixel
-      //   size (desktop letterbox renders smallish but we still want HD).
-      // MANIFEST_PARSED → jump to the top level for first playback so users
-      //   don't see the lowest-bitrate ladder rung. ABR can still downgrade
-      //   on real network pressure afterwards.
-      const hls = new Hls({
-        maxBufferLength: 20,
-        maxMaxBufferLength: 30,
-        capLevelToPlayerSize: false,
-      });
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        if (hls.levels.length > 0) {
-          hls.nextLevel = hls.levels.length - 1;
-        }
-      });
-      hls.loadSource(src);
-      hls.attachMedia(video);
-      hlsRef.current = hls;
-    } else {
-      video.src = src;
-    }
-
-    return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
-    };
+    return attachHls(video, src, { hd: true });
   }, [shouldMount, effectiveCfId, sel.externalUrl, isExternal]);
 
   // Play/pause on active changes.

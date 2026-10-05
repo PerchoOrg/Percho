@@ -18,23 +18,12 @@
  */
 
 import { fetchCommunityListCardsByIds } from '@/lib/communities/list';
+import { haversineMiles } from '@/lib/geo/distance';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
 const MAX_RADIUS_MI = 100;
 const MIN_RADIUS_MI = 1;
-
-const EARTH_RADIUS_MI = 3958.7613;
-
-function haversineMi(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const lat1 = toRad(a.lat);
-  const lat2 = toRad(b.lat);
-  const x = Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
-  return 2 * EARTH_RADIUS_MI * Math.asin(Math.sqrt(x));
-}
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -82,7 +71,7 @@ export async function GET(req: Request) {
   // Exact filter + closest-distance per community.
   const closestByCommunity = new Map<string, number>();
   for (const v of videoRows ?? []) {
-    const d = haversineMi({ lat, lng }, { lat: v.lat, lng: v.lng });
+    const d = haversineMiles({ lat, lng }, { lat: v.lat, lng: v.lng });
     if (d > radius) continue;
     const prev = closestByCommunity.get(v.community_id);
     if (prev === undefined || d < prev) closestByCommunity.set(v.community_id, d);

@@ -86,3 +86,39 @@ export function createAnonClient() {
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
 }
+
+/**
+ * `fetch` with Next's data cache turned off, for supabase-js clients.
+ *
+ * Next 14 patches global `fetch` and, in the App Router, persists responses to
+ * `.next/cache/fetch-cache` ON DISK — surviving a dev-server restart. supabase-js
+ * uses `fetch`, so a read gets pinned to whatever the row looked like the first
+ * time it was requested. On 2026-07-27, after backfilling
+ * `listing_photos.ai_tags`, the DB and a direct PostgREST call both returned 10
+ * tagged photos while the listing endpoint kept returning 0 — through a
+ * restart. `export const dynamic = 'force-dynamic'` does NOT cover this; it
+ * governs route rendering, not the inner fetch cache.
+ */
+const noStoreFetch = (input: RequestInfo | URL, init?: RequestInit) =>
+  fetch(input, { ...init, cache: 'no-store' });
+
+/** Anon client that never reads Next's fetch cache — see `noStoreFetch`. */
+export function createUncachedAnonClient() {
+  return createPlainClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
+    { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: noStoreFetch } },
+  );
+}
+
+/**
+ * Service-role client that never reads Next's fetch cache. Bypasses RLS: the
+ * same rules as `createServiceClient` apply to every caller.
+ */
+export function createUncachedServiceClient() {
+  return createPlainClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+    { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: noStoreFetch } },
+  );
+}

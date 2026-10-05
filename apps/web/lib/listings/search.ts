@@ -41,8 +41,7 @@
  */
 
 import { publicCoverImageUrl } from '@/lib/communities/cover';
-import type { Database } from '@/lib/supabase/database.types';
-import { createClient as createPlainClient } from '@supabase/supabase-js';
+import { createUncachedAnonClient } from '@/lib/supabase/server';
 
 const SEARCH_LIMIT = 24;
 /**
@@ -146,21 +145,6 @@ export function projectSearchCommunities(rows: CommunityRow[]): SearchCommunityD
     ...(r.cover_storage_path ? { heroUrl: publicCoverImageUrl(r.cover_storage_path) } : {}),
     ...(coord(r.lat, r.lng) ?? {}),
   }));
-}
-
-function createUncachedAnonClient() {
-  // Same fetch-cache opt-out as `detail.ts` — see the long note there.
-  return createPlainClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
-    {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: {
-        fetch: (input: RequestInfo | URL, init?: RequestInit) =>
-          fetch(input, { ...init, cache: 'no-store' }),
-      },
-    },
-  );
 }
 
 /** `q` MUST already be the sanitised output of `mobileSearchQuerySchema`. */

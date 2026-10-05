@@ -16,6 +16,7 @@
  * from those, and this file exports types too.
  */
 import { createHash } from 'node:crypto';
+import { haversineMeters } from '@/lib/geo/distance';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { POI_PHOTO_BUCKET, type PoiEntityScope } from './entity-scope';
@@ -25,7 +26,6 @@ import {
   type PlaceResult,
   bucketByPlaceType,
   fetchPhotoBinary,
-  haversineMeters,
   searchNearby,
 } from './google-places';
 import type { IntentBucket, PhotoStatus, PoiStatus } from './types';

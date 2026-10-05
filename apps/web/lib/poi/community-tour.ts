@@ -15,7 +15,8 @@
  * admin page renders history instead of re-running.
  */
 
-import { type PlaceResult, haversineMeters, searchNearby, searchText } from './google-places';
+import { haversineMeters } from '@/lib/geo/distance';
+import { type PlaceResult, searchNearby, searchText } from './google-places';
 import { PLACES_TYPE_TO_BUCKET } from './google-places';
 import { RELIGIOUS_DROP_REASON, isReligiousPlace } from './religious-content';
 

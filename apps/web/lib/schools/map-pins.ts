@@ -35,7 +35,7 @@
 
 import { milestones } from '@/lib/listings/schools';
 import type { Database, Json } from '@/lib/supabase/database.types';
-import { createClient as createPlainClient } from '@supabase/supabase-js';
+import { createUncachedAnonClient } from '@/lib/supabase/server';
 
 /** The three levels the map draws. `k8` and `other` are stored but not shown:
  *  the layer's zoom rule is built on the elementary/middle/high ladder, and a
@@ -100,21 +100,6 @@ export function projectSchoolPins(rows: readonly SchoolRow[]): SchoolPin[] {
     });
   }
   return out;
-}
-
-function createUncachedAnonClient() {
-  // Same fetch-cache opt-out as `lib/areas/areas.ts` — see the note there.
-  return createPlainClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
-    {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: {
-        fetch: (input: RequestInfo | URL, init?: RequestInit) =>
-          fetch(input, { ...init, cache: 'no-store' }),
-      },
-    },
-  );
 }
 
 /**

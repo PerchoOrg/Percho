@@ -44,9 +44,9 @@
  */
 'use client';
 
+import { attachHls } from '@/app/(public)/_components/feed/attach-hls';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import type { BrowseSourceVideo } from '@/lib/feed/browse-card';
-import Hls from 'hls.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActionButton } from '../../_components/feed/ActionButton';
 import { FEED_FRAME_CLASS, FEED_RAIL_BOTTOM, FEED_Z } from '../../_components/feed/constants';
@@ -374,7 +374,6 @@ function CarouselSlide({
   isActive: boolean;
 }) {
   const ref = useRef<HTMLVideoElement | null>(null);
-  const hlsRef = useRef<Hls | null>(null);
 
   // overlay a poster <img> on top of the <video>
   // and only fade it out once the first video frame has actually rendered.
@@ -416,10 +415,6 @@ function CarouselSlide({
     // New src → hide the video layer behind the poster until the first
     // frame renders. Otherwise `<video>` sits blank/black over the poster.
     setHasFirstFrame(false);
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
     v.removeAttribute('src');
     v.load();
     let src: string;
@@ -428,20 +423,7 @@ function CarouselSlide({
     } catch {
       return;
     }
-    if (v.canPlayType('application/vnd.apple.mpegurl')) {
-      v.src = src;
-    } else if (Hls.isSupported()) {
-      const hls = new Hls({ maxBufferLength: 20 });
-      hls.loadSource(src);
-      hls.attachMedia(v);
-      hlsRef.current = hls;
-    }
-    return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
-    };
+    return attachHls(v, src);
   }, [shouldMount, video.cfVideoId]);
 
   // Reveal the video layer only after the first real frame paints. Use

@@ -25,11 +25,11 @@ import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 
+import { attachHls } from '@/app/(public)/_components/feed/attach-hls';
 import {
   COMMUNITY_VIDEO_CATEGORIES,
   type CommunityVideoCategoryId,
 } from '@/lib/zod/community-video-categories';
-import Hls from 'hls.js';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LeadModal } from '../../../_components/LeadModal';
@@ -117,7 +117,6 @@ function VideoCard({
   onAutoplayBlocked,
 }: VideoCardProps) {
   const videoElRef = useRef<HTMLVideoElement | null>(null);
-  const hlsRef = useRef<Hls | null>(null);
   const [paused, setPaused] = useState(true);
   // poster-attribute anti-pattern. See
   // BrowseFeed 74.7 comment. Overlay a poster <img> until first
@@ -141,10 +140,6 @@ function VideoCard({
     // hide <video> layer until first frame paints on new src.
     setHasFirstFrame(false);
 
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
     el.removeAttribute('src');
     el.load();
 
@@ -154,33 +149,7 @@ function VideoCard({
     } catch {
       return;
     }
-
-    if (el.canPlayType('application/vnd.apple.mpegurl')) {
-      el.src = src;
-    } else if (Hls.isSupported()) {
-      const hls = new Hls({
-        maxBufferLength: 20,
-        maxMaxBufferLength: 30,
-        capLevelToPlayerSize: false,
-      });
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        if (hls.levels.length > 0) {
-          hls.nextLevel = hls.levels.length - 1;
-        }
-      });
-      hls.loadSource(src);
-      hls.attachMedia(el);
-      hlsRef.current = hls;
-    } else {
-      el.src = src;
-    }
-
-    return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
-    };
+    return attachHls(el, src, { hd: true });
   }, [shouldMount, video.cfVideoId]);
 
   // Play/pause on activation; honor mute, fall back if blocked.
