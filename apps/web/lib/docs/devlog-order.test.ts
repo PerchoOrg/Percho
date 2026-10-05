@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -24,9 +24,23 @@ import { describe, expect, it } from 'vitest';
  * stop it happening again.
  */
 
-const DEVLOG = readFileSync(new URL('../../../../DEVLOG.md', import.meta.url), 'utf8');
 /** Entries before this were written in sessions whose clock nobody kept. */
 const CHECKED_FROM = '2026-09-08';
+
+/**
+ * The live file, then every archived month from CHECKED_FROM's on, newest
+ * first — the order the history reads in. Reading DEVLOG.md alone made the
+ * month's rotation (§2.1 rule 2) fail this test the day it was done right.
+ */
+const ARCHIVE = new URL('../../../../docs/devlog/', import.meta.url);
+const DEVLOG = [
+  readFileSync(new URL('../../../../DEVLOG.md', import.meta.url), 'utf8'),
+  ...readdirSync(ARCHIVE)
+    .filter((f) => /^\d{4}-\d{2}\.md$/.test(f) && f.slice(0, 7) >= CHECKED_FROM.slice(0, 7))
+    .sort()
+    .reverse()
+    .map((f) => readFileSync(new URL(f, ARCHIVE), 'utf8')),
+].join('\n');
 
 interface Entry {
   date: string;

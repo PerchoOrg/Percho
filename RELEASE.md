@@ -20,6 +20,28 @@ Everything is learned from the swipes you've already made, on your own
 device — there's no form to fill in, and a left swipe never blacklists
 anything; it just means "less of this for now".
 
+### 2026-10-05
+- **Agents can upload neighbourhood photos and videos again.** Both had been
+  quietly failing since mid-July; uploads now land and show up in the
+  neighbourhood's Media tab.
+- **Search finds every neighbourhood.** Search, the neighbourhoods page and
+  "neighbourhoods near me" only ever looked at the first thousand names in
+  alphabetical order — about one in twenty-four of them. They now cover all
+  of them, and neighbourhoods with homes or films come first.
+- **Publishing keeps your latest edits.** Publishing a listing moments after
+  typing could save the values the page opened with instead of yours.
+- **No more doubles from a double-click.** "New listing", "New
+  neighbourhood", publish and the other dashboard buttons now stay disabled
+  while they work.
+- **Neighbourhood films are back in a home's Nearby reel** on the website,
+  and dashboard listings without a cover picture show their first video's
+  thumbnail.
+- **Tighter permissions.** Only Percho staff can reach the admin tools, only
+  signed-in agents can change a neighbourhood page, and the agent waitlist is
+  staff-only.
+- The iPhone app no longer retries sending usage data in a tight loop when
+  it's offline.
+
 ### 2026-09-26
 - **Home listings reset.** Every home previously in the feed has been
   removed while Percho moves to a licensed MLS data feed. For now the feed
