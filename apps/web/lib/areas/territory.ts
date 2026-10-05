@@ -49,7 +49,7 @@ export interface BBox {
 }
 
 /** Each polygon of a geometry, as its list of rings (outer first, then holes). */
-export function polygonsOf(geom: PolygonLike): Position[][][] {
+function polygonsOf(geom: PolygonLike): Position[][][] {
   return geom.type === 'Polygon'
     ? [geom.coordinates as Position[][]]
     : (geom.coordinates as Position[][][]);
@@ -73,7 +73,7 @@ export function bboxOf(geom: PolygonLike): BBox {
   return { minX, minY, maxX, maxY };
 }
 
-export function inBBox(x: number, y: number, b: BBox): boolean {
+function inBBox(x: number, y: number, b: BBox): boolean {
   return x >= b.minX && x <= b.maxX && y >= b.minY && y <= b.maxY;
 }
 

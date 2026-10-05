@@ -21,7 +21,7 @@ export interface CoLikeRow {
 }
 
 /** At most this many scored neighbours come back. */
-export const CO_LIKE_CAP = 50;
+const CO_LIKE_CAP = 50;
 
 export function coLikeScores(
   rows: readonly CoLikeRow[],

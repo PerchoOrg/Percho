@@ -79,7 +79,7 @@ export const DIM_LABELS: Record<PersonaDim, string> = {
 	space: "Room to grow",
 };
 
-export function isPersonaDim(key: string): key is PersonaDim {
+function isPersonaDim(key: string): key is PersonaDim {
 	return key in MODIFIER;
 }
 

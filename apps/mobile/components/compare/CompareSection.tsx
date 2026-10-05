@@ -62,7 +62,7 @@ export function ColumnHeaderSpacer({
 	return <View style={{ width: LABEL_COL_W - gap }} />;
 }
 
-export function FigureRow({
+function FigureRow({
 	row,
 	ids,
 }: {

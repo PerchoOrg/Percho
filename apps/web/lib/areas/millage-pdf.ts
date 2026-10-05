@@ -211,7 +211,7 @@ export function decodeCid(hex: string, map: ReadonlyMap<string, string>): string
 }
 
 /** PDF string escapes, as far as this document uses them. */
-export function unescapePdf(s: string): string {
+function unescapePdf(s: string): string {
   return s
     .replace(/\\([()\\])/g, '$1')
     .replace(/\\t/g, '\t')

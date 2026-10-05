@@ -12,6 +12,8 @@
  * needed a test and had none.
  */
 
+import { ASSESSMENT_RATIO } from '@percho/shared/property-tax';
+
 /** A county levy row as the DOR report prints it. */
 export interface DistrictLevy {
   district: string;
@@ -39,9 +41,6 @@ export function classify(district: string, siblings: readonly string[]): Bucket 
   }
   return 'ambiguous';
 }
-
-/** Statewide assessment ratio, O.C.G.A. § 48-5-7. */
-export const ASSESSMENT_RATIO = 0.4;
 
 /** Mills → percentage points of MARKET value, which is what a buyer compares. */
 export function millsToPoints(mills: number): number {
