@@ -79,8 +79,7 @@ async function searchListings(
     `neighborhood.ilike.${pattern}`,
   ].join(',');
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  let query = (supabase as any)
+  let query = supabase
     .from('listings')
     .select(
       'id, slug, address, city, state, zip, neighborhood, price, beds, baths, sqft, agent_id, status, cover_url',
@@ -123,15 +122,13 @@ async function searchListings(
   const agentIds = Array.from(new Set(listings.map((l) => l.agent_id)));
 
   const [vidsResp, photosResp, agentsResp] = await Promise.all([
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
+    supabase
       .from('listing_videos')
       .select('listing_id, cf_video_id, sort_order')
       .in('listing_id', ids)
       .eq('status', 'ready')
       .order('sort_order', { ascending: true }),
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
+    supabase
       .from('listing_photos')
       .select('listing_id, storage_path, sort_order')
       .in('listing_id', ids)
@@ -141,11 +138,7 @@ async function searchListings(
         (r: { data: Array<{ listing_id: string; storage_path: string }> | null }) => r,
         () => ({ data: [] }),
       ),
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
-      .from('agents')
-      .select('id, slug')
-      .in('id', agentIds),
+    supabase.from('agents').select('id, slug').in('id', agentIds),
   ]);
 
   const heroVid = new Map<string, string>();
@@ -237,8 +230,7 @@ async function getViewerAgentId(): Promise<string | null> {
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
   if (!user) return null;
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agent } = (await (supabase as any)
+  const { data: agent } = (await supabase
     .from('agents')
     .select('id')
     .eq('user_id', user.id)

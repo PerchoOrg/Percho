@@ -49,8 +49,7 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
   let communityLabel: string | null = null;
   if (communitySlug) {
     const supabase = await createClient();
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data } = (await (supabase as any)
+    const { data } = (await supabase
       .from('communities')
       .select('name')
       .eq('slug', communitySlug)

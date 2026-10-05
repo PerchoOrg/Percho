@@ -145,16 +145,14 @@ export default async function DashboardAnalyticsPage() {
   const user = session?.user ?? null;
   if (!user) redirect('/login');
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agentRow } = (await (supabase as any)
+  const { data: agentRow } = (await supabase
     .from('agents')
     .select('id')
     .eq('user_id', user.id)
     .maybeSingle()) as { data: { id: string } | null };
   if (!agentRow?.id) redirect('/dashboard');
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: listings } = (await (supabase as any)
+  const { data: listings } = (await supabase
     .from('listings')
     .select('id')
     .eq('agent_id', agentRow.id)) as { data: Array<{ id: string }> | null };
@@ -171,8 +169,7 @@ export default async function DashboardAnalyticsPage() {
     const since = new Date();
     since.setUTCHours(0, 0, 0, 0);
     since.setUTCDate(since.getUTCDate() - 6);
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: events } = (await (supabase as any)
+    const { data: events } = (await supabase
       .from('events')
       .select('created_at')
       .eq('event_type', 'page_view')

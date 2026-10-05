@@ -7,6 +7,7 @@
  * empty set has to stay empty here so the caller can refuse to run.
  */
 
+import type { TypedClient } from '@/lib/supabase/server';
 import { describe, expect, it, vi } from 'vitest';
 import { tourPoiIds, tourPoiSet } from './tour-poi-set';
 
@@ -23,7 +24,8 @@ function fakeSb(opts: {
     }
     throw new Error(`unexpected table: ${table}`);
   });
-  return { sb: { from }, poisIn };
+  // Only the two chains the module walks; the rest of the client is absent.
+  return { sb: { from } as unknown as TypedClient, poisIn };
 }
 
 const CID = 'community-1';

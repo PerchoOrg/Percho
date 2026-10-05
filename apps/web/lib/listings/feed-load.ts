@@ -20,7 +20,7 @@
 
 import type { BrowseCard } from '@/lib/feed/browse-card';
 import { webVideoUid } from '@/lib/feed/video-uid';
-import { createClient } from '@/lib/supabase/server';
+import { type TypedClient, createClient } from '@/lib/supabase/server';
 import {
   COMMUNITY_VIDEO_CATEGORIES,
   type CommunityVideoCategoryId,
@@ -92,8 +92,7 @@ export interface ListingFeedBundle {
 }
 
 async function fetchAroundListing(
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  supabase: any,
+  supabase: TypedClient,
   agent: Agent,
   listing: ListingForFeed,
 ): Promise<ListingFeedBundle> {
@@ -228,8 +227,7 @@ export async function loadListingFeedBySource(
   const statuses = opts.statuses ?? ['active'];
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: listing } = (await (supabase as any)
+  const { data: listing } = (await supabase
     .from('listings')
     .select(
       'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id',
@@ -265,16 +263,14 @@ export async function loadListingFeedBySlug(
   const statuses = opts.statuses ?? ['active'];
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agent } = (await (supabase as any)
+  const { data: agent } = (await supabase
     .from('agents')
     .select('id, slug, name, email, phone')
     .eq('slug', agentSlug)
     .maybeSingle()) as { data: Agent | null };
   if (!agent) return null;
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: listing } = (await (supabase as any)
+  const { data: listing } = (await supabase
     .from('listings')
     .select(
       'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id',
@@ -295,8 +291,7 @@ export async function loadListingFeedBySlug(
 export async function loadListingFeedById(listingId: string): Promise<ListingFeedBundle | null> {
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: listing } = (await (supabase as any)
+  const { data: listing } = (await supabase
     .from('listings')
     .select(
       'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id',
@@ -310,8 +305,7 @@ export async function loadListingFeedById(listingId: string): Promise<ListingFee
   // so bail if we land here.
   if (!listing.agent_id) return null;
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agent } = (await (supabase as any)
+  const { data: agent } = (await supabase
     .from('agents')
     .select('id, slug, name, email, phone')
     .eq('id', listing.agent_id)
@@ -461,8 +455,7 @@ export async function buildListingCards(
  */
 export async function loadListingPhotos(listingId: string) {
   const supabase = await createClient();
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data } = (await (supabase as any)
+  const { data } = (await supabase
     .from('listing_photos')
     .select('id, storage_path, alt_text, sort_order')
     .eq('listing_id', listingId)

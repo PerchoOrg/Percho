@@ -34,8 +34,7 @@ export default async function DashboardHomePage() {
   const user = session?.user ?? null;
   if (!user) redirect('/login');
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agentRow } = (await (supabase as any)
+  const { data: agentRow } = (await supabase
     .from('agents')
     .select('id, slug')
     .eq('user_id', user.id)
@@ -43,8 +42,7 @@ export default async function DashboardHomePage() {
   const agentId = agentRow?.id ?? null;
 
   const { data: allRows } = agentId
-    ? // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-      ((await (supabase as any)
+    ? ((await supabase
         .from('listings')
         .select('id, slug, address, city, state, zip, status, price, beds, baths, sqft, cover_url')
         .eq('agent_id', agentId)
@@ -75,8 +73,7 @@ export default async function DashboardHomePage() {
   const idsNeedingCover = rows.filter((l) => !l.cover_url).map((l) => l.id);
   const fallbackCovers = new Map<string, string>();
   if (idsNeedingCover.length > 0) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: vids } = (await (supabase as any)
+    const { data: vids } = (await supabase
       .from('listing_videos')
       .select('listing_id, cf_video_id, sort_order')
       .in('listing_id', idsNeedingCover)

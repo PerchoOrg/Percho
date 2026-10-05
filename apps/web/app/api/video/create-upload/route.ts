@@ -1,4 +1,5 @@
 import { createDirectUpload } from '@/lib/cloudflare/stream';
+import type { Insert } from '@/lib/supabase/rows';
 import { createClient } from '@/lib/supabase/server';
 import {
   type CommunityVideoCategoryId,
@@ -99,8 +100,7 @@ async function handleListing(
   // database.types.ts is a stub (see TODO in app/dashboard/layout.tsx); cast
   // through `any` so insert payload typing isn't `never`. Phase-end regen will
   // remove the cast.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: row, error: insertErr } = (await (supabase as any)
+  const { data: row, error: insertErr } = (await supabase
     .from('listing_videos')
     .insert({
       listing_id: input.parent_id,
@@ -209,15 +209,16 @@ async function handleCommunity(
   // them as null still triggers a 400 from PostgREST. Omitting the keys
   // entirely keeps the insert compatible with both pre- and post-migration
   // schemas. Once 0011 is applied, callers that supply geo get it persisted.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const insertPayload: any = {
+  // No `poi_id`: the column was dropped on 2026-07-14, and naming it — even as
+  // null — made PostgREST reject the insert, so every community upload failed
+  // here after its Cloudflare slot was already reserved.
+  const insertPayload: Insert<'community_videos'> = {
     community_id: input.parent_id,
     cf_video_id: videoId,
     kind: legacyKind,
     category,
     category_needs_review: needsReview,
     school_id: input.school_id ?? null,
-    poi_id: input.poi_id ?? null,
     title: input.title ?? null,
     status: 'processing',
     uploaded_by: agent.id,
@@ -228,8 +229,7 @@ async function handleCommunity(
     insertPayload.address = input.address.trim();
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: row, error: insertErr } = (await (supabase as any)
+  const { data: row, error: insertErr } = (await supabase
     .from('community_videos')
     .insert(insertPayload)
     .select('id')
@@ -248,8 +248,7 @@ async function handleCommunity(
   const extras = (input.extra_community_ids ?? []).filter((cid) => cid && cid !== input.parent_id);
   const uniqueExtras = Array.from(new Set(extras));
   if (uniqueExtras.length > 0) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { error: linkErr } = await (supabase as any).from('community_video_extra_links').insert(
+    const { error: linkErr } = await supabase.from('community_video_extra_links').insert(
       uniqueExtras.map((cid) => ({
         video_id: row.id,
         community_id: cid,

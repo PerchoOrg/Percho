@@ -28,8 +28,7 @@ export async function setGlobalPhotoStatus(
   const admin = await requireAdmin();
   if (!admin) return { ok: false, message: 'Not authorized.' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const supabase: any = createServiceClient();
+  const supabase = createServiceClient();
 
   const { error } = await supabase
     .from('poi_photos')

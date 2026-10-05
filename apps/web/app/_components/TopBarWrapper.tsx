@@ -22,8 +22,7 @@ export async function TopBarWrapper() {
     return <TopBar viewer="anon" initial="" />;
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: agents typing not in stub yet
-  const { data: agent } = (await (supabase as any)
+  const { data: agent } = (await supabase
     .from('agents')
     .select('id, name, headshot_url')
     .eq('user_id', user.id)
@@ -38,8 +37,7 @@ export async function TopBarWrapper() {
     );
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
-  const { data: buyer } = (await (supabase as any)
+  const { data: buyer } = (await supabase
     .from('buyers')
     .select('display_name, avatar_url')
     .eq('user_id', user.id)

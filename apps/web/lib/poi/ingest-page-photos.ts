@@ -346,8 +346,7 @@ export async function ingestPagePhotos(
   pageUrl: string,
   label: string,
 ): Promise<IngestResult | { error: string; message: string }> {
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const sb: any = createServiceClient();
+  const sb = createServiceClient();
 
   const { data: community } = (await sb
     .from('communities')

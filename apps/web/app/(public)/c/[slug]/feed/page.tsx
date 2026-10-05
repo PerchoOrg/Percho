@@ -63,8 +63,7 @@ export default async function CommunityFeedPage({
   const { start } = await searchParams;
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: community } = (await (supabase as any)
+  const { data: community } = (await supabase
     .from('communities')
     .select('id, name, slug, city, state, created_by')
     .eq('slug', slug)
@@ -88,8 +87,7 @@ export default async function CommunityFeedPage({
   let ownerId: string | null = community.created_by;
   let ownerName: string | null = null;
   if (ownerId) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: owner } = (await (supabase as any)
+    const { data: owner } = (await supabase
       .from('agents')
       .select('name')
       .eq('id', ownerId)
@@ -97,8 +95,7 @@ export default async function CommunityFeedPage({
     ownerName = owner?.name ?? null;
   }
   if (!ownerId || !ownerName) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: fallbackListing } = (await (supabase as any)
+    const { data: fallbackListing } = (await supabase
       .from('listings')
       .select('agent_id')
       .eq('community_id', community.id)
@@ -107,8 +104,7 @@ export default async function CommunityFeedPage({
       .limit(1)
       .maybeSingle()) as { data: { agent_id: string } | null };
     if (fallbackListing?.agent_id) {
-      // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-      const { data: fallbackAgent } = (await (supabase as any)
+      const { data: fallbackAgent } = (await supabase
         .from('agents')
         .select('id, name')
         .eq('id', fallbackListing.agent_id)
@@ -121,8 +117,7 @@ export default async function CommunityFeedPage({
   }
 
   // Membership view: primary community_id UNION extra links.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: memberships } = (await (supabase as any)
+  const { data: memberships } = (await supabase
     .from('community_video_membership')
     .select('video_id')
     .eq('community_id', community.id)) as { data: Array<{ video_id: string }> | null };
@@ -131,8 +126,7 @@ export default async function CommunityFeedPage({
 
   let videos: VideoRow[] = [];
   if (videoIds.length > 0) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: rows } = (await (supabase as any)
+    const { data: rows } = (await supabase
       .from('community_videos')
       .select('id, cf_video_id, title, category, created_at')
       .in('id', videoIds)
@@ -156,8 +150,7 @@ export default async function CommunityFeedPage({
   // chip opens a listings sheet (L2) for the active community. Fetch the
   // full listing rows + hero video/photo here so the sheet has everything
   // it needs without round-tripping. Sorted newest-first.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: listingRows } = (await (supabase as any)
+  const { data: listingRows } = (await supabase
     .from('listings')
     .select('id, slug, address, city, state, zip, price, beds, baths, sqft, agent_id, created_at')
     .eq('community_id', community.id)
@@ -184,32 +177,29 @@ export default async function CommunityFeedPage({
   // Hero video + hero photo per listing (parallel; same shape as browse-cards).
   const [{ data: lvRows }, { data: lpRows }] = await Promise.all([
     listingIds.length > 0
-      ? // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-        ((supabase as any)
+      ? supabase
           .from('listing_videos')
           .select('listing_id, cf_video_id, sort_order')
           .in('listing_id', listingIds)
           .eq('status', 'ready')
-          .order('sort_order', { ascending: true }) as Promise<{
-          data: Array<{ listing_id: string; cf_video_id: string }> | null;
-        }>)
+          .order('sort_order', { ascending: true })
       : Promise.resolve({ data: [] as Array<{ listing_id: string; cf_video_id: string }> }),
     listingIds.length > 0
-      ? // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-        ((supabase as any)
+      ? supabase
           .from('listing_photos')
           .select('listing_id, storage_path, sort_order')
           .in('listing_id', listingIds)
           .eq('status', 'ready')
-          .order('sort_order', { ascending: true }) as Promise<{
-          data: Array<{ listing_id: string; storage_path: string }> | null;
-        }>)
+          .order('sort_order', { ascending: true })
       : Promise.resolve({ data: [] as Array<{ listing_id: string; storage_path: string }> }),
   ]);
 
   const heroVideoByListing = new Map<string, string>();
   for (const v of lvRows ?? []) {
-    if (!heroVideoByListing.has(v.listing_id)) heroVideoByListing.set(v.listing_id, v.cf_video_id);
+    // An external-URL video has no Stream id; the hero is the first that does.
+    if (v.cf_video_id && !heroVideoByListing.has(v.listing_id)) {
+      heroVideoByListing.set(v.listing_id, v.cf_video_id);
+    }
   }
   const heroPhotoByListing = new Map<string, string>();
   for (const p of lpRows ?? []) {
@@ -223,8 +213,7 @@ export default async function CommunityFeedPage({
   );
   const agentSlugById = new Map<string, string>();
   if (agentIdsForListings.length > 0) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: agentRows } = (await (supabase as any)
+    const { data: agentRows } = (await supabase
       .from('agents')
       .select('id, slug')
       .in('id', agentIdsForListings)) as {

@@ -21,8 +21,7 @@ export type DeleteListingResult = { ok: true } | { ok: false; error: string };
  */
 async function deleteListing(listingId: string): Promise<DeleteListingResult> {
   const supabase = await createClient();
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error } = await (supabase as any).from('listings').delete().eq('id', listingId);
+  const { error } = await supabase.from('listings').delete().eq('id', listingId);
   if (error) return { ok: false, error: error.message };
   revalidatePath('/dashboard');
   revalidateTag('community-cards');

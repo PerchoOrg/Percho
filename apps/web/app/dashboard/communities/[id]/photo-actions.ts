@@ -63,8 +63,7 @@ export async function recordCommunityPhoto(
 
   // Confirm community exists (defense in depth — storage RLS already
   // checks the path's community_id segment).
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: community } = (await (supabase as any)
+  const { data: community } = (await supabase
     .from('communities')
     .select('id')
     .eq('id', communityId)
@@ -72,8 +71,7 @@ export async function recordCommunityPhoto(
   if (!community) return { ok: false, error: 'community_not_found' };
 
   // Compute next sort_order = max + 1.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: maxRow } = (await (supabase as any)
+  const { data: maxRow } = (await supabase
     .from('community_photos')
     .select('sort_order')
     .eq('community_id', communityId)
@@ -82,8 +80,7 @@ export async function recordCommunityPhoto(
     .maybeSingle()) as { data: { sort_order: number } | null };
   const nextSort = (maxRow?.sort_order ?? -1) + 1;
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: row, error } = (await (supabase as any)
+  const { data: row, error } = (await supabase
     .from('community_photos')
     .insert({
       community_id: communityId,
@@ -135,8 +132,7 @@ export async function deleteCommunityPhoto(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'unauthorized' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: photo } = (await (supabase as any)
+  const { data: photo } = (await supabase
     .from('community_photos')
     .select('id, storage_path, community_id')
     .eq('id', parsed.data.photoId)
@@ -154,8 +150,7 @@ export async function deleteCommunityPhoto(
     // fall through — still delete the row
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error: rowErr } = await (supabase as any)
+  const { error: rowErr } = await supabase
     .from('community_photos')
     .delete()
     .eq('id', parsed.data.photoId)

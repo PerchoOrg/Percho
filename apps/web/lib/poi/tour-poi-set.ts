@@ -16,6 +16,8 @@
  * Everything else stays where it is, for `resolve` to pick from next time.
  */
 
+import type { TypedClient } from '@/lib/supabase/server';
+
 /** The `resolved` array shape the callers have on hand. */
 export interface ResolvedPlaceRef {
   place_id?: string;
@@ -54,8 +56,7 @@ export interface TourPoiSet {
  * but never fetched, which is correct: there is nothing to tag yet.
  */
 export async function tourPoiSet(
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  sb: any,
+  sb: TypedClient,
   communityId: string,
   resolved: ResolvedPlaceRef[] | undefined,
 ): Promise<TourPoiSet> {
@@ -94,8 +95,7 @@ export async function tourPoiSet(
 
 /** Just the ids, for the callers that do not rank anything. */
 export async function tourPoiIds(
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  sb: any,
+  sb: TypedClient,
   communityId: string,
   resolved: ResolvedPlaceRef[] | undefined,
 ): Promise<Set<string>> {

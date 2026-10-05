@@ -40,8 +40,7 @@ export async function discardClip(photoId: string, engine = 'seedance'): Promise
     return { ok: false, message: 'Only Seedance clips are discarded — re-render local ones.' };
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const supabase: any = createServiceClient();
+  const supabase = createServiceClient();
   const { error } = await supabase
     .from('photo_clips')
     .delete()

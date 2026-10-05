@@ -36,8 +36,7 @@ export async function updateAgentIdentity(input: {
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Not signed in.' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: agents typing not in stub yet
-  const { data: agent, error: lookupErr } = (await (supabase as any)
+  const { data: agent, error: lookupErr } = (await supabase
     .from('agents')
     .select('slug')
     .eq('user_id', user.id)
@@ -46,8 +45,7 @@ export async function updateAgentIdentity(input: {
   if (lookupErr) return { error: lookupErr.message };
   if (!agent) return { error: 'Agent profile not found.' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: agents typing not in stub yet
-  const { error: updateErr } = await (supabase as any)
+  const { error: updateErr } = await supabase
     .from('agents')
     .update({
       name,
@@ -85,23 +83,20 @@ export async function updateBuyerDisplayName(input: {
   // through handle_new_user (security definer) for new signups, but legacy
   // rows may be missing. Use a service-free upsert: if the row is missing,
   // we insert; otherwise we update.
-  // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
-  const { data: existing } = (await (supabase as any)
+  const { data: existing } = (await supabase
     .from('buyers')
     .select('user_id')
     .eq('user_id', user.id)
     .maybeSingle()) as { data: { user_id: string } | null };
 
   if (existing) {
-    // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
-    const { error: updateErr } = await (supabase as any)
+    const { error: updateErr } = await supabase
       .from('buyers')
       .update({ display_name: displayName })
       .eq('user_id', user.id);
     if (updateErr) return { error: updateErr.message };
   } else {
-    // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
-    const { error: insertErr } = await (supabase as any)
+    const { error: insertErr } = await supabase
       .from('buyers')
       .insert({ user_id: user.id, display_name: displayName, email: user.email });
     if (insertErr) return { error: insertErr.message };
@@ -135,16 +130,14 @@ export async function updateAvatarUrl(input: {
     return { error: 'Invalid avatar URL.' };
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: agents typing not in stub yet
-  const { data: agent } = (await (supabase as any)
+  const { data: agent } = (await supabase
     .from('agents')
     .select('slug')
     .eq('user_id', user.id)
     .maybeSingle()) as { data: { slug: string | null } | null };
 
   if (agent) {
-    // biome-ignore lint/suspicious/noExplicitAny: agents typing not in stub yet
-    const { error: updateErr } = await (supabase as any)
+    const { error: updateErr } = await supabase
       .from('agents')
       .update({ headshot_url: url })
       .eq('user_id', user.id);
@@ -155,23 +148,20 @@ export async function updateAvatarUrl(input: {
   }
 
   // Buyer branch — upsert because legacy users may be missing a buyers row.
-  // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
-  const { data: existing } = (await (supabase as any)
+  const { data: existing } = (await supabase
     .from('buyers')
     .select('user_id')
     .eq('user_id', user.id)
     .maybeSingle()) as { data: { user_id: string } | null };
 
   if (existing) {
-    // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
-    const { error: updateErr } = await (supabase as any)
+    const { error: updateErr } = await supabase
       .from('buyers')
       .update({ avatar_url: url })
       .eq('user_id', user.id);
     if (updateErr) return { error: updateErr.message };
   } else {
-    // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
-    const { error: insertErr } = await (supabase as any)
+    const { error: insertErr } = await supabase
       .from('buyers')
       .insert({ user_id: user.id, email: user.email, avatar_url: url });
     if (insertErr) return { error: insertErr.message };

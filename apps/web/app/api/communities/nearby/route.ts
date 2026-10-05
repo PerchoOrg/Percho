@@ -62,8 +62,7 @@ export async function GET(req: Request) {
   const lngPad = radius / (69 * Math.max(Math.cos((lat * Math.PI) / 180), 0.01));
 
   const supabase = await createClient();
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: videoRows } = (await (supabase as any)
+  const { data: videoRows } = (await supabase
     .from('community_videos')
     .select('id, community_id, lat, lng')
     .eq('status', 'ready')

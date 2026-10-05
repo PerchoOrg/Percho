@@ -28,6 +28,7 @@
  */
 
 import { isDraftAddress } from '@/app/dashboard/listings/draft';
+import type { Update } from '@/lib/supabase/rows';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
 
@@ -36,8 +37,7 @@ export type PublishResult = { ok: true; status: 'active' } | { ok: false; missin
 export async function publishListing(listingId: string): Promise<PublishResult> {
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: listing } = (await (supabase as any)
+  const { data: listing } = (await supabase
     .from('listings')
     .select('id, address, price, beds, baths, agent_id, slug, published_at')
     .eq('id', listingId)
@@ -56,8 +56,7 @@ export async function publishListing(listingId: string): Promise<PublishResult> 
 
   if (!listing) return { ok: false, missing: ['listing not found'] };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { count: readyVideoCount } = (await (supabase as any)
+  const { count: readyVideoCount } = (await supabase
     .from('listing_videos')
     .select('id', { count: 'exact', head: true })
     .eq('listing_id', listingId)
@@ -67,8 +66,7 @@ export async function publishListing(listingId: string): Promise<PublishResult> 
   // Either ≥1 ready video or ≥1 ready photo unblocks activation.
   // Hotfix: graceful fallback if migration 0011 is missing — count = 0
   // means activate gate falls back to "video required", matching V0 behaviour.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { count: readyPhotoCount } = (await (supabase as any)
+  const { count: readyPhotoCount } = (await supabase
     .from('listing_photos')
     .select('id', { count: 'exact', head: true })
     .eq('listing_id', listingId)
@@ -90,17 +88,15 @@ export async function publishListing(listingId: string): Promise<PublishResult> 
   if (missing.length > 0) return { ok: false, missing };
 
   // Only stamp published_at on first activation; preserve subsequent toggles.
-  const update: Record<string, unknown> = { status: 'active' };
+  const update: Update<'listings'> = { status: 'active' };
   if (!listing.published_at) update.published_at = new Date().toISOString();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error } = await (supabase as any).from('listings').update(update).eq('id', listingId);
+  const { error } = await supabase.from('listings').update(update).eq('id', listingId);
 
   if (error) return { ok: false, missing: [`db: ${error.message}`] };
 
   // Look up agent slug for revalidation. RLS allows agents to read their own row.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agent } = (await (supabase as any)
+  const { data: agent } = (await supabase
     .from('agents')
     .select('slug')
     .eq('id', listing.agent_id)
@@ -119,8 +115,7 @@ export async function unpublishListing(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: listing } = (await (supabase as any)
+  const { data: listing } = (await supabase
     .from('listings')
     .select('id, agent_id, slug')
     .eq('id', listingId)
@@ -128,16 +123,14 @@ export async function unpublishListing(
 
   if (!listing) return { ok: false, error: 'listing not found' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('listings')
     .update({ status: 'inactive' })
     .eq('id', listingId);
 
   if (error) return { ok: false, error: error.message };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agent } = (await (supabase as any)
+  const { data: agent } = (await supabase
     .from('agents')
     .select('slug')
     .eq('id', listing.agent_id)

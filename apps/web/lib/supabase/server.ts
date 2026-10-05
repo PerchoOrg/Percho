@@ -12,10 +12,23 @@ import { createClient as createPlainClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import type { Database } from './database.types';
 
-export async function createClient() {
+/**
+ * The typed client every factory here returns.
+ *
+ * `@supabase/ssr` 0.5's generics predate the ones supabase-js 2.5x+ uses (the
+ * generated schema's `PostgrestVersion` among them), so `createServerClient<
+ * Database>` resolves every table to `never` — which is why ~160 call sites
+ * cast it to `any`, and why a dropped column could be queried for months
+ * without the compiler noticing (phase306). The object ssr returns IS a
+ * supabase-js client — ssr builds it with supabase-js's own `createClient` —
+ * so it is typed as one, once, here.
+ */
+export type TypedClient = ReturnType<typeof createPlainClient<Database>>;
+
+export async function createClient(): Promise<TypedClient> {
   const cookieStore = await cookies();
 
-  return createServerClient<Database>(
+  const client = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -37,6 +50,7 @@ export async function createClient() {
       },
     },
   );
+  return client as unknown as TypedClient;
 }
 
 /**

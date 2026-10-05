@@ -111,16 +111,14 @@ export async function getEntityStats(
 ): Promise<EntityStats> {
   const col = fkColumn(args.entityType);
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const eventsRes = await (supabase as any)
+  const eventsRes = await supabase
     .from('events')
     .select('event_type, session_id, card_id')
     .eq(col, args.entityId);
   if (eventsRes.error) throw eventsRes.error;
   const rows: EventRow[] = (eventsRes.data ?? []) as EventRow[];
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const leadsRes = await (supabase as any)
+  const leadsRes = await supabase
     .from('leads')
     .select('id', { head: true, count: 'exact' })
     .eq(col, args.entityId);
@@ -141,16 +139,14 @@ export async function getRollupEntityStats(
   if (args.entityIds.length === 0) return emptyStats();
   const col = fkColumn(args.entityType);
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const eventsRes = await (supabase as any)
+  const eventsRes = await supabase
     .from('events')
     .select('event_type, session_id, card_id')
     .in(col, args.entityIds);
   if (eventsRes.error) throw eventsRes.error;
   const rows: EventRow[] = (eventsRes.data ?? []) as EventRow[];
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const leadsRes = await (supabase as any)
+  const leadsRes = await supabase
     .from('leads')
     .select('id', { head: true, count: 'exact' })
     .in(col, args.entityIds);

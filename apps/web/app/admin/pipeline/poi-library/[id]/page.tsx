@@ -57,8 +57,7 @@ export default async function PoiDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const supabase: any = createServiceClient();
+  const supabase = createServiceClient();
 
   const [{ data: poi, error: poiError }, { data: photos }] = await Promise.all([
     supabase

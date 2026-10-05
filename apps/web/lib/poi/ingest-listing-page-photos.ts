@@ -60,8 +60,7 @@ export async function ingestListingPagePhotos(
   listingId: string,
   pageUrl: string,
 ): Promise<ListingIngestResult | { error: string; message: string }> {
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const sb: any = createServiceClient();
+  const sb = createServiceClient();
 
   const { data: listing } = (await sb
     .from('listings')

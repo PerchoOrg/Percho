@@ -43,7 +43,7 @@ import { type CommunityReviewsDTO, fetchCommunityReviews } from '@/lib/communiti
 import { fetchPoiCounts } from '@/lib/feed/community-pool';
 import type { TourSegment } from '@/lib/feed/tour-segments';
 import { fetchVerticalVideos, streamManifestUrl } from '@/lib/feed/vertical-videos';
-import { createAnonClient } from '@/lib/supabase/server';
+import { type TypedClient, createAnonClient } from '@/lib/supabase/server';
 import {
   type CommunityReason,
   communityReasons,
@@ -195,8 +195,7 @@ export async function fetchCommunityDetail(idOrSlug: string): Promise<CommunityD
 
 /** Latest READY AI community-tour video for a community, or null. */
 async function fetchLatestAiTourVideo(
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  supabase: any,
+  supabase: TypedClient,
   communityId: string,
 ): Promise<string | null> {
   const { data } = (await supabase

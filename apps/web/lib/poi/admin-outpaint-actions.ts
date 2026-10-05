@@ -32,8 +32,7 @@ export async function rejectOutpaint(photoId: string): Promise<Result> {
   const admin = await requireAdmin();
   if (!admin) return { ok: false, message: 'Not authorized.' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const supabase: any = createServiceClient();
+  const supabase = createServiceClient();
   const { error } = await supabase
     .from('poi_photos')
     .update({
@@ -60,8 +59,7 @@ export async function requeueOutpaint(photoId: string): Promise<Result> {
   const admin = await requireAdmin();
   if (!admin) return { ok: false, message: 'Not authorized.' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const supabase: any = createServiceClient();
+  const supabase = createServiceClient();
   const { error } = await supabase
     .from('poi_photos')
     .update({ outpaint_status: 'queued', outpaint_error: null })

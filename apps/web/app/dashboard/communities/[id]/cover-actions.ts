@@ -29,8 +29,7 @@ async function authorize(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'unauthorized' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: community } = (await (supabase as any)
+  const { data: community } = (await supabase
     .from('communities')
     .select('id, created_by')
     .eq('id', communityId)
@@ -39,8 +38,7 @@ async function authorize(
 
   if (community.created_by == null) return { ok: true };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agentRow } = (await (supabase as any)
+  const { data: agentRow } = (await supabase
     .from('agents')
     .select('id')
     .eq('user_id', user.id)
@@ -83,8 +81,7 @@ export async function setCommunityCoverVideo(
   // via the membership view are NOT eligible to be cover, since the FK is
   // ON DELETE SET NULL on community_videos and that table is the source
   // of truth for primary ownership).
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: video } = (await (supabase as any)
+  const { data: video } = (await supabase
     .from('community_videos')
     .select('id, community_id')
     .eq('id', videoId)
@@ -92,8 +89,7 @@ export async function setCommunityCoverVideo(
     .maybeSingle()) as { data: { id: string } | null };
   if (!video) return { ok: false, error: 'video_not_in_community' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: row, error } = (await (supabase as any)
+  const { data: row, error } = (await supabase
     .from('communities')
     .update({ cover_video_id: videoId, cover_storage_path: null })
     .eq('id', communityId)
@@ -131,8 +127,7 @@ async function recordCommunityCoverImage(
 
   // If there was a previous uploaded image, remove it from storage to
   // avoid orphans. (Storage RLS owner-delete policy fences this.)
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: prev } = (await (supabase as any)
+  const { data: prev } = (await supabase
     .from('communities')
     .select('cover_storage_path, slug')
     .eq('id', communityId)
@@ -145,8 +140,7 @@ async function recordCommunityCoverImage(
     if (rmErr) console.warn('[recordCommunityCoverImage] orphan cleanup warning', rmErr);
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('communities')
     .update({ cover_video_id: null, cover_storage_path: storagePath })
     .eq('id', communityId);

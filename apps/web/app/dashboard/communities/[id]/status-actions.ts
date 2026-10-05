@@ -38,16 +38,14 @@ export async function setCommunityStatus(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'Not signed in' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agentRow } = (await (supabase as any)
+  const { data: agentRow } = (await supabase
     .from('agents')
     .select('id')
     .eq('user_id', user.id)
     .maybeSingle()) as { data: { id: string } | null };
   if (!agentRow) return { ok: false, error: 'Agent profile required' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: row } = (await (supabase as any)
+  const { data: row } = (await supabase
     .from('communities')
     .select('id, slug, name, city, state, created_by')
     .eq('id', communityId)
@@ -74,14 +72,12 @@ export async function setCommunityStatus(
     if (!row.city || !row.city.trim()) missing.push('city');
     if (!row.state || !row.state.trim()) missing.push('state');
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { count: photoCount } = (await (supabase as any)
+    const { count: photoCount } = (await supabase
       .from('community_photos')
       .select('id', { count: 'exact', head: true })
       .eq('community_id', communityId)) as { count: number | null };
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { count: videoCount } = (await (supabase as any)
+    const { count: videoCount } = (await supabase
       .from('community_videos')
       .select('id', { count: 'exact', head: true })
       .eq('community_id', communityId)
@@ -97,11 +93,7 @@ export async function setCommunityStatus(
     }
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error } = await (supabase as any)
-    .from('communities')
-    .update({ status })
-    .eq('id', communityId);
+  const { error } = await supabase.from('communities').update({ status }).eq('id', communityId);
   if (error) return { ok: false, error: error.message };
 
   revalidatePath(`/dashboard/communities/${communityId}`);

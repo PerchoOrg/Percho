@@ -67,8 +67,7 @@ export async function createStubCommunity(): Promise<ActionResult<{ id: string }
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'unauthorized' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agentRow } = (await (supabase as any)
+  const { data: agentRow } = (await supabase
     .from('agents')
     .select('id')
     .eq('user_id', user.id)
@@ -79,8 +78,7 @@ export async function createStubCommunity(): Promise<ActionResult<{ id: string }
   // will re-derive a real slug from the agent's chosen name on first edit.
   for (let attempt = 0; attempt < 3; attempt++) {
     const slug = `untitled-${Math.random().toString(36).slice(2, 8)}`;
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: created, error } = (await (supabase as any)
+    const { data: created, error } = (await supabase
       .from('communities')
       .insert({
         name: COMMUNITY_STUB_NAME,
@@ -125,8 +123,7 @@ export async function updateCommunity(id: string, raw: unknown): Promise<ActionR
   // Slug derives from name — if the name changed, the slug follows. If a
   // collision happens we append a short suffix and retry once. We don't keep
   // an "agent-edited slug" mode for V1: simpler to keep slug == derived(name).
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: existing } = (await (supabase as any)
+  const { data: existing } = (await supabase
     .from('communities')
     .select('name, slug')
     .eq('id', id)
@@ -143,8 +140,7 @@ export async function updateCommunity(id: string, raw: unknown): Promise<ActionR
 
   let lastError: { code?: string; message?: string } | null = null;
   for (const slug of slugCandidates) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { error, count } = (await (supabase as any)
+    const { error, count } = (await supabase
       .from('communities')
       .update(
         {
@@ -219,8 +215,7 @@ export async function deleteCommunity(id: string): Promise<ActionResult> {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'unauthorized' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error, count } = (await (supabase as any)
+  const { error, count } = (await supabase
     .from('communities')
     .delete({ count: 'exact' })
     .eq('id', id)) as { error: { message?: string } | null; count: number | null };
@@ -260,15 +255,13 @@ async function requireOwnedVideo(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'unauthorized' };
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agentRow } = (await (supabase as any)
+  const { data: agentRow } = (await supabase
     .from('agents')
     .select('id')
     .eq('user_id', user.id)
     .maybeSingle()) as { data: { id: string } | null };
   if (!agentRow) return { ok: false, error: 'unauthorized' };
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: videoRow } = (await (supabase as any)
+  const { data: videoRow } = (await supabase
     .from('community_videos')
     .select('uploaded_by')
     .eq('id', videoId)
@@ -287,8 +280,7 @@ export async function deleteCommunityVideo(
   const supabase = await createClient();
   const owned = await requireOwnedVideo(supabase, videoId);
   if (!owned.ok) return owned;
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error } = await (supabase as any).from('community_videos').delete().eq('id', videoId);
+  const { error } = await supabase.from('community_videos').delete().eq('id', videoId);
   if (error) {
     console.error('[deleteCommunityVideo] failed', error);
     return { ok: false, error: 'delete_failed' };

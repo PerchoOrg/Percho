@@ -18,8 +18,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
   const { id: communityId } = await params;
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const sb: any = createServiceClient();
+  const sb = createServiceClient();
 
   // community_pois → pois → poi_photos
   const { data: links } = await sb

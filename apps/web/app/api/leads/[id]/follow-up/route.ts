@@ -42,8 +42,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const followed_up_at = body.value === 'now' ? new Date().toISOString() : null;
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data, error } = (await (supabase as any)
+  const { data, error } = (await supabase
     .from('leads')
     .update({ followed_up_at })
     .eq('id', id)
