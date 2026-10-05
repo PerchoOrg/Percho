@@ -204,12 +204,12 @@ export function useSwipeCard({
 	lastTapTarget = onTapTarget ?? null;
 	// Clear on unmount so a late runOnJS hop can never call a dead callback.
 	// The cleanup closure compares identity to avoid clobbering a newer mount.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: once per mount — the cleanup must compare against the callback installed AT mount
 	useEffect(() => {
 		const installed = onTapTarget ?? null;
 		return () => {
 			if (lastTapTarget === installed) lastTapTarget = null;
 		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 	/**
 	 * True from the instant a direction commits until the handoff completes.

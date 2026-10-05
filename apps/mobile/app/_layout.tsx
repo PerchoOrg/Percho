@@ -19,7 +19,7 @@ import { TAB_BAR_FONT, TAB_BAR_FONT_FILL } from "../components/TabBarIconFont";
 import { ICON_FONT, OUTLINE_FONT } from "../components/cards/redline/icon-font";
 import { createEventsTransport } from "../lib/events-transport";
 import { initAuth } from "../state/auth";
-import { useEventQueue } from "../state/event-queue";
+import { shouldAutoDrain, useEventQueue } from "../state/event-queue";
 
 import { DM_SERIF_FONT } from "../theme/fonts";
 import { colors } from "../theme/tokens";
@@ -56,8 +56,8 @@ export default function RootLayout() {
 		const q = useEventQueue.getState();
 		q.setTransport(createEventsTransport());
 		void q.drain();
-		return useEventQueue.subscribe((s) => {
-			if (s.queue.length >= DRAIN_THRESHOLD && !s.draining) void s.drain();
+		return useEventQueue.subscribe((s, prev) => {
+			if (shouldAutoDrain(s, prev, DRAIN_THRESHOLD)) void s.drain();
 		});
 	}, []);
 

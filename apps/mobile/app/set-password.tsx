@@ -61,8 +61,15 @@ export default function SetPasswordScreen() {
 			return;
 		}
 		setDone(true);
-		setTimeout(() => router.back(), 900);
 	};
+
+	// Close on a beat once saved. An effect, so leaving first (Cancel, swipe
+	// back) clears the timer — a bare setTimeout then popped a second screen.
+	useEffect(() => {
+		if (!done) return;
+		const t = setTimeout(() => router.back(), 900);
+		return () => clearTimeout(t);
+	}, [done]);
 
 	return (
 		<KeyboardAvoidingView

@@ -10,6 +10,10 @@
  * a partial failure re-sends everything next drain, and the already-landed
  * chunks dedupe server-side.
  *
+ * A chunk the server REJECTS (400 / 413 / 422) is dropped, not retried: it
+ * would fail identically forever and hold every later event behind it.
+ * 429, 5xx and network errors keep the batch for the next drain.
+ *
  * The session token rides along when present so signed-in behaviour is
  * attributable; its absence (or expiry) must never cost telemetry.
  */
@@ -19,6 +23,9 @@ import { installId } from "./install-id";
 import { supabase } from "./supabase";
 
 const CHUNK = 100;
+
+/** Statuses that say "this payload will never be accepted". */
+const PERMANENT_REJECT = new Set([400, 413, 422]);
 
 export function createEventsTransport(): EventTransport {
 	return async (batch) => {
@@ -41,6 +48,10 @@ export function createEventsTransport(): EventTransport {
 					events: batch.slice(i, i + CHUNK),
 				}),
 			});
+			if (PERMANENT_REJECT.has(res.status)) {
+				console.warn(`[events] dropped a rejected chunk (${res.status})`);
+				continue;
+			}
 			if (!res.ok) return false;
 		}
 		return true;

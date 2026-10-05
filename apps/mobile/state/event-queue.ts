@@ -44,6 +44,24 @@ export type EventTransport = (batch: QueuedEvent[]) => Promise<boolean>;
 /** Task-1 sink: accepts and discards. Keeps the drain path exercised. */
 export const noopTransport: EventTransport = async () => true;
 
+/**
+ * Whether a store change should kick off a drain: the queue GREW past the
+ * threshold and nothing is in flight. "Is at or past the threshold" alone was
+ * the old rule, and a failed drain's own `draining: false` then re-triggered
+ * it — offline, or on a 429, that was a fetch loop with no pause.
+ */
+export function shouldAutoDrain(
+	state: Pick<EventQueueState, "queue" | "draining">,
+	prev: Pick<EventQueueState, "queue">,
+	threshold: number,
+): boolean {
+	return (
+		!state.draining &&
+		state.queue.length > prev.queue.length &&
+		state.queue.length >= threshold
+	);
+}
+
 /** Pure cap policy, exported so the drop-oldest rule is directly testable. */
 export function capQueue(
 	queue: readonly QueuedEvent[],
@@ -100,8 +118,12 @@ export const useEventQueue = create<EventQueueState>()(
 					const ok = await transport(batch);
 					if (!ok) return 0;
 					// Re-read from the store rather than assigning []: events
-					// enqueued *during* the flight must survive the drain.
-					set((s) => ({ queue: s.queue.slice(batch.length) }));
+					// enqueued *during* the flight must survive the drain. Remove
+					// what was SENT, by identity — slicing off `batch.length`
+					// from the front also ate unsent events whenever the cap
+					// evicted some of the batch mid-flight.
+					const sent = new Set<QueuedEvent>(batch);
+					set((s) => ({ queue: s.queue.filter((e) => !sent.has(e)) }));
 					return batch.length;
 				} catch {
 					// Offline / server error: keep the batch for the next drain.
