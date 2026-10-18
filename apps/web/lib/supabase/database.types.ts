@@ -1922,6 +1922,7 @@ export type Database = {
           lot_size: string | null
           map_cached_at: string | null
           map_url: string | null
+          mls_number: string | null
           neighborhood: string | null
           price: number | null
           published_at: string | null
@@ -1961,6 +1962,7 @@ export type Database = {
           lot_size?: string | null
           map_cached_at?: string | null
           map_url?: string | null
+          mls_number?: string | null
           neighborhood?: string | null
           price?: number | null
           published_at?: string | null
@@ -2000,6 +2002,7 @@ export type Database = {
           lot_size?: string | null
           map_cached_at?: string | null
           map_url?: string | null
+          mls_number?: string | null
           neighborhood?: string | null
           price?: number | null
           published_at?: string | null
