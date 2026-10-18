@@ -159,7 +159,7 @@ describe('projectComps', () => {
 });
 
 describe('projectDetail — phase119 enrichments (MLS mirror + walkthrough video)', () => {
-  const mls = { days_on_market: 23, lot_size_acres: 0.31, listing_key: '7382914' };
+  const mls = { days_on_market: 23, lot_size_acres: 0.31 };
 
   it('omits every enrichment when there is no mirror row and no video', () => {
     const d = projectDetail(baseListing, [], []);
@@ -168,11 +168,10 @@ describe('projectDetail — phase119 enrichments (MLS mirror + walkthrough video
     }
   });
 
-  it('carries daysOnMarket / lot / mls number from the mirror', () => {
+  it('carries daysOnMarket / lot from the mirror', () => {
     const d = projectDetail(baseListing, [], [], { mls });
     expect(d.daysOnMarket).toBe(23);
     expect(d.lotSizeAcres).toBe(0.31);
-    expect(d.mlsNumber).toBe('7382914');
   });
 
   it('prefers listings.lot_size over the mirror acres — one lot figure only', () => {
@@ -216,7 +215,7 @@ describe('projectDetail — phase119 enrichments (MLS mirror + walkthrough video
 });
 
 describe('projectDetail — IDX display gate (phase119.1)', () => {
-  const mls = { days_on_market: 23, lot_size_acres: 0.31, listing_key: '7382914' };
+  const mls = { days_on_market: 23, lot_size_acres: 0.31 };
 
   it('projects nothing from a mirror row the MLS forbids displaying', () => {
     const d = projectDetail(baseListing, [], [], {
@@ -232,6 +231,38 @@ describe('projectDetail — IDX display gate (phase119.1)', () => {
       mls: { ...mls, internet_entire_listing_display_yn: null },
     });
     expect(d.daysOnMarket).toBe(23);
+  });
+});
+
+describe('projectDetail — FMLS identity (IDX rules 13.7.b, 13.7(e)2; phase307)', () => {
+  const fmls = {
+    ...baseListing,
+    source: 'fmls_bridge',
+    source_id: 'd9e2c4cdf7a1658c5f66c85a4aafb02a',
+    mls_number: ' 5893300 ',
+    external_agent_name: 'Mark Stewart',
+    external_office: 'FIRST MULTIPLE LISTING SERVICE',
+  };
+
+  it('carries the FMLS number and the listing brokerage from the listing row', () => {
+    const d = projectDetail(fmls, [], []);
+    expect(d.mlsNumber).toBe('5893300');
+    expect(d.listAgentName).toBe('Mark Stewart');
+    expect(d.listOfficeName).toBe('FIRST MULTIPLE LISTING SERVICE');
+  });
+
+  it('never shows the mirror row as the number — that is a record key, not a listing number', () => {
+    const d = projectDetail(baseListing, [], [], {
+      mls: { days_on_market: 3, lot_size_acres: null },
+    });
+    expect('mlsNumber' in d).toBe(false);
+  });
+
+  it('omits all three on a listing that is not from FMLS', () => {
+    const d = projectDetail({ ...baseListing, mls_number: ' ', external_office: null }, [], []);
+    for (const key of ['mlsNumber', 'listAgentName', 'listOfficeName']) {
+      expect(key in d, key).toBe(false);
+    }
   });
 });
 

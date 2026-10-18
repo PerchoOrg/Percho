@@ -169,6 +169,8 @@ export interface ListingCardV3 {
 	 * when the listing has more than one photo.
 	 */
 	photoCount?: number;
+	/** FMLS listing number, FMLS listings only — IDX rule 13.7.b puts it on the card. */
+	mlsNumber?: string;
 }
 
 /** One "why people love it" tile. Mirrors `CommunityReason` on the server. */

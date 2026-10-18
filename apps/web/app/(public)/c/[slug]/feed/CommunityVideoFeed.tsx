@@ -80,6 +80,8 @@ export type CommunityListingItem = {
    *  listing URL (`/v/[agentSlug]/[listingSlug]`) for the Share rail button.
    *  Null when the agent row is missing (rare; Share is hidden in that case). */
   agentSlug: string | null;
+  /** FMLS listing number; set only on FMLS listings (IDX rule 13.7.b). */
+  mlsNumber: string | null;
 };
 
 export type CommunityFeedCommunity = {

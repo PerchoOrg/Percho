@@ -90,6 +90,7 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
       state: card.listing.state,
       zip: card.listing.zip,
       badge: null,
+      mlsNumber: card.listing.mlsNumber ?? null,
     };
   });
 

@@ -10,6 +10,8 @@
  * (schema has no zip -> we omit the trailing 98039 from owner's example.)
  */
 
+import { FmlsDisclosure } from '@/app/_components/FmlsDisclosure';
+import { fmlsNumberLabel } from '@percho/shared/fmls';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -23,6 +25,8 @@ type Listing = {
   baths: number | null;
   sqft: number | null;
   description: string[];
+  /** FMLS listing number; set only on FMLS listings (IDX rule 13.7.b). */
+  mlsNumber?: string | null;
 };
 
 type Agent = {
@@ -89,6 +93,7 @@ export function CaptionCard({
 
   const addressLine =
     `${listing.address}, ${listing.city}, ${listing.state}${listing.zip ? ` ${listing.zip}` : ''}`.trim();
+  const mlsLabel = fmlsNumberLabel(listing.mlsNumber);
 
   const openSheet = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -112,6 +117,9 @@ export function CaptionCard({
         </div>
         <div className="mt-1.5 text-[13px] leading-snug">{specs}</div>
         <div className="mt-1 text-[13px] leading-snug">{addressLine}</div>
+        {mlsLabel && (
+          <div className="mt-1 text-[12px] text-surface/90 leading-snug">{mlsLabel}</div>
+        )}
         {hasDescription && preview.length > 0 && (
           <div className="mt-1.5 text-[13px] text-surface/95 leading-snug">
             <span>{preview}</span>
@@ -181,6 +189,7 @@ export function CaptionCard({
             <div className="flex-1 overflow-auto px-5 pt-4 pb-8">
               <div className="text-[15px] leading-snug">{specs}</div>
               <div className="mt-2 text-[15px] leading-snug">{addressLine}</div>
+              {mlsLabel && <div className="mt-1 text-[13px] text-black/60">{mlsLabel}</div>}
 
               {hasDescription && (
                 <section className="mt-5">
@@ -259,6 +268,14 @@ export function CaptionCard({
                   </Link>
                 )}
               </section>
+
+              {/* IDX rule 13.7(e)2: the FMLS disclosure closes every detail view. */}
+              {mlsLabel && (
+                <FmlsDisclosure
+                  variant="detail"
+                  className="mt-6 border-black/[.08] border-t pt-4"
+                />
+              )}
             </div>
           </div>
         </>

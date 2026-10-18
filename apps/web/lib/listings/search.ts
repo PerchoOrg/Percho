@@ -67,6 +67,8 @@ export interface SearchListingDTO {
   coverUrl?: string;
   lat?: number;
   lng?: number;
+  /** FMLS listing number, FMLS listings only (IDX rule 13.7.b). */
+  mlsNumber?: string;
 }
 
 export interface SearchCommunityDTO {
@@ -100,6 +102,7 @@ type ListingRow = {
   cover_url: string | null;
   lat: number | null;
   lng: number | null;
+  mls_number?: string | null;
 };
 
 type CommunityRow = {
@@ -133,6 +136,7 @@ export function projectSearchListings(rows: ListingRow[]): SearchListingDTO[] {
     ...(r.sqft != null && r.sqft > 0 ? { sqft: r.sqft } : {}),
     ...(r.cover_url ? { coverUrl: r.cover_url } : {}),
     ...(coord(r.lat, r.lng) ?? {}),
+    ...(r.mls_number?.trim() ? { mlsNumber: r.mls_number.trim() } : {}),
   }));
 }
 
@@ -171,7 +175,9 @@ export async function searchEntities(q: string): Promise<SearchResultDTO> {
   const [listingRes, communityRes] = await Promise.all([
     supabase
       .from('listings')
-      .select('id, slug, address, city, state, zip, price, beds, baths, sqft, cover_url, lat, lng')
+      .select(
+        'id, slug, address, city, state, zip, price, beds, baths, sqft, cover_url, lat, lng, mls_number',
+      )
       .eq('status', 'active')
       .or(
         `address.ilike.${like},city.ilike.${like},state.ilike.${like},zip.ilike.${like},neighborhood.ilike.${like}`,
@@ -230,7 +236,9 @@ export async function mapEntities(bounds: {
   const [listingRes, communityRes] = await Promise.all([
     supabase
       .from('listings')
-      .select('id, slug, address, city, state, zip, price, beds, baths, sqft, cover_url, lat, lng')
+      .select(
+        'id, slug, address, city, state, zip, price, beds, baths, sqft, cover_url, lat, lng, mls_number',
+      )
       .eq('status', 'active')
       .gte('lat', bounds.minLat)
       .lte('lat', bounds.maxLat)

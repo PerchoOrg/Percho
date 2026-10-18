@@ -105,6 +105,11 @@ export interface PoolListingDTO {
   photoCount?: number;
   /** City unit this listing sits in — a tease swipe credits it (§1.7). */
   geoUnitId?: string;
+  /**
+   * FMLS listing number (`listings.mls_number`), FMLS listings only. IDX rule
+   * 13.7.b: the card shows it. Omitted for every other listing.
+   */
+  mlsNumber?: string;
   /** Set in stages 1–2: likeable, weighted 0.5×, match badge suppressed. */
   tease?: true;
   /** Set in stage 3: preview inside an already-liked community. */

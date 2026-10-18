@@ -267,6 +267,7 @@ function ListingsGrid({ listings }: { listings: BrowseCard[] }) {
       city: card.listing.city,
       state: card.listing.state,
       zip: card.listing.zip,
+      mlsNumber: card.listing.mlsNumber ?? null,
     };
   });
   return <ListingGrid items={items} />;

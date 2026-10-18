@@ -20,6 +20,7 @@ import { listSavedListingIds, saveListing, unsaveListing } from '@/app/_actions/
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
+import { fmlsNumberLabel } from '@percho/shared/fmls';
 import Hls from 'hls.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LeadModal } from '../../../../_components/LeadModal';
@@ -535,6 +536,11 @@ function ListingSlide({
         <div className="mt-1 text-[13px] leading-snug">
           {`${listing.address}, ${listing.city}, ${listing.state}${listing.zip ? ` ${listing.zip}` : ''}`}
         </div>
+        {fmlsNumberLabel(listing.mlsNumber) && (
+          <div className="mt-1 text-[12px] text-surface/90 leading-snug">
+            {fmlsNumberLabel(listing.mlsNumber)}
+          </div>
+        )}
       </div>
     </section>
   );

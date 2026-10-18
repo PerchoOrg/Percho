@@ -130,8 +130,19 @@ export interface ListingDetailDTO {
   lotSizeAcres?: number;
   zip?: string;
   neighborhood?: string;
-  /** `mls_listings.listing_key` — the FMLS number a buyer can quote. */
+  /**
+   * `listings.mls_number` — the FMLS listing number (Bridge `ListingId`), FMLS
+   * listings only. IDX rule 13.7.b: shown with the listing. Not the mirror's
+   * `listing_key`, which is Bridge's record hash, not a number anyone quotes.
+   */
   mlsNumber?: string;
+  /**
+   * The listing agent and brokerage of an FMLS listing (`external_agent_name`,
+   * `external_office`). FMLS's detail disclosure promises "the listing
+   * brokerage is identified in any listing details" — this is that line.
+   */
+  listAgentName?: string;
+  listOfficeName?: string;
   video?: ListingVideoDTO;
   /** Approved "After you move in" cards. Absent when the listing has none. */
   insights?: InsightDTO[];
@@ -189,6 +200,9 @@ type ListingRow = {
   lng?: number | null;
   source?: string | null;
   source_id?: string | null;
+  mls_number?: string | null;
+  external_agent_name?: string | null;
+  external_office?: string | null;
   /** PostgREST embed of the owning agent's slug; null for FMLS imports. */
   agents?: { slug: string | null } | null;
 };
@@ -197,7 +211,6 @@ type ListingRow = {
 type MlsMirrorRow = {
   days_on_market: number | null;
   lot_size_acres: number | null;
-  listing_key: string;
   /** IDX display gate. `false` means the MLS forbids showing this record. */
   internet_entire_listing_display_yn?: boolean | null;
 };
@@ -317,7 +330,11 @@ export function projectDetail(
     ...(!listing.lot_size?.trim() && mls?.lot_size_acres != null && mls.lot_size_acres > 0
       ? { lotSizeAcres: mls.lot_size_acres }
       : {}),
-    ...(mls?.listing_key?.trim() ? { mlsNumber: mls.listing_key.trim() } : {}),
+    ...(listing.mls_number?.trim() ? { mlsNumber: listing.mls_number.trim() } : {}),
+    ...(listing.external_agent_name?.trim()
+      ? { listAgentName: listing.external_agent_name.trim() }
+      : {}),
+    ...(listing.external_office?.trim() ? { listOfficeName: listing.external_office.trim() } : {}),
     ...(video ? { video } : {}),
     ...(insights.length > 0 ? { insights } : {}),
     ...(rentEstimate ? { rentEstimate } : {}),
@@ -471,7 +488,7 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
   const supabase = createUncachedAnonClient();
   // `agents(slug)` embeds the owning agent for the share link; null for FMLS rows.
   const columns =
-    'id, slug, address, city, state, price, beds, baths, sqft, year_built, hoa, description, community_id, status, lot_size, zip, neighborhood, lat, lng, source, source_id, agents(slug)';
+    'id, slug, address, city, state, price, beds, baths, sqft, year_built, hoa, description, community_id, status, lot_size, zip, neighborhood, lat, lng, source, source_id, mls_number, external_agent_name, external_office, agents(slug)';
 
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
   const { data: rows, error } = await supabase
@@ -507,7 +524,7 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
       // flag is fetched so a row the MLS forbids displaying projects nothing.
       createUncachedServiceClient()
         .from('mls_listings')
-        .select('days_on_market, lot_size_acres, listing_key, internet_entire_listing_display_yn')
+        .select('days_on_market, lot_size_acres, internet_entire_listing_display_yn')
         .eq('our_listing_id', row.id)
         .limit(1)
         .maybeSingle(),

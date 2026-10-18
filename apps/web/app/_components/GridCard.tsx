@@ -91,10 +91,13 @@ export function GridCardCaption({
   title,
   sub,
   sub2,
+  sub3,
 }: {
   title: ReactNode;
   sub?: ReactNode;
   sub2?: ReactNode;
+  /** Fourth line — the FMLS listing number on FMLS cards (IDX rule 13.7.b). */
+  sub3?: ReactNode;
 }) {
   return (
     <>
@@ -106,6 +109,9 @@ export function GridCardCaption({
       )}
       {sub2 != null && (
         <div className="mt-0.5 truncate text-[11px] tracking-wide opacity-95">{sub2}</div>
+      )}
+      {sub3 != null && (
+        <div className="mt-0.5 truncate text-[11px] tracking-wide opacity-95">{sub3}</div>
       )}
     </>
   );

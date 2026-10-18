@@ -16,6 +16,7 @@
  * (cost, size, HOA…) underneath; only the basics collapse behind the
  * "show all" toggle, and price lives in the header column.
  */
+import { fmlsNumberLabel } from "@percho/shared/fmls";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -28,6 +29,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FmlsDisclosure } from "../components/FmlsDisclosure";
 import {
 	ColumnHeaderSpacer,
 	CompareBlock,
@@ -170,6 +172,11 @@ export default function CompareScreen() {
 								<Text style={styles.headCity} numberOfLines={2}>
 									{h.city}
 								</Text>
+								{!!fmlsNumberLabel(h.mlsNumber) && (
+									<Text style={styles.headCity} numberOfLines={1}>
+										{fmlsNumberLabel(h.mlsNumber)}
+									</Text>
+								)}
 								{h.price && <Text style={styles.headPrice}>{h.price}</Text>}
 							</Pressable>
 						))}
@@ -210,6 +217,11 @@ export default function CompareScreen() {
 						the nearest by distance, not an assignment; the basics follow your
 						You-tab priorities.
 					</Text>
+
+					{/* IDX rule 13.7(e)i — FMLS homes are on screen. */}
+					{table.headers.some((h) => fmlsNumberLabel(h.mlsNumber)) && (
+						<FmlsDisclosure variant="results" style={styles.fmls} />
+					)}
 				</ScrollView>
 			)}
 		</View>
@@ -260,6 +272,7 @@ const styles = StyleSheet.create({
 		color: colors.ink2,
 		textAlign: "center",
 	},
+	fmls: { paddingHorizontal: 20, paddingTop: 16 },
 	headPrice: {
 		...textStyles.footnote,
 		fontWeight: "600",

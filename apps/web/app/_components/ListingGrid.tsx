@@ -10,7 +10,10 @@
 
 import { Home } from 'lucide-react';
 
+import { fmlsNumberLabel } from '@percho/shared/fmls';
+
 import { EmptyHubState } from './EmptyHubState';
+import { FmlsDisclosure } from './FmlsDisclosure';
 import { GridCard, GridCardBadgeDark, GridCardBadgeLight, GridCardCaption } from './GridCard';
 import { GridFrame } from './GridFrame';
 
@@ -40,6 +43,12 @@ export type ListingGridItem = {
   distanceMi?: number | null;
   /** Reduce cover opacity (used for inactive listings on the agent side). */
   dimmed?: boolean;
+  /**
+   * FMLS listing number (`listings.mls_number`). Set only on FMLS listings:
+   * it prints "FMLS #…" on the card (IDX rule 13.7.b), and any card carrying
+   * one puts the FMLS results disclosure under the grid (13.7(e)i).
+   */
+  mlsNumber?: string | null;
 };
 
 function fmtPrice(n: number | null): string {
@@ -100,46 +109,52 @@ export function ListingGrid({
     );
   }
 
+  const showsFmls = items.some((item) => fmlsNumberLabel(item.mlsNumber) !== undefined);
+
   return (
-    <GridFrame>
-      {items.map((item) => {
-        const badge = item.badge;
-        const topRight = badge ? (
-          badge.tone === 'light' ? (
-            <GridCardBadgeLight>{badge.label}</GridCardBadgeLight>
-          ) : (
-            <GridCardBadgeDark>{badge.label}</GridCardBadgeDark>
-          )
-        ) : null;
-        const specs = specsLine(item);
-        const topLeft =
-          typeof item.distanceMi === 'number' ? (
-            <GridCardBadgeDark>{`${item.distanceMi.toFixed(1)} mi`}</GridCardBadgeDark>
+    <>
+      <GridFrame>
+        {items.map((item) => {
+          const badge = item.badge;
+          const topRight = badge ? (
+            badge.tone === 'light' ? (
+              <GridCardBadgeLight>{badge.label}</GridCardBadgeLight>
+            ) : (
+              <GridCardBadgeDark>{badge.label}</GridCardBadgeDark>
+            )
           ) : null;
-        return (
-          <GridCard
-            key={item.id}
-            href={item.href}
-            coverUrl={item.coverUrl}
-            alt={item.address ?? ''}
-            dimmed={item.dimmed}
-            topLeft={topLeft}
-            topRight={topRight}
-            fallback={
-              <div className="grid h-full w-full place-items-center text-muted text-xs">
-                No cover
-              </div>
-            }
-            caption={
-              <GridCardCaption
-                title={fmtPrice(item.price)}
-                sub={specs || null}
-                sub2={formatFullAddress(item)}
-              />
-            }
-          />
-        );
-      })}
-    </GridFrame>
+          const specs = specsLine(item);
+          const topLeft =
+            typeof item.distanceMi === 'number' ? (
+              <GridCardBadgeDark>{`${item.distanceMi.toFixed(1)} mi`}</GridCardBadgeDark>
+            ) : null;
+          return (
+            <GridCard
+              key={item.id}
+              href={item.href}
+              coverUrl={item.coverUrl}
+              alt={item.address ?? ''}
+              dimmed={item.dimmed}
+              topLeft={topLeft}
+              topRight={topRight}
+              fallback={
+                <div className="grid h-full w-full place-items-center text-muted text-xs">
+                  No cover
+                </div>
+              }
+              caption={
+                <GridCardCaption
+                  title={fmtPrice(item.price)}
+                  sub={specs || null}
+                  sub2={formatFullAddress(item)}
+                  sub3={fmlsNumberLabel(item.mlsNumber) ?? null}
+                />
+              }
+            />
+          );
+        })}
+      </GridFrame>
+      {showsFmls && <FmlsDisclosure variant="results" className="px-1 pt-4" />}
+    </>
   );
 }

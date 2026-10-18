@@ -59,6 +59,7 @@ export type ListingForFeed = {
   external_office?: string | null;
   source?: string | null;
   source_id?: string | null;
+  mls_number?: string | null;
 };
 
 type Community = { id: string; name: string; description: string | null };
@@ -243,7 +244,7 @@ export async function loadListingFeedBySource(
   const { data: listing } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id',
+      'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number',
     )
     .eq('source', source)
     .eq('source_id', sourceId)
@@ -288,7 +289,7 @@ export async function loadListingFeedBySlug(
   const { data: listing } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id',
+      'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number',
     )
     .eq('agent_id', agent.id)
     .eq('slug', listingSlug)
@@ -310,7 +311,7 @@ export async function loadListingFeedById(listingId: string): Promise<ListingFee
   const { data: listing } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id',
+      'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number',
     )
     .eq('id', listingId)
     .maybeSingle()) as { data: ListingForFeed | null };
@@ -409,6 +410,7 @@ export async function buildListingCards(
         description: (listing.description ?? []).filter((s) => s && s.trim().length > 0),
         source: listing.source ?? null,
         sourceId: listing.source_id ?? null,
+        mlsNumber: listing.mls_number ?? null,
       },
       agent: {
         slug: agent.slug,
@@ -455,12 +457,17 @@ export async function buildListingCards(
       baths: listing.baths,
       sqft: listing.sqft,
       description: (listing.description ?? []).filter((s) => s && s.trim().length > 0),
+      source: listing.source ?? null,
+      sourceId: listing.source_id ?? null,
+      mlsNumber: listing.mls_number ?? null,
     },
     agent: {
       slug: agent.slug,
       name: agent.name,
       email: agent.email,
       phone: agent.phone,
+      office: agent.office ?? null,
+      isExternal: agent.isExternal ?? false,
     },
   };
 

@@ -1,3 +1,4 @@
+import { fmlsNumberLabel } from "@percho/shared/fmls";
 /**
  * Search tab (spec-v3 `04-search.md`) — map + collapsible list.
  *
@@ -133,6 +134,7 @@ import MapView, {
 	Polygon,
 } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FmlsDisclosure } from "../../components/FmlsDisclosure";
 import { useAreas } from "../../hooks/use-areas";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { useMapContent } from "../../hooks/use-map-content";
@@ -1172,6 +1174,11 @@ export default function SearchTab() {
 												.filter(Boolean)
 												.join(" · ")}
 										</Text>
+										{!!fmlsNumberLabel(l.mlsNumber) && (
+											<Text style={styles.rowSub} numberOfLines={1}>
+												{fmlsNumberLabel(l.mlsNumber)}
+											</Text>
+										)}
 									</View>
 								</Pressable>
 							))}
@@ -1194,6 +1201,11 @@ export default function SearchTab() {
 									</View>
 								</Pressable>
 							))}
+
+							{/* IDX rule 13.7(e)i — under any list that shows an FMLS home. */}
+							{hits?.listings.some((l) => fmlsNumberLabel(l.mlsNumber)) && (
+								<FmlsDisclosure variant="results" style={styles.fmls} />
+							)}
 						</ScrollView>
 					)}
 				</View>
@@ -1686,6 +1698,7 @@ const styles = StyleSheet.create({
 	rowText: { flex: 1, gap: 2 },
 	rowName: { ...textStyles.headline, color: colors.ink },
 	rowSub: { ...textStyles.footnote, color: colors.ink2 },
+	fmls: { paddingHorizontal: 16, paddingTop: 16 },
 
 	// ── Lens chips ────────────────────────────────────────────────────────────
 	lensBar: { position: "absolute", left: 0, right: 0 },

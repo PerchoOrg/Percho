@@ -32,6 +32,8 @@ export interface ListingSummaryDTO {
   baths?: number;
   sqft?: number;
   thumbUrl?: string;
+  /** FMLS listing number, FMLS listings only (IDX rule 13.7.b). */
+  mlsNumber?: string;
 }
 
 type SummaryRow = {
@@ -43,6 +45,7 @@ type SummaryRow = {
   beds: number | null;
   baths: number | null;
   sqft: number | null;
+  mls_number?: string | null;
 };
 
 type ThumbRow = { listing_id: string; storage_path: string; sort_order: number | null };
@@ -79,6 +82,7 @@ export function projectSummaries(
       ...(r.baths != null ? { baths: r.baths } : {}),
       ...(r.sqft != null && r.sqft > 0 ? { sqft: r.sqft } : {}),
       ...(thumb ? { thumbUrl: photoPublicUrl(thumb.storage_path) } : {}),
+      ...(r.mls_number?.trim() ? { mlsNumber: r.mls_number.trim() } : {}),
     });
   }
   return out;
@@ -119,7 +123,7 @@ export async function fetchListingSummaries(ids: readonly string[]): Promise<Lis
   const [rowRes, thumbRes] = await Promise.all([
     supabase
       .from('listings')
-      .select('id, address, city, state, price, beds, baths, sqft')
+      .select('id, address, city, state, price, beds, baths, sqft, mls_number')
       .in('id', [...ids])
       .eq('status', 'active'),
     supabase

@@ -1,3 +1,4 @@
+import { fmlsNumberLabel } from "@percho/shared/fmls";
 import { LinearGradient } from "expo-linear-gradient";
 import { Fragment } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -119,6 +120,8 @@ export function ListingFace({
 	const place = [abbreviateAddress(card.address), card.locality, card.zip]
 		.filter(Boolean)
 		.join(" · ");
+	/** IDX rule 13.7.b — the FMLS number rides with every FMLS listing. */
+	const mlsLabel = fmlsNumberLabel(card.mlsNumber);
 
 	const saved = useSavedStore((s) => s.isSaved(card.id));
 	const toggleSaved = useSavedStore((s) => s.toggle);
@@ -208,6 +211,11 @@ export function ListingFace({
 				{!!place && (
 					<Text style={styles.address} numberOfLines={1}>
 						{place}
+					</Text>
+				)}
+				{!!mlsLabel && (
+					<Text style={styles.mlsNumber} numberOfLines={1}>
+						{mlsLabel}
 					</Text>
 				)}
 				<View style={styles.bottomRow}>
@@ -370,6 +378,11 @@ const styles = StyleSheet.create({
 		...redlineText.listingCard.address,
 		color: "rgba(255,255,255,0.72)",
 		marginTop: 6,
+	},
+	mlsNumber: {
+		...redlineText.listingCard.address,
+		color: "rgba(255,255,255,0.72)",
+		marginTop: 2,
 	},
 	/**
 	 * Explore link row — right-aligned, bottom of the overlay. The owner's

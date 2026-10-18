@@ -132,6 +132,7 @@ function ListingsView({ cards }: { cards: BrowseCard[] }) {
     city: card.listing.city,
     state: card.listing.state,
     zip: card.listing.zip,
+    mlsNumber: card.listing.mlsNumber ?? null,
   }));
   return (
     <GridPageShell>

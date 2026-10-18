@@ -55,4 +55,14 @@ describe('projectSummaries', () => {
     const s = projectSummaries([uuid(1)], [row(uuid(1))], [])[0];
     expect(s && 'thumbUrl' in s).toBe(false);
   });
+
+  it('carries the FMLS number only for a listing that has one (IDX rule 13.7.b)', () => {
+    const [fmls, own] = projectSummaries(
+      [uuid(1), uuid(2)],
+      [row(uuid(1), { mls_number: '7404568' }), row(uuid(2), { mls_number: null })],
+      [],
+    );
+    expect(fmls?.mlsNumber).toBe('7404568');
+    expect(own && 'mlsNumber' in own).toBe(false);
+  });
 });

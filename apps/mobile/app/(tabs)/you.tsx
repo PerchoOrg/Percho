@@ -32,6 +32,7 @@
  *     not settings — plain text under the last card, no heading. Deletion
  *     stays because App Review 5.1.1(v) requires it in-app.
  */
+import { TECHNICAL_ENTITY_STATEMENT } from "@percho/shared/fmls";
 import Constants from "expo-constants";
 import { router } from "expo-router";
 import { useMemo } from "react";
@@ -439,6 +440,8 @@ export default function YouTab() {
 					Percho {Constants.expoConfig?.version ?? "?"}
 					{buildLabel()}
 				</Text>
+				{/* FMLS IDX rule 13.8 — who runs and supports the listing display. */}
+				<Text style={styles.footerTxt}>{TECHNICAL_ENTITY_STATEMENT}</Text>
 			</View>
 		</ScrollView>
 	);

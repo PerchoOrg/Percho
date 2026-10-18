@@ -159,7 +159,9 @@ export default async function CommunityFeedPage({
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: listingRows } = (await (supabase as any)
     .from('listings')
-    .select('id, slug, address, city, state, zip, price, beds, baths, sqft, agent_id, created_at')
+    .select(
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, agent_id, created_at, mls_number',
+    )
     .eq('community_id', community.id)
     .eq('status', 'active')
     .order('created_at', { ascending: false })) as {
@@ -176,6 +178,7 @@ export default async function CommunityFeedPage({
       sqft: number | null;
       agent_id: string;
       created_at: string;
+      mls_number: string | null;
     }> | null;
   };
 
@@ -254,6 +257,7 @@ export default async function CommunityFeedPage({
         heroCfVideoId: heroCf,
         heroPhotoUrl: heroPhotoPath ? photoPublicUrl(heroPhotoPath) : null,
         agentSlug: agentSlugById.get(l.agent_id) ?? null,
+        mlsNumber: l.mls_number,
       };
     })
     .filter((x): x is CommunityListingItem => x !== null);

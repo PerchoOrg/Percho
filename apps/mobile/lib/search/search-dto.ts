@@ -18,6 +18,8 @@ export interface SearchListing {
 	coverUrl?: string;
 	lat?: number;
 	lng?: number;
+	/** FMLS listing number, FMLS homes only (IDX rule 13.7.b). */
+	mlsNumber?: string;
 }
 
 export interface SearchCommunity {
@@ -63,6 +65,7 @@ function parseListing(v: unknown): SearchListing | null {
 		coverUrl: str(o.coverUrl),
 		lat: num(o.lat),
 		lng: num(o.lng),
+		mlsNumber: str(o.mlsNumber),
 	};
 }
 
