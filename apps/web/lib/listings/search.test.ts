@@ -102,3 +102,32 @@ describe('projectSearchCommunities', () => {
     expect(c?.lat).toBe(34.1);
   });
 });
+
+describe('projectSearchListings — FMLS number (IDX rule 13.7.b)', () => {
+  const base = {
+    id: 'l1',
+    slug: 'no-street-address-7404568',
+    address: 'No street address',
+    city: 'Houston County',
+    state: 'GA',
+    zip: null,
+    price: null,
+    beds: null,
+    baths: null,
+    sqft: null,
+    cover_url: null,
+    lat: null,
+    lng: null,
+  };
+
+  it('carries a trimmed FMLS number and omits a blank one', () => {
+    const [fmls, blank, own] = projectSearchListings([
+      { ...base, mls_number: ' 7404568 ' },
+      { ...base, id: 'l2', mls_number: '  ' },
+      { ...base, id: 'l3' },
+    ]);
+    expect(fmls?.mlsNumber).toBe('7404568');
+    expect(blank && 'mlsNumber' in blank).toBe(false);
+    expect(own && 'mlsNumber' in own).toBe(false);
+  });
+});

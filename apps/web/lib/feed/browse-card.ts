@@ -150,7 +150,7 @@ export type BrowseCard = {
     description: string[];
     /**
      * provenance for externally-sourced listings.
-     * Internal (agent-owned) listings leave both null. When `source === 'fmls'`,
+     * Internal (agent-owned) listings leave both null. When `source === 'fmls_bridge'`,
      * the listing belongs to an external MLS agent (see `agent` below for the
      * verbatim FMLS attribution) and the detail-page link uses
      * `/v/fmls/{sourceId}` — NOT `/v/{agent.slug}/{listing.slug}` because
@@ -158,6 +158,12 @@ export type BrowseCard = {
      */
     source?: string | null;
     sourceId?: string | null;
+    /**
+     * FMLS listing number (`listings.mls_number`, Bridge `ListingId`) — set
+     * only on FMLS listings. IDX rule 13.7.b: shown with every FMLS listing,
+     * and its presence is what puts the FMLS disclosure on screen.
+     */
+    mlsNumber?: string | null;
   };
   agent: {
     /**

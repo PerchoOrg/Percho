@@ -328,6 +328,7 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 		...(matchScore !== undefined ? { matchScore } : {}),
 		...(d.length > 0 ? { dims: d } : {}),
 		...(photoCount !== undefined ? { photoCount } : {}),
+		...(str(raw.mlsNumber) ? { mlsNumber: str(raw.mlsNumber) as string } : {}),
 		// The server flags the gate variant; the client engine re-applies its own
 		// gate on top, so these are carried through verbatim rather than inferred.
 		...(raw.tease === true ? { tease: true as const } : {}),

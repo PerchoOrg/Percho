@@ -114,8 +114,14 @@ export interface ListingDetailDTO {
 	lotSizeAcres?: number;
 	zip?: string;
 	neighborhood?: string;
-	/** The FMLS number a buyer can quote. */
+	/** The FMLS listing number (`listings.mls_number`), FMLS listings only. */
 	mlsNumber?: string;
+	/**
+	 * Listing agent and brokerage of an FMLS listing. FMLS's detail disclosure
+	 * says "the listing brokerage is identified in any listing details".
+	 */
+	listAgentName?: string;
+	listOfficeName?: string;
 	video?: ListingVideoDTO;
 	/** Approved "After you move in" cards. Absent when the listing has none. */
 	insights?: InsightDTO[];

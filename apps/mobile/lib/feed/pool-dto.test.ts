@@ -148,6 +148,16 @@ describe("parseListing", () => {
 		expect(parseListing({ ...LISTING, zip: 30144 })?.zip).toBeUndefined();
 	});
 
+	it("carries the FMLS number off the wire and omits it when absent", () => {
+		expect(parseListing({ ...LISTING, mlsNumber: "7404568" })?.mlsNumber).toBe(
+			"7404568",
+		);
+		expect(parseListing(LISTING)?.mlsNumber).toBeUndefined();
+		expect(
+			parseListing({ ...LISTING, mlsNumber: 7404568 })?.mlsNumber,
+		).toBeUndefined();
+	});
+
 	it("drops a photo count of 1 — the pill must never read '1 Photos'", () => {
 		expect(
 			parseListing({ ...LISTING, photoCount: 1 })?.photoCount,

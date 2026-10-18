@@ -33,6 +33,7 @@
  * Rows re-fetch from the detail endpoints on every mount — the store keeps
  * ids only, so a price change shows the moment the server knows it.
  */
+import { fmlsNumberLabel } from "@percho/shared/fmls";
 import type { Area } from "@percho/shared/lenses";
 import { lensById, valuesFor } from "@percho/shared/lenses";
 import { router } from "expo-router";
@@ -47,6 +48,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FmlsDisclosure } from "../../components/FmlsDisclosure";
 import { useAreas } from "../../hooks/use-areas";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { communityDetailUrl, listingDetailUrl } from "../../lib/api/base";
@@ -86,6 +88,7 @@ type Row =
 			place: string;
 			thumbUrl?: string;
 			href: string;
+			mlsNumber?: string;
 	  }
 	| { status: "gone" }
 	| { status: "error" };
@@ -144,6 +147,7 @@ async function fetchRow(item: SavedItem): Promise<Row> {
 				baths?: number;
 				sqft?: number;
 				photos: { url: string }[];
+				mlsNumber?: string;
 			};
 			const price = formatPrice(d.price);
 			const specs = specsLine(d.beds, d.baths, d.sqft);
@@ -156,6 +160,7 @@ async function fetchRow(item: SavedItem): Promise<Row> {
 				place: placeOf(d.city),
 				thumbUrl: d.photos[0]?.url,
 				href: `/listing/${d.id}`,
+				...(d.mlsNumber ? { mlsNumber: d.mlsNumber } : {}),
 			};
 		}
 		const d = (await res.json()) as {
@@ -286,6 +291,7 @@ export default function SavedTab() {
 				sub: r.sub,
 				...(r.thumbUrl ? { thumbUrl: r.thumbUrl } : {}),
 				href: r.href,
+				...(r.mlsNumber ? { mlsNumber: r.mlsNumber } : {}),
 			};
 		});
 	}, [items, rows, pool.geoUnits, countyOf, costLineFor]);
@@ -510,6 +516,11 @@ export default function SavedTab() {
 						* water and trash are still our estimate. Tap a place for the rest.
 					</Text>
 				)}
+
+				{/* IDX rule 13.7(e)i — under any list that shows an FMLS home. */}
+				{shelves.some((s) => s.cards.some((c) => c.mlsNumber)) && (
+					<FmlsDisclosure variant="results" style={styles.fmls} />
+				)}
 			</ScrollView>
 
 			{popOpen && (
@@ -729,6 +740,11 @@ function ShelfBlock({
 									<Text style={styles.cardS} numberOfLines={1}>
 										{c.sub}
 									</Text>
+									{!!fmlsNumberLabel(c.mlsNumber) && (
+										<Text style={styles.cardS} numberOfLines={1}>
+											{fmlsNumberLabel(c.mlsNumber)}
+										</Text>
+									)}
 								</View>
 							</Pressable>
 						);
@@ -780,6 +796,7 @@ function LooseRow({
 
 const styles = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: colors.bg },
+	fmls: { paddingHorizontal: 20, paddingTop: 16 },
 	center: {
 		alignItems: "center",
 		justifyContent: "center",

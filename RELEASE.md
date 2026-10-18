@@ -20,6 +20,20 @@ Everything is learned from the swipes you've already made, on your own
 device — there's no form to fill in, and a left swipe never blacklists
 anything; it just means "less of this for now".
 
+### 2026-10-18
+- **MLS homes now show their FMLS listing number** — on every card, in
+  search, saved homes, compare and on the listing page, on the website and
+  in the app.
+- **The MLS's data notice is now on screen wherever its homes are**, with a
+  link to its copyright-complaint (DMCA) policy, and the site and app say
+  who runs them and how to reach us. FMLS requires both before it licenses
+  its listings to Percho.
+- **Listing pages always name the listing agent and brokerage.** The app's
+  listing page now shows them under the address; on the website one listing
+  page had been showing the agent's name without the brokerage.
+- **Fix:** searching the website for an MLS home now opens that home instead
+  of the browse page.
+
 ### 2026-09-26
 - **Home listings reset.** Every home previously in the feed has been
   removed while Percho moves to a licensed MLS data feed. For now the feed

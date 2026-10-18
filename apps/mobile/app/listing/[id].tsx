@@ -23,6 +23,7 @@
  * stays in the repo unmounted; `?focus=` deep links land here harmlessly as
  * plain opens (no live caller emits them today).
  */
+import { fmlsNumberLabel } from "@percho/shared/fmls";
 import type { InsightTheme } from "@percho/shared/insights";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -37,6 +38,7 @@ import {
 	useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FmlsDisclosure } from "../../components/FmlsDisclosure";
 import { ActionDock } from "../../components/listing/explore/ActionDock";
 import {
 	type AppBarTab,
@@ -377,6 +379,20 @@ export default function ListingExploreScreen() {
 						{detail.address} · {detail.city}, {detail.state}
 						{detail.zip ? ` ${detail.zip}` : ""}
 					</Text>
+					{/* IDX rule 13.7.b: the FMLS number with the listing; 13.7(e)2's
+					    disclosure promises the brokerage is named in the details. */}
+					{!!fmlsNumberLabel(detail.mlsNumber) && (
+						<Text style={styles.listedBy}>
+							{fmlsNumberLabel(detail.mlsNumber)}
+						</Text>
+					)}
+					{(!!detail.listAgentName || !!detail.listOfficeName) && (
+						<Text style={styles.listedBy}>
+							{`Listed by ${[detail.listAgentName, detail.listOfficeName]
+								.filter(Boolean)
+								.join(" · ")}`}
+						</Text>
+					)}
 					{(detail.daysOnMarket !== undefined ||
 						pricePerSqft !== undefined ||
 						detail.yearBuilt !== undefined) && (
@@ -540,6 +556,13 @@ export default function ListingExploreScreen() {
 						anything we can't source stays blank.
 					</Text>
 				</View>
+
+				{/* ——— FMLS disclosure (IDX rule 13.7(e)2) — closes the page ——— */}
+				{!!fmlsNumberLabel(detail.mlsNumber) && (
+					<View style={[styles.section, styles.sectionRuled]}>
+						<FmlsDisclosure variant="detail" />
+					</View>
+				)}
 			</ScrollView>
 
 			<CollapsedAppBar
@@ -686,6 +709,12 @@ const styles = StyleSheet.create({
 		fontSize: 15,
 		color: explore.muted,
 		marginTop: 7,
+		fontFamily: fonts.ui,
+	},
+	listedBy: {
+		fontSize: 13,
+		color: explore.muted,
+		marginTop: 4,
 		fontFamily: fonts.ui,
 	},
 	meta: { flexDirection: "row", gap: 16, marginTop: 13 },

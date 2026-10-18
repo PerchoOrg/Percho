@@ -41,6 +41,8 @@ export interface ShelfEntry {
 	sub?: string;
 	thumbUrl?: string;
 	href?: string;
+	/** FMLS listing number, FMLS homes only (IDX rule 13.7.b). */
+	mlsNumber?: string;
 	/** `area` only: the county line the shelf header carries. */
 	costLine?: string;
 	/** `area` only: the lens key, for `/compare-areas`. Absent outside metro. */
@@ -54,6 +56,7 @@ export interface ShelfCard {
 	sub: string;
 	thumbUrl?: string;
 	href: string;
+	mlsNumber?: string;
 }
 
 export interface Shelf {
@@ -81,6 +84,7 @@ function toCard(e: ShelfEntry): ShelfCard | null {
 		sub: e.sub ?? "",
 		...(e.thumbUrl ? { thumbUrl: e.thumbUrl } : {}),
 		href: e.href,
+		...(e.mlsNumber ? { mlsNumber: e.mlsNumber } : {}),
 	};
 }
 

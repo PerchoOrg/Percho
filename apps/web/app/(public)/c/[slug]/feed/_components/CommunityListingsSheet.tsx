@@ -17,7 +17,9 @@
  */
 'use client';
 
+import { FmlsDisclosure } from '@/app/_components/FmlsDisclosure';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import { fmlsNumberLabel } from '@percho/shared/fmls';
 import { useEffect } from 'react';
 import type { CommunityListingItem } from '../CommunityVideoFeed';
 
@@ -168,6 +170,11 @@ export function CommunityListingsSheet({
                         <div className="mt-0.5 truncate text-[11px] text-ink2 tracking-wide">
                           {`${l.address}, ${l.city}, ${l.state}`}
                         </div>
+                        {fmlsNumberLabel(l.mlsNumber) && (
+                          <div className="mt-0.5 truncate text-[11px] text-ink2 tracking-wide">
+                            {fmlsNumberLabel(l.mlsNumber)}
+                          </div>
+                        )}
                       </div>
                       <div className="text-muted" aria-hidden="true">
                         ›
@@ -177,6 +184,9 @@ export function CommunityListingsSheet({
                 );
               })}
             </ul>
+          )}
+          {listings.some((l) => fmlsNumberLabel(l.mlsNumber)) && (
+            <FmlsDisclosure variant="results" className="px-4 pt-3 pb-4" />
           )}
         </div>
       </div>

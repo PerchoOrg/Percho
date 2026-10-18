@@ -214,6 +214,7 @@ function projectListing(card: BrowseCard, verticalUid?: string): PoolListingDTO 
     ...(citySlug(card.listing.city, card.listing.state)
       ? { geoUnitId: citySlug(card.listing.city, card.listing.state) }
       : {}),
+    ...(card.listing.mlsNumber?.trim() ? { mlsNumber: card.listing.mlsNumber.trim() } : {}),
   };
 }
 

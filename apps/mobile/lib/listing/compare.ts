@@ -64,6 +64,8 @@ export interface CompareTable {
 		/** Formatted, so the header cell and a table cell can never disagree. */
 		price?: string;
 		thumbUrl?: string;
+		/** FMLS listing number, FMLS homes only (IDX rule 13.7.b). */
+		mlsNumber?: string;
 	}[];
 	/** Always all four, in the owner's order, rows or not. */
 	aspects: CompareAspect<CompareRow>[];
@@ -100,6 +102,7 @@ export function buildCompareTable(
 		city: h.city,
 		...(h.price !== undefined ? { price: formatUsd(h.price) } : {}),
 		thumbUrl: h.photos[0]?.url,
+		...(h.mlsNumber ? { mlsNumber: h.mlsNumber } : {}),
 	}));
 
 	const cost = homes.map((h) =>

@@ -22,6 +22,7 @@ import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid
  */
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { fetchCommunityListCards } from '@/lib/communities/list';
+import { linkForCard } from '@/lib/feed/link-for-card';
 import { createClient } from '@/lib/supabase/server';
 import { photoPublicUrl } from '@/lib/supabase/storage';
 import type { Metadata } from 'next';
@@ -59,6 +60,9 @@ type ListingHit = {
   agent_slug: string;
   status: string;
   cover: { kind: 'video' | 'photo'; src: string } | null;
+  source: string | null;
+  sourceId: string | null;
+  mlsNumber: string | null;
 };
 
 type ListingScope = 'public' | 'agent_inactive';
@@ -83,7 +87,7 @@ async function searchListings(
   let query = (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, neighborhood, price, beds, baths, sqft, agent_id, status, cover_url',
+      'id, slug, address, city, state, zip, neighborhood, price, beds, baths, sqft, agent_id, status, cover_url, source, source_id, mls_number',
     )
     .or(orFields)
     .order('created_at', { ascending: false })
@@ -113,6 +117,9 @@ async function searchListings(
       agent_id: string;
       status: string;
       cover_url: string | null;
+      source: string | null;
+      source_id: string | null;
+      mls_number: string | null;
     }> | null;
   };
 
@@ -190,6 +197,9 @@ async function searchListings(
       agent_slug: agentSlugs.get(l.agent_id) ?? '',
       status: l.status,
       cover,
+      source: l.source,
+      sourceId: l.source_id,
+      mlsNumber: l.mls_number,
     };
   });
 }
@@ -205,8 +215,12 @@ function listingHitsToItems(
     const buyerHref =
       hit.cover?.kind === 'video'
         ? `/browse/feed?start=${encodeURIComponent(hit.id)}`
-        : hit.agent_slug
-          ? `/v/${hit.agent_slug}/${hit.slug}`
+        : hit.agent_slug || hit.sourceId
+          ? // FMLS rows have no agent slug; route them to `/v/fmls/<key>`.
+            linkForCard({
+              agent: { slug: hit.agent_slug },
+              listing: { slug: hit.slug, source: hit.source, sourceId: hit.sourceId },
+            })
           : '/browse';
     return {
       id: hit.id,
@@ -223,6 +237,7 @@ function listingHitsToItems(
       zip: hit.zip,
       badge: inactive ? { label: 'Inactive', tone: 'light' } : null,
       dimmed: inactive && opts.dimInactive,
+      mlsNumber: hit.mlsNumber,
     };
   });
 }

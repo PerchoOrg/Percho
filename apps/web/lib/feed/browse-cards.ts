@@ -68,6 +68,7 @@ type ListingRow = {
   external_office: string | null;
   source: string | null;
   source_id: string | null;
+  mls_number: string | null;
 };
 
 /**
@@ -468,6 +469,7 @@ async function assembleCards(
         description: (l.description ?? []).filter((s) => s && s.trim().length > 0),
         source: l.source,
         sourceId: l.source_id,
+        mlsNumber: l.mls_number,
       },
       agent: {
         slug: agent.slug,
@@ -509,7 +511,7 @@ export async function fetchBrowseCards(offset = 0, limit = 1000): Promise<Browse
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
     )
     .eq('status', 'active')
     .order('created_at', { ascending: false })
@@ -551,7 +553,7 @@ export async function fetchBrowseCardsVideosOnly(offset = 0, limit = 1000): Prom
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
     )
     .in('id', ids)
     .eq('status', 'active')
@@ -587,7 +589,7 @@ export async function fetchBrowseCardsByCommunitySlug(slug: string): Promise<Bro
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
     )
     .eq('status', 'active')
     .eq('community_id', community.id)
@@ -610,7 +612,7 @@ export async function fetchBrowseCardsByIds(ids: string[]): Promise<BrowseCard[]
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
     )
     .in('id', ids)
     .eq('status', 'active')) as { data: ListingRow[] | null };
@@ -643,7 +645,7 @@ export async function fetchNearbyCards(args: {
     const r = (await (supabase as any)
       .from('listings')
       .select(
-        'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
+        'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
       )
       .eq('status', 'active')
       .not('lat', 'is', null)

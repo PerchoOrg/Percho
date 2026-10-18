@@ -257,6 +257,7 @@ export function NearbyClient() {
       state: card.listing.state,
       zip: card.listing.zip,
       distanceMi: typeof card.distance === 'number' ? card.distance : null,
+      mlsNumber: card.listing.mlsNumber ?? null,
     };
   });
 
