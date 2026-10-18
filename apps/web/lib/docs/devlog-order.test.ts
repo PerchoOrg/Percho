@@ -22,9 +22,19 @@ import { describe, expect, it } from 'vitest';
  * So the check covers entries from 2026-09-08, which is everything written
  * since the file was last known-good in order. It cannot repair history; it can
  * stop it happening again.
+ *
+ * Monthly rotation (same rule) moves finished months into `docs/devlog/`, so
+ * the check reads DEVLOG.md followed by every archive its index lists, in the
+ * index's newest-first order — otherwise the first entry of a new month leaves
+ * this file nearly empty and the boundary between months goes unchecked.
  */
 
-const DEVLOG = readFileSync(new URL('../../../../DEVLOG.md', import.meta.url), 'utf8');
+const ROOT = new URL('../../../../', import.meta.url);
+const CURRENT = readFileSync(new URL('DEVLOG.md', ROOT), 'utf8');
+const ARCHIVES = [...CURRENT.matchAll(/^- \[`(docs\/devlog\/\d{4}-\d{2}\.md)`\]/gm)].map((m) =>
+  readFileSync(new URL(m[1] as string, ROOT), 'utf8'),
+);
+const DEVLOG = [CURRENT, ...ARCHIVES].join('\n');
 /** Entries before this were written in sessions whose clock nobody kept. */
 const CHECKED_FROM = '2026-09-08';
 

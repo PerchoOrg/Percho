@@ -66,6 +66,10 @@ IDX content", approved the backfill of the six sandbox rows, "开始做吧".
   showed `isExternal:true` on the five tail cards only.
 - `/search` sent FMLS hits (no agent slug) to `/browse`; now `linkForCard` →
   `/v/fmls/<key>`.
+- `lib/docs/devlog-order.test.ts` read DEVLOG.md alone, so this rotation left
+  it one entry and "has entries to check" failed on the merge result. It now
+  reads DEVLOG.md plus every archive the index lists, newest first, so the
+  month boundary is checked too.
 
 **Decisions**:
 - The swipe feed is one listing per screen, so it is treated as a detail view:
@@ -93,7 +97,7 @@ IDX content", approved the backfill of the six sandbox rows, "开始做吧".
   writes October DEVLOG entries and will conflict with this rotation.
 
 **Verification (branch)**: typecheck 0; lint 0 errors (mobile 8 / web 181
-warnings, none new); web 1209 / mobile 809 tests; `next build` compiles and
+warnings, none new); web 1209 / mobile 809 tests (on the merge result); `next build` compiles and
 type-checks (prerender of `/communities` logs "supabaseUrl is required" — no
 `.env.local` in this worktree).
 
