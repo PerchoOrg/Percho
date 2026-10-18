@@ -101,6 +101,39 @@ warnings, none new); web 1209 / mobile 809 tests (on the merge result); `next bu
 type-checks (prerender of `/communities` logs "supabaseUrl is required" — no
 `.env.local` in this worktree).
 
-**Next steps**: owner replies to FMLS — answer (e), the URLs to check, the
-swipe-feed interpretation, the DMCA link, the two blank contract fields
-(Authorized Purpose, Vendor System), and the 401 on the `fmls` test dataset.
+**Release**: `4c7a2e3f` (phase307.1, migration only) on main →
+`echo | pnpm db:push` from the reference worktree: "Applying migration
+20261018120000_listings_mls_number.sql... Finished supabase db push." Then
+`2dc582e2` (phase307.2–4) on main; gates re-run on that merge result; reference
+worktree fast-forwarded + `pnpm install`, so Metro serves the mobile changes.
+
+**Verification (live, Vercel ~100 s after push)**:
+- `/api/mobile/feed?stage=4`: all six listings carry `mlsNumber` — 6755168,
+  5303661, 7049147, 6826677, 7404568, 5893300 (Fairmount), each matching its
+  slug. `/api/mobile/listing/90871e1e…`: `mlsNumber` 5893300, `listAgentName`
+  Mark Stewart, `listOfficeName` FIRST MULTIPLE LISTING SERVICE.
+  `/api/mobile/search?q=cookaburra` → 5303661.
+- Headless Chrome, 390×844: `/browse` 6 × "FMLS #…", one results disclosure +
+  Technical Entity line below the grid (clear of the tab bar at full scroll),
+  "click here" → https://www.fmls.com/dmca. `/v/fmls/d9e2c4cd…`: "FMLS
+  #5893300" on the overlay; More shows "Listed by Mark Stewart · FIRST
+  MULTIPLE LISTING SERVICE" as plain text (0 links to `/a/`) and closes with
+  the detail disclosure. `/search?q=lost mountain`: the hit links to
+  `/v/fmls/d9e2c4cd…`, number + disclosure present. `/about` footer carries
+  the Technical Entity line.
+- Mobile not device-checked here — owner's phone (Metro / next build).
+
+**Finding — licence §4.11 / §4.4 (owner call, nothing changed)**: the
+phase304 home-tour run put the FMLS sandbox photos through the `tag` step,
+which is `scripts/render-worker/photo_tagger.py` — Gemini 2.5 Flash vision.
+So FMLS photos went to a third-party AI model, and `listing_photos.ai_tags` /
+`listings.ai_style` on those rows are AI output from Licensed Data. The 10-08
+reply to FMLS said Licensed Data "will not be shared with any third party or
+used with any AI tools". Before the FMLS reply goes out: decide whether to
+purge those columns for `fmls_bridge` rows, make the tour pipeline skip the
+tagger (and any AI planning) for FMLS listings, and re-cut the six films.
+
+**Next steps**: settle the §4.11 finding first, then the FMLS reply — answer
+(e), the URLs to check, the swipe-feed interpretation, the DMCA link, the two
+blank contract fields (Authorized Purpose, Vendor System), and the 401 on the
+`fmls` test dataset.
