@@ -33,6 +33,7 @@
  *
  * Rows land as `source = 'fmls_bridge'`, `source_id = ListingKey` (distinct
  * from the retired scraper's 'fmls'), served at `/v/fmls/<ListingKey>`.
+ * `mls_number = ListingId`, the FMLS number shown on every card (phase307).
  *
  * Usage (repo-root .env.local: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
  * BRIDGE_SERVER_TOKEN, BRIDGE_DATASET_ID):
@@ -153,6 +154,8 @@ async function importOne(listingId: string) {
     description: [...statusNote, ...(row.PublicRemarks?.trim() ? [row.PublicRemarks.trim()] : [])],
     external_agent_name: row.ListAgentFullName ?? row.ListOfficeName ?? 'FMLS',
     external_office: row.ListOfficeName,
+    // The number IDX rule 13.7.b says to show with the listing — not ListingKey.
+    mls_number: row.ListingId,
   };
 
   console.log(`\n${listingId} (${row.ListingKey}) — ${row.StandardStatus}, ${photos.length} photo(s)`);
