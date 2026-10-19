@@ -22,6 +22,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-10-19 04:07 UTC — phase307: owner leaves the Gemini-tagged FMLS rows as they are (demo stage)
+
+**Decision**: owner, on the licence §4.11 / §4.4 finding in the entry below —
+「AI的问题暂时不用改动 还在demo阶段」. The six `fmls_bridge` sandbox listings
+keep their `ai_tags` / `ai_style` and their films; the tour pipeline is not
+changed.
+
+**Implication**: this is a deferral, not a ruling that the use is allowed.
+Revisit before the licence is signed or real FMLS listings are imported. A
+real-feed import must not run the tagger without the owner deciding again.
+The FMLS reply should not repeat the 10-08 "no AI tools" line as a statement
+of current fact.
+
 ## 2026-10-18 23:40 UTC — phase307: FMLS IDX disclosures on web and mobile; listings carry the FMLS number
 
 **Objective**: FMLS Data Services (licence thread, 2026-10-12) listed the IDX
