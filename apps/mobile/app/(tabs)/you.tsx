@@ -307,38 +307,46 @@ export default function YouTab() {
 					</View>
 				))}
 
-				<Text style={[styles.groupHead, styles.groupHeadSplit]}>
-					From your swipes
-				</Text>
-				{dims.length === 0 ? (
-					<Text style={styles.emptyLine}>
-						Answer a trade-off card and what Percho learns shows up here.
-					</Text>
-				) : (
-					dims.map((d) => (
-						<View key={d.dim} style={styles.dimRow}>
-							<View style={styles.dimText}>
-								<Text style={styles.dimLabel}>
-									{DIM_LABELS[d.dim]}{" "}
-									<Text style={styles.dimShare}>
-										{Math.round(d.share * 100)}%
-									</Text>
-								</Text>
-								<View style={styles.meter}>
-									<View style={[styles.meterFill, { flex: d.share }]} />
-									<View style={{ flex: Math.max(1 - d.share, 0.001) }} />
+				{/* Learned dims come only from trade-off answers, and the
+				    communities-only build has no trade-off card
+				    (`COMMUNITY_ONLY_MIX`), so this group could only ever say
+				    "answer a trade-off card". It returns with listings. */}
+				{LISTINGS_IN_APP && (
+					<>
+						<Text style={[styles.groupHead, styles.groupHeadSplit]}>
+							From your swipes
+						</Text>
+						{dims.length === 0 ? (
+							<Text style={styles.emptyLine}>
+								Answer a trade-off card and what Percho learns shows up here.
+							</Text>
+						) : (
+							dims.map((d) => (
+								<View key={d.dim} style={styles.dimRow}>
+									<View style={styles.dimText}>
+										<Text style={styles.dimLabel}>
+											{DIM_LABELS[d.dim]}{" "}
+											<Text style={styles.dimShare}>
+												{Math.round(d.share * 100)}%
+											</Text>
+										</Text>
+										<View style={styles.meter}>
+											<View style={[styles.meterFill, { flex: d.share }]} />
+											<View style={{ flex: Math.max(1 - d.share, 0.001) }} />
+										</View>
+									</View>
+									<Pressable
+										onPress={() => removeDim(d.dim)}
+										hitSlop={10}
+										accessibilityRole="button"
+										accessibilityLabel={`${DIM_LABELS[d.dim]}. Remove.`}
+									>
+										<Text style={styles.dimX}>×</Text>
+									</Pressable>
 								</View>
-							</View>
-							<Pressable
-								onPress={() => removeDim(d.dim)}
-								hitSlop={10}
-								accessibilityRole="button"
-								accessibilityLabel={`${DIM_LABELS[d.dim]}. Remove.`}
-							>
-								<Text style={styles.dimX}>×</Text>
-							</Pressable>
-						</View>
-					))
+							))
+						)}
+					</>
 				)}
 				{/* The reset lives with what it resets. The confirm carries the
 				    scope (§5.3: no bare reset without a recap). */}
