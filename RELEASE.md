@@ -21,6 +21,10 @@ device — there's no form to fill in, and a left swipe never blacklists
 anything; it just means "less of this for now".
 
 ### 2026-10-25
+- **The iPhone app is with Apple for review.** Version 1.0 covers
+  neighbourhoods — films, nearby places, costs, comparisons and resident
+  reviews; homes for sale come in a later version. Once Apple approves it,
+  we choose the day it goes live.
 - **Credits on screen.** Each neighbourhood page in the app now names the
   photographers whose photos its film uses, and the You tab credits the
   film music.

@@ -22,6 +22,42 @@ rotation, not on the way in.
 
 ---
 
+## 2026-10-25 21:38 UTC — phase308.15–16: iOS 1.0.0 (8) submitted to App Review
+
+**Objective**: owner finished the device pass and screenshots on build 7,
+then the App Privacy labels; key rotation deferred ("先不做第一步").
+
+**Actions**:
+- Build 7's You tab still said "Answer a trade-off card and what Percho
+  learns shows up here." — learned dims come only from trade-off answers and
+  v1.0 has none. `d589102b` hides that group behind `LISTINGS_IN_APP`.
+  Build 8: EAS `e895730d` (1.0.0 (8)), submission `f5d10b16`, ASC `VALID`, in
+  `Internal`, attached to version 1.0.0 in place of 7; `app.json` 8 on main
+  (`61164323`). Build 8 differs from the device-tested 7 by that one hidden block.
+- Screenshots: owner's seven 1284×2778 captures (iPhone Pro Max class). Used
+  four — Windward community page, Compare, cost-of-living map, Saved; dropped
+  the You tab (shows the removed line), the credits view (status bar over
+  content) and the duplicate map. The "◀ TestFlight" breadcrumb on the first
+  was covered with a feathered patch of the same frame's tree line (ffmpeg
+  `alphamerge` over a blurred box; a plain `delogo` left a visible smear).
+  Uploaded over the ASC API as `APP_IPHONE_65` (native) and `APP_IPHONE_67`
+  (scaled to 1290×2796), RGB without alpha — all eight `COMPLETE`.
+- App Privacy: set by the owner in the web UI (v1.0 answers: Email, User
+  ID, Device ID, Other User Content, Product Interaction; linked, no tracking).
+- Pre-flight read back: build 8 `VALID`, `usesNonExemptEncryption: false`;
+  copy, both screenshot sets, review details with the demo account, UGC age
+  rating, `USES_THIRD_PARTY_CONTENT`, free, USA only, release MANUAL.
+- `reviewSubmissions` `11aca9f0-07cb-4150-96df-58cf32584e0b` → submitted;
+  version 1.0.0 `WAITING_FOR_REVIEW`.
+
+**Next steps**:
+- Watch the review; if Apple asks, answer in App Store Connect → Resolution
+  Center. Keep `/admin/pipeline/reviews` watched during review week (UGC 1.2).
+- On approval nothing goes live by itself (MANUAL) — the owner picks the
+  release day.
+- Still open: Supabase secret-key rotation (owner deferred), web photo
+  credits, App Store seller name shows "Qiaoxuan Xue" (individual account).
+
 ## 2026-10-25 20:52 UTC — phase308.14: content rights + US-only availability; service-key rotation scoped
 
 **Objective**: owner — feed stays videos-only, the unknown-origin tracks
