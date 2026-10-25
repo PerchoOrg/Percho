@@ -203,7 +203,7 @@ App Store Connect version record: `da554336-…`, state `PREPARE_FOR_SUBMISSION`
 | Privacy policy URL | https://www.percho.co/privacy |
 | Primary category | `LIFESTYLE` |
 | Age rating | all-none questionnaire → 4+; `userGeneratedContent: true` set 2026-10-25 (still 4+) |
-| **v1.0 record (2026-10-25, phase308)** | build **1.0.0 (7)** attached; description / keywords / promotional text / marketing URL from the store-copy draft below; subtitle `Feel the neighbourhood first`; copyright `2026 Percho Inc.`; **release type MANUAL**; price **Free** (base territory USA); App Review details: contact Qiaoxuan Xue, demo account `app-review@percho.co` (password sign-in, buyer role, created over the Supabase admin API — the password is only in App Store Connect), notes as in DEVLOG phase308 |
+| **v1.0 record (2026-10-25, phase308)** | Content Rights: uses third-party content; availability **USA only**; build **1.0.0 (7)** attached; description / keywords / promotional text / marketing URL from the store-copy draft below; subtitle `Feel the neighbourhood first`; copyright `2026 Percho Inc.`; **release type MANUAL**; price **Free** (base territory USA); App Review details: contact Qiaoxuan Xue, demo account `app-review@percho.co` (password sign-in, buyer role, created over the Supabase admin API — the password is only in App Store Connect), notes as in DEVLOG phase308 |
 
 ### Store sprint (2026-09-04, phase172) — what the launch build changes
 

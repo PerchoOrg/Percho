@@ -22,6 +22,28 @@ rotation, not on the way in.
 
 ---
 
+## 2026-10-25 20:52 UTC — phase308.14: content rights + US-only availability; service-key rotation scoped
+
+**Objective**: owner — feed stays videos-only, the unknown-origin tracks
+stay; "需要我做的你能做就做 不行就给我step by step guide".
+
+**Done (ASC API)**: `contentRightsDeclaration = USES_THIRD_PARTY_CONTENT`
+(the true answer under route A). Availability: USA only,
+`availableInNewTerritories: false` (v2 create must list all 175 territories,
+each available true/false — listing only USA is a 409). Read back: USA, 1 of 175.
+
+**Cannot be done from here**: App Privacy labels (no ASC API), screenshots
+(no Xcode on this Mac, so no simulator — device captures needed), the device
+pass, and the Supabase / Vercel side of the key rotation (no Supabase access
+token; `vercel whoami` waits for an interactive login).
+
+**Key rotation, re-scoped**: the August leak was an `sb_secret_…` key (DEVLOG
+2026-08-19 09:05), and the app ships an `sb_publishable_…` key; server env
+uses `sb_secret_…` too. A new-style secret key is revocable on its own, so
+rotation needs no build and signs nobody out. The same value sits in seven
+local `.env.local` files (reference worktree + ws1/4/5/6/7/8) and in Vercel;
+`notify-lead` uses the runtime-injected key.
+
 ## 2026-10-25 09:26 UTC — phase308.13: App Store record for v1.0 filled over the ASC API
 
 **Objective**: owner — "先帮我做 需要ios app发布 的步骤".
