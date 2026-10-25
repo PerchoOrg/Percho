@@ -3252,6 +3252,7 @@ export type Database = {
             }
             Returns: string
           }
+      agent_is_public: { Args: { p_agent_id: string }; Returns: boolean }
       claim_community: {
         Args: { p_community_id: string }
         Returns: {
