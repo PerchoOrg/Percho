@@ -6,8 +6,10 @@
  * use: `uuid`, `title`, `filename`, `feel`, `bpm`, `instruments`,
  * `length`. Not all fields are documented; we type only what we consume.
  *
- * License: CC-BY 4.0 by Kevin MacLeod (incompetech.com). Attribution is
- * already handled in the render output.
+ * License: CC-BY 4.0 by Kevin MacLeod (incompetech.com). The render output
+ * does NOT credit it (the end card shows only the community and Percho); the
+ * credit is `MUSIC_CREDIT` on the iOS You tab (phase308). A track imported
+ * from here must be added to that list.
  *
  * We fetch once per request from a short-lived module-level memo — the
  * admin route pings this at most a handful of times per session and the

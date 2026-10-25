@@ -447,6 +447,19 @@ export default function YouTab() {
 					) : null}
 				</View>
 				<Text style={styles.footerTxt}>
+					{MUSIC_CREDIT}{" "}
+					<Text
+						style={styles.footerLink}
+						onPress={() => void Linking.openURL(CC_BY_4)}
+						accessibilityRole="link"
+					>
+						{CC_BY_4}
+					</Text>
+				</Text>
+				<Text style={styles.footerTxt}>
+					Film photos credited on each neighbourhood page.
+				</Text>
+				<Text style={styles.footerTxt}>
 					Percho {Constants.expoConfig?.version ?? "?"}
 					{buildLabel()}
 				</Text>
@@ -465,6 +478,23 @@ export default function YouTab() {
  * is a summary, not an archive.
  */
 const RECENT_SHOWN = 10;
+
+/**
+ * CC BY 4.0 credit for the Kevin MacLeod tracks in the film soundtrack
+ * library — incompetech's own wording, with the tracks named.
+ *
+ * App-wide rather than per film: only assembled tours record their track,
+ * and when the planned file is missing the render worker plays a random one
+ * without writing it back, so a per-film credit could name the wrong piece.
+ * The titles are every `KML_TRACKS` entry in
+ * `scripts/render-worker/bgm/fetch.sh`: the render machine's manifest holds
+ * seven of them, but the library of record is the `bgm` bucket, and naming a
+ * track no film uses costs nothing where missing one breaks the licence. Add
+ * one when a MacLeod track is added.
+ */
+const MUSIC_CREDIT =
+	'Music: "Carefree", "Cheery Monday", "Wallpaper", "Amazing Plan", "Wholesome", "Daily Beetle", "Happy Alley", "Balloon Game", "Take a Chance" and "Pookatori and Friends" by Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License';
+const CC_BY_4 = "https://creativecommons.org/licenses/by/4.0/";
 
 const LINKS = [
 	{ label: "Privacy", href: "https://www.percho.co/privacy" },

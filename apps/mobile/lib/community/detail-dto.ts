@@ -76,4 +76,6 @@ export interface CommunityDetailDTO {
 	interests: string[];
 	/** Approved resident reviews (phase E). Absent until one is approved. */
 	reviews?: CommunityReviewsDTO;
+	/** Google authors of the film's photos, in film order. Absent when none. */
+	photoCredits?: string[];
 }

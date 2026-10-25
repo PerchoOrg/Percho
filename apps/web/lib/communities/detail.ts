@@ -38,6 +38,7 @@
  */
 
 import { publicCoverImageUrl } from '@/lib/communities/cover';
+import { fetchFilmPhotoCredits } from '@/lib/communities/film-credits';
 import { dedupeLabels } from '@/lib/communities/labels';
 import { type CommunityReviewsDTO, fetchCommunityReviews } from '@/lib/communities/reviews';
 import { fetchPoiCounts } from '@/lib/feed/community-pool';
@@ -136,6 +137,11 @@ export interface CommunityDetailDTO {
   interests: string[];
   /** Approved resident reviews (phase E). Absent until one is approved. */
   reviews?: CommunityReviewsDTO;
+  /**
+   * Google authors of the photos the film is cut from, in film order
+   * (`lib/communities/film-credits.ts`). Absent when the film has none.
+   */
+  photoCredits?: string[];
 }
 
 type DetailRow = {
@@ -187,10 +193,19 @@ export async function fetchCommunityDetail(idOrSlug: string): Promise<CommunityD
   // would let this page and the feed card disagree about which film is "the"
   // tour. `ai_tour_videos` stays as the fallback, same as the feed route.
   const uid = videos.byCommunity.get(row.id);
-  const videoUrl = uid ? streamManifestUrl(uid) : await fetchLatestAiTourVideo(supabase, row.id);
+  const [videoUrl, photoCredits] = await Promise.all([
+    uid ? streamManifestUrl(uid) : fetchLatestAiTourVideo(supabase, row.id),
+    fetchFilmPhotoCredits(row.id, uid),
+  ]);
   const segments = uid ? videos.segmentsByCommunity.get(row.id) : undefined;
   const detail = projectCommunityDetail(row, poiCounts[row.id], videoUrl, segments);
-  return detail && reviews ? { ...detail, reviews } : detail;
+  if (!detail) return detail;
+  return {
+    ...detail,
+    ...(reviews ? { reviews } : {}),
+    // A credit with no film on the page would credit nothing the buyer sees.
+    ...(detail.videoUrl && photoCredits.length > 0 ? { photoCredits } : {}),
+  };
 }
 
 /** Latest READY AI community-tour video for a community, or null. */

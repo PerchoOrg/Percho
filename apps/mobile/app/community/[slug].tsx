@@ -401,6 +401,16 @@ export default function CommunityWhyScreen() {
 						Resident-stated attributes and interests from Nextdoor neighbourhood
 						profiles.
 					</Text>
+					{/*
+					 * Google's Places policy: every displayed photo credits its author.
+					 * The film shows Places photos and the feed card has no room, so
+					 * this — the larger view the card leads to — carries the credit.
+					 */}
+					{data.photoCredits && data.photoCredits.length > 0 && (
+						<Text style={styles.credit}>
+							Film photos by {data.photoCredits.join(", ")}, via Google Maps.
+						</Text>
+					)}
 				</View>
 			</ScrollView>
 		</View>
@@ -566,6 +576,15 @@ const styles = StyleSheet.create({
 		textTransform: "none",
 		letterSpacing: 0,
 		marginTop: 22,
+		lineHeight: 18,
+	},
+	credit: {
+		...textStyles.caption,
+		fontSize: 12,
+		color: colors.ink3,
+		textTransform: "none",
+		letterSpacing: 0,
+		marginTop: 8,
 		lineHeight: 18,
 	},
 });
