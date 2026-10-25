@@ -22,6 +22,49 @@ rotation, not on the way in.
 
 ---
 
+## 2026-10-25 04:08 UTC — phase308.6–8: build 6 on TestFlight; buyers by default; community writes need an agent; store copy
+
+**Objective**: owner — "you have my approvals" (the `eas` rule, the
+auth-flow change, the remaining launch items).
+
+**Actions**:
+- **Build 6.** No iPhone is registered on the Apple team (`eas device:list
+  --apple-team-id 5C84L6M8HT`: none), so the development build cannot be
+  installed yet. Built the store build instead, from this worktree at
+  `76f7ffee` (clean tree, so the reference worktree's untracked file was not
+  uploaded): `eas build --platform ios --profile production
+  --non-interactive --no-wait` → `0c6252cd-9c19-4126-bbc5-559594762feb`,
+  1.0.0 (6), FINISHED 04:03:58 UTC. Submitted with the ASC key added to
+  `eas.json` locally and reverted after (`git checkout -- eas.json`):
+  submission `221acedc`. ASC API: build 6 `processingState VALID`, already in
+  the `Internal` group. `app.json` buildNumber 5 → 6 on main (`26df9616`).
+- `1ff1a7d0` phase308.6, both applied by `echo | pnpm db:push`
+  ("Applying migration 20261025023000_new_users_default_to_buyer.sql...
+  Applying migration 20261025023100_community_writes_need_an_agent.sql...
+  Finished supabase db push."):
+  - `handle_new_user` defaults a missing role to `buyer`. Only iOS signs up
+    without one — `signInWithIdToken` cannot carry metadata, so a client-side
+    fix could not cover Apple. Web always sends a role. No backfill.
+  - communities INSERT / UPDATE / DELETE need an agents row. The phase306
+    scoping to `authenticated` still let every signed-in app user delete or
+    rewrite the ~22k unclaimed seeded communities and insert new ones.
+- `b93d86b4` phase308.7: store copy in `docs/ios-release.md` rewritten for
+  the communities-only v1.0 — no homes for sale / tour requests, no "every
+  clip is made from real photos", and no commute or insurance claims (the
+  community page itself says there is no commute source).
+
+**Not verified**: the community write policies as a signed-in buyer — no
+test session from here; checked by reading the policies. Owner: an agent
+edit on the dashboard should still work.
+
+**Next steps**:
+- Owner on build 6 (Stage 4.2 device pass): Sign in with Apple, email code,
+  password, delete account, a review reaching `/admin/pipeline/reviews`, the
+  feed (5 films on a loop), Search map, Compare neighbourhoods, Saved.
+- Development build after the iPhone is registered (`npx eas-cli
+  device:create`, Developer Mode on).
+- Music / Places photo credits; Supabase service-role key rotation (owner).
+
 ## 2026-10-25 01:52 UTC — phase308.2–4: development build, communities-only iOS mode, agents privacy fix
 
 **Objective**: owner — "现在的重点是如何尽快上线ios" (route A: communities
