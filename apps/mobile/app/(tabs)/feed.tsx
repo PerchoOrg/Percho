@@ -61,6 +61,7 @@ import {
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
 import { preferScope } from "../../lib/feed/scope";
 import { CARD_TAP_TARGET, SOUND_TAP_TARGET } from "../../lib/gesture/tap-slot";
+import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
 import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
@@ -352,6 +353,7 @@ export default function FeedScreen() {
 			seenIds: s.seenIds,
 			count: FIRST_PAGE_SIZE,
 			rotate: 0,
+			listings: LISTINGS_IN_APP,
 		});
 		rotate.current = result.nextRotate;
 		setDeck(result.cards);
@@ -389,6 +391,7 @@ export default function FeedScreen() {
 			seenIds: [...s.seenIds, ...current.map((c) => c.id)],
 			count: FIRST_PAGE_SIZE,
 			rotate: rotate.current,
+			listings: LISTINGS_IN_APP,
 		});
 		rotate.current = result.nextRotate;
 		if (result.cards.length === 0) return;

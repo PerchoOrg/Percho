@@ -155,7 +155,7 @@ export default function AuthScreen() {
 
 				<Text style={styles.title}>Sign in</Text>
 				<Text style={styles.sub}>
-					Keep your saved homes, and pick up on any device.
+					Keep what you save, and pick up on any device.
 				</Text>
 
 				{appleAvailable ? (

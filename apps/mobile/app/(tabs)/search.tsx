@@ -144,6 +144,7 @@ import { familiarityFor } from "../../lib/area-familiarity";
 import { areasByKey } from "../../lib/areas/areas-dto";
 import { savedCitiesByCounty, savedCityNote } from "../../lib/areas/locate";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
+import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
 import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
 import {
 	type MapRegion,
@@ -952,7 +953,11 @@ export default function SearchTab() {
 						// Names the levels the map itself walks, coarse to fine, so the
 						// box and the map read as one thing (owner, 2026-09-09). Zip
 						// still matches; the hint stays short rather than complete.
-						placeholder="Area, city, community or address…"
+						placeholder={
+							LISTINGS_IN_APP
+								? "Area, city, community or address…"
+								: "Area, city or community…"
+						}
 						placeholderTextColor={colors.ink3}
 						style={styles.searchInput}
 						autoCorrect={false}

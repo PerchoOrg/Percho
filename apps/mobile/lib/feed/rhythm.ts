@@ -58,7 +58,9 @@ export function kindForFill(fill: string): FeedCardV3["kind"] | null {
 /**
  * Floor and ceiling for the per-stage run limit. The floor is 2 (a pair always
  * reads as intentional); the ceiling stops a mix that is nearly all one fill from
- * licensing an unbounded run.
+ * licensing an unbounded run. A mix that is ALL one fill has no limit: there is
+ * no other kind to space it with, and capping it would end the deck after
+ * three cards (the communities-only build, `COMMUNITY_ONLY_MIX`).
  */
 const MIN_RUN_LIMIT = 2;
 export const MAX_RUN_LIMIT = 3;
@@ -91,7 +93,7 @@ export function runLimitsFor(
 		limits.set(
 			fill,
 			others <= 0
-				? MAX_RUN_LIMIT
+				? Number.POSITIVE_INFINITY
 				: Math.min(
 						MAX_RUN_LIMIT,
 						Math.max(MIN_RUN_LIMIT, Math.round(n / others)),

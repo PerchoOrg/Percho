@@ -25,7 +25,7 @@
  */
 import { fmlsNumberLabel } from "@percho/shared/fmls";
 import type { InsightTheme } from "@percho/shared/insights";
-import { router, useLocalSearchParams } from "expo-router";
+import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	Linking,
@@ -80,6 +80,7 @@ import {
 import { useRates } from "../../lib/listing/rates";
 import { buildRoomGroups } from "../../lib/listing/rooms";
 import { useListingSummaries } from "../../lib/listing/summaries";
+import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
 import { useAuthStore } from "../../state/auth";
 import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
@@ -102,7 +103,17 @@ function cityGeoUnitId(city: string, state: string): string {
 		.replace(/^-|-$/g, "")}`;
 }
 
-export default function ListingExploreScreen() {
+/**
+ * The communities-only build (`lib/listings-in-app.ts`) has no home screens:
+ * a `percho://listing/…` link, or a save left by an earlier build, lands on
+ * the feed instead of opening one.
+ */
+export default function ListingRoute() {
+	if (!LISTINGS_IN_APP) return <Redirect href="/feed" />;
+	return <ListingExploreScreen />;
+}
+
+function ListingExploreScreen() {
 	const params = useLocalSearchParams<{ id?: string }>();
 	const insets = useSafeAreaInsets();
 	const { width, height: screenH } = useWindowDimensions();

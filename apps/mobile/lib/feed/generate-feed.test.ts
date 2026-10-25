@@ -188,6 +188,32 @@ describe("§1.7 stage 4 mix", () => {
 	});
 });
 
+// ─── the communities-only build (phase308) ────────────────────────────────────
+
+describe("listings: false — the communities-only deck", () => {
+	const deck = (count: number) => gen(4, { listings: false, count });
+
+	it("emits only community cards, even with listings in the pool", () => {
+		const { cards } = deck(8);
+		expect(cards).toHaveLength(8);
+		expect(cards.every((c) => c.kind === "community")).toBe(true);
+	});
+
+	it("serves every community fresh before it loops", () => {
+		const { cards, exhausted } = deck(POOL.communities.length);
+		expect(new Set(cards.map((c) => c.id)).size).toBe(POOL.communities.length);
+		expect(exhausted).toBe(false);
+	});
+
+	it("keeps going past the rhythm ceiling instead of stopping at three", () => {
+		// One fill, no limit: the deck loops the films rather than ending early.
+		const { cards, exhausted } = deck(12);
+		expect(cards).toHaveLength(12);
+		expect(countKind(cards, "community")).toBe(12);
+		expect(exhausted).toBe(true);
+	});
+});
+
 // ─── seenIds / determinism / exhaustion (§1.9) ────────────────────────────────
 
 describe("seenIds and exhaustion", () => {

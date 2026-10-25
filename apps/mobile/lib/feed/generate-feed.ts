@@ -31,7 +31,7 @@ import { TRADEOFFS } from "./content";
 import type { GeoLevel, GeoUnit } from "./geo-unit";
 import { finestAvailableLevel, unitsAtLevel } from "./geo-unit";
 import type { Slot } from "./ratios";
-import { STAGE_MIX } from "./ratios";
+import { COMMUNITY_ONLY_MIX, STAGE_MIX } from "./ratios";
 import {
 	byStaleness,
 	kindForFill,
@@ -87,6 +87,11 @@ export interface GenerateFeedInput {
 	 * restarting it. Pass the previous result's `nextRotate`.
 	 */
 	rotate?: number;
+	/**
+	 * `false` composes the communities-only deck (`COMMUNITY_ONLY_MIX`) — the
+	 * build without listings, `lib/listings-in-app.ts`. Defaults to `true`.
+	 */
+	listings?: boolean;
 }
 
 export interface GenerateFeedResult {
@@ -1186,7 +1191,8 @@ export function generateFeed(input: GenerateFeedInput): GenerateFeedResult {
 	const rotate0 = input.rotate ?? 0;
 	const seen = new Set(input.seenIds);
 	const level = finestAvailableLevel(pool.geoUnits);
-	const mix = mixFor(stage, level);
+	const mix =
+		input.listings === false ? [...COMMUNITY_ONLY_MIX] : mixFor(stage, level);
 
 	const ctx: FillContext = {
 		stage,

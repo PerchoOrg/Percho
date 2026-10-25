@@ -52,6 +52,7 @@ import { useFeedPool } from "../../hooks/use-feed-pool";
 import { familiarityFor } from "../../lib/area-familiarity";
 import { deleteAccount, signOut } from "../../lib/auth";
 import { DIM_LABELS, personaName, rankedDims } from "../../lib/feed/persona";
+import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
 import { PRIORITIES, WEIGHT_LABELS } from "../../lib/priorities";
 import { useAuthStore } from "../../state/auth";
 import { useFeedSession } from "../../state/feed-session";
@@ -66,7 +67,16 @@ export default function YouTab() {
 	const signals = useFeedSession((s) => s.signals);
 	const clearSignals = useFeedSession((s) => s.clearSignals);
 	const removeDim = useFeedSession((s) => s.removeDim);
-	const recent = useFeedSession((s) => s.recent);
+	const allRecent = useFeedSession((s) => s.recent);
+	// Snapshots persist on the device, so an earlier build's listing swipes are
+	// still in the store; the communities-only build does not show them.
+	const recent = useMemo(
+		() =>
+			LISTINGS_IN_APP
+				? allRecent
+				: allRecent.filter((e) => e.kind !== "listing"),
+		[allRecent],
+	);
 	const bringBack = useFeedSession((s) => s.bringBack);
 
 	const weights = usePriorityStore((s) => s.weights);
@@ -108,7 +118,7 @@ export default function YouTab() {
 		// §5.3: no bare reset without a recap of what it erases.
 		Alert.alert(
 			"Reset preferences?",
-			`This clears ${likes} likes, ${tradeoffs} answered trade-offs and your area history. Saved homes stay saved.`,
+			`This clears ${likes} likes, ${tradeoffs} answered trade-offs and your area history. Everything you saved stays saved.`,
 			[
 				{ text: "Cancel", style: "cancel" },
 				{
@@ -126,7 +136,7 @@ export default function YouTab() {
 	const confirmDeleteAccount = () => {
 		Alert.alert(
 			"Delete your account?",
-			"This permanently removes your account and your saved homes. There is no undo.",
+			"This permanently removes your account and everything you saved. There is no undo.",
 			[
 				{ text: "Cancel", style: "cancel" },
 				{
@@ -397,7 +407,7 @@ export default function YouTab() {
 						<View>
 							<Text style={styles.rowLabel}>Sign in</Text>
 							<Text style={styles.rowSub}>
-								Keep your saved homes on every device
+								Keep what you save on every device
 							</Text>
 						</View>
 						<Text style={styles.chevron}>›</Text>
@@ -440,8 +450,11 @@ export default function YouTab() {
 					Percho {Constants.expoConfig?.version ?? "?"}
 					{buildLabel()}
 				</Text>
-				{/* FMLS IDX rule 13.8 — who runs and supports the listing display. */}
-				<Text style={styles.footerTxt}>{TECHNICAL_ENTITY_STATEMENT}</Text>
+				{/* FMLS IDX rule 13.8 — who runs and supports the listing display.
+				    Only a build that shows FMLS listings has one to disclose. */}
+				{LISTINGS_IN_APP && (
+					<Text style={styles.footerTxt}>{TECHNICAL_ENTITY_STATEMENT}</Text>
+				)}
 			</View>
 		</ScrollView>
 	);

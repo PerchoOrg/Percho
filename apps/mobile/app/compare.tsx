@@ -17,7 +17,7 @@
  * "show all" toggle, and price lives in the header column.
  */
 import { fmlsNumberLabel } from "@percho/shared/fmls";
-import { router, useLocalSearchParams } from "expo-router";
+import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
 	ActivityIndicator,
@@ -45,6 +45,7 @@ import {
 import type { ListingDetailDTO } from "../lib/listing/detail-dto";
 import { useRates } from "../lib/listing/rates";
 import { buildHomeTake } from "../lib/listing/take";
+import { LISTINGS_IN_APP } from "../lib/listings-in-app";
 import { usePriorityStore } from "../state/priorities";
 import { colors, radii } from "../theme/tokens";
 import { textStyles } from "../theme/typography";
@@ -54,7 +55,17 @@ type State =
 	| { status: "ready"; homes: ListingDetailDTO[] }
 	| { status: "error" };
 
-export default function CompareScreen() {
+/**
+ * The communities-only build (`lib/listings-in-app.ts`) has no homes to
+ * compare: Saved hides them, so a `/compare` link can only be stale, and it
+ * lands on the feed.
+ */
+export default function CompareRoute() {
+	if (!LISTINGS_IN_APP) return <Redirect href="/feed" />;
+	return <CompareScreen />;
+}
+
+function CompareScreen() {
 	const insets = useSafeAreaInsets();
 	const { ids } = useLocalSearchParams<{ ids?: string }>();
 	const list = (ids ?? "")

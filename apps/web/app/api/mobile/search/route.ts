@@ -8,6 +8,7 @@
  */
 
 import { searchEntities } from '@/lib/listings/search';
+import { parseMobileListingsFlag } from '@/lib/zod/mobile-listings';
 import { mobileSearchQuerySchema } from '@/lib/zod/mobile-search';
 import { NextResponse } from 'next/server';
 
@@ -21,7 +22,9 @@ export async function GET(req: Request) {
   }
 
   try {
-    return NextResponse.json(await searchEntities(parsed.data));
+    return NextResponse.json(
+      await searchEntities(parsed.data, { listings: parseMobileListingsFlag(new URL(req.url)) }),
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

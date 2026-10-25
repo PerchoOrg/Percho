@@ -63,6 +63,7 @@ import {
 	COMMUNITY_COMPARE_MIN,
 } from "../../lib/community/compare-communities";
 import { COMPARE_MAX, COMPARE_MIN } from "../../lib/listing/compare";
+import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
 import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
 import {
 	type Shelf,
@@ -102,6 +103,14 @@ const FILTER_LABEL: Record<Filter, string> = {
 	community: "Neighbourhoods",
 	area: "Areas",
 };
+
+/** The filter's rows. The communities-only build has no Homes row. */
+const FILTERS: readonly Filter[] = LISTINGS_IN_APP
+	? ["all", "listing", "community", "area"]
+	: ["all", "community", "area"];
+
+/** What the empty state promises to keep. */
+const SAVED_NOUN = LISTINGS_IN_APP ? "Homes" : "Neighbourhoods";
 
 /** Per-kind compare bounds, so the action bar can speak in the right units. */
 const BOUNDS = {
@@ -185,7 +194,15 @@ async function fetchRow(item: SavedItem): Promise<Row> {
 
 export default function SavedTab() {
 	const insets = useSafeAreaInsets();
-	const items = useSavedStore((s) => s.items);
+	const allItems = useSavedStore((s) => s.items);
+	// The communities-only build (`lib/listings-in-app.ts`) shows no homes. A
+	// home saved by an earlier build stays on the account; it is only not
+	// shown, so it comes back with the build that shows homes again.
+	const items = useMemo(
+		() =>
+			LISTINGS_IN_APP ? allItems : allItems.filter((i) => i.kind !== "listing"),
+		[allItems],
+	);
 	const hydrated = useSavedStore((s) => s.hydrated);
 	const toggle = useSavedStore((s) => s.toggle);
 	const signedIn = useAuthStore((s) => s.session !== null);
@@ -396,8 +413,8 @@ export default function SavedTab() {
 			<View style={[styles.screen, styles.center]}>
 				<Text style={styles.emptyTitle}>
 					{signedIn
-						? "Homes you like will live here"
-						: "Sign in to keep the homes you like"}
+						? `${SAVED_NOUN} you like will live here`
+						: `Sign in to keep the ${SAVED_NOUN.toLowerCase()} you like`}
 				</Text>
 				{!signedIn && (
 					<Pressable
@@ -532,7 +549,7 @@ export default function SavedTab() {
 						accessibilityLabel="Close filter"
 					/>
 					<View style={[styles.pop, { top: insets.top + 58 }]}>
-						{(["all", "listing", "community", "area"] as Filter[]).map((f) => {
+						{FILTERS.map((f) => {
 							const n =
 								f === "all"
 									? items.length

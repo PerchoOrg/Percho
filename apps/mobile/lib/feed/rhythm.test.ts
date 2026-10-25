@@ -19,7 +19,7 @@ import { describe, expect, it } from "vitest";
 import type { FeedCardV3, FunnelStage } from "./card-types";
 import { EMPTY_POOL, type FeedPool, generateFeed } from "./generate-feed";
 import type { GeoUnit } from "./geo-unit";
-import { STAGE_MIX } from "./ratios";
+import { COMMUNITY_ONLY_MIX, STAGE_MIX } from "./ratios";
 import {
 	MAX_RUN_LIMIT,
 	byStaleness,
@@ -258,6 +258,14 @@ describe("runLimitsFor", () => {
 
 	it("handles an empty mix without throwing", () => {
 		expect(runLimitsFor([]).size).toBe(0);
+	});
+
+	it("puts no limit on a mix of a single fill — there is nothing to space it with", () => {
+		// The communities-only build (phase308). A ceiling of 3 here ended the
+		// deck after three neighbourhoods.
+		expect(runLimitsFor(COMMUNITY_ONLY_MIX).get("community")).toBe(
+			Number.POSITIVE_INFINITY,
+		);
 	});
 });
 

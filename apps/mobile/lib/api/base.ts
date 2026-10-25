@@ -15,6 +15,7 @@
  * Trailing slashes are stripped here so callers can always write `${apiBase()}/api/...`.
  */
 import Constants from "expo-constants";
+import { LISTINGS_IN_APP } from "../listings-in-app";
 
 const PRODUCTION = "https://www.percho.co";
 
@@ -74,6 +75,7 @@ export function feedPoolUrl(params: {
 	}
 	if (params.videosOnly) q.set("videosOnly", "1");
 	if (params.videoFirst) q.set("videoFirst", "1");
+	if (!LISTINGS_IN_APP) q.set("listings", "0");
 	return `${apiBase()}/api/mobile/feed?${q.toString()}`;
 }
 
@@ -112,9 +114,15 @@ export function ratesUrl(): string {
 	return `${apiBase()}/api/mobile/rates`;
 }
 
+/**
+ * Appended to every listing-bearing request when this build shows no homes
+ * (`lib/listings-in-app.ts`): the server then reads no listing rows at all.
+ */
+const LISTINGS_FLAG = LISTINGS_IN_APP ? "" : "&listings=0";
+
 /** `/api/mobile/search?q=…` — listings + communities by text (phase D). */
 export function searchUrl(q: string): string {
-	return `${apiBase()}/api/mobile/search?q=${encodeURIComponent(q)}`;
+	return `${apiBase()}/api/mobile/search?q=${encodeURIComponent(q)}${LISTINGS_FLAG}`;
 }
 
 /** `/api/mobile/map?minLat=…` — communities + homes in the viewport
@@ -131,6 +139,7 @@ export function mapUrl(b: {
 		minLng: String(b.minLng),
 		maxLng: String(b.maxLng),
 	});
+	if (!LISTINGS_IN_APP) q.set("listings", "0");
 	return `${apiBase()}/api/mobile/map?${q.toString()}`;
 }
 

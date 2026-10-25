@@ -151,23 +151,55 @@ export function projectSearchCommunities(rows: CommunityRow[]): SearchCommunityD
   }));
 }
 
-/** `q` MUST already be the sanitised output of `mobileSearchQuerySchema`. */
-export async function searchEntities(q: string): Promise<SearchResultDTO> {
+/** An empty listing read, for the communities-only app (phase308). */
+const NO_LISTINGS = Promise.resolve({ data: [] as ListingRow[], error: null });
+
+function listingSearch(supabase: ReturnType<typeof createUncachedAnonClient>, like: string) {
+  return supabase
+    .from('listings')
+    .select(
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, cover_url, lat, lng, mls_number',
+    )
+    .eq('status', 'active')
+    .or(
+      `address.ilike.${like},city.ilike.${like},state.ilike.${like},zip.ilike.${like},neighborhood.ilike.${like}`,
+    )
+    .order('created_at', { ascending: false })
+    .limit(SEARCH_LIMIT);
+}
+
+function listingsInBounds(
+  supabase: ReturnType<typeof createUncachedAnonClient>,
+  bounds: { minLat: number; maxLat: number; minLng: number; maxLng: number },
+) {
+  return supabase
+    .from('listings')
+    .select(
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, cover_url, lat, lng, mls_number',
+    )
+    .eq('status', 'active')
+    .gte('lat', bounds.minLat)
+    .lte('lat', bounds.maxLat)
+    .gte('lng', bounds.minLng)
+    .lte('lng', bounds.maxLng)
+    .order('created_at', { ascending: false })
+    .limit(MAP_LISTING_LIMIT);
+}
+
+/**
+ * `q` MUST already be the sanitised output of `mobileSearchQuerySchema`.
+ * `listings: false` (the communities-only app, phase308) skips the listing
+ * read entirely rather than filtering its result.
+ */
+export async function searchEntities(
+  q: string,
+  opts: { listings: boolean } = { listings: true },
+): Promise<SearchResultDTO> {
   const supabase = createUncachedAnonClient();
   const like = `%${q}%`;
 
   const [listingRes, communityRes] = await Promise.all([
-    supabase
-      .from('listings')
-      .select(
-        'id, slug, address, city, state, zip, price, beds, baths, sqft, cover_url, lat, lng, mls_number',
-      )
-      .eq('status', 'active')
-      .or(
-        `address.ilike.${like},city.ilike.${like},state.ilike.${like},zip.ilike.${like},neighborhood.ilike.${like}`,
-      )
-      .order('created_at', { ascending: false })
-      .limit(SEARCH_LIMIT),
+    opts.listings ? listingSearch(supabase, like) : NO_LISTINGS,
     supabase
       .from('communities')
       .select('id, slug, name, city, state, cover_storage_path, lat, lng')
@@ -209,27 +241,19 @@ const MAP_LISTING_LIMIT = 100;
  * Plain lat/lng range filters, deliberately: the marks draw at centroids,
  * so PostGIS adds nothing here that two btree comparisons don't.
  */
-export async function mapEntities(bounds: {
-  minLat: number;
-  maxLat: number;
-  minLng: number;
-  maxLng: number;
-}): Promise<Omit<SearchResultDTO, 'q'>> {
+export async function mapEntities(
+  bounds: {
+    minLat: number;
+    maxLat: number;
+    minLng: number;
+    maxLng: number;
+  },
+  opts: { listings: boolean } = { listings: true },
+): Promise<Omit<SearchResultDTO, 'q'>> {
   const supabase = createUncachedAnonClient();
 
   const [listingRes, communityRes] = await Promise.all([
-    supabase
-      .from('listings')
-      .select(
-        'id, slug, address, city, state, zip, price, beds, baths, sqft, cover_url, lat, lng, mls_number',
-      )
-      .eq('status', 'active')
-      .gte('lat', bounds.minLat)
-      .lte('lat', bounds.maxLat)
-      .gte('lng', bounds.minLng)
-      .lte('lng', bounds.maxLng)
-      .order('created_at', { ascending: false })
-      .limit(MAP_LISTING_LIMIT),
+    opts.listings ? listingsInBounds(supabase, bounds) : NO_LISTINGS,
     supabase
       .from('communities')
       // No `boundary`: the map does not draw community shapes at any zoom —

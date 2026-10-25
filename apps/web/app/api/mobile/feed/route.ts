@@ -57,6 +57,7 @@ import {
 } from '@/lib/feed/vertical-videos';
 import { createAnonClient, createServiceClient } from '@/lib/supabase/server';
 import { parseFeedPoolQuery } from '@/lib/zod/feed-pool';
+import { parseMobileListingsFlag } from '@/lib/zod/mobile-listings';
 import type { DimKey } from '@percho/shared/types';
 import { NextResponse } from 'next/server';
 
@@ -224,7 +225,10 @@ export async function GET(request: Request) {
     parseFeedPoolQuery(url);
 
   // Stage 0 shows no listings at all, so don't pay for the listing query.
-  const needsListingRows = stage > 0;
+  // `listings=0` is the communities-only app (iOS v1.0, phase308): no listing
+  // row is read, so neither listings nor the trade-off doors' listing photos
+  // can reach the response.
+  const needsListingRows = stage > 0 && parseMobileListingsFlag(url);
   // Communities are Stage 3's main card type; earlier stages don't show them.
   const needsCommunities = stage >= 3;
   /**
@@ -486,8 +490,12 @@ export async function GET(request: Request) {
     limit,
     // `done` tracks the underlying inventory scan, NOT the gated listing count:
     // stage 1 returns 2 of 12 rows by design, and reporting done=false there
-    // would make the client loop forever trying to fill a page.
-    done: needsListingRows ? rows.length < limit : true,
+    // would make the client loop forever trying to fill a page. Without
+    // listings the scan is the community page — except under `videosOnly`,
+    // which returns every filmed community on every page.
+    done: needsListingRows
+      ? rows.length < limit
+      : !needsCommunities || videosOnly || communities.length < limit,
     pool: {
       geoUnits,
       listings,

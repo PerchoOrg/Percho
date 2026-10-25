@@ -7,13 +7,16 @@
  * and not a blocker — it has no retry button and no dismiss.
  */
 import { StyleSheet, Text, View } from "react-native";
+import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
 export function OfflineBar() {
 	return (
 		<View style={styles.bar} accessibilityRole="alert">
-			<Text style={styles.text}>Offline — showing cached homes</Text>
+			<Text style={styles.text}>
+				Offline — showing cached {LISTINGS_IN_APP ? "homes" : "neighbourhoods"}
+			</Text>
 		</View>
 	);
 }

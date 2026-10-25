@@ -10,6 +10,7 @@
  */
 
 import { mapEntities } from '@/lib/listings/search';
+import { parseMobileListingsFlag } from '@/lib/zod/mobile-listings';
 import { mobileMapBoundsSchema } from '@/lib/zod/mobile-map';
 import { NextResponse } from 'next/server';
 
@@ -28,7 +29,9 @@ export async function GET(req: Request) {
   }
 
   try {
-    return NextResponse.json(await mapEntities(parsed.data));
+    return NextResponse.json(
+      await mapEntities(parsed.data, { listings: parseMobileListingsFlag(new URL(req.url)) }),
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

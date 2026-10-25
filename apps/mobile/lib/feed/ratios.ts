@@ -63,6 +63,15 @@ export const STAGE_MIX: Record<FunnelStage, readonly Slot[]> = {
 	],
 };
 
+/**
+ * The communities-only build's mix (`lib/listings-in-app.ts`, phase308).
+ *
+ * No listing slots, and no trade-off either: its questions are about the
+ * house ("a home office", "newer build"), its answers rank listings, and its
+ * door photos were listing photos. What is left is the neighbourhood deck.
+ */
+export const COMMUNITY_ONLY_MIX: readonly Slot[] = [{ fill: "community" }];
+
 /** §1.7 pagination: first page is 12 cards. */
 export const FIRST_PAGE_SIZE = 12;
 /** §1.7: prefetch when the active card is this far from the end. */
