@@ -20,6 +20,11 @@ Everything is learned from the swipes you've already made, on your own
 device — there's no form to fill in, and a left swipe never blacklists
 anything; it just means "less of this for now".
 
+### 2026-10-25
+- **Privacy fix:** people's email, phone and account details can no longer
+  be looked up by other users. Only agents with a live listing or a
+  neighbourhood page have a public profile now.
+
 ### 2026-10-18
 - **MLS homes now show their FMLS listing number** — on every card, in
   search, saved homes, compare and on the listing page, on the website and
