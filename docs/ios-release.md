@@ -286,32 +286,39 @@ Setting `userGeneratedContent: true` alone does not raise the rating above
 
 ### Store copy — draft (owner edits, then pastes into App Store Connect)
 
+Rewritten 2026-10-25 (phase308) for **v1.0 = communities only**: the build
+shows no home listings (`apps/mobile/lib/listings-in-app.ts`), so nothing
+below may promise homes for sale, prices or tour requests — App Review
+compares the description with the app (2.3.1 accuracy). The old "every clip
+is made from real photos" line is gone too: Seedance motion and outpainted
+edges are AI-generated (provenance audit item 6).
+
 - **Name** (30): `Percho`
 - **Subtitle** (30): `Feel the neighbourhood first`
 - **Promotional text** (170, editable without a new build): `Short films of
-  real Atlanta neighbourhoods and the homes for sale in them. Browse
-  without an account; sign in to keep your saves.`
+  real Atlanta neighbourhoods, with the schools and costs that come with
+  them. Browse without an account; sign in to keep your saves.`
 - **Keywords** (100, comma-separated, no spaces after commas):
-  `homes,houses,real estate,neighborhood,atlanta,house hunting,home buying,community,tour,relocate`
+  `neighborhood,atlanta,relocate,moving,home buying,suburbs,schools,cost of living,community,area guide`
 - **Description** (4000):
 
   ```
   Percho is house hunting in the order you actually decide: neighbourhood
-  first, house second.
+  first.
 
-  Swipe through short films of real communities — the streets, the parks,
-  the coffee place, the school-run traffic — and the homes for sale inside
-  them. Every clip is made from real photos of that place, not stock
-  footage.
+  Swipe through short films of real Atlanta communities — the streets, the
+  parks, the coffee place — before you ever drive there. Films are cut
+  from photos of each place; some of the motion is AI-assisted.
 
   WHAT YOU CAN DO
-  • Watch a 60-second film of a neighbourhood before you ever drive there
-  • See the homes for sale in it, with photos, price, beds and baths
-  • Explore what's nearby: groceries, parks, schools, commute anchors
+  • Watch a short film of a neighbourhood
+  • See what's nearby: the groceries, parks and schools each film visits
+  • Check what living there costs: each county's property tax rate and
+    utility estimates
+  • Compare neighbourhoods and areas side by side
   • Read what residents say about living there — every review is read by
     a person before it appears
-  • Save homes and neighbourhoods; sign in and they follow you to any device
-  • Ask for a tour in one tap — your request goes straight to the agent
+  • Save neighbourhoods and areas; sign in and they follow you to any device
 
   NO ACCOUNT NEEDED
   Browse everything without signing in. Sign in with Apple or an emailed
@@ -326,6 +333,9 @@ Setting `userGeneratedContent: true` alone does not raise the rating above
 
 - **What's New** (first release): `First release.`
 - **Support URL**: https://www.percho.co/contact · **Marketing URL**: https://www.percho.co
+- Reviewer note, v1.0: "This version covers neighbourhoods only; home
+  listings arrive in a later version." — so a reviewer does not go looking
+  for a listings screen.
 - Fair-housing note for the reviewer field ("Notes"): reviews are limited to
   four neighbourhood dimensions (quiet, walkable, neighbourly, value) and are
   moderated. Schools appear only as the state's published proficiency % for
