@@ -55,8 +55,7 @@ export async function recordListingPhoto(
 
   // Verify listing ownership via RLS — read returns the row only if the
   // calling agent owns it.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: listing } = (await (supabase as any)
+  const { data: listing } = (await supabase
     .from('listings')
     .select('id')
     .eq('id', listingId)
@@ -64,8 +63,7 @@ export async function recordListingPhoto(
   if (!listing) return { ok: false, error: 'listing_not_found' };
 
   // Compute next sort_order = max + 1.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: maxRow } = (await (supabase as any)
+  const { data: maxRow } = (await supabase
     .from('listing_photos')
     .select('sort_order')
     .eq('listing_id', listingId)
@@ -74,8 +72,7 @@ export async function recordListingPhoto(
     .maybeSingle()) as { data: { sort_order: number } | null };
   const nextSort = (maxRow?.sort_order ?? -1) + 1;
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: row, error } = (await (supabase as any)
+  const { data: row, error } = (await supabase
     .from('listing_photos')
     .insert({
       listing_id: listingId,
@@ -104,16 +101,14 @@ export async function recordListingPhoto(
   // Photo wins over a still-processing video because photos are
   // synchronously `ready`; video covers fill in via the CF Stream
   // webhook only after `status='ready'`.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: cur } = (await (supabase as any)
+  const { data: cur } = (await supabase
     .from('listings')
     .select('cover_url')
     .eq('id', listingId)
     .maybeSingle()) as { data: { cover_url: string | null } | null };
   if (cur && !cur.cover_url) {
     const { photoPublicUrl } = await import('@/lib/supabase/storage');
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    await (supabase as any)
+    await supabase
       .from('listings')
       .update({ cover_url: photoPublicUrl(storagePath) })
       .eq('id', listingId);
@@ -145,8 +140,7 @@ export async function deleteListingPhoto(
   if (!user) return { ok: false, error: 'unauthorized' };
 
   // Read the row first so we know the storage_path. RLS fences this.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: photo } = (await (supabase as any)
+  const { data: photo } = (await supabase
     .from('listing_photos')
     .select('id, storage_path, listing_id')
     .eq('id', parsed.data.photoId)
@@ -167,8 +161,7 @@ export async function deleteListingPhoto(
     // fall through — still delete the row
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error: rowErr } = await (supabase as any)
+  const { error: rowErr } = await supabase
     .from('listing_photos')
     .delete()
     .eq('id', parsed.data.photoId)

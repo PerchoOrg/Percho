@@ -75,8 +75,7 @@ export default async function ProfilePage() {
     );
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: agents typing not in stub yet (TODO phase1-end db:types)
-  const { data: agent } = (await (supabase as any)
+  const { data: agent } = (await supabase
     .from('agents')
     .select('name, brokerage, slug, headshot_url, is_admin')
     .eq('user_id', user.id)
@@ -154,8 +153,7 @@ export default async function ProfilePage() {
   }
 
   // Logged in but no agents row — treat as buyer (V1 stub; ).
-  // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
-  const { data: buyer } = (await (supabase as any)
+  const { data: buyer } = (await supabase
     .from('buyers')
     .select('display_name, avatar_url')
     .eq('user_id', user.id)

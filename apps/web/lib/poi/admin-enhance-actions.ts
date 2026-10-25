@@ -40,8 +40,7 @@ export async function queuePhotoEnhancement(
   if (!guardTable(table)) return { ok: false, message: 'Bad table.' };
   if (photoIds.length === 0) return { ok: false, message: 'No photos selected.' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const supabase: any = createServiceClient();
+  const supabase = createServiceClient();
   const { error } = await supabase
     .from(table)
     .update({
@@ -66,8 +65,7 @@ export async function setEnhancedDecision(
   if (!admin) return { ok: false, message: 'Not authorized.' };
   if (!guardTable(table)) return { ok: false, message: 'Bad table.' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const supabase: any = createServiceClient();
+  const supabase = createServiceClient();
   const { error } = await supabase
     .from(table)
     .update({ enhanced_status: decision })

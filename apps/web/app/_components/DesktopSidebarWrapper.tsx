@@ -17,8 +17,7 @@ export async function DesktopSidebarWrapper() {
 
   let role: ViewerRole = 'anon';
   if (user) {
-    // biome-ignore lint/suspicious/noExplicitAny: agents typing not in stub yet
-    const { data: agent } = (await (supabase as any)
+    const { data: agent } = (await supabase
       .from('agents')
       .select('id')
       .eq('user_id', user.id)

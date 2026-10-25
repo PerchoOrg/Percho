@@ -543,6 +543,7 @@ export default function SearchTab() {
 	const [mapReady, setMapReady] = useState(false);
 
 	const handledFocus = useRef<string | null>(null);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: flyTo is a new closure every render; the effect is keyed on the three values that decide whether to fly
 	useEffect(() => {
 		if (!focus || focus === handledFocus.current) return;
 		if (!mapReady) return; // animateToRegion would be dropped — retry on ready
@@ -550,7 +551,6 @@ export default function SearchTab() {
 		if (!unit) return; // pool still loading — retry on the next pool change
 		handledFocus.current = focus;
 		flyTo(unit);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [focus, pool.geoUnits, mapReady]);
 
 	// `?focusLat=…&focusLng=…&focusKind=…` — the feed header's Map button on a
@@ -589,6 +589,7 @@ export default function SearchTab() {
 		return () => clearTimeout(t);
 	}, [focusLat, focusLng, focusKind, mapReady]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: fam is rebuilt every render from `signals`, which is in the list
 	const units = useMemo(() => {
 		const q = query.trim().toLowerCase();
 		const list = q
@@ -597,7 +598,6 @@ export default function SearchTab() {
 		// Familiar units float to the top, matching the §4.3 "in your
 		// journey first" rule.
 		return [...list].sort((a, b) => fam(b).score - fam(a).score);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [pool.geoUnits, query, signals]);
 
 	function fam(u: GeoUnit) {

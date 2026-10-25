@@ -18,8 +18,7 @@ export async function getViewerAgentId(): Promise<string | null> {
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
   if (!user) return null;
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agent } = (await (supabase as any)
+  const { data: agent } = (await supabase
     .from('agents')
     .select('id')
     .eq('user_id', user.id)

@@ -40,8 +40,7 @@ export async function findCommunityForPoint(
 ): Promise<CommunityMatch | null> {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   const supabase = await createClient();
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data, error } = (await (supabase as any).rpc('match_community', {
+  const { data, error } = (await supabase.rpc('match_community', {
     p_lat: lat,
     p_lng: lng,
   })) as { data: MatchRow[] | null; error: { message: string } | null };

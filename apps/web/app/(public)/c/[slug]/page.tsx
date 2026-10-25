@@ -53,8 +53,7 @@ export default async function CommunityPage({
   const { slug } = await params;
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: community } = (await (supabase as any)
+  const { data: community } = (await supabase
     .from('communities')
     .select(
       'id, name, slug, city, state, description, created_by, cover_video_id, cover_storage_path, status, residents_count, avg_income, avg_age, homeowners_pct, attributes, interests, nearby, boundary',
@@ -66,8 +65,7 @@ export default async function CommunityPage({
   // sees them in /dashboard/communities so they can reactivate).
   if (!community || community.status !== 'active') notFound();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: memberships } = (await (supabase as any)
+  const { data: memberships } = (await supabase
     .from('community_video_membership')
     .select('video_id')
     .eq('community_id', community.id)) as { data: Array<{ video_id: string }> | null };
@@ -76,8 +74,7 @@ export default async function CommunityPage({
 
   let videos: VideoRow[] = [];
   if (videoIds.length > 0) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: rows } = (await (supabase as any)
+    const { data: rows } = (await supabase
       .from('community_videos')
       .select('id, cf_video_id, title, category')
       .in('id', videoIds)
@@ -108,8 +105,7 @@ export default async function CommunityPage({
     { slug: string; name: string; city: string | null; state: string }
   >();
   if (nearbyNdSlugs.length > 0) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: nrows } = (await (supabase as any)
+    const { data: nrows } = (await supabase
       .from('communities')
       .select('slug, name, city, state, nextdoor_slug')
       .in('nextdoor_slug', nearbyNdSlugs)

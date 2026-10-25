@@ -88,8 +88,7 @@ export async function updateListingAddress(
 
   // Read current row under RLS so we can (a) check ownership and
   // (b) gate the address edit to draft listings only.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: current } = (await (supabase as any)
+  const { data: current } = (await supabase
     .from('listings')
     .select('id, agent_id, address, slug')
     .eq('id', id)
@@ -127,8 +126,7 @@ export async function updateListingAddress(
 
   for (let attempt = 0; attempt < MAX_SLUG_ATTEMPTS; attempt++) {
     const slug = nextCandidate(baseSlug, attempt);
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: updated, error } = (await (supabase as any)
+    const { data: updated, error } = (await supabase
       .from('listings')
       .update({
         address: data.address,
@@ -189,8 +187,7 @@ export async function updateListing(
 
   // The form always sends community_id back, so only a CHANGED value is the
   // agent's pick; an unchanged auto-match keeps its boundary/nearest record.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: current } = (await (supabase as any)
+  const { data: current } = (await supabase
     .from('listings')
     .select('community_id')
     .eq('id', id)
@@ -206,8 +203,7 @@ export async function updateListing(
   // checked count, but that combination returns count=null after .update()
   // in supabase-js v2 (head=true skips body, and PostgREST's Content-Range
   // count for UPDATE is unreliable post-RLS). Switched to maybeSingle().
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: updated, error } = (await (supabase as any)
+  const { data: updated, error } = (await supabase
     .from('listings')
     .update({
       price: data.price,
@@ -303,8 +299,7 @@ export async function setListingCover(
   let coverUrl: string | null = null;
 
   if (parsed.data.videoId !== null) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: video } = (await (supabase as any)
+    const { data: video } = (await supabase
       .from('listing_videos')
       .select('id, cf_video_id, status, listing_id')
       .eq('id', parsed.data.videoId)
@@ -320,8 +315,7 @@ export async function setListingCover(
     coverUrl = thumbnailUrl(video.cf_video_id);
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('listings')
     .update({ cover_url: coverUrl })
     .eq('id', parsed.data.listingId);
@@ -337,8 +331,7 @@ export async function setListingCover(
   // (videoId === null) we leave the existing video order alone — buyers
   // simply fall back to whatever was already first.
   if (parsed.data.videoId !== null) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: rows } = (await (supabase as any)
+    const { data: rows } = (await supabase
       .from('listing_videos')
       .select('id, sort_order')
       .eq('listing_id', parsed.data.listingId)
@@ -352,12 +345,11 @@ export async function setListingCover(
       order.unshift(parsed.data.videoId);
       // No unique constraint on (listing_id, sort_order), so a single-phase
       // rewrite is fine — same shape as reorderListingVideos.
-      for (let i = 0; i < order.length; i++) {
-        // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-        await (supabase as any)
+      for (const [i, id] of order.entries()) {
+        await supabase
           .from('listing_videos')
           .update({ sort_order: i })
-          .eq('id', order[i])
+          .eq('id', id)
           .eq('listing_id', parsed.data.listingId);
       }
     }
@@ -413,8 +405,7 @@ export async function setListingCoverPhoto(
   let coverUrl: string | null = null;
 
   if (parsed.data.photoId !== null) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: photo } = (await (supabase as any)
+    const { data: photo } = (await supabase
       .from('listing_photos')
       .select('id, storage_path, listing_id')
       .eq('id', parsed.data.photoId)
@@ -429,8 +420,7 @@ export async function setListingCoverPhoto(
     coverUrl = photoPublicUrl(photo.storage_path);
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('listings')
     .update({ cover_url: coverUrl })
     .eq('id', parsed.data.listingId);
@@ -444,8 +434,7 @@ export async function setListingCoverPhoto(
   // sort_order=0 so buyer-side photo-fallback (`/browse`, `/saved`,
   // photo-only swipe path) renders the same hero image the agent picked.
   if (parsed.data.photoId !== null) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: rows } = (await (supabase as any)
+    const { data: rows } = (await supabase
       .from('listing_photos')
       .select('id, sort_order')
       .eq('listing_id', parsed.data.listingId)
@@ -457,12 +446,11 @@ export async function setListingCoverPhoto(
     if (chosenIdx > 0) {
       order.splice(chosenIdx, 1);
       order.unshift(parsed.data.photoId);
-      for (let i = 0; i < order.length; i++) {
-        // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-        await (supabase as any)
+      for (const [i, id] of order.entries()) {
+        await supabase
           .from('listing_photos')
           .update({ sort_order: i })
-          .eq('id', order[i])
+          .eq('id', id)
           .eq('listing_id', parsed.data.listingId);
       }
     }
@@ -515,18 +503,15 @@ export async function reorderListingVideos(
 
   // Ownership check first — read the listing under RLS. If it returns null
   // the caller doesn't own it and every update below would be a no-op.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: ownerCheck } = (await (supabase as any)
+  const { data: ownerCheck } = (await supabase
     .from('listings')
     .select('id')
     .eq('id', parsed.data.listingId)
     .maybeSingle()) as { data: { id: string } | null };
   if (!ownerCheck) return { ok: false, error: 'not_found_or_forbidden' };
 
-  for (let i = 0; i < parsed.data.orderedIds.length; i++) {
-    const videoId = parsed.data.orderedIds[i];
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { error } = await (supabase as any)
+  for (const [i, videoId] of parsed.data.orderedIds.entries()) {
+    const { error } = await supabase
       .from('listing_videos')
       .update({ sort_order: i })
       .eq('id', videoId)
@@ -580,8 +565,7 @@ export async function deleteListingVideo(
 
   // Look up the row first (RLS-fenced) so we can (a) confirm the caller
   // owns it and (b) read cf_video_id for the cover-url cleanup below.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: video } = (await (supabase as any)
+  const { data: video } = (await supabase
     .from('listing_videos')
     .select('id, cf_video_id, listing_id')
     .eq('id', parsed.data.videoId)
@@ -596,23 +580,17 @@ export async function deleteListingVideo(
   // exactly that string.
   const { thumbnailUrl } = await import('@/lib/cloudflare/stream');
   const thumb = thumbnailUrl(video.cf_video_id);
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: listing } = (await (supabase as any)
+  const { data: listing } = (await supabase
     .from('listings')
     .select('cover_url')
     .eq('id', parsed.data.listingId)
     .maybeSingle()) as { data: { cover_url: string | null } | null };
 
   if (listing && listing.cover_url === thumb) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    await (supabase as any)
-      .from('listings')
-      .update({ cover_url: null })
-      .eq('id', parsed.data.listingId);
+    await supabase.from('listings').update({ cover_url: null }).eq('id', parsed.data.listingId);
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('listing_videos')
     .delete()
     .eq('id', parsed.data.videoId)

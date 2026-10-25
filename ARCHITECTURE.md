@@ -76,7 +76,7 @@ no URL segment) or underscored (private, never routed).
 | `dashboard/` | The agent's workspace. Listing and community editors, leads, analytics. Everything here assumes an authenticated agent. |
 | `admin/` | Internal pipeline console — POI review, video jobs, BGM, tour runs. Gated by `is_admin`; not a customer surface. |
 | `api/` | Route handlers. `api/mobile/*` is the mobile app's contract; `api/admin/*` requires `requireAdmin()`; webhooks verify signatures before doing anything. |
-| `_components/` | Components used by more than one route subtree — e.g. `nearby-panel/`, the POI-triage panel both the listing and community editors mount. |
+| `_components/` | Components used by more than one route subtree — e.g. `nearby-panel/`, the POI-triage panel the admin listing- and community-nearby pages mount (through `ListingNearbyPanel` / `CommunityNearbyPanel`, which still live under `dashboard/`). |
 | `_actions/` | Server actions shared across routes. |
 
 **Where does a component go?** Used by one route subtree → that route's own
@@ -92,24 +92,29 @@ No React in here. If it renders, it belongs in `app/`.
 
 | Folder | Responsibility |
 |---|---|
-| `supabase/` | Client construction and generated types. `server.ts` gives you `createClient` (anon + RLS), `createServiceClient` (bypasses RLS — see CLAUDE.md §3) and `createAnonClient` (for `unstable_cache`). `rows.ts` projects row types from `database.types.ts`; never hand-write a row shape. |
+| `supabase/` | Client construction and generated types. `server.ts` gives you `createClient` (anon + RLS, cookie-bound), `createServiceClient` (bypasses RLS — see CLAUDE.md §3), `createAnonClient` (for `unstable_cache`) and `createUncachedAnonClient` / `createUncachedServiceClient` (Next's fetch cache off — read the note there). Every one returns `TypedClient`: `@supabase/ssr` 0.5 resolves tables to `never`, so the cookie clients are typed once at the factory — never cast a client to `any` at a call site, that is how dropped columns stayed queried for months (phase306). `paginate.ts` is `readAllPages`, for any read that must see more than PostgREST's 1000 rows. `rows.ts` projects row types from `database.types.ts`; never hand-write a row shape. |
 | `poi/` | The largest subsystem: points of interest and the videos built from them. Discovery via Google Places, photo fetch, vision tagging, narrative, and the community-tour orchestrator. See its own section below. |
 | `feed/` | Deciding what a viewer sees and why — browse cards, community pools, highlights, the reasons shown under a card, neighborhood scores, geo units. Read-heavy, no writes. |
 | `communities/` | Community as an entity: list queries, detail projection, cover/logo resolution. `naming.ts` holds the de-duplication and humanisation rules every bulk creator of community rows must use — read it before adding one. |
 | `listings/` | Listing as an entity: detail projection, the public feed loader, address autocomplete. |
 | `areas/` | An AREA as an entity — county, city, school district, utility territory — and the numbers attached to one. Reads `area_metrics` (long format: one row per area × metric, each with its source and `as_of`) and joins it to the bundled county shapes in `data/metro-county-shapes.json`. The lens definitions themselves live in `packages/shared/src/lenses.ts` because mobile is the primary consumer; read that file's header before adding a dimension, especially the recorded reason there is no crime lens. `millage-pdf.ts` reads the GA DOR millage report — read ITS header before writing any millage parser, it records three quirks that each silently cost a county. `territory.ts` answers "which utility/district covers this county, and by how much" by area-sampling one polygon against a set of others; it returns SHARES. Its `dominant` names nobody for a county that is genuinely split — which is honest and, phase219 found, the wrong question: `blend` averages across every provider weighted by coverage instead, because "who is THE provider" has no answer for a county split 41/38 while "what does this cost here" does. Prefer `blend`. `demo-artifacts.test.ts` fails the build when `public/demos/*/data.js` drifts from the code that generates it — run `pnpm demos:build` to fix, never edit the expectation. Four small modules carry the judgement-laden parts that used to live in `scripts/admin/`, where nothing tests them: `water-bill.ts` (tiered water arithmetic — bands are cumulative BOUNDS, not widths, and it refuses a volume the ladder cannot reach rather than returning a total that looks complete and is low), `county-names.ts` (Georgia has a city of Forsyth, Jackson, Douglas, Dawson and Morgan and a county of each name containing none of them — a prefix match silently priced five counties from cities up to eighty miles away), `district-millage.ts` (which county levies the published rate omits, and who pays each — the floor/ceiling range behind the tax line's disclosure), and `school-year.ts` (the vintage stamped on every school figure, which used to fall back to a string a correct parse also produces). `areas.ts` is the read side: it projects a NARROW named field per fact — `supplier`, `coversSewer` — and never passes `detail` through, because `detail` is each importer's scratchpad and an importer changing its shape once emptied the supplier note from all 29 counties. `xlsx.ts` is a dependency-free ZIP + worksheet reader, so a figure published only as a spreadsheet (EIA's tables, EIA-861) can be verified rather than taken on report; it handles no formulas, dates, styles or ZIP64 and throws when it meets them. |
-| `ai/` | Model callers and their guardrails — Gemini, OpenRouter video, prompt builders, rate limiting, response caching. Every call caps `max_tokens` (CLAUDE.md §7). |
-| `mls/` | Bridge/RESO integration: the API client with retry, address autofill, the sync worker. |
-| `analytics/` | Behavioural events, both directions. `track.ts` writes them from the browser; `entity-stats`/`listing-stats` read them back. |
+| `ai/` | The OpenRouter video client (Seedance), the community-tour research prompt, and the per-user rate limiter. Most Gemini callers live beside the job they serve — `poi/` (vision tagging, narration, curator, VO) and `bgm/` (Lyria) — and the render worker's in Python. Every call caps `max_tokens` (CLAUDE.md §7). |
+| `mls/` | Bridge/RESO integration: the API client with retry, address autofill, and `sync-worker.ts` — written for go-live, not yet wired to anything (today's imports run through `scripts/admin/import-bridge-listings.ts`). |
+| `analytics/` | Behavioural events, both directions. `track.ts` writes them from the browser, `events.ts` shapes the server-side rows; `entity-stats` reads them back. |
 | `zod/` | Request and payload schemas. Every API route validates through here — TypeScript types are not runtime checks (CLAUDE.md §4). |
 | `auth/` | Who is asking: `requireAdmin`, viewer role resolution. |
-| `geo/` | Pure geometry — distance, point-in-polygon, community lookup by coordinate. |
+| `geo/` | Geometry — `distance.ts` (the one haversine, miles and meters, plus bounding boxes), point-in-polygon, and `find-community.ts`, which asks the `match_community` RPC rather than computing anything itself. |
 | `bgm/` | Background-music library: catalogue, storage paths, vibe state. |
 | `cloudflare/` | Cloudflare Stream URLs and thumbnails. |
 | `buyer/` | Anonymous-buyer identity and likes (device id, no account required). |
 | `copy/` | Static marketing copy kept out of components. |
 | `worker-hub/` | What the `/admin` Worker console reads: the queue specs the two local workers drain, the launchd/`ps`/log readers for the box they run on, and the alert rules over both. The host readers answer "not the worker host" everywhere but the Mac mini. |
 | `perf/` | Server timing helpers. |
+| `cleanup/` | What the admin Cloudflare Stream cleanup reads: every uid the database still points at (`refs.ts`, paged — a short read would offer live videos for deletion) and the live/superseded/orphan classification. |
+| `insights/` | The move-in insight research: prompt, parser, and `codex.ts`, which shells out to the local Codex CLI. Node-only — imported from `scripts/`, never from a route. |
+| `rates/` | Freddie Mac PMMS mortgage rates for `GET /api/mobile/rates`. |
+| `schools/` | School map pins for the mobile map (no attendance zones — read the header for why). |
+| `docs/` | Not code: the tests that hold `DEVLOG.md` and `RELEASE.md` to their format. |
 | `utils/` | Genuinely generic, domain-free helpers. If it mentions a listing or a community it does not belong here. |
 
 ### `lib/poi/` in detail
@@ -158,10 +163,10 @@ worker or a one-shot job.
 | `seedance-worker/` | Owns `ai_tour_videos`: submits to OpenRouter, polls, stores the result. |
 | `ken-burns/` | The Ken Burns renderer itself, callable standalone. |
 | `caption-render/` | Burns captions into frames. |
-| `pipelines/` | `nearby_generate.py` — batch nearby-video generation. |
-| `community-tour/` | The agent-research entrypoint, runnable outside the web app. |
+| `community-tour/` | `agent-research.ts`, a local-debugging copy of the research step that `lib/poi/tour-steps/research.ts` now owns. |
 | `upload-bgm/` | Mirrors the local BGM library into storage. Called by `render-worker/pull-bgm.sh`. |
-| `admin/` | Operator utilities — curator eval, production smoke test, demo assets. Allowed to use the service-role key (CLAUDE.md §3). |
+| `admin/` | Operator utilities, run by hand against production: listing imports (Bridge, Redfin), area-metric importers (millage, water, electric, schools), community merges and purges, curator eval, demo assets. Allowed to use the service-role key (CLAUDE.md §3). |
+| `nextdoor-seed/` | The one-shot July scrape that seeded the community layer. Its own README records that Nextdoor's terms forbid it — see `docs/references/content-provenance.md` before reusing anything here. |
 | `icon-fonts/` | Rebuilds the mobile app's subset icon fonts from `brand/icons/`. |
 | `maintenance/` | One-off backfills and requeues run by hand against production. |
 | `spikes/` | Experiments. Nothing in the product depends on them; treat as disposable. |

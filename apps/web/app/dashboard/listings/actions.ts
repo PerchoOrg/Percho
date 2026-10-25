@@ -32,8 +32,7 @@ export async function createStubListing(): Promise<ActionResult<{ id: string }>>
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'unauthorized' };
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agentRow } = (await (supabase as any)
+  const { data: agentRow } = (await supabase
     .from('agents')
     .select('id')
     .eq('user_id', user.id)
@@ -44,8 +43,7 @@ export async function createStubListing(): Promise<ActionResult<{ id: string }>>
   for (let attempt = 0; attempt < 3; attempt++) {
     const suffix = Math.random().toString(36).slice(2, 8);
     const placeholder = `${DRAFT_ADDRESS_PREFIX}${suffix}`;
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: created, error } = (await (supabase as any)
+    const { data: created, error } = (await supabase
       .from('listings')
       .insert({
         agent_id: agentRow.id,

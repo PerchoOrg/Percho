@@ -28,7 +28,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]  # scripts/maintenance/ → repo root
 BUCKET = "listing-maps"
 STATIC_MAPS = "https://maps.googleapis.com/maps/api/staticmap"
 

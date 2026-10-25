@@ -61,8 +61,7 @@ export default async function LeadDetailPage({ params, searchParams }: PageProps
   const user = session?.user ?? null;
   if (!user) redirect('/login');
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: lead } = (await (supabase as any)
+  const { data: lead } = (await supabase
     .from('leads')
     .select(
       'id, name, email, phone, message, source, notified_at, followed_up_at, created_at, listing_id, community_id, listings(address, city, state, slug), communities(name, slug)',

@@ -37,8 +37,7 @@ export async function checkAndRecord(
 ): Promise<RateLimitResult> {
   const since = new Date(now.getTime() - 60_000).toISOString();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const countRes = await (supabase as any)
+  const countRes = await supabase
     .from('ai_usage_log')
     .select('id', { head: true, count: 'exact' })
     .eq('agent_id', agentId)
@@ -52,8 +51,7 @@ export async function checkAndRecord(
     return { ok: false, reason: 'rate_limited' };
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const ins = await (supabase as any).from('ai_usage_log').insert({ agent_id: agentId, kind });
+  const ins = await supabase.from('ai_usage_log').insert({ agent_id: agentId, kind });
   if (ins.error) {
     return { ok: false, reason: 'internal' };
   }

@@ -20,7 +20,7 @@
 
 import type { BrowseCard } from '@/lib/feed/browse-card';
 import { webVideoUid } from '@/lib/feed/video-uid';
-import { createClient } from '@/lib/supabase/server';
+import { type TypedClient, createClient } from '@/lib/supabase/server';
 import {
   COMMUNITY_VIDEO_CATEGORIES,
   type CommunityVideoCategoryId,
@@ -80,10 +80,8 @@ type CommunityVideo = {
   title: string | null;
   category: string | null;
   school_id: string | null;
-  poi_id: string | null;
 };
 type School = { id: string; name: string; grades: string | null; rating: number | null };
-type Poi = { id: string; name: string; poi_type: string; distance_text: string | null };
 
 export interface ListingFeedBundle {
   agent: Agent;
@@ -92,12 +90,10 @@ export interface ListingFeedBundle {
   listingVideos: ListingVideo[];
   communityVideos: CommunityVideo[];
   schools: School[];
-  pois: Poi[];
 }
 
 async function fetchAroundListing(
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  supabase: any,
+  supabase: TypedClient,
   agent: Agent,
   listing: ListingForFeed,
 ): Promise<ListingFeedBundle> {
@@ -122,7 +118,6 @@ async function fetchAroundListing(
 
   const communityVideos: CommunityVideo[] = [];
   let schools: School[] = [];
-  let pois: Poi[] = [];
 
   // nearby videos are anchored to the listing, not
   // the community. Owner rule: only look at POIs near the listing
@@ -155,14 +150,15 @@ async function fetchAroundListing(
       title: r.narrative?.title ?? null,
       category: null,
       school_id: null,
-      poi_id: null,
     });
   }
 
   if (listing.community_id) {
     const cv = (await supabase
       .from('community_videos')
-      .select('id, cf_video_id, kind, title, category, school_id, poi_id')
+      // `poi_id` was dropped from this table on 2026-07-14; asking for it
+      // failed the read and the listing page lost its community videos.
+      .select('id, cf_video_id, kind, title, category, school_id')
       .eq('community_id', listing.community_id)
       .eq('status', 'ready')
       .eq('visibility', 'public')
@@ -197,7 +193,6 @@ async function fetchAroundListing(
         title: r.narrative?.title ?? null,
         category: null,
         school_id: null,
-        poi_id: null,
       });
     }
 
@@ -206,12 +201,6 @@ async function fetchAroundListing(
       .select('id, name, grades, rating')
       .eq('community_id', listing.community_id)) as { data: School[] | null };
     schools = sc.data ?? [];
-
-    const po = (await supabase
-      .from('pois')
-      .select('id, name, poi_type, distance_text')
-      .eq('community_id', listing.community_id)) as { data: Poi[] | null };
-    pois = po.data ?? [];
   }
 
   return {
@@ -221,7 +210,6 @@ async function fetchAroundListing(
     listingVideos: listingVideos ?? [],
     communityVideos,
     schools,
-    pois,
   };
 }
 
@@ -240,8 +228,7 @@ export async function loadListingFeedBySource(
   const statuses = opts.statuses ?? ['active'];
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: listing } = (await (supabase as any)
+  const { data: listing } = (await supabase
     .from('listings')
     .select(
       'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number',
@@ -277,16 +264,14 @@ export async function loadListingFeedBySlug(
   const statuses = opts.statuses ?? ['active'];
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agent } = (await (supabase as any)
+  const { data: agent } = (await supabase
     .from('agents')
     .select('id, slug, name, email, phone')
     .eq('slug', agentSlug)
     .maybeSingle()) as { data: Agent | null };
   if (!agent) return null;
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: listing } = (await (supabase as any)
+  const { data: listing } = (await supabase
     .from('listings')
     .select(
       'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number',
@@ -307,8 +292,7 @@ export async function loadListingFeedBySlug(
 export async function loadListingFeedById(listingId: string): Promise<ListingFeedBundle | null> {
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: listing } = (await (supabase as any)
+  const { data: listing } = (await supabase
     .from('listings')
     .select(
       'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number',
@@ -322,8 +306,7 @@ export async function loadListingFeedById(listingId: string): Promise<ListingFee
   // so bail if we land here.
   if (!listing.agent_id) return null;
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agent } = (await (supabase as any)
+  const { data: agent } = (await supabase
     .from('agents')
     .select('id, slug, name, email, phone')
     .eq('id', listing.agent_id)
@@ -346,7 +329,7 @@ export async function buildListingCards(
     | { id: string; storage_path: string; alt_text: string | null; sort_order: number }[]
     | null,
 ): Promise<BrowseCard[]> {
-  const { agent, listing, listingVideos, communityVideos, schools, pois } = bundle;
+  const { agent, listing, listingVideos, communityVideos, schools } = bundle;
 
   // categoryVideos are built the same way whether the
   // listing hero is a video or a photo. Nearby (listing- + community-scoped)
@@ -395,7 +378,6 @@ export async function buildListingCards(
         grades: s.grades,
         rating: s.rating,
       })),
-      photoPois: pois.map((p) => ({ name: p.name, distance_text: p.distance_text })),
       listing: {
         id: listing.id,
         slug: listing.slug,
@@ -480,8 +462,7 @@ export async function buildListingCards(
  */
 export async function loadListingPhotos(listingId: string) {
   const supabase = await createClient();
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data } = (await (supabase as any)
+  const { data } = (await supabase
     .from('listing_photos')
     .select('id, storage_path, alt_text, sort_order')
     .eq('listing_id', listingId)

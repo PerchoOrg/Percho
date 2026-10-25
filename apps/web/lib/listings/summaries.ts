@@ -15,9 +15,8 @@
  * Same projection rule as `detail.ts`: absent means the key is OMITTED.
  */
 
-import type { Database } from '@/lib/supabase/database.types';
+import { createUncachedAnonClient } from '@/lib/supabase/server';
 import { photoPublicUrl } from '@/lib/supabase/storage';
-import { createClient as createPlainClient } from '@supabase/supabase-js';
 
 /** Hard cap on ids per request. The rail shows ~10; 24 is headroom, not a page. */
 export const SUMMARY_IDS_LIMIT = 24;
@@ -99,21 +98,6 @@ export function parseSummaryIds(raw: string | null): string[] {
     if (seen.size >= SUMMARY_IDS_LIMIT) break;
   }
   return [...seen];
-}
-
-function createUncachedAnonClient() {
-  // Same fetch-cache opt-out as `detail.ts` — see the long note there.
-  return createPlainClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
-    {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: {
-        fetch: (input: RequestInfo | URL, init?: RequestInit) =>
-          fetch(input, { ...init, cache: 'no-store' }),
-      },
-    },
-  );
 }
 
 export async function fetchListingSummaries(ids: readonly string[]): Promise<ListingSummaryDTO[]> {

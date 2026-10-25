@@ -91,7 +91,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const update: Record<string, unknown> = { status };
+  const update: { status: string; duration_sec?: number } = { status };
   if (duration_sec !== null) update.duration_sec = duration_sec;
 
   const supabase = createServiceClient();
@@ -99,11 +99,13 @@ export async function POST(req: Request) {
   // Update both tables; only one will have a matching row (cf_video_id is
   // unique within each table). If neither matches, log and 200 — Cloudflare
   // retries on non-2xx, and we don't want infinite retries on a stale row.
-  // biome-ignore lint/suspicious/noExplicitAny: database.types.ts is a stub; regen at phase-end via `pnpm db:types`.
-  const sb = supabase as any;
   const [listingRes, communityRes] = await Promise.all([
-    sb.from('listing_videos').update(update).eq('cf_video_id', videoId).select('id, listing_id'),
-    sb
+    supabase
+      .from('listing_videos')
+      .update(update)
+      .eq('cf_video_id', videoId)
+      .select('id, listing_id'),
+    supabase
       .from('community_videos')
       .update(update)
       .eq('cf_video_id', videoId)
@@ -121,13 +123,13 @@ export async function POST(req: Request) {
     const { thumbnailUrl } = await import('@/lib/cloudflare/stream');
     const lr = listingRes.data?.[0] as { id: string; listing_id: string } | undefined;
     if (lr?.listing_id) {
-      const { data: cur } = await sb
+      const { data: cur } = await supabase
         .from('listings')
         .select('cover_url')
         .eq('id', lr.listing_id)
         .maybeSingle();
       if (cur && !cur.cover_url) {
-        await sb
+        await supabase
           .from('listings')
           .update({ cover_url: thumbnailUrl(videoId) })
           .eq('id', lr.listing_id);
@@ -135,13 +137,13 @@ export async function POST(req: Request) {
     }
     const cr = communityRes.data?.[0] as { id: string; community_id: string } | undefined;
     if (cr?.community_id) {
-      const { data: cur } = await sb
+      const { data: cur } = await supabase
         .from('communities')
         .select('cover_video_id, cover_storage_path')
         .eq('id', cr.community_id)
         .maybeSingle();
       if (cur && !cur.cover_video_id && !cur.cover_storage_path) {
-        await sb
+        await supabase
           .from('communities')
           .update({ cover_video_id: cr.id, cover_storage_path: null })
           .eq('id', cr.community_id);

@@ -100,8 +100,7 @@ export default async function CommunityEditorPage({
   const user = session?.user ?? null;
   if (!user) redirect(`/login?redirect=%2Fdashboard%2Fcommunities%2F${id}`);
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: community } = (await (supabase as any)
+  const { data: community } = (await supabase
     .from('communities')
     .select(
       'id, name, slug, city, state, description, status, created_by, cover_video_id, cover_storage_path, boundary, zip, county, hoa_fee_monthly, year_built, year_built_end, price_min, price_max, property_types, highlights, builder, website',
@@ -117,8 +116,7 @@ export default async function CommunityEditorPage({
     );
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agentRow } = (await (supabase as any)
+  const { data: agentRow } = (await supabase
     .from('agents')
     .select('id')
     .eq('user_id', user.id)
@@ -129,8 +127,7 @@ export default async function CommunityEditorPage({
 
   // Manage list — only own videos (legacy NULL uploaded_by visible to creator).
   const ownsLegacy = community.created_by != null && community.created_by === myAgentId;
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  let manageQuery = (supabase as any)
+  let manageQuery = supabase
     .from('community_videos')
     .select(
       'id, cf_video_id, title, description, category, category_needs_review, status, visibility, created_at, uploaded_by, uploader:agents!community_videos_uploaded_by_fkey(slug, name)',
@@ -172,12 +169,9 @@ export default async function CommunityEditorPage({
   // gates "Set as cover" on `status === 'ready'` itself.
 
   // Photos for the Media tab.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: photoRows } = (await (supabase as any)
+  const { data: photoRows } = (await supabase
     .from('community_photos')
-    .select(
-      'id, storage_path, kind, category, school_id, poi_id, alt_text, width, height, sort_order',
-    )
+    .select('id, storage_path, kind, category, school_id, alt_text, width, height, sort_order')
     .eq('community_id', community.id)
     .order('sort_order', { ascending: true })) as {
     data: Array<{
@@ -186,7 +180,6 @@ export default async function CommunityEditorPage({
       kind: string;
       category: string | null;
       school_id: string | null;
-      poi_id: string | null;
       alt_text: string | null;
       width: number | null;
       height: number | null;
@@ -203,7 +196,6 @@ export default async function CommunityEditorPage({
     kind: p.kind,
     category: p.category,
     school_id: p.school_id,
-    poi_id: p.poi_id,
     alt_text: p.alt_text,
     width: p.width,
     height: p.height,

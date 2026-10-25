@@ -27,8 +27,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
   const { id: communityId } = await params;
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const sb: any = createServiceClient();
+  const sb = createServiceClient();
 
   const { data } = (await sb
     .from('community_tour_runs')
@@ -45,8 +44,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
   const { id: communityId } = await params;
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const sb: any = createServiceClient();
+  const sb = createServiceClient();
 
   const { data: community } = await sb
     .from('communities')

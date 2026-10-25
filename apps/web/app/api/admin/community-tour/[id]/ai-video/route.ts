@@ -21,7 +21,7 @@ import {
   type AiTourVideoRow,
   clipPrompt,
 } from '@/lib/poi/ai-tour-video';
-import { createServiceClient } from '@/lib/supabase/server';
+import { type TypedClient, createServiceClient } from '@/lib/supabase/server';
 import { GenerateAiTourVideos } from '@/lib/zod/ai-tour-video';
 import { NextResponse } from 'next/server';
 
@@ -57,8 +57,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
   const { photoIds, prompt, durationS } = parsed.data;
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const sb = createServiceClient() as any;
+  const sb = createServiceClient();
 
   const { data: community } = await sb
     .from('communities')
@@ -118,8 +117,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
   const { id: communityId } = await params;
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const sb = createServiceClient() as any;
+  const sb = createServiceClient();
 
   // Owner 2026-08-16: failed jobs are garbage — delete them, don't keep.
   const { data: failedRows } = (await sb
@@ -161,8 +159,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   return NextResponse.json({ videos });
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: stub generated types
-function publicUrl(sb: any, path: string): string {
+function publicUrl(sb: TypedClient, path: string): string {
   const { data } = sb.storage.from(AI_VIDEO_BUCKET).getPublicUrl(path);
   return (data as { publicUrl: string }).publicUrl;
 }

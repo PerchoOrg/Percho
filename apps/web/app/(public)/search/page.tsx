@@ -21,7 +21,7 @@ import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid
  * Public surface still gates on status='active' — buyer view unchanged.
  */
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
-import { fetchCommunityListCards } from '@/lib/communities/list';
+import { searchCommunityListCards } from '@/lib/communities/list';
 import { linkForCard } from '@/lib/feed/link-for-card';
 import { createClient } from '@/lib/supabase/server';
 import { photoPublicUrl } from '@/lib/supabase/storage';
@@ -83,8 +83,7 @@ async function searchListings(
     `neighborhood.ilike.${pattern}`,
   ].join(',');
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  let query = (supabase as any)
+  let query = supabase
     .from('listings')
     .select(
       'id, slug, address, city, state, zip, neighborhood, price, beds, baths, sqft, agent_id, status, cover_url, source, source_id, mls_number',
@@ -130,15 +129,13 @@ async function searchListings(
   const agentIds = Array.from(new Set(listings.map((l) => l.agent_id)));
 
   const [vidsResp, photosResp, agentsResp] = await Promise.all([
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
+    supabase
       .from('listing_videos')
       .select('listing_id, cf_video_id, sort_order')
       .in('listing_id', ids)
       .eq('status', 'ready')
       .order('sort_order', { ascending: true }),
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
+    supabase
       .from('listing_photos')
       .select('listing_id, storage_path, sort_order')
       .in('listing_id', ids)
@@ -148,11 +145,7 @@ async function searchListings(
         (r: { data: Array<{ listing_id: string; storage_path: string }> | null }) => r,
         () => ({ data: [] }),
       ),
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
-      .from('agents')
-      .select('id, slug')
-      .in('id', agentIds),
+    supabase.from('agents').select('id, slug').in('id', agentIds),
   ]);
 
   const heroVid = new Map<string, string>();
@@ -252,8 +245,7 @@ async function getViewerAgentId(): Promise<string | null> {
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
   if (!user) return null;
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agent } = (await (supabase as any)
+  const { data: agent } = (await supabase
     .from('agents')
     .select('id')
     .eq('user_id', user.id)
@@ -289,21 +281,9 @@ export default async function SearchPage({
   const [publicListings, agentListings, allCommunities] = await Promise.all([
     searchListings(q, 'public', null),
     agentId ? searchListings(q, 'agent_inactive', agentId) : Promise.resolve([]),
-    // include inactive in the raw set when viewer is an agent;
-    // we filter in JS to scope inactive results to communities the viewer
-    // created (RLS prevents her from seeing other agents' inactive rows
-    // anyway, but the explicit filter keeps this correct if RLS shifts).
-    fetchCommunityListCards({ viewerAgentId: agentId }).then((rows) =>
-      rows
-        .filter(
-          (c) =>
-            c.name.toLowerCase().includes(q) ||
-            (c.city ?? '').toLowerCase().includes(q) ||
-            c.state.toLowerCase().includes(q) ||
-            (c.description ?? '').toLowerCase().includes(q),
-        )
-        .slice(0, LIMIT),
-    ),
+    // Matched in Postgres: the cached grid set is only a slice of the active
+    // communities. Includes the viewer's own inactive drafts when an agent.
+    searchCommunityListCards(q, { viewerAgentId: agentId, limit: LIMIT }),
   ]);
 
   // We don't have created_by on the card type yet — split communities

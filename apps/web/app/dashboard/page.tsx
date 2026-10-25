@@ -16,10 +16,8 @@
  */
 
 import { GridPageShell } from '@/app/_components/GridPageShell';
-import {
-  type DashboardItem,
-  DashboardListingGrid,
-} from '@/app/dashboard/_components/DashboardListingGrid';
+import type { ListingGridItem } from '@/app/_components/ListingGrid';
+import { DashboardListingGrid } from '@/app/dashboard/_components/DashboardListingGrid';
 import { isDraftAddress } from '@/app/dashboard/listings/draft';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
@@ -36,8 +34,7 @@ export default async function DashboardHomePage() {
   const user = session?.user ?? null;
   if (!user) redirect('/login');
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agentRow } = (await (supabase as any)
+  const { data: agentRow } = (await supabase
     .from('agents')
     .select('id, slug')
     .eq('user_id', user.id)
@@ -45,12 +42,9 @@ export default async function DashboardHomePage() {
   const agentId = agentRow?.id ?? null;
 
   const { data: allRows } = agentId
-    ? // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-      ((await (supabase as any)
+    ? ((await supabase
         .from('listings')
-        .select(
-          'id, slug, address, city, state, zip, status, price, beds, baths, sqft, cover_url, created_at, updated_at',
-        )
+        .select('id, slug, address, city, state, zip, status, price, beds, baths, sqft, cover_url')
         .eq('agent_id', agentId)
         .order('updated_at', { ascending: false })) as {
         data: Array<{
@@ -66,8 +60,6 @@ export default async function DashboardHomePage() {
           baths: number | null;
           sqft: number | null;
           cover_url: string | null;
-          created_at: string;
-          updated_at: string;
         }> | null;
       })
     : { data: [] };
@@ -75,19 +67,19 @@ export default async function DashboardHomePage() {
   const rows = allRows ?? [];
 
   // Fallback covers: pull the first listing_video thumbnail per listing
-  // when cover_url is null. One batched query ordered by ord asc; keep
-  // the first hit per listing in JS.
+  // when cover_url is null. One batched query ordered by sort_order asc;
+  // keep the first hit per listing in JS. (It asked for a column `ord` that
+  // never existed, so the query errored and no fallback cover ever showed.)
   const idsNeedingCover = rows.filter((l) => !l.cover_url).map((l) => l.id);
   const fallbackCovers = new Map<string, string>();
   if (idsNeedingCover.length > 0) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: vids } = (await (supabase as any)
+    const { data: vids } = (await supabase
       .from('listing_videos')
-      .select('listing_id, cf_video_id, ord')
+      .select('listing_id, cf_video_id, sort_order')
       .in('listing_id', idsNeedingCover)
       .eq('status', 'ready')
-      .order('ord', { ascending: true })) as {
-      data: Array<{ listing_id: string; cf_video_id: string; ord: number }> | null;
+      .order('sort_order', { ascending: true })) as {
+      data: Array<{ listing_id: string; cf_video_id: string | null; sort_order: number }> | null;
     };
     for (const v of vids ?? []) {
       if (!fallbackCovers.has(v.listing_id) && v.cf_video_id) {
@@ -96,24 +88,7 @@ export default async function DashboardHomePage() {
     }
   }
 
-  // Snapshot view counts: page_view events grouped by listing_id.
-  const viewCounts = new Map<string, number>();
-  if (rows.length > 0) {
-    const ids = rows.map((r) => r.id);
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data: events } = (await (supabase as any)
-      .from('events')
-      .select('listing_id')
-      .in('listing_id', ids)
-      .eq('event_type', 'page_view')) as {
-      data: Array<{ listing_id: string }> | null;
-    };
-    for (const e of events ?? []) {
-      viewCounts.set(e.listing_id, (viewCounts.get(e.listing_id) ?? 0) + 1);
-    }
-  }
-
-  const items: DashboardItem[] = rows.map((l) => {
+  const items: ListingGridItem[] = rows.map((l) => {
     const isInactive = l.status === 'inactive';
     const isDraft = isDraftAddress(l.address);
     const badge = isDraft
@@ -138,10 +113,6 @@ export default async function DashboardHomePage() {
       zip: isDraft ? null : l.zip,
       badge,
       dimmed: isInactive,
-      rawStatus: l.status,
-      updatedAt: l.updated_at,
-      createdAt: l.created_at,
-      viewCount: viewCounts.get(l.id) ?? 0,
     };
   });
 

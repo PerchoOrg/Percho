@@ -124,8 +124,7 @@ export default async function DashboardListingPreviewPage({ params }: PageProps)
   if (!data) notFound();
 
   // Defensive owner check (RLS already enforces this, but makes intent clear).
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agentRow } = (await (supabase as any)
+  const { data: agentRow } = (await supabase
     .from('agents')
     .select('id')
     .eq('user_id', user.id)

@@ -23,8 +23,7 @@ import { type ListingLeadRow, ListingLeadsRows } from './ListingLeadsPanel.clien
 
 export async function ListingLeadsPanel({ listingId }: { listingId: string }) {
   const supabase = await createClient();
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data } = (await (supabase as any)
+  const { data } = (await supabase
     .from('leads')
     .select('id, name, email, phone, message, followed_up_at, created_at')
     .eq('listing_id', listingId)

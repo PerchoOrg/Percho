@@ -9,7 +9,8 @@
  * still writes the shot list back into this step's result, because the whole
  * admin surface reads it from there.
  */
-import type { PoiActor } from '@/lib/poi/poi-actions-core';
+import { COMMUNITY_SCOPE } from '@/lib/poi/entity-scope';
+import { type PoiActor, fetchPhotosForPoi } from '@/lib/poi/poi-actions-core';
 import { type RunRow, type TourDb, asJson, mustWrite, saveStep, setRunStatus } from './shared';
 
 /**
@@ -190,7 +191,6 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     dropped: [],
   });
 
-  const { fetchPhotosForCommunityPoi } = await import('@/lib/poi/community-actions');
   const results: Record<string, unknown> = {};
   const resolvedPoiIds: string[] = [];
   // The resolve step already decided each POI's tour bucket; the Scheduler
@@ -293,7 +293,7 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
         continue;
       }
     }
-    const r = await fetchPhotosForCommunityPoi(run.community_id, poiId!, { max: 3, actor });
+    const r = await fetchPhotosForPoi(COMMUNITY_SCOPE, run.community_id, poiId!, { max: 3, actor });
     results[poi.place_id] = r;
   }
 
@@ -338,7 +338,10 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     // Amenity POIs arrive with their photos already ingested; a POI added by
     // hand usually arrives with none, and Places is where they come from.
     if (!count) {
-      const r = await fetchPhotosForCommunityPoi(run.community_id, link.poi_id, { max: 3, actor });
+      const r = await fetchPhotosForPoi(COMMUNITY_SCOPE, run.community_id, link.poi_id, {
+        max: 3,
+        actor,
+      });
       results[link.poi_id] = r;
     }
   }

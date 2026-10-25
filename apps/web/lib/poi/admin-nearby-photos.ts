@@ -1,7 +1,9 @@
-'use server';
-
 /**
  * Flat photo rows for an admin nearby page (community or listing scope).
+ *
+ * A plain server module, not `'use server'`: it reads on the service role and
+ * its only callers are the two admin Server Components. As a server action it
+ * was an unauthenticated endpoint any browser could call.
  *
  * The nearby pages used to show photos only inside a per-POI accordion, which
  * makes "which photos does this community actually have, and which are in a
@@ -13,7 +15,7 @@
  * what the renderer reads) — per-scope curation stays in the POI panel.
  */
 
-import { createServiceClient } from '@/lib/supabase/server';
+import { type TypedClient, createServiceClient } from '@/lib/supabase/server';
 import { keepPhotoForTour } from './nearby-photo-scope';
 import { tourPoiIds } from './tour-poi-set';
 
@@ -56,12 +58,7 @@ type Scope = { kind: 'community'; id: string } | { kind: 'listing'; id: string }
  */
 async function narrowToTour<
   T extends { poi_id: string; status: string | null; reviewed_by: string | null },
->(
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  sb: any,
-  communityId: string,
-  rows: T[],
-): Promise<T[]> {
+>(sb: TypedClient, communityId: string, rows: T[]): Promise<T[]> {
   if (rows.length === 0) return rows;
 
   const { data: runs } = (await sb
@@ -85,16 +82,13 @@ async function narrowToTour<
 }
 
 export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> {
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const sb: any = createServiceClient();
+  const sb = createServiceClient();
 
-  const linkTable = scope.kind === 'community' ? 'community_pois' : 'listing_pois';
   const ownerCol = scope.kind === 'community' ? 'community_id' : 'listing_id';
-
-  const { data: links } = (await sb
-    .from(linkTable)
-    .select('poi_id, intent_bucket, pois!inner(display_name)')
-    .eq(ownerCol, scope.id)) as {
+  const columns = 'poi_id, intent_bucket, pois!inner(display_name)';
+  const { data: links } = (await (scope.kind === 'community'
+    ? sb.from('community_pois').select(columns).eq('community_id', scope.id)
+    : sb.from('listing_pois').select(columns).eq('listing_id', scope.id))) as {
     data: Array<{
       poi_id: string;
       intent_bucket: string | null;

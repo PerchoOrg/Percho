@@ -16,12 +16,12 @@
  */
 'use client';
 
+import { attachHls } from '@/app/(public)/_components/feed/attach-hls';
 import { listSavedListingIds, saveListing, unsaveListing } from '@/app/_actions/saved-listings';
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import { fmlsNumberLabel } from '@percho/shared/fmls';
-import Hls from 'hls.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LeadModal } from '../../../../_components/LeadModal';
 import { ActionButton } from '../../../../_components/feed/ActionButton';
@@ -351,7 +351,6 @@ function ListingSlide({
   cardRef: (el: HTMLElement | null) => void;
 }) {
   const ref = useRef<HTMLVideoElement | null>(null);
-  const hlsRef = useRef<Hls | null>(null);
   // manual paused state — user tap toggles play/pause. isActive
   // still drives autoplay when swiping to a new card, but a fresh visit
   // resets manuallyPaused so playback resumes.
@@ -379,10 +378,6 @@ function ListingSlide({
     if (!v) return;
     // hide <video> layer until first frame paints on new src.
     setHasFirstFrame(false);
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
     v.removeAttribute('src');
     v.load();
     if (!listing.heroCfVideoId) return;
@@ -392,20 +387,7 @@ function ListingSlide({
     } catch {
       return;
     }
-    if (v.canPlayType('application/vnd.apple.mpegurl')) {
-      v.src = src;
-    } else if (Hls.isSupported()) {
-      const hls = new Hls({ maxBufferLength: 20 });
-      hls.loadSource(src);
-      hls.attachMedia(v);
-      hlsRef.current = hls;
-    }
-    return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
-    };
+    return attachHls(v, src);
   }, [shouldMount, listing.heroCfVideoId]);
 
   // reveal <video> only after first frame.

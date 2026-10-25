@@ -29,9 +29,15 @@ type Row = {
   communities: { name: string | null } | null;
 };
 
+/**
+ * Name and message are typed by anonymous visitors, and the agent opens this
+ * file in a spreadsheet: a cell starting `=`, `+`, `-`, `@` (or a tab / CR)
+ * would run as a formula. The leading apostrophe makes it text.
+ */
 function csvEscape(v: string | null | undefined): string {
   if (v == null) return '';
-  const s = String(v);
+  let s = String(v);
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }
@@ -43,8 +49,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data } = (await (supabase as any)
+  const { data } = (await supabase
     .from('leads')
     .select(
       'id, name, email, phone, message, source, notified_at, followed_up_at, created_at, community_id, listings(address, city, state), communities(name)',

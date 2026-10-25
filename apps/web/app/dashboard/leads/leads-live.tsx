@@ -121,8 +121,7 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
         async (payload) => {
           const id = (payload.new as { id?: string }).id;
           if (!id) return;
-          // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-          const { data } = (await (supabase as any)
+          const { data } = (await supabase
             .from('leads')
             .select(LEAD_SELECT)
             .eq('id', id)
@@ -149,8 +148,7 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
     const supabase = createClient();
     let cancelled = false;
     const tick = async () => {
-      // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-      const { data } = (await (supabase as any)
+      const { data } = (await supabase
         .from('leads')
         .select(LEAD_SELECT)
         .order('created_at', { ascending: false })
@@ -197,8 +195,7 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
       });
       if (!res.ok) {
         // revert on failure
-        // biome-ignore lint/suspicious/noExplicitAny: stub
-        const supabase = createClient() as any;
+        const supabase = createClient();
         const { data } = await supabase
           .from('leads')
           .select('id, followed_up_at')

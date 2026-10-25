@@ -20,7 +20,6 @@ import {
   type DiscoverResult,
   type NearbyPoi,
   type PhotoFetchResult,
-  type PoiActor,
   discoverPois,
   fetchPhotosForPoi,
   loadNearbyPois,
@@ -33,21 +32,29 @@ export type CommunityPhotoFetchResult = PhotoFetchResult;
 export type NearbyPoiForCommunity = NearbyPoi;
 export type { ReviewAction };
 
+/**
+ * Every export here is a server action: its arguments arrive from the browser.
+ * So nothing a caller passes may widen what runs — the Places radius and type
+ * list stay the server's defaults (each type is one billed Nearby call), and
+ * `actor` is not accepted at all. A `{ actor: 'service' }` from the client used
+ * to skip the session check and run on the service role. Trusted callers that
+ * need `actor` (the tour steps) import `poi-actions-core` directly.
+ */
 export async function discoverPoisForCommunity(
   communityId: string,
-  opts: { radiusMeters?: number; includedTypes?: readonly string[] } = {},
 ): Promise<CommunityDiscoverResult> {
-  return discoverPois(SCOPE, communityId, opts);
+  return discoverPois(SCOPE, communityId);
 }
 
-/** `opts.actor: 'service'` skips the session check — admin scripts only, and
- *  never from a value a request supplied. See PoiActor. */
 export async function fetchPhotosForCommunityPoi(
   communityId: string,
   poiId: string,
-  opts: { max?: number; maxHeightPx?: number; actor?: PoiActor } = {},
+  opts: { max?: number; maxHeightPx?: number } = {},
 ): Promise<CommunityPhotoFetchResult> {
-  return fetchPhotosForPoi(SCOPE, communityId, poiId, opts);
+  return fetchPhotosForPoi(SCOPE, communityId, poiId, {
+    max: opts.max,
+    maxHeightPx: opts.maxHeightPx,
+  });
 }
 
 export async function setCommunityPhotoStatus(

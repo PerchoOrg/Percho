@@ -111,7 +111,7 @@ export default async function EditListingPage({
     .eq('listing_id', listing.id)
     .order('sort_order', { ascending: true })
     .then(
-      (r: { data: ListingPhotoRow[] | null }) => r,
+      (r) => r,
       () => ({ data: [] }),
     )) as { data: ListingPhotoRow[] | null };
   const photos = photosResp.data ?? [];

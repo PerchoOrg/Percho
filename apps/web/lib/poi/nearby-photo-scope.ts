@@ -1,9 +1,8 @@
 /**
  * Which of a community's photos belong on its review page.
  *
- * Its own module because `admin-nearby-photos.ts` is a `'use server'` file —
- * every export there has to be an async server action, and this is a pure
- * predicate the tests call directly.
+ * Its own module so the tests can import a pure predicate without the
+ * service-role loader in `admin-nearby-photos.ts` beside it.
  */
 
 /**

@@ -6,10 +6,12 @@
  */
 import { createBrowserClient } from '@supabase/ssr';
 import type { Database } from './database.types';
+import type { TypedClient } from './server';
 
-export function createClient() {
+/** Typed as a supabase-js client for the reason given on `TypedClient`. */
+export function createClient(): TypedClient {
   return createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  ) as unknown as TypedClient;
 }

@@ -22,8 +22,8 @@
 
 import shapeFile from '@/data/metro-county-shapes.json';
 import type { Database } from '@/lib/supabase/database.types';
+import { createUncachedAnonClient } from '@/lib/supabase/server';
 import { type Area, type AreaMetric, METRIC_KEYS, type MetricKey } from '@percho/shared/lenses';
-import { createClient as createPlainClient } from '@supabase/supabase-js';
 
 /** A county outline, ready for react-native-maps / MapLibre. */
 export interface AreaShape {
@@ -55,36 +55,6 @@ const shapes = shapeFile as unknown as {
  *  a new key cannot be added to the type and silently dropped here, which is
  *  exactly what happened to `public_water_pct` in phase220. */
 const KNOWN_METRICS = new Set<string>(METRIC_KEYS);
-
-/**
- * The anon client, typed against the generated schema.
- *
- * This spent phase196–208 UNTYPED, because `area_metrics` did not exist in the
- * database yet and so was absent from `database.types.ts`; hand-writing the
- * row into that generated file would have been overwritten by the next
- * `pnpm db:types` and, until then, would have claimed a shape the database had
- * not agreed to. The migration is applied and the types are regenerated, so
- * the generic is back and `.from('area_metrics')` is checked again.
- *
- * The runtime validation in `groupMetrics` stays regardless. The generated
- * types describe what the schema PROMISES; they say nothing about a metric key
- * a newer importer writes that this build does not understand, or about a row
- * that arrives malformed for any other reason.
- */
-function createUncachedAnonClient() {
-  // Same fetch-cache opt-out as `lib/listings/search.ts` — see the note there.
-  return createPlainClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
-    {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: {
-        fetch: (input: RequestInfo | URL, init?: RequestInit) =>
-          fetch(input, { ...init, cache: 'no-store' }),
-      },
-    },
-  );
-}
 
 /** Exactly the columns `fetchAreas` selects. Keeping the list beside the type
  *  means adding a column to the query without widening this fails to compile. */

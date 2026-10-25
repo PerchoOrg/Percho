@@ -25,8 +25,7 @@ export default async function LeadsPage() {
   const user = session?.user ?? null;
   if (!user) redirect('/login?redirect=%2Fdashboard%2Fleads');
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data } = (await (supabase as any)
+  const { data } = (await supabase
     .from('leads')
     .select(
       'id, name, email, phone, message, source, notified_at, followed_up_at, created_at, listing_id, community_id, listings(address, city, state, slug), communities(name, slug)',

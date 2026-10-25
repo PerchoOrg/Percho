@@ -19,7 +19,7 @@
 import type { BrowseCard } from '@/lib/feed/browse-card';
 import { webVideoUid } from '@/lib/feed/video-uid';
 import { haversineMiles, latLngBoundingBox } from '@/lib/geo/distance';
-import { createClient } from '@/lib/supabase/server';
+import { type TypedClient, createClient } from '@/lib/supabase/server';
 import {
   COMMUNITY_VIDEO_CATEGORIES,
   type CommunityVideoCategoryId,
@@ -120,22 +120,6 @@ type CommunityVideoRow = {
   kind: string;
   category: string | null;
   school_id: string | null;
-  poi_id: string | null;
-};
-
-type SchoolRow = {
-  community_id: string;
-  id: string;
-  name: string;
-  grades: string | null;
-  rating: number | null;
-};
-
-type PoiRow = {
-  community_id: string;
-  id: string;
-  name: string;
-  distance_text: string | null;
 };
 
 type CommunityRow = {
@@ -159,8 +143,7 @@ type CommunityRow = {
  */
 async function assembleCards(
   listings: ListingRow[],
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  supabase: any,
+  supabase: TypedClient,
   distanceById?: Map<string, number>,
 ): Promise<BrowseCard[]> {
   if (listings.length === 0) return [];
@@ -178,8 +161,6 @@ async function assembleCards(
     listingPhotosResp,
     agentsResp,
     commVidsResp,
-    schoolsResp,
-    poisResp,
     communitiesResp,
     listingCountResp,
     listingBucketVidsResp,
@@ -210,24 +191,14 @@ async function assembleCards(
     communityIds.length > 0
       ? supabase
           .from('community_videos')
-          .select('community_id, cf_video_id, title, kind, category, school_id, poi_id')
+          // `poi_id` was dropped from this table on 2026-07-14; asking for it
+          // failed the whole read, and the Nearby pool came back empty.
+          .select('community_id, cf_video_id, title, kind, category, school_id')
           .in('community_id', communityIds)
           .eq('status', 'ready')
           .eq('visibility', 'public')
           // skip history renders.
           .eq('is_primary', true)
-      : Promise.resolve({ data: [] }),
-    communityIds.length > 0
-      ? supabase
-          .from('schools')
-          .select('community_id, id, name, grades, rating')
-          .in('community_id', communityIds)
-      : Promise.resolve({ data: [] }),
-    communityIds.length > 0
-      ? supabase
-          .from('pois')
-          .select('community_id, id, name, distance_text')
-          .in('community_id', communityIds)
       : Promise.resolve({ data: [] }),
     communityIds.length > 0
       ? supabase
@@ -262,8 +233,6 @@ async function assembleCards(
   const listingPhotos = (listingPhotosResp.data ?? []) as ListingPhotoRow[];
   const agents = (agentsResp.data ?? []) as AgentRow[];
   const commVideos = (commVidsResp.data ?? []) as CommunityVideoRow[];
-  const schools = (schoolsResp.data ?? []) as SchoolRow[];
-  const pois = (poisResp.data ?? []) as PoiRow[];
   const communities = (communitiesResp.data ?? []) as CommunityRow[];
   const listingCountRows = (listingCountResp.data ?? []) as Array<{ community_id: string }>;
   const listingCountByCommunity = new Map<string, number>();
@@ -288,8 +257,6 @@ async function assembleCards(
   }
   const agentsById = new Map(agents.map((a) => [a.id, a] as const));
   const communitiesById = new Map(communities.map((c) => [c.id, c] as const));
-  const _schoolsById = new Map(schools.map((s) => [s.id, s] as const));
-  const _poisById = new Map(pois.map((p) => [p.id, p] as const));
 
   const commVidsByCommunity = new Map<string, CommunityVideoRow[]>();
   for (const v of commVideos) {
@@ -316,7 +283,6 @@ async function assembleCards(
       kind: 'poi',
       category: null,
       school_id: null,
-      poi_id: null,
     });
     bucketVidsByListing.set(r.listing_id, arr);
   }
@@ -507,8 +473,7 @@ async function assembleCards(
 export async function fetchBrowseCards(offset = 0, limit = 1000): Promise<BrowseCard[]> {
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: rawListings } = (await (supabase as any)
+  const { data: rawListings } = (await supabase
     .from('listings')
     .select(
       'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
@@ -533,8 +498,7 @@ export async function fetchBrowseCards(offset = 0, limit = 1000): Promise<Browse
 export async function fetchBrowseCardsVideosOnly(offset = 0, limit = 1000): Promise<BrowseCard[]> {
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: vidRows } = (await (supabase as any)
+  const { data: vidRows } = (await supabase
     .from('listing_videos')
     .select('listing_id')
     .eq('status', 'ready')
@@ -549,8 +513,7 @@ export async function fetchBrowseCardsVideosOnly(offset = 0, limit = 1000): Prom
   const ids = Array.from(new Set((vidRows ?? []).map((r) => r.listing_id)));
   if (ids.length === 0) return [];
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: rawListings } = (await (supabase as any)
+  const { data: rawListings } = (await supabase
     .from('listings')
     .select(
       'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
@@ -576,8 +539,7 @@ export async function fetchBrowseCardsVideosOnly(offset = 0, limit = 1000): Prom
 export async function fetchBrowseCardsByCommunitySlug(slug: string): Promise<BrowseCard[]> {
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: community } = (await (supabase as any)
+  const { data: community } = (await supabase
     .from('communities')
     .select('id')
     .eq('slug', slug)
@@ -585,11 +547,10 @@ export async function fetchBrowseCardsByCommunitySlug(slug: string): Promise<Bro
     .maybeSingle()) as { data: { id: string } | null };
   if (!community) return [];
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: rawListings } = (await (supabase as any)
+  const { data: rawListings } = (await supabase
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
     )
     .eq('status', 'active')
     .eq('community_id', community.id)
@@ -608,11 +569,10 @@ export async function fetchBrowseCardsByIds(ids: string[]): Promise<BrowseCard[]
   if (ids.length === 0) return [];
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: rawListings } = (await (supabase as any)
+  const { data: rawListings } = (await supabase
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
     )
     .in('id', ids)
     .eq('status', 'active')) as { data: ListingRow[] | null };
@@ -641,11 +601,10 @@ export async function fetchNearbyCards(args: {
 
   let raw: ListingRow[] = [];
   try {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const r = (await (supabase as any)
+    const r = (await supabase
       .from('listings')
       .select(
-        'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
+        'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
       )
       .eq('status', 'active')
       .not('lat', 'is', null)

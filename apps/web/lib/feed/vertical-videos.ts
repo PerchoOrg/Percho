@@ -37,7 +37,7 @@
 
 import { type TourSegment, tourSegments } from '@/lib/feed/tour-segments';
 import { mobileVideoUid } from '@/lib/feed/video-uid';
-import { createServiceClient } from '@/lib/supabase/server';
+import { type TypedClient, createServiceClient } from '@/lib/supabase/server';
 
 const CF_STREAM_BASE = 'https://videodelivery.net';
 
@@ -191,8 +191,7 @@ export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
  * strip falls back to the un-grouped film — never an empty strip.
  */
 async function fillSegmentBuckets(
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  supabase: any,
+  supabase: TypedClient,
   segmentsByCommunity: Map<string, TourSegment[]>,
 ): Promise<void> {
   const communityIds = [...segmentsByCommunity.keys()];

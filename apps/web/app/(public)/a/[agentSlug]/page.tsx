@@ -53,8 +53,7 @@ type ListingCard = {
 
 async function fetchAgent(agentSlug: string): Promise<AgentRow | null> {
   const supabase = await createClient();
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data } = (await (supabase as any)
+  const { data } = (await supabase
     .from('agents')
     .select('id, slug, name, email, phone, headshot_url, brokerage, license_no, bio')
     .eq('slug', agentSlug)
@@ -65,8 +64,7 @@ async function fetchAgent(agentSlug: string): Promise<AgentRow | null> {
 async function fetchListings(agentId: string): Promise<ListingCard[]> {
   const supabase = await createClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: rawListings } = (await (supabase as any)
+  const { data: rawListings } = (await supabase
     .from('listings')
     .select('id, slug, address, city, state, zip, price, beds, baths, sqft, cover_url, created_at')
     .eq('agent_id', agentId)
@@ -79,8 +77,7 @@ async function fetchListings(agentId: string): Promise<ListingCard[]> {
   if (listings.length === 0) return [];
 
   const ids = listings.map((l) => l.id);
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: rawVideos } = (await (supabase as any)
+  const { data: rawVideos } = (await supabase
     .from('listing_videos')
     .select('listing_id, cf_video_id, sort_order')
     .in('listing_id', ids)

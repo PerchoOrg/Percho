@@ -247,8 +247,7 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
     return { ok: false, skipped: 'no_key' };
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const admin: any = createServiceClient();
+  const admin = createServiceClient();
 
   const { data: photo, error: photoErr } = await admin
     .from('poi_photos')

@@ -15,17 +15,15 @@
  * Run: pnpm --filter @percho/web seedance-worker   (or tsx directly)
  * Install as launchd agent for always-on (see scripts/seedance-worker/README).
  */
-import { config as loadEnv } from 'dotenv';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { loadEnv } from './loadEnv.js';
 
 const execFileP = promisify(execFile);
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-loadEnv({ path: path.join(repoRoot, '.env.local') });
+loadEnv();
 
 /**
  * Re-encode a Seedance mp4 into a stream-friendly one: moov at the front
@@ -70,7 +68,32 @@ import { AI_VIDEO_ASPECT, AI_VIDEO_BUCKET } from '../../apps/web/lib/poi/ai-tour
 const PHOTO_BUCKET = 'listing-photos';
 const POLL_DB_MS = 10_000; // how often we scan for work
 const MAX_JOBS_PER_TICK = 1; // one at a time — generation is minutes long
-const STALE_PROCESSING_MS = 30 * 60 * 1000; // a job stuck processing this long = retry
+/**
+ * A row claimed this long ago that never saved a polling_url: the worker died
+ * somewhere between the claim and recording the provider's job. Whether the
+ * paid submit went out cannot be known from here, so the row FAILS saying so.
+ * It used to go back to `pending`, which pays for the same clip a second time
+ * whenever the crash came after the submit — and Seedance is only ever re-run
+ * by hand (owner, 2026-08-19).
+ */
+const STALE_PROCESSING_MS = 30 * 60 * 1000;
+const SUBMIT_OUTCOME_UNKNOWN =
+  'worker stopped before saving the provider job; the paid submit may have gone out — check OpenRouter before regenerating';
+/**
+ * A row that HAS a polling_url has a paid generation behind it. A poll,
+ * download, transcode or upload error on it is retried next tick instead of
+ * failing the row and stranding the clip, until the job is this old.
+ */
+const PROCESSING_GIVE_UP_MS = 2 * 60 * 60 * 1000;
+
+function ageMs(row: { updated_at: string }): number {
+  return Date.now() - new Date(row.updated_at).getTime();
+}
+
+/** An error on an in-flight paid job that is still worth retrying. */
+function retryLater(row: { status: string; polling_url: string | null; updated_at: string }): boolean {
+  return row.status === 'processing' && !!row.polling_url && ageMs(row) < PROCESSING_GIVE_UP_MS;
+}
 
 type Row = {
   id: string;
@@ -99,7 +122,7 @@ function log(...args: unknown[]) {
 async function claim(id: string): Promise<boolean> {
   const { data } = (await sb
     .from('ai_tour_videos')
-    .update({ status: 'submitting', updated_at: new Date().toISOString() })
+    .update({ status: 'submitting', provider_job_id: null, polling_url: null, updated_at: new Date().toISOString() })
     .eq('id', id)
     .eq('status', 'pending')
     .select('id')) as { data: Array<{ id: string }> | null };
@@ -173,7 +196,7 @@ async function submitClip(row: Row): Promise<void> {
     aspectRatio: row.aspect_ratio ?? AI_VIDEO_ASPECT,
   });
 
-  await sb
+  const { error: saveErr } = await sb
     .from('ai_tour_videos')
     .update({
       status: 'processing',
@@ -182,6 +205,11 @@ async function submitClip(row: Row): Promise<void> {
       updated_at: new Date().toISOString(),
     })
     .eq('id', row.id);
+  if (saveErr) {
+    // The generation is paid for; this line is the only record of where it is.
+    log('SUBMITTED BUT NOT SAVED', row.id, 'job', job.id, 'polling_url', job.pollingUrl, saveErr.message);
+    return;
+  }
   log('submitted', row.id, 'job', job.id, `${frameUrls.length} frames`);
 }
 
@@ -233,7 +261,7 @@ async function tick(): Promise<void> {
   const { data } = (await sb
     .from('ai_tour_videos')
     .select('*')
-    .in('status', ['pending', 'processing'])
+    .in('status', ['pending', 'submitting', 'processing'])
     .order('created_at', { ascending: true })
     .limit(20)) as { data: Row[] | null };
 
@@ -247,23 +275,19 @@ async function tick(): Promise<void> {
           done += 1;
         }
       } else {
-        // processing: only finalize if the job isn't stale (or if it has a
-        // polling_url). A stale processing row with no polling_url (crashed
-        // mid-submit) gets reset to pending so the next tick re-submits.
+        // submitting / processing. No polling_url means the worker died
+        // mid-submit — see STALE_PROCESSING_MS for why that fails, not retries.
         if (!row.polling_url) {
-          const ageMs = Date.now() - new Date(row.updated_at).getTime();
-          if (ageMs > STALE_PROCESSING_MS) {
-            await sb
-              .from('ai_tour_videos')
-              .update({ status: 'pending', updated_at: new Date().toISOString() })
-              .eq('id', row.id);
-            log('reset stale processing -> pending', row.id);
-          }
+          if (ageMs(row) > STALE_PROCESSING_MS) await fail(row.id, SUBMIT_OUTCOME_UNKNOWN);
           continue;
         }
         if (await finalizeClip(row)) done += 1;
       }
     } catch (err) {
+      if (retryLater(row)) {
+        log('retry next tick', row.id, (err instanceof Error ? err.message : String(err)).slice(0, 300));
+        continue;
+      }
       await fail(row.id, err);
     }
   }
@@ -397,7 +421,7 @@ async function processClipQueue(scope: ClipScope, budget: number): Promise<numbe
         // leaving the row pending forever (owner 2026-08-16).
         const { data: claimed } = (await sb
           .from(scope.clipTable)
-          .update({ status: 'processing', updated_at: new Date().toISOString() })
+          .update({ status: 'processing', provider_job_id: null, polling_url: null, updated_at: new Date().toISOString() })
           .eq('id', row.id)
           .eq('status', 'pending')
           .select('id')) as { data: Array<{ id: string }> | null };
@@ -459,7 +483,7 @@ async function processClipQueue(scope: ClipScope, budget: number): Promise<numbe
           mode: 'frames',
         });
 
-        await sb
+        const { error: saveErr } = await sb
           .from(scope.clipTable)
           .update({
             status: 'processing',
@@ -468,16 +492,22 @@ async function processClipQueue(scope: ClipScope, budget: number): Promise<numbe
             updated_at: new Date().toISOString(),
           })
           .eq('id', row.id);
+        if (saveErr) {
+          // The generation is paid for; this line is the only record of where it is.
+          log(scope.label, 'SUBMITTED BUT NOT SAVED', row.id, 'job', job.id, 'polling_url', job.pollingUrl, saveErr.message);
+          done += 1;
+          continue;
+        }
         log(scope.label, 'submitted', row.id, 'job', job.id);
       } else {
         if (!row.polling_url) {
-          const ageMs = Date.now() - new Date(row.updated_at).getTime();
-          if (ageMs > STALE_PROCESSING_MS) {
+          // See STALE_PROCESSING_MS: fail, never back to pending.
+          if (ageMs(row) > STALE_PROCESSING_MS) {
             await sb
               .from(scope.clipTable)
-              .update({ status: 'pending', updated_at: new Date().toISOString() })
+              .update({ status: 'failed', error: SUBMIT_OUTCOME_UNKNOWN, updated_at: new Date().toISOString() })
               .eq('id', row.id);
-            log('reset stale', scope.label, '-> pending', row.id);
+            log(scope.label, 'stale with no polling_url -> failed', row.id);
           }
           continue;
         }
@@ -514,6 +544,7 @@ async function processClipQueue(scope: ClipScope, budget: number): Promise<numbe
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       log(scope.label, 'error', row.id, message.slice(0, 300));
+      if (retryLater(row)) continue;
       await sb
         .from(scope.clipTable)
         .update({ status: 'failed', error: message.slice(0, 500), updated_at: new Date().toISOString() })

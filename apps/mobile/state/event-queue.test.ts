@@ -13,6 +13,7 @@ import {
 	type QueuedEvent,
 	capQueue,
 	noopTransport,
+	shouldAutoDrain,
 	useEventQueue,
 } from "./event-queue";
 
@@ -154,6 +155,57 @@ describe("drain", () => {
 		release(true);
 		await first;
 		expect(transport).toHaveBeenCalledOnce();
+	});
+});
+
+describe("drain — cap eviction during a flight", () => {
+	it("removes exactly what was sent, not the first N of whatever is left", async () => {
+		let release: (v: boolean) => void = () => {};
+		q().setTransport(
+			() =>
+				new Promise<boolean>((resolve) => {
+					release = resolve;
+				}),
+		);
+		const [e1, e2, e3] = [ev(1), ev(2), ev(3)];
+		useEventQueue.setState({ queue: [e1, e2, e3] });
+		const inFlight = q().drain();
+		// The cap evicts the two oldest mid-flight while two new events arrive.
+		useEventQueue.setState({ queue: [e3, ev(4), ev(5)] });
+		release(true);
+		await inFlight;
+		// ev(3) went out; ev(4) and ev(5) never did and must survive.
+		expect(q().queue.map((e) => e.seq)).toEqual([4, 5]);
+	});
+});
+
+describe("shouldAutoDrain", () => {
+	const of = (n: number) => Array.from({ length: n }, (_, i) => ev(i + 1));
+
+	it("drains when the queue grows past the threshold", () => {
+		expect(
+			shouldAutoDrain(
+				{ queue: of(20), draining: false },
+				{ queue: of(19) },
+				20,
+			),
+		).toBe(true);
+	});
+
+	it("does not re-drain when a failed drain only clears `draining`", () => {
+		const queue = of(25);
+		expect(shouldAutoDrain({ queue, draining: false }, { queue }, 20)).toBe(
+			false,
+		);
+	});
+
+	it("waits below the threshold and while a drain is in flight", () => {
+		expect(
+			shouldAutoDrain({ queue: of(5), draining: false }, { queue: of(4) }, 20),
+		).toBe(false);
+		expect(
+			shouldAutoDrain({ queue: of(30), draining: true }, { queue: of(29) }, 20),
+		).toBe(false);
 	});
 });
 

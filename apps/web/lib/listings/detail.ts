@@ -38,8 +38,8 @@ import { mobileVideoUid } from '@/lib/feed/video-uid';
 import { type RentEstimateDTO, rentEstimateForZip } from '@/lib/listings/rent-index';
 import { type NearestSchoolRow, type SchoolDTO, projectSchools } from '@/lib/listings/schools';
 import type { Database } from '@/lib/supabase/database.types';
+import { createUncachedAnonClient, createUncachedServiceClient } from '@/lib/supabase/server';
 import { photoPublicUrl, preferredPhotoPath } from '@/lib/supabase/storage';
-import { createClient as createPlainClient } from '@supabase/supabase-js';
 
 /** Mirrors the tagger's output (`scripts/render-worker/photo_tagger.py`). */
 export interface PhotoTagsDTO {
@@ -416,67 +416,6 @@ export function projectComps(rows: CompRow[], cohortLabel: string): CompsCohortD
 const COMPS_LIMIT = 400;
 
 /**
- * Anon client with Next's fetch cache explicitly DISABLED.
- *
- * Next 14 patches global `fetch` and, in the App Router, persists responses to
- * `.next/cache/fetch-cache` ON DISK — surviving a dev-server restart. supabase-js
- * uses `fetch`, so a listing read gets pinned to whatever the row looked like the
- * first time it was requested.
- *
- * That cost a real debugging detour on 2026-07-27: after backfilling
- * `listing_photos.ai_tags`, the DB and a direct PostgREST call with the SAME anon
- * key both returned 10 tagged photos while this endpoint kept returning 0 tagged —
- * through a restart, and for one listing but not another (whichever had been
- * requested pre-backfill). `export const dynamic = 'force-dynamic'` on the route
- * does NOT cover this; that governs route rendering, not the inner fetch cache.
- *
- * `cache: 'no-store'` on the client's own fetch is the fix. This data is
- * per-listing and read once per screen open, so there is nothing to gain from
- * caching it here anyway.
- */
-function createUncachedAnonClient() {
-  return createPlainClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
-    {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: {
-        fetch: (input: RequestInfo | URL, init?: RequestInit) =>
-          fetch(input, { ...init, cache: 'no-store' }),
-      },
-    },
-  );
-}
-
-/**
- * Service-role client for the ONE read RLS cannot serve: the `mls_listings`
- * mirror is deliberately policy-less ("Server-role only", migration
- * 20260704075823), so the anon client's mirror read always came back empty
- * and daysOnMarket / lot / MLS number silently never shipped (phase119.1).
- *
- * Same trust model as the mobile feed route, which already reads
- * community-video rows with `createServiceClient()` from this unauthenticated
- * namespace: server-side only, projecting three non-sensitive display fields
- * for a listing the caller can already see, and only when the mirror row's
- * `internet_entire_listing_display_yn` does not forbid display. Same
- * `no-store` wrapper as the anon client — the fetch-cache trap above applies
- * to any supabase-js client.
- */
-function createUncachedServiceClient() {
-  return createPlainClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-    process.env.SUPABASE_SERVICE_ROLE_KEY as string,
-    {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: {
-        fetch: (input: RequestInfo | URL, init?: RequestInit) =>
-          fetch(input, { ...init, cache: 'no-store' }),
-      },
-    },
-  );
-}
-
-/**
  * Fetches one listing by id OR slug. Both because the feed carries ids while
  * shared/deep-linked URLs are slugs, and a screen that only accepts one of them
  * dead-ends the other.
@@ -518,8 +457,13 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
         .eq('status', 'active')
         .not('price', 'is', null)
         .limit(COMPS_LIMIT),
-      // The MLS mirror row, when the sync has linked one. Service-role client —
-      // see `createUncachedServiceClient` for why anon cannot read the mirror.
+      // The MLS mirror row, when the sync has linked one. Service role: the
+      // `mls_listings` mirror is deliberately policy-less ("Server-role only",
+      // 20260704075823), so an anon read always came back empty and
+      // daysOnMarket / lot / MLS number never shipped (phase119.1). Safe here
+      // for the same reason as the mobile feed route: server-side only,
+      // three non-sensitive display fields, for a listing the caller can
+      // already see, and nothing when the MLS forbids display.
       // `maybeSingle`: a missing mirror is normal, not an error. The display
       // flag is fetched so a row the MLS forbids displaying projects nothing.
       createUncachedServiceClient()
