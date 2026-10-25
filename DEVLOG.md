@@ -22,6 +22,81 @@ rotation, not on the way in.
 
 ---
 
+## 2026-10-25 00:40 UTC — phase308: FMLS contract read; iOS ships first without listings (route A); phase306 merged
+
+**Objective**: owner — FMLS sent a $5,000 invoice; plan iOS first, pay FMLS
+after, market after go-live, and get the most out of the licence year. Then:
+"现在的重点是如何尽快上线ios".
+
+**The signed contract** (FMLS Licensed Content Third Party Vendor agreement,
+signed by both sides 2026-10-22; the PDF is attached to the Remine "summary of
+your activity" email — not committed, it carries personal contact details):
+- Effective Date **2026-10-12**; §12 one-year Initial Term, auto-renews yearly
+  unless either side gives notice ≥60 days before term end (2027-08-13).
+- **Appendix B: the $5,000 is due "at the time access to 'live' listing
+  content is provided to and displayed by Vendor"**, first month prorated —
+  not at signing. FMLS's Square invoice #20230 says "due 2026-10-22", which
+  contradicts it. The 10-06 email ("paid once the contract is signed") is
+  superseded by the contract (§23 complete agreement).
+- Appendix A Authorized Purpose: "A lifestyle exploring app with housing
+  information. Uses media to generate an animation video with zooming and
+  panning effects." **Vendor System: https://www.percho.co/ only** — the iOS
+  app needs a signed amendment (§1.7, §3.8, §23) before it shows FMLS data.
+- §3.7 is the AI ban the emails called 4.11 (material breach). §3.1(vii): no
+  Licensed Content in advertising without FMLS's written consent — marketing
+  uses community films, not FMLS listings. §3.1(iii): no processing with
+  other-source data "except as expressly authorized" (grey for a lifestyle
+  app; owner's call). §3.5(d): FMLS may cut access if Licensed Data appears
+  next to IP-infringing content. §3.6 written infosec program + 48 h breach
+  notice. §24 WCAG 2.1 AA. §13.4 destroy Licensed Content and derivatives
+  within 10 days of termination.
+- Reply drafted in Gmail (not sent): pay at live access with 12 months from
+  then, add the iOS app to Appendix A, keep test data alive until then.
+
+**Decisions**:
+- iOS v1.0 ships with communities only; FMLS listings come in a later app
+  version (v1.1, through review — not a server switch, Guideline 2.3.1).
+- Owner chose **route A**: ship the community layer as it is. Route B (a
+  small launch set filmed by us) was offered because the contentful
+  communities are the Nextdoor-scraped 8,678 and the films are built from
+  Google Places / builder photos (`docs/references/content-provenance.md`).
+  Owner: the Google photos were bought through the API and may be used.
+  Recorded against that: Google's Places policies say "You must not
+  pre-fetch, cache, or store Places API content" (only `place_id` is exempt)
+  and "You must always credit the author when displaying photos". Route A
+  stands; author credit for Places photos is added as the cheap half.
+
+**Actions**:
+- Merged `origin/phase306/audit-and-refactor` (2026-10-05) → `f5f9ce0f` on
+  main. Conflicts: DEVLOG/RELEASE kept both sides newest-first; browse-cards
+  selects carry both `ai_style` (306.5) and `mls_number` (307.1); search page
+  `searchCommunityListCards` + `linkForCard`; carousel keeps
+  `fmlsNumberLabel`, drops the unused `hls.js` import; devlog-order test keeps
+  the index-driven archive read. Gates on the merge result: typecheck 0, lint
+  0 errors, mobile 813 / web 1217 tests, `next build` compiles, every select
+  column in the 121 touched files exists in `database.types.ts`.
+- `echo | pnpm db:push --include-all` from the reference worktree: "Applying
+  migration 20261005000000_tighten_admin_flag_and_anon_writes.sql... Finished
+  supabase db push." (`--include-all` because it predates the applied
+  20261018 migration.)
+- Reference worktree fast-forwarded to `f5f9ce0f` + `pnpm install`.
+- `com.percho.seedance-worker` restarted (`launchctl kickstart -k`) — it was
+  the Aug 30 process; idle (0 jobs) before and after.
+
+**Issues**: the first `next build` on the merge result died inside webpack
+("Cannot read properties of null (reading '1')"); the second run on the same
+tree compiled clean. Not reproduced, not investigated further.
+
+**Next steps**:
+- Mobile community-only mode (listing surfaces hidden, mobile API returns no
+  listings), store-copy fix, MacLeod credit, Google author credit.
+- `agents` is publicly readable — every app user's email — a privacy
+  blocker for the store; needs an RLS change.
+- Owner: build 6 / TestFlight (or allow `eas build` for the agent), App Store
+  Connect forms, rotate the Supabase service-role key, D-U-N-S in parallel;
+  check `select email from agents where is_admin` for use of the closed
+  self-grant (phase306 next step).
+
 ## 2026-10-19 04:07 UTC — phase307: owner leaves the Gemini-tagged FMLS rows as they are (demo stage)
 
 **Decision**: owner, on the licence §4.11 / §4.4 finding in the entry below —
