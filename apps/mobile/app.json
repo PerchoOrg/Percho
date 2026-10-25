@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "co.percho.app",
-      "buildNumber": "7",
+      "buildNumber": "8",
       "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
