@@ -22,6 +22,37 @@ rotation, not on the way in.
 
 ---
 
+## 2026-10-25 09:26 UTC — phase308.13: App Store record for v1.0 filled over the ASC API
+
+**Objective**: owner — "先帮我做 需要ios app发布 的步骤".
+
+**State before** (ASC API): version 1.0.0 `PREPARE_FOR_SUBMISSION`, no build,
+empty description / keywords / promo, no subtitle, no screenshots, no review
+details, `userGeneratedContent: false`, `contentRightsDeclaration: null`,
+release type `AFTER_APPROVAL`, a price schedule with no price, no territory
+availability.
+
+**Done** (scratchpad scripts signing with the ASC key `P68W57U2G9`):
+- description / keywords / promotional text / marketing URL from
+  `docs/ios-release.md` (paragraphs re-joined — the doc is hard-wrapped);
+  subtitle; copyright `2026 Percho Inc.`; release type **MANUAL**.
+- age rating `userGeneratedContent: true` → still `FOUR_PLUS`.
+- build 1.0.0 (7) attached (`VALID`).
+- price **Free** (`appPriceSchedules` 201).
+- App Review demo account `app-review@percho.co` created with the Supabase
+  admin API (password random, never printed; landed as a buyer, so the new
+  `handle_new_user` default works); password sign-in with the app's anon key
+  → 200. Review details (contact, demo account, required, notes: v1.0 is
+  neighbourhoods only, the password path, UGC moderation and Report link,
+  fair-housing, no location, account deletion) → 201.
+
+**Left for the owner** (attestations or things only the device / web UI can
+do): App Privacy labels (v1.0: Name and Phone not collected — runbook);
+Content Rights declaration (the app shows third-party content); territory
+availability; screenshots (6.9", from build 7); device pass; rotate the
+Supabase service-role key; then Submit — the agent can submit over the API
+on the owner's word.
+
 ## 2026-10-25 08:46 UTC — phase308.10–11: film photo + music credits; build 7 on TestFlight
 
 **Objective**: provenance items 2 and 5 under route A — Google's Places
