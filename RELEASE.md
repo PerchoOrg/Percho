@@ -21,6 +21,9 @@ device — there's no form to fill in, and a left swipe never blacklists
 anything; it just means "less of this for now".
 
 ### 2026-10-25
+- **Credits on screen.** Each neighbourhood page in the app now names the
+  photographers whose photos its film uses, and the You tab credits the
+  film music.
 - **Privacy fix:** people's email, phone and account details can no longer
   be looked up by other users. Only agents with a live listing or a
   neighbourhood page have a public profile now.

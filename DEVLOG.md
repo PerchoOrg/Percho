@@ -22,6 +22,48 @@ rotation, not on the way in.
 
 ---
 
+## 2026-10-25 08:46 UTC — phase308.10–11: film photo + music credits; build 7 on TestFlight
+
+**Objective**: provenance items 2 and 5 under route A — Google's Places
+policy ("You must always credit the author when displaying photos") and
+Kevin MacLeod's CC BY 4.0 — before the store submission.
+
+**Actions** (`6fe95126`, `9f256d80`):
+- `apps/web/lib/communities/film-credits.ts`: the served film's photo ids
+  (winning stream uid → `tour_assemblies.ordered_clips` /
+  `generated_videos.input_photo_ids`; no uid → latest ready
+  `ai_tour_videos.input_photo_ids`) → `poi_photos.attribution
+  .authorAttributions[].displayName` for `source='google_places'`, in film
+  order, deduped. Service role, as `vertical-videos.ts` already is (RLS:
+  admins read assemblies, agents read poi_photos); only display names leave.
+  `CommunityDetailDTO.photoCredits`; the iOS community page prints "Film
+  photos by …, via Google Maps." under the Nextdoor source line. The feed
+  card carries none — the policy allows that when the larger view does.
+- Music: one CC BY 4.0 credit on the You tab naming all ten `KML_TRACKS`
+  of `scripts/render-worker/bgm/fetch.sh` (the render machine's manifest has
+  seven; the bucket is the library of record). Per-film credit was rejected:
+  the worker plays a random track when the planned file is missing and never
+  writes the choice back for community films, and bucket videos record no
+  track at all. `lib/bgm/incompetech.ts` no longer claims the render credits it.
+- Build 7: `eas build` `251c4394` (1.0.0 (7), from `6fe95126`), submission
+  `542ab12b`; ASC: `VALID`, in `Internal`. `app.json` buildNumber 7 on main.
+
+**Verification**: live `/api/mobile/community/<id>` for the five filmed
+communities — Apremont-Highcroft 22, Aberdeen 23, Ashley Crossing 24,
+Windward 24, Bellmoore Park 21 credited authors. Gates: typecheck 0, lint 0
+errors, mobile 820 / web 1229 tests, `expo export`, `next build`.
+
+**Findings (owner's call, nothing changed)**:
+- 11 soundtrack files have no recorded origin (digital-clouds,
+  driving-ambition, feeling-happy, just-keep-walking, lifes-a-movie,
+  serene-view, summers-here, the-hamptons, tides-turning, under-the-sun,
+  walking-in-the-park; phase139 manifest commit `7da1473c` says "author
+  unknown"). They cannot be credited or shown to be licensed.
+- The web community pages play the same films with no photo credit.
+
+**Next steps**: owner device pass on build 7; the two findings above; the
+Supabase service-role key rotation; App Store Connect forms and submit.
+
 ## 2026-10-25 04:08 UTC — phase308.6–8: build 6 on TestFlight; buyers by default; community writes need an agent; store copy
 
 **Objective**: owner — "you have my approvals" (the `eas` rule, the
