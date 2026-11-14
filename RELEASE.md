@@ -21,6 +21,21 @@ device — there's no form to fill in, and a left swipe never blacklists
 anything; it just means "less of this for now".
 
 ### 2026-11-14
+- **The website now matches the iPhone app: neighbourhoods only.** Homes
+  for sale are no longer shown on the website — the For You tab, home pages
+  and home results in search are gone for now, and old home links open the
+  Neighbourhoods page instead. They come back together with the app's
+  homes version.
+- **Saving needs an account, and your saves follow you.** Tapping Save
+  while signed out takes you to sign in first. What you save on the website
+  now shows up in the app and the other way round. Neighbourhood pages on
+  the website have a Save button at the top.
+- **Compare neighbourhoods on the website.** In Favorites, tap Compare,
+  pick two to five saved neighbourhoods and see Percho's take and the
+  numbers side by side — the same comparison the app shows. Needs an
+  account.
+- **Northbrooke (Cumming) has a cover photo** and now plays in the app's
+  feed alongside the other filmed neighbourhoods.
 - **Neighbourhoods show only ones with a film.** The Neighbourhoods page and
   neighbourhood search on the website, and search and the map in the iPhone
   app, now list only places that have a video to watch, instead of a long
