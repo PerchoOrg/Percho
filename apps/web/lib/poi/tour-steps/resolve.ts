@@ -3,6 +3,7 @@
  * candidate POIs. A name the agents invented resolves to nothing and is
  * dropped here rather than reaching the photo fetch.
  */
+import { idColumnOf, poisTableOf } from './scope';
 import { type RunRow, type TourDb, saveStep, setRunStatus } from './shared';
 
 export async function runResolve(sb: TourDb, run: RunRow) {
@@ -69,7 +70,9 @@ export async function runResolve(sb: TourDb, run: RunRow) {
   }
 
   const { resolveCandidates } = await import('@/lib/poi/community-tour');
-  const radiusMeters = 6000; // suburban default — the <4 POI widen hook lives at step 4
+  // Suburban default — the <4 POI widen hook lives at step 4. A city film
+  // (phase318) searches the whole town around its centre.
+  const radiusMeters = run.scope.kind === 'city' ? 10000 : 6000;
   // The community's real city/state, not the agent's guess at a street address.
   const locality = [research.community?.city, research.community?.state].filter(Boolean).join(', ');
   const result = await resolveCandidates(candidates, center, radiusMeters, locality);
@@ -85,9 +88,9 @@ export async function runResolve(sb: TourDb, run: RunRow) {
   // quality"; making the RESULT stable is more attainable than making the
   // model deterministic.
   const { data: existing } = (await sb
-    .from('community_pois')
+    .from(poisTableOf(run.scope))
     .select('poi_id, pois!inner(google_place_id)')
-    .eq('community_id', run.community_id)) as {
+    .eq(idColumnOf(run.scope), run.entity_id)) as {
     data: Array<{ poi_id: string; pois: { google_place_id: string | null } | null }> | null;
   };
   const knownPlaceIds = new Map(
@@ -110,7 +113,7 @@ export async function runResolve(sb: TourDb, run: RunRow) {
     }),
   };
   await saveStep(sb, run, 'resolve', annotated);
-  await setRunStatus(sb, run.id, result.resolved.length >= 4 ? 'fetching_photos' : 'resolving');
+  await setRunStatus(sb, run, result.resolved.length >= 4 ? 'fetching_photos' : 'resolving');
   return { resolved: result.resolved.length, dropped: result.dropped.length };
 }
 

@@ -4,7 +4,7 @@
  * Runs INLINE on Vercel: plain HTTP to Gemini, no local CLI. ~5-10s total,
  * comfortably under the platform function timeout.
  */
-import { buildResearchPrompt } from '@/lib/ai/community-tour-prompt';
+import { buildCityResearchPrompt, buildResearchPrompt } from '@/lib/ai/community-tour-prompt';
 import type { Json } from '@/lib/supabase/database.types';
 import { extractJsonObject } from '@/lib/utils/extract-json';
 import { type RunRow, type TourDb, asJson, bestEffortWrite, mustWrite } from './shared';
@@ -12,15 +12,8 @@ import { type RunRow, type TourDb, asJson, bestEffortWrite, mustWrite } from './
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 async function geminiResearch(opts: {
-  community: {
-    name: string;
-    city: string | null;
-    state: string | null;
-    zip: string | null;
-    lat: number | null;
-    lng: number | null;
-  };
-  runId: string;
+  prompt: string;
+  run: RunRow;
   sb: TourDb;
 }): Promise<{
   ok: boolean;
@@ -45,15 +38,15 @@ async function geminiResearch(opts: {
   const model = process.env.GEMINI_RESEARCH_MODEL ?? 'gemini-3.7-flash';
   const key = process.env.GEMINI_API_KEY;
   if (!key) return { ok: false, text: '', error: 'GEMINI_API_KEY not set' };
-  const prompt = buildResearchPrompt(opts.community);
+  const prompt = opts.prompt;
   const url = `${GEMINI_API_BASE}/${model}:generateContent`;
   const startedAt = new Date().toISOString();
   const patchProgress = async (patch: Record<string, unknown>) => {
-    const { data: run } = await opts.sb
-      .from('community_tour_runs')
+    const { data: run } = (await opts.sb
+      .from(opts.run.scope.runsTable)
       .select('step_results')
-      .eq('id', opts.runId)
-      .maybeSingle();
+      .eq('id', opts.run.id)
+      .maybeSingle()) as { data: { step_results: Json } | null };
     if (!run) return;
     // JSONB column — the schema types it as `Json`, which admits primitives
     // and null, so narrow before spreading.
@@ -61,12 +54,12 @@ async function geminiResearch(opts: {
     await bestEffortWrite(
       'research progress',
       opts.sb
-        .from('community_tour_runs')
+        .from(opts.run.scope.runsTable)
         .update({
           step_results: asJson({ ...existing, ...patch }),
           updated_at: new Date().toISOString(),
         })
-        .eq('id', opts.runId),
+        .eq('id', opts.run.id),
     );
   };
   await patchProgress({
@@ -172,20 +165,37 @@ export async function runResearch(
     return { ok: true, started: false };
   }
 
-  const { data: community } = await sb
-    .from('communities')
-    .select('id, name, city, state, zip, lat, lng, website')
-    .eq('id', run.community_id)
-    .maybeSingle();
-  if (!community) {
-    return { ok: false, started: false, error: 'community not found' };
+  // A city (phase318) has no `city` / `zip` column — its name is the city.
+  const { data: place } = (await (run.scope.kind === 'city'
+    ? sb.from('cities').select('id, name, state, lat, lng, website').eq('id', run.entity_id)
+    : sb
+        .from('communities')
+        .select('id, name, city, state, zip, lat, lng, website')
+        .eq('id', run.entity_id)
+  ).maybeSingle()) as {
+    data: {
+      id: string;
+      name: string;
+      city?: string | null;
+      state: string | null;
+      zip?: string | null;
+      lat: number | null;
+      lng: number | null;
+      website: string | null;
+    } | null;
+  };
+  if (!place) {
+    return { ok: false, started: false, error: `${run.scope.kind} not found` };
   }
+  const community = {
+    ...place,
+    city: run.scope.kind === 'city' ? place.name : (place.city ?? null),
+    zip: place.zip ?? null,
+  };
+  const prompt =
+    run.scope.kind === 'city' ? buildCityResearchPrompt(community) : buildResearchPrompt(community);
 
-  const result = await geminiResearch({
-    community,
-    runId: run.id,
-    sb,
-  });
+  const result = await geminiResearch({ prompt, run, sb });
   if (!result.ok) {
     return { ok: false, started: false, error: result.error ?? 'research failed' };
   }
@@ -200,7 +210,7 @@ export async function runResearch(
       lat: community.lat,
       lng: community.lng,
     },
-    prompt: buildResearchPrompt(community),
+    prompt,
     agents: parsed,
     // Same reason as saveStep's stamp: the panel cannot otherwise tell a fresh
     // result from one produced by an older prompt.
@@ -209,7 +219,7 @@ export async function runResearch(
   await mustWrite(
     'save agent_research',
     sb
-      .from('community_tour_runs')
+      .from(run.scope.runsTable)
       .update({
         step_results: asJson({ ...run.step_results, agent_research: research }),
         updated_at: new Date().toISOString(),
@@ -231,7 +241,7 @@ export async function runResearch(
   if (site && !community.website) {
     await bestEffortWrite(
       'save community website',
-      sb.from('communities').update({ website: site }).eq('id', community.id),
+      sb.from(run.scope.entityTable).update({ website: site }).eq('id', community.id),
     );
   }
 
@@ -241,11 +251,14 @@ export async function runResearch(
   // you give me the candidate website urls that we got from agent research? so
   // i can select"). Best-effort: research succeeded, and a bookkeeping failure
   // must not turn that into a failed step.
-  try {
-    const { seedPhotoSources } = await import('./ingest');
-    await seedPhotoSources(sb, community.id, parsed);
-  } catch (err) {
-    console.error('[community-tour] seeding photo sources failed:', err);
+  // Communities only: website ingest has no city tables (phase318).
+  if (run.scope.kind === 'community') {
+    try {
+      const { seedPhotoSources } = await import('./ingest');
+      await seedPhotoSources(sb, community.id, parsed);
+    } catch (err) {
+      console.error('[community-tour] seeding photo sources failed:', err);
+    }
   }
 
   return { ok: true, started: true, communitySite: site ?? null };

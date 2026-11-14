@@ -53,7 +53,7 @@ export async function runFilter(
   // tagger and stayed 'pending', which the table renders as a red "rejected"
   // sitting in the Pending section (owner 2026-08-20: "i see some rejected
   // photos in the pending section").
-  const poiIds = [...(await tourPoiIds(sb, run.community_id, resolve?.resolved))];
+  const poiIds = [...(await tourPoiIds(sb, run.entity_id, resolve?.resolved, run.scope))];
   if (poiIds.length === 0) {
     return { error: 'no_pois', message: 'Nothing to filter — run the fetch steps first.' };
   }
@@ -121,7 +121,7 @@ export async function runFilter(
     reasons,
     ...(untagged > 0 ? { judged_untagged: untagged } : {}),
   });
-  await setRunStatus(sb, run.id, 'review');
+  await setRunStatus(sb, run, 'review');
 
   return {
     ok: true,

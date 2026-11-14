@@ -14,37 +14,52 @@
  */
 import type { IntentBucket } from './types';
 
-export interface PoiEntityScope {
+/**
+ * What the POI discovery and photo fetch need (`poi-actions-core.ts`). A city
+ * (phase318) is one of these, but not a `PoiEntityScope`: it has no bucket
+ * videos, and `generated_videos` has no `city_id`.
+ */
+export interface PoiPlaceScope {
   /** Used in log prefixes and error `reason` strings. */
-  readonly kind: 'listing' | 'community';
+  readonly kind: 'listing' | 'community' | 'city';
   /** Log prefix shared by both pipelines. */
   readonly logPrefix: string;
 
   // ─── entity ───────────────────────────────────────────────────────────
-  readonly entityTable: 'listings' | 'communities';
+  readonly entityTable: 'listings' | 'communities' | 'cities';
   /** Column that names the entity in user-facing copy. */
   readonly labelColumn: 'address' | 'name';
   /** Used when `labelColumn` is null on the row. */
   readonly labelFallback: string;
 
   // ─── join tables ──────────────────────────────────────────────────────
-  /** Owning FK on generated_videos and on the per-scope join tables. */
-  readonly idColumn: 'listing_id' | 'community_id';
-  /** The other owning FK, explicitly nulled on insert. */
-  readonly otherIdColumn: 'listing_id' | 'community_id';
-  readonly poiTable: 'listing_pois' | 'community_pois';
-  readonly photoJoinTable: 'listing_poi_photos' | 'community_poi_photos';
+  /** Owning FK on the per-scope join tables. */
+  readonly idColumn: 'listing_id' | 'community_id' | 'city_id';
+  readonly poiTable: 'listing_pois' | 'community_pois' | 'city_pois';
+  readonly photoJoinTable: 'listing_poi_photos' | 'community_poi_photos' | 'city_poi_photos';
 
-  // ─── bucket video ─────────────────────────────────────────────────────
-  /** `generated_videos.scope` discriminator. */
-  readonly videoScope: 'listing_intent_bucket' | 'community_intent_bucket';
-  readonly notFoundReason: 'listing_not_found' | 'community_not_found';
+  readonly notFoundReason: 'listing_not_found' | 'community_not_found' | 'city_not_found';
   readonly notFoundMessage: string;
 
   // ─── messages / routing ───────────────────────────────────────────────
   anchorNotFound(entityId: string): string;
   missingLatLng(label: string): string;
   revalidatePathFor(entityId: string): string;
+}
+
+/** A place that also has bucket videos — a listing or a community. */
+export interface PoiEntityScope extends PoiPlaceScope {
+  readonly kind: 'listing' | 'community';
+  readonly entityTable: 'listings' | 'communities';
+  /** Owning FK on generated_videos and on the per-scope join tables. */
+  readonly idColumn: 'listing_id' | 'community_id';
+  /** The other owning FK, explicitly nulled on insert. */
+  readonly otherIdColumn: 'listing_id' | 'community_id';
+  readonly poiTable: 'listing_pois' | 'community_pois';
+  readonly photoJoinTable: 'listing_poi_photos' | 'community_poi_photos';
+  /** `generated_videos.scope` discriminator. */
+  readonly videoScope: 'listing_intent_bucket' | 'community_intent_bucket';
+  readonly notFoundReason: 'listing_not_found' | 'community_not_found';
 }
 
 export const LISTING_SCOPE: PoiEntityScope = {
@@ -84,7 +99,23 @@ export const COMMUNITY_SCOPE: PoiEntityScope = {
   revalidatePathFor: (id) => `/dashboard/communities/${id}`,
 };
 
-/** Storage bucket for POI photos. Shared by both scopes. */
+export const CITY_SCOPE: PoiPlaceScope = {
+  kind: 'city',
+  logPrefix: '[city-poi]',
+  entityTable: 'cities',
+  labelColumn: 'name',
+  labelFallback: 'this city',
+  idColumn: 'city_id',
+  poiTable: 'city_pois',
+  photoJoinTable: 'city_poi_photos',
+  notFoundReason: 'city_not_found',
+  notFoundMessage: 'City not found.',
+  anchorNotFound: (id) => `city ${id} not found`,
+  missingLatLng: (label) => `city "${label}" has no lat/lng — set its town-centre point first`,
+  revalidatePathFor: (id) => `/admin/pipeline/city-tours/${id}`,
+};
+
+/** Storage bucket for POI photos. Shared by every scope. */
 export const POI_PHOTO_BUCKET = 'listing-photos';
 
 // ─── bucket-video result shapes ─────────────────────────────────────────

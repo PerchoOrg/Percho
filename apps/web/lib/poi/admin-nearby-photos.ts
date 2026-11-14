@@ -18,6 +18,13 @@
 import { type TypedClient, createServiceClient } from '@/lib/supabase/server';
 import { keepPhotoForTour } from './nearby-photo-scope';
 import { tourPoiIds } from './tour-poi-set';
+import {
+  CITY_TOUR,
+  COMMUNITY_TOUR,
+  type TourScope,
+  idColumnOf,
+  runsTableOf,
+} from './tour-steps/scope';
 
 export interface NearbyPhotoRow {
   id: string;
@@ -45,7 +52,10 @@ export interface NearbyPhotoRow {
   used_in: string[];
 }
 
-type Scope = { kind: 'community'; id: string } | { kind: 'listing'; id: string };
+type Scope =
+  | { kind: 'community'; id: string }
+  | { kind: 'listing'; id: string }
+  | { kind: 'city'; id: string };
 
 /**
  * Drop the photos that belong to POIs the tour never resolved.
@@ -58,13 +68,13 @@ type Scope = { kind: 'community'; id: string } | { kind: 'listing'; id: string }
  */
 async function narrowToTour<
   T extends { poi_id: string; status: string | null; reviewed_by: string | null },
->(sb: TypedClient, communityId: string, rows: T[]): Promise<T[]> {
+>(sb: TypedClient, tour: TourScope, communityId: string, rows: T[]): Promise<T[]> {
   if (rows.length === 0) return rows;
 
   const { data: runs } = (await sb
-    .from('community_tour_runs')
+    .from(runsTableOf(tour))
     .select('step_results')
-    .eq('community_id', communityId)
+    .eq(idColumnOf(tour), communityId)
     .order('created_at', { ascending: false })
     .limit(10)) as {
     data: Array<{ step_results: { resolve?: { resolved?: Array<{ place_id?: string }> } } }> | null;
@@ -76,7 +86,7 @@ async function narrowToTour<
 
   // Same set the fetch and tag steps work off — one definition, in
   // tour-poi-set.ts.
-  const focusPoiIds = await tourPoiIds(sb, communityId, resolved);
+  const focusPoiIds = await tourPoiIds(sb, communityId, resolved, tour);
 
   return rows.filter((row) => keepPhotoForTour(row, focusPoiIds));
 }
@@ -84,11 +94,12 @@ async function narrowToTour<
 export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> {
   const sb = createServiceClient();
 
-  const ownerCol = scope.kind === 'community' ? 'community_id' : 'listing_id';
   const columns = 'poi_id, intent_bucket, pois!inner(display_name)';
   const { data: links } = (await (scope.kind === 'community'
     ? sb.from('community_pois').select(columns).eq('community_id', scope.id)
-    : sb.from('listing_pois').select(columns).eq('listing_id', scope.id))) as {
+    : scope.kind === 'city'
+      ? sb.from('city_pois').select(columns).eq('city_id', scope.id)
+      : sb.from('listing_pois').select(columns).eq('listing_id', scope.id))) as {
     data: Array<{
       poi_id: string;
       intent_bucket: string | null;
@@ -121,17 +132,29 @@ export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> 
   };
 
   const rows =
-    scope.kind === 'community' ? await narrowToTour(sb, scope.id, photos ?? []) : (photos ?? []);
+    scope.kind === 'listing'
+      ? (photos ?? [])
+      : await narrowToTour(
+          sb,
+          scope.kind === 'city' ? CITY_TOUR : COMMUNITY_TOUR,
+          scope.id,
+          photos ?? [],
+        );
   if (rows.length === 0) return [];
 
   // Which rendered videos used each photo. Scoped to THIS owner — a photo used
   // in another community's video is not "in this community's video".
+  // A city has no bucket videos (phase318), so nothing to look up.
   const usedIn = new Map<string, string[]>();
-  const { data: vids } = (await sb
-    .from('generated_videos')
-    .select('intent_bucket, scope, input_photo_ids')
-    .eq(ownerCol, scope.id)
-    .not('input_photo_ids', 'is', null)) as {
+  const { data: vids } = (
+    scope.kind === 'city'
+      ? { data: [] }
+      : await sb
+          .from('generated_videos')
+          .select('intent_bucket, scope, input_photo_ids')
+          .eq(scope.kind === 'community' ? 'community_id' : 'listing_id', scope.id)
+          .not('input_photo_ids', 'is', null)
+  ) as {
     data: Array<{
       intent_bucket: string | null;
       scope: string | null;

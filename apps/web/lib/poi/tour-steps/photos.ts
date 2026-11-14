@@ -9,8 +9,8 @@
  * still writes the shot list back into this step's result, because the whole
  * admin surface reads it from there.
  */
-import { COMMUNITY_SCOPE } from '@/lib/poi/entity-scope';
 import { type PoiActor, fetchPhotosForPoi } from '@/lib/poi/poi-actions-core';
+import { idColumnOf, ownerOf, poisTableOf } from './scope';
 import { type RunRow, type TourDb, asJson, mustWrite, saveStep, setRunStatus } from './shared';
 
 /**
@@ -309,9 +309,9 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     if (poi.bucket) bucketByPoiId.set(poiId!, poi.bucket);
     // Ensure community link (candidate status — admin reviews later).
     const { data: link } = await sb
-      .from('community_pois')
-      .select('community_id')
-      .eq('community_id', run.community_id)
+      .from(poisTableOf(run.scope))
+      .select('poi_id')
+      .eq(idColumnOf(run.scope), run.entity_id)
       .eq('poi_id', poiId)
       .maybeSingle();
     if (!link) {
@@ -320,8 +320,8 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
       // POI, which left `community_pois` empty — and that table is where the
       // admin page starts when it looks for a community's photos, so the
       // photos existed and the page showed none (owner 2026-08-17, Aberdeen).
-      const { error: linkErr } = await sb.from('community_pois').insert({
-        community_id: run.community_id,
+      const { error: linkErr } = await sb.from(poisTableOf(run.scope)).insert({
+        ...ownerOf(run.scope, run.entity_id),
         poi_id: poiId,
         intent_bucket: poi.bucket ?? 'other',
         status: 'candidate',
@@ -337,7 +337,10 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
         continue;
       }
     }
-    const r = await fetchPhotosForPoi(COMMUNITY_SCOPE, run.community_id, poiId!, { max: 3, actor });
+    const r = await fetchPhotosForPoi(run.scope.poiScope, run.entity_id, poiId!, {
+      max: 3,
+      actor,
+    });
     results[poi.place_id] = r;
   }
 
@@ -364,9 +367,9 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
   // discovery output stays 'candidate', and picking from that is what `resolve`
   // is for.
   const { data: links } = (await sb
-    .from('community_pois')
+    .from(poisTableOf(run.scope))
     .select('poi_id, intent_bucket')
-    .eq('community_id', run.community_id)
+    .eq(idColumnOf(run.scope), run.entity_id)
     .eq('status', 'approved')) as {
     data: Array<{ poi_id: string; intent_bucket: string | null }> | null;
   };
@@ -382,7 +385,7 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     // Amenity POIs arrive with their photos already ingested; a POI added by
     // hand usually arrives with none, and Places is where they come from.
     if (!count) {
-      const r = await fetchPhotosForPoi(COMMUNITY_SCOPE, run.community_id, link.poi_id, {
+      const r = await fetchPhotosForPoi(run.scope.poiScope, run.entity_id, link.poi_id, {
         max: 3,
         actor,
       });
@@ -485,7 +488,7 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     shots: [],
     dropped: [],
   });
-  await setRunStatus(sb, run.id, 'fetching_photos');
+  await setRunStatus(sb, run, 'fetching_photos');
   return {
     ok: true,
     poiCount: Object.keys(results).length,

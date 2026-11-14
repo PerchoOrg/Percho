@@ -50,7 +50,7 @@ export async function runTag(sb: TourDb, run: RunRow) {
   // `resolved_poi_ids` the photos step happened to write: `ingest` runs after
   // `photos` and creates POIs it could not have known about, and those are
   // precisely the community's own amenities.
-  const poiIds = [...(await tourPoiIds(sb, run.community_id, resolve?.resolved))];
+  const poiIds = [...(await tourPoiIds(sb, run.entity_id, resolve?.resolved, run.scope))];
   if (poiIds.length === 0) {
     return { error: 'no_pois', message: 'Nothing to tag — run resolve and the fetch steps first.' };
   }
@@ -99,7 +99,7 @@ export async function runTag(sb: TourDb, run: RunRow) {
       errors,
       stopped_on: 'time_budget',
     });
-    await setRunStatus(sb, run.id, 'tagging');
+    await setRunStatus(sb, run, 'tagging');
     return {
       ok: true,
       tagged,
@@ -118,7 +118,7 @@ export async function runTag(sb: TourDb, run: RunRow) {
   // ... }`, and `run` is the snapshot from before `runFilter` wrote its own
   // key — so saving through it would erase the filter result we just produced,
   // silently, leaving the review gate closed with nothing to explain why.
-  const fresh = (await getRun(sb, run.id)) ?? run;
+  const fresh = (await getRun(sb, run.id, run.scope)) ?? run;
 
   if ('error' in filtered) {
     await saveStep(sb, fresh, 'tag', {

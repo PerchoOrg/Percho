@@ -211,6 +211,8 @@ export function buildSections(
 
 export interface NarrationContext {
   communityName: string;
+  /** What the film is of — a city film (phase318) is told as a city. */
+  placeKind?: 'community' | 'city';
   city: string | null;
   state: string | null;
   /** The research step's one-line take. Unused before 2026-08-20. */
@@ -258,6 +260,7 @@ function buildNarrationPrompt(ctx: NarrationContext): string {
     .join('\n');
 
   const angles = ctx.angles ?? [];
+  const noun = ctx.placeKind ?? 'community';
   const allFacts = Object.values(facts);
   const overall = allFacts.length > 0 ? filmFacts(allFacts) : [];
 
@@ -298,10 +301,10 @@ RULES
   silence over moving pictures; over the cap runs into the next section.
 - A long section is several shots of several places. Say something about more
   than one of them.
-- Open from what makes this community specific — but do not quote the
+- Open from what makes this ${noun} specific — but do not quote the
   researcher's sentence back, it is a note to you. Never "<Name> sits in
-  <City>": it fits every community, which is why it is wrong for this one.
-- Name the community once, early. After that, say "here".
+  <City>": it fits every ${noun}, which is why it is wrong for this one.
+- Name the ${noun} once, early. After that, say "here".
 - Concrete nouns, real detail. "The courts stay busy past dusk" beats "tennis
   courts are available".
 - USE THE FACTS, all of them — what the place is, what it looks like, what it
