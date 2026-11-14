@@ -19,12 +19,12 @@ import {
 	PRIORITY_PROSE,
 	listJoin,
 	usd,
-} from "../compare/take";
+} from "@percho/shared/compare-take";
 import {
 	type PriorityKey,
 	type PriorityWeights,
 	topStatedPriority,
-} from "../priorities";
+} from "@percho/shared/priorities";
 import { buildCost } from "./cost";
 import type { ListingDetailDTO } from "./detail-dto";
 import { DEFAULT_DOWN_FRACTION, parseHoaMonthlyUsd } from "./monthly";

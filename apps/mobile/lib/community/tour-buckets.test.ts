@@ -1,5 +1,9 @@
+import {
+	type TourSegment,
+	bucketLabel,
+	buildTourGroups,
+} from "@percho/shared/tour-buckets";
 import { describe, expect, it } from "vitest";
-import { type TourSegment, bucketLabel, buildTourGroups } from "./tour-buckets";
 
 /** A film's places, as the wire sends them. */
 function seg(name: string, endFraction: number, bucket?: string): TourSegment {

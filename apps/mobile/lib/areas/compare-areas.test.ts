@@ -1,6 +1,6 @@
 import type { Area, AreaMetric, MetricKey } from "@percho/shared/lenses";
+import { defaultWeights } from "@percho/shared/priorities";
 import { describe, expect, it } from "vitest";
-import { defaultWeights } from "../priorities";
 import { buildAreaCompareTable } from "./compare-areas";
 
 function metric(m: MetricKey, value: number, estimated = false): AreaMetric {

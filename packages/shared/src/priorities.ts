@@ -1,4 +1,4 @@
-import { DEFAULT_LENS, type LensId } from "@percho/shared/lenses";
+import { DEFAULT_LENS, type LensId } from "./lenses";
 
 /**
  * What the buyer SAYS matters to them.

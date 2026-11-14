@@ -16,18 +16,18 @@
  * A nearby bucket the server omits is UNKNOWN, not zero (see the DTO), so a
  * contrast is only spoken when both sides have a count.
  */
-import { type CompareTake, listJoin } from "../compare/take";
+import { type CompareTake, listJoin } from "./compare-take";
 import {
 	type PriorityKey,
 	type PriorityWeights,
 	topStatedPriority,
-} from "../priorities";
+} from "./priorities";
 import {
 	REVIEW_DIMENSIONS,
 	REVIEW_DIMENSION_LABELS,
 	type ReviewDimension,
-} from "../reviews/dimensions";
-import type { CommunityDetailDTO } from "./detail-dto";
+} from "./review-dimensions";
+import type { CompareCommunity } from "./community-compare";
 import { bucketLabel } from "./tour-buckets";
 
 /** Rating gaps under this are noise at these sample sizes. */
@@ -40,7 +40,7 @@ const NEARBY_MIN_COUNT = 5;
 const OWNER_MIN_GAP_PCT = 10;
 
 /** "84%" → 84; undefined for anything that does not start with a number. */
-function pct(c: CommunityDetailDTO, label: string): number | undefined {
+function pct(c: CompareCommunity, label: string): number | undefined {
 	const raw = c.stats.find((s) => s.label === label)?.value;
 	if (!raw) return undefined;
 	const n = Number.parseFloat(raw.replace(/[,%]/g, ""));
@@ -71,13 +71,13 @@ const DIMENSION_PRIORITY: Record<ReviewDimension, PriorityKey> = {
  * that would be manufacturing a difference to flatter an answer.
  */
 function dimensionPoint(
-	communities: readonly CommunityDetailDTO[],
+	communities: readonly CompareCommunity[],
 	prefer?: PriorityKey,
 ): string | undefined {
 	let best:
 		| {
 				label: string;
-				hi: CommunityDetailDTO;
+				hi: CompareCommunity;
 				hiV: number;
 				loV: number;
 				wanted: boolean;
@@ -87,7 +87,7 @@ function dimensionPoint(
 		const rated = communities
 			.map((c) => ({ c, v: c.reviews?.dimensionAvgs[d] }))
 			.filter(
-				(x): x is { c: CommunityDetailDTO; v: number } => x.v !== undefined,
+				(x): x is { c: CompareCommunity; v: number } => x.v !== undefined,
 			);
 		if (rated.length < 2) continue;
 		const sorted = [...rated].sort((a, b) => b.v - a.v);
@@ -121,14 +121,14 @@ function dimensionPoint(
 
 /** The busiest real contrast in what is around each place, if there is one. */
 function nearbyPoint(
-	communities: readonly CommunityDetailDTO[],
+	communities: readonly CompareCommunity[],
 ): string | undefined {
 	let best:
 		| {
 				label: string;
-				hi: CommunityDetailDTO;
+				hi: CompareCommunity;
 				hiN: number;
-				lo: CommunityDetailDTO;
+				lo: CompareCommunity;
 				loN: number;
 		  }
 		| undefined;
@@ -141,7 +141,7 @@ function nearbyPoint(
 		const counted = communities
 			.map((c) => ({ c, n: c.nearby?.find((x) => x.bucket === bucket)?.count }))
 			.filter(
-				(x): x is { c: CommunityDetailDTO; n: number } => x.n !== undefined,
+				(x): x is { c: CompareCommunity; n: number } => x.n !== undefined,
 			);
 		if (counted.length < 2) continue;
 		const sorted = [...counted].sort((a, b) => b.n - a.n);
@@ -165,12 +165,12 @@ function nearbyPoint(
 
 /** The owner-occupancy contrast, when it is wide enough to mean something. */
 function ownerPoint(
-	communities: readonly CommunityDetailDTO[],
+	communities: readonly CompareCommunity[],
 ): string | undefined {
 	const known = communities
 		.map((c) => ({ c, v: pct(c, "Owner-occupied") }))
 		.filter(
-			(x): x is { c: CommunityDetailDTO; v: number } => x.v !== undefined,
+			(x): x is { c: CompareCommunity; v: number } => x.v !== undefined,
 		);
 	if (known.length < 2) return undefined;
 	const sorted = [...known].sort((a, b) => b.v - a.v);
@@ -186,7 +186,7 @@ function ownerPoint(
  * gap and never changes a rating.
  */
 export function buildCommunityTake(
-	communities: readonly CommunityDetailDTO[],
+	communities: readonly CompareCommunity[],
 	weights?: PriorityWeights,
 ): CompareTake {
 	const top = weights ? topStatedPriority(weights) : undefined;
@@ -196,8 +196,8 @@ export function buildCommunityTake(
 			(
 				x,
 			): x is {
-				c: CommunityDetailDTO;
-				r: NonNullable<CommunityDetailDTO["reviews"]>;
+				c: CompareCommunity;
+				r: NonNullable<CompareCommunity["reviews"]>;
 			} => x.r !== undefined && x.r.count > 0,
 		);
 

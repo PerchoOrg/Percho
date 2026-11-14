@@ -1,5 +1,6 @@
 'use client';
 
+import { BUYER_HOME } from '@/lib/listings/listings-on-web';
 import { createClient } from '@/lib/supabase/client';
 import { SignupWithPassword } from '@/lib/zod/auth';
 import { useState } from 'react';
@@ -56,7 +57,7 @@ export function SignupForm({ redirect }: { redirect: string }) {
       // Role-aware default redirect — only override if caller passed the
       // generic '/dashboard' default. An explicit ?redirect=… still wins.
       const target =
-        redirect === '/dashboard' && parsed.data.role === 'buyer' ? '/browse' : redirect;
+        redirect === '/dashboard' && parsed.data.role === 'buyer' ? BUYER_HOME : redirect;
       window.location.assign(target);
       return;
     }

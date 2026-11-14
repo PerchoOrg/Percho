@@ -1,3 +1,4 @@
+import type { CompareTableRow } from "@percho/shared/compare-table";
 /**
  * The shared body of a compare screen (phase281): one titled section, and
  * one figure row — label above, an equal-flex cell per column, the layout
@@ -21,7 +22,6 @@
  */
 import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import type { CompareTableRow } from "../../lib/compare/table";
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 

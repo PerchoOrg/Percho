@@ -1,3 +1,10 @@
+import {
+	MAX_WEIGHT,
+	type PriorityKey,
+	type PriorityWeights,
+	defaultWeights,
+	normalizeWeights,
+} from "@percho/shared/priorities";
 /**
  * The buyer's DECLARED priorities. Rules and rationale live in
  * `lib/priorities.ts`; this is only the persistence.
@@ -14,13 +21,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import {
-	MAX_WEIGHT,
-	type PriorityKey,
-	type PriorityWeights,
-	defaultWeights,
-	normalizeWeights,
-} from "../lib/priorities";
 
 interface PriorityState {
 	weights: PriorityWeights;

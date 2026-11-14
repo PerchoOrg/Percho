@@ -5,13 +5,14 @@ import {
   LANDING_SUBTITLE,
   LANDING_TAGLINE,
 } from '@/lib/copy/landing';
+import { BUYER_HOME } from '@/lib/listings/listings-on-web';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 export default async function HomePage() {
   // If already authed, the landing's Login button is meaningless and Explore
-  // should be the default — send them straight to /browse.
+  // should be the default — send them straight to the buyer home.
   const supabase = await createClient();
   // getSession() reads cookie locally (~5ms) instead of round-tripping
   // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
@@ -20,7 +21,7 @@ export default async function HomePage() {
     data: { session },
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
-  if (user) redirect('/browse');
+  if (user) redirect(BUYER_HOME);
 
   return (
     <>
@@ -72,7 +73,7 @@ export default async function HomePage() {
           </p>
           <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
-              href="/browse"
+              href={BUYER_HOME}
               className="inline-flex items-center justify-center rounded-full px-9 py-4 text-[12px] font-medium uppercase tracking-[0.22em] text-[#1a1410] transition hover:brightness-110"
               style={{ backgroundColor: '#c9a24a' }}
             >

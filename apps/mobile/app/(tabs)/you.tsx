@@ -33,6 +33,7 @@
  *     stays because App Review 5.1.1(v) requires it in-app.
  */
 import { TECHNICAL_ENTITY_STATEMENT } from "@percho/shared/fmls";
+import { PRIORITIES, WEIGHT_LABELS } from "@percho/shared/priorities";
 import Constants from "expo-constants";
 import { router } from "expo-router";
 import { useMemo } from "react";
@@ -53,7 +54,6 @@ import { familiarityFor } from "../../lib/area-familiarity";
 import { deleteAccount, signOut } from "../../lib/auth";
 import { DIM_LABELS, personaName, rankedDims } from "../../lib/feed/persona";
 import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
-import { PRIORITIES, WEIGHT_LABELS } from "../../lib/priorities";
 import { useAuthStore } from "../../state/auth";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";

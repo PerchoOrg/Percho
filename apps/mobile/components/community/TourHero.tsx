@@ -1,3 +1,4 @@
+import { type TourSegment, buildTourGroups } from "@percho/shared/tour-buckets";
 /**
  * TourHero — the community explore page's hero, built like the listing page's
  * `MediaCarousel` (owner, 2026-09-04: the community page's first section
@@ -37,10 +38,6 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-	type TourSegment,
-	buildTourGroups,
-} from "../../lib/community/tour-buckets";
 import { useSoundStore } from "../../state/sound";
 import { explore, fonts, radii } from "../../theme/tokens";
 import { SaveGlyph } from "../SaveGlyph";

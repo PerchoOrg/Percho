@@ -23,12 +23,15 @@
  * says Percho does not do. Each row is one figure per home, with the cell
  * blank when the data is missing rather than filled with a guess.
  */
-import type { CompareAspect, CompareTableRow } from "../compare/table";
+import type {
+	CompareAspect,
+	CompareTableRow,
+} from "@percho/shared/compare-table";
 import {
 	type PriorityKey,
 	type PriorityWeights,
 	orderByPriority,
-} from "../priorities";
+} from "@percho/shared/priorities";
 import { buildCost } from "./cost";
 import type { ListingDetailDTO } from "./detail-dto";
 import {

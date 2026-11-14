@@ -32,6 +32,7 @@ import { dedupeLabels } from '@/lib/communities/labels';
 import type { BrowseCard } from '@/lib/feed/browse-card';
 import { linkForCard } from '@/lib/feed/link-for-card';
 import type { GeoJsonPolygonLike } from '@/lib/geo/point-in-polygon';
+import { LISTINGS_ON_WEB } from '@/lib/listings/listings-on-web';
 import {
   COMMUNITY_VIDEO_CATEGORIES,
   type CommunityVideoCategoryId,
@@ -39,6 +40,7 @@ import {
 import { Fragment } from 'react';
 import { useEffect, useState } from 'react';
 import { CommunityBoundaryMap } from './CommunityBoundaryMap';
+import { SaveCommunityButton } from './SaveCommunityButton';
 
 const CATEGORY_META = new Map(COMMUNITY_VIDEO_CATEGORIES.map((m) => [m.id, m] as const));
 
@@ -110,6 +112,9 @@ export function CommunityBody({
         <div className="absolute left-3 top-3 z-10 sm:left-5 sm:top-5">
           <HeroControl href="/communities">← Back</HeroControl>
         </div>
+        <div className="absolute right-3 top-3 z-10 sm:right-5 sm:top-5">
+          <SaveCommunityButton communityId={community.id} />
+        </div>
         <div className="absolute inset-x-0 bottom-0 px-4 py-3 sm:px-6 sm:py-4">
           <h1 className="font-semibold text-2xl text-surface tracking-tight sm:text-3xl">
             {community.name}
@@ -123,24 +128,30 @@ export function CommunityBody({
             <span className="text-surface/90">
               {community.city ? `${community.city}, ${community.state}` : community.state}
             </span>
-            <span className="text-surface/60" aria-hidden="true">
-              ·
-            </span>
-            <button
-              type="button"
-              onClick={() => setTab(tab === 'videos' ? 'listings' : 'videos')}
-              className="font-semibold text-surface underline decoration-surface decoration-[1.5px] underline-offset-[3px] transition hover:decoration-surface/70"
-            >
-              {tab === 'videos' ? (
-                <>
-                  Live here <span aria-hidden="true">→</span>
-                </>
-              ) : (
-                <>
-                  <span aria-hidden="true">←</span> Walk through
-                </>
-              )}
-            </button>
+            {/* The listings toggle is hidden while listings are off on the
+                web (phase311). */}
+            {LISTINGS_ON_WEB ? (
+              <>
+                <span className="text-surface/60" aria-hidden="true">
+                  ·
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setTab(tab === 'videos' ? 'listings' : 'videos')}
+                  className="font-semibold text-surface underline decoration-surface decoration-[1.5px] underline-offset-[3px] transition hover:decoration-surface/70"
+                >
+                  {tab === 'videos' ? (
+                    <>
+                      Live here <span aria-hidden="true">→</span>
+                    </>
+                  ) : (
+                    <>
+                      <span aria-hidden="true">←</span> Walk through
+                    </>
+                  )}
+                </button>
+              </>
+            ) : null}
           </div>
           {community.description ? (
             <p className="mt-1 max-w-2xl text-surface/80 text-xs sm:text-sm">

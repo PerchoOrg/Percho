@@ -1,8 +1,9 @@
+import { LISTINGS_ON_WEB } from '@/lib/listings/listings-on-web';
 import type { Metadata } from 'next';
 /**
  * /saved — Buyer's saved listings (Favorites · Listings sub-tab).
  *
- * persistent saves keyed by anonymous device id.
+ * Saves live on the signed-in account (phase311).
  * Listings/Communities split into route segments
  * so the global TopBar can host them as sub-tabs (see nav-config.getSubTabs).
  */
@@ -14,5 +15,6 @@ export const metadata: Metadata = {
 };
 
 export default function SavedPage() {
-  return <SavedClient kind="listings" />;
+  // Listings are off on the web (phase311): Favorites is neighbourhoods.
+  return <SavedClient kind={LISTINGS_ON_WEB ? 'listings' : 'communities'} />;
 }

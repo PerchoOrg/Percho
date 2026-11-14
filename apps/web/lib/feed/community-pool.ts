@@ -20,7 +20,7 @@
 
 import { publicCoverImageUrl } from '@/lib/communities/cover';
 import type { TourSegment } from '@/lib/feed/tour-segments';
-import { createAnonClient } from '@/lib/supabase/server';
+import { createUncachedAnonClient } from '@/lib/supabase/server';
 import type { CardIconName } from '@percho/shared/icons';
 import type { DimKey } from '@percho/shared/types';
 import { communityHighlightDims } from './community-highlights';
@@ -164,7 +164,10 @@ export async function fetchCommunityPool(args: {
   limit: number;
   cities?: string[];
 }): Promise<PoolCommunityDTO[]> {
-  const supabase = await createAnonClient();
+  // Uncached (phase311): with Next's fetch cache a read keeps the row as it
+  // was the first time this exact query ran — Northbrooke's new cover never
+  // reached the feed. The endpoint's own `s-maxage` is the cache.
+  const supabase = createUncachedAnonClient();
 
   let query = supabase
     .from('communities')
@@ -215,7 +218,8 @@ export async function fetchCommunityPool(args: {
  */
 export async function fetchCommunityPoolByIds(ids: string[]): Promise<PoolCommunityDTO[]> {
   if (ids.length === 0) return [];
-  const supabase = await createAnonClient();
+  // Uncached — see `fetchCommunityPool`.
+  const supabase = createUncachedAnonClient();
   const { data, error } = await supabase
     .from('communities')
     // Same column list as the paged read, minus `boundary` — see the header.
@@ -257,7 +261,7 @@ export async function fetchCommunityPoolByIds(ids: string[]): Promise<PoolCommun
  * and demographic facts, never fail the feed.
  */
 export async function fetchPoiCounts(
-  supabase: Awaited<ReturnType<typeof createAnonClient>>,
+  supabase: ReturnType<typeof createUncachedAnonClient>,
   communityIds: string[],
 ): Promise<Record<string, Record<string, number>>> {
   if (communityIds.length === 0) return {};

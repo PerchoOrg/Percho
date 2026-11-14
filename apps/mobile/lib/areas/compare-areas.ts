@@ -38,7 +38,7 @@ import {
 	type PriorityKey,
 	type PriorityWeights,
 	orderByPriority,
-} from "../priorities";
+} from "@percho/shared/priorities";
 
 export const AREA_COMPARE_MIN = 2;
 /** 3 → 5 in phase272, for the reason `lib/listing/compare.ts` states. */

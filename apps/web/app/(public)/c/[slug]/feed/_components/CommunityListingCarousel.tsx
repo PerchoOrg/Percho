@@ -18,6 +18,7 @@
 
 import { attachHls } from '@/app/(public)/_components/feed/attach-hls';
 import { listSavedListingIds, saveListing, unsaveListing } from '@/app/_actions/saved-listings';
+import { currentPath, loginHref } from '@/lib/auth/login-href';
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
@@ -119,12 +120,12 @@ export function CommunityListingCarousel({
       const ids = listings.map((l) => l.id);
       if (ids.length === 0) return;
       const [savedIds, likedIds] = await Promise.all([
-        listSavedListingIds({ deviceId }),
+        listSavedListingIds(),
         listLiked({ deviceId, kind: 'listing' }),
       ]);
       if (cancelled) return;
       const have = new Set(ids);
-      setSavedSet(new Set(savedIds.filter((id) => have.has(id))));
+      setSavedSet(new Set((savedIds ?? []).filter((id) => have.has(id))));
       setLikedSet(new Set(likedIds.filter((id) => have.has(id))));
     })().catch(() => {
       /* ignore — UI starts empty, user can still toggle */
@@ -209,18 +210,25 @@ export function CommunityListingCarousel({
       else next.add(id);
       return next;
     });
+    const revert = () =>
+      setSavedSet((s) => {
+        const next = new Set(s);
+        if (wasSaved) next.add(id);
+        else next.delete(id);
+        return next;
+      });
     (async () => {
       try {
-        const deviceId = getOrCreateDeviceId();
-        if (wasSaved) await unsaveListing({ deviceId, listingId: id });
-        else await saveListing({ deviceId, listingId: id });
+        const result = await (wasSaved
+          ? unsaveListing({ listingId: id })
+          : saveListing({ listingId: id }));
+        if (!result.ok) {
+          revert();
+          // Saving needs an account (phase311).
+          if (result.error === 'not_signed_in') window.location.assign(loginHref(currentPath()));
+        }
       } catch {
-        setSavedSet((s) => {
-          const next = new Set(s);
-          if (wasSaved) next.add(id);
-          else next.delete(id);
-          return next;
-        });
+        revert();
       }
     })();
   }, [active, savedSet]);

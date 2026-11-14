@@ -3,12 +3,19 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
+    "./community-compare": "./src/community-compare.ts",
+    "./community-take": "./src/community-take.ts",
+    "./compare-table": "./src/compare-table.ts",
+    "./compare-take": "./src/compare-take.ts",
     "./dims": "./src/dims.ts",
     "./fmls": "./src/fmls.ts",
     "./icons": "./src/icons.ts",
     "./insights": "./src/insights.ts",
     "./lenses": "./src/lenses.ts",
+    "./priorities": "./src/priorities.ts",
     "./property-tax": "./src/property-tax.ts",
+    "./review-dimensions": "./src/review-dimensions.ts",
+    "./tour-buckets": "./src/tour-buckets.ts",
     "./types": "./src/types.ts"
   },
   "scripts": {

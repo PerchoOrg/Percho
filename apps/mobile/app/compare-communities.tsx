@@ -1,3 +1,10 @@
+import {
+	COMMUNITY_COMPARE_MAX,
+	COMMUNITY_COMPARE_MIN,
+	buildCommunityCompareTable,
+} from "@percho/shared/community-compare";
+import { buildCommunityTake } from "@percho/shared/community-take";
+import { splitRows } from "@percho/shared/compare-take";
 /**
  * `/compare-communities?ids=a,b[,c]` — 2–3 saved communities side by side.
  *
@@ -41,14 +48,7 @@ import {
 } from "../components/compare/CompareSection";
 import { TakeCard } from "../components/compare/TakeCard";
 import { communityDetailUrl } from "../lib/api/base";
-import {
-	COMMUNITY_COMPARE_MAX,
-	COMMUNITY_COMPARE_MIN,
-	buildCommunityCompareTable,
-} from "../lib/community/compare-communities";
 import type { CommunityDetailDTO } from "../lib/community/detail-dto";
-import { buildCommunityTake } from "../lib/community/take";
-import { splitRows } from "../lib/compare/take";
 import { usePriorityStore } from "../state/priorities";
 import { colors, radii } from "../theme/tokens";
 import { textStyles } from "../theme/typography";

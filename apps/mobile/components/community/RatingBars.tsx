@@ -1,3 +1,7 @@
+import {
+	REVIEW_DIMENSION_LABELS,
+	type ReviewDimension,
+} from "@percho/shared/review-dimensions";
 /**
  * RatingBars — the review dimension averages as bars out of 5.
  *
@@ -11,10 +15,6 @@
  * community would flatter every community equally.
  */
 import { StyleSheet, Text, View } from "react-native";
-import {
-	REVIEW_DIMENSION_LABELS,
-	type ReviewDimension,
-} from "../../lib/reviews/dimensions";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 

@@ -1,3 +1,4 @@
+import { splitRows } from "@percho/shared/compare-take";
 /**
  * `/compare?ids=a,b[,c]` — 2–3 saved homes side by side (phase D, 05 §5.2).
  *
@@ -36,7 +37,6 @@ import {
 } from "../components/compare/CompareSection";
 import { TakeCard } from "../components/compare/TakeCard";
 import { listingDetailUrl } from "../lib/api/base";
-import { splitRows } from "../lib/compare/take";
 import {
 	COMPARE_MAX,
 	COMPARE_MIN,
