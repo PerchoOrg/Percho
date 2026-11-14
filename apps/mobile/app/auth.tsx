@@ -6,10 +6,11 @@
  * Laid out the way sign-in screens usually are (phase311, owner: sign-up
  * belongs under the sign-in form, not "New here, or forgot it? Email me a
  * code"):
- *   - Sign in: Apple, Google (phase314), or email + password, a "Forgot password?" link, and
- *     "Don't have an account? Sign up" at the foot.
- *   - Sign up: Apple, Google, or email + password (`signUpWithPassword`), with
- *     "Already have an account? Sign in".
+ *   - Sign in: email + password with "Forgot password?", then "or" Apple and
+ *     Google (phase314; under the form since phase315), and "Don't have an
+ *     account? Sign up" at the foot.
+ *   - Sign up: email + password (`signUpWithPassword`), then "or" Apple and
+ *     Google, with "Already have an account? Sign in".
  *   - Forgot password: email → 6-digit code → signed in → Set a password.
  *     `lib/auth-form.ts` explains why recovery is a code rather than a link.
  *
@@ -236,42 +237,6 @@ export default function AuthScreen() {
 						: "Keep what you save, and pick up on any device."}
 				</Text>
 
-				{mode !== "reset" ? (
-					<>
-						{appleAvailable ? (
-							<AppleAuthentication.AppleAuthenticationButton
-								buttonType={
-									mode === "signUp"
-										? AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
-										: AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
-								}
-								buttonStyle={
-									AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-								}
-								cornerRadius={radii.btn}
-								style={styles.appleBtn}
-								onPress={busy ? () => {} : runApple}
-							/>
-						) : null}
-						{/* Google's branding rules: white, a grey outline, the
-						    full-colour G, and "Sign in / up with Google". */}
-						<Pressable
-							style={styles.googleBtn}
-							onPress={runGoogle}
-							disabled={busy}
-							accessibilityRole="button"
-						>
-							<Image source={GOOGLE_G} style={styles.googleG} />
-							<Text style={styles.googleTxt}>
-								{mode === "signUp"
-									? "Sign up with Google"
-									: "Sign in with Google"}
-							</Text>
-						</Pressable>
-						<Text style={styles.divider}>or</Text>
-					</>
-				) : null}
-
 				{mode === "reset" ? (
 					<>
 						{emailInput}
@@ -341,6 +306,44 @@ export default function AuthScreen() {
 						)}
 					</>
 				)}
+
+				{/* Apple and Google sit under the email form, after an "or"
+				    (owner 2026-11-14: "Sign in with Google 放到登录框下面"). */}
+				{mode !== "reset" ? (
+					<>
+						<Text style={styles.divider}>or</Text>
+						{appleAvailable ? (
+							<AppleAuthentication.AppleAuthenticationButton
+								buttonType={
+									mode === "signUp"
+										? AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
+										: AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+								}
+								buttonStyle={
+									AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+								}
+								cornerRadius={radii.btn}
+								style={styles.appleBtn}
+								onPress={busy ? () => {} : runApple}
+							/>
+						) : null}
+						{/* Google's branding rules: white, a grey outline, the
+						    full-colour G, and "Sign in / up with Google". */}
+						<Pressable
+							style={styles.googleBtn}
+							onPress={runGoogle}
+							disabled={busy}
+							accessibilityRole="button"
+						>
+							<Image source={GOOGLE_G} style={styles.googleG} />
+							<Text style={styles.googleTxt}>
+								{mode === "signUp"
+									? "Sign up with Google"
+									: "Sign in with Google"}
+							</Text>
+						</Pressable>
+					</>
+				) : null}
 
 				{error ? <Text style={styles.error}>{error}</Text> : null}
 

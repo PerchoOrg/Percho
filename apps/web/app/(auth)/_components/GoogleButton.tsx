@@ -8,6 +8,8 @@
  * an agent signs up with email + password, where the role picker is.
  *
  * Drawn to Google's branding rules: white, a grey outline, the full-colour G.
+ * Sits UNDER the email form, after an "or" (owner 2026-11-14: "Sign in with
+ * Google 放到登录框下面").
  */
 import { createClient } from '@/lib/supabase/client';
 import { useState } from 'react';
@@ -41,6 +43,11 @@ export function GoogleButton({
 
   return (
     <div>
+      <div className="mb-5 flex items-center gap-3 text-muted text-xs">
+        <span className="h-px flex-1 bg-line" />
+        or
+        <span className="h-px flex-1 bg-line" />
+      </div>
       <button
         type="button"
         onClick={onClick}
@@ -72,11 +79,6 @@ export function GoogleButton({
           {error}
         </p>
       ) : null}
-      <div className="mt-5 flex items-center gap-3 text-muted text-xs">
-        <span className="h-px flex-1 bg-line" />
-        or
-        <span className="h-px flex-1 bg-line" />
-      </div>
     </div>
   );
 }

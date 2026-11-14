@@ -36,8 +36,8 @@ export default async function LoginPage({
           That sign-in link was invalid or expired. Try again.
         </p>
       ) : null}
-      <GoogleButton redirect={safeRedirect} label="Sign in with Google" />
       <LoginForm redirect={safeRedirect} />
+      <GoogleButton redirect={safeRedirect} label="Sign in with Google" />
       <div className="space-y-2 text-center text-sm">
         <p>
           <a href="/forgot-password" className="text-ink2 underline hover:text-ink">
