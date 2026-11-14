@@ -6,9 +6,9 @@
  * Laid out the way sign-in screens usually are (phase311, owner: sign-up
  * belongs under the sign-in form, not "New here, or forgot it? Email me a
  * code"):
- *   - Sign in: Apple, or email + password, a "Forgot password?" link, and
+ *   - Sign in: Apple, Google (phase314), or email + password, a "Forgot password?" link, and
  *     "Don't have an account? Sign up" at the foot.
- *   - Sign up: Apple, or email + password (`signUpWithPassword`), with
+ *   - Sign up: Apple, Google, or email + password (`signUpWithPassword`), with
  *     "Already have an account? Sign in".
  *   - Forgot password: email → 6-digit code → signed in → Set a password.
  *     `lib/auth-form.ts` explains why recovery is a code rather than a link.
@@ -22,6 +22,7 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
+	Image,
 	KeyboardAvoidingView,
 	Platform,
 	Pressable,
@@ -36,6 +37,7 @@ import {
 	appleSignInAvailable,
 	requestEmailCode,
 	signInWithApple,
+	signInWithGoogle,
 	signInWithPassword,
 	signUpWithPassword,
 	verifyEmailCode,
@@ -52,6 +54,8 @@ import { colors, radii } from "../theme/tokens";
 import { textStyles } from "../theme/typography";
 
 type Mode = "signIn" | "signUp" | "reset";
+
+const GOOGLE_G = require("../assets/google-g.png");
 
 const TITLES: Record<Mode, string> = {
 	signIn: "Sign in",
@@ -102,6 +106,14 @@ export default function AuthScreen() {
 		setError(null);
 		setBusy(true);
 		const res = await signInWithApple();
+		setBusy(false);
+		if (!res.ok && res.error) setError(res.error);
+	};
+
+	const runGoogle = async () => {
+		setError(null);
+		setBusy(true);
+		const res = await signInWithGoogle();
 		setBusy(false);
 		if (!res.ok && res.error) setError(res.error);
 	};
@@ -224,21 +236,38 @@ export default function AuthScreen() {
 						: "Keep what you save, and pick up on any device."}
 				</Text>
 
-				{mode !== "reset" && appleAvailable ? (
+				{mode !== "reset" ? (
 					<>
-						<AppleAuthentication.AppleAuthenticationButton
-							buttonType={
-								mode === "signUp"
-									? AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
-									: AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
-							}
-							buttonStyle={
-								AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-							}
-							cornerRadius={radii.btn}
-							style={styles.appleBtn}
-							onPress={busy ? () => {} : runApple}
-						/>
+						{appleAvailable ? (
+							<AppleAuthentication.AppleAuthenticationButton
+								buttonType={
+									mode === "signUp"
+										? AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
+										: AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+								}
+								buttonStyle={
+									AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+								}
+								cornerRadius={radii.btn}
+								style={styles.appleBtn}
+								onPress={busy ? () => {} : runApple}
+							/>
+						) : null}
+						{/* Google's branding rules: white, a grey outline, the
+						    full-colour G, and "Sign in / up with Google". */}
+						<Pressable
+							style={styles.googleBtn}
+							onPress={runGoogle}
+							disabled={busy}
+							accessibilityRole="button"
+						>
+							<Image source={GOOGLE_G} style={styles.googleG} />
+							<Text style={styles.googleTxt}>
+								{mode === "signUp"
+									? "Sign up with Google"
+									: "Sign in with Google"}
+							</Text>
+						</Pressable>
 						<Text style={styles.divider}>or</Text>
 					</>
 				) : null}
@@ -370,7 +399,20 @@ const styles = StyleSheet.create({
 		marginTop: 6,
 		marginBottom: 28,
 	},
-	appleBtn: { height: 48, width: "100%" },
+	appleBtn: { height: 48, width: "100%", marginBottom: 12 },
+	googleBtn: {
+		height: 48,
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: 10,
+		backgroundColor: "#FFFFFF",
+		borderWidth: 1,
+		borderColor: "#747775",
+		borderRadius: radii.btn,
+	},
+	googleG: { width: 18, height: 18 },
+	googleTxt: { ...textStyles.headline, color: "#1F1F1F" },
 	divider: {
 		...textStyles.footnote,
 		color: colors.ink3,

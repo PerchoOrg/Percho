@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { safeRedirectPath } from '@/lib/utils/safe-redirect';
 import { redirect } from 'next/navigation';
+import { GoogleButton } from '../_components/GoogleButton';
 import { SignupForm } from './signup-form';
 
 type SearchParams = { redirect?: string };
@@ -27,6 +28,7 @@ export default async function SignupPage({
 
   return (
     <div className="space-y-5">
+      <GoogleButton redirect={safeRedirect} label="Sign up with Google" />
       <SignupForm redirect={safeRedirect} />
       <p className="text-center text-sm text-ink2">
         Already have an account?{' '}

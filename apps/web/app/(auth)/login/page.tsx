@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { safeRedirectPath } from '@/lib/utils/safe-redirect';
 import { redirect } from 'next/navigation';
+import { GoogleButton } from '../_components/GoogleButton';
 import { LoginForm } from './login-form';
 
 type SearchParams = { redirect?: string; error?: string };
@@ -35,6 +36,7 @@ export default async function LoginPage({
           That sign-in link was invalid or expired. Try again.
         </p>
       ) : null}
+      <GoogleButton redirect={safeRedirect} label="Sign in with Google" />
       <LoginForm redirect={safeRedirect} />
       <div className="space-y-2 text-center text-sm">
         <p>

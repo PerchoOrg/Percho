@@ -7,6 +7,11 @@
  *   - Sign in with Apple: native sheet → identity token →
  *     `signInWithIdToken`. Requires the Apple provider enabled in Supabase
  *     Auth with client id `co.percho.app`.
+ *   - Sign in with Google (phase314): Google's native sheet
+ *     (`@react-native-google-signin/google-signin`) → ID token →
+ *     `signInWithIdToken`. Supabase's Google provider lists both client ids
+ *     below and skips the nonce check, which the native SDK cannot pass. A
+ *     native module: it runs in the dev client and store builds, not Expo Go.
  *   - Email + password, to sign in or to sign up. Web has always been email +
  *     password and both surfaces are the same `auth.users`, so a percho.co
  *     password works here (owner, 2026-09-08: 「我已经注册过的要允许密码登陆」).
@@ -23,6 +28,13 @@
  * /api/mobile/account`): removing an auth user takes the service role, which
  * never ships in this bundle.
  */
+import {
+	GoogleSignin,
+	isCancelledResponse,
+	isErrorWithCode,
+	isSuccessResponse,
+	statusCodes,
+} from "@react-native-google-signin/google-signin";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { accountUrl } from "./api/base";
 import { passwordFailureHint } from "./auth-form";
@@ -61,6 +73,49 @@ export async function signInWithApple(): Promise<AuthResult> {
 	const { error } = await supabase().auth.signInWithIdToken({
 		provider: "apple",
 		token: identityToken,
+	});
+	return error ? fail(error.message) : { ok: true };
+}
+
+/**
+ * Google OAuth client ids (Google Cloud project "Percho"). Public by design —
+ * they identify the app, they do not authorise anything. The iOS one is also
+ * in `app.json` as the reversed `iosUrlScheme` the Google sheet returns to.
+ * Asking with `webClientId` makes the ID token's audience the web client, the
+ * first id Supabase's Google provider lists.
+ */
+const GOOGLE_IOS_CLIENT_ID =
+	"188846054900-8t6qou2bp07imjkv0o06fjm4lr3i9sbo.apps.googleusercontent.com";
+const GOOGLE_WEB_CLIENT_ID =
+	"188846054900-8a8r51ab9qcuml3ibla0rtjanskemnt6.apps.googleusercontent.com";
+
+let googleConfigured = false;
+
+/** Google's native sheet. Resolves ok:false with no error if the user bails. */
+export async function signInWithGoogle(): Promise<AuthResult> {
+	if (!googleConfigured) {
+		GoogleSignin.configure({
+			iosClientId: GOOGLE_IOS_CLIENT_ID,
+			webClientId: GOOGLE_WEB_CLIENT_ID,
+		});
+		googleConfigured = true;
+	}
+	let idToken: string | null;
+	try {
+		const res = await GoogleSignin.signIn();
+		if (isCancelledResponse(res)) return CANCELED;
+		idToken = isSuccessResponse(res) ? res.data.idToken : null;
+	} catch (err) {
+		if (isErrorWithCode(err) && err.code === statusCodes.IN_PROGRESS) {
+			return CANCELED;
+		}
+		return fail("Google sign-in didn't complete. Please try again.");
+	}
+	if (!idToken) return fail("Google didn't return a sign-in token.");
+
+	const { error } = await supabase().auth.signInWithIdToken({
+		provider: "google",
+		token: idToken,
 	});
 	return error ? fail(error.message) : { ok: true };
 }
@@ -159,6 +214,9 @@ export async function signOut(): Promise<void> {
 	// Local scope is enough — and it cannot strand the user in a half-state
 	// the way a failed network round-trip on global sign-out can.
 	await supabase().auth.signOut({ scope: "local" });
+	// Forget the Google account too, so the next Google sign-in offers the
+	// account picker instead of silently reusing the last one.
+	await GoogleSignin.signOut().catch(() => {});
 }
 
 /**
