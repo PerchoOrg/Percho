@@ -77,7 +77,7 @@ export function credentialMessage(err: CredentialError): string | null {
  * way out matters more than naming the cause.
  */
 export function passwordFailureHint(): string {
-	return "That email and password don’t match. If you’ve only ever signed in with a code, use the code — you can set a password afterwards.";
+	return "That email and password don’t match. If you’ve only ever signed in with a code, tap “Forgot password?” — we’ll email you a code and you can set one.";
 }
 
 /** Whether a new password can be saved. Confirmation must match so a typo
