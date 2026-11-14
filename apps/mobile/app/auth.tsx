@@ -3,23 +3,19 @@
  * tab's account row); success dismisses it and the caller's surface reacts to
  * the session via `useAuthStore` — nothing is passed back.
  *
- * Three paths, matching `lib/auth.ts`:
- *   - Sign in with Apple, rendered with Apple's own button component (their
- *     HIG requires the stock control) and only when the native sheet exists.
- *   - Email + password — the default, because most people arriving here
- *     already have an account and know its password.
- *   - Email → 6-digit code, one tap away. This is how a NEW account is made
- *     and how a forgotten password is recovered; `lib/auth-form.ts` explains
- *     why recovery is a code rather than a reset link.
- *
- * Password is the default rather than the code because the alternative is what
- * the owner reported as a bug: an account that exists, a password he knows,
- * and the app insisting on mailing him a number first. The code is never more
- * than one tap away, so nobody is trapped by a password they do not have.
+ * Laid out the way sign-in screens usually are (phase311, owner: sign-up
+ * belongs under the sign-in form, not "New here, or forgot it? Email me a
+ * code"):
+ *   - Sign in: Apple, or email + password, a "Forgot password?" link, and
+ *     "Don't have an account? Sign up" at the foot.
+ *   - Sign up: Apple, or email + password (`signUpWithPassword`), with
+ *     "Already have an account? Sign in".
+ *   - Forgot password: email → 6-digit code → signed in → Set a password.
+ *     `lib/auth-form.ts` explains why recovery is a code rather than a link.
  *
  * Dismissal is driven by the SESSION, not the button handler: whichever path
- * signs in, `onAuthStateChange` fills the store and the effect below pops the
- * screen. That keeps "signed in" defined in exactly one place.
+ * signs in, `onAuthStateChange` fills the store and the effect below leaves
+ * the screen — back to the caller, or on to Set a password after a reset.
  */
 import * as AppleAuthentication from "expo-apple-authentication";
 import { router } from "expo-router";
@@ -29,6 +25,7 @@ import {
 	KeyboardAvoidingView,
 	Platform,
 	Pressable,
+	ScrollView,
 	StyleSheet,
 	Text,
 	TextInput,
@@ -40,9 +37,11 @@ import {
 	requestEmailCode,
 	signInWithApple,
 	signInWithPassword,
+	signUpWithPassword,
 	verifyEmailCode,
 } from "../lib/auth";
 import {
+	MIN_PASSWORD_LENGTH,
 	credentialMessage,
 	isEmailShaped,
 	normalizeEmail,
@@ -52,16 +51,22 @@ import { useAuthStore } from "../state/auth";
 import { colors, radii } from "../theme/tokens";
 import { textStyles } from "../theme/typography";
 
-/** `password` is the landing step; `code` is reached deliberately, either to
- *  make an account or to get past a password nobody has. */
-type EmailStep = "password" | "code";
+type Mode = "signIn" | "signUp" | "reset";
+
+const TITLES: Record<Mode, string> = {
+	signIn: "Sign in",
+	signUp: "Create account",
+	reset: "Reset password",
+};
 
 export default function AuthScreen() {
 	const insets = useSafeAreaInsets();
 	const session = useAuthStore((s) => s.session);
 
 	const [appleAvailable, setAppleAvailable] = useState(false);
-	const [step, setStep] = useState<EmailStep>("password");
+	const [mode, setMode] = useState<Mode>("signIn");
+	/** Reset only: whether the code has been sent and we are waiting for it. */
+	const [codeSent, setCodeSent] = useState(false);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [code, setCode] = useState("");
@@ -69,15 +74,29 @@ export default function AuthScreen() {
 	const [error, setError] = useState<string | null>(null);
 	const codeRef = useRef<TextInput>(null);
 	const passwordRef = useRef<TextInput>(null);
+	// Read inside the session effect without making it re-run on mode changes.
+	const modeRef = useRef<Mode>(mode);
+	modeRef.current = mode;
 
 	useEffect(() => {
 		appleSignInAvailable().then(setAppleAvailable);
 	}, []);
 
-	// Session appeared → whichever path produced it, this screen is done.
+	// Session appeared → whichever path produced it, this screen is done. A
+	// reset lands signed in with no password yet, so it goes on to set one.
 	useEffect(() => {
-		if (session) router.back();
+		if (!session) return;
+		if (modeRef.current === "reset") router.replace("/set-password");
+		else router.back();
 	}, [session]);
+
+	const switchMode = (next: Mode) => {
+		setMode(next);
+		setCodeSent(false);
+		setCode("");
+		setPassword("");
+		setError(null);
+	};
 
 	const runApple = async () => {
 		setError(null);
@@ -90,12 +109,20 @@ export default function AuthScreen() {
 	const submitPassword = async () => {
 		const problem = validateCredentials(email, password);
 		if (problem) {
-			setError(credentialMessage(problem));
+			setError(
+				mode === "signUp" && problem === "password"
+					? `Use at least ${MIN_PASSWORD_LENGTH} characters.`
+					: credentialMessage(problem),
+			);
 			return;
 		}
 		setError(null);
 		setBusy(true);
-		const res = await signInWithPassword(normalizeEmail(email), password);
+		const addr = normalizeEmail(email);
+		const res =
+			mode === "signUp"
+				? await signUpWithPassword(addr, password)
+				: await signInWithPassword(addr, password);
 		setBusy(false);
 		// Success dismisses via the session effect; only failure lands here.
 		if (!res.ok) setError(res.error ?? "That didn’t work.");
@@ -112,11 +139,11 @@ export default function AuthScreen() {
 		const res = await requestEmailCode(addr);
 		setBusy(false);
 		if (!res.ok) {
-			setError(res.error ?? "Couldn't send the code.");
+			setError(res.error ?? "Couldn’t send the code.");
 			return;
 		}
 		setEmail(addr);
-		setStep("code");
+		setCodeSent(true);
 		setTimeout(() => codeRef.current?.focus(), 50);
 	};
 
@@ -129,20 +156,57 @@ export default function AuthScreen() {
 		setBusy(true);
 		const res = await verifyEmailCode(email, code);
 		setBusy(false);
-		// Success dismisses via the session effect; only failure lands here.
-		if (!res.ok) setError(res.error ?? "That code didn't work.");
+		// Success moves on via the session effect; only failure lands here.
+		if (!res.ok) setError(res.error ?? "That code didn’t work.");
 	};
+
+	const emailInput = (
+		<TextInput
+			style={styles.input}
+			value={email}
+			onChangeText={setEmail}
+			placeholder="Email address"
+			placeholderTextColor={colors.ink3}
+			keyboardType="email-address"
+			autoCapitalize="none"
+			autoCorrect={false}
+			autoComplete="email"
+			textContentType={mode === "signUp" ? "emailAddress" : "username"}
+			editable={!busy && !codeSent}
+			onSubmitEditing={() =>
+				mode === "reset" ? sendCode() : passwordRef.current?.focus()
+			}
+			returnKeyType={mode === "reset" ? "send" : "next"}
+			submitBehavior="submit"
+		/>
+	);
+
+	const cta = (label: string, onPress: () => void) => (
+		<Pressable
+			style={[styles.cta, busy && styles.ctaDisabled]}
+			onPress={onPress}
+			disabled={busy}
+			accessibilityRole="button"
+		>
+			{busy ? (
+				<ActivityIndicator color={colors.onCard} />
+			) : (
+				<Text style={styles.ctaTxt}>{label}</Text>
+			)}
+		</Pressable>
+	);
 
 	return (
 		<KeyboardAvoidingView
 			style={styles.screen}
 			behavior={Platform.OS === "ios" ? "padding" : undefined}
 		>
-			<View
-				style={[
+			<ScrollView
+				contentContainerStyle={[
 					styles.body,
 					{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
 				]}
+				keyboardShouldPersistTaps="handled"
 			>
 				<Pressable
 					style={styles.cancel}
@@ -153,16 +217,20 @@ export default function AuthScreen() {
 					<Text style={styles.cancelTxt}>Cancel</Text>
 				</Pressable>
 
-				<Text style={styles.title}>Sign in</Text>
+				<Text style={styles.title}>{TITLES[mode]}</Text>
 				<Text style={styles.sub}>
-					Keep what you save, and pick up on any device.
+					{mode === "reset"
+						? "We’ll email you a 6-digit code. Enter it, then choose a new password."
+						: "Keep what you save, and pick up on any device."}
 				</Text>
 
-				{appleAvailable ? (
+				{mode !== "reset" && appleAvailable ? (
 					<>
 						<AppleAuthentication.AppleAuthenticationButton
 							buttonType={
-								AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+								mode === "signUp"
+									? AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
+									: AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
 							}
 							buttonStyle={
 								AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
@@ -175,118 +243,119 @@ export default function AuthScreen() {
 					</>
 				) : null}
 
-				{step === "password" ? (
+				{mode === "reset" ? (
 					<>
-						<TextInput
-							style={styles.input}
-							value={email}
-							onChangeText={setEmail}
-							placeholder="Email address"
-							placeholderTextColor={colors.ink3}
-							keyboardType="email-address"
-							autoCapitalize="none"
-							autoCorrect={false}
-							autoComplete="email"
-							textContentType="username"
-							editable={!busy}
-							onSubmitEditing={() => passwordRef.current?.focus()}
-							returnKeyType="next"
-							submitBehavior="submit"
-						/>
+						{emailInput}
+						{codeSent ? (
+							<>
+								<Text style={styles.codeHint}>
+									Enter the 6-digit code sent to {email}.
+								</Text>
+								<TextInput
+									ref={codeRef}
+									style={styles.input}
+									value={code}
+									onChangeText={setCode}
+									placeholder="123456"
+									placeholderTextColor={colors.ink3}
+									keyboardType="number-pad"
+									textContentType="oneTimeCode"
+									editable={!busy}
+									onSubmitEditing={submitCode}
+									returnKeyType="done"
+									maxLength={6}
+								/>
+								{cta("Continue", submitCode)}
+							</>
+						) : (
+							cta("Send code", sendCode)
+						)}
+					</>
+				) : (
+					<>
+						{emailInput}
 						<TextInput
 							ref={passwordRef}
 							style={styles.input}
 							value={password}
 							onChangeText={setPassword}
-							placeholder="Password"
+							placeholder={
+								mode === "signUp"
+									? `Password (${MIN_PASSWORD_LENGTH}+ characters)`
+									: "Password"
+							}
 							placeholderTextColor={colors.ink3}
 							secureTextEntry
 							autoCapitalize="none"
 							autoCorrect={false}
-							autoComplete="current-password"
-							textContentType="password"
+							autoComplete={
+								mode === "signUp" ? "new-password" : "current-password"
+							}
+							textContentType={mode === "signUp" ? "newPassword" : "password"}
 							editable={!busy}
 							onSubmitEditing={submitPassword}
 							returnKeyType="go"
 						/>
-						<Pressable
-							style={[styles.cta, busy && styles.ctaDisabled]}
-							onPress={submitPassword}
-							disabled={busy}
-							accessibilityRole="button"
-						>
-							{busy ? (
-								<ActivityIndicator color={colors.onCard} />
-							) : (
-								<Text style={styles.ctaTxt}>Sign in</Text>
-							)}
-						</Pressable>
-						<Pressable
-							style={styles.linkRow}
-							onPress={sendCode}
-							disabled={busy}
-							accessibilityRole="button"
-						>
-							<Text style={styles.linkTxt}>
-								New here, or forgot it? Email me a code
-							</Text>
-						</Pressable>
-					</>
-				) : (
-					<>
-						<Text style={styles.codeHint}>
-							Enter the 6-digit code sent to {email}.
-						</Text>
-						<TextInput
-							ref={codeRef}
-							style={styles.input}
-							value={code}
-							onChangeText={setCode}
-							placeholder="123456"
-							placeholderTextColor={colors.ink3}
-							keyboardType="number-pad"
-							textContentType="oneTimeCode"
-							editable={!busy}
-							onSubmitEditing={submitCode}
-							returnKeyType="done"
-							maxLength={6}
-						/>
-						<Pressable
-							style={[styles.cta, busy && styles.ctaDisabled]}
-							onPress={submitCode}
-							disabled={busy}
-							accessibilityRole="button"
-						>
-							{busy ? (
-								<ActivityIndicator color={colors.onCard} />
-							) : (
-								<Text style={styles.ctaTxt}>Sign in</Text>
-							)}
-						</Pressable>
-						<Pressable
-							style={styles.linkRow}
-							onPress={() => {
-								setStep("password");
-								setCode("");
-								setError(null);
-							}}
-							disabled={busy}
-							accessibilityRole="button"
-						>
-							<Text style={styles.linkTxt}>Use a password instead</Text>
-						</Pressable>
+						{mode === "signIn" ? (
+							<Pressable
+								style={styles.forgot}
+								onPress={() => switchMode("reset")}
+								disabled={busy}
+								accessibilityRole="button"
+							>
+								<Text style={styles.linkTxt}>Forgot password?</Text>
+							</Pressable>
+						) : null}
+						{cta(
+							mode === "signUp" ? "Create account" : "Sign in",
+							submitPassword,
+						)}
 					</>
 				)}
 
 				{error ? <Text style={styles.error}>{error}</Text> : null}
-			</View>
+
+				<View style={styles.foot}>
+					{mode === "signIn" ? (
+						<Text style={styles.footTxt}>
+							Don’t have an account?{" "}
+							<Text
+								style={styles.footLink}
+								onPress={() => switchMode("signUp")}
+								accessibilityRole="button"
+							>
+								Sign up
+							</Text>
+						</Text>
+					) : mode === "signUp" ? (
+						<Text style={styles.footTxt}>
+							Already have an account?{" "}
+							<Text
+								style={styles.footLink}
+								onPress={() => switchMode("signIn")}
+								accessibilityRole="button"
+							>
+								Sign in
+							</Text>
+						</Text>
+					) : (
+						<Text
+							style={styles.footLink}
+							onPress={() => switchMode("signIn")}
+							accessibilityRole="button"
+						>
+							Back to sign in
+						</Text>
+					)}
+				</View>
+			</ScrollView>
 		</KeyboardAvoidingView>
 	);
 }
 
 const styles = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: colors.bg },
-	body: { flex: 1, paddingHorizontal: 24 },
+	body: { flexGrow: 1, paddingHorizontal: 24 },
 	cancel: {
 		alignSelf: "flex-end",
 		minHeight: 44,
@@ -318,6 +387,13 @@ const styles = StyleSheet.create({
 		paddingVertical: 14,
 		marginBottom: 12,
 	},
+	forgot: {
+		alignSelf: "flex-end",
+		minHeight: 32,
+		justifyContent: "center",
+		marginTop: -4,
+		marginBottom: 8,
+	},
 	cta: {
 		backgroundColor: colors.cta,
 		borderRadius: radii.btn,
@@ -327,12 +403,14 @@ const styles = StyleSheet.create({
 	},
 	ctaDisabled: { opacity: 0.6 },
 	ctaTxt: { ...textStyles.headline, color: colors.onCard },
-	linkRow: {
-		minHeight: 44,
-		justifyContent: "center",
-		alignItems: "center",
-		marginTop: 4,
-	},
 	linkTxt: { ...textStyles.footnote, color: colors.accent },
 	error: { ...textStyles.footnote, color: colors.neg, marginTop: 14 },
+	/** Pinned to the bottom of the sheet when the form is short. */
+	foot: {
+		marginTop: "auto",
+		paddingTop: 28,
+		alignItems: "center",
+	},
+	footTxt: { ...textStyles.footnote, color: colors.ink2 },
+	footLink: { ...textStyles.footnote, color: colors.accent, fontWeight: "600" },
 });

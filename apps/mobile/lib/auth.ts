@@ -3,22 +3,21 @@
  * returned error, the session itself lands in `state/auth.ts` via
  * `onAuthStateChange` — no action here writes the store directly.
  *
- * Three ways in, none with a redirect leg:
+ * Ways in, none with a redirect leg:
  *   - Sign in with Apple: native sheet → identity token →
  *     `signInWithIdToken`. Requires the Apple provider enabled in Supabase
  *     Auth with client id `co.percho.app`.
- *   - Email + password: for anyone who already has an account. Web has always
- *     been email + password and both surfaces are the same `auth.users`, so a
- *     percho.co password works here (owner, 2026-09-08: 「我已经注册过的要允许
- *     密码登陆」).
+ *   - Email + password, to sign in or to sign up. Web has always been email +
+ *     password and both surfaces are the same `auth.users`, so a percho.co
+ *     password works here (owner, 2026-09-08: 「我已经注册过的要允许密码登陆」).
+ *     Sign-up is a plain `signUp` since phase311 (owner: the sign-in screen
+ *     should have sign-up under it, not "New here? Email me a code");
+ *     production auto-confirms email, so it returns a session at once.
  *   - Email OTP: 6-digit code typed into the app (`signInWithOtp` →
- *     `verifyOtp`). A magic LINK would round-trip through a browser and a
- *     `percho://` redirect — more moving parts and a Supabase redirect
- *     allowlist — for a worse phone UX than "type the code".
- *
- * OTP remains the way an account is CREATED on this app, and therefore the way
- * a forgotten password is recovered: sign in with a code, then `setPassword`.
- * See `lib/auth-form.ts` for why there is no `resetPasswordForEmail` here.
+ *     `verifyOtp`), now only behind "Forgot password?" — sign in with the
+ *     code, then `setPassword`. A magic LINK would round-trip through a
+ *     browser and a `percho://` redirect for a worse phone UX than "type the
+ *     code"; see `lib/auth-form.ts` for why there is no `resetPasswordForEmail`.
  *
  * Account deletion is the one server-mediated call (`DELETE
  * /api/mobile/account`): removing an auth user takes the service role, which
@@ -106,16 +105,44 @@ export async function setPassword(password: string): Promise<AuthResult> {
 	return error ? fail(error.message) : { ok: true };
 }
 
-/** Step 1: email in, 6-digit code out (creates the account on first use). */
+/**
+ * New account, email + password. Production auto-confirms email, so success
+ * comes with a session and `onAuthStateChange` does the rest; a session-less
+ * success (confirmation switched back on) asks the user to check their inbox.
+ */
+export async function signUpWithPassword(
+	email: string,
+	password: string,
+): Promise<AuthResult> {
+	const { data, error } = await supabase().auth.signUp({ email, password });
+	if (error) {
+		return fail(
+			/already registered/i.test(error.message)
+				? "That email already has an account — sign in instead."
+				: error.message,
+		);
+	}
+	if (!data.session) {
+		return fail("Check your inbox to confirm your email, then sign in.");
+	}
+	return { ok: true };
+}
+
+/**
+ * Forgot password, step 1: email in, 6-digit code out. Never creates an
+ * account — sign-up is `signUpWithPassword`. The error is not passed through:
+ * Supabase answers an unknown address differently, which would tell anyone
+ * which emails are registered.
+ */
 export async function requestEmailCode(email: string): Promise<AuthResult> {
 	const { error } = await supabase().auth.signInWithOtp({
 		email,
-		options: { shouldCreateUser: true },
+		options: { shouldCreateUser: false },
 	});
-	return error ? fail(error.message) : { ok: true };
+	return error ? fail("Couldn’t send a code to that address.") : { ok: true };
 }
 
-/** Step 2: the typed code. Success fires `onAuthStateChange` with a session. */
+/** Forgot password, step 2: the typed code. Success fires `onAuthStateChange`. */
 export async function verifyEmailCode(
 	email: string,
 	code: string,
