@@ -21,6 +21,10 @@ device — there's no form to fill in, and a left swipe never blacklists
 anything; it just means "less of this for now".
 
 ### 2026-11-14
+- **The Percho iPhone app is live on the App Store** (US): neighbourhood
+  films, nearby places, costs, comparisons and resident reviews. Today's
+  app changes — the new sign-in screen, Sign in with Google, account-only
+  saving for areas — come in the next app update.
 - **The website now matches the iPhone app: neighbourhoods only.** Homes
   for sale are no longer shown on the website — the For You tab, home pages
   and home results in search are gone for now, and old home links open the

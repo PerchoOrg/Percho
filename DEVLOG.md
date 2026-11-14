@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-14 22:40 UTC — phase316: 1.0.0 is live; dev client moves to 1.0.1 (10), in TestFlight
+
+**Objective**: get the dev client onto the owner's phone.
+**Findings**: build 1.0.0 (9) never appeared in App Store Connect. Apple's mail (19:42 UTC, "Action needed") rejected it: **ITMS-90186** "train version '1.0.0' is closed" and **ITMS-90062** "must contain a higher version than … the previously approved version [1.0.0]". The ASC API confirms version **1.0.0 is `READY_FOR_SALE`** (release type MANUAL) — the communities-only iOS app is on the App Store, as build 8.
+**Actions**: `app.json` → version **1.0.1**, buildNumber **10** (`40da4920`). `eas build --profile development-testflight` → `dd5a80fa-34a8-4bdf-a2e7-b719a724f184` FINISHED; `eas submit` (key in `eas.json` locally, reverted) → build `67fdb8b5…` 1.0.1 (10) `VALID`, `internalBuildState READY_FOR_BETA_TESTING`; it was in no beta group, so it was added to `Internal` (`747516ea…`) over the API (204).
+**Decisions**: The dev client takes the 1.0.1 train. A store build for the next release can still be 1.0.1 with a higher build number (≥ 11), or 1.1; never attach build 10 (dev client) to a version.
+**Learnings**: Once a version is approved its train closes — bump `version`, not just `buildNumber`. Check Gmail for Apple's "Action needed" mail when an upload succeeds but no build appears.
+
 ## 2026-11-14 22:00 UTC — phase315: Apple / Google under the sign-in form; build 9 uploaded; film arrangement noted for later
 
 **Objective**: Owner: "签 Apple 协议 - done / Sign in with Google 放到登录框下面 / 编排方式 - 先记录下来这个点 暂时不做过多改变".
