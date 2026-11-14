@@ -9,7 +9,7 @@
  */
 import type { PlaceFact } from '../tour-orchestrator/insights';
 import { tourPoiSet } from '../tour-poi-set';
-import { SURROUNDING_POI_BUDGET, selectSurroundingPois } from './photos';
+import { SURROUNDING_POI_BUDGET, preferNearPois, selectSurroundingPois } from './photos';
 import { type RunRow, type TourDb, mustWrite, saveStep, setRunStatus } from './shared';
 import { computeFinalShots } from './shots';
 
@@ -63,10 +63,10 @@ export async function runPlan(sb: TourDb, run: RunRow) {
 
   const { data: allLinks } = (await sb
     .from('community_pois')
-    .select('poi_id, intent_bucket')
+    .select('poi_id, intent_bucket, distance_m')
     .eq('community_id', run.community_id)
     .neq('status', 'rejected')) as {
-    data: Array<{ poi_id: string; intent_bucket: string | null }> | null;
+    data: Array<{ poi_id: string; intent_bucket: string | null; distance_m: number | null }> | null;
   };
 
   // Every photo behind every link, once. Three questions need it: which POIs in
@@ -122,8 +122,17 @@ export async function runPlan(sb: TourDb, run: RunRow) {
   // THE BUDGET, applied HERE so the owner's review counts toward it. Amenities
   // are the community's own and never compete; the surrounding places do.
   const amenityIds = resolvedPoiIds.filter((id) => bucketByPoiId.get(id) === 'amenities');
-  const surrounding = resolvedPoiIds.filter((id) => bucketByPoiId.get(id) !== 'amenities');
-  let cutPoiIds = resolvedPoiIds;
+  // Near places first, on every plan — see `preferNearPois`.
+  const distanceByPoiId = new Map(links.map((l) => [l.poi_id, l.distance_m]));
+  const surrounding = preferNearPois({
+    surrounding: resolvedPoiIds.filter((id) => bucketByPoiId.get(id) !== 'amenities'),
+    bucketOf: (id) => bucketByPoiId.get(id) ?? 'other',
+    distanceOf: (id) => distanceByPoiId.get(id) ?? null,
+    handPicked: new Set(
+      linkedPhotos.filter((p) => p.reviewed_by && p.status === 'approved').map((p) => p.poi_id),
+    ),
+  });
+  let cutPoiIds = [...amenityIds, ...surrounding];
   if (surrounding.length > SURROUNDING_POI_BUDGET) {
     const { data: approvedPhotos } = (await sb
       .from('poi_photos')

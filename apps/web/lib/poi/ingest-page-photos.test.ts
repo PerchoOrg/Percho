@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractImageUrls, isFurniture } from './ingest-page-photos';
+import { extractImageUrls, filenameWidth, isFurniture } from './ingest-page-photos';
 
 const PAGE = 'https://www.aberdeencommunity.org/photo-album/';
 
@@ -149,5 +149,39 @@ describe('isFurniture', () => {
     expect(isFurniture('https://media.example.com/259/2020/9/10/HbtM3.jpeg?width=1920')).toBe(
       false,
     );
+  });
+});
+
+describe('filenameWidth', () => {
+  it('reads a width a CMS baked into the filename (Toll Brothers)', () => {
+    expect(filenameWidth('/communities/14538/images-resized/GA_Pool_7_1920.jpg')).toEqual({
+      width: 1920,
+      key: '/communities/14538/images-resized/GA_Pool_7.jpg',
+    });
+  });
+
+  it('leaves a counter alone — only known widths count', () => {
+    expect(filenameWidth('/media/Clubhouse_1234.jpg')).toBeNull();
+    expect(filenameWidth('/media/Pool_7.jpg')).toBeNull();
+  });
+
+  it('leaves a camera file name alone even when the counter looks like a width', () => {
+    expect(filenameWidth('/uploads/IMG_1080.jpg')).toBeNull();
+    expect(filenameWidth('/uploads/DSC_1920.JPG')).toBeNull();
+  });
+});
+
+describe('extractImageUrls, filename widths', () => {
+  it('collapses _920 / _1920 copies of one picture to the widest', () => {
+    const urls = extractImageUrls(
+      `<img src="https://cdn.tollbrothers.com/c/GA_Pool_7_920.jpg">
+       <img src="https://cdn.tollbrothers.com/c/GA_Pool_7_1920.jpg">
+       <img src="https://cdn.tollbrothers.com/c/GA_Clubhouse_2_920.jpg">`,
+      PAGE,
+    );
+    expect(urls).toEqual([
+      'https://cdn.tollbrothers.com/c/GA_Pool_7_1920.jpg',
+      'https://cdn.tollbrothers.com/c/GA_Clubhouse_2_920.jpg',
+    ]);
   });
 });
