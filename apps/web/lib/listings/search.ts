@@ -28,6 +28,13 @@
  * photo preference, it is the precise "this page has something on it" test
  * the data offers. Scan: DEVLOG 2026-09-12 phase277.5.
  *
+ * ── Narrowed to communities with a video (2026-11-14) ───────────────────────
+ * Owner: "for neighborhood, 只显示有视频的". The gate is now the web grid's
+ * set — `fetchCommunityListCards()`, every active community with an uploaded
+ * video or a film — instead of `cover_storage_path is not null`. A community
+ * with a film but no cover photo (Northbrooke) is in; one with photos and no
+ * video is out. Search and the map read the same set, so they still agree.
+ *
  * Communities therefore get their own, much higher ceiling. It is still a
  * ceiling: a city like Atlanta has 731 communities and this returns the first
  * `COMMUNITY_LIMIT` of them by name. True full coverage needs a viewport query
@@ -41,6 +48,7 @@
  */
 
 import { publicCoverImageUrl } from '@/lib/communities/cover';
+import { fetchCommunityListCards } from '@/lib/communities/list';
 import { createUncachedAnonClient } from '@/lib/supabase/server';
 
 const SEARCH_LIMIT = 24;
@@ -151,6 +159,11 @@ export function projectSearchCommunities(rows: CommunityRow[]): SearchCommunityD
   }));
 }
 
+/** Ids of the communities a buyer may see: those with a video — see the header. */
+async function videoCommunityIds(): Promise<string[]> {
+  return (await fetchCommunityListCards()).map((c) => c.id);
+}
+
 /** An empty listing read, for the communities-only app (phase308). */
 const NO_LISTINGS = Promise.resolve({ data: [] as ListingRow[], error: null });
 
@@ -197,6 +210,7 @@ export async function searchEntities(
 ): Promise<SearchResultDTO> {
   const supabase = createUncachedAnonClient();
   const like = `%${q}%`;
+  const videoIds = await videoCommunityIds();
 
   const [listingRes, communityRes] = await Promise.all([
     opts.listings ? listingSearch(supabase, like) : NO_LISTINGS,
@@ -204,9 +218,8 @@ export async function searchEntities(
       .from('communities')
       .select('id, slug, name, city, state, cover_storage_path, lat, lng')
       .eq('status', 'active')
-      // The content gate — see the header. A row this drops has a name and
-      // a point and nothing else to open.
-      .not('cover_storage_path', 'is', null)
+      // The content gate — see the header. Only communities with a video.
+      .in('id', videoIds)
       .or(`name.ilike.${like},city.ilike.${like}`)
       .order('name', { ascending: true })
       .limit(COMMUNITY_LIMIT),
@@ -251,6 +264,7 @@ export async function mapEntities(
   opts: { listings: boolean } = { listings: true },
 ): Promise<Omit<SearchResultDTO, 'q'>> {
   const supabase = createUncachedAnonClient();
+  const videoIds = await videoCommunityIds();
 
   const [listingRes, communityRes] = await Promise.all([
     opts.listings ? listingsInBounds(supabase, bounds) : NO_LISTINGS,
@@ -261,7 +275,7 @@ export async function mapEntities(
       .select('id, slug, name, city, state, cover_storage_path, lat, lng')
       .eq('status', 'active')
       // The content gate — see the header.
-      .not('cover_storage_path', 'is', null)
+      .in('id', videoIds)
       .gte('lat', bounds.minLat)
       .lte('lat', bounds.maxLat)
       .gte('lng', bounds.minLng)

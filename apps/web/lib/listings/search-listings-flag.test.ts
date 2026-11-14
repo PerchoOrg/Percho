@@ -6,13 +6,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * the database for that app. This fake records which tables were queried.
  */
 const tables: string[] = [];
+/** Every `.in()` filter, as `[column, values]`. */
+const inFilters: Array<[string, unknown]> = [];
 
 /** Every read in `search.ts` ends in `.limit()`, so that is where it resolves. */
 function fakeQuery(): unknown {
   const chain: Record<string, unknown> = {};
-  for (const m of ['select', 'eq', 'not', 'or', 'gte', 'lte', 'order', 'in']) {
+  for (const m of ['select', 'eq', 'not', 'or', 'gte', 'lte', 'order']) {
     chain[m] = () => chain;
   }
+  chain.in = (column: string, values: unknown) => {
+    inFilters.push([column, values]);
+    return chain;
+  };
   chain.limit = () => Promise.resolve({ data: [], error: null });
   return chain;
 }
@@ -26,12 +32,17 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }));
 
+vi.mock('@/lib/communities/list', () => ({
+  fetchCommunityListCards: async () => [{ id: 'filmed-1' }, { id: 'filmed-2' }],
+}));
+
 const { mapEntities, searchEntities } = await import('./search');
 
 const BOUNDS = { minLat: 33.6, maxLat: 34.1, minLng: -84.6, maxLng: -84.1 };
 
 beforeEach(() => {
   tables.length = 0;
+  inFilters.length = 0;
 });
 
 describe('searchEntities / mapEntities — the listings option', () => {
@@ -55,5 +66,17 @@ describe('searchEntities / mapEntities — the listings option', () => {
   it('the map still reads both by default', async () => {
     await mapEntities(BOUNDS);
     expect(tables.sort()).toEqual(['communities', 'listings']);
+  });
+});
+
+describe('searchEntities / mapEntities — only communities with a video', () => {
+  it('search limits the community read to the grid set', async () => {
+    await searchEntities('oak', { listings: false });
+    expect(inFilters).toEqual([['id', ['filmed-1', 'filmed-2']]]);
+  });
+
+  it('the map limits the community read to the same set', async () => {
+    await mapEntities(BOUNDS, { listings: false });
+    expect(inFilters).toEqual([['id', ['filmed-1', 'filmed-2']]]);
   });
 });

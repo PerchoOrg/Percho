@@ -23,6 +23,16 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-14 10:40 UTC — phase310.1: iOS search and map show only communities with a video
+
+**Objective**: Owner, after reviewing the phase310 preview: "iOS 搜索改" — the app's Search tab should follow the same rule. Northbrooke's logo-SVG cover: "先不改".
+**Actions**: `lib/listings/search.ts` — `searchEntities` and `mapEntities` replace the content gate `cover_storage_path is not null` with `.in('id', videoCommunityIds())`, where the ids come from `fetchCommunityListCards()` (the cached web grid set). Header comment records the change. `search-listings-flag.test.ts` mocks the grid set and asserts both reads carry the `id` filter.
+**Decisions**: Changed the map viewport read too, not just typed search — the file's own rule is that the two faces of the map agree on what a community is, and a text search returning 6 while the map draws thousands of dots would break it. Server-only change: `/api/mobile/search` and `/api/mobile/map` serve the phone, so it lands on iOS with the deploy, no app release.
+**Issues**: None. Typecheck clean for web, biome 0 errors, vitest 1231/1231.
+**Resolution**: The iOS map now draws only the filmed communities (6 today) — a much emptier map. Flagged to the owner.
+**Learnings**: Northbrooke has a film but no `cover_storage_path`; on iOS search it now appears with no `heroUrl`.
+**Next steps**: Owner to check Search on the phone.
+
 ## 2026-11-14 09:55 UTC — phase310: neighborhood grid and search show only communities with a video
 
 **Objective**: Owner: "for neighborhood, 只显示有视频的" — the web Neighborhoods grid should list only communities with a video.
