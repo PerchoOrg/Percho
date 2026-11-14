@@ -1,3 +1,8 @@
+import {
+	REVIEW_DIMENSIONS,
+	REVIEW_DIMENSION_LABELS,
+	type ReviewDimension,
+} from "@percho/shared/review-dimensions";
 /**
  * `/community/review?id=<communityId>&name=<community name>` — write or edit
  * the signed-in user's resident review (phase E).
@@ -21,11 +26,6 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-	REVIEW_DIMENSIONS,
-	REVIEW_DIMENSION_LABELS,
-	type ReviewDimension,
-} from "../../lib/reviews/dimensions";
 import {
 	REVIEW_BODY_MAX,
 	draftProblem,

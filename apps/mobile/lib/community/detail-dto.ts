@@ -1,3 +1,5 @@
+import type { ReviewDimension } from "@percho/shared/review-dimensions";
+import type { TourSegment } from "@percho/shared/tour-buckets";
 /**
  * The community detail DTO client-side.
  *
@@ -21,8 +23,6 @@
 // (see vitest.config.ts — no React Native runtime), and the component file
 // pulls in react-native through its own imports.
 import type { RedlineIconName } from "../../components/cards/redline/icon-font";
-import type { ReviewDimension } from "../reviews/dimensions";
-import type { TourSegment } from "./tour-buckets";
 
 export interface CommunityReasonDTO {
 	label: string;

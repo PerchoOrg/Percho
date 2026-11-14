@@ -1,3 +1,4 @@
+import type { CompareTake } from "@percho/shared/compare-take";
 /**
  * TakeCard (phase270) — a compare screen's opening move: the suggestion
  * itself, spoken like a person, sitting above the numbers that back it.
@@ -8,7 +9,6 @@
  * the tables use.
  */
 import { StyleSheet, Text, View } from "react-native";
-import type { CompareTake } from "../../lib/compare/take";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 

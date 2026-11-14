@@ -1,3 +1,9 @@
+import {
+	type CompareTake,
+	PRIORITY_PROSE,
+	listJoin,
+	usd,
+} from "@percho/shared/compare-take";
 /**
  * The areas take (phase270) — `lib/compare/take.ts` built from the same
  * figures `buildAreaCompareTable` shows. PURE: areas in, prose out.
@@ -21,12 +27,9 @@ import {
 	taxMonthlyUsdFor,
 } from "@percho/shared/lenses";
 import {
-	type CompareTake,
-	PRIORITY_PROSE,
-	listJoin,
-	usd,
-} from "../compare/take";
-import { type PriorityWeights, topStatedPriority } from "../priorities";
+	type PriorityWeights,
+	topStatedPriority,
+} from "@percho/shared/priorities";
 
 /** Gaps smaller than these are "the same, basically" and earn no opinion. */
 const COST_MIN_GAP_USD_MONTHLY = 25;

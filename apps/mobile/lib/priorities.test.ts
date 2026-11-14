@@ -1,5 +1,4 @@
 import { DEFAULT_LENS, LENSES } from "@percho/shared/lenses";
-import { describe, expect, it } from "vitest";
 import {
 	MAX_WEIGHT,
 	PRIORITIES,
@@ -12,7 +11,8 @@ import {
 	orderByPriority,
 	rankedPriorities,
 	topStatedPriority,
-} from "./priorities";
+} from "@percho/shared/priorities";
+import { describe, expect, it } from "vitest";
 
 describe("the catalogue", () => {
 	it("has a label for every weight step", () => {

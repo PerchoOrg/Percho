@@ -44,7 +44,7 @@ worker outside Vercel picks it up. Anything slow lives behind that boundary.
 |---|---|
 | `apps/web/` | The product. Next.js 14 App Router — buyer-facing pages, the agent dashboard, the admin pipeline console, and the HTTP API. Everything a browser touches. |
 | `apps/mobile/` | Buyer-facing iOS app. Expo + expo-router. Reads the web app's `/api/mobile/*` routes; owns no schema. |
-| `packages/shared/` | Types and constants both apps must agree on. The only cross-app import. Keep it dependency-free, and import a module by subpath (`@percho/shared/types`) — there is no barrel. |
+| `packages/shared/` | Types, constants and pure logic both apps must agree on — since phase311 that includes the community compare (`community-compare`, `community-take` and the priority, review-dimension and table modules they read), because the web and iOS compare screens draw the same table. The only cross-app import. Keep it dependency-free, and import a module by subpath (`@percho/shared/types`) — there is no barrel. |
 | `scripts/` | Everything that runs outside Vercel: long-running workers, one-shot pipelines, admin utilities, prototypes. |
 | `supabase/` | Schema source of truth. Migrations, RLS policies, edge functions, local config. |
 | `docs/` | Reference material a human reads. Not process logs — those go to `docs/archive/`, which also collects finished prototypes and campaigns. |

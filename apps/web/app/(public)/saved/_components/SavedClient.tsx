@@ -30,7 +30,8 @@ import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import type { BrowseCard } from '@/lib/feed/browse-card';
 import { linkForCard } from '@/lib/feed/link-for-card';
 import { BUYER_HOME, LISTINGS_ON_WEB } from '@/lib/listings/listings-on-web';
-import { Bookmark } from 'lucide-react';
+import { COMMUNITY_COMPARE_MAX, COMMUNITY_COMPARE_MIN } from '@percho/shared/community-compare';
+import { Bookmark, Check } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
@@ -178,27 +179,122 @@ function ListingsView({ cards }: { cards: BrowseCard[] }) {
   );
 }
 
+/**
+ * Saved neighbourhoods, and the way into Compare (phase311) — the same flow
+ * as the iOS Saved tab: pick 2–5, then compare them side by side.
+ */
 function CommunitiesView({ communities }: { communities: SavedCommunityCard[] }) {
+  const [selecting, setSelecting] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
   if (communities.length === 0) return <FavoritesEmpty />;
+
+  const canCompare =
+    picked.length >= COMMUNITY_COMPARE_MIN && picked.length <= COMMUNITY_COMPARE_MAX;
+  const togglePick = (id: string) =>
+    setPicked((p) =>
+      p.includes(id)
+        ? p.filter((x) => x !== id)
+        : p.length < COMMUNITY_COMPARE_MAX
+          ? [...p, id]
+          : p,
+    );
+  const stopSelecting = () => {
+    setSelecting(false);
+    setPicked([]);
+  };
+
   return (
     <GridPageShell>
+      {communities.length >= COMMUNITY_COMPARE_MIN ? (
+        <div className="flex items-center justify-between gap-3 px-1 pt-4 pb-3">
+          <p className="text-ink2 text-sm">
+            {selecting
+              ? `Pick ${COMMUNITY_COMPARE_MIN}–${COMMUNITY_COMPARE_MAX} to compare · ${picked.length} picked`
+              : 'Saved neighborhoods'}
+          </p>
+          <div className="flex shrink-0 items-center gap-2">
+            {selecting ? (
+              <>
+                <button
+                  type="button"
+                  onClick={stopSelecting}
+                  className="rounded-full px-3 py-1.5 text-ink2 text-sm hover:text-ink"
+                >
+                  Cancel
+                </button>
+                {canCompare ? (
+                  <Link
+                    href={`/compare?ids=${picked.join(',')}`}
+                    className="rounded-full bg-ink px-4 py-1.5 font-medium text-sm text-surface"
+                  >
+                    Compare {picked.length}
+                  </Link>
+                ) : (
+                  <span className="rounded-full bg-ink/30 px-4 py-1.5 font-medium text-sm text-surface">
+                    Compare
+                  </span>
+                )}
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSelecting(true)}
+                className="rounded-full border border-line-strong px-4 py-1.5 font-medium text-ink text-sm hover:bg-surface"
+              >
+                Compare
+              </button>
+            )}
+          </div>
+        </div>
+      ) : null}
       <GridFrame>
-        {communities.map((c) => (
-          <GridCard
-            key={c.id}
-            href={`/c/${c.slug}/feed`}
-            coverUrl={c.coverUrl}
-            alt={c.name}
-            fallback={
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-ink2/20 to-ink">
-                <span className="font-semibold text-3xl text-surface/70">{c.name.charAt(0)}</span>
-              </div>
-            }
-            caption={
-              <GridCardCaption title={c.name} sub={c.city ? `${c.city}, ${c.state}` : c.state} />
-            }
-          />
-        ))}
+        {communities.map((c) => {
+          const isPicked = picked.includes(c.id);
+          return (
+            <div key={c.id} className="relative">
+              <GridCard
+                href={`/c/${c.slug}`}
+                coverUrl={c.coverUrl}
+                alt={c.name}
+                dimmed={selecting && !isPicked}
+                fallback={
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-ink2/20 to-ink">
+                    <span className="font-semibold text-3xl text-surface/70">
+                      {c.name.charAt(0)}
+                    </span>
+                  </div>
+                }
+                topRight={
+                  selecting ? (
+                    <span
+                      className={`flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface ${isPicked ? 'bg-ink' : 'bg-black/20'}`}
+                    >
+                      {isPicked ? (
+                        <Check size={14} className="text-surface" aria-hidden="true" />
+                      ) : null}
+                    </span>
+                  ) : undefined
+                }
+                caption={
+                  <GridCardCaption
+                    title={c.name}
+                    sub={c.city ? `${c.city}, ${c.state}` : c.state}
+                  />
+                }
+              />
+              {/* In select mode a tap picks the card instead of opening it. */}
+              {selecting ? (
+                <button
+                  type="button"
+                  aria-pressed={isPicked}
+                  aria-label={`${isPicked ? 'Unpick' : 'Pick'} ${c.name}`}
+                  onClick={() => togglePick(c.id)}
+                  className="absolute inset-0 z-10 cursor-pointer"
+                />
+              ) : null}
+            </div>
+          );
+        })}
       </GridFrame>
     </GridPageShell>
   );

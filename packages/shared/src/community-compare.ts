@@ -44,19 +44,41 @@
  * counted as zero and one it never counted, and printing "0 parks" for a
  * community we simply have no POI sweep for would be inventing an absence.
  */
-import type { CompareAspect, CompareTableRow } from "../compare/table";
+import type { CompareAspect, CompareTableRow } from "./compare-table";
 import {
 	type PriorityKey,
 	type PriorityWeights,
 	orderByPriority,
-} from "../priorities";
+} from "./priorities";
 import {
 	REVIEW_DIMENSIONS,
 	REVIEW_DIMENSION_LABELS,
 	type ReviewDimension,
-} from "../reviews/dimensions";
-import type { CommunityDetailDTO } from "./detail-dto";
+} from "./review-dimensions";
 import { bucketLabel } from "./tour-buckets";
+
+/**
+ * The slice of a community's detail DTO the compare reads. Structural, so
+ * the server's `CommunityDetailDTO` (apps/web/lib/communities/detail.ts) and
+ * the phone's copy of it (apps/mobile/lib/community/detail-dto.ts) both fit
+ * without either importing the other. Shared since phase311, when the web
+ * gained the same compare.
+ */
+export interface CompareCommunity {
+	id: string;
+	slug: string;
+	name: string;
+	city: string;
+	state: string;
+	heroUrl?: string;
+	stats: readonly { label: string; value: string }[];
+	nearby?: readonly { bucket: string; count: number }[];
+	reviews?: {
+		count: number;
+		avgRating: number;
+		dimensionAvgs: Partial<Record<ReviewDimension, number>>;
+	};
+}
 
 export const COMMUNITY_COMPARE_MIN = 2;
 /** 3 → 5 in phase272, for the reason `lib/listing/compare.ts` states. */
@@ -121,13 +143,13 @@ export interface CommunityCompareTable {
 }
 
 /** "Woodstock, GA" — or whichever half we have, or nothing. */
-function placeOf(c: CommunityDetailDTO): string {
+function placeOf(c: CompareCommunity): string {
 	return [c.city, c.state].filter(Boolean).join(", ");
 }
 
 /** The verbatim value for one of the server's three stat labels. */
 function statCells(
-	communities: readonly CommunityDetailDTO[],
+	communities: readonly CompareCommunity[],
 	label: string,
 ): (string | undefined)[] {
 	return communities.map((c) => c.stats.find((s) => s.label === label)?.value);
@@ -135,7 +157,7 @@ function statCells(
 
 /** One bucket's count per community, `undefined` when the server omitted it. */
 function bucketCells(
-	communities: readonly CommunityDetailDTO[],
+	communities: readonly CompareCommunity[],
 	bucket: string,
 ): (number | undefined)[] {
 	return communities.map(
@@ -156,7 +178,7 @@ const kept = (rows: CommunityCompareRow[]): CommunityCompareRow[] =>
  * already shows are skipped too.
  */
 function nearbyRows(
-	communities: readonly CommunityDetailDTO[],
+	communities: readonly CompareCommunity[],
 ): CommunityCompareRow[] {
 	const totals = new Map<string, number>();
 	for (const c of communities) {
@@ -183,7 +205,7 @@ function nearbyRows(
 
 /** A resident-rated dimension as a row: "4.5" with a bar out of 5. */
 function dimensionRow(
-	communities: readonly CommunityDetailDTO[],
+	communities: readonly CompareCommunity[],
 	dim: ReviewDimension,
 ): CommunityCompareRow {
 	const values = communities.map((c) => c.reviews?.dimensionAvgs[dim]);
@@ -202,7 +224,7 @@ function dimensionRow(
  * Never filters. The four aspect sections keep the owner's fixed order.
  */
 export function buildCommunityCompareTable(
-	communities: readonly CommunityDetailDTO[],
+	communities: readonly CompareCommunity[],
 	weights?: PriorityWeights,
 ): CommunityCompareTable {
 	// Errands + shops + food as one count. Summed over the buckets the server

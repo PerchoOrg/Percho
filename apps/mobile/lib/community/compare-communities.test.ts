@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
 import {
 	type CommunityCompareTable,
 	NEARBY_ROW_LIMIT,
 	buildCommunityCompareTable,
-} from "./compare-communities";
+} from "@percho/shared/community-compare";
+import { describe, expect, it } from "vitest";
 import type { CommunityDetailDTO } from "./detail-dto";
 
 function community(over: Partial<CommunityDetailDTO> = {}): CommunityDetailDTO {

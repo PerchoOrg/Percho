@@ -1,6 +1,6 @@
+import { buildCommunityTake } from "@percho/shared/community-take";
 import { describe, expect, it } from "vitest";
 import type { CommunityDetailDTO, CommunityReviewsDTO } from "./detail-dto";
-import { buildCommunityTake } from "./take";
 
 function community(over: Partial<CommunityDetailDTO> = {}): CommunityDetailDTO {
 	return {

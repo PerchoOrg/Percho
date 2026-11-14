@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
 import {
 	ESSENTIAL_ROWS,
 	MIN_HIDDEN_TO_EXPAND,
 	listJoin,
 	splitRows,
 	usd,
-} from "./take";
+} from "@percho/shared/compare-take";
+import { describe, expect, it } from "vitest";
 
 const rows = (n: number) => Array.from({ length: n }, (_, i) => `row${i}`);
 

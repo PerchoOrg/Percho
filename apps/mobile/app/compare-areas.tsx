@@ -1,3 +1,4 @@
+import { splitRows } from "@percho/shared/compare-take";
 import { estimateNoteForRows } from "@percho/shared/lenses";
 /**
  * `/compare-areas?keys=cobb,forsyth[,dekalb]` — 2–3 areas side by side.
@@ -28,7 +29,6 @@ import {
 	buildAreaCompareTable,
 } from "../lib/areas/compare-areas";
 import { buildAreaTake } from "../lib/areas/take";
-import { splitRows } from "../lib/compare/take";
 import { usePriorityStore } from "../state/priorities";
 import { colors, explore, radii } from "../theme/tokens";
 import { textStyles } from "../theme/typography";

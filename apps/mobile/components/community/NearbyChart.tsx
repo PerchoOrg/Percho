@@ -1,3 +1,4 @@
+import { bucketLabel } from "@percho/shared/tour-buckets";
 /**
  * NearbyChart — how many real places of each kind are near this community.
  *
@@ -18,7 +19,6 @@
  */
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { bucketLabel } from "../../lib/community/tour-buckets";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 

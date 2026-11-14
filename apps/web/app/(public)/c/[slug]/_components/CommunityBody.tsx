@@ -40,6 +40,7 @@ import {
 import { Fragment } from 'react';
 import { useEffect, useState } from 'react';
 import { CommunityBoundaryMap } from './CommunityBoundaryMap';
+import { SaveCommunityButton } from './SaveCommunityButton';
 
 const CATEGORY_META = new Map(COMMUNITY_VIDEO_CATEGORIES.map((m) => [m.id, m] as const));
 
@@ -110,6 +111,9 @@ export function CommunityBody({
             grid (Explore tab). */}
         <div className="absolute left-3 top-3 z-10 sm:left-5 sm:top-5">
           <HeroControl href="/communities">← Back</HeroControl>
+        </div>
+        <div className="absolute right-3 top-3 z-10 sm:right-5 sm:top-5">
+          <SaveCommunityButton communityId={community.id} />
         </div>
         <div className="absolute inset-x-0 bottom-0 px-4 py-3 sm:px-6 sm:py-4">
           <h1 className="font-semibold text-2xl text-surface tracking-tight sm:text-3xl">

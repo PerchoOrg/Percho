@@ -1,3 +1,11 @@
+// The dimension keys and labels live in `dimensions.ts` — pure data, reachable
+// from the vitest suite, which this module is not (the `supabase` import above
+// pulls in react-native). Callers that only need the four names should import
+// THAT file, not this one.
+import {
+	REVIEW_DIMENSIONS,
+	type ReviewDimension,
+} from "@percho/shared/review-dimensions";
 /**
  * Resident reviews (phase E) — the app's half of `community_reviews`.
  *
@@ -12,11 +20,6 @@
  * step, the server drops any it does not know.
  */
 import { supabase } from "../supabase";
-// The dimension keys and labels live in `dimensions.ts` — pure data, reachable
-// from the vitest suite, which this module is not (the `supabase` import above
-// pulls in react-native). Callers that only need the four names should import
-// THAT file, not this one.
-import { REVIEW_DIMENSIONS, type ReviewDimension } from "./dimensions";
 
 const REVIEW_BODY_MIN = 20;
 export const REVIEW_BODY_MAX = 1200;

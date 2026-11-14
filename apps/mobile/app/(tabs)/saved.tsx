@@ -1,3 +1,7 @@
+import {
+	COMMUNITY_COMPARE_MAX,
+	COMMUNITY_COMPARE_MIN,
+} from "@percho/shared/community-compare";
 /**
  * Saved tab (spec-v3 05 §5.2) — the shortlist, grouped by place.
  *
@@ -58,10 +62,6 @@ import {
 	AREA_COMPARE_MIN,
 } from "../../lib/areas/compare-areas";
 import { countyKeyForPoint } from "../../lib/areas/locate";
-import {
-	COMMUNITY_COMPARE_MAX,
-	COMMUNITY_COMPARE_MIN,
-} from "../../lib/community/compare-communities";
 import { COMPARE_MAX, COMPARE_MIN } from "../../lib/listing/compare";
 import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
 import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
