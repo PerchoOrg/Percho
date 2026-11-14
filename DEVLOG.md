@@ -23,6 +23,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-14 20:10 UTC — phase313: near places first; three pipeline bugs; web plays the film; area saves need an account; Expo Go
+
+**Objective**: Owner: "距离上限7mi 没有问题 - 但是距离近的要有优先级 / 本地的expo go打不开了 - 修 / Google 登录 … 给详细步骤 / Web 社区页不播放影片 - 修 / iOS 保存区域（县）仍然不用登录 - 改 / 9 月遗留的三个流水线 bug - 修".
+**Actions**:
+- **Expo Go**: the phone's Expo Go is `Exponent/58.0.5` (ngrok request log) and the project is SDK 57 — Expo Go only opens its own SDK, so no Metro fix can open it. Metro (up since 2026-10-04, before the phase308 dependency bumps) restarted from the reference worktree with `--clear`; manifest `exposdk:57.0.0`, iOS bundle 200 / 11.4 MB / 1983 modules. No iPhone is registered on team `5C84L6M8HT`, so an ad-hoc dev client cannot install; `eas.json` gains `development-testflight` (`developmentClient: true`, `distribution: "store"`), `app.json` buildNumber 9 (`7f8ff21e`). **The `eas build` was refused by the auto-mode classifier** — the owner runs it (or allows it), then submits to TestFlight per `docs/ios-release.md`.
+- **Area saves** (`cfbd69dd`): `state/saved.ts` gates every kind when signed out; Saved shows only the sign-in prompt when signed out, so area compare needs an account too. Areas stay device-local (no table).
+- **Pipeline** (`2721da52`, `3e0fe1f9`): `failedShotKeys` requeues failed clips on each shot's own engine (was `forceEngine ?? 'seedance'`); `scripts/render-worker/storage_retry.py` backs Storage GET/POST/PUT off through 429/5xx and connection errors (1-2-4-8-16 s); page ingest dedupes content hashes across every POI of the community and `filenameWidth` collapses CMS widths baked into filenames (`_920` / `_1920`, known widths only, camera names exempt).
+- **Near first** (`3e0fe1f9`): `preferNearPois` runs on every plan before the budget — a place beyond 4 mi (`NEAR_TIER_M`) stays only if its bucket has nothing within 4 mi; hand-approved POIs exempt; unknown distance counts as near. The 7-mile `MAX_DISTANCE_M` is unchanged; film ORDER (time-of-day acts) is unchanged.
+- **Web film** (`824c439a`): `/c/[slug]` plays the film the app plays (`fetchVerticalVideos` with the uncached client, AI-tour fallback) via `attachHls`, with the Google Maps photo-credit line (the web was missing it — phase308.11 finding); the "No videos" box is hidden for a filmed community without uploads.
+**Verification**: web typecheck 0, biome 0 errors (180 warnings; one new `useMediaCaption` on the film, same as the other players), vitest web 1237+ new (lib/poi 399); mobile tsc 0, vitest saved 8; worker pytest 134. Local `next start` against production data: `/c/northbrooke-cumming` video `readyState 4`, 76 s, `d9aedd34…` manifest, credit line present, no "No videos" text.
+**Decisions**: Near-first is a selection rule, not an ordering rule — the scheduler's day-in-order acts stay. Existing six films are NOT re-planned (no backfill without the owner's word); Northbrooke would lose Ducktown Park, Poole's Mill Park and probably NoFo under the new rule.
+**Next steps**: Owner: run the dev-client build; Google OAuth setup (steps in chat); say whether to re-plan Northbrooke as the first film under near-first. Restart the render workers after this merge (worker.py changed).
+
 ## 2026-11-14 18:50 UTC — phase312: Northbrooke's film had its place labels burned in — stale render worker; film reads skip Next's fetch cache
 
 **Objective**: Owner: "Northbrooke 视频的左上角和右上角都有位置label fix it，看看还有别的落后的版本问题吗，有几个地理位置都是4mile以外 这是最新编排版本预期的结果吗".

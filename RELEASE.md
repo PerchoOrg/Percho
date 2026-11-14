@@ -34,6 +34,15 @@ anything; it just means "less of this for now".
   pick two to five saved neighbourhoods and see Percho's take and the
   numbers side by side — the same comparison the app shows. Needs an
   account.
+- **Neighbourhood pages on the website play the film**, with the photo
+  credits underneath — the same film the app plays.
+- **Saving a county or area in the app now needs an account too**, like
+  saving a neighbourhood; signed out, the Saved tab only offers sign-in.
+- **Films favour nearby places.** A spot more than four miles away only
+  makes a neighbourhood's film when there is nothing of its kind closer.
+- **Behind the scenes:** film production is sturdier — failed clips retry on
+  their own, uploads ride out busy moments, and the same builder photo is no
+  longer collected several times.
 - **A clearer sign-in screen in the app** (in the next app update): sign in
   with Apple or your email and password, "Forgot password?" right under the
   form, and "Don't have an account? Sign up" at the bottom — no more
