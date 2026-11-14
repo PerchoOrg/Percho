@@ -93,9 +93,16 @@ export interface HeroVideoIndex {
  * total, so this is two small queries. Revisit when either table reaches a few
  * hundred rows.
  */
-export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
-  const supabase = createServiceClient();
-
+export async function fetchVerticalVideos(
+  /**
+   * Route handlers pass `createUncachedServiceClient()` (phase312): through
+   * Next's fetch cache this read kept answering with the film a community had
+   * when the query first ran — Northbrooke's re-cut reached the feed while its
+   * community page kept the old one. The default serves `unstable_cache`
+   * callers, whose own TTL bounds the staleness.
+   */
+  supabase: TypedClient = createServiceClient(),
+): Promise<HeroVideoIndex> {
   const [listingRes, communityRes, assemblyRes] = await Promise.all([
     supabase
       .from('listing_videos')
@@ -234,7 +241,7 @@ export async function fetchVerticalVideoListingIds(): Promise<string[]> {
  * `offset=0, limit=12`. Reordering that page hoists nothing. The route uses
  * these ids to fetch the rows directly — see `fetchCommunityPoolByIds`.
  */
-export async function fetchVerticalVideoCommunityIds(): Promise<string[]> {
-  const { byCommunity } = await fetchVerticalVideos();
+export async function fetchVerticalVideoCommunityIds(supabase?: TypedClient): Promise<string[]> {
+  const { byCommunity } = await fetchVerticalVideos(supabase);
   return [...byCommunity.keys()];
 }
