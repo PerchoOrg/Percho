@@ -11,10 +11,17 @@
  */
 
 import { resolveCommunityCoverWithCfIds } from '@/lib/communities/cover';
+import { fetchFilmPhotoCredits } from '@/lib/communities/film-credits';
+import { fetchAiTourVideoByCommunity } from '@/lib/feed/ai-tour-videos';
 import { fetchBrowseCardsByCommunitySlug } from '@/lib/feed/browse-cards';
+import {
+  fetchVerticalVideos,
+  streamManifestUrl,
+  streamPosterUrl,
+} from '@/lib/feed/vertical-videos';
 import { LISTINGS_ON_WEB } from '@/lib/listings/listings-on-web';
 import type { Row } from '@/lib/supabase/rows';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createUncachedServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { CommunityBody } from './_components/CommunityBody';
 
@@ -87,6 +94,21 @@ export default async function CommunityPage({
       .eq('is_primary', true)) as { data: VideoRow[] | null };
     videos = rows ?? [];
   }
+
+  // The community's film — the same pick the app makes (phase313). Uncached,
+  // so a re-cut reaches this page (see `fetchVerticalVideos`).
+  const films = await fetchVerticalVideos(createUncachedServiceClient());
+  const filmUid = films.byCommunity.get(community.id);
+  const filmUrl = filmUid
+    ? streamManifestUrl(filmUid)
+    : ((await fetchAiTourVideoByCommunity()).get(community.id) ?? null);
+  const film = filmUrl
+    ? {
+        url: filmUrl,
+        poster: filmUid ? streamPosterUrl(filmUid) : null,
+        credits: await fetchFilmPhotoCredits(community.id, filmUid),
+      }
+    : null;
 
   // Active listings inside this community — reuse the browse-card builder
   // so cards match the global feed shape exactly (BrowseCard type). None
@@ -173,6 +195,7 @@ export default async function CommunityPage({
       nearby={nearbyCards}
       videos={videos}
       listings={listings}
+      film={film}
     />
   );
 }

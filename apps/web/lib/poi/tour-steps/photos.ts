@@ -40,6 +40,50 @@ export const SURROUNDING_POI_BUDGET = 15;
 const SCHOOL_SLOTS = 3;
 
 /**
+ * The daily orbit: a place inside this is "near". 4 miles — the ceiling the
+ * owner set on 2026-08-18 before widening the hard limit to a 15-minute drive.
+ */
+export const NEAR_TIER_M = 6437;
+
+/**
+ * Near places first (owner 2026-11-14: "距离上限7mi 没有问题 - 但是距离近的要有
+ * 优先级"). PURE.
+ *
+ * A place beyond `NEAR_TIER_M` stays in the running only when its KIND has
+ * nothing inside it — the 7-mile ceiling exists for dining and fitness that
+ * have no candidate within four miles, not to put a 6.7-mile park beside a
+ * 2.5-mile one (Northbrooke's cut did both). A POI the owner approved a photo
+ * of by hand is never dropped, and an unknown distance counts as near rather
+ * than being punished for missing data.
+ *
+ * Runs on every plan, before the budget: the budget only trims when there are
+ * more than fifteen places, so on its own it never saw a far one in a short
+ * list.
+ */
+export function preferNearPois({
+  surrounding,
+  bucketOf,
+  distanceOf,
+  handPicked = new Set<string>(),
+  nearM = NEAR_TIER_M,
+}: {
+  surrounding: string[];
+  bucketOf: (id: string) => string;
+  distanceOf: (id: string) => number | null;
+  handPicked?: Set<string>;
+  nearM?: number;
+}): string[] {
+  const isNear = (id: string) => {
+    const d = distanceOf(id);
+    return d == null || d <= nearM;
+  };
+  const kindsWithNear = new Set(surrounding.filter(isNear).map(bucketOf));
+  return surrounding.filter(
+    (id) => isNear(id) || handPicked.has(id) || !kindsWithNear.has(bucketOf(id)),
+  );
+}
+
+/**
  * @param actor 'user' (default) checks the caller's session, which is what the
  *   admin route needs. 'service' skips it for a script with no session — the
  *   whole step is otherwise service-role already. Must never be taken from

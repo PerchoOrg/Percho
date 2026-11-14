@@ -40,6 +40,7 @@ import {
 import { Fragment } from 'react';
 import { useEffect, useState } from 'react';
 import { CommunityBoundaryMap } from './CommunityBoundaryMap';
+import { CommunityFilm, type CommunityFilmProps } from './CommunityFilm';
 import { SaveCommunityButton } from './SaveCommunityButton';
 
 const CATEGORY_META = new Map(COMMUNITY_VIDEO_CATEGORIES.map((m) => [m.id, m] as const));
@@ -60,6 +61,7 @@ export function CommunityBody({
   nearby,
   videos,
   listings,
+  film,
 }: {
   community: {
     id: string;
@@ -80,6 +82,8 @@ export function CommunityBody({
   nearby: Array<{ name: string; city: string | null; state: string; href: string | null }>;
   videos: CommunityVideo[];
   listings: BrowseCard[];
+  /** The community's film, when it has one (phase313). */
+  film: CommunityFilmProps | null;
 }) {
   const [tab, setTab] = useState<Tab>('videos');
 
@@ -161,6 +165,8 @@ export function CommunityBody({
         </div>
       </div>
 
+      {film ? <CommunityFilm {...film} /> : null}
+
       {/* / 87.2: Nextdoor demographics + tag chips + nearby.
           Data we already have in the DB, rendered as three white-card
           sections. Anything empty collapses — we don't fabricate. */}
@@ -179,7 +185,11 @@ export function CommunityBody({
           GridPageShell elsewhere. */}
       <div className="px-1 py-4 md:px-1.5">
         {tab === 'videos' ? (
-          <VideosGrid communitySlug={community.slug} videos={videos} />
+          // A filmed community with no uploaded clips shows its film above
+          // and no "No videos" box here.
+          film && videos.length === 0 ? null : (
+            <VideosGrid communitySlug={community.slug} videos={videos} />
+          )
         ) : (
           <ListingsGrid listings={listings} />
         )}

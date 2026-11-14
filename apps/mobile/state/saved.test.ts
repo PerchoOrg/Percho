@@ -96,12 +96,10 @@ describe("toggle, signed out", () => {
 		expect(routerPush).toHaveBeenCalledWith("/auth");
 	});
 
-	it("still toggles device-local area entries", () => {
-		expect(useSavedStore.getState().toggle("a1", "area")).toBe(true);
-		expect(useSavedStore.getState().items).toEqual([
-			{ id: "a1", kind: "area" },
-		]);
-		expect(routerPush).not.toHaveBeenCalled();
+	it("gates area entries too (phase313)", () => {
+		expect(useSavedStore.getState().toggle("a1", "area")).toBe(false);
+		expect(useSavedStore.getState().items).toEqual([]);
+		expect(routerPush).toHaveBeenCalledWith("/auth");
 	});
 });
 
@@ -119,6 +117,19 @@ describe("toggle, signed in", () => {
 				listing_id: "l1",
 			}),
 		]);
+	});
+
+	it("saves an area on this device only", async () => {
+		signIn("u1");
+		await flush();
+		expect(useSavedStore.getState().toggle("a1", "area")).toBe(true);
+		await flush();
+		expect(useSavedStore.getState().items).toEqual([
+			{ id: "a1", kind: "area" },
+		]);
+		expect(db.saved_listings).toEqual([]);
+		expect(db.saved_communities).toEqual([]);
+		expect(routerPush).not.toHaveBeenCalled();
 	});
 
 	it("unsave deletes the row", async () => {

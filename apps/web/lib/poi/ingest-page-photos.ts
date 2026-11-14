@@ -12,6 +12,7 @@
  */
 
 import { createHash } from 'node:crypto';
+import { readAllPages } from '@/lib/supabase/paginate';
 import { createServiceClient } from '@/lib/supabase/server';
 import { POI_PHOTO_BUCKET } from './entity-scope';
 import { imageSizeOf } from './image-size';
@@ -100,6 +101,36 @@ function decodeEntities(value: string): string {
   });
 }
 
+/**
+ * Widths a CMS bakes into a FILENAME (`Pool_7_920.jpg` / `Pool_7_1920.jpg`).
+ * Only these: an arbitrary trailing number is as likely a counter as a size,
+ * and collapsing two different photos onto one key costs a photo.
+ */
+const FILENAME_WIDTHS = new Set([
+  320, 375, 400, 480, 600, 640, 720, 750, 768, 800, 900, 920, 960, 1024, 1080, 1200, 1280, 1366,
+  1440, 1536, 1600, 1920, 2048, 2560, 3840,
+]);
+
+/** Camera-style names (`IMG_1080.jpg`) carry a counter, not a width. */
+const CAMERA_STEM = /^(img|dsc|dscn|dji|pxl|photo|image)$/i;
+
+/**
+ * A width baked into the filename, and the path without it — or null.
+ *
+ * Toll Brothers serves one picture as `…_Pool_7_920.jpg` and `…_Pool_7_1920.jpg`
+ * with no `w` descriptor and no `width=` param, so the declared-width collapse
+ * never saw them as one image and Northbrooke ingested both (2026-09-23,
+ * phase313).
+ */
+export function filenameWidth(pathname: string): { width: number; key: string } | null {
+  const m = pathname.match(/^(.*\/)?([^/]*?)_(\d{3,4})(\.[a-z0-9]+)$/i);
+  if (!m) return null;
+  const [, dir = '', stem = '', digits = '', ext = ''] = m;
+  const width = Number(digits);
+  if (!FILENAME_WIDTHS.has(width) || !stem || CAMERA_STEM.test(stem)) return null;
+  return { width, key: `${dir}${stem}${ext}` };
+}
+
 /** The declared pixel width of a variant, or null if it does not claim one. */
 function declaredWidth(url: URL, descriptor: number | undefined): number | null {
   if (descriptor !== undefined) return descriptor;
@@ -125,8 +156,9 @@ function declaredWidth(url: URL, descriptor: number | undefined): number | null 
  * which then failed the size floor. Six photos survived, none of them of an
  * amenity, out of a 62-photo gallery (owner 2026-08-22).
  *
- * So variants that *declare* a width — a `w` descriptor, or a `width=` query —
- * collapse onto their path and the widest one wins. Anything that declares no
+ * So variants that *declare* a width — a `w` descriptor, a `width=` query, or
+ * a known width baked into the filename (`filenameWidth`) — collapse onto
+ * their path and the widest one wins. Anything that declares no
  * width keys on its full URL and is left alone: `?size=full` and `?size=thumb`
  * are not knowably the same picture, and guessing costs a photo.
  */
@@ -145,8 +177,15 @@ export function extractImageUrls(html: string, pageUrl: string): string[] {
       /* a malformed src is not worth failing the page over */
       return;
     }
-    const width = declaredWidth(parsed, descriptor);
-    const key = width === null ? parsed.toString() : `${parsed.origin}${parsed.pathname}`;
+    const declared = declaredWidth(parsed, descriptor);
+    const named = declared === null ? filenameWidth(parsed.pathname) : null;
+    const width = declared ?? named?.width ?? null;
+    const key =
+      declared !== null
+        ? `${parsed.origin}${parsed.pathname}`
+        : named
+          ? `${parsed.origin}${named.key}`
+          : parsed.toString();
     const seen = best.get(key);
     if (!seen || (width ?? 0) > seen.width) {
       best.set(key, { url: parsed.toString(), width: width ?? 0 });
@@ -341,6 +380,32 @@ export function extensionFor(contentType: string): string {
   return '.jpg';
 }
 
+/** Content hashes of every photo on every POI linked to the community. */
+async function communityContentHashes(
+  sb: ReturnType<typeof createServiceClient>,
+  communityId: string,
+): Promise<Set<string>> {
+  const links = await readAllPages<{ poi_id: string }>((from, to) =>
+    sb.from('community_pois').select('poi_id').eq('community_id', communityId).range(from, to),
+  );
+  const poiIds = links.map((l) => l.poi_id);
+  const hashes = new Set<string>();
+  // Chunked: a long `in (...)` list overruns the request URL.
+  for (let i = 0; i < poiIds.length; i += 100) {
+    const chunk = poiIds.slice(i, i + 100);
+    const rows = await readAllPages<{ content_hash: string | null }>((from, to) =>
+      sb
+        .from('poi_photos')
+        .select('content_hash')
+        .in('poi_id', chunk)
+        .not('content_hash', 'is', null)
+        .range(from, to),
+    );
+    for (const r of rows) if (r.content_hash) hashes.add(r.content_hash);
+  }
+  return hashes;
+}
+
 export async function ingestPagePhotos(
   communityId: string,
   pageUrl: string,
@@ -398,18 +463,18 @@ export async function ingestPagePhotos(
   const queued: string[] = [];
   let added = 0;
 
+  // Every photo this COMMUNITY already holds, not just this page's POI
+  // (phase313). A builder's main, event and quick-move-in pages share one
+  // gallery; deduping per POI let Northbrooke store each picture 3–5 times.
+  const known = await communityContentHashes(sb, community.id);
+
   for (const image of harvest.images) {
     const { url, bytes, contentType, contentHash } = image;
-    const { data: existing } = (await sb
-      .from('poi_photos')
-      .select('id')
-      .eq('poi_id', poi.id)
-      .eq('content_hash', contentHash)
-      .maybeSingle()) as { data: { id: string } | null };
-    if (existing) {
+    if (known.has(contentHash)) {
       skipped.push({ url, reason: 'already ingested' });
       continue;
     }
+    known.add(contentHash);
 
     const storagePath = `poi/${poi.id}/${contentHash.slice(0, 32)}${extensionFor(contentType)}`;
     const { error: upErr } = await sb.storage

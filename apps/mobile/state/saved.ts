@@ -19,9 +19,10 @@
  * On sign-out it clears: another person signing in on this phone must not
  * inherit the list.
  *
- * `kind: "area"` never reaches the server — no table for it, and the feed
- * cannot currently produce an area save at all (no `geo` slot in STAGE_MIX).
- * Area entries stay device-local, exactly as before.
+ * `kind: "area"` never reaches the server — there is no table for it — so
+ * area entries stay device-local. They still need an account since phase313
+ * (owner: "iOS 保存区域（县）仍然不用登录 - 改"): every save is gated the same
+ * way, and they clear on sign-out with the rest of the list.
  *
  * ── v2 (phase116): entries carry their kind ─────────────────────────────────
  *
@@ -51,8 +52,8 @@ interface SavedState {
 	/** ISO timestamp of the one-time local→server push. Null = not yet run. */
 	migratedAt: string | null;
 	/**
-	 * Toggle an entry's saved state. Returns the new state. Signed out, a
-	 * server kind routes to the sign-in screen instead of toggling — the gate
+	 * Toggle an entry's saved state. Returns the new state. Signed out, any
+	 * kind routes to the sign-in screen instead of toggling — the gate
 	 * lives HERE so every bookmark in the app (five call sites and counting)
 	 * gets it without repeating itself.
 	 */
@@ -120,9 +121,9 @@ export const useSavedStore = create<SavedState>()(
 				const before = get().items;
 				const has = before.some((x) => x.id === id);
 				const uid = useAuthStore.getState().session?.user.id;
-				// Signed out, a server-backed save would exist nowhere but this
-				// device and silently diverge — send the user to sign in instead.
-				if (!uid && kind !== "area") {
+				// Signed out, nothing saves — send the user to sign in instead
+				// (areas too since phase313, though they stay on this device).
+				if (!uid) {
 					router.push("/auth");
 					return has;
 				}
