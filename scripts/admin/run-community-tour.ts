@@ -13,6 +13,7 @@
  * Usage, from apps/web:
  *   pnpm tour <community-slug>            # research -> resolve -> photos, then STOPS
  *   pnpm tour aberdeen-2 --steps plan,generate,assemble   # after the manual review
+ *   pnpm tour suwanee-ga --city                           # a city film (phase318)
  *
  * Steps run in the order given and stop at the first failure. `assemble`
  * enqueues the job; the render worker finishes it out of band.
@@ -56,7 +57,7 @@ function flagValue(argv: string[], name: string): string | undefined {
   return i >= 0 ? argv[i + 1] : undefined;
 }
 
-function parseArgs(): { slug: string; steps: Step[]; runId?: string } {
+function parseArgs(): { slug: string; steps: Step[]; runId?: string; city: boolean } {
   const argv = process.argv.slice(2);
   const slug = argv.find(
     (a) =>
@@ -65,7 +66,7 @@ function parseArgs(): { slug: string; steps: Step[]; runId?: string } {
       argv[argv.indexOf(a) - 1] !== '--run',
   );
   if (!slug) {
-    console.error('Usage: pnpm tour <community-slug> [--steps a,b,c] [--run <run-id>]');
+    console.error('Usage: pnpm tour <slug> [--city] [--steps a,b,c] [--run <run-id>]');
     process.exit(1);
   }
   const raw = flagValue(argv, 'steps');
@@ -77,11 +78,14 @@ function parseArgs(): { slug: string; steps: Step[]; runId?: string } {
   }
   // Newest-run is the wrong default once a community has several part-finished
   // runs — the newest may be the one that only got as far as research.
-  return { slug, steps, runId: flagValue(argv, 'run') };
+  return { slug, steps, runId: flagValue(argv, 'run'), city: argv.includes('--city') };
 }
 
 async function main() {
-  const { slug, steps, runId: explicitRun } = parseArgs();
+  const { slug, steps, runId: explicitRun, city } = parseArgs();
+  const { CITY_TOUR, COMMUNITY_TOUR } = await import('../../apps/web/lib/poi/tour-steps/scope.js');
+  const { getRun } = await import('../../apps/web/lib/poi/tour-steps/shared.js');
+  const scope = city ? CITY_TOUR : COMMUNITY_TOUR;
   // biome-ignore lint/suspicious/noExplicitAny: the step modules take TourDb
   const sb: any = createClient(
     requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
@@ -89,21 +93,21 @@ async function main() {
   );
 
   const { data: community } = await sb
-    .from('communities')
-    .select('id, name, city, state')
+    .from(scope.entityTable)
+    .select(city ? 'id, name, state' : 'id, name, city, state')
     .eq('slug', slug)
     .maybeSingle();
-  if (!community) throw new Error(`No community with slug "${slug}"`);
-  console.log(`${community.name} (${community.city}, ${community.state})\n`);
+  if (!community) throw new Error(`No ${scope.kind} with slug "${slug}"`);
+  console.log(`${community.name} (${community.city ?? 'city'}, ${community.state})\n`);
 
   // Reuse the newest run so a partial pipeline can be continued; `research`
   // makes a fresh one, matching what the Run button does on the page.
   let runId: string | undefined = explicitRun;
   if (!runId && !steps.includes('research')) {
     const { data: latest } = await sb
-      .from('community_tour_runs')
+      .from(scope.runsTable)
       .select('id')
-      .eq('community_id', community.id)
+      .eq(scope.idColumn, community.id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -111,8 +115,8 @@ async function main() {
   }
   if (!runId) {
     const { data: created, error } = await sb
-      .from('community_tour_runs')
-      .insert({ community_id: community.id, step_results: {} })
+      .from(scope.runsTable)
+      .insert({ [scope.idColumn]: community.id, step_results: {} })
       .select('id')
       .single();
     if (error || !created) throw new Error(`Could not create run: ${error?.message}`);
@@ -130,7 +134,8 @@ async function main() {
 
   for (const step of steps) {
     // Re-read: every step reads what the previous one persisted.
-    const { data: run } = await sb.from('community_tour_runs').select('*').eq('id', runId).single();
+    const run = await getRun(sb, runId as string, scope);
+    if (!run) throw new Error(`run ${runId} vanished`);
 
     const startedAt = Date.now();
     process.stdout.write(`${step} … `);
@@ -152,7 +157,7 @@ async function main() {
         //
         // The photo table auto-approves 'ready' rows when an admin opens it,
         // so this is the same policy, not a new one.
-        result = await settleEnhancements(sb, community.id, runId, result);
+        result = await settleEnhancements(sb, scope, community.id, runId as string, result);
         break;
       case 'tag':
         // Tags every untagged photo the tour can see and then filters them,
@@ -220,6 +225,7 @@ async function waitForClips(
 async function settleEnhancements(
   // biome-ignore lint/suspicious/noExplicitAny: service client, dynamic tables
   sb: any,
+  scope: import('../../apps/web/lib/poi/tour-steps/scope.js').TourScope,
   communityId: string,
   runId: string,
   photosResult: unknown,
@@ -228,7 +234,7 @@ async function settleEnhancements(
   // runPhotos trims the surrounding places to a budget, and re-reading the
   // table here would quietly undo that and put all 22 back in the film.
   const { data: runRow } = await sb
-    .from('community_tour_runs')
+    .from(scope.runsTable)
     .select('step_results')
     .eq('id', runId)
     .single();
@@ -237,9 +243,9 @@ async function settleEnhancements(
       ?.resolved_poi_ids ?? [];
 
   const { data: links } = await sb
-    .from('community_pois')
+    .from(scope.poisTable)
     .select('poi_id, intent_bucket')
-    .eq('community_id', communityId)
+    .eq(scope.idColumn, communityId)
     .neq('status', 'rejected');
   const inFilm = new Set(budgeted);
   const scoped = (links ?? []).filter((l: { poi_id: string }) =>
@@ -276,12 +282,12 @@ async function settleEnhancements(
     scoped.map((l: { poi_id: string; intent_bucket: string }) => [l.poi_id, l.intent_bucket]),
   );
   const { computeFinalShots } = await import('../../apps/web/lib/poi/tour-steps/shots.js');
-  const recomputed = await computeFinalShots(sb, poiIds, buckets);
+  const recomputed = await computeFinalShots(sb, poiIds, buckets, { scope, id: communityId });
 
   // Persist, or generate and assemble would read the empty list runPhotos
   // wrote before the enhancements landed.
   const { data: run } = await sb
-    .from('community_tour_runs')
+    .from(scope.runsTable)
     .select('step_results')
     .eq('id', runId)
     .single();
@@ -292,7 +298,7 @@ async function settleEnhancements(
     resolved_poi_ids: poiIds,
     ran_at: new Date().toISOString(),
   };
-  await sb.from('community_tour_runs').update({ step_results: sr }).eq('id', runId);
+  await sb.from(scope.runsTable).update({ step_results: sr }).eq('id', runId);
   return recomputed;
 }
 

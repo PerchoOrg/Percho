@@ -54,7 +54,10 @@ export function NarrationPanel({
   bgm,
   bgmUrl,
   error,
+  voiceEditable = true,
 }: {
+  /** False for a city film (phase318): `cities` has no narration_voice. */
+  voiceEditable?: boolean;
   communityId: string;
   voice?: string;
   segments: NarrationSegmentView[];
@@ -76,6 +79,7 @@ export function NarrationPanel({
   const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!voiceEditable) return;
     void (async () => {
       const res = await fetch(`/api/admin/community-tour/${communityId}/voice`);
       if (!res.ok) return;
@@ -83,7 +87,7 @@ export function NarrationPanel({
       setVoices(body.voices);
       setSelected(body.selected ?? '');
     })();
-  }, [communityId]);
+  }, [communityId, voiceEditable]);
 
   async function pick(next: string) {
     setSelected(next);

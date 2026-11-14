@@ -55,7 +55,10 @@ export function TourHeader({
   droppedPlaces,
   busy,
   onRun,
+  apiBase,
 }: {
+  /** The tour API this header reads — a city's since phase318. */
+  apiBase?: string;
   communityId: string;
   communityName: string;
   city: string | null;
@@ -93,7 +96,9 @@ export function TourHeader({
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch(`/api/admin/community-tour/${communityId}/assemblies`);
+        const res = await fetch(
+          `${apiBase ?? `/api/admin/community-tour/${communityId}`}/assemblies`,
+        );
         if (!res.ok) return;
         const body = (await res.json()) as { assemblies: AssemblyRow[] };
         if (!cancelled) setRows(body.assemblies);
@@ -109,7 +114,7 @@ export function TourHeader({
       cancelled = true;
       clearInterval(t);
     };
-  }, [communityId]);
+  }, [communityId, apiBase]);
 
   const latest = rows[0];
   const ready = latest?.status === 'ready';

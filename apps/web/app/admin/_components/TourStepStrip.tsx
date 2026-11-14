@@ -113,6 +113,13 @@ const TOUR_STEPS: StepSpec[] = [
 export const AUTOMATABLE_STEPS: StepName[] = ['research', 'resolve', 'photos', 'ingest', 'tag'];
 
 /**
+ * A city film (phase318) has no website ingest — its photos come from Google
+ * Places — so its strip and its automated run skip that step.
+ */
+export const CITY_TOUR_STEPS: StepSpec[] = TOUR_STEPS.filter((s) => s.name !== 'ingest');
+export const CITY_AUTOMATABLE_STEPS: StepName[] = AUTOMATABLE_STEPS.filter((s) => s !== 'ingest');
+
+/**
  * `running` is the REQUEST in flight. `waiting` is the request finished and the
  * work still happening somewhere else.
  *
