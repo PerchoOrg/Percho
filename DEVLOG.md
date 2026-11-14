@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-14 18:40 UTC — phase312: Northbrooke's film had its place labels burned in — stale render worker; film reads skip Next's fetch cache
+
+**Objective**: Owner: "Northbrooke 视频的左上角和右上角都有位置label fix it，看看还有别的落后的版本问题吗，有几个地理位置都是4mile以外 这是最新编排版本预期的结果吗".
+**Findings**:
+- Two labels = the app's own place chip (top-left, `CommunityFace`, since phase174 on 2026-09-05) + a white pill burned INTO the Northbrooke film (top-right). phase174 removed the burn-in from `worker.py` and re-assembled the five films of that day; Northbrooke was assembled on 2026-09-23 by `render-worker-2`, whose process predated phase174 — its log shows `label_00.png`… overlays for assembly `e14ef3f1`. The other five films' frames are clean.
+- Running workers were started 2026-09-26 01:04 and never restarted since — missing phase306.9's `photo_tagger.py` change (Gemini key as a header). Seedance worker started 2026-10-24, current. Migrations: remote == local through `20261114090000`.
+- Distance: `MAX_DISTANCE_M` = 7 mi (owner 2026-08-19, 15-minute drive; 4 mi was the 08-18 rule), with `distanceWeight` decaying to 0.4 at the ceiling. Northbrooke's farthest are Ducktown Park 6.7, Poole's Mill 5.8, NoFo 4.6 — inside the rule; the 09-05 films have the same pattern (Ashley Crossing: H Mart 6.5, Newtown Dog Park 6.3; Aberdeen: Halcyon 4.8, Cherry Street 4.9). No planning code changed after 09-23 (only phase306 refactors), so the cut IS the current planner's output.
+- Still open from 09-21/09-23: `generate.ts:322` failed-clip requeue keys on `forceEngine ?? 'seedance'`; worker storage calls have no 429 backoff; ingest dedupes per POI, not per community (Northbrooke needed a one-off dedupe of 53 photos).
+**Actions**: Queues empty → `launchctl kickstart -k` all three `com.percho.render-worker*` (now 2026-11-14 10:22 local). `pnpm tour northbrooke-cumming --steps assemble` (stored shots, all clips reused, only narration TTS re-run) → assembly `69b5a53c`, `cf_stream_uid d9aedd3423f83b37e69e60243e3a6937`; frames at 1/8/12/30 s carry no pill. The feed served the new uid at once, but `/api/mobile/community/northbrooke-cumming` kept returning the old `3a330951` on fresh CDN misses — the same Next fetch-cache pin as phase311.2. `fetchVerticalVideos` now takes a client; the feed route and `fetchCommunityDetail` pass `createUncachedServiceClient()`, `lib/communities/list.ts` (inside `unstable_cache`) keeps the default.
+**Learnings**: After merging anything under `scripts/render-worker/` or `scripts/ken-burns/`, restart the three render workers — a Python worker keeps the code it booted with, which is how a 09-23 film shipped a 09-05-removed feature.
+**Next steps**: Owner decides whether 7 mi stays or tightens before the Atlanta batch; fix the three open pipeline bugs before that batch.
+
 ## 2026-11-14 18:45 UTC — phase311.3: iOS sign-in screen reworked; phase311 live
 
 **Objective**: Owner: "sign in 方式不自然：登录框下面应该是注册 不要写new here? email me a code stuff.... 或者用google /apple id 登录".

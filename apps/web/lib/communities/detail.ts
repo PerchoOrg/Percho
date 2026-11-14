@@ -44,7 +44,11 @@ import { type CommunityReviewsDTO, fetchCommunityReviews } from '@/lib/communiti
 import { fetchPoiCounts } from '@/lib/feed/community-pool';
 import type { TourSegment } from '@/lib/feed/tour-segments';
 import { fetchVerticalVideos, streamManifestUrl } from '@/lib/feed/vertical-videos';
-import { type TypedClient, createAnonClient } from '@/lib/supabase/server';
+import {
+  type TypedClient,
+  createAnonClient,
+  createUncachedServiceClient,
+} from '@/lib/supabase/server';
 import {
   type CommunityReason,
   communityReasons,
@@ -186,7 +190,8 @@ export async function fetchCommunityDetail(idOrSlug: string): Promise<CommunityD
   // facts than the tile the user tapped to reach it.
   const [poiCounts, videos, reviews] = await Promise.all([
     fetchPoiCounts(supabase, [row.id]),
-    fetchVerticalVideos(),
+    // Uncached, so a re-cut film reaches this page — see `fetchVerticalVideos`.
+    fetchVerticalVideos(createUncachedServiceClient()),
     fetchCommunityReviews(supabase, row.id),
   ]);
   // The winning-uid rule lives in `fetchVerticalVideos`; re-deciding it here

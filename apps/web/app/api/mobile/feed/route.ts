@@ -55,7 +55,11 @@ import {
   fetchVerticalVideos,
   streamManifestUrl,
 } from '@/lib/feed/vertical-videos';
-import { createAnonClient, createServiceClient } from '@/lib/supabase/server';
+import {
+  createAnonClient,
+  createServiceClient,
+  createUncachedServiceClient,
+} from '@/lib/supabase/server';
 import { parseFeedPoolQuery } from '@/lib/zod/feed-pool';
 import { parseMobileListingsFlag } from '@/lib/zod/mobile-listings';
 import type { DimKey } from '@percho/shared/types';
@@ -241,6 +245,7 @@ export async function GET(request: Request) {
    * being serial was where it sat in the file.
    */
   const needsVideoCommunityIds = needsCommunities && (videosOnly || videoFirst);
+  const filmsClient = createUncachedServiceClient();
 
   const [pageRows, geoUnits, communities, verticalVideos, aiTourVideos, videoCommunityIds] =
     await Promise.all([
@@ -254,10 +259,13 @@ export async function GET(request: Request) {
         ? fetchCommunityPool({ offset, limit, cities })
         : Promise.resolve([] as PoolCommunityDTO[]),
       // Cheap (15 ready rows) and needed for both listings and communities.
-      fetchVerticalVideos(),
+      // Uncached, so a new or re-cut film reaches the phone (phase312).
+      fetchVerticalVideos(filmsClient),
       // AI-generated community tours (Seedance); only communities have these.
       needsCommunities ? fetchAiTourVideoByCommunity() : Promise.resolve(new Map<string, string>()),
-      needsVideoCommunityIds ? fetchVerticalVideoCommunityIds() : Promise.resolve([] as string[]),
+      needsVideoCommunityIds
+        ? fetchVerticalVideoCommunityIds(filmsClient)
+        : Promise.resolve([] as string[]),
     ]);
 
   /**
