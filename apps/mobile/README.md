@@ -11,12 +11,20 @@ pnpm install
 pnpm --filter @percho/mobile start
 ```
 
-Scan the QR code with the Expo Go app on your iPhone. For features that
-require a dev client (expo-video, custom native modules), use:
+**Not Expo Go.** The App Store's Expo Go follows the newest Expo SDK and the
+app uses native modules Expo Go does not carry (Google Sign-In), so it cannot
+open this project (phase313–314). The phone runs our own **development
+client** instead, installed from TestFlight:
 
-```bash
-pnpm --filter @percho/mobile ios      # requires Xcode
-```
+- Dev client: the `development-testflight` EAS profile, currently 1.0.1 (10).
+  Open it, enter the Metro URL, and it loads the latest JS like Expo Go did.
+  Rebuild it only when native code or `app.json` plugins change.
+- Store build: what App Store users run; JS is bundled in, no Metro.
+- Both are bundle `co.percho.app`, so installing one replaces the other — pick
+  the build in TestFlight (or the App Store for the live one).
+
+Build and submit steps (and why the ASC key is added to `eas.json` only for
+the duration of a submit) are in `docs/ios-release.md`.
 
 ## Structure
 
