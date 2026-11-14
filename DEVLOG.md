@@ -23,6 +23,12 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-14 21:30 UTC — phase314.1: dev client 1.0.0 (9) built; TestFlight upload blocked by an Apple agreement
+
+**Objective**: Owner approved the dev-client build ("expo go - you have my approval").
+**Actions**: Reference worktree fast-forwarded to `da098f0f` + `pnpm install`; Metro restarted with `--clear` (new native dep). `eas build --platform ios --profile development-testflight` from a clean worktree at `da098f0f` → `7f7a0e7f-9659-453e-ade5-c7c235d3ebae`, FINISHED, 1.0.0 (9), includes `@react-native-google-signin/google-signin`. `eas submit --id 7f7a0e7f… --profile production` with the ASC key added to `eas.json` locally (reverted after, tree clean) → submission `f3d22300…` failed: "A required Apple agreement is missing or has expired".
+**Next steps**: Owner accepts the agreement at appstoreconnect.apple.com/business (and the Program License Agreement at developer.apple.com/account if prompted) — it may also gate the 1.0.0 (8) review/release. Then re-run the same submit; build 9 goes to the `Internal` TestFlight group. Build 9 is a DEV CLIENT: never attach it to an App Store version.
+
 ## 2026-11-14 20:50 UTC — phase314: Sign in with Google, web and iOS
 
 **Objective**: Owner set up Google OAuth (Supabase `/auth/v1/settings` now shows `google: true`) and sent the two client ids: web `188846054900-8a8r…` and iOS `188846054900-8t6q…`.
