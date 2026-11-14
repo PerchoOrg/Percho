@@ -311,6 +311,242 @@ export type Database = {
         }
         Relationships: []
       }
+      cities: {
+        Row: {
+          county: string | null
+          cover_storage_path: string | null
+          created_at: string
+          description: string | null
+          geo_unit_id: string | null
+          highlights: Json
+          id: string
+          lat: number | null
+          lng: number | null
+          name: string
+          slug: string
+          state: string
+          status: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          county?: string | null
+          cover_storage_path?: string | null
+          created_at?: string
+          description?: string | null
+          geo_unit_id?: string | null
+          highlights?: Json
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name: string
+          slug: string
+          state?: string
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          county?: string | null
+          cover_storage_path?: string | null
+          created_at?: string
+          description?: string | null
+          geo_unit_id?: string | null
+          highlights?: Json
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name?: string
+          slug?: string
+          state?: string
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      city_poi_photos: {
+        Row: {
+          city_id: string
+          poi_photo_id: string
+          reviewed_at: string | null
+          status: string
+        }
+        Insert: {
+          city_id: string
+          poi_photo_id: string
+          reviewed_at?: string | null
+          status?: string
+        }
+        Update: {
+          city_id?: string
+          poi_photo_id?: string
+          reviewed_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_poi_photos_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_poi_photos_poi_photo_id_fkey"
+            columns: ["poi_photo_id"]
+            isOneToOne: false
+            referencedRelation: "poi_photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_pois: {
+        Row: {
+          ai_score: number | null
+          city_id: string
+          discovered_at: string
+          distance_m: number | null
+          intent_bucket: string
+          poi_id: string
+          reviewed_at: string | null
+          status: string
+        }
+        Insert: {
+          ai_score?: number | null
+          city_id: string
+          discovered_at?: string
+          distance_m?: number | null
+          intent_bucket: string
+          poi_id: string
+          reviewed_at?: string | null
+          status?: string
+        }
+        Update: {
+          ai_score?: number | null
+          city_id?: string
+          discovered_at?: string
+          distance_m?: number | null
+          intent_bucket?: string
+          poi_id?: string
+          reviewed_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_pois_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_pois_poi_id_fkey"
+            columns: ["poi_id"]
+            isOneToOne: false
+            referencedRelation: "pois"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_tour_assemblies: {
+        Row: {
+          bgm: Json | null
+          cf_stream_uid: string | null
+          city_id: string
+          created_at: string
+          error: string | null
+          id: string
+          narration: Json | null
+          ordered_clips: Json
+          photos_dropped: Json
+          run_id: string
+          status: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          bgm?: Json | null
+          cf_stream_uid?: string | null
+          city_id: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          narration?: Json | null
+          ordered_clips?: Json
+          photos_dropped?: Json
+          run_id: string
+          status?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          bgm?: Json | null
+          cf_stream_uid?: string | null
+          city_id?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          narration?: Json | null
+          ordered_clips?: Json
+          photos_dropped?: Json
+          run_id?: string
+          status?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_tour_assemblies_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_tour_assemblies_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "city_tour_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_tour_runs: {
+        Row: {
+          city_id: string
+          created_at: string
+          id: string
+          status: string
+          step_results: Json
+          updated_at: string
+        }
+        Insert: {
+          city_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          step_results?: Json
+          updated_at?: string
+        }
+        Update: {
+          city_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          step_results?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_tour_runs_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       communities: {
         Row: {
           anchor_geom: unknown
