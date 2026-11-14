@@ -20,6 +20,14 @@ Everything is learned from the swipes you've already made, on your own
 device — there's no form to fill in, and a left swipe never blacklists
 anything; it just means "less of this for now".
 
+### 2026-11-14
+- **Neighbourhoods show only ones with a film.** The Neighbourhoods page and
+  neighbourhood search on the website, and search and the map in the iPhone
+  app, now list only places that have a video to watch, instead of a long
+  wall of empty tiles. The website page also loads much faster.
+- **Fixed the Neighbourhoods page occasionally failing to open** with an
+  "Application error" message.
+
 ### 2026-10-25
 - **The iPhone app is with Apple for review.** Version 1.0 covers
   neighbourhoods — films, nearby places, costs, comparisons and resident
