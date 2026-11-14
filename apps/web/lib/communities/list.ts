@@ -18,16 +18,19 @@
  * applies — community reads are global, so this returns the same rows as
  * the cookie-bound client would for these particular tables.
  *
- * Visibility: viewers get (all active) ∪ (their own inactive), de-duped by
- * id. The active set is shared-cached; the per-viewer inactive fetch is
- * uncached because it's cheap and viewer-specific. Do NOT accept a generic
+ * Visibility: viewers get (all active with a video) ∪ (their own inactive
+ * with a video), de-duped by id. The active set is shared-cached; the
+ * per-viewer inactive fetch is uncached because it's cheap and
+ * viewer-specific. Do NOT accept a generic
  * `includeInactive: true` — that would leak one agent's drafts to others.
  */
 
 import { resolveCommunityCoverWithCfIds } from '@/lib/communities/cover';
 import { COMMUNITY_STUB_NAMES_FILTER } from '@/lib/communities/naming';
+import { fetchAiTourVideoByCommunity } from '@/lib/feed/ai-tour-videos';
+import { fetchVerticalVideoCommunityIds } from '@/lib/feed/vertical-videos';
 import { startTimer } from '@/lib/perf/timing';
-import { PAGE_ROWS, readAllPages } from '@/lib/supabase/paginate';
+import { readAllPages } from '@/lib/supabase/paginate';
 import { createAnonClient } from '@/lib/supabase/server';
 import { unstable_cache } from 'next/cache';
 
@@ -47,9 +50,6 @@ export type CommunityListCard = {
 const COMMUNITY_CARDS_TAG = 'community-cards';
 
 const CARD_COLUMNS = 'id, name, slug, city, state, description, cover_video_id, cover_storage_path';
-
-/** One PostgREST read's worth; there are ~23.8k active communities. */
-const PAGE = PAGE_ROWS;
 
 /** `.in()` batch size: 8k ids in one URL is a 300 KB request PostgREST rejects. */
 const CHUNK = 500;
@@ -223,33 +223,21 @@ function rankByRelevance(a: CommunityListCard, b: CommunityListCard): number {
 }
 
 /**
- * Ids of every community that can rank above the bare seeds — it has an active
- * listing or a video. Paged: either table can pass 1000 rows.
+ * Ids of every community with a video membership. Paged: the table can pass
+ * 1000 rows. Whether a video is playable (ready, public, primary) is decided
+ * in `hydrateCommunityCards` — its `videoCount` counts only those.
  */
-async function idsWithListingsOrVideos(
-  supabase: ReturnType<typeof createAnonClient>,
-): Promise<string[]> {
-  const [listings, memberships] = await Promise.all([
-    readAllPages((from, to) =>
-      supabase
-        .from('listings')
-        .select('community_id')
-        .eq('status', 'active')
-        .not('community_id', 'is', null)
-        .order('id')
-        .range(from, to),
-    ),
-    readAllPages((from, to) =>
-      supabase
-        .from('community_video_membership')
-        .select('community_id')
-        .order('community_id')
-        .order('video_id')
-        .range(from, to),
-    ),
-  ]);
+async function idsWithVideos(supabase: ReturnType<typeof createAnonClient>): Promise<string[]> {
+  const memberships = await readAllPages((from, to) =>
+    supabase
+      .from('community_video_membership')
+      .select('community_id')
+      .order('community_id')
+      .order('video_id')
+      .range(from, to),
+  );
   const ids = new Set<string>();
-  for (const r of [...listings, ...memberships]) if (r.community_id) ids.add(r.community_id);
+  for (const r of memberships) if (r.community_id) ids.add(r.community_id);
   return [...ids];
 }
 
@@ -269,13 +257,15 @@ async function activeRowsByIds(
 }
 
 /**
- * The shared grid set. One read cannot return all ~23.8k active communities,
- * and it used to be one alphabetical read — so the grid, search and the nearby
- * endpoint only ever saw names from the front of the alphabet, and a community
- * with listings that sorted past the first 1000 was simply absent. Now every
- * community with a listing or a video is fetched explicitly, and the
- * alphabetical head of the bare seeds fills the rest. Search does not use this
- * set any more — see `searchCommunityListCards`.
+ * The shared grid set: every active community with a video. Owner decision
+ * 2026-11-14 — neighborhoods without one are empty tiles to a buyer, so they
+ * are not shown. (This used to be the alphabetical head of all ~23.8k active
+ * communities plus those with listings or videos: 1000 cards, mostly bare
+ * seeds, a 14 MB page.)
+ *
+ * "A video" is either a playable uploaded community video (`videoCount`) or a
+ * community film — the assembled tour / bucket video or an AI tour, the same
+ * sources the community page and the iOS `videosOnly` feed play.
  *
  * Errors throw, so `unstable_cache` does not keep an empty grid for a minute.
  */
@@ -284,27 +274,20 @@ async function fetchActiveCommunitiesImpl(): Promise<CommunityListCard[]> {
   const supabase = createAnonClient();
   t.mark('createClient');
 
-  const [head, relevantIds] = await Promise.all([
-    supabase
-      .from('communities')
-      .select(CARD_COLUMNS)
-      // never surface the upload-flow stub — its owner has never named it.
-      .not('name', 'in', COMMUNITY_STUB_NAMES_FILTER)
-      .eq('status', 'active')
-      .order('name', { ascending: true })
-      .limit(PAGE),
-    idsWithListingsOrVideos(supabase),
+  const [uploadIds, heroIds, aiTours] = await Promise.all([
+    idsWithVideos(supabase),
+    fetchVerticalVideoCommunityIds(),
+    fetchAiTourVideoByCommunity(),
   ]);
-  if (head.error) throw head.error;
-  const byId = new Map<string, CommunityRow>(head.data.map((r) => [r.id, r]));
-  const missing = relevantIds.filter((id) => !byId.has(id));
-  for (const r of await activeRowsByIds(supabase, missing)) byId.set(r.id, r);
+  const filmIds = new Set([...heroIds, ...aiTours.keys()]);
+  const rows = await activeRowsByIds(supabase, [...new Set([...uploadIds, ...filmIds])]);
   t.mark('query');
 
-  const rows = [...byId.values()];
-  const cards = await hydrateCommunityCards(rows);
+  const cards = (await hydrateCommunityCards(rows)).filter(
+    (c) => c.videoCount > 0 || filmIds.has(c.id),
+  );
   cards.sort(rankByRelevance);
-  t.end({ communities: rows.length, cached: false });
+  t.end({ communities: cards.length, cached: false });
   return cards;
 }
 
@@ -414,12 +397,12 @@ async function fetchAgentScopedCommunities(agentId: string): Promise<CommunityLi
 /**
  * Public entry point — **buyer / public surface**.
  *
- * Returns all active communities (the 731 Nextdoor seeds are visible
- * here). If a `viewerAgentId` is supplied we also union in that agent's
- * own inactive drafts so their in-progress work shows up alongside the
+ * Returns every active community with a playable video. If a
+ * `viewerAgentId` is supplied we also union in that agent's own inactive
+ * drafts that have one, so their in-progress work shows up alongside the
  * shared pool.
  *
- * Sorted by name.
+ * Sorted by `rankByRelevance`.
  */
 export async function fetchCommunityListCards(
   opts: { viewerAgentId?: string | null } = {},
@@ -428,7 +411,7 @@ export async function fetchCommunityListCards(
   const viewerAgentId = opts.viewerAgentId ?? null;
   if (!viewerAgentId) return active;
 
-  const own = await fetchOwnInactiveCommunities(viewerAgentId);
+  const own = (await fetchOwnInactiveCommunities(viewerAgentId)).filter((c) => c.videoCount > 0);
   if (own.length === 0) return active;
 
   const byId = new Map<string, CommunityListCard>();
@@ -440,48 +423,24 @@ export async function fetchCommunityListCards(
 /**
  * Communities matching a search term, as cards — the search page's set.
  *
- * Matched in Postgres (`ilike` on name, city, state and description) rather
- * than by filtering the grid set, which holds only a slice of the ~23.8k
- * active communities. Each field contributes up to `PER_FIELD` alphabetical
- * matches; the union is ranked like the grid and cut to `limit`. A signed-in
- * agent's own inactive drafts are searched too, as before.
+ * Filters the grid set (name, city, state or description contains the term),
+ * which now holds every community a buyer can see — so search shows only
+ * communities with a video, like the grid. A signed-in agent's own inactive
+ * drafts with a video are searched too.
  */
 export async function searchCommunityListCards(
   q: string,
   opts: { viewerAgentId?: string | null; limit: number },
 ): Promise<CommunityListCard[]> {
-  const PER_FIELD = 200;
-  const supabase = createAnonClient();
-  const pattern = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
-  const fields = ['name', 'city', 'state', 'description'] as const;
-  const [ownCards, ...matches] = await Promise.all([
-    opts.viewerAgentId ? fetchOwnInactiveCommunities(opts.viewerAgentId) : Promise.resolve([]),
-    ...fields.map((field) =>
-      supabase
-        .from('communities')
-        .select(CARD_COLUMNS)
-        .eq('status', 'active')
-        .not('name', 'in', COMMUNITY_STUB_NAMES_FILTER)
-        .ilike(field, pattern)
-        .order('name', { ascending: true })
-        .limit(PER_FIELD),
-    ),
-  ]);
-  const byId = new Map<string, CommunityRow>();
-  for (const m of matches) {
-    if (m.error) throw m.error;
-    for (const r of m.data) byId.set(r.id, r);
-  }
   const needle = q.toLowerCase();
-  const own = ownCards.filter((c) =>
-    [c.name, c.city ?? '', c.state, c.description ?? ''].some((v) =>
-      v.toLowerCase().includes(needle),
-    ),
-  );
-  const cards = await hydrateCommunityCards([...byId.values()]);
-  const merged = new Map<string, CommunityListCard>();
-  for (const c of [...cards, ...own]) merged.set(c.id, c);
-  return [...merged.values()].sort(rankByRelevance).slice(0, opts.limit);
+  const cards = await fetchCommunityListCards({ viewerAgentId: opts.viewerAgentId });
+  return cards
+    .filter((c) =>
+      [c.name, c.city ?? '', c.state, c.description ?? ''].some((v) =>
+        v.toLowerCase().includes(needle),
+      ),
+    )
+    .slice(0, opts.limit);
 }
 
 /** Active communities by id, as cards — for callers that already know which. */

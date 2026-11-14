@@ -281,8 +281,8 @@ export default async function SearchPage({
   const [publicListings, agentListings, allCommunities] = await Promise.all([
     searchListings(q, 'public', null),
     agentId ? searchListings(q, 'agent_inactive', agentId) : Promise.resolve([]),
-    // Matched in Postgres: the cached grid set is only a slice of the active
-    // communities. Includes the viewer's own inactive drafts when an agent.
+    // Filters the cached grid set — communities with a video. Includes the
+    // viewer's own inactive drafts when an agent.
     searchCommunityListCards(q, { viewerAgentId: agentId, limit: LIMIT }),
   ]);
 
