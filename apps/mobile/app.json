@@ -18,6 +18,12 @@
     },
     "plugins": [
       "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.188846054900-8t6qou2bp07imjkv0o06fjm4lr3i9sbo"
+        }
+      ],
       "expo-router",
       "expo-video",
       [

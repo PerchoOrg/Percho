@@ -34,6 +34,8 @@ anything; it just means "less of this for now".
   pick two to five saved neighbourhoods and see Percho's take and the
   numbers side by side — the same comparison the app shows. Needs an
   account.
+- **Sign in with Google**, on the website now and in the app's next update,
+  alongside Sign in with Apple and email.
 - **Neighbourhood pages on the website play the film**, with the photo
   credits underneath — the same film the app plays.
 - **Saving a county or area in the app now needs an account too**, like

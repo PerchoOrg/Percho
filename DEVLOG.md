@@ -23,6 +23,16 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-14 20:50 UTC — phase314: Sign in with Google, web and iOS
+
+**Objective**: Owner set up Google OAuth (Supabase `/auth/v1/settings` now shows `google: true`) and sent the two client ids: web `188846054900-8a8r…` and iOS `188846054900-8t6q…`.
+**Actions**:
+- iOS: `@react-native-google-signin/google-signin` **16.2.0** (`pnpm --filter @percho/mobile add` from the root; 17.0.0 was a two-week-old major, passed over). `app.json` plugin with `iosUrlScheme` = reversed iOS client id (introspected into Info.plist). `signInWithGoogle` in `lib/auth.ts`: `GoogleSignin.configure({ iosClientId, webClientId })` → `signIn()` → `signInWithIdToken({ provider: 'google' })`; `signOut` also signs out of Google so the picker shows next time. `auth.tsx` draws a white outlined "Sign in / up with Google" button (G mark rendered to `assets/google-g{,@2x,@3x}.png` — no SVG lib in the app) under Apple. Native module → dev client / store build only, not Expo Go.
+- Web: `app/(auth)/_components/GoogleButton.tsx` (`signInWithOAuth`, redirect `/auth/callback?redirect=…`) above the login and signup cards. `/auth/callback` now also serves OAuth and sends a non-agent arriving with the default `/dashboard` redirect to `BUYER_HOME`.
+**Verification**: web vitest 1248, tsc 0, biome 0 errors, `next build`; local `next start` → clicking the button lands on `accounts.google.com` with the web client id and `redirect_uri=https://tavmbcghxjeyaoptndvn.supabase.co/auth/v1/callback`. Mobile tsc 0, vitest 821, biome 0 errors; expo-doctor's only failure is the pre-existing "7 packages out of date" (expo 57.0.31 → 57.0.33).
+**Decisions**: Google sign-ups land as buyers (`handle_new_user` default); agents still sign up with email + password to pick the role. Client ids are committed — they are public identifiers; the secret lives only in Supabase.
+**Not verified**: a full Google round trip (needs a person at Google's screen) and whether Supabase's redirect allowlist holds `https://www.percho.co/**` — if not, web Google sign-in lands on the Site URL instead of the page that asked. Owner checks both.
+
 ## 2026-11-14 20:10 UTC — phase313: near places first; three pipeline bugs; web plays the film; area saves need an account; Expo Go
 
 **Objective**: Owner: "距离上限7mi 没有问题 - 但是距离近的要有优先级 / 本地的expo go打不开了 - 修 / Google 登录 … 给详细步骤 / Web 社区页不播放影片 - 修 / iOS 保存区域（县）仍然不用登录 - 改 / 9 月遗留的三个流水线 bug - 修".
