@@ -52,7 +52,7 @@ export default async function ProfilePage() {
           <div className="rounded-xl border border-line bg-surface p-5">
             <div className="font-serif text-lg text-ink">Sign in to save your work</div>
             <p className="mt-1 text-ink2 text-sm">
-              Log in or create an account to save listings, follow neighborhoods, and (for agents)
+              Log in or create an account to save and compare neighborhoods, and (for agents)
               publish your own tours.
             </p>
             <div className="mt-4 flex flex-col gap-2">

@@ -3,7 +3,7 @@
 /**
  * server-action wrapper that fetches saved
  * listings as `BrowseCard[]` for the /saved page. Sequences:
- *   1. listSavedListingIds(device) → ordered listing_ids
+ *   1. listSavedListingIds() → the signed-in viewer's listing_ids
  *   2. fetchBrowseCardsByIds(ids)   → BrowseCard rows
  *
  * Splitting the join across two queries instead of expanding the SQL
@@ -23,10 +23,10 @@ import type { BrowseCard } from '@/lib/feed/browse-card';
 import { fetchBrowseCardsByIds } from '@/lib/feed/browse-cards';
 import { createServiceClient } from '@/lib/supabase/server';
 
-export async function fetchSavedCardsAction(input: {
-  deviceId: string;
-}): Promise<BrowseCard[]> {
-  const ids = await listSavedListingIds(input);
+/** `null` when nobody is signed in — saves live on the account (phase311). */
+export async function fetchSavedCardsAction(): Promise<BrowseCard[] | null> {
+  const ids = await listSavedListingIds();
+  if (ids === null) return null;
   if (ids.length === 0) return [];
   return fetchBrowseCardsByIds(ids);
 }
@@ -42,10 +42,10 @@ export type SavedCommunityCard = {
   coverUrl: string | null;
 };
 
-export async function fetchSavedCommunitiesAction(input: {
-  deviceId: string;
-}): Promise<SavedCommunityCard[]> {
-  const ids = await listSavedCommunityIds(input);
+/** `null` when nobody is signed in — saves live on the account (phase311). */
+export async function fetchSavedCommunitiesAction(): Promise<SavedCommunityCard[] | null> {
+  const ids = await listSavedCommunityIds();
+  if (ids === null) return null;
   return fetchCommunityCardsByIds(ids);
 }
 

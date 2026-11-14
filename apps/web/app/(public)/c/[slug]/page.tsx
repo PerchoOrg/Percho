@@ -12,6 +12,7 @@
 
 import { resolveCommunityCoverWithCfIds } from '@/lib/communities/cover';
 import { fetchBrowseCardsByCommunitySlug } from '@/lib/feed/browse-cards';
+import { LISTINGS_ON_WEB } from '@/lib/listings/listings-on-web';
 import type { Row } from '@/lib/supabase/rows';
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
@@ -88,8 +89,9 @@ export default async function CommunityPage({
   }
 
   // Active listings inside this community — reuse the browse-card builder
-  // so cards match the global feed shape exactly (BrowseCard type).
-  const listings = await fetchBrowseCardsByCommunitySlug(community.slug);
+  // so cards match the global feed shape exactly (BrowseCard type). None
+  // while listings are off on the web (phase311).
+  const listings = LISTINGS_ON_WEB ? await fetchBrowseCardsByCommunitySlug(community.slug) : [];
 
   // resolve `nearby` — each entry carries a `slug` from Nextdoor
   // (i.e. nextdoor_slug), plus name/city/state/lat/lng. We look up which of

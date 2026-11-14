@@ -23,6 +23,7 @@ import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { searchCommunityListCards } from '@/lib/communities/list';
 import { linkForCard } from '@/lib/feed/link-for-card';
+import { LISTINGS_ON_WEB } from '@/lib/listings/listings-on-web';
 import { createClient } from '@/lib/supabase/server';
 import { photoPublicUrl } from '@/lib/supabase/storage';
 import type { Metadata } from 'next';
@@ -270,7 +271,9 @@ export default async function SearchPage({
           </div>
         </header>
         <div className="mx-auto max-w-md px-6 py-24 text-center">
-          <p className="text-ink2">Search listings and neighborhoods</p>
+          <p className="text-ink2">
+            {LISTINGS_ON_WEB ? 'Search listings and neighborhoods' : 'Search neighborhoods'}
+          </p>
         </div>
       </main>
     );
@@ -279,7 +282,9 @@ export default async function SearchPage({
   const agentId = await getViewerAgentId();
 
   const [publicListings, agentListings, allCommunities] = await Promise.all([
-    searchListings(q, 'public', null),
+    // Listings are off on the web (phase311): no public listing hits. An
+    // agent's own inactive drafts still show — they link into the dashboard.
+    LISTINGS_ON_WEB ? searchListings(q, 'public', null) : Promise.resolve([]),
     agentId ? searchListings(q, 'agent_inactive', agentId) : Promise.resolve([]),
     // Filters the cached grid set — communities with a video. Includes the
     // viewer's own inactive drafts when an agent.

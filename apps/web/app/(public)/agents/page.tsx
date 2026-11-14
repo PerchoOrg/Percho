@@ -1,3 +1,4 @@
+import { BUYER_HOME } from '@/lib/listings/listings-on-web';
 import { MapPin, Users, Video } from 'lucide-react';
 import type { Metadata } from 'next';
 import { WaitlistForm } from './_components/WaitlistForm';
@@ -39,8 +40,8 @@ export default function AgentsLandingPage() {
 
         <p className="mt-4 text-sm text-muted">
           Not an agent?{' '}
-          <a href="/browse" className="text-ink underline hover:text-ink/80">
-            Browse Atlanta homes →
+          <a href={BUYER_HOME} className="text-ink underline hover:text-ink/80">
+            Browse Atlanta neighborhoods →
           </a>
         </p>
       </section>

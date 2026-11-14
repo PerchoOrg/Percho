@@ -17,17 +17,19 @@
  * identical to /browse, /communities, /dashboard, /dashboard/communities.
  * No more inline grid/card markup.
  *
- * device_id lives in browser storage — pure client component.
+ * Saves live on the account (phase311); signed out, the page is the sign-in
+ * prompt the iOS Saved tab shows.
  */
 
 import { GridCard, GridCardCaption } from '@/app/_components/GridCard';
 import { GridFrame } from '@/app/_components/GridFrame';
 import { GridPageShell } from '@/app/_components/GridPageShell';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
-import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
+import { loginHref } from '@/lib/auth/login-href';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import type { BrowseCard } from '@/lib/feed/browse-card';
 import { linkForCard } from '@/lib/feed/link-for-card';
+import { BUYER_HOME, LISTINGS_ON_WEB } from '@/lib/listings/listings-on-web';
 import { Bookmark } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -39,47 +41,80 @@ import {
 
 type Kind = 'listings' | 'communities';
 
-type Bucket = {
-  savesListings: BrowseCard[] | null;
-  savesCommunities: SavedCommunityCard[] | null;
-};
+type Bucket =
+  | { status: 'loading' }
+  | { status: 'signed_out' }
+  | { status: 'ready'; savesListings: BrowseCard[]; savesCommunities: SavedCommunityCard[] };
 
 export function SavedClient({ kind }: { kind: Kind }) {
-  const [data, setData] = useState<Bucket>({
-    savesListings: null,
-    savesCommunities: null,
-  });
+  const [data, setData] = useState<Bucket>({ status: 'loading' });
 
   useEffect(() => {
     void (async () => {
-      const deviceId = getOrCreateDeviceId();
       try {
         const [sl, sc] = await Promise.all([
-          fetchSavedCardsAction({ deviceId }),
-          fetchSavedCommunitiesAction({ deviceId }),
+          fetchSavedCardsAction(),
+          fetchSavedCommunitiesAction(),
         ]);
-        setData({ savesListings: sl, savesCommunities: sc });
+        // Saves live on the account (phase311): signed out, there is nothing
+        // to show but the way in.
+        if (sl === null || sc === null) {
+          setData({ status: 'signed_out' });
+          return;
+        }
+        setData({ status: 'ready', savesListings: sl, savesCommunities: sc });
       } catch (err) {
         console.error('[SavedClient] fetch failed', err);
-        setData({ savesListings: [], savesCommunities: [] });
+        setData({ status: 'ready', savesListings: [], savesCommunities: [] });
       }
     })();
   }, []);
 
-  const loading = data.savesListings === null || data.savesCommunities === null;
-  const cards = data.savesListings ?? [];
-  const communities = data.savesCommunities ?? [];
-
   return (
     <main className="min-h-dvh bg-bg pb-20 text-ink md:pb-0">
-      {loading ? (
+      {data.status === 'loading' ? (
         <div className="mx-auto max-w-md px-6 py-24 text-center text-muted">Loading…</div>
+      ) : data.status === 'signed_out' ? (
+        <SignedOut />
       ) : kind === 'listings' ? (
-        <ListingsView cards={cards} />
+        <ListingsView cards={data.savesListings} />
       ) : (
-        <CommunitiesView communities={communities} />
+        <CommunitiesView communities={data.savesCommunities} />
       )}
     </main>
+  );
+}
+
+/** Signed out — the same prompt the iOS Saved tab shows. */
+function SignedOut() {
+  return (
+    <div className="mx-auto min-h-[60vh] max-w-2xl px-5 pt-10 pb-24 md:pb-10">
+      <div className="mt-10 flex flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-bg px-6 py-16 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-ink/10 text-ink">
+          <Bookmark size={26} aria-hidden="true" />
+        </span>
+        <h2 className="mt-4 font-serif text-ink text-xl">
+          Sign in to keep the neighborhoods you like
+        </h2>
+        <p className="mt-2 text-ink2 text-sm">
+          Your saves follow your account, on the web and in the app.
+        </p>
+        <div className="mt-6 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-center">
+          <Link
+            href={loginHref('/saved')}
+            className="rounded-full bg-ink px-5 py-2 font-medium text-surface text-sm transition hover:opacity-90"
+          >
+            Sign in
+          </Link>
+          <Link
+            href={BUYER_HOME}
+            className="rounded-full border border-line-strong px-5 py-2 font-medium text-ink text-sm transition hover:bg-surface/30"
+          >
+            Explore neighborhoods
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -92,12 +127,14 @@ function FavoritesEmpty() {
         </span>
         <h2 className="mt-4 font-serif text-ink text-xl">Nothing saved yet</h2>
         <div className="mt-6 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-center">
-          <Link
-            href="/browse"
-            className="rounded-full bg-ink px-5 py-2 font-medium text-surface text-sm transition hover:opacity-90"
-          >
-            Explore listing
-          </Link>
+          {LISTINGS_ON_WEB ? (
+            <Link
+              href="/browse"
+              className="rounded-full bg-ink px-5 py-2 font-medium text-surface text-sm transition hover:opacity-90"
+            >
+              Explore listing
+            </Link>
+          ) : null}
           <Link
             href="/communities"
             className="rounded-full border border-line-strong px-5 py-2 font-medium text-ink text-sm transition hover:bg-surface/30"

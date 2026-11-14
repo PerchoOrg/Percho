@@ -21,6 +21,7 @@ import {
   saveCommunity,
   unsaveCommunity,
 } from '@/app/_actions/saved-communities';
+import { currentPath, loginHref } from '@/lib/auth/login-href';
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
@@ -347,6 +348,8 @@ export function CommunityVideoFeed({
     }
   }, [activeIndex, loops, videos.length]);
   const deviceIdRef = useRef<string | null>(null);
+  /** Set by the saved-state read on mount; null until it answers. */
+  const signedInRef = useRef<boolean | null>(null);
   const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const wasAutoplayBlockedRef = useRef(false);
@@ -358,10 +361,11 @@ export function CommunityVideoFeed({
         const id = getOrCreateDeviceId();
         deviceIdRef.current = id;
         const [ids, likedIds] = await Promise.all([
-          listSavedCommunityIds({ deviceId: id }),
+          listSavedCommunityIds(),
           listLiked({ deviceId: id, kind: 'community' }),
         ]);
-        if (ids.includes(community.id)) setSaved(true);
+        signedInRef.current = ids !== null;
+        if (ids?.includes(community.id)) setSaved(true);
         if (likedIds.includes(community.id)) setLiked(true);
       } catch (err) {
         console.error('[CommunityVideoFeed] saved hydrate failed', err);
@@ -457,24 +461,32 @@ export function CommunityVideoFeed({
   }, [liked, community.id]);
 
   const toggleSave = useCallback(() => {
+    // Saving needs an account (phase311) — signed out, go sign in first.
+    if (signedInRef.current === false) {
+      router.push(loginHref(currentPath()));
+      return;
+    }
     const wasSaved = saved;
     setSaved(!wasSaved); // optimistic
     void (async () => {
       try {
-        const deviceId = getOrCreateDeviceId();
         const result = await (wasSaved
-          ? unsaveCommunity({ deviceId, communityId: community.id })
-          : saveCommunity({ deviceId, communityId: community.id }));
+          ? unsaveCommunity({ communityId: community.id })
+          : saveCommunity({ communityId: community.id }));
         if (!result.ok) {
-          console.error('[CommunityVideoFeed] save toggle failed', result.error);
           setSaved(wasSaved);
+          if (result.error === 'not_signed_in') {
+            router.push(loginHref(currentPath()));
+            return;
+          }
+          console.error('[CommunityVideoFeed] save toggle failed', result.error);
         }
       } catch (err) {
         console.error('[CommunityVideoFeed] save toggle threw', err);
         setSaved(wasSaved);
       }
     })();
-  }, [saved, community.id]);
+  }, [saved, community.id, router]);
 
   const onShare = useCallback(async () => {
     const url = `${window.location.origin}/c/${community.slug}`;

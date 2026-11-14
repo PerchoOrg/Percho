@@ -14,6 +14,7 @@
  *   - Agent "+ New" label loses the leading "+" (icon already shows the plus).
  *   - /dashboard sub-tabs renamed singular: Listing / Community.
  */
+import { LISTINGS_ON_WEB } from '@/lib/listings/listings-on-web';
 import { Bookmark, Briefcase, Building2, Compass, type LucideIcon, Plus, User } from 'lucide-react';
 
 export type ViewerRole = 'anon' | 'buyer' | 'agent';
@@ -36,8 +37,16 @@ export type Tab = {
  * - buyer: For You · Community · Favorites · Me
  * - agent: Agent Hub · For You · Community · New · Me
  *          (Favorites is reachable from the avatar menu, not a primary tab)
+ *
+ * For You is the listings grid, so it is dropped while listings are off on
+ * the web (phase311, `LISTINGS_ON_WEB`).
  */
 export function getPrimaryTabs(role: ViewerRole): Tab[] {
+  const tabs = primaryTabsWithListings(role);
+  return LISTINGS_ON_WEB ? tabs : tabs.filter((t) => t.href !== '/browse');
+}
+
+function primaryTabsWithListings(role: ViewerRole): Tab[] {
   if (role === 'agent') {
     // "+ New" moved to the center slot so the
     // mobile FAB lands in the middle of the 5-item BottomNav (index 2 of 5)
@@ -77,7 +86,7 @@ export function getSubTabs(pathname: string, role: ViewerRole): SubTab[] | null 
   // static "Explore" title in the middle slot instead. The /browse/nearby
   // and /communities/nearby routes are still live but no longer navigable
   // from the chrome.
-  if (pathname === '/saved' || pathname.startsWith('/saved/')) {
+  if (LISTINGS_ON_WEB && (pathname === '/saved' || pathname.startsWith('/saved/'))) {
     // Listing / Community are now the global TopBar sub-tabs
     // for Favorites. SavedClient no longer renders its own pill row.
     // singular per owner ("Listing" / "Community").

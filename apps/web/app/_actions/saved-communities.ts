@@ -3,19 +3,21 @@
 /**
  * Saved-communities server actions.
  *
- * Mirror of `saved-listings.ts`. RLS denies everything on
- * `saved_communities`; all access funnels through these actions using
- * the service-role client. Device-id is the only identifier in V1
- * (anonymous buyers); `user_id` will be backfilled when buyer auth
- * lands.
+ * Saving needs an account (phase311, owner: "保存和对比要求登录"), the same
+ * rule as iOS. Rows are written the way the app writes them —
+ * `user_id = auth.uid()`, `device_id = auth.uid()::text`
+ * (`20260904090000_mobile_auth_saves.sql`) — through the cookie client and
+ * RLS, so a save made here shows up on the phone and the other way round.
+ *
+ * Signed out, every action answers `not_signed_in` and the caller sends the
+ * viewer to /login. The anonymous device-id rows web wrote before phase311
+ * stay in the table, unread: there is no way to tell whose they are.
  */
 
-import { isValidDeviceId } from '@/lib/buyer/device-id';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
 const SaveInput = z.object({
-  deviceId: z.string().refine(isValidDeviceId, { message: 'invalid_device_id' }),
   communityId: z.string().uuid(),
 });
 
@@ -25,27 +27,20 @@ export async function saveCommunity(input: z.infer<typeof SaveInput>): Promise<S
   const parsed = SaveInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: 'invalid_input' };
 
-  const supabase = createServiceClient();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'not_signed_in' };
 
-  // Confirm community exists. (Communities don't have a status field
-  // in V1 — once present, every community is browsable.)
-  const { data: community } = (await supabase
-    .from('communities')
-    .select('id')
-    .eq('id', parsed.data.communityId)
-    .maybeSingle()) as { data: { id: string } | null };
-  if (!community) return { ok: false, error: 'community_not_found' };
-
-  const { error } = await supabase.from('saved_communities').upsert(
-    {
-      device_id: parsed.data.deviceId,
-      community_id: parsed.data.communityId,
-    },
-    { onConflict: 'device_id,community_id', ignoreDuplicates: true },
-  );
-
-  if (error) {
-    console.error('[saveCommunity] failed', error);
+  const { error } = await supabase.from('saved_communities').insert({
+    user_id: user.id,
+    device_id: user.id,
+    community_id: parsed.data.communityId,
+  });
+  // Duplicate (23505) is success: the row is there.
+  if (error && error.code !== '23505') {
+    console.error('[saveCommunity] failed', error.code, error.message);
     return { ok: false, error: 'insert_failed' };
   }
   return { ok: true };
@@ -55,40 +50,41 @@ export async function unsaveCommunity(input: z.infer<typeof SaveInput>): Promise
   const parsed = SaveInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: 'invalid_input' };
 
-  const supabase = createServiceClient();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'not_signed_in' };
+
   const { error } = await supabase
     .from('saved_communities')
     .delete()
-    .eq('device_id', parsed.data.deviceId)
+    .eq('user_id', user.id)
     .eq('community_id', parsed.data.communityId);
 
   if (error) {
-    console.error('[unsaveCommunity] failed', error);
+    console.error('[unsaveCommunity] failed', error.code, error.message);
     return { ok: false, error: 'delete_failed' };
   }
   return { ok: true };
 }
 
-const DeviceInput = z.object({
-  deviceId: z.string().refine(isValidDeviceId, { message: 'invalid_device_id' }),
-});
-
 /**
- * Returns the set of community_ids saved by this device. Used by
- * the community feed and grid pages to hydrate the saved state.
+ * The signed-in viewer's saved community ids, newest first, or `null` when
+ * nobody is signed in (so the caller knows a Save tap must go to /login).
  */
-export async function listSavedCommunityIds(input: z.infer<typeof DeviceInput>): Promise<string[]> {
-  const parsed = DeviceInput.safeParse(input);
-  if (!parsed.success) return [];
+export async function listSavedCommunityIds(): Promise<string[] | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
 
-  const supabase = createServiceClient();
-  const { data, error } = (await supabase
+  const { data, error } = await supabase
     .from('saved_communities')
     .select('community_id')
-    .eq('device_id', parsed.data.deviceId)) as {
-    data: { community_id: string }[] | null;
-    error: unknown;
-  };
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
   if (error || !data) return [];
   return data.map((r) => r.community_id);
 }

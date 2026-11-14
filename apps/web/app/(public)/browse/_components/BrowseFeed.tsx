@@ -1,5 +1,6 @@
 'use client';
 import { listSavedListingIds, saveListing, unsaveListing } from '@/app/_actions/saved-listings';
+import { currentPath, loginHref } from '@/lib/auth/login-href';
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { type BrowseCard, type Source, poolFor } from '@/lib/feed/browse-card';
@@ -82,9 +83,9 @@ export function BrowseFeed({
   const [carouselOpen, setCarouselOpen] = useState(false);
   const [carouselStartIdx, setCarouselStartIdx] = useState(0);
 
-  // persistent saves keyed by anonymous device id.
-  // Hydrated on mount from saved_listings; toggleSave fires server actions.
-  // Resolved lazily on the client (localStorage requires window).
+  // Saves live on the account (phase311); likes are still keyed by the
+  // anonymous device id. Hydrated on mount; toggleSave fires server actions.
+  // The device id resolves lazily on the client (localStorage requires window).
   const deviceIdRef = useRef<string | null>(null);
   useEffect(() => {
     void (async () => {
@@ -92,10 +93,10 @@ export function BrowseFeed({
       deviceIdRef.current = id;
       try {
         const [ids, likedIds] = await Promise.all([
-          listSavedListingIds({ deviceId: id }),
+          listSavedListingIds(),
           listLiked({ deviceId: id, kind: 'listing' }),
         ]);
-        if (ids.length > 0) {
+        if (ids && ids.length > 0) {
           setSaved(Object.fromEntries(ids.map((lid: string) => [lid, true])));
         }
         if (likedIds.length > 0) {
@@ -285,17 +286,19 @@ export function BrowseFeed({
     // Optimistic flip; revert on server failure.
     setSaved((m) => ({ ...m, [id]: !wasSaved }));
 
-    const deviceId = deviceIdRef.current;
-    if (!deviceId) return; // hydration race; user likely double-tapped before mount fetch
-
     void (async () => {
       const result = await (wasSaved
-        ? unsaveListing({ deviceId, listingId: id })
-        : saveListing({ deviceId, listingId: id }));
+        ? unsaveListing({ listingId: id })
+        : saveListing({ listingId: id }));
       if (!result.ok) {
-        console.error('[BrowseFeed] save toggle failed', result.error);
         // revert optimistic flip
         setSaved((m) => ({ ...m, [id]: wasSaved }));
+        // Saving needs an account (phase311).
+        if (result.error === 'not_signed_in') {
+          window.location.assign(loginHref(currentPath()));
+          return;
+        }
+        console.error('[BrowseFeed] save toggle failed', result.error);
       }
     })();
   }, [active, saved]);

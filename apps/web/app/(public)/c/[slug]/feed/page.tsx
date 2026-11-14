@@ -11,6 +11,7 @@
  * taps a tile on `/c/[slug]`).
  */
 
+import { LISTINGS_ON_WEB } from '@/lib/listings/listings-on-web';
 import { createClient } from '@/lib/supabase/server';
 import { photoPublicUrl } from '@/lib/supabase/storage';
 import type { Metadata } from 'next';
@@ -149,15 +150,20 @@ export default async function CommunityFeedPage({
   // Scenario B — bottom-left "homes here"
   // chip opens a listings sheet (L2) for the active community. Fetch the
   // full listing rows + hero video/photo here so the sheet has everything
-  // it needs without round-tripping. Sorted newest-first.
-  const { data: listingRows } = (await supabase
-    .from('listings')
-    .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, agent_id, created_at, mls_number',
-    )
-    .eq('community_id', community.id)
-    .eq('status', 'active')
-    .order('created_at', { ascending: false })) as {
+  // it needs without round-tripping. Sorted newest-first. Skipped while
+  // listings are off on the web (phase311) — no rows, so no chip.
+  const { data: listingRows } = (
+    LISTINGS_ON_WEB
+      ? await supabase
+          .from('listings')
+          .select(
+            'id, slug, address, city, state, zip, price, beds, baths, sqft, agent_id, created_at, mls_number',
+          )
+          .eq('community_id', community.id)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+      : { data: [] }
+  ) as {
     data: Array<{
       id: string;
       slug: string;
