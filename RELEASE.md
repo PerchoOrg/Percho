@@ -34,6 +34,10 @@ anything; it just means "less of this for now".
   pick two to five saved neighbourhoods and see Percho's take and the
   numbers side by side — the same comparison the app shows. Needs an
   account.
+- **A clearer sign-in screen in the app** (in the next app update): sign in
+  with Apple or your email and password, "Forgot password?" right under the
+  form, and "Don't have an account? Sign up" at the bottom — no more
+  "Email me a code" to create an account.
 - **Northbrooke (Cumming) has a cover photo** and now plays in the app's
   feed alongside the other filmed neighbourhoods.
 - **Neighbourhoods show only ones with a film.** The Neighbourhoods page and

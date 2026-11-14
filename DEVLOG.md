@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-14 18:45 UTC — phase311.3: iOS sign-in screen reworked; phase311 live
+
+**Objective**: Owner: "sign in 方式不自然：登录框下面应该是注册 不要写new here? email me a code stuff.... 或者用google /apple id 登录".
+**Actions**: `apps/mobile/app/auth.tsx` now has three modes. Sign in: Apple, or email + password, "Forgot password?" under the password, "Don't have an account? Sign up" at the foot. Sign up: Apple (SIGN_UP button) or email + password via new `signUpWithPassword` (`lib/auth.ts`) — production `mailer_autoconfirm: true` (read from `/auth/v1/settings`), so `signUp` returns a session and the screen dismisses; "already registered" maps to "sign in instead". Forgot password: email → `requestEmailCode` (now `shouldCreateUser: false`, error text no longer passed through) → code → `router.replace('/set-password')`. `passwordFailureHint` points at "Forgot password?". Merged `4a5065d2`; reference worktree fast-forwarded + `pnpm install`.
+**Decisions**: Web login already had this shape (form → Forgot password? → Sign up), so only iOS changed. Google is NOT added: `/auth/v1/settings` shows only `apple` and `email` enabled, and the iOS path needs a native Google module (new build) plus OAuth clients the owner must create. A Google button before that would fail App Review 2.1.
+**Verification**: mobile typecheck 0, biome 0 errors, vitest 820. No simulator on this host — the owner checks on device. Production after `afff8cd7`: `/browse`, `/v/fmls/…` → 307 `/communities`; `/compare` signed out → 307 `/login?redirect=…`; iOS feed (`stage=3&videosOnly=1&listings=0`, CDN-bypassed) now lists 6 films including Northbrooke.
+**Next steps**: Owner: device pass on sign-in / sign-up / forgot password (Metro, or build 9 when wanted); Google OAuth setup; then the video content work.
+
 ## 2026-11-14 18:20 UTC — phase311: web matches iOS — no listings, saves and compare need an account; Northbrooke cover
 
 **Objective**: Owner, after an audit of iOS vs web: "web上不要显示房子 并且保存 和对比要求登录"; "给Northbrooke加上封面 保持一致". (Sign-in screen rework is the next step — not in this entry.)
