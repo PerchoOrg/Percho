@@ -28,8 +28,8 @@ export default async function SignupPage({
 
   return (
     <div className="space-y-5">
-      <GoogleButton redirect={safeRedirect} label="Sign up with Google" />
       <SignupForm redirect={safeRedirect} />
+      <GoogleButton redirect={safeRedirect} label="Sign up with Google" />
       <p className="text-center text-sm text-ink2">
         Already have an account?{' '}
         <a

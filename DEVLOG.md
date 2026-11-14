@@ -23,6 +23,15 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-14 22:00 UTC — phase315: Apple / Google under the sign-in form; build 9 uploaded; film arrangement noted for later
+
+**Objective**: Owner: "签 Apple 协议 - done / Sign in with Google 放到登录框下面 / 编排方式 - 先记录下来这个点 暂时不做过多改变".
+**Actions**:
+- Re-ran `eas submit --id 7f7a0e7f… --profile production` (ASC key in `eas.json` locally, reverted) → "Submitted your app to Apple App Store Connect", 1.0.0 (9) processing. Build 9 is the dev client — never attach it to an App Store version.
+- Web: `GoogleButton` now renders "or" ABOVE itself and sits under `LoginForm` / `SignupForm`, before "Forgot password?" / "Sign up". iOS `auth.tsx`: Apple and Google moved from above the email fields to under the Sign in / Create account button, after "or" (Apple moved with Google so the two social options stay together). JS-only — reaches build 9 over Metro, no rebuild.
+**Film arrangement — recorded, not built** (owner: "一天的行程 - 这个表述不全面 不要局限 可以有多种编排方式 目的是让人真实体验到在这居住"): the scheduler's surroundings act is one arrangement today — opener, the Curator's time-of-day order, bucket chapters, closer (`orderSurroundingsAct`). The goal is the felt experience of living there, and a day's timeline is only one way to show it. Candidates discussed: from the front door outward (walkable → 5 min → 15 min), weekday vs weekend, by household (family / young professional / retiree), signature-first (the one thing the place has that others don't), and the current day-in-the-life. Narration would follow the chosen arrangement. Owner: no change for now.
+**Verification**: mobile tsc 0, biome 0 errors, vitest 821; web tsc 0, biome 0 errors, vitest 1248.
+
 ## 2026-11-14 21:30 UTC — phase314.1: dev client 1.0.0 (9) built; TestFlight upload blocked by an Apple agreement
 
 **Objective**: Owner approved the dev-client build ("expo go - you have my approval").
