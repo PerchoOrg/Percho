@@ -206,6 +206,7 @@ export default function SavedTab() {
 	const hydrated = useSavedStore((s) => s.hydrated);
 	const toggle = useSavedStore((s) => s.toggle);
 	const signedIn = useAuthStore((s) => s.session !== null);
+	const authHydrated = useAuthStore((s) => s.hydrated);
 
 	// Area rows resolve from the pool (a bookmarked CITY card's unit is pool
 	// data, not a detail endpoint) — same source the Search tab reads.
@@ -405,10 +406,11 @@ export default function SavedTab() {
 		closeSelect();
 	};
 
-	if (hydrated && items.length === 0) {
+	if (hydrated && (items.length === 0 || (authHydrated && !signedIn))) {
 		// §5.5's Saved empty state — always a way back to the main loop. Signed
 		// out it doubles as the sign-in prompt: saves live on the account now,
-		// so an empty list here usually means "not signed in on this phone".
+		// and signed out this tab shows nothing else — not even area entries
+		// an older build kept on the device, so compare needs an account too.
 		return (
 			<View style={[styles.screen, styles.center]}>
 				<Text style={styles.emptyTitle}>
