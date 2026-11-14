@@ -23,7 +23,7 @@ rotation, not on the way in.
 
 ---
 
-## 2026-11-14 18:40 UTC — phase312: Northbrooke's film had its place labels burned in — stale render worker; film reads skip Next's fetch cache
+## 2026-11-14 18:50 UTC — phase312: Northbrooke's film had its place labels burned in — stale render worker; film reads skip Next's fetch cache
 
 **Objective**: Owner: "Northbrooke 视频的左上角和右上角都有位置label fix it，看看还有别的落后的版本问题吗，有几个地理位置都是4mile以外 这是最新编排版本预期的结果吗".
 **Findings**:
