@@ -65,7 +65,7 @@ export async function runGenerate(sb: TourDb, run: RunRow, photoIds?: string[], 
         };
       });
     // Per-row click: re-render even a clip that is already ready.
-    return enqueueClips(sb, run, selected, forceEngine, true);
+    return enqueueClips(sb, run, selected, true);
   }
 
   if (!resolve?.resolved?.length)
@@ -100,7 +100,7 @@ export async function runGenerate(sb: TourDb, run: RunRow, photoIds?: string[], 
   // showed no status change because the failed row blocked a re-create).
   // Keyed by (photo_id, engine): a photo can have both a seedance and a
   // depthflow/kenburns clip.
-  return enqueueClips(sb, run, shotsWithEngine, forceEngine);
+  return enqueueClips(sb, run, shotsWithEngine);
 }
 
 /** What a clip's pixels depend on. Change any of these and the file is wrong. */
@@ -204,6 +204,22 @@ async function plannedRenderKeys(
   return out;
 }
 
+/**
+ * The planned shots whose OWN clip row (photo + its engine) has failed.
+ *
+ * Keyed on each shot's engine (phase313). It used to key on
+ * `forceEngine ?? 'seedance'`, so a plain Generate only ever requeued failed
+ * Seedance rows — a failed DepthFlow or Ken Burns clip sat failed with
+ * "0 requeued" until someone forced that engine by hand (Northbrooke,
+ * 2026-09-21: four storage-429 failures).
+ */
+export function failedShotKeys(
+  shots: ReadonlyArray<{ photo_id: string; engine: string }>,
+  statusByKey: ReadonlyMap<string, string>,
+): Array<{ photo_id: string; engine: string }> {
+  return shots.filter((s) => statusByKey.get(`${s.photo_id}:${s.engine}`) === 'failed');
+}
+
 /** Which existing rows no longer match the plan. Pure — see the doc above. */
 export function staleClipKeys(
   clips: Array<{ photo_id: string; engine: string; render_key?: string | null }>,
@@ -231,7 +247,6 @@ async function enqueueClips(
     prompt?: string | null;
     ai_generated?: boolean;
   }>,
-  forceEngine?: string | null,
   /**
    * A per-row click means "render this again", so a clip that is already
    * ready has to go back to pending — otherwise the button updates the row's
@@ -316,18 +331,20 @@ async function enqueueClips(
         .eq('engine', s.engine),
     );
   }
-  // Failed rows: reset to pending (re-generate). Leave ready/processing alone.
-  const failedIds = shotsWithEngine
-    .map((s) => s.photo_id)
-    .filter((id) => have.get(`${id}:${forceEngine ?? 'seedance'}`) === 'failed');
-  if (failedIds.length > 0) {
+  // Failed rows: reset to pending (re-generate), each on its own engine.
+  // Leave ready/processing alone.
+  const failedByEngine = new Map<string, string[]>();
+  for (const s of failedShotKeys(shotsWithEngine, have)) {
+    failedByEngine.set(s.engine, [...(failedByEngine.get(s.engine) ?? []), s.photo_id]);
+  }
+  for (const [engine, ids] of failedByEngine) {
     await mustWrite(
-      `requeue ${failedIds.length} failed clip(s)`,
+      `requeue ${ids.length} failed ${engine} clip(s)`,
       sb
         .from('photo_clips')
         .update({ status: 'pending', error: null, updated_at: new Date().toISOString() })
-        .in('photo_id', failedIds)
-        .eq('engine', forceEngine ?? 'seedance'),
+        .in('photo_id', ids)
+        .eq('engine', engine),
     );
   }
 

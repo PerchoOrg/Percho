@@ -51,6 +51,7 @@ from photo_tagger import MODEL as TAGGER_MODEL, tag_listing_photos  # type: igno
 # same way generate.py does for a whole film — see process_plan_job.
 from depthflow_modes import pick_engines, plan_moves  # type: ignore  # noqa: E402
 from hero_prompt import choose_hero_prompt, fallback_hero, looks_aerial  # type: ignore  # noqa: E402
+from storage_retry import with_retry  # type: ignore  # noqa: E402
 
 
 def _now_iso() -> str:
@@ -223,10 +224,19 @@ def sb_post(table: str, body: dict[str, Any]) -> list[dict[str, Any]]:
     return r.json()
 
 
+# Network blips worth retrying along with a 429 burst (see storage_retry.py).
+_TRANSIENT = (requests.ConnectionError, requests.Timeout)
+
+
 def storage_download(bucket: str, path: str, dest: Path) -> None:
     # Service role can read from any bucket regardless of RLS.
     url = f"{STORAGE}/object/{bucket}/{path}"
-    with requests.get(url, headers=SB_HEADERS, stream=True, timeout=60) as r:
+    r = with_retry(
+        f"GET {bucket}/{path}",
+        lambda: requests.get(url, headers=SB_HEADERS, stream=True, timeout=60),
+        transient=_TRANSIENT,
+    )
+    with r:
         r.raise_for_status()
         with dest.open("wb") as f:
             for chunk in r.iter_content(chunk_size=1 << 15):
@@ -244,11 +254,15 @@ def storage_upload(bucket: str, path: str, src: Path, content_type: str = "image
         "Content-Type": content_type,
         "x-upsert": "true",
     }
-    with src.open("rb") as f:
-        r = requests.post(url, headers=headers, data=f, timeout=120)
-    if r.status_code == 409:  # some Storage versions reject POST-over-existing
+
+    def send(method: str) -> requests.Response:
+        # Re-opened per attempt: a retry must send the whole file again.
         with src.open("rb") as f:
-            r = requests.put(url, headers=headers, data=f, timeout=120)
+            return requests.request(method, url, headers=headers, data=f, timeout=120)
+
+    r = with_retry(f"POST {bucket}/{path}", lambda: send("POST"), transient=_TRANSIENT)
+    if r.status_code == 409:  # some Storage versions reject POST-over-existing
+        r = with_retry(f"PUT {bucket}/{path}", lambda: send("PUT"), transient=_TRANSIENT)
     if not r.ok:
         raise RuntimeError(f"storage upload failed {r.status_code}: {r.text[:300]}")
 
