@@ -2,6 +2,7 @@
  * `assemble` step — turn the planned shot list into a `tour_assemblies` row
  * for the render worker to concat.
  */
+import { assembliesTableOf, ownerOf } from './scope';
 import { type RunRow, type TourDb, asJson, saveStep, setRunStatus } from './shared';
 
 export async function runAssemble(
@@ -62,8 +63,8 @@ export async function runAssemble(
   const notReady = planned.filter((sh) => !haveSomething.has(sh.photo_id)).length;
 
   if (approve) {
-    const { error: insErr } = await sb.from('tour_assemblies').insert({
-      community_id: run.community_id,
+    const { error: insErr } = await sb.from(assembliesTableOf(run.scope)).insert({
+      ...ownerOf(run.scope, run.entity_id),
       run_id: run.id,
       status: 'pending',
       ordered_clips: asJson(shots),
@@ -76,7 +77,7 @@ export async function runAssemble(
       bgm: bgm ? asJson(bgm) : null,
     });
     if (insErr) return { error: 'insert_failed', message: (insErr as { message: string }).message };
-    await setRunStatus(sb, run.id, 'assembled');
+    await setRunStatus(sb, run, 'assembled');
     await saveStep(sb, run, 'assemble', { approved: true, ordered: shots, dropped, notReady });
     return {
       approved: true,

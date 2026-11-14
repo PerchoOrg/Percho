@@ -1,5 +1,5 @@
 /**
- * Plumbing shared by every community-tour step.
+ * Plumbing shared by every tour step — community and city (phase318).
  *
  * The step handlers used to live inline in the route file, which had grown to
  * 1,304 lines. They are independent of each other — the route only dispatches
@@ -8,6 +8,7 @@
  */
 import type { Json } from '@/lib/supabase/database.types';
 import type { createServiceClient } from '@/lib/supabase/server';
+import type { TourScope } from './scope';
 
 /**
  * The service-role client every step handler receives. Named so the
@@ -26,7 +27,10 @@ export const asJson = (value: unknown): Json => value as Json;
 
 export interface RunRow {
   id: string;
-  community_id: string;
+  /** The community or city this run films (phase318). */
+  entity_id: string;
+  /** Which tables the run lives in — community or city. */
+  scope: TourScope;
   status: string;
   step_results: Record<string, Json>;
 }
@@ -56,31 +60,40 @@ export async function bestEffortWrite(
 ): Promise<void> {
   const { error } = await q;
   if (error) {
-    console.error(`[community-tour] ${label} failed:`, error);
+    console.error(`[tour] ${label} failed:`, error);
   }
 }
 
-export async function getRun(sb: TourDb, runId: string): Promise<RunRow | null> {
-  const { data } = await sb
-    .from('community_tour_runs')
-    .select('id, community_id, status, step_results')
+export async function getRun(sb: TourDb, runId: string, scope: TourScope): Promise<RunRow | null> {
+  const { data } = (await sb
+    .from(scope.runsTable)
+    .select(`id, ${scope.idColumn}, status, step_results`)
     .eq('id', runId)
-    .maybeSingle();
-  return (data as RunRow | null) ?? null;
+    .maybeSingle()) as unknown as {
+    data: (Record<string, string> & { step_results: Record<string, Json> }) | null;
+  };
+  if (!data) return null;
+  return {
+    id: data.id as string,
+    entity_id: data[scope.idColumn] as string,
+    scope,
+    status: data.status as string,
+    step_results: data.step_results,
+  };
 }
 
 export async function setRunStatus(
   sb: TourDb,
-  runId: string,
+  run: Pick<RunRow, 'id' | 'scope'>,
   status: string,
   extra: Record<string, unknown> = {},
 ) {
   await mustWrite(
     `setRunStatus(${status})`,
     sb
-      .from('community_tour_runs')
+      .from(run.scope.runsTable)
       .update({ status, updated_at: new Date().toISOString(), ...extra })
-      .eq('id', runId),
+      .eq('id', run.id),
   );
 }
 
@@ -120,24 +133,20 @@ export interface ActiveStep {
  * runs one step at a time, so what is left is a handler's own writes, and those
  * are sequential.
  */
-async function mergeBase(
-  sb: TourDb,
-  runId: string,
-  fallback: Record<string, Json>,
-): Promise<Record<string, Json>> {
-  return (await getRun(sb, runId))?.step_results ?? fallback;
+async function mergeBase(sb: TourDb, run: RunRow): Promise<Record<string, Json>> {
+  return (await getRun(sb, run.id, run.scope))?.step_results ?? run.step_results;
 }
 
 /** Claim the run for `step`. Returns the stamp `clearActiveStep` needs. */
 export async function claimActiveStep(sb: TourDb, run: RunRow, step: string): Promise<string> {
   const startedAt = new Date().toISOString();
-  const base = await mergeBase(sb, run.id, run.step_results);
+  const base = await mergeBase(sb, run);
   // Best-effort: losing the claim costs a spinner, and refusing to run the step
   // over it would be the worse trade.
   await bestEffortWrite(
     `claimActiveStep(${step})`,
     sb
-      .from('community_tour_runs')
+      .from(run.scope.runsTable)
       .update({
         step_results: asJson({ ...base, active: { step, started_at: startedAt } }),
         updated_at: startedAt,
@@ -174,20 +183,20 @@ export function mayClearClaim(active: ActiveStep | null | undefined, startedAt: 
  * snapshot this route started with is stale, so clearing through it would roll
  * back everything the step just produced.
  */
-export async function clearActiveStep(sb: TourDb, runId: string, startedAt: string) {
-  const fresh = await getRun(sb, runId);
+export async function clearActiveStep(sb: TourDb, run: RunRow, startedAt: string) {
+  const fresh = await getRun(sb, run.id, run.scope);
   if (!fresh) return;
   const active = fresh.step_results.active as ActiveStep | null | undefined;
   if (!mayClearClaim(active, startedAt)) return;
   await bestEffortWrite(
     'clearActiveStep',
     sb
-      .from('community_tour_runs')
+      .from(run.scope.runsTable)
       .update({
         step_results: asJson({ ...fresh.step_results, active: null }),
         updated_at: new Date().toISOString(),
       })
-      .eq('id', runId),
+      .eq('id', run.id),
   );
 }
 
@@ -214,14 +223,14 @@ export async function saveStep(sb: TourDb, run: RunRow, step: string, result: un
       ? { ...(result as Record<string, unknown>), ran_at: new Date().toISOString() }
       : result;
 
-  const base = await mergeBase(sb, run.id, run.step_results);
+  const base = await mergeBase(sb, run);
 
   // The write whose silent failure is indistinguishable from "the step did
   // nothing": the panel simply keeps rendering the previous run's numbers.
   await mustWrite(
     `saveStep(${step})`,
     sb
-      .from('community_tour_runs')
+      .from(run.scope.runsTable)
       .update({
         step_results: asJson({ ...base, [step]: stamped }),
         updated_at: new Date().toISOString(),

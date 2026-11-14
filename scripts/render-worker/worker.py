@@ -2144,44 +2144,58 @@ def process_photo_clip(row: dict[str, Any]) -> None:
 # Fifteen minutes is comfortably past a real render, which runs in about three.
 ASSEMBLY_STALE_MIN = 15
 
+# Community films and, since phase318, city films: (table, owning FK, owner
+# table). The two tables are column-for-column mirrors, so one claim and one
+# process function serve both; the row remembers which table it came from.
+ASSEMBLY_TABLES: tuple[tuple[str, str, str], ...] = (
+    ("tour_assemblies", "community_id", "communities"),
+    ("city_tour_assemblies", "city_id", "cities"),
+)
+
 
 def requeue_stale_assemblies() -> None:
     """Hand orphaned assemblies back to the queue. Runs at startup."""
     cutoff = (datetime.now(timezone.utc) - timedelta(minutes=ASSEMBLY_STALE_MIN)).isoformat()
-    stale = sb_get(
-        "tour_assemblies",
-        {"select": "id", "status": "eq.processing", "updated_at": f"lt.{cutoff}"},
-    )
-    for row in stale or []:
-        sb_patch(
-            "tour_assemblies",
-            {"id": f"eq.{row['id']}", "status": "eq.processing"},
-            {"status": "pending", "updated_at": _now_iso()},
+    for table, _fk, _owner in ASSEMBLY_TABLES:
+        stale = sb_get(
+            table,
+            {"select": "id", "status": "eq.processing", "updated_at": f"lt.{cutoff}"},
         )
-        print(f"[assembly {row['id']}] requeued — left processing by a stopped worker", flush=True)
+        for row in stale or []:
+            sb_patch(
+                table,
+                {"id": f"eq.{row['id']}", "status": "eq.processing"},
+                {"status": "pending", "updated_at": _now_iso()},
+            )
+            print(f"[assembly {row['id']}] requeued — left processing by a stopped worker", flush=True)
 
 
 def claim_assembly() -> dict[str, Any] | None:
-    rows = sb_get(
-        "tour_assemblies",
-        {
-            "select": "id,community_id,run_id,ordered_clips,narration,bgm,status,community:communities(name)",
-            "status": "eq.pending",
-            "order": "created_at.asc",
-            "limit": "1",
-        },
-    )
-    if not rows:
-        return None
-    row = rows[0]
-    updated = sb_patch(
-        "tour_assemblies",
-        {"id": f"eq.{row['id']}", "status": "eq.pending"},
-        {"status": "processing", "updated_at": _now_iso()},
-    )
-    if not updated:
-        return None
-    return row
+    for table, fk, owner in ASSEMBLY_TABLES:
+        rows = sb_get(
+            table,
+            {
+                "select": f"id,{fk},run_id,ordered_clips,narration,bgm,status,place:{owner}(name)",
+                "status": "eq.pending",
+                "order": "created_at.asc",
+                "limit": "1",
+            },
+        )
+        if not rows:
+            continue
+        row = rows[0]
+        updated = sb_patch(
+            table,
+            {"id": f"eq.{row['id']}", "status": "eq.pending"},
+            {"status": "processing", "updated_at": _now_iso()},
+        )
+        if not updated:
+            continue
+        row["_table"] = table
+        row["_owner_id"] = row.get(fk)
+        row["_kind"] = "city" if table == "city_tour_assemblies" else "community"
+        return row
+    return None
 
 
 # Bold face for the place labels. The list in ken-burns/generate.py is
@@ -2443,7 +2457,7 @@ def process_assembly(row: dict[str, Any]) -> None:
         # last label's span ran to `total` and would have been worn across the
         # card. With the labels gone it simply follows the xfade chain.
         card_inputs: list[str] = []
-        community_name = (row.get("community") or {}).get("name") or ""
+        community_name = (row.get("place") or {}).get("name") or ""
         hero = workdir / "hero.png"
         subprocess.run(
             ["ffmpeg", "-y", "-v", "error", "-i", str(clip_paths[0]),
@@ -2528,15 +2542,15 @@ def process_assembly(row: dict[str, Any]) -> None:
 
         # Upload to CF Stream.
         cf_meta = {
-            "name": f"community-tour-{row.get('community_id')}",
-            "scope": "community_tour_assemble",
+            "name": f"{row.get('_kind', 'community')}-tour-{row.get('_owner_id')}",
+            "scope": f"{row.get('_kind', 'community')}_tour_assemble",
             "tour_assembly_id": assembly_id,
         }
         cf_uid = cf_upload(out_path, meta=cf_meta)
         print(f"[assembly {assembly_id}] uploaded to CF: {cf_uid}", flush=True)
 
         sb_patch(
-            "tour_assemblies",
+            row.get("_table", "tour_assemblies"),
             {"id": f"eq.{assembly_id}"},
             {
                 "status": "ready",
@@ -2553,7 +2567,7 @@ def process_assembly(row: dict[str, Any]) -> None:
         traceback.print_exc()
         try:
             sb_patch(
-                "tour_assemblies",
+                row.get("_table", "tour_assemblies"),
                 {"id": f"eq.{assembly_id}"},
                 {"status": "failed", "error": err[:500], "updated_at": _now_iso()},
             )
@@ -3717,6 +3731,7 @@ STALE_QUEUES: tuple[tuple[str, str, str, str, dict[str, str]], ...] = (
      {"or": "(engine.eq.depthflow,engine.eq.kenburns)"}),
     ("listing_tour_assemblies", "processing", "pending", "updated_at", {}),
     ("tour_assemblies", "processing", "pending", "updated_at", {}),
+    ("city_tour_assemblies", "processing", "pending", "updated_at", {}),
 )
 
 

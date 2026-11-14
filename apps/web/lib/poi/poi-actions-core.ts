@@ -19,7 +19,7 @@ import { createHash } from 'node:crypto';
 import { haversineMeters } from '@/lib/geo/distance';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { POI_PHOTO_BUCKET, type PoiEntityScope } from './entity-scope';
+import { POI_PHOTO_BUCKET, type PoiPlaceScope } from './entity-scope';
 import {
   DEFAULT_INCLUDED_TYPES,
   type PhotoBlob,
@@ -111,7 +111,7 @@ export type NearbyPoi = {
 export type PoiActor = 'user' | 'service';
 
 async function requireEntity(
-  s: PoiEntityScope,
+  s: PoiPlaceScope,
   entityId: string,
   actor: PoiActor = 'user',
 ): Promise<EntityAnchor> {
@@ -158,7 +158,7 @@ async function requireEntity(
  * it. Refreshing a cache is not worth failing a photo fetch over, so a script
  * context is a no-op rather than an error.
  */
-function revalidateEntityPage(s: PoiEntityScope, entityId: string): void {
+function revalidateEntityPage(s: PoiPlaceScope, entityId: string): void {
   try {
     revalidatePath(s.revalidatePathFor(entityId));
   } catch {
@@ -174,7 +174,7 @@ function revalidateEntityPage(s: PoiEntityScope, entityId: string): void {
  * dynamic-radius policy (10-min drive) is deferred, see 2026-07-16.
  */
 export async function discoverPois(
-  s: PoiEntityScope,
+  s: PoiPlaceScope,
   entityId: string,
   opts: { radiusMeters?: number; includedTypes?: readonly string[] } = {},
 ): Promise<DiscoverResult> {
@@ -273,7 +273,7 @@ export async function discoverPois(
 // ─── photo fetch ────────────────────────────────────────────────────────────
 
 export async function fetchPhotosForPoi(
-  s: PoiEntityScope,
+  s: PoiPlaceScope,
   entityId: string,
   poiId: string,
   opts: { max?: number; maxHeightPx?: number; actor?: PoiActor } = {},
@@ -446,7 +446,7 @@ export async function fetchPhotosForPoi(
 // ─── review actions ─────────────────────────────────────────────────────────
 
 export async function setPhotoStatus(
-  s: PoiEntityScope,
+  s: PoiPlaceScope,
   entityId: string,
   poiPhotoId: string,
   status: PhotoStatus,
@@ -473,7 +473,7 @@ export async function setPhotoStatus(
 
 // ─── read helpers ──────────────────────────────────────────────────────────
 
-export async function loadNearbyPois(s: PoiEntityScope, entityId: string): Promise<NearbyPoi[]> {
+export async function loadNearbyPois(s: PoiPlaceScope, entityId: string): Promise<NearbyPoi[]> {
   // Admin bypass: /admin/pipeline/<scope>-nearby/[id] is reachable by any
   // is_admin=true agent, but the join table's SELECT policy scopes rows to
   // the owning agent. Without a bypass the panel loads empty and the

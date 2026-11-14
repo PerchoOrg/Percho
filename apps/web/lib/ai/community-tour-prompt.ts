@@ -144,3 +144,76 @@ OUTPUT — JSON only, no fences, no preamble
   "buckets_deliberately_skipped": [{"bucket": "...", "why": "one line"}]
 }`;
 }
+
+/**
+ * The city film's research prompt (phase318). Same output schema as
+ * `buildResearchPrompt`, so resolve / photos / plan take it unchanged — only
+ * the question differs.
+ *
+ * Owner 2026-11-14: a city card is like a community card but general — the
+ * place's highlights — while still being specific about what is unique. So
+ * the centre is the town centre, not a subdivision, the town square is the
+ * strongest material rather than something to keep out, and there is no
+ * amenities act (a city has no clubhouse).
+ */
+export function buildCityResearchPrompt(ctx: {
+  name: string;
+  state: string | null;
+  lat: number | null;
+  lng: number | null;
+}): string {
+  const coord =
+    ctx.lat != null && ctx.lng != null
+      ? ` (town centre ${ctx.lat.toFixed(4)}, ${ctx.lng.toFixed(4)})`
+      : '';
+
+  return `Research the city of ${ctx.name}, ${ctx.state ?? 'GA'}${coord}, for a short
+video aimed at a family deciding whether to move there. The film should make
+them feel what living in ${ctx.name} is like — its highlights, and above all
+what this city has that the towns around it do not.
+
+STEP 1 — find the city's official website and its parks, events and "visit"
+pages. Note the URL.
+
+STEP 2 — answer these, by name:
+  Where is the heart of town — the square, the main street, the town green?
+  What happens there — the concerts, the festival, the farmers market?
+  Which parks, greenways and trails do residents actually use?
+  Which public HIGH schools serve the city, and a well-regarded elementary
+    and middle school — schools are why most families look here.
+  Where do people eat out, and where do they shop?
+  What is the one thing people mention when they say where they live?
+Each answer is a POI. Buckets classify them afterwards: schools, dining,
+nightlife, shopping, outdoor, fitness, kids, daily_errands, work_hubs,
+healthcare, pets, transit, civic, waterfront, other.
+
+DISTANCE — measured from the town centre:
+  Inside the city — the strongest material. Prefer it.
+  Within ~6 miles — only what residents treat as their own.
+Give approx_miles for every POI.
+
+RULES
+- 12 to 15 POIs, at least six kinds of place. Fewer is a failure — say why in
+  buckets_deliberately_skipped rather than stopping quietly.
+- Max 2 per bucket, except schools (3) and outdoor (3).
+- No places of worship, of any religion. (Fair-housing rule, not taste.)
+- Skip what looks the same in every suburb: chain pharmacies, banks, urgent
+  care, car washes, self-storage.
+- No subdivisions or apartment complexes — neighbourhoods get their own films.
+- Spell each name exactly as Google Maps does. Give no street address.
+
+OUTPUT — JSON only, no fences, no preamble
+{
+  "narrative_angle": "one honest, specific sentence on what makes this city itself",
+  "community_site": "the city's official website from STEP 1 — omit if none",
+  "pois": [{
+    "name": "exact Google Maps name",
+    "bucket": "one of the buckets above",
+    "why": "why a family cares — 10 words maximum",
+    "approx_miles": 1.4,
+    "source": "the place's own website, for photos — omit if it has none",
+    "confidence": "high|medium"
+  }],
+  "buckets_deliberately_skipped": [{"bucket": "...", "why": "one line"}]
+}`;
+}

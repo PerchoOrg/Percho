@@ -12,7 +12,16 @@
  */
 
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { Activity, Building2, Film, Home, ListVideo, MessageSquare, Music } from 'lucide-react';
+import {
+  Activity,
+  Building2,
+  Film,
+  Home,
+  Landmark,
+  ListVideo,
+  MessageSquare,
+  Music,
+} from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { type AdminHubTab, AdminHubTabs } from './_components/AdminHubTabs';
 
@@ -23,6 +32,12 @@ const TABS: AdminHubTab[] = [
     label: 'Community Tour',
     href: '/admin/pipeline/community-nearby',
     icon: <Building2 size={22} />,
+  },
+  {
+    id: 'city-tours',
+    label: 'City Tour',
+    href: '/admin/pipeline/city-tours',
+    icon: <Landmark size={22} />,
   },
   {
     id: 'listing-nearby',

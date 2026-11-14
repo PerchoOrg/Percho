@@ -17,6 +17,7 @@
  */
 
 import type { TypedClient } from '@/lib/supabase/server';
+import { COMMUNITY_TOUR, type TourScope, idColumnOf, poisTableOf } from './tour-steps/scope';
 
 /** The `resolved` array shape the callers have on hand. */
 export interface ResolvedPlaceRef {
@@ -59,6 +60,8 @@ export async function tourPoiSet(
   sb: TypedClient,
   communityId: string,
   resolved: ResolvedPlaceRef[] | undefined,
+  /** Whose links to union in — a community's, or a city's (phase318). */
+  scope: TourScope = COMMUNITY_TOUR,
 ): Promise<TourPoiSet> {
   const ids = new Set<string>();
   const scoreByPoiId = new Map<string, number>();
@@ -84,9 +87,9 @@ export async function tourPoiSet(
   }
 
   const { data: approved } = (await sb
-    .from('community_pois')
+    .from(poisTableOf(scope))
     .select('poi_id')
-    .eq('community_id', communityId)
+    .eq(idColumnOf(scope), communityId)
     .eq('status', 'approved')) as { data: Array<{ poi_id: string }> | null };
   for (const l of approved ?? []) ids.add(l.poi_id);
 
@@ -98,6 +101,7 @@ export async function tourPoiIds(
   sb: TypedClient,
   communityId: string,
   resolved: ResolvedPlaceRef[] | undefined,
+  scope: TourScope = COMMUNITY_TOUR,
 ): Promise<Set<string>> {
-  return (await tourPoiSet(sb, communityId, resolved)).ids;
+  return (await tourPoiSet(sb, communityId, resolved, scope)).ids;
 }

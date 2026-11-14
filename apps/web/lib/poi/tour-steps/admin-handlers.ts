@@ -1,0 +1,249 @@
+/**
+ * The admin tour routes that only READ a run's tables — runs, assemblies,
+ * clips — written once and parameterised by `TourScope` (phase318), so
+ * `/api/admin/community-tour/[id]/…` and `/api/admin/city-tour/[id]/…` are
+ * one line each. The step route's body is `step-route.ts`.
+ */
+
+import { requireAdmin } from '@/lib/auth/require-admin';
+import { createServiceClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
+import {
+  type TourScope,
+  assembliesTableOf,
+  idColumnOf,
+  ownerOf,
+  poisTableOf,
+  runsTableOf,
+} from './scope';
+
+interface RunListRow {
+  id: string;
+  status: string;
+  step_results: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+/** GET …/runs — all pipeline runs + step_results, newest first. */
+export async function getTourRuns(scope: TourScope, entityId: string): Promise<Response> {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+
+  const sb = createServiceClient();
+  const { data } = (await sb
+    .from(runsTableOf(scope))
+    .select(`id, ${scope.idColumn}, status, step_results, created_at, updated_at`)
+    .eq(idColumnOf(scope), entityId)
+    .order('created_at', { ascending: false })
+    .limit(50)) as unknown as { data: RunListRow[] | null };
+
+  return NextResponse.json({ runs: data ?? [] });
+}
+
+/** POST …/runs — create a new run (steps run through …/runs/[runId]/step). */
+export async function createTourRun(scope: TourScope, entityId: string): Promise<Response> {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+
+  const sb = createServiceClient();
+  const { data: entity } = await sb
+    .from(scope.entityTable)
+    .select('id')
+    .eq('id', entityId)
+    .maybeSingle();
+  if (!entity) {
+    return NextResponse.json({ error: `${scope.kind}_not_found` }, { status: 404 });
+  }
+
+  const { data: run, error } = (await sb
+    .from(runsTableOf(scope))
+    .insert({ ...ownerOf(scope, entityId), status: 'researching' })
+    .select(`id, ${scope.idColumn}, status, step_results, created_at, updated_at`)
+    .single()) as unknown as { data: RunListRow | null; error: { message: string } | null };
+
+  if (error) {
+    return NextResponse.json({ error: 'create_failed', message: error.message }, { status: 500 });
+  }
+  return NextResponse.json({ run }, { status: 201 });
+}
+
+/** GET …/assemblies — every assembled film, newest first. */
+export async function getTourAssemblies(scope: TourScope, entityId: string): Promise<Response> {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+
+  const sb = createServiceClient();
+  const { data, error } = await sb
+    .from(assembliesTableOf(scope))
+    .select('id, run_id, status, cf_stream_uid, video_url, error, created_at')
+    .eq(idColumnOf(scope), entityId)
+    .order('created_at', { ascending: false });
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ assemblies: data ?? [] });
+}
+
+/**
+ * GET …/clips — photo→clip status for the place's photos, including cache
+ * hits (photo_clips rows made for another film are reused).
+ */
+export async function getTourClips(scope: TourScope, entityId: string): Promise<Response> {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+
+  const sb = createServiceClient();
+
+  // <kind>_pois → pois → poi_photos
+  const { data: links } = await sb
+    .from(poisTableOf(scope))
+    .select('poi_id')
+    .eq(idColumnOf(scope), entityId);
+  const poiIds = [...new Set((links ?? []).map((l: { poi_id: string }) => l.poi_id))];
+  if (poiIds.length === 0) return NextResponse.json({ clips: [] });
+
+  // google_place_id per POI — used to mark agent-recommended photos
+  const { data: pois } = await sb.from('pois').select('id, google_place_id').in('id', poiIds);
+
+  // The latest run's resolve step: which place_ids survived the firewall.
+  const { data: runs } = await sb
+    .from(runsTableOf(scope))
+    .select('step_results')
+    .eq(idColumnOf(scope), entityId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  const resolve = (
+    runs?.[0]?.step_results as { resolve?: { resolved?: Array<{ place_id: string }> } } | undefined
+  )?.resolve;
+  const recommendedIds = new Set(
+    (resolve?.resolved ?? []).map((r: { place_id: string }) => r.place_id),
+  );
+
+  const { data: photos } = await sb
+    .from('poi_photos')
+    .select('id, poi_id, storage_path, enhanced_path, enhanced_status, ai_tags')
+    .in('poi_id', poiIds);
+
+  const { data: clips } = await sb
+    .from('photo_clips')
+    .select('photo_id, engine, duration_s, status, storage_path, cost_usd, error, updated_at')
+    .in(
+      'photo_id',
+      (photos ?? []).map((p: { id: string }) => p.id),
+    );
+
+  const clipByPhoto = new Map<
+    string,
+    {
+      photo_id: string;
+      engine: string;
+      duration_s: number | null;
+      status: string;
+      storage_path: string | null;
+      cost_usd: number | null;
+      error: string | null;
+      updated_at: string;
+    }
+  >(
+    (clips ?? [])
+      .filter((c: { engine: string }) => c.engine === 'seedance')
+      .map(
+        (c: {
+          photo_id: string;
+          engine: string;
+          duration_s: number | null;
+          status: string;
+          storage_path: string | null;
+          cost_usd: number | null;
+          error: string | null;
+          updated_at: string;
+        }) => [c.photo_id, c],
+      ),
+  );
+  // Seedance vs depthflow/kenburns clips are separate rows (same photo can
+  // have both). The UI shows two columns; key by photo_id + engine.
+  const clipsByPhotoEngine = new Map<
+    string,
+    typeof clipByPhoto extends Map<string, infer V> ? V : never
+  >();
+  for (const c of clips ?? []) {
+    clipsByPhotoEngine.set(`${c.photo_id}:${c.engine}`, c);
+  }
+  const publicBase = sb.storage
+    .from('ai-videos')
+    .getPublicUrl('__probe__')
+    .data.publicUrl.replace('/__probe__', '');
+  // Local render clips (depthflow/kenburns) live in clip-renders, not the
+  // paid ai-videos bucket — keep the two money classes separate.
+  const renderBase = sb.storage
+    .from('clip-renders')
+    .getPublicUrl('__probe__')
+    .data.publicUrl.replace('/__probe__', '');
+
+  const poiPlaceId = new Map<string, string>(
+    (pois ?? []).map((poi: { id: string; google_place_id: string }) => [
+      poi.id,
+      poi.google_place_id,
+    ]),
+  );
+  // Agent agreement per place_id (resolve step: 1 = single agent, 2 = both).
+  const agreementByPlace = new Map(
+    (resolve?.resolved ?? []).map((r: { place_id: string; agreement?: number }) => [
+      r.place_id,
+      r.agreement ?? 1,
+    ]),
+  );
+
+  const rows = (photos ?? []).map(
+    (p: {
+      id: string;
+      poi_id: string;
+      storage_path: string;
+      enhanced_path: string | null;
+      enhanced_status: string;
+      ai_tags: unknown;
+    }) => {
+      const clip = clipByPhoto.get(p.id);
+      // DepthFlow and Ken Burns are separate rows in photo_clips and the two
+      // are separate columns in the table (owner 2026-08-19: "DA, KB (yes
+      // split these two)"). Collapsing them to whichever existed hid the fact
+      // that a photo can have both, or that the one you wanted failed.
+      const depthflowClip = clipsByPhotoEngine.get(`${p.id}:depthflow`);
+      const kenburnsClip = clipsByPhotoEngine.get(`${p.id}:kenburns`);
+      const path =
+        p.enhanced_status === 'approved' && p.enhanced_path ? p.enhanced_path : p.storage_path;
+      const clipOut = (
+        c: (typeof clipByPhoto extends Map<string, infer V> ? V : never) | undefined,
+        isDakb: boolean,
+      ) =>
+        c
+          ? {
+              engine: c.engine,
+              duration_s: c.duration_s,
+              status: c.status,
+              // ?v= busts the browser/CDN cache: a regenerated clip OVERWRITES
+              // the same storage path (upsert), so without a version the old
+              // bytes keep playing under a row that says the new clip is ready.
+              video_url: c.storage_path
+                ? `${isDakb ? renderBase : publicBase}/${c.storage_path}?v=${Date.parse(c.updated_at) || 0}`
+                : null,
+              cost_usd: c.cost_usd,
+              error: c.error,
+            }
+          : null;
+      return {
+        photo_id: p.id,
+        poi_id: p.poi_id,
+        photo_url: `${sb.storage.from('listing-photos').getPublicUrl(path).data.publicUrl}`,
+        ai_tags: p.ai_tags ?? null,
+        recommended: recommendedIds.has(poiPlaceId.get(p.poi_id) ?? '') || clip?.status === 'ready',
+        agreement: agreementByPlace.get(poiPlaceId.get(p.poi_id) ?? '') ?? null,
+        clip: clipOut(clip, false),
+        depthflow_clip: clipOut(depthflowClip, true),
+        kenburns_clip: clipOut(kenburnsClip, true),
+      };
+    },
+  );
+
+  return NextResponse.json({ clips: rows });
+}

@@ -354,7 +354,7 @@ async function enqueueClips(
     requeued,
     reused: shotsWithEngine.length - toCreate.length - requeued,
   });
-  await setRunStatus(sb, run.id, 'generating');
+  await setRunStatus(sb, run, 'generating');
   return { shots: shotsWithEngine.length, created: toCreate.length, requeued };
 }
 
@@ -457,7 +457,7 @@ export async function runRegenerateAll(sb: TourDb, run: RunRow) {
     paid_skipped: paidSkipped,
   };
   await saveStep(sb, run, 'regenerate_all', result);
-  await setRunStatus(sb, run.id, 'generating');
+  await setRunStatus(sb, run, 'generating');
   return result;
 }
 

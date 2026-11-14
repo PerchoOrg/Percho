@@ -33,6 +33,8 @@ import { PhotoTable } from './PhotoTable';
 import { TourHeader } from './TourHeader';
 import {
   AUTOMATABLE_STEPS,
+  CITY_AUTOMATABLE_STEPS,
+  CITY_TOUR_STEPS,
   type StepName,
   type StepState,
   type StripStep,
@@ -88,7 +90,13 @@ export function CommunityTourSection({
   storageBase,
   bucket,
   photos,
+  placeKind = 'community',
 }: {
+  /**
+   * A city film (phase318) runs the same pipeline against its own tables:
+   * the city tour API, no website ingest, no voice override.
+   */
+  placeKind?: 'community' | 'city';
   communityId: string;
   communityName: string;
   city: string | null;
@@ -109,13 +117,17 @@ export function CommunityTourSection({
   const [stepError, setStepError] = useState<string | null>(null);
   const [assemblies, setAssemblies] = useState<AssemblyStatus[]>([]);
   const router = useRouter();
+  const apiBase =
+    placeKind === 'city'
+      ? `/api/admin/city-tour/${communityId}`
+      : `/api/admin/community-tour/${communityId}`;
 
   const loadRuns = useCallback(async () => {
-    const res = await fetch(`/api/admin/community-tour/${communityId}/runs`);
+    const res = await fetch(`${apiBase}/runs`);
     if (!res.ok) return;
     const body = (await res.json()) as { runs: Run[] };
     setRuns(body.runs);
-  }, [communityId]);
+  }, [apiBase]);
 
   useEffect(() => {
     void loadRuns();
@@ -129,10 +141,10 @@ export function CommunityTourSection({
   // Assemblies, because "did the step return" and "does the film exist" are
   // different questions and the strip was answering the first one.
   const loadAssemblies = useCallback(async () => {
-    const res = await fetch(`/api/admin/community-tour/${communityId}/assemblies`);
+    const res = await fetch(`${apiBase}/assemblies`);
     if (!res.ok) return;
     setAssemblies(((await res.json()) as { assemblies: AssemblyStatus[] }).assemblies);
-  }, [communityId]);
+  }, [apiBase]);
 
   useEffect(() => {
     void loadAssemblies();
@@ -296,7 +308,7 @@ export function CommunityTourSection({
         // run — otherwise the button looks inert (owner 2026-08-16).
         let rid = runId ?? (step === 'research' ? undefined : runs[0]?.id);
         if (!rid) {
-          const created = await fetch(`/api/admin/community-tour/${communityId}/runs`, {
+          const created = await fetch(`${apiBase}/runs`, {
             method: 'POST',
           });
           if (!created.ok) {
@@ -305,7 +317,7 @@ export function CommunityTourSection({
           }
           rid = ((await created.json()) as { run: { id: string } }).run.id;
         }
-        const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${rid}/step`, {
+        const res = await fetch(`${apiBase}/runs/${rid}/step`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           // `assemble` is two-phase server-side: without `approve` it only
@@ -350,24 +362,24 @@ export function CommunityTourSection({
         await loadRuns();
       }
     },
-    [communityId, runs, loadRuns],
+    [apiBase, runs, loadRuns],
   );
 
   /** The automated half only — it stops at the review gate, by construction. */
   const runAutomated = useCallback(async () => {
     let rid: string | undefined;
-    for (const s of AUTOMATABLE_STEPS) {
+    for (const s of placeKind === 'city' ? CITY_AUTOMATABLE_STEPS : AUTOMATABLE_STEPS) {
       const got = await runStep(s, rid);
       if (!got) return; // a failed step stops the chain; the error is on screen
       rid = got;
     }
-  }, [runStep]);
+  }, [runStep, placeKind]);
 
   const loadClips = useCallback(async () => {
     if (inFlight.current) return;
     inFlight.current = true;
     try {
-      const res = await fetch(`/api/admin/community-tour/${communityId}/clips`);
+      const res = await fetch(`${apiBase}/clips`);
       if (!res.ok) return;
       const body = (await res.json()) as { clips: ClipRow[] };
       setClipRows(body.clips);
@@ -376,7 +388,7 @@ export function CommunityTourSection({
     } finally {
       inFlight.current = false;
     }
-  }, [communityId]);
+  }, [apiBase]);
 
   useEffect(() => {
     void loadClips();
@@ -538,21 +550,21 @@ export function CommunityTourSection({
     // Reuse the latest run (or create one) and run the generate step for one
     // photo. The step route creates a photo_clips row (engine/duration from
     // the shot list); the seedance worker picks it up.
-    const runsRes = await fetch(`/api/admin/community-tour/${communityId}/runs`);
+    const runsRes = await fetch(`${apiBase}/runs`);
     if (!runsRes.ok) return { ok: false, message: 'Could not load runs' };
     const runsBody = (await runsRes.json()) as {
       runs: Array<{ id: string; step_results: Record<string, unknown> }>;
     };
     let runId = runsBody.runs[0]?.id;
     if (!runId) {
-      const createRes = await fetch(`/api/admin/community-tour/${communityId}/runs`, {
+      const createRes = await fetch(`${apiBase}/runs`, {
         method: 'POST',
       });
       if (!createRes.ok) return { ok: false, message: 'Could not create run' };
       const createBody = (await createRes.json()) as { run: { id: string } };
       runId = createBody.run.id;
     }
-    const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${runId}/step`, {
+    const res = await fetch(`${apiBase}/runs/${runId}/step`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ step: 'generate', photoIds: [photoId], engine }),
@@ -593,10 +605,18 @@ export function CommunityTourSection({
         droppedPlaces={resolveRaw?.dropped ?? []}
         busy={!!running || (!!active?.step && !activeStale)}
         onRun={(s) => void runStep(s)}
+        apiBase={apiBase}
       />
 
       {/* 2 · The whole pipeline as one row of chips. */}
       <TourStepStrip
+        {...(placeKind === 'city'
+          ? {
+              steps: CITY_TOUR_STEPS,
+              automatedHint:
+                'Runs research → resolve → fetch → tag & filter, then stops for your review',
+            }
+          : {})}
         stateOf={stateOf}
         noteOf={noteOf}
         running={running}
@@ -616,13 +636,16 @@ export function CommunityTourSection({
         bgm={bgm}
         bgmUrl={bgmUrl}
         error={narration?.error}
+        voiceEditable={placeKind === 'community'}
       />
 
       {/* 4 · The ingest step's input: which pages it may read. Sits directly
            above the table those photos land in. The list it shows is built by
            the step itself (`sourcesFromResearch` plus the community site's own
            subpages) — this surface no longer derives it from the run blob. */}
-      <PhotoSourcePanel communityId={communityId} onIngested={() => router.refresh()} />
+      {placeKind === 'community' ? (
+        <PhotoSourcePanel communityId={communityId} onIngested={() => router.refresh()} />
+      ) : null}
 
       {/* 5 · THE workspace. Open, full width — everything is managed here
            (owner 2026-08-19: "one big table to manage and display

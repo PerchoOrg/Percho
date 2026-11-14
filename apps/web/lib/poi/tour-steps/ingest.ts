@@ -196,7 +196,12 @@ export async function seedPhotoSources(
 }
 
 export async function runIngest(sb: TourDb, run: RunRow) {
-  const communityId = run.community_id;
+  // Website ingest has no city tables (phase318): a city film's photos come
+  // from Google Places through the photos step.
+  if (run.scope.kind !== 'community') {
+    return { error: 'not_supported', message: 'Website ingest is for communities only.' };
+  }
+  const communityId = run.entity_id;
 
   // Seeded here too, not only at research time: a run researched before
   // 2026-08-23 has candidates in its blob and no rows to show for them.
@@ -336,7 +341,7 @@ export async function runIngest(sb: TourDb, run: RunRow) {
     pages,
     ...(stoppedOnBudget ? { stopped_on: 'time_budget' } : {}),
   });
-  if (pagesLeft > 0) await setRunStatus(sb, run.id, 'fetching_photos');
+  if (pagesLeft > 0) await setRunStatus(sb, run, 'fetching_photos');
 
   return {
     ok: true,

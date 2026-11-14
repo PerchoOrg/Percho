@@ -15,6 +15,7 @@ import {
 } from '@/lib/poi/tour-orchestrator/amenity';
 import type { TourPlanPhoto } from '@/lib/poi/tour-orchestrator/plan';
 import type { PhotoAnnotation } from '@/lib/poi/tour-orchestrator/types';
+import { type TourScope, idColumnOf, poisTableOf } from './scope';
 import { type RunRow, type TourDb, mustWrite } from './shared';
 
 /** One planned clip as the photos step persisted it. */
@@ -159,6 +160,12 @@ export async function computeFinalShots(
   sb: TourDb,
   poiIds: string[],
   buckets?: Map<string, string>,
+  /**
+   * Whose distances label the clips (phase318). Without it the label took the
+   * first `community_pois` row for the POI — any community's distance, and
+   * never a city's.
+   */
+  owner?: { scope: TourScope; id: string },
 ): Promise<{ shots: unknown[]; dropped: unknown[]; plan: unknown }> {
   const { data: photosRaw } = (await sb
     .from('poi_photos')
@@ -553,10 +560,13 @@ export async function computeFinalShots(
   // `clip.label`. See clip-label.ts for why a community tour carries text and
   // the listing tour deliberately does not.
   const { clipLabel } = await import('@/lib/poi/tour-orchestrator/clip-label');
-  const { data: distRows } = (await sb
-    .from('community_pois')
+  const distQuery = sb
+    .from(owner ? poisTableOf(owner.scope) : 'community_pois')
     .select('poi_id, distance_m')
-    .in('poi_id', poiIds)) as { data: Array<{ poi_id: string; distance_m: number | null }> | null };
+    .in('poi_id', poiIds);
+  const { data: distRows } = (await (owner
+    ? distQuery.eq(idColumnOf(owner.scope), owner.id)
+    : distQuery)) as { data: Array<{ poi_id: string; distance_m: number | null }> | null };
   const distanceByPoi = new Map((distRows ?? []).map((r) => [r.poi_id, r.distance_m]));
 
   const labelled = plan.shots.map((s) => {

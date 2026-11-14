@@ -129,7 +129,7 @@ copied per entity.
 | `bucket-video-core.ts` | Approved photos → shot selection → a `generated_videos` row. |
 | `{listing,community}-actions.ts` | `'use server'` adapters over the two cores. No logic. |
 | `{listing,community}-video-actions.ts` | Same, for the video pipeline. |
-| `tour-steps/` | The community-tour steps — research, resolve, photos, ingest, tag, filter, plan, generate (which also owns regenerate-all), assemble — one module each, plus `shared.ts` and `shots.ts`. The route only dispatches. |
+| `tour-steps/` | The place-tour steps — research, resolve, photos, ingest, tag, filter, plan, generate (which also owns regenerate-all), assemble — one module each, plus `shared.ts` and `shots.ts`. Since phase318 they film a community OR a city: `scope.ts` (`TourScope`) names each kind's tables (`community_*` / `city_*`, mirrored), every run carries its scope, and `step-route.ts` / `admin-handlers.ts` are the route bodies both `/api/admin/community-tour` and `/api/admin/city-tour` call. |
 | `listing-tour-steps/` | The home tour's four steps — tag, plan, generate, assemble — same shape, same `step_results` persistence. `tag` and `plan` queue work to the render worker because their logic is Python; the other two are database writes. A sibling of `tour-steps/` rather than a merge: the two pipelines run different steps, and only the generic plumbing is shared (imported, not copied). |
 | `tour-orchestrator/` | The planning layer: Curator (describes photos), Scheduler (orders and times them), Guard (compliance), VO Pass (narration). Pure functions, well tested. |
 | `google-places.ts` | The POI pipeline's Places client — nearby/text search, photo binaries. Distinct from `lib/listings/address-autocomplete.ts`, which is the address form's. |

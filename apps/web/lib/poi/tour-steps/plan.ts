@@ -10,6 +10,7 @@
 import type { PlaceFact } from '../tour-orchestrator/insights';
 import { tourPoiSet } from '../tour-poi-set';
 import { SURROUNDING_POI_BUDGET, preferNearPois, selectSurroundingPois } from './photos';
+import { idColumnOf, poisTableOf } from './scope';
 import { type RunRow, type TourDb, mustWrite, saveStep, setRunStatus } from './shared';
 import { computeFinalShots } from './shots';
 
@@ -57,14 +58,15 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     | undefined;
   const { ids: scopePoiIds, scoreByPoiId } = await tourPoiSet(
     sb,
-    run.community_id,
+    run.entity_id,
     resolveStep?.resolved,
+    run.scope,
   );
 
   const { data: allLinks } = (await sb
-    .from('community_pois')
+    .from(poisTableOf(run.scope))
     .select('poi_id, intent_bucket, distance_m')
-    .eq('community_id', run.community_id)
+    .eq(idColumnOf(run.scope), run.entity_id)
     .neq('status', 'rejected')) as {
     data: Array<{ poi_id: string; intent_bucket: string | null; distance_m: number | null }> | null;
   };
@@ -158,7 +160,10 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     ];
   }
 
-  const { shots, dropped, plan } = await computeFinalShots(sb, cutPoiIds, bucketByPoiId);
+  const { shots, dropped, plan } = await computeFinalShots(sb, cutPoiIds, bucketByPoiId, {
+    scope: run.scope,
+    id: run.entity_id,
+  });
 
   // NARRATION — written here, because the cut only exists here.
   //
@@ -239,7 +244,7 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     narration,
     bgm,
   });
-  await setRunStatus(sb, run.id, 'tagging');
+  await setRunStatus(sb, run, 'tagging');
   return {
     ok: true,
     shots: shots.length,
@@ -294,9 +299,9 @@ async function chooseBgm(sb: TourDb, run: RunRow, shots: unknown[]) {
       bucketCounts[b] = (bucketCounts[b] ?? 0) + 1;
     }
     const { data: links } = await sb
-      .from('community_pois')
+      .from(poisTableOf(run.scope))
       .select('distance_m')
-      .eq('community_id', run.community_id)
+      .eq(idColumnOf(run.scope), run.entity_id)
       .not('distance_m', 'is', null);
     const miles = (links ?? []).map((l) => (l.distance_m as number) / 1609).sort((a, b) => a - b);
     const medianMiles = miles.length > 0 ? (miles[Math.floor(miles.length / 2)] ?? null) : null;
@@ -321,11 +326,26 @@ async function chooseBgm(sb: TourDb, run: RunRow, shots: unknown[]) {
     for (const row of shipped ?? []) {
       const path = (row.bgm as { path?: string } | null)?.path;
       if (!path) continue;
-      if (row.community_id === run.community_id) incumbent ??= path;
+      if (run.scope.kind === 'community' && row.community_id === run.entity_id) {
+        incumbent ??= path;
+      }
       const key = `${row.community_id} ${path}`;
       if (counted.has(key)) continue;
       counted.add(key);
       usage[path] = (usage[path] ?? 0) + 1;
+    }
+
+    // A city film (phase318) keeps its own last track; the community rows
+    // above still spread the choice across the library.
+    if (run.scope.kind === 'city') {
+      const { data: mine } = await sb
+        .from('city_tour_assemblies')
+        .select('bgm')
+        .eq('city_id', run.entity_id)
+        .not('bgm', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      incumbent = (mine?.[0]?.bgm as { path?: string } | null)?.path ?? null;
     }
 
     // 'bed' always: this film is narrated, and a track that surges fights the
@@ -334,7 +354,7 @@ async function chooseBgm(sb: TourDb, run: RunRow, shots: unknown[]) {
       candidates,
       vibe,
       role: 'bed',
-      seed: run.community_id,
+      seed: run.entity_id,
       incumbent,
       usage,
     });
@@ -355,11 +375,19 @@ async function chooseBgm(sb: TourDb, run: RunRow, shots: unknown[]) {
  */
 async function writeNarration(sb: TourDb, run: RunRow, shots: unknown[]) {
   const { runNarration } = await import('../tour-orchestrator/narration');
-  const { data: community } = await sb
-    .from('communities')
-    .select('name, city, state, narration_voice')
-    .eq('id', run.community_id)
-    .maybeSingle();
+  // A city (phase318) has no `city` or `narration_voice` column — its name is
+  // the city, and the voice falls back to the seeded pick.
+  const { data: community } = (await (run.scope.kind === 'city'
+    ? sb.from('cities').select('name, state').eq('id', run.entity_id)
+    : sb.from('communities').select('name, city, state, narration_voice').eq('id', run.entity_id)
+  ).maybeSingle()) as {
+    data: {
+      name: string;
+      city?: string | null;
+      state: string | null;
+      narration_voice?: string | null;
+    } | null;
+  };
 
   // `narrative_angle` is the research step's one-line read on the place. It has
   // been written on every run since research shipped and consumed by nothing;
@@ -383,11 +411,11 @@ async function writeNarration(sb: TourDb, run: RunRow, shots: unknown[]) {
   const facts: Record<string, PlaceFact> = {};
   if (poiIds.length > 0) {
     const { data: links } = await sb
-      .from('community_pois')
+      .from(poisTableOf(run.scope))
       .select(
         'poi_id, distance_m, intent_bucket, poi:pois(display_name, rating, user_ratings_total)',
       )
-      .eq('community_id', run.community_id)
+      .eq(idColumnOf(run.scope), run.entity_id)
       .in('poi_id', poiIds);
     for (const l of links ?? []) {
       const poi = l.poi as unknown as {
@@ -413,11 +441,13 @@ async function writeNarration(sb: TourDb, run: RunRow, shots: unknown[]) {
       duration_s: number;
     }>,
     {
-      communityName: community?.name ?? 'this community',
-      city: community?.city ?? null,
+      communityName: community?.name ?? `this ${run.scope.kind}`,
+      placeKind: run.scope.kind,
+      // A city is its own name; "Suwanee, Suwanee, GA" helps nobody.
+      city: run.scope.kind === 'city' ? null : (community?.city ?? null),
       state: community?.state ?? null,
       narrativeAngle,
-      seed: run.community_id,
+      seed: run.entity_id,
       voiceOverride: community?.narration_voice ?? null,
       facts,
     },
