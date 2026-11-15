@@ -13,11 +13,13 @@ a buyer, a buyer to their partner. Tap the share button in the card's top
 corner (or on its page) and pick Messages, WhatsApp, email or anything else
 on the phone. The person on the other end gets a link with the film's
 picture in the preview. If they have the Percho app, the link opens straight
-into that neighbourhood or city in the app; if they don't, it opens the same
-page on the website, where the film plays, and from there they can carry on
-to the city and every other neighbourhood in it, or get the app.
+into that neighbourhood or city in the app; if they don't, it plays the film
+on its own, with a button to see more in the app.
 
 ### 2026-11-15
+- **A shared link now opens just the film.** Someone without the app sees
+  the neighbourhood's or city's film full screen, playing, with one button
+  underneath to see more in the Percho app — not the whole web page.
 - **Share from the feed.** The card's top-right corner now has a share
   button next to sound and save, on neighbourhood and city cards.
 - **Cities on the website.** Each city has its own web page — the film, how

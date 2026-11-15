@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { APP_STORE_ID, appleAppSiteAssociation, sharedPageMetadata } from './app-links';
 
 describe('appleAppSiteAssociation', () => {
-  it('hands communities and cities to the app, and nothing else', () => {
+  it('hands shared films, communities and cities to the app, and nothing else', () => {
     const [detail] = appleAppSiteAssociation().applinks.details;
     expect(detail?.appIDs).toEqual(['5C84L6M8HT.co.percho.app']);
-    expect(detail?.components.map((c) => c['/'])).toEqual(['/c/*', '/city/*']);
+    expect(detail?.components.map((c) => c['/'])).toEqual(['/watch/*', '/c/*', '/city/*']);
   });
 });
 

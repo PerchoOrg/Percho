@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 20:50 UTC — phase336: a shared link opens the film alone, then the app
+
+**Objective**: Owner on phase335: "分享链接直接打开了web页面 不好 打开应该只有视频 然后想要看更多就go to or download app".
+**Actions**:
+- Web: `/watch/c/[slug]` and `/watch/city/[slug]` — `app/watch/_components/WatchFilm.tsx`: the film full height (`100dvh`, cover), autoplaying MUTED with a "Sound on" pill (browsers refuse autoplay with sound), the Percho mark, and over its foot the eyebrow, the name (a city's tagline), one button "See more in the Percho app" → the App Store page, and the photo credit line (Google's terms; Commons authors by name, their licences stay on `/city/<slug>`). `/watch/` hides the site chrome (`nav-config.ts`). Same link-card metadata and Safari banner as phase335, pointing at the `/watch/` path. The association file adds `/watch/*` in front of `/c/*` and `/city/*`.
+- iOS: `shareUrl` now gives `/watch/c/<slug>` / `/watch/city/<slug>`; `appPathForSharedPath` maps both to the app's community / city page. JS only — nothing in build 11's native config changes.
+- `/c/<slug>` and `/city/<slug>` stay the full pages for anyone browsing the website.
+**Decisions**:
+- The button goes to the App Store, not a custom-scheme `percho://` link: the store page itself says Open when the app is installed and Get when it is not, while a scheme link with no app installed is a Safari error. Safari's banner offers the same.
+- New paths rather than a `?share` mode on the full pages: the full pages keep one shape, and the share path is free to be just the film.
+**Known gap**: a buyer who installs the app from the button lands on the deck, not on the shared community — carrying the link through an install needs a deferred deep-link service (Branch / AppsFlyer), a new paid third party, so it is the owner's call.
+
 ## 2026-11-15 20:19 UTC — phase335: share a community or city card — universal links, web city page
 
 **Objective**: Owner: "给percho app加分享功能 use case是 agent可以把某个城市和小区的card 分享给任何buyer buyer再通过这个入口探索其他内容形成飞轮". Rulings in the session: share button in the feed card's top-right corner; universal links yes; the web city page yes ("全部都支持").

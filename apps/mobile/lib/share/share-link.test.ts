@@ -8,21 +8,21 @@ import {
 } from "./share-link";
 
 describe("shareUrl", () => {
-	it("sends a community to its web page, on www", () => {
+	it("sends a community to its film page, on www", () => {
 		expect(
 			shareUrl({ kind: "community", slug: "northbrooke", name: "Northbrooke" }),
-		).toBe("https://www.percho.co/c/northbrooke");
+		).toBe("https://www.percho.co/watch/c/northbrooke");
 	});
 
-	it("sends a city to its city page", () => {
+	it("sends a city to its film page", () => {
 		expect(
 			shareUrl({ kind: "city", slug: "suwanee-ga", name: "Suwanee" }),
-		).toBe("https://www.percho.co/city/suwanee-ga");
+		).toBe("https://www.percho.co/watch/city/suwanee-ga");
 	});
 
 	it("escapes a slug that is not URL-safe", () => {
 		expect(shareUrl({ kind: "community", slug: "a b", name: "A" })).toBe(
-			"https://www.percho.co/c/a%20b",
+			"https://www.percho.co/watch/c/a%20b",
 		);
 	});
 });
@@ -34,7 +34,7 @@ describe("shareContent", () => {
 			slug: "suwanee-ga",
 			name: "Suwanee",
 		});
-		expect(c.url).toBe("https://www.percho.co/city/suwanee-ga");
+		expect(c.url).toBe("https://www.percho.co/watch/city/suwanee-ga");
 		expect(c.message.endsWith(c.url)).toBe(true);
 		expect(c.message.startsWith("Suwanee")).toBe(true);
 	});
@@ -48,6 +48,16 @@ describe("appPathForSharedPath", () => {
 		expect(appPathForSharedPath("/c/northbrooke/")).toBe(
 			"/community/northbrooke",
 		);
+	});
+
+	it("opens a shared film on the page behind it", () => {
+		expect(
+			appPathForSharedPath("https://www.percho.co/watch/c/northbrooke"),
+		).toBe("/community/northbrooke");
+		expect(appPathForSharedPath("/watch/city/suwanee-ga")).toBe(
+			"/city/suwanee-ga",
+		);
+		expect(appPathForSharedPath("/watch/x/suwanee-ga")).toBeNull();
 	});
 
 	it("takes the whole URL iOS hands over", () => {
