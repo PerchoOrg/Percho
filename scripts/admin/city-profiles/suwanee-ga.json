@@ -44,7 +44,7 @@
       "source": {
         "name": "Money",
         "year": "2007",
-        "url": "https://money.cnn.com/galleries/2007/moneymag/0707/gallery.BPTL_top_100.moneymag/10.html"
+        "url": "https://web.archive.org/web/20250328112027/https://money.cnn.com/galleries/2007/moneymag/0707/gallery.BPTL_top_100.moneymag/10.html"
       }
     }
   ],
@@ -160,7 +160,7 @@
     "takeaway": "8.6× since 1990",
     "source": {
       "name": "U.S. Census Bureau, decennial census",
-      "url": "https://en.wikipedia.org/wiki/Suwanee,_Georgia"
+      "url": "https://www.census.gov/quickfacts/fact/table/suwaneecitygeorgia/POP010220"
     }
   },
   "education": {
@@ -247,7 +247,7 @@
         }
       }
     ],
-    "measure": "4-year graduation rate",
+    "measure": "Graduate in 4 years · SchoolDigger, AJC",
     "rows": [
       {
         "label": "North Gwinnett HS",
@@ -266,7 +266,7 @@
         "baseline": true
       }
     ],
-    "note": "Rankings are U.S. News's Georgia lists. Suwanee's 30024 ZIP spans two counties: Johns Creek Elementary, Riverwatch Middle and Lambert High are Forsyth County schools. Graduation rates: SchoolDigger; district rate AJC, 2021. Which school a home is zoned for depends on its address."
+    "note": "Suwanee's 30024 ZIP spans two counties: Johns Creek Elementary, Riverwatch Middle and Lambert High are Forsyth County schools."
   },
   "gettingAround": [
     {
