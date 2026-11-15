@@ -24,7 +24,12 @@
 import { clipPhotoIds, googleAuthorNames } from '@/lib/communities/film-credits';
 import { type TourSegment, tourSegments } from '@/lib/feed/tour-segments';
 import { streamManifestUrl, streamPosterUrl } from '@/lib/feed/vertical-videos';
-import { type TypedClient, createAnonClient, createServiceClient } from '@/lib/supabase/server';
+import {
+  type TypedClient,
+  createServiceClient,
+  createUncachedAnonClient,
+  createUncachedServiceClient,
+} from '@/lib/supabase/server';
 import { parseCityProfile } from '@/lib/zod/city-profile';
 import type { CityDetailDTO, CityFilmCredits, CityFundamentals } from '@percho/shared/city';
 
@@ -126,9 +131,16 @@ export async function fetchCityFilms(
   return films;
 }
 
-/** The city page, or null when there is no such active city or it has no profile yet. */
+/**
+ * The city page, or null when there is no such active city or it has no profile yet.
+ *
+ * Both reads are uncached (phase312's trap, again): through Next's fetch cache
+ * this page kept the profile it first read, and when the profile's schema grew
+ * a field the stale copy no longer parsed — the page answered 404 for a city
+ * whose row was fine (2026-11-15).
+ */
 export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | null> {
-  const anon = await createAnonClient();
+  const anon = createUncachedAnonClient();
   const { data: city, error } = await anon
     .from('cities')
     .select('id, slug, name, state, county, geo_unit_id, profile')
@@ -147,7 +159,7 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
   let video: { videoUrl: string; posterUrl: string } | undefined;
   let credits: CityFilmCredits = { google: [], commons: [] };
   try {
-    const service = createServiceClient();
+    const service = createUncachedServiceClient();
     const { data: assembly } = await service
       .from('city_tour_assemblies')
       .select('city_id, cf_stream_uid, ordered_clips')
