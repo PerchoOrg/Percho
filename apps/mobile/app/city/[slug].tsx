@@ -33,10 +33,10 @@ import {
 	DriveTimes,
 	GlanceTiles,
 	HistoryTimeline,
+	PhotoCredits,
 	PlanList,
 	RankingBadges,
 	SchoolLadder,
-	SourcesFold,
 } from "../../components/city/CityCharts";
 import { TourHero } from "../../components/community/TourHero";
 import { apiBase } from "../../lib/api/base";
@@ -182,7 +182,7 @@ export default function CityScreen() {
 					)}
 
 					<View style={styles.sources}>
-						<SourcesFold city={data} />
+						<PhotoCredits credits={data.credits} />
 					</View>
 				</View>
 			</ScrollView>

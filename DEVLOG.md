@@ -23,6 +23,15 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 18:46 UTC — phase334: every figure on the city page links to its source; only photo credits stay at the foot
+
+**Objective**: Owner asked whether rankings should link to their sources and whether "Sources & photo credits" is needed; agreed to: links on every figure, photo credits kept (folded), the source list dropped, the two-county note moved to the schools card.
+**Actions**:
+- `CityCharts.tsx`: ranking badges, school names (and the college row), and the growth and state-comparison tiles open their source in Safari (`Linking.openURL`; no browser module ships with the app), marked " ↗".
+- `PhotoCredits` replaces `SourcesFold`: Google contributors and Commons author/licence/link only — Google's Places terms and CC BY both require them. The figures' sources are no longer listed a second time.
+- The ZIP-spans-two-counties note is one line under the school columns; the graduation figures' source moved into `education.measure` ("Graduate in 4 years · SchoolDigger, AJC").
+- Links checked: Fortune, StorageCafe/Atlanta Agent, all three Patch/U.S. News reports and PCOM answer 200. Money's 2007 page is dead (503) — now its Wayback copy (verified in Chrome). Growth linked to Wikipedia — now the Census QuickFacts 2020 count. census.gov blocks every automated client (403 / Cloudflare challenge even for headless Chrome), so that link is checked by eye, not by script.
+
 ## 2026-11-15 16:42 UTC — phase333: city playbook written down; the city page redrawn as charts
 
 **Objective**: Owner: "把编排经验记录下来可以用来做下一个" and, before the next city, "优化city explore page 现在太多文字 又臭又长 重新设计 比如可以用一些图表".

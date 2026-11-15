@@ -31,6 +31,16 @@ const RUSH_TINT = "#F3D9BF";
 
 /** "Fortune · 2024" */
 const cite = (s: CitySource) => (s.year ? `${s.name} · ${s.year}` : s.name);
+/**
+ * Open a figure's source (owner 2026-11-15: every ranking links to where it
+ * came from). Safari, not an in-app view — the app ships no web-browser module.
+ */
+const openSource = (url?: string) => {
+	if (url) void Linking.openURL(url).catch(() => {});
+};
+/** The mark on a figure that links out. */
+const LINK_MARK = " ↗";
+
 const pct = (value: number, max: number) =>
 	`${Math.max(3, Math.round((value / (max || 1)) * 100))}%` as const;
 
@@ -46,7 +56,14 @@ export function RankingBadges({
 			contentContainerStyle={styles.badgeRow}
 		>
 			{rankings.map((r) => (
-				<View key={`${r.rank}-${r.title}`} style={styles.badge}>
+				<Pressable
+					key={`${r.rank}-${r.title}`}
+					style={({ pressed }) => [styles.badge, pressed && styles.pressed]}
+					onPress={() => openSource(r.source.url)}
+					disabled={!r.source.url}
+					accessibilityRole="link"
+					accessibilityLabel={`${r.rank} ${r.scope}, ${r.title} — ${cite(r.source)}`}
+				>
 					<View style={styles.badgeTop}>
 						<Text style={styles.badgeRank}>{r.rank}</Text>
 						<Text style={styles.badgeScope}>{r.scope}</Text>
@@ -56,8 +73,9 @@ export function RankingBadges({
 					</Text>
 					<Text style={styles.badgeSource} numberOfLines={1}>
 						{cite(r.source)}
+						{r.source.url ? LINK_MARK : ""}
 					</Text>
-				</View>
+				</Pressable>
 			))}
 		</ScrollView>
 	);
@@ -65,15 +83,35 @@ export function RankingBadges({
 
 // ─── at a glance ────────────────────────────────────────────────────────────
 
-function Tile({ tile }: { tile: GlanceTile }) {
+/** A tile that opens its source when it has one. */
+function Linked({
+	url,
+	children,
+}: { url?: string; children: React.ReactNode }) {
+	if (!url) return <View style={styles.tile}>{children}</View>;
+	return (
+		<Pressable
+			style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
+			onPress={() => openSource(url)}
+			accessibilityRole="link"
+		>
+			{children}
+		</Pressable>
+	);
+}
+
+function Tile({ tile, url }: { tile: GlanceTile; url?: string }) {
 	switch (tile.kind) {
 		case "growth": {
 			const max = Math.max(...tile.series.map((p) => p.value), 1);
 			const first = tile.series[0];
 			const last = tile.series[tile.series.length - 1];
 			return (
-				<View style={styles.tile}>
-					<Text style={styles.tileLabel}>{tile.label}</Text>
+				<Linked url={url}>
+					<Text style={styles.tileLabel}>
+						{tile.label}
+						{url ? LINK_MARK : ""}
+					</Text>
 					<Text style={styles.tileValue}>{tile.value}</Text>
 					<View style={styles.spark}>
 						{tile.series.map((p, i) => (
@@ -94,15 +132,16 @@ function Tile({ tile }: { tile: GlanceTile }) {
 						<Text style={styles.tileTiny}>{last?.label}</Text>
 					</View>
 					<Text style={styles.tileTakeaway}>{tile.takeaway}</Text>
-				</View>
+				</Linked>
 			);
 		}
 		case "compare": {
 			const max = Math.max(tile.city.value, tile.state.value);
 			return (
-				<View style={styles.tile}>
+				<Linked url={url}>
 					<Text style={styles.tileLabel} numberOfLines={2}>
 						{tile.label}
+						{url ? LINK_MARK : ""}
 					</Text>
 					<Text style={styles.tileValue}>{tile.city.display}</Text>
 					<View style={styles.pairTrack}>
@@ -119,7 +158,7 @@ function Tile({ tile }: { tile: GlanceTile }) {
 						{tile.against} {tile.state.display}
 					</Text>
 					<Text style={styles.tileTakeaway}>{tile.takeaway}</Text>
-				</View>
+				</Linked>
 			);
 		}
 		case "share":
@@ -152,7 +191,17 @@ export function GlanceTiles({ city }: { city: CityDetailDTO }) {
 	return (
 		<View style={styles.tiles}>
 			{glanceTiles(city).map((t) => (
-				<Tile key={`${t.kind}-${t.label}`} tile={t} />
+				<Tile
+					key={`${t.kind}-${t.label}`}
+					tile={t}
+					url={
+						t.kind === "growth"
+							? city.growth.source.url
+							: t.kind === "compare"
+								? city.compare.source.url
+								: undefined
+					}
+				/>
 			))}
 		</View>
 	);
@@ -172,7 +221,17 @@ export function SchoolLadder({
 						<View key={c.level} style={styles.ladderCol}>
 							<Text style={styles.ladderHead}>{c.heading}</Text>
 							{c.schools.map((s, i) => (
-								<View key={s.name} style={styles.ladderItem}>
+								<Pressable
+									key={s.name}
+									style={({ pressed }) => [
+										styles.ladderItem,
+										pressed && styles.pressed,
+									]}
+									onPress={() => openSource(s.source.url)}
+									disabled={!s.source.url}
+									accessibilityRole="link"
+									accessibilityLabel={`${s.name}${s.rank ? `, ${s.rank} in Georgia` : ""} — ${cite(s.source)}`}
+								>
 									{!!s.rank && (
 										<Text
 											style={[
@@ -185,8 +244,9 @@ export function SchoolLadder({
 									)}
 									<Text style={styles.ladderName} numberOfLines={2}>
 										{s.name}
+										{s.source.url ? LINK_MARK : ""}
 									</Text>
-								</View>
+								</Pressable>
 							))}
 						</View>
 					))}
@@ -195,13 +255,25 @@ export function SchoolLadder({
 			{columns.length > 0 && (
 				<Text style={styles.cardFoot}>Rank in Georgia · U.S. News</Text>
 			)}
+			{/* Why some of "Suwanee's" schools are another county's — one line,
+			    where the reader meets them (it was buried in the sources). */}
+			{!!education.note && (
+				<Text style={styles.cardFoot}>{education.note}</Text>
+			)}
 			{colleges.map((c) => (
-				<View key={c.name} style={styles.college}>
+				<Pressable
+					key={c.name}
+					style={({ pressed }) => [styles.college, pressed && styles.pressed]}
+					onPress={() => openSource(c.source.url)}
+					disabled={!c.source.url}
+					accessibilityRole="link"
+				>
 					<Text style={styles.collegeTag}>COLLEGE</Text>
 					<Text style={styles.collegeName} numberOfLines={1}>
 						{c.name}
+						{c.source.url ? LINK_MARK : ""}
 					</Text>
-				</View>
+				</Pressable>
 			))}
 			{education.rows.length > 0 && (
 				<View style={styles.grad}>
@@ -374,32 +446,33 @@ export function PlanList({
 	);
 }
 
-export function SourcesFold({ city }: { city: CityDetailDTO }) {
+/**
+ * Who took the film's photographs. Required, not optional: Google's Places
+ * terms ask for the author's name wherever a photo is shown, and a CC BY file
+ * on Commons asks for author, licence and a link. Folded shut, at the foot.
+ * The figures' own sources are on the figures (each links out), so there is no
+ * second list of them here.
+ */
+export function PhotoCredits({
+	credits,
+}: { credits: CityDetailDTO["credits"] }) {
+	if (credits.google.length === 0 && credits.commons.length === 0) return null;
 	return (
 		<View style={[styles.card, styles.sourcesCard]}>
-			<Fold title="Sources & photo credits">
-				{!!city.education.note && (
-					<Text style={styles.foldText}>{city.education.note}</Text>
-				)}
-				{city.sources.length > 0 && (
+			<Fold title="Photo credits">
+				{credits.google.length > 0 && (
 					<Text style={styles.foldText}>
-						{city.sources.map(cite).join(" · ")}
+						Google Maps contributors: {credits.google.join(", ")}
 					</Text>
 				)}
-				{city.credits.google.length > 0 && (
-					<Text style={styles.foldText}>
-						Film photos: Google Maps contributors{" "}
-						{city.credits.google.join(", ")}
-					</Text>
-				)}
-				{city.credits.commons.length > 0 && (
+				{credits.commons.length > 0 && (
 					<Text style={styles.foldText}>
 						Wikimedia Commons:{" "}
-						{city.credits.commons.map((c, i) => (
+						{credits.commons.map((c, i) => (
 							<Text
 								key={c.url}
 								style={styles.link}
-								onPress={() => void Linking.openURL(c.url).catch(() => {})}
+								onPress={() => openSource(c.url)}
 							>
 								{i > 0 ? ", " : ""}
 								{c.author}
@@ -745,4 +818,5 @@ const styles = StyleSheet.create({
 	},
 	sourcesCard: { paddingVertical: 4 },
 	link: { textDecorationLine: "underline" },
+	pressed: { opacity: 0.6 },
 });
