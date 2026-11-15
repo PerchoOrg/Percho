@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 05:45 UTC — phase324: owner picks directions A and D, 1–2 min; two playable storyboards on percho.co/demos
+
+**Objective**: Owner on the four directions: "a和d更合适 时长在1-2分钟" — A (one claim, then the proof) and D (a resident's Saturday, first person). As promised, a storyboard before any pipeline change.
+**Actions**: `apps/web/public/demos/city-film-v3/` — one page, two cuts, each a PLAYABLE storyboard: the real stills, timing taken from the real narration (same TTS model and voice as the worker, `Autonoe`), the film's music bed, one mixed mp3 per cut, and the picture driven off the audio clock (pan/zoom approximated in the browser; captions on for watching without sound). A "Built on purpose" 1:32, 20 shots, 13 lines; D "A Saturday in Suwanee" 1:09, 15 shots, 11 lines. No pipeline code touched.
+**Decisions**:
+- Rules for both, in answer to v2: no slides — a figure is ONE callout over the picture it belongs to (the 1990→2020 growth is a counter with a four-point line, the only chart); no single business anywhere; cuts ~4–5s (a spoken sentence may span 2–3 shots, split by word weight); no subject twice in a cut; nothing on safety.
+- D is first person as the owner chose, but every statement is one that is true of the place (market hours, the 2024 park, the 1871 depot) — the voice is a device, not a testimonial.
+- Material: the 42 pipeline photos give ~10 city-scale subjects, not enough for 1–2 minutes. Wikimedia Commons fills eight more for free (1897 USGS map, the caboose by the tracks, Old Town arch, 629 Main St, a residential street, greenway boardwalk, the Town Center on Main bridge, George Pierce Park) — CC0 / CC BY / public domain only; CC BY-SA was left out because a film is a derivative work, and places of worship are excluded as on every surface.
+- Dashed frames mark shots a cut needs and we hold no picture for: Suwanee Fest crowd, the farmers market, a SculpTour sculpture, I-85 (4 in A, 2 in D).
+**Issues**: Wikimedia serves thumbnails only at its standard widths (a 1600px request fails; 1280px works). TTS preview quota returned 429 twice in 24 lines; the retry recovered both.
+**Next steps**: Owner watches both and says which becomes the city film (or both, as two arrangements). Then: a commons/extra-photo source step for cities, the callout renderer in the worker in place of `data_frames.py` slides, the two script shapes in `cities.profile.film`, and the missing shots sourced. Still open: whether hero shots get paid AI motion (Seedance, ~$0.14/clip) — not asked for again until he answers.
+
 ## 2026-11-15 04:30 UTC — phase323: city film v2 rejected ("像ppt"); research and four new directions put to the owner
 
 **Objective**: Owner on the 99s Suwanee film (assembly `9d033143`): "效果不好 前半部分感觉在罗列数字 不生动 像ppt 后半部分又过度到非常具体的店面 你再做一做调研看看一般的城市宣传片怎么做 我看到有些还有文化属性 等等 结合我们的需求你给我几个新的方案".
