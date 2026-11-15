@@ -93,6 +93,8 @@ export function WatchFilm({ eyebrow, name, line, film, credits, appStoreUrl }: W
           loop
           playsInline
           poster={film.poster ?? undefined}
+          // Whatever started it, a film that is playing needs no play button.
+          onPlaying={() => setBlocked(false)}
           className="absolute inset-0 h-full w-full object-cover"
         />
       ) : null}

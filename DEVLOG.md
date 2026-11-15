@@ -28,7 +28,7 @@ rotation, not on the way in.
 **Objective**: Owner: "链接视频没有自动播放".
 **Finding**: the served tag already carries `autoplay muted playsinline` (checked in the production HTML), so the markup was not the fault. An iPhone in Low Power Mode refuses even muted autoplay, and the in-app browsers chat apps open links in (WeChat's WKWebView) require a tap before any media plays — neither can be talked round by a web page.
 **Actions**: `WatchFilm` starts the film itself (`play()` after attaching the stream); when that is refused, the whole screen becomes one play button, and because that tap is a user gesture the film plays WITH sound (falling back to muted if a browser still refuses). The sound pill on a paused film does the same. Name, button and credits sit above the overlay.
-**Verified**: production, headless Chrome with the default policy (plays, no overlay) and with `--autoplay-policy=user-gesture-required` (overlay shown).
+**Verified** on production through Chrome DevTools: with autoplay allowed the film plays muted and no overlay shows. Chrome lets MUTED autoplay through even under `--autoplay-policy=user-gesture-required`, so the refusal was simulated by replacing `HTMLMediaElement.prototype.play` before the page loads: the overlay shows, and one tap plays with sound (`muted: false`). That run also showed the native `autoplay` can start the film while the explicit `play()` is refused, which left the overlay over a playing film — the overlay now also clears on `playing` (phase336.2). Not reproducible here: real iOS Safari / WeChat; the owner's phone is the check.
 
 ## 2026-11-15 20:50 UTC — phase336: a shared link opens the film alone, then the app
 
