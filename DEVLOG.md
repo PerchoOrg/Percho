@@ -23,6 +23,12 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 09:04 UTC — phase332: no photo of a family in the city film
+
+**Objective**: Owner on the third shot (PlayTown's painted path, `c4890c75`): "大人和两个小孩在自家后院的照片不能用 换". A photo of identifiable people — a parent and two children, read as a family at home — is not something a city film shows, wherever it was taken.
+**Actions**: the Fortune line's second shot is now PlayTown's empty swing set (`478cd2a8`, same place, same label). Sims Lake's playground was the better picture but Sims Lake already has its shot on the greenway line. The photo's global status is left alone (it is a community photo too); it is simply out of the script.
+**Learnings**: the editorial pass checks for people, not only for the subject — the tagger had called it "a sensory path", and so did I. Recorded in memory.
+
 ## 2026-11-15 08:47 UTC — phase331: one City Hall, place names only for places, the community page's hero on the city page
 
 **Objective**: Owner on the phase330 cut: "好多了" then three fixes — "town center city hall反复了几次", "suwanee 1897 不是地名 不要显示在左上角 不需要所有页面都显示", "city explore page video部分没有和community保持一致".
