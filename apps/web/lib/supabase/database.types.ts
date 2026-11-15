@@ -585,6 +585,7 @@ export type Database = {
           nextdoor_url: string | null
           price_max: number | null
           price_min: number | null
+          profile: Json | null
           property_types: string[] | null
           residents_count: string | null
           seeded_at: string | null
@@ -632,6 +633,7 @@ export type Database = {
           nextdoor_url?: string | null
           price_max?: number | null
           price_min?: number | null
+          profile?: Json | null
           property_types?: string[] | null
           residents_count?: string | null
           seeded_at?: string | null
@@ -679,6 +681,7 @@ export type Database = {
           nextdoor_url?: string | null
           price_max?: number | null
           price_min?: number | null
+          profile?: Json | null
           property_types?: string[] | null
           residents_count?: string | null
           seeded_at?: string | null
