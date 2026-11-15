@@ -11,12 +11,14 @@
  * `packages/shared/src/lenses.ts` records why adding one needs him (fair
  * housing). Do not add a key for it here without that decision.
  *
- * `film` is the city film's script. Act 1 is `frames` — data frames the render
- * worker draws (`scripts/render-worker/data_frames.py`) over the city's own
- * photos; Act 2 is one shot per place, and `places` holds the line spoken over
- * each. The two acts are meant to run about half and half, and a clip lasts as
- * long as its line takes to say (`lib/cities/film.ts`), so the balance is set
- * by the words written here.
+ * `film` is the city film's script (phase326): spoken lines, and under each
+ * line the photographs it is spoken over — named by `poi_photos` id, chosen by
+ * whoever wrote the line. EVERY line has at least one photo of what it says
+ * (owner 2026-11-15: "最好是全部都有对应的照片"), which the schema requires and
+ * the plan step checks against the city's photos. A figure is a `callout` on
+ * the shot it belongs to, never a frame of its own: the first two cuts were
+ * rejected as "像ppt". The cut itself is `lib/cities/film.ts`; the callouts
+ * are drawn by `scripts/render-worker/callouts.py`.
  */
 
 import { z } from 'zod';
@@ -56,60 +58,82 @@ const comparison = z.object({
 
 // ─── film ───────────────────────────────────────────────────────────────────
 
-/** A spoken line. ~2.5 words a second, so 26 words is a ten-second frame. */
+/** A spoken line. ~2.3 words a second, so 26 words is an eleven-second line. */
 const say = z
   .string()
   .min(1)
   .refine((s) => s.trim().split(/\s+/).length <= 26, { message: 'a line is at most 26 words' });
 
-const frameBase = {
-  /** Small caps above the headline: "HISTORY". */
-  eyebrow: z.string().min(1).max(36),
-  headline: z.string().min(1).max(28),
-  sub: z.string().max(64).optional(),
-  /** Printed small at the foot of the frame. */
-  source: z.string().max(72).optional(),
-  say,
-  /** Prefer a background photo from a place in this bucket ("schools"). */
-  bgBucket: z.string().max(24).optional(),
-};
-
-export const cityFilmFrameSchema = z.discriminatedUnion('type', [
+/**
+ * One fact, drawn over the picture it belongs to.
+ *
+ *   title — the city's name, large, and where it is. The opening shot.
+ *   stat  — one figure, what it measures, and who says so.
+ *   count — a figure that changed: it counts up beside a small line chart.
+ *   tag   — a place or a date in the corner; no figure.
+ */
+export const cityFilmCalloutSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('title'),
-    ...frameBase,
-    /** The pill under the name: "#1 in Georgia for families · Fortune 2024". */
-    chip: z.string().max(56).optional(),
+    big: z.string().min(1).max(24),
+    label: z.string().min(1).max(64),
   }),
   z.object({
-    type: z.literal('rows'),
-    ...frameBase,
-    rows: z
-      // `v` wraps to two lines beside the key; the worker ellipsises past that.
-      .array(z.object({ k: z.string().min(1).max(14), v: z.string().min(1).max(64) }))
-      .min(2)
-      .max(4),
+    type: z.literal('stat'),
+    big: z.string().min(1).max(12),
+    label: z.string().min(1).max(64),
+    source: z.string().max(48).optional(),
   }),
   z.object({
-    type: z.literal('bars'),
-    ...frameBase,
-    bars: z
-      .array(
-        z.object({ label: z.string().min(1).max(8), value: z.number().nonnegative(), display }),
-      )
+    type: z.literal('count'),
+    from: z.number().nonnegative(),
+    to: z.number().nonnegative(),
+    label: z.string().min(1).max(64),
+    source: z.string().max(48).optional(),
+    /** The line beside the counter: its last value is where the counter ends. */
+    series: z
+      .array(z.object({ label: z.string().min(1).max(6), value: z.number().nonnegative() }))
       .min(2)
       .max(6),
   }),
   z.object({
-    type: z.literal('stats'),
-    ...frameBase,
-    stats: z
-      .array(z.object({ value: display, label: z.string().min(1).max(56) }))
-      .min(1)
-      .max(3),
+    type: z.literal('tag'),
+    kicker: z.string().min(1).max(28),
+    text: z.string().max(48).optional(),
   }),
 ]);
-export type CityFilmFrame = z.infer<typeof cityFilmFrameSchema>;
+export type CityFilmCallout = z.infer<typeof cityFilmCalloutSchema>;
+
+/** Ken Burns moves the render worker implements (`LISTING_CLIP_MODES`). */
+export const CITY_FILM_MOVES = [
+  'push_in',
+  'push_in_slow',
+  'pull_back',
+  'pan_lr',
+  'pan_rl',
+  'push_pan_lr',
+  'push_pan_rl',
+  'tilt_td',
+] as const;
+
+const filmShot = z.object({
+  /** A `poi_photos.id`, or its first eight characters. */
+  photo: z
+    .string()
+    .regex(/^[0-9a-f]{8}(-[0-9a-f-]{27})?$/, 'a photo id, or its first 8 characters'),
+  /** This shot's share of the line's time, relative to the line's other shots. */
+  weight: z.number().positive().max(20).optional(),
+  /** The camera move; left out, the cut picks one from the photo's shape. */
+  move: z.enum(CITY_FILM_MOVES).optional(),
+  callout: cityFilmCalloutSchema.optional(),
+});
+
+const filmLine = z.object({
+  say,
+  /** The pictures the line is spoken over, in order. Never empty. */
+  shots: z.array(filmShot).min(1).max(4),
+});
+export type CityFilmLine = z.infer<typeof filmLine>;
 
 export const cityProfileSchema = z.object({
   /** One line for the card face. */
@@ -155,9 +179,7 @@ export const cityProfileSchema = z.object({
   sources: z.array(source),
 
   film: z.object({
-    frames: z.array(cityFilmFrameSchema).min(3).max(7),
-    /** The line over each place's shot, matched to a POI by name. */
-    places: z.array(z.object({ poi: z.string().min(1).max(80), say })),
+    lines: z.array(filmLine).min(4).max(24),
   }),
 });
 export type CityProfile = z.infer<typeof cityProfileSchema>;

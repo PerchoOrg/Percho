@@ -30,18 +30,10 @@ export interface PlannedShot {
   ai_generated: boolean;
 }
 
-/**
- * The PHOTO shots the photos step planned, or [] if it has not run.
- *
- * A city film's Act 1 clips are data frames (`kind: 'data'`, phase322): the
- * render worker draws them at assembly, so they have no photo and no
- * `photo_clips` row, and everything that renders or counts clips skips them.
- */
+/** The shot list the photos step planned, or [] if it has not run. */
 export function plannedShots(run: RunRow): PlannedShot[] {
-  const photos = run.step_results.photos as
-    | { shots?: Array<PlannedShot & { kind?: string }> }
-    | undefined;
-  return Array.isArray(photos?.shots) ? photos.shots.filter((s) => s.kind !== 'data') : [];
+  const photos = run.step_results.photos as { shots?: PlannedShot[] } | undefined;
+  return Array.isArray(photos?.shots) ? photos.shots : [];
 }
 
 /**
@@ -82,23 +74,7 @@ const CLIPS_BY_BUCKET: Record<string, number> = {
 };
 const DEFAULT_CLIPS_PER_POI = 2;
 
-/**
- * A city film asks for three candidates per place, whatever its kind
- * (phase322).
- *
- * They are candidates, not clips: `lib/cities/film.ts` keeps ONE shot per
- * place — and refuses close-ups and repeated subjects — so it needs more than
- * the planner's first pick to choose from. (phase320 gave civic and outdoor
- * places three CLIPS each; that is how City Hall reached the screen four
- * times.)
- */
-const CITY_CANDIDATES_PER_PLACE = 3;
-
-function clipsAllowedFor(
-  bucket: string | null | undefined,
-  kind: 'community' | 'city' = 'community',
-): number {
-  if (kind === 'city') return CITY_CANDIDATES_PER_PLACE;
+function clipsAllowedFor(bucket: string | null | undefined): number {
   return CLIPS_BY_BUCKET[bucket ?? ''] ?? DEFAULT_CLIPS_PER_POI;
 }
 
@@ -376,7 +352,7 @@ export async function computeFinalShots(
     const groupAmenity = amenityOfKey(groupKey);
     const allowed = groupAmenity
       ? (amenitySlots.get(groupAmenity) ?? 0)
-      : clipsAllowedFor(buckets?.get(arr[0]!.poi_id), owner?.scope.kind);
+      : clipsAllowedFor(buckets?.get(arr[0]!.poi_id));
     // One ESTABLISHING frame is promoted ahead of the score order.
     //
     // A place has to be recognisable before a detail of it means anything, and
@@ -417,7 +393,7 @@ export async function computeFinalShots(
               ? allowed === 0
                 ? `${AMENITY_LABEL[groupAmenity]} got no slot in the community act's ${COMMUNITY_ACT_CLIP_BUDGET} clips`
                 : `not in the top ${allowed} for ${AMENITY_LABEL[groupAmenity]}`
-              : `not in the top ${clipsAllowedFor(buckets?.get(row.poi_id), owner?.scope.kind)} for this place`;
+              : `not in the top ${clipsAllowedFor(buckets?.get(row.poi_id))} for this place`;
       dropped.push({ photo_id: row.id, poi_id: row.poi_id, reason });
     }
   }

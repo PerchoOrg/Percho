@@ -1,263 +1,222 @@
-/**
- * The two complaints that made this file (owner 2026-11-15, on Suwanee's first
- * city film): City Hall four times, and a deer close-up standing in for the
- * greenway.
- */
-
-import type { CityProfile } from '@/lib/zod/city-profile';
+import type { CityFilmLine, CityProfile } from '@/lib/zod/city-profile';
 import { describe, expect, it } from 'vitest';
-import {
-  type FilmPhoto,
-  type FilmPoi,
-  type PlaceShot,
-  buildCityCut,
-  coreName,
-  isPlaceView,
-  secondsFor,
-  spokenWords,
-  subjectOf,
-} from './film';
+import { type FilmPhoto, buildCityFilm, lineSeconds, spokenWords } from './film';
 
-const pois: FilmPoi[] = [
-  { id: 'hall', name: 'Suwanee City Hall', bucket: 'civic' },
-  { id: 'tcp', name: 'Town Center Park', bucket: 'outdoor' },
-  { id: 'green', name: 'Suwanee Creek Greenway', bucket: 'outdoor' },
-  { id: 'lib', name: 'Gwinnett County Public Library - Suwanee Branch', bucket: 'civic' },
-  { id: 'school', name: 'North Gwinnett High School', bucket: 'schools' },
+const photo = (id: string, over: Partial<FilmPhoto> = {}): FilmPhoto => ({
+  id: `${id}-0000-0000-0000-000000000000`,
+  poiId: `poi-${id}`,
+  poiName: `Place ${id}`,
+  bucket: 'outdoor',
+  width: 4032,
+  height: 3024,
+  seedanceReady: false,
+  ...over,
+});
+
+const photos = [
+  photo('aaaaaaaa'),
+  photo('bbbbbbbb'),
+  photo('cccccccc', { width: 3000, height: 4000 }),
+  photo('dddddddd', { seedanceReady: true }),
+  photo('eeeeeeee'),
+  photo('ffffffff'),
 ];
 
-const photo = (
-  id: string,
-  poiId: string,
-  description: string,
-  category = 'exterior',
-  tags: string[] = [],
-): FilmPhoto => ({
-  id,
-  poiId,
-  description,
-  category,
-  tags,
-  path: `poi/${poiId}/${id}.jpg`,
-});
+/** Only `film` is read by the cut. */
+const profileOf = (lines: CityFilmLine[]) => ({ film: { lines } }) as unknown as CityProfile;
 
-const photos: FilmPhoto[] = [
-  photo(
-    'aerial',
-    'hall',
-    'Aerial view of Suwanee City Hall and the adjacent town center park.',
-    'aerial',
-  ),
-  photo('hall-day', 'hall', 'Exterior facade of Suwanee City Hall on a clear, sunny day.'),
-  photo('hall-night', 'hall', 'Exterior facade of Suwanee City Hall at night.'),
-  photo('tcp-hall', 'tcp', 'Exterior facade of a modern City Hall building with a clock tower.'),
-  photo(
-    'wall',
-    'tcp',
-    'A historic segment of the Berlin Wall displayed in a green public park.',
-    'other',
-  ),
-  photo(
-    'deer',
-    'green',
-    'Close-up of a white-tailed deer along the Suwanee Creek Greenway.',
-    'landscape',
-    ['wildlife'],
-  ),
-  photo(
-    'trail',
-    'green',
-    'A paved trail leading into a wooded area of the Suwanee Creek Greenway.',
-    'landscape',
-  ),
-  photo('lib-out', 'lib', 'Exterior facade of the Gwinnett County Public Library Suwanee Branch.'),
-  photo(
-    'lib-in',
-    'lib',
-    'Wide-angle interior view of the library with vaulted ceilings.',
-    'interior',
-  ),
-  photo(
-    'band',
-    'school',
-    'Interior of a large high school auditorium with an orchestra on stage.',
-    'interior',
-  ),
-];
-
-const shot = (photo_id: string, poi_id: string, engine = 'kenburns'): PlaceShot => ({
-  photo_id,
-  poi_id,
-  poi_name: pois.find((p) => p.id === poi_id)?.name ?? '',
-  engine,
-  duration_s: 3,
-  vo_line: '',
-});
-
-const profile = {
-  film: {
-    frames: [
-      {
-        type: 'title',
-        eyebrow: 'CITY',
-        headline: 'Suwanee',
-        say: 'This is Suwanee, Georgia, the top city in the state for families.',
-      },
-      {
-        type: 'rows',
-        eyebrow: 'HISTORY',
-        headline: 'Since 1871',
-        rows: [
-          { k: '1871', v: 'Depot' },
-          { k: '1949', v: 'City' },
-        ],
-        say: 'It grew up around a railroad depot and became a city in 1949.',
-      },
-      {
-        type: 'stats',
-        eyebrow: 'SCHOOLS',
-        headline: 'Schools',
-        stats: [{ value: '#16', label: 'in Georgia' }],
-        bgBucket: 'schools',
-        say: 'Most families come for the schools, ranked sixteenth in Georgia.',
-      },
-    ],
-    places: [
-      { poi: 'Town Center Park', say: 'A section of the Berlin Wall stands in Town Center Park.' },
-      { poi: 'Suwanee Creek Greenway', say: 'Four miles of greenway run through the woods.' },
-      { poi: 'Library', say: 'The library anchors the newest park.' },
-    ],
-  },
-} as unknown as CityProfile;
-
-const cut = () =>
-  buildCityCut({
-    cityName: 'Suwanee',
-    profile,
-    shots: [
-      shot('aerial', 'hall'),
-      shot('hall-day', 'hall'),
-      shot('hall-night', 'hall'),
-      shot('tcp-hall', 'tcp'),
-      shot('wall', 'tcp'),
-      shot('deer', 'green'),
-      shot('trail', 'green', 'seedance'),
-      shot('lib-out', 'lib'),
-      shot('lib-in', 'lib'),
-      shot('band', 'school'),
-    ],
-    photos,
-    pois,
-    seedanceReady: new Set(),
-  });
-
-describe('coreName', () => {
-  it('drops the city and a branch suffix', () => {
-    expect(coreName('Suwanee City Hall', 'Suwanee')).toBe('city hall');
-    expect(coreName('Gwinnett County Public Library - Suwanee Branch', 'Suwanee')).toBe(
-      'gwinnett county public library',
-    );
-    expect(coreName('Tequila Mama - Suwanee', 'Suwanee')).toBe('tequila mama');
-  });
-});
-
-describe('subjectOf', () => {
-  it('reads a City Hall photo filed under the park as City Hall', () => {
-    expect(subjectOf(photos[3] as FilmPhoto, pois, 'Suwanee')).toBe('hall');
-  });
-
-  it('keeps a photo with its own place when the description names no other', () => {
-    expect(subjectOf(photos[4] as FilmPhoto, pois, 'Suwanee')).toBe('tcp');
-  });
-
-  it('keeps a photo that names its own place even if it mentions another', () => {
-    // The aerial names City Hall (its own) and "town center park".
-    expect(subjectOf(photos[0] as FilmPhoto, pois, 'Suwanee')).toBe('hall');
-  });
-});
+const eight = 'A greenway follows the creek through the town.'; // 8 words
 
 describe('spokenWords', () => {
-  it('counts a figure as the two or three words it is aloud, and skips a dash', () => {
-    expect(spokenWords('Since 1990 its population has grown — eightfold.')).toBe(6 + 2.5);
+  it('counts a figure as the two or three words it is aloud', () => {
+    expect(spokenWords('It began in 1871, as a stop on the railroad.')).toBe(9 + 2.5);
   });
 });
 
-describe('isPlaceView', () => {
-  it('refuses a close-up, food and wildlife', () => {
-    expect(isPlaceView(photos[5] as FilmPhoto)).toBe(false);
-    expect(
-      isPlaceView({ description: 'Two cocktails on a table', category: 'food', tags: [] }),
-    ).toBe(false);
-    expect(
-      isPlaceView({ description: 'A close-up of a pint glass', category: 'interior', tags: [] }),
-    ).toBe(false);
-  });
-
-  it('accepts a view of the place', () => {
-    expect(isPlaceView(photos[6] as FilmPhoto)).toBe(true);
+describe('lineSeconds', () => {
+  it('gives every clip its crossfade on top of the speech and the air', () => {
+    expect(lineSeconds(eight, 1)).toBeCloseTo(8 / 2.3 + 0.6 + 0.5, 5);
+    expect(lineSeconds(eight, 3) - lineSeconds(eight, 1)).toBeCloseTo(1, 5);
   });
 });
 
-describe('buildCityCut', () => {
-  it('shows City Hall once — as the title frame — and never the deer', () => {
-    const { shots, dropped } = cut();
-    const used = shots.map((s) => ('kind' in s ? s.bg_photo_id : s.photo_id));
-    expect(
-      used.filter((id) => ['aerial', 'hall-day', 'hall-night', 'tcp-hall'].includes(id as string)),
-    ).toEqual(['aerial']);
-    expect(used).not.toContain('deer');
-    expect(dropped.find((d) => d.photo_id === 'deer')?.reason).toMatch(/detail/);
-    expect(dropped.find((d) => d.photo_id === 'tcp-hall')?.reason).toMatch(/title frame/);
-  });
-
-  it('gives each place exactly one shot, in the order the script speaks of them', () => {
-    const places = cut().shots.filter((s): s is PlaceShot => !('kind' in s));
-    // Script: Town Center Park, Greenway, Library; the school is unscripted, so last.
-    expect(places.map((s) => s.photo_id)).toEqual(['wall', 'trail', 'lib-out', 'band']);
-    const reordered = buildCityCut({
-      cityName: 'Suwanee',
-      profile: {
-        film: {
-          frames: profile.film.frames,
-          places: [...profile.film.places].reverse(),
+describe('buildCityFilm', () => {
+  it('cuts each line over its own photos, in order, and anchors the line to its first clip', () => {
+    const film = buildCityFilm({
+      profile: profileOf([
+        { say: eight, shots: [{ photo: 'aaaaaaaa' }] },
+        {
+          say: eight,
+          shots: [
+            { photo: 'bbbbbbbb', weight: 2 },
+            { photo: 'cccccccc', weight: 1 },
+          ],
         },
-      } as unknown as CityProfile,
-      shots: [
-        shot('wall', 'tcp'),
-        shot('trail', 'green'),
-        shot('lib-out', 'lib'),
-        shot('band', 'school'),
-      ],
+        { say: eight, shots: [{ photo: 'eeeeeeee' }] },
+        { say: eight, shots: [{ photo: 'ffffffff' }] },
+      ]),
       photos,
-      pois,
-      seedanceReady: new Set(),
     });
-    expect(
-      reordered.shots.filter((s): s is PlaceShot => !('kind' in s)).map((s) => s.photo_id),
-    ).toEqual(['lib-out', 'trail', 'wall', 'band']);
+    expect(film.problems).toEqual([]);
+    expect(film.shots.map((s) => s.photo_id.slice(0, 8))).toEqual([
+      'aaaaaaaa',
+      'bbbbbbbb',
+      'cccccccc',
+      'eeeeeeee',
+      'ffffffff',
+    ]);
+    expect(film.segments.map((s) => [s.startClip, s.endClip])).toEqual([
+      [0, 0],
+      [1, 2],
+      [3, 3],
+      [4, 4],
+    ]);
   });
 
-  it('never uses a photo twice, and backs the schools frame with a school photo when one is spare', () => {
-    const { shots } = cut();
-    const used = shots.map((s) => ('kind' in s ? s.bg_photo_id : s.photo_id));
-    // The only school photo is in Act 2, so the schools frame reuses it rather
-    // than going without — but nothing else repeats.
-    const repeats = used.filter((id, i) => used.indexOf(id) !== i);
-    expect(repeats.every((id) => id === 'band')).toBe(true);
+  it('gives a line enough clip to be spoken in, whatever the rounding', () => {
+    const film = buildCityFilm({
+      profile: profileOf([
+        { say: eight, shots: [{ photo: 'aaaaaaaa' }] },
+        {
+          say: `${eight} ${eight}`,
+          shots: [
+            { photo: 'bbbbbbbb', weight: 9 },
+            { photo: 'cccccccc', weight: 5 },
+            { photo: 'eeeeeeee', weight: 6 },
+          ],
+        },
+        { say: eight, shots: [{ photo: 'ffffffff' }] },
+        { say: eight, shots: [{ photo: 'dddddddd' }] },
+      ]),
+      photos,
+    });
+    const second = film.shots.slice(1, 4);
+    const total = second.reduce((a, s) => a + s.duration_s, 0);
+    expect(total).toBeGreaterThanOrEqual(lineSeconds(`${eight} ${eight}`, 3));
+    expect(total).toBeLessThan(lineSeconds(`${eight} ${eight}`, 3) + 1);
+    expect(second.every((s) => s.duration_s >= 2.5)).toBe(true);
+    // Weighted: the heaviest shot is the longest.
+    expect(second[0]?.duration_s).toBeGreaterThan(second[1]?.duration_s ?? 0);
   });
 
-  it('times a clip by its line and moves an unpaid Seedance shot to Ken Burns', () => {
-    const { shots, segments } = cut();
-    const trail = shots.find((s) => !('kind' in s) && s.photo_id === 'trail') as PlaceShot;
-    expect(trail.engine).toBe('kenburns');
-    expect(trail.duration_s).toBe(secondsFor(8, 'place'));
-    // One line per clip, each anchored to its own clip.
-    expect(segments.map((s) => s.startClip)).toEqual(segments.map((s) => s.endClip));
-    expect(segments[0]?.text).toMatch(/^This is Suwanee/);
+  it('refuses a line whose photo the city does not hold — no related picture stands in', () => {
+    const film = buildCityFilm({
+      profile: profileOf([
+        { say: eight, shots: [{ photo: 'aaaaaaaa' }] },
+        { say: 'The farmers market takes over Town Center.', shots: [{ photo: '99999999' }] },
+        { say: eight, shots: [{ photo: 'bbbbbbbb' }] },
+        { say: eight, shots: [{ photo: 'eeeeeeee' }] },
+      ]),
+      photos,
+    });
+    expect(film.problems).toHaveLength(1);
+    expect(film.problems[0]).toContain('line 2');
+    expect(film.problems[0]).toContain('99999999');
+    // The line is not cut at all: three lines, three shots.
+    expect(film.shots).toHaveLength(3);
+    expect(film.segments).toHaveLength(3);
   });
 
-  it('falls back to no line, with a warning, for a place the profile does not cover', () => {
-    const { warnings } = cut();
-    expect(warnings.some((w) => /North Gwinnett High School/.test(w))).toBe(true);
+  it('shows a picture once', () => {
+    const film = buildCityFilm({
+      profile: profileOf([
+        { say: eight, shots: [{ photo: 'aaaaaaaa' }] },
+        { say: eight, shots: [{ photo: 'bbbbbbbb' }] },
+        { say: eight, shots: [{ photo: 'aaaaaaaa' }] },
+        { say: eight, shots: [{ photo: 'eeeeeeee' }] },
+      ]),
+      photos,
+    });
+    expect(film.problems).toEqual([
+      'line 3: photo aaaaaaaa is already under line 1 — a picture is shown once',
+    ]);
+  });
+
+  it('plays a photo with a paid Seedance clip as that clip — four seconds — and shares the rest', () => {
+    const film = buildCityFilm({
+      profile: profileOf([
+        { say: eight, shots: [{ photo: 'aaaaaaaa' }] },
+        { say: `${eight} ${eight}`, shots: [{ photo: 'bbbbbbbb' }, { photo: 'dddddddd' }] },
+        { say: eight, shots: [{ photo: 'eeeeeeee' }] },
+        { say: eight, shots: [{ photo: 'ffffffff' }] },
+      ]),
+      photos,
+    });
+    const [, still, paid] = film.shots;
+    expect(paid).toMatchObject({
+      engine: 'seedance',
+      duration_s: 4,
+      move: null,
+      ai_generated: true,
+    });
+    expect(still?.engine).toBe('kenburns');
+    expect((still?.duration_s ?? 0) + 4).toBeGreaterThanOrEqual(
+      lineSeconds(`${eight} ${eight}`, 2),
+    );
+    expect(film.warnings.filter((w) => w.startsWith('line'))).toEqual([]);
+  });
+
+  it('warns when a line is longer than the fixed clip it sits on — except the last, which runs over the end card', () => {
+    const long = `${eight} ${eight}`;
+    const mid = buildCityFilm({
+      profile: profileOf([
+        { say: eight, shots: [{ photo: 'aaaaaaaa' }] },
+        { say: long, shots: [{ photo: 'dddddddd' }] },
+        { say: eight, shots: [{ photo: 'bbbbbbbb' }] },
+        { say: eight, shots: [{ photo: 'eeeeeeee' }] },
+      ]),
+      photos,
+    });
+    expect(mid.warnings.some((w) => w.startsWith('line 2 needs'))).toBe(true);
+    const last = buildCityFilm({
+      profile: profileOf([
+        { say: eight, shots: [{ photo: 'aaaaaaaa' }] },
+        { say: eight, shots: [{ photo: 'bbbbbbbb' }] },
+        { say: eight, shots: [{ photo: 'eeeeeeee' }] },
+        { say: long, shots: [{ photo: 'dddddddd' }] },
+      ]),
+      photos,
+    });
+    expect(last.warnings.some((w) => w.startsWith('line 4 needs'))).toBe(false);
+  });
+
+  it('pans a landscape photo and pushes an upright one, unless the script says otherwise', () => {
+    const film = buildCityFilm({
+      profile: profileOf([
+        { say: eight, shots: [{ photo: 'aaaaaaaa' }] },
+        { say: eight, shots: [{ photo: 'cccccccc' }] },
+        { say: eight, shots: [{ photo: 'bbbbbbbb', move: 'pull_back' }] },
+        { say: eight, shots: [{ photo: 'eeeeeeee' }] },
+      ]),
+      photos,
+    });
+    expect(film.shots.map((s) => s.move)).toEqual(['pan_lr', 'pull_back', 'pull_back', 'pan_rl']);
+  });
+
+  it('carries a callout on the shot it was written for', () => {
+    const film = buildCityFilm({
+      profile: profileOf([
+        {
+          say: eight,
+          shots: [
+            {
+              photo: 'aaaaaaaa',
+              callout: { type: 'stat', big: '#1', label: 'in Georgia', source: 'Fortune, 2024' },
+            },
+          ],
+        },
+        { say: eight, shots: [{ photo: 'bbbbbbbb' }] },
+        { say: eight, shots: [{ photo: 'eeeeeeee' }] },
+        { say: eight, shots: [{ photo: 'ffffffff' }] },
+      ]),
+      photos,
+    });
+    expect(film.shots[0]?.callout).toEqual({
+      type: 'stat',
+      big: '#1',
+      label: 'in Georgia',
+      source: 'Fortune, 2024',
+    });
+    expect(film.shots[1]?.callout).toBeUndefined();
   });
 });

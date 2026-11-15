@@ -28,6 +28,40 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     auto_tag?: unknown;
   };
 
+  // A CITY FILM IS ITS SCRIPT (phase326). Everything below chooses photos for
+  // a community film; a city film's photos are named, line by line, in the
+  // city's profile, so its plan is that script timed — or an error naming the
+  // lines whose photo the city does not hold.
+  //
+  // It also leaves `poi_photos.status` alone. `approved` means "in the current
+  // cut" of a COMMUNITY film, the flag is global, and a city shares its places
+  // with every community around them.
+  if (run.scope.kind === 'city') {
+    const city = await planCityFilm(sb, run);
+    const bgm = await chooseBgm(sb, run, city.shots);
+    await saveStep(sb, run, 'photos', {
+      ...photosStep,
+      phase: 'done',
+      cut_poi_ids: city.cutPoiIds,
+      shots: city.shots,
+      dropped: [],
+      plan: { city_film: { seconds: city.seconds, warnings: city.narration.warnings } },
+      narration: city.narration,
+      bgm,
+    });
+    await setRunStatus(sb, run, 'tagging');
+    return {
+      ok: true,
+      shots: city.shots.length,
+      dropped: 0,
+      approved: 0,
+      unapproved: 0,
+      plan: { seconds: city.seconds, warnings: city.narration.warnings },
+      narration: { lines: city.narration.segments.length, voice: city.narration.voice },
+      bgm,
+    };
+  }
+
   // The candidate set is the TOUR's POI set — what `resolve` picked for this
   // run, plus the links a person approved (the amenity ingest and the admin
   // panel both stamp 'approved'). NOT every non-rejected row in
@@ -161,21 +195,10 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     ];
   }
 
-  const planned = await computeFinalShots(sb, cutPoiIds, bucketByPoiId, {
+  const { shots, dropped, plan } = await computeFinalShots(sb, cutPoiIds, bucketByPoiId, {
     scope: run.scope,
     id: run.entity_id,
   });
-  const { plan } = planned;
-
-  // A CITY FILM IS TWO ACTS (phase322): the fundamentals as data frames, then
-  // one shot per place — `lib/cities/film.ts`. The planner's shots are its
-  // candidates, not its cut, and its script comes from the city's profile.
-  const city =
-    run.scope.kind === 'city'
-      ? await planCityFilm(sb, run, planned.shots, cutPoiIds, bucketByPoiId)
-      : null;
-  const shots: unknown[] = city ? city.shots : planned.shots;
-  const dropped: unknown[] = city ? [...planned.dropped, ...city.dropped] : planned.dropped;
 
   // NARRATION — written here, because the cut only exists here.
   //
@@ -187,7 +210,7 @@ export async function runPlan(sb: TourDb, run: RunRow) {
   //
   // Text only. Synthesis and placement belong to the worker, which is the only
   // place the real timeline is known — see `NarrationSection.startClip`.
-  const narration = city ? city.narration : await writeNarration(sb, run, shots);
+  const narration = await writeNarration(sb, run, shots);
 
   // THE MUSIC, chosen here rather than rolled by the worker.
   //
@@ -214,45 +237,36 @@ export async function runPlan(sb: TourDb, run: RunRow) {
   // be approved" of the photos in the video. Anything previously approved that
   // this plan did not pick goes back to 'pending': still usable, no longer in
   // the film. Rejected rows are never touched; that verdict is the review's.
-  // `approved` on a photo means "in the current cut" — of a COMMUNITY film.
-  // The flag is global and a city shares its places with every community
-  // around them, so a city plan leaves it alone (phase322): its cut is the
-  // shot list below, and rewriting the flag here would quietly re-shuffle the
-  // incumbents of films that have nothing to do with this one.
-  const promote: string[] = [];
-  const demote: string[] = [];
-  if (!city) {
-    const chosen = new Set(
-      (shots as Array<{ photo_id?: string }>).map((sh) => sh.photo_id).filter(Boolean) as string[],
+  const chosen = new Set(
+    (shots as Array<{ photo_id?: string }>).map((sh) => sh.photo_id).filter(Boolean) as string[],
+  );
+  //
+  // Read across EVERY link, not only the POIs in this cut. Narrowing the cut to
+  // the tour's own POI set (see the top of this step) strands rows an earlier,
+  // wider plan stamped 'approved' — nine of them on Apremont - Highcroft — and
+  // a photo claiming to be in the cut of a film that has never heard of its POI
+  // is the very lie this stamp exists to prevent.
+  const promote = linkedPhotos
+    .filter((r) => chosen.has(r.id) && r.status !== 'approved')
+    .map((r) => r.id);
+  const demote = linkedPhotos
+    .filter((r) => !chosen.has(r.id) && r.status === 'approved')
+    .map((r) => r.id);
+  // Chunked for the same 8 KB header limit as the read above: `demote` is now
+  // community-wide, so it is no longer bounded by one cut's worth of photos.
+  for (let i = 0; i < promote.length; i += 100) {
+    const batch = promote.slice(i, i + 100);
+    await mustWrite(
+      `approve ${batch.length} photo(s) in the cut`,
+      sb.from('poi_photos').update({ status: 'approved' }).in('id', batch),
     );
-    //
-    // Read across EVERY link, not only the POIs in this cut. Narrowing the cut to
-    // the tour's own POI set (see the top of this step) strands rows an earlier,
-    // wider plan stamped 'approved' — nine of them on Apremont - Highcroft — and
-    // a photo claiming to be in the cut of a film that has never heard of its POI
-    // is the very lie this stamp exists to prevent.
-    promote.push(
-      ...linkedPhotos.filter((r) => chosen.has(r.id) && r.status !== 'approved').map((r) => r.id),
+  }
+  for (let i = 0; i < demote.length; i += 100) {
+    const batch = demote.slice(i, i + 100);
+    await mustWrite(
+      `un-approve ${batch.length} photo(s) no longer in the cut`,
+      sb.from('poi_photos').update({ status: 'pending' }).in('id', batch),
     );
-    demote.push(
-      ...linkedPhotos.filter((r) => !chosen.has(r.id) && r.status === 'approved').map((r) => r.id),
-    );
-    // Chunked for the same 8 KB header limit as the read above: `demote` is now
-    // community-wide, so it is no longer bounded by one cut's worth of photos.
-    for (let i = 0; i < promote.length; i += 100) {
-      const batch = promote.slice(i, i + 100);
-      await mustWrite(
-        `approve ${batch.length} photo(s) in the cut`,
-        sb.from('poi_photos').update({ status: 'approved' }).in('id', batch),
-      );
-    }
-    for (let i = 0; i < demote.length; i += 100) {
-      const batch = demote.slice(i, i + 100);
-      await mustWrite(
-        `un-approve ${batch.length} photo(s) no longer in the cut`,
-        sb.from('poi_photos').update({ status: 'pending' }).in('id', batch),
-      );
-    }
   }
 
   await saveStep(sb, run, 'photos', {
@@ -264,7 +278,6 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     plan,
     narration,
     bgm,
-    ...(city ? { city_cut: { balance: city.balance, warnings: city.warnings } } : {}),
   });
   await setRunStatus(sb, run, 'tagging');
   return {
