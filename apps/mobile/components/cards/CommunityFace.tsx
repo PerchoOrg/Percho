@@ -163,7 +163,7 @@ import Animated, {
 } from "react-native-reanimated";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
 import { SOUND_TAP_TARGET, type TapSlot } from "../../lib/gesture/tap-slot";
-import { useSavedStore } from "../../state/saved";
+import { type SavedKind, useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
 import { redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
@@ -267,6 +267,14 @@ interface CommunityFaceProps {
 	 * competing gesture and the scrub simply works.
 	 */
 	deckGesture?: GestureType;
+	/**
+	 * The eyebrow over the name, and what a save is filed as. A CITY with a
+	 * film wears this face too (phase329, owner: "你再看看community card, 要保持
+	 * 一致") — the place label, the progress bar and the bottom row are this
+	 * face's, and a second face kept drifting from it.
+	 */
+	tag?: "COMMUNITY" | "CITY";
+	saveKind?: SavedKind;
 }
 
 export function CommunityFace({
@@ -276,6 +284,8 @@ export function CommunityFace({
 	onExplore,
 	tapSlot,
 	deckGesture,
+	tag = "COMMUNITY",
+	saveKind = "community",
 }: CommunityFaceProps) {
 	const icons = signalIcons(card);
 
@@ -631,7 +641,7 @@ export function CommunityFace({
 					: {})}
 				save={{
 					saved,
-					onPress: () => toggleSaved(card.id, "community"),
+					onPress: () => toggleSaved(card.id, saveKind),
 					...(tapSlot ? { onTouchStart: arm(SAVE_TAP_TARGET) } : {}),
 				}}
 			/>
@@ -670,7 +680,7 @@ export function CommunityFace({
 			    glyphs on a short name and the name itself on a long one. */}
 			<View style={styles.info}>
 				<View style={styles.tagRow}>
-					<Text style={styles.badgeLabel}>COMMUNITY</Text>
+					<Text style={styles.badgeLabel}>{tag}</Text>
 				</View>
 				<View style={styles.infoRow}>
 					<View style={styles.infoLeft}>

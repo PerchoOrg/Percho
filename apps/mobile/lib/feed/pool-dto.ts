@@ -188,6 +188,7 @@ export function parseGeoUnit(v: unknown): GeoUnit | null {
 	const heroUrl = str(raw.heroUrl);
 	const videoUrl = str(raw.videoUrl);
 	const citySlug = str(raw.citySlug);
+	const segments = tourSegments(raw.tourSegments);
 	return {
 		id,
 		level: lvl,
@@ -198,6 +199,7 @@ export function parseGeoUnit(v: unknown): GeoUnit | null {
 		...(heroUrl ? { heroUrl } : {}),
 		...(videoUrl ? { videoUrl } : {}),
 		...(citySlug ? { citySlug } : {}),
+		...(segments.length > 0 ? { tourSegments: segments } : {}),
 		communityCount: num(raw.communityCount) ?? 0,
 		sampleCommunityNames: strings(raw.sampleCommunityNames).slice(0, 3),
 		stats: stats(raw.stats),

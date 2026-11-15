@@ -158,6 +158,89 @@
     }
   },
   "education": {
+    "schools": [
+      {
+        "level": "elementary",
+        "name": "Johns Creek Elementary",
+        "rank": "#5",
+        "scope": "in Georgia",
+        "detail": "Forsyth County Schools, Suwanee address. U.S. News Best Elementary Schools, 2024.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2024",
+          "url": "https://new.patch.com/georgia/across-ga/these-are-best-elementary-middle-schools-ga-new-ranking-says"
+        }
+      },
+      {
+        "level": "elementary",
+        "name": "Level Creek Elementary",
+        "rank": "#9",
+        "scope": "in Georgia",
+        "detail": "Gwinnett County Public Schools, North Gwinnett cluster. U.S. News Best Elementary Schools, 2024.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2024",
+          "url": "https://new.patch.com/georgia/across-ga/these-are-best-elementary-middle-schools-ga-new-ranking-says"
+        }
+      },
+      {
+        "level": "middle",
+        "name": "Riverwatch Middle",
+        "rank": "#4",
+        "scope": "in Georgia",
+        "detail": "Forsyth County Schools, Suwanee address. U.S. News Best Middle Schools, 2025.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2025",
+          "url": "https://patch.com/georgia/atlanta/these-are-best-middle-schools-ga-u-s-news-ranking"
+        }
+      },
+      {
+        "level": "middle",
+        "name": "North Gwinnett Middle",
+        "rank": "#8",
+        "scope": "in Georgia",
+        "detail": "Gwinnett County Public Schools, North Gwinnett cluster (Sugar Hill address). U.S. News Best Middle Schools, 2025.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2025",
+          "url": "https://patch.com/georgia/atlanta/these-are-best-middle-schools-ga-u-s-news-ranking"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Lambert High",
+        "rank": "#9",
+        "scope": "in Georgia",
+        "detail": "Forsyth County Schools, Suwanee address. U.S. News Best High Schools, 2025–26.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2025–26",
+          "url": "https://new.patch.com/georgia/atlanta/top-25-high-schools-ga-2025-26-u-s-news-world-report"
+        }
+      },
+      {
+        "level": "high",
+        "name": "North Gwinnett High",
+        "rank": "#16",
+        "scope": "in Georgia",
+        "detail": "Gwinnett County Public Schools; 95% graduate in four years. U.S. News Best High Schools, 2025–26.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2025–26",
+          "url": "https://new.patch.com/georgia/atlanta/top-25-high-schools-ga-2025-26-u-s-news-world-report"
+        }
+      },
+      {
+        "level": "college",
+        "name": "PCOM Georgia",
+        "detail": "A medical school campus in Suwanee since 2005: osteopathic medicine, pharmacy, physical therapy and physician assistant programs.",
+        "source": {
+          "name": "Philadelphia College of Osteopathic Medicine",
+          "url": "https://www.pcom.edu/georgia"
+        }
+      }
+    ],
     "measure": "4-year graduation rate",
     "rows": [
       {
@@ -177,7 +260,7 @@
         "baseline": true
       }
     ],
-    "note": "North Gwinnett: #16 in Georgia (U.S. News 2025–26), Niche A+, GreatSchools 10/10. Suwanee's 30024 ZIP is also served by Collins Hill (Gwinnett) and Lambert (Forsyth). District rate: AJC, 2021. Which school a home is zoned for depends on its address."
+    "note": "Rankings are U.S. News's Georgia lists. Suwanee's 30024 ZIP spans two counties: Johns Creek Elementary, Riverwatch Middle and Lambert High are Forsyth County schools. Graduation rates: SchoolDigger; district rate AJC, 2021. Which school a home is zoned for depends on its address."
   },
   "gettingAround": [
     {
@@ -247,6 +330,20 @@
     {
       "name": "Pro-Football-Reference — Falcons training camps",
       "url": "https://www.pro-football-reference.com/teams/atl/training-camps.htm"
+    },
+    {
+      "name": "U.S. News & World Report",
+      "year": "2024",
+      "url": "https://new.patch.com/georgia/across-ga/these-are-best-elementary-middle-schools-ga-new-ranking-says"
+    },
+    {
+      "name": "U.S. News & World Report",
+      "year": "2025",
+      "url": "https://patch.com/georgia/atlanta/these-are-best-middle-schools-ga-u-s-news-ranking"
+    },
+    {
+      "name": "Philadelphia College of Osteopathic Medicine",
+      "url": "https://www.pcom.edu/georgia"
     }
   ],
   "film": {
@@ -256,12 +353,8 @@
         "shots": [
           {
             "photo": "3f027b58",
-            "move": "pan_lr",
-            "callout": {
-              "type": "tag",
-              "kicker": "Gwinnett County, Georgia",
-              "text": "33 mi northeast of downtown Atlanta"
-            }
+            "label": "Town Center Park",
+            "move": "pan_lr"
           }
         ]
       },
@@ -270,6 +363,7 @@
         "shots": [
           {
             "photo": "6f88a051",
+            "label": "Sims Lake Park",
             "weight": 7,
             "callout": {
               "type": "stat",
@@ -280,6 +374,7 @@
           },
           {
             "photo": "78dc5c40",
+            "label": "Town Center Park",
             "weight": 6
           }
         ]
@@ -289,6 +384,7 @@
         "shots": [
           {
             "photo": "6644ffa4",
+            "label": "Suwanee, 1897",
             "move": "push_in_slow",
             "callout": {
               "type": "stat",
@@ -304,21 +400,13 @@
         "shots": [
           {
             "photo": "74bc5f84",
-            "weight": 7,
-            "callout": {
-              "type": "tag",
-              "kicker": "Old Town",
-              "text": "The caboose by the tracks"
-            }
+            "label": "Old Town",
+            "weight": 7
           },
           {
             "photo": "582f51eb",
-            "weight": 8,
-            "callout": {
-              "type": "tag",
-              "kicker": "Main Street",
-              "text": "Old Town's brick storefronts"
-            }
+            "label": "Old Town",
+            "weight": 8
           }
         ]
       },
@@ -327,6 +415,7 @@
         "shots": [
           {
             "photo": "b3558ddf",
+            "label": "Portland Trail Drive",
             "callout": {
               "type": "count",
               "from": 2412,
@@ -360,6 +449,7 @@
         "shots": [
           {
             "photo": "33ffc205",
+            "label": "Town Center Park",
             "weight": 8,
             "callout": {
               "type": "stat",
@@ -370,6 +460,7 @@
           },
           {
             "photo": "84446a55",
+            "label": "Suwanee City Hall",
             "weight": 7
           }
         ]
@@ -379,15 +470,12 @@
         "shots": [
           {
             "photo": "ac380f96",
-            "weight": 8,
-            "callout": {
-              "type": "tag",
-              "kicker": "Town Center Park",
-              "text": "Concerts and festivals, all year"
-            }
+            "label": "Town Center Park",
+            "weight": 8
           },
           {
             "photo": "d76971c5",
+            "label": "Suwanee City Hall",
             "weight": 6
           }
         ]
@@ -397,29 +485,77 @@
         "shots": [
           {
             "photo": "268c3d2e",
-            "weight": 7,
-            "callout": {
-              "type": "tag",
-              "kicker": "SculpTour",
-              "text": "Public art on loan since 2011"
-            }
+            "label": "SculpTour",
+            "weight": 7
           },
           {
             "photo": "cf918144",
+            "label": "SculpTour",
             "weight": 7
           }
         ]
       },
       {
-        "say": "Families come for the schools: North Gwinnett High ranks sixteenth in Georgia.",
+        "say": "Families come for the schools. Around Suwanee, they rank in Georgia's top ten at every level, from elementary to high school.",
+        "shots": [
+          {
+            "photo": "6ad7e505",
+            "label": "Johns Creek Elementary",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "#5",
+              "label": "in Georgia · Johns Creek Elementary",
+              "source": "U.S. News, 2024"
+            }
+          },
+          {
+            "photo": "4b8dc00a",
+            "label": "Riverwatch Middle",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "#4",
+              "label": "in Georgia · Riverwatch Middle",
+              "source": "U.S. News, 2025"
+            }
+          },
+          {
+            "photo": "e261814d",
+            "label": "Lambert High",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "#9",
+              "label": "in Georgia · Lambert High",
+              "source": "U.S. News, 2025–26"
+            }
+          }
+        ]
+      },
+      {
+        "say": "North Gwinnett High is sixteenth. And a medical college, PCOM Georgia, trains doctors and pharmacists right in town.",
         "shots": [
           {
             "photo": "e5632242",
+            "label": "North Gwinnett High",
+            "weight": 7,
             "callout": {
               "type": "stat",
               "big": "#16",
-              "label": "in Georgia · North Gwinnett High · 95% graduate in four years",
-              "source": "U.S. News, 2025–26 · SchoolDigger"
+              "label": "in Georgia · North Gwinnett High · 95% graduate",
+              "source": "U.S. News, 2025–26"
+            }
+          },
+          {
+            "photo": "9647a951",
+            "label": "PCOM Georgia",
+            "weight": 8,
+            "callout": {
+              "type": "stat",
+              "big": "Since 2005",
+              "label": "a medical school campus · doctors, pharmacists, PTs",
+              "source": "PCOM Georgia"
             }
           }
         ]
@@ -429,23 +565,17 @@
         "shots": [
           {
             "photo": "52f135cb",
-            "weight": 9,
-            "callout": {
-              "type": "tag",
-              "kicker": "Suwanee Creek Greenway",
-              "text": "Through the middle of town"
-            }
+            "label": "Suwanee Creek Greenway",
+            "weight": 9
           },
           {
             "photo": "64214feb",
+            "label": "Suwanee Creek Greenway",
             "weight": 5
           },
           {
             "photo": "b825542f",
-            "callout": {
-              "type": "tag",
-              "kicker": "Sims Lake Park"
-            }
+            "label": "Sims Lake Park"
           }
         ]
       },
@@ -454,6 +584,7 @@
         "shots": [
           {
             "photo": "aeefaa03",
+            "label": "Downtown Atlanta",
             "weight": 7,
             "callout": {
               "type": "stat",
@@ -464,6 +595,7 @@
           },
           {
             "photo": "69dae8ad",
+            "label": "Downtown Atlanta",
             "weight": 6
           }
         ]
@@ -473,6 +605,7 @@
         "shots": [
           {
             "photo": "ac13dc13",
+            "label": "Town Center on Main",
             "callout": {
               "type": "stat",
               "big": "2024",
@@ -481,7 +614,8 @@
             }
           },
           {
-            "photo": "4d0134b9"
+            "photo": "4d0134b9",
+            "label": "Suwanee Library"
           }
         ]
       },
@@ -490,10 +624,12 @@
         "shots": [
           {
             "photo": "4f006aa8",
+            "label": "George Pierce Park",
             "weight": 3
           },
           {
-            "photo": "56cb362f"
+            "photo": "56cb362f",
+            "label": "Town Center on Main"
           }
         ]
       }

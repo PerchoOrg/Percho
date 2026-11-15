@@ -59,6 +59,15 @@ export interface CityFundamentals {
     source: CitySource;
   };
   education: {
+    /** Named schools at every level, each ranking with its publisher. */
+    schools: Array<{
+      level: 'elementary' | 'middle' | 'high' | 'college';
+      name: string;
+      rank?: string;
+      scope?: string;
+      detail: string;
+      source: CitySource;
+    }>;
     measure: string;
     rows: Array<{ label: string; pct: number; display: string; baseline?: boolean }>;
     note: string;

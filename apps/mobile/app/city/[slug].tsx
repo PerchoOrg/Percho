@@ -35,6 +35,14 @@ import { useSavedStore } from "../../state/saved";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
+/** Schools by level, in the order a family meets them. */
+const SCHOOL_LEVELS = [
+	["elementary", "Elementary"],
+	["middle", "Middle"],
+	["high", "High"],
+	["college", "College"],
+] as const;
+
 /** "Fortune, 2024" */
 const cite = (s: CitySource) => (s.year ? `${s.name}, ${s.year}` : s.name);
 
@@ -264,8 +272,48 @@ export default function CityScreen() {
 						</Section>
 					)}
 
+					{data.education.schools.length > 0 && (
+						<Section title="SCHOOLS">
+							<View style={styles.card}>
+								{SCHOOL_LEVELS.map(([level, heading]) => {
+									const schools = data.education.schools.filter(
+										(sc) => sc.level === level,
+									);
+									if (schools.length === 0) return null;
+									return (
+										<View key={level} style={styles.levelBlock}>
+											<Text style={styles.levelHead}>{heading}</Text>
+											{schools.map((sc) => (
+												<View key={sc.name} style={styles.rankRow}>
+													<View style={styles.rankFigure}>
+														{sc.rank ? (
+															<>
+																<Text style={styles.rankValue}>{sc.rank}</Text>
+																{!!sc.scope && (
+																	<Text style={styles.rankScope}>
+																		{sc.scope}
+																	</Text>
+																)}
+															</>
+														) : (
+															<Text style={styles.rankScope}>{heading}</Text>
+														)}
+													</View>
+													<View style={styles.rankText}>
+														<Text style={styles.rowLabel}>{sc.name}</Text>
+														<Text style={styles.rowFact}>{sc.detail}</Text>
+													</View>
+												</View>
+											))}
+										</View>
+									);
+								})}
+							</View>
+						</Section>
+					)}
+
 					{data.education.rows.length > 0 && (
-						<Section title="SCHOOLS" note={data.education.measure}>
+						<Section title="GRADUATION" note={data.education.measure}>
 							<View style={[styles.card, styles.cardPad]}>
 								{data.education.rows.map((row) => (
 									<View key={row.label} style={styles.barRow}>
@@ -456,6 +504,12 @@ const styles = StyleSheet.create({
 		marginTop: 2,
 	},
 	rankText: { flex: 1, minWidth: 0 },
+	levelBlock: { paddingTop: 12 },
+	levelHead: {
+		...textStyles.caption,
+		fontSize: 11,
+		color: colors.ink2,
+	},
 
 	compareItem: { marginBottom: 14 },
 	compareHead: {

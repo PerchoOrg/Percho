@@ -184,6 +184,7 @@ export function buildCityFilm(input: {
       photo: FilmPhoto;
       weight: number;
       move?: string;
+      label?: string;
       callout?: CityFilmCallout;
     }> = [];
     for (const s of line.shots) {
@@ -200,7 +201,13 @@ export function buildCityFilm(input: {
         continue;
       }
       usedAt.set(photo.id, n);
-      resolved.push({ photo, weight: s.weight ?? 1, move: s.move, callout: s.callout });
+      resolved.push({
+        photo,
+        weight: s.weight ?? 1,
+        move: s.move,
+        label: s.label,
+        callout: s.callout,
+      });
     }
     // A line that lost a photo is already a problem; do not time what is left.
     if (resolved.length !== line.shots.length) return;
@@ -234,18 +241,21 @@ export function buildCityFilm(input: {
         weightLeft -= r.weight;
       }
       const sort = shots.length;
+      // What the card's place pill reads, and what its progress dashes are
+      // grouped by (`lib/feed/tour-segments.ts` reads `poi_name`).
+      const place = r.label ?? r.photo.poiName;
       shots.push({
         photo_id: r.photo.id,
         poi_id: r.photo.poiId,
-        poi_name: r.photo.poiName,
+        poi_name: place,
         bucket: r.photo.bucket,
         engine: r.photo.seedanceReady ? 'seedance' : 'kenburns',
         move: r.photo.seedanceReady ? null : (r.move ?? defaultMove(r.photo, sort)),
         duration_s: seconds,
         prompt: null,
         ai_generated: r.photo.seedanceReady,
-        label: r.photo.poiName,
-        chip_label: r.photo.poiName,
+        label: place,
+        chip_label: place,
         label_distance: '',
         sort_order: sort,
         ...(r.callout ? { callout: r.callout } : {}),

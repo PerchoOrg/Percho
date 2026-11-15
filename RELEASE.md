@@ -29,6 +29,11 @@ anything; it just means "less of this for now".
   how it compares with Georgia, a short history, growth, schools, getting
   around and what's planned, every number with its source. The city card
   opens the deck, followed by its neighbourhoods.
+- **The city card now looks and works like a neighbourhood card**: the place
+  on screen is named at the top, the bar along the bottom shows where you
+  are in the film and can be dragged, and nothing in the film sits under the
+  card's own text. The city page lists the top-ranked elementary, middle and
+  high schools around Suwanee, and the medical college in town.
 
 ### 2026-11-14
 - **The Percho iPhone app is live on the App Store** (US): neighbourhood

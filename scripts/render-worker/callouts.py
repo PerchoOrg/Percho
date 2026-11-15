@@ -12,18 +12,20 @@ thing, and leaves with the clip.
 
 The callout SPECS are written by the web side from `cities.profile`
 (`apps/web/lib/cities/film.ts`, schema in `lib/zod/city-profile.ts`); this file
-only draws what it is handed. Three kinds:
+only draws what it is handed. Two kinds:
 
   stat  — one figure, what it measures, who says so.
   count — a figure that changed: it counts up beside a small line chart.
-  tag   — a place or a date near the top corner; no figure.
 
-WHERE they are drawn is decided by the phone, not by the picture (phase327).
-The film plays full-frame on the city card, and the card draws over it: a CITY
-pill and the sound/save control across the top 8% of the frame, and the city's
-name, its community count and the Explore link from 77% down. So a tag starts
-at `TAG_TOP` and a figure block ends at `FIGURE_BOTTOM` — the band between is
-the only part of the frame that is always the film's own.
+A place NAME is not drawn here: the phone draws it in the card's place pill,
+as it does for every community film (phase329; phase174 took community labels
+out of the pixels for the same reason).
+
+WHERE a figure goes is decided by the phone, not by the picture. The film plays
+full-frame on the card, which draws its place pill and sound/save control
+across the top 8% and its eyebrow, name, Explore link and progress bar from
+about 84% down. A figure block ends at `FIGURE_BOTTOM`, inside the band that is
+always the film's own.
 
 Drawn with Pillow because this worker's ffmpeg has no drawtext (phase66.1).
 `draw_callout` takes the time since the clip started, so one function gives
@@ -50,9 +52,7 @@ COUNT_MIN_S = 1.2
 #: What a counter leaves of its clip: its arrival before, a held result after.
 COUNT_REST_S = 2.4
 
-#: Below the card's top chrome (CITY pill, sound/save: 2-8% of the frame).
-TAG_TOP = 0.105
-#: Above the card's own text (name, count, Explore: from 77% of the frame).
+#: Above the card's own text (eyebrow, name, Explore, progress: from ~84%).
 FIGURE_BOTTOM = 0.745
 
 WHITE = (255, 255, 255)
@@ -320,36 +320,6 @@ def _count_block(c: _Canvas, callout: dict[str, Any], t: float, clip_seconds: fl
     c.stamp(label_fn, arrive, rise=0)
 
 
-def _tag_block(c: _Canvas, callout: dict[str, Any], t: float) -> None:
-    """`tag`: a small plate near the top corner — where this is, or when."""
-    w, h = c.w, c.h
-    mx = round(w * 0.085)
-    pad_x, pad_y = round(w * 0.030), round(w * 0.024)
-    kicker = str(callout.get("kicker", "")).upper()
-    text = str(callout.get("text") or "")
-    track = w * 0.0035
-    kfont = _sans(round(w * 0.029), "Bold")
-    tfont = _sans(round(w * 0.037), "Medium")
-    max_w = w * 0.72 - 2 * pad_x
-    while kfont.size > round(w * 0.020) and _tracked_width(kicker, kfont, track) > max_w:
-        kfont = _sans(kfont.size - 2, "Bold")
-    lines = _wrap(text, tfont, max_w, 2) if text else []
-    body_w = max([_tracked_width(kicker, kfont, track)] + [_PROBE.textlength(l, font=tfont) for l in lines])
-    box_w = round(body_w + 2 * pad_x)
-    box_h = round(pad_y * 2 + kfont.size * 1.1 + (len(lines) * tfont.size * 1.3 + w * 0.008 if lines else 0))
-    x0, y0 = mx - round(pad_x * 0.5), round(h * TAG_TOP)
-
-    def tag_fn(d):
-        d.rounded_rectangle((x0, y0, x0 + box_w, y0 + box_h), radius=round(w * 0.028),
-                            fill=WASH + (150,), outline=WHITE + (44,), width=2)
-        _tracked(d, (x0 + pad_x, y0 + pad_y), kicker, kfont, AMBER + (255,), track)
-        for i, line in enumerate(lines):
-            d.text((x0 + pad_x, y0 + pad_y + kfont.size * 1.1 + w * 0.008 + i * tfont.size * 1.3),
-                   line, font=tfont, fill=WHITE + (245,))
-
-    c.stamp(tag_fn, _appear(t), rise=-14)
-
-
 def draw_callout(callout: dict[str, Any], w: int, h: int, t: float, clip_seconds: float) -> Image.Image:
     """The callout on a transparent canvas, `t` seconds into its clip."""
     c = _Canvas(w, h)
@@ -358,8 +328,6 @@ def draw_callout(callout: dict[str, Any], w: int, h: int, t: float, clip_seconds
         _figure_block(c, callout, t)
     elif kind == "count":
         _count_block(c, callout, t, clip_seconds)
-    elif kind == "tag":
-        _tag_block(c, callout, t)
     return c.img
 
 

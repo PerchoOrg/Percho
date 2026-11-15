@@ -22,6 +22,7 @@
  */
 
 import { clipPhotoIds, googleAuthorNames } from '@/lib/communities/film-credits';
+import { type TourSegment, tourSegments } from '@/lib/feed/tour-segments';
 import { streamManifestUrl, streamPosterUrl } from '@/lib/feed/vertical-videos';
 import { type TypedClient, createAnonClient, createServiceClient } from '@/lib/supabase/server';
 import { parseCityProfile } from '@/lib/zod/city-profile';
@@ -31,6 +32,8 @@ export interface CityFilm {
   slug: string;
   videoUrl: string;
   posterUrl: string;
+  /** One per place the film shows — the card's place label and progress dashes. */
+  segments: TourSegment[];
 }
 
 interface PhotoRow {
@@ -92,7 +95,7 @@ export async function fetchCityFilms(
       .not('geo_unit_id', 'is', null),
     supabase
       .from('city_tour_assemblies')
-      .select('city_id, cf_stream_uid')
+      .select('city_id, cf_stream_uid, ordered_clips')
       .eq('status', 'ready')
       .not('cf_stream_uid', 'is', null)
       .order('created_at', { ascending: false }),
@@ -101,17 +104,23 @@ export async function fetchCityFilms(
     console.warn('[city] films unavailable', cities.error ?? assemblies.error);
     return films;
   }
-  const newest = new Map<string, string>();
+  const newest = new Map<string, AssemblyRow>();
   for (const row of (assemblies.data ?? []) as AssemblyRow[]) {
-    if (row.cf_stream_uid && !newest.has(row.city_id)) newest.set(row.city_id, row.cf_stream_uid);
+    if (row.cf_stream_uid && !newest.has(row.city_id)) newest.set(row.city_id, row);
   }
   for (const city of cities.data ?? []) {
-    const uid = newest.get(city.id);
-    if (!uid || !city.geo_unit_id) continue;
+    const film = newest.get(city.id);
+    if (!film?.cf_stream_uid || !city.geo_unit_id) continue;
     films.set(city.geo_unit_id, {
       slug: city.slug,
-      videoUrl: streamManifestUrl(uid),
-      posterUrl: streamPosterUrl(uid),
+      videoUrl: streamManifestUrl(film.cf_stream_uid),
+      posterUrl: streamPosterUrl(film.cf_stream_uid),
+      // The community card's place label and dashes read these; a city's
+      // shots are named for the place they show (`lib/cities/film.ts`).
+      segments: tourSegments(film.ordered_clips).map(({ name, endFraction }) => ({
+        name,
+        endFraction,
+      })),
     });
   }
   return films;

@@ -23,6 +23,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 08:12 UTC — phase329: the city card IS the community card; schools at every level
+
+**Objective**: Owner on the first city card in the app: "school section is thin, need to mention top primary, middle and high, even university if any in this area, not just high school" and "视频本身的字和卡片的字重合了 city label也没有像community卡的位置一样 视频没有进度条 等等 你再看看community card, 要保持一致".
+**Actions**:
+- Card: a city with a film is drawn by `CommunityFace` (`lib/feed/city-film-card.ts` maps the unit into what it reads; `tag="CITY"`, `saveKind="area"`). It brings the place pill top-left, the corner control, the eyebrow + name + Explore row, the dashed scrubber and the Explore breath — the community card's exact chrome, so the two cannot drift again. The deck card stays `kind: "area"` (its id, save and swipe signal are a city's). `AreaFace` remains for a city without a film.
+- Server: `fetchCityFilms` reads the assembly's `ordered_clips` and sends `tourSegments` (name + endFraction) on the city's geo unit; `parseGeoUnit` reads them.
+- Film: every shot names the place it shows (`label` in the script → the clip's `poi_name`, which is what the card's pill and dashes read). The `tag` caption is gone from the video — a place name is the card's job, as phase174 decided for community films; only figures (`stat`, `count`) stay in the pixels, in the band the card leaves free (the overlap the owner saw was the first cut's figures at 88%).
+- Schools: `education.schools` — named schools by level with their ranking and source. Suwanee: Johns Creek Elementary #5 and Level Creek Elementary #9 (U.S. News 2024), Riverwatch Middle #4 and North Gwinnett Middle #8 (U.S. News 2025), Lambert High #9 and North Gwinnett High #16 (U.S. News 2025–26), and PCOM Georgia — a medical school campus in Suwanee since 2005. Read from the Patch reports of each U.S. News list, not directory summaries (which disagreed). The note says plainly that Johns Creek ES, Riverwatch and Lambert are Forsyth County schools: Suwanee's 30024 ZIP spans two counties.
+- Film script: the one schools line became two — "top ten at every level" over Johns Creek ES, Riverwatch, Lambert (each with its rank); North Gwinnett High and PCOM Georgia. New Google photos fetched for the five schools and PCOM; every line still has its own photo. 14 lines, 200 words, 27 photos.
+- City page: SCHOOLS by level (rank, name, detail), graduation bars below.
+**Issues**: Level Creek ES and North Gwinnett Middle have no photos on Google, so the film shows Johns Creek ES and Riverwatch for those levels; both are on the page. Johns Creek ES's only exterior is 955×560 — soft at full frame, on screen ~3s.
+**Next steps**: re-assemble, check the cut, owner tests on the dev client.
+
 ## 2026-11-15 07:56 UTC — phase328: a spent daily TTS quota fails the assembly instead of shipping a silent film
 
 **Objective**: Stop the failure that has now happened twice in one night: an assembly started while the narration model's daily quota (100 requests, phase326) is spent retries every line for 170s and would finish as a film with no voice — and become the city's newest.

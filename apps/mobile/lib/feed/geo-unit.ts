@@ -44,6 +44,11 @@ export interface GeoUnit {
 	videoUrl?: string;
 	/** The slug of the city's page, `/city/<slug>` — present with the film. */
 	citySlug?: string;
+	/**
+	 * One entry per place in the city's film, for the card's place label and
+	 * dashed progress bar — the community card's `tourSegments`, same shape.
+	 */
+	tourSegments?: readonly { name: string; endFraction: number }[];
 	communityCount: number;
 	/** ≤3 real `communities.name`. */
 	sampleCommunityNames: readonly string[];
