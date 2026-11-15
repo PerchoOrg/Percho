@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 23:55 UTC — phase338: three directions for the community explore page (demo only)
+
+**Objective**: Owner: "重新设计community的explore page 要有信息量 要有real insights 不要太多文字 多一点图表 但是不要单纯罗列数字 可以有一些ranking 可以从reddit上找一些review comments啥的 也可以加一些events 。 你来设计几个方案". Designs to choose from — no app code changed.
+**Actions**: `apps/web/public/demos/community-explore-v1/index.html` — one static page, three phones, all on Windward (Alpharetta), each section a one-line finding over its chart. `#a` / `#b` / `#c` opens one direction on a phone-width screen.
+- **A · Where it ranks** — medals, rank tracks (dot on its peer distribution, median tick), resident words by rarity, online voices, three events.
+- **B · Life here** — on-site row, distance strip of the film's 15 off-site stops, the year as a labelled month chart, event cards, interests with the unusual ones marked, "overheard".
+- **C · The honest take** — good fit / think twice, praise-vs-gripes diverging bars by topic, a dumbbell against the area, monthly holding cost, events.
+**Data, and what is real**: every block is tagged on the page. Real, computed for this demo from the public API and an anon-key read of `communities` (22,730 active GA rows): Lake Windward ES 84% proficient = #6 of 1,220 GA elementaries (#2 of 62 in Fulton), Webb Bridge MS 83% = #7 of 472, Alpharetta HS 67% = #31 of 443; 4,589 Nextdoor members = #6 of 314 Alpharetta communities (median 367); 74% owner-occupied = #236 of 349 (median 86%); "Convenient" is stated by 17% of Alpharetta's 342 communities, "Family Friendly" by 71%; 12 of the film's 15 off-site stops are within 3 mi. Events (tree lighting Nov 21, Lighting of Avalon Nov 22, Lights on the Loop Dec 4–Jan 4, Maker's Market Dec 12, the 5K Lake Challenge — 26th on 2026-03-14) are from Awesome Alpharetta and the WCSA race page via search, not checked against the official pages; the farmers market and swim-season spans are drawn dashed as unconfirmed. HOA $840/yr is WCSA's 2024 figure. The $900K median (61 sales, 12 months to 2026-09-01) is a broker's MLS summary — tagged as needing a licensed source.
+**Issues**: Reddit returns 403 to curl and is not reachable by the search tool, so **every Reddit quote and count on the page is invented for layout and tagged SAMPLE**. I did not route around the block.
+**Decisions**: the three are angles (rank / rhythm / trade-off), not skins — sections can be mixed. Rank tracks and word rarity need no new source; voices need Reddit's Data API (commercial use needs their approval) plus a classifier pass; events need a per-metro job and an "as of" date.
+**Next steps**: owner picks a direction or a mix; then the real work is the two missing sources, and deciding whether the fair-housing rule that keeps `avg_income` off the page also covers the owner-occupied comparison.
+
 ## 2026-11-15 23:20 UTC — phase337: a shared link opens the swipe deck with that card on top; one link in Messages
 
 **Objective**: Owner on build 11: "发送message 会有两个链接 并且跳转到app的explore页面 不是swipe的页面".

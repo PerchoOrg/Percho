@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho community explore page — three directions</title>
+<style>
+@font-face { font-family: "DM Serif Display"; src: url("/demos/feed-chrome-v1/DMSerifDisplay-Regular.ttf"); }
+:root{
+  --bg:#F7F5F0; --surface:#FFFFFF; --surface2:#F3EDE4; --border:#EADFD0;
+  --ink:#2B2116; --ink2:#8A7358; --ink3:#B9A88F;
+  --accent:#B45309; --accent-soft:#F6E7D6; --pos:#1B7A4D; --neg:#B3402A; --cta:#2B2116;
+  --green:#0E6B57;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --ui: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px 16px 60px}
+.nav{max-width:1300px;margin:0 auto 18px;font:400 14px/1.6 var(--ui)}
+.nav h1{font:400 26px "DM Serif Display",serif;color:var(--green);margin-bottom:4px}
+.nav p{max-width:860px;color:#4A4038}
+.legend{max-width:1300px;margin:0 auto 22px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;font:400 13px var(--ui);color:#4A4038}
+.legend label{display:inline-flex;gap:6px;align-items:center;cursor:pointer;user-select:none}
+.tag{display:inline-block;font:700 9px var(--ui);letter-spacing:.8px;padding:2px 5px;border-radius:4px;vertical-align:middle;text-transform:uppercase}
+.tag.sample{color:#7A4B00;background:#FFE9B8;border:1px dashed #C99A3A}
+.tag.real{color:#0E5C48;background:#DFF0EA}
+body.clean .phone .tag{display:none}
+
+.tabs{display:none}
+.stage{display:flex;gap:28px;justify-content:center;align-items:flex-start;flex-wrap:wrap;max-width:1300px;margin:0 auto}
+.col{display:flex;flex-direction:column;gap:12px;align-items:center;width:390px}
+.col h3{font:600 15px var(--ui);color:#2B2116;text-align:center}
+.col h3 small{display:block;font:400 13px/1.45 var(--ui);color:#5C5046;margin-top:3px}
+.notes{width:390px;background:#fff;border-radius:16px;padding:14px 16px;font:400 12.5px/1.55 var(--ui);color:#4A4038}
+.notes b{color:var(--ink)}
+.notes ul{margin:4px 0 8px 16px}
+.foot{max-width:1226px;margin:28px auto 0;background:#fff;border-radius:16px;padding:16px 20px;font:400 13px/1.6 var(--ui);color:#4A4038}
+.foot b{color:var(--ink)}
+.foot ul{margin:6px 0 0 18px}
+.phone{width:390px;height:844px;background:var(--bg);border-radius:44px;box-shadow:0 12px 40px rgba(0,0,0,.18),0 0 0 8px #1C1A17;position:relative;overflow:hidden}
+.scroll{height:100%;overflow-y:auto;scrollbar-width:none;padding-bottom:40px}
+.scroll::-webkit-scrollbar{display:none}
+
+/* hero (unchanged from the app, shortened here so the page below shows) */
+.hero{height:270px;position:relative;background:#2E2118 center/cover}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.28),transparent 30%,transparent 62%,rgba(0,0,0,.55))}
+.hero .top{position:absolute;z-index:2;top:52px;left:16px;right:16px;display:flex;justify-content:space-between}
+.disc{width:36px;height:36px;border-radius:18px;background:rgba(250,246,240,.92);display:flex;align-items:center;justify-content:center}
+.disc svg{width:18px;height:18px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hero .top div{display:flex;gap:8px}
+.hero .strip{position:absolute;z-index:2;left:0;right:0;bottom:12px;display:flex;gap:6px;padding:0 16px;overflow:hidden}
+.hero .strip span{flex:none;font:600 12px var(--ui);color:#fff;background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:5px 10px}
+.hero .strip span.on{background:rgba(250,246,240,.92);color:var(--ink);border-color:transparent}
+
+.body{padding:18px 18px 0}
+.headline{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.name{font:700 28px var(--serif);color:var(--ink)}
+.place{font:400 14px var(--ui);color:var(--ink2)}
+.sec{font:600 11.5px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);margin:26px 0 4px;display:flex;gap:6px;align-items:center}
+.insight{font:700 20px/1.22 var(--serif);color:var(--ink);margin-bottom:12px;text-wrap:balance}
+.insight em{font-style:normal;color:var(--accent)}
+.card{background:var(--surface);border-radius:16px;border:.5px solid var(--border);padding:14px}
+.cap{font:400 11.5px/1.4 var(--ui);color:var(--ink2);margin-top:8px}
+.cap b{font-weight:600;color:var(--ink)}
+.key{display:flex;gap:14px;font:400 11.5px var(--ui);color:var(--ink2);margin-top:10px;align-items:center}
+.key i{display:inline-block;vertical-align:middle;margin-right:5px}
+.k-dot{width:10px;height:10px;border-radius:5px;background:var(--accent)}
+.k-gdot{width:10px;height:10px;border-radius:5px;background:var(--ink3)}
+.k-tick{width:2px;height:12px;background:var(--ink)}
+.src{font:400 11px/1.5 var(--ui);color:var(--ink3);margin:22px 0 0}
+svg text{font-family:var(--ui)}
+
+/* A — medals */
+.medals{display:flex;gap:8px;margin-top:14px;overflow-x:auto;scrollbar-width:none;margin-right:-18px;padding-right:18px}
+.medals::-webkit-scrollbar{display:none}
+.medal{flex:none;background:var(--surface);border:.5px solid var(--border);border-radius:14px;padding:10px 12px;min-width:112px}
+.medal b{display:block;font:700 24px var(--serif);color:var(--accent);line-height:1}
+.medal span{display:block;font:600 12.5px var(--ui);color:var(--ink);margin-top:6px}
+.medal small{display:block;font:400 11px var(--ui);color:var(--ink2);margin-top:1px}
+
+/* A — rank tracks */
+.track-row{display:grid;grid-template-columns:92px 1fr 74px;gap:10px;align-items:center;padding:9px 0;border-top:.5px solid var(--border)}
+.track-row:first-child{border-top:0;padding-top:0}
+.track-row .l b{display:block;font:600 13px var(--ui);color:var(--ink)}
+.track-row .l small{font:400 11px var(--ui);color:var(--ink2)}
+.track-row .r{text-align:right;font:400 11px var(--ui);color:var(--ink2)}
+.track-row .r b{display:block;font:700 15px var(--ui);color:var(--ink);font-variant-numeric:tabular-nums}
+.track{position:relative;height:18px}
+.track::before{content:"";position:absolute;left:0;right:0;top:8px;height:2px;border-radius:1px;background:var(--border)}
+.track .med{position:absolute;left:50%;top:3px;width:2px;height:12px;background:var(--ink);margin-left:-1px;opacity:.55}
+.track .dot{position:absolute;top:3px;width:12px;height:12px;border-radius:6px;background:var(--accent);margin-left:-6px;box-shadow:0 0 0 2px var(--surface)}
+.axis-ends{display:grid;grid-template-columns:92px 1fr 74px;gap:10px;font:400 10.5px var(--ui);color:var(--ink3);margin-top:2px}
+.axis-ends div:nth-child(2){display:flex;justify-content:space-between}
+
+/* lollipop / bars */
+.bar-row{display:grid;grid-template-columns:104px 1fr 36px;gap:10px;align-items:center;padding:5px 0}
+.bar-row .l{font:500 13px var(--ui);color:var(--ink)}
+.bar-row .v{font:500 12px var(--ui);color:var(--ink2);text-align:right;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:var(--surface2);position:relative}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--ink3)}
+.bar-row.hot .bar i{background:var(--accent)}
+.bar-row.hot .l{font-weight:700}
+.bar-row.hot .v{color:var(--ink);font-weight:700}
+.absent{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center;font:400 11.5px var(--ui);color:var(--ink2)}
+.absent span{border:1px dashed var(--ink3);border-radius:999px;padding:3px 9px;color:var(--ink2)}
+
+/* voices */
+.senti{display:flex;gap:2px;height:10px;border-radius:5px;overflow:hidden;margin:2px 0 6px}
+.senti i{display:block;height:100%}
+.senti-key{display:flex;justify-content:space-between;font:400 11.5px var(--ui);color:var(--ink2)}
+.senti-key b{color:var(--ink);font-weight:700}
+.quotes{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin:12px -18px 0;padding:0 18px}
+.quotes::-webkit-scrollbar{display:none}
+.quote{flex:none;width:262px;background:var(--surface);border:.5px solid var(--border);border-radius:16px;padding:13px 14px}
+.quote p{font:400 15px/1.4 var(--serif);color:var(--ink)}
+.quote .meta{display:flex;justify-content:space-between;margin-top:10px;font:400 11.5px var(--ui);color:var(--ink2)}
+.quote .meta b{font-weight:600}
+.quote .meta .up{color:var(--pos);font-weight:600}
+.quote .meta .down{color:var(--neg);font-weight:600}
+.topic-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.topic-chips span{font:500 12.5px var(--ui);color:var(--ink);background:var(--surface);border:.5px solid var(--border);border-radius:999px;padding:5px 10px}
+.topic-chips span b{color:var(--ink2);font-weight:500;margin-left:4px}
+.cta{display:inline-block;margin-top:14px;font:500 15px var(--ui);color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:9px 16px}
+
+/* events */
+.ev{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:.5px solid var(--border)}
+.ev:first-child{border-top:0;padding-top:0}
+.ev:last-child{padding-bottom:0}
+.date{flex:none;width:46px;height:50px;border-radius:12px;background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.date small{font:700 9.5px var(--ui);letter-spacing:.8px;color:var(--accent)}
+.date b{font:700 19px var(--serif);color:var(--ink);line-height:1.05}
+.ev .t{flex:1;min-width:0}
+.ev .t b{display:block;font:600 14.5px var(--ui);color:var(--ink)}
+.ev .t small{font:400 12px var(--ui);color:var(--ink2)}
+.ev .mi{font:600 12px var(--ui);color:var(--ink2);white-space:nowrap}
+.evcards{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin:0 -18px;padding:0 18px}
+.evcards::-webkit-scrollbar{display:none}
+.evcard{flex:none;width:150px;background:var(--surface);border:.5px solid var(--border);border-radius:16px;padding:12px}
+.evcard small{font:700 10px var(--ui);letter-spacing:.8px;color:var(--accent)}
+.evcard .d{font:700 26px var(--serif);color:var(--ink);line-height:1.05;margin:2px 0 8px}
+.evcard b{display:block;font:600 13.5px/1.25 var(--ui);color:var(--ink)}
+.evcard span{display:block;font:400 11.5px var(--ui);color:var(--ink2);margin-top:4px}
+
+/* B — on site */
+.onsite{display:flex;gap:8px;margin-top:14px}
+.onsite div{flex:1;background:var(--surface);border:.5px solid var(--border);border-radius:14px;padding:10px 0 8px;text-align:center}
+.onsite svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.onsite span{display:block;font:500 11px var(--ui);color:var(--ink);margin-top:3px}
+.tipline{min-height:18px;font:400 12px var(--ui);color:var(--ink2);margin-top:6px}
+.tipline b{color:var(--ink);font-weight:600}
+.dotp{cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{font:500 13.5px var(--ui);color:var(--ink);background:var(--surface);border:.5px solid var(--border);border-radius:999px;padding:6px 11px}
+.chip.hot{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700}
+.chip small{font:500 10.5px var(--ui);color:var(--ink3);margin-right:5px}
+.chip.hot small{color:var(--accent)}
+.bubbles{display:flex;flex-direction:column;gap:8px}
+.bubble{max-width:88%;background:var(--surface);border:.5px solid var(--border);border-radius:16px 16px 16px 4px;padding:10px 13px;font:400 14.5px/1.4 var(--ui);color:var(--ink)}
+.bubble.r{align-self:flex-end;border-radius:16px 16px 4px 16px;background:var(--surface2)}
+.bubble small{display:block;font:400 11px var(--ui);color:var(--ink2);margin-top:5px}
+
+/* C — fit */
+.fit{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.fit .side{background:var(--surface);border:.5px solid var(--border);border-radius:16px;padding:12px}
+.fit h4{font:700 10.5px var(--ui);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.fit .yes h4{color:var(--pos)}
+.fit .no h4{color:var(--neg)}
+.fit .it{padding:7px 0;border-top:.5px solid var(--border)}
+.fit .it:first-of-type{border-top:0;padding-top:0}
+.fit .it b{display:block;font:600 13.5px/1.25 var(--ui);color:var(--ink)}
+.fit .it small{font:400 11.5px var(--ui);color:var(--ink2)}
+.div-row{display:grid;grid-template-columns:78px 1fr;gap:8px;align-items:center;padding:6px 6px;border-radius:10px;cursor:pointer}
+.div-row.on{background:var(--surface2)}
+.div-row .l{font:500 13px var(--ui);color:var(--ink)}
+.div-bar{position:relative;height:14px}
+.div-bar::before{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;width:1px;background:var(--ink3)}
+.div-bar i{position:absolute;top:2px;height:10px}
+.div-bar .p{right:calc(50% + 1px);background:var(--pos);border-radius:4px 0 0 4px}
+.div-bar .n{left:calc(50% + 1px);background:var(--neg);border-radius:0 4px 4px 0}
+.div-bar span{position:absolute;top:0;font:600 10.5px/14px var(--ui);color:var(--ink2);font-variant-numeric:tabular-nums}
+.div-head{display:grid;grid-template-columns:78px 1fr;gap:8px;padding:0 6px 4px;font:600 10.5px var(--ui);letter-spacing:.6px;text-transform:uppercase}
+.div-head div:nth-child(2){display:flex;justify-content:space-between}
+.div-quote{margin-top:10px;padding:11px 12px;background:var(--bg);border-radius:12px;font:400 14.5px/1.4 var(--serif);color:var(--ink);min-height:74px}
+.div-quote small{display:block;font:400 11px var(--ui);color:var(--ink2);margin-top:6px}
+.cost-bar{display:flex;gap:2px;height:16px;margin:4px 0 12px}
+.cost-bar i{display:block;height:100%}
+.cost-bar i:first-child{border-radius:4px 0 0 4px}
+.cost-bar i:last-child{border-radius:0 4px 4px 0}
+.cost-row{display:flex;align-items:center;gap:8px;padding:4px 0;font:400 13px var(--ui);color:var(--ink)}
+.cost-row i{width:10px;height:10px;border-radius:3px;flex:none}
+.cost-row span{flex:1}
+.cost-row small{font:400 11px var(--ui);color:var(--ink3)}
+.cost-row b{font:600 13px var(--ui);font-variant-numeric:tabular-nums}
+.big{font:700 34px var(--serif);color:var(--ink);line-height:1}
+.big small{display:block;font:400 13px var(--ui);color:var(--ink2);margin-top:5px}
+
+@media (max-width: 860px){
+  body{padding:12px 0 40px}
+  .nav,.legend{padding:0 14px}
+  .tabs{display:flex;position:sticky;top:0;z-index:20;background:#DCD7CE;padding:8px 14px;gap:8px}
+  .tabs button{flex:1;font:600 14px var(--ui);padding:10px 0;border-radius:12px;border:1.5px solid #CFC6B8;background:#FBFAF7;color:#2B2116}
+  .tabs button.on{border-color:var(--green);background:#EAF3F0;color:var(--green)}
+  .stage{gap:0}
+  .col{display:none;width:100%}
+  .col.on{display:flex}
+  .phone{width:100%;max-width:430px;height:auto;border-radius:0;box-shadow:none}
+  .scroll{height:auto;overflow:visible}
+  .hero .top{top:14px}
+  .notes{width:auto;margin:0 14px}
+  .foot{margin:20px 14px 0}
+}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>Community explore page — three directions</h1>
+  <p>Same community (Windward, Alpharetta), same film on top, three different answers to “what should the page below the film say?”. Every section leads with one finding and draws it; the number is the evidence, not the content. Scroll inside each phone. Tap dots and rows.</p>
+</div>
+<div class="legend">
+  <span><span class="tag real">real</span> drawn from Percho’s own tables or a named public source</span>
+  <span><span class="tag sample">sample</span> layout only — the data source does not exist yet</span>
+  <label><input type="checkbox" id="clean"> hide the tags</label>
+</div>
+
+<div class="tabs" id="tabs">
+  <button data-i="0" class="on">A · Rank</button>
+  <button data-i="1">B · Life</button>
+  <button data-i="2">C · Trade-offs</button>
+</div>
+
+<div class="stage">
+
+<!-- ═════════════ A ═════════════ -->
+<div class="col on">
+  <h3>A · Where it ranks<small>Every figure is placed against its peers. A buyer reads position, not numbers.</small></h3>
+  <div class="phone"><div class="scroll">
+    <div class="hero" data-hero></div>
+    <div class="body">
+      <div class="headline"><div class="name">Windward</div><div class="place">Alpharetta, GA</div></div>
+
+      <div class="medals">
+        <div class="medal"><b>#6</b><span>Elementary</span><small>of 1,220 in Georgia</small></div>
+        <div class="medal"><b>#7</b><span>Middle school</span><small>of 472 in Georgia</small></div>
+        <div class="medal"><b>#6</b><span>Largest</span><small>of 314 in Alpharetta</small></div>
+        <div class="medal"><b>200</b><span>Acre lake</span><small>45 neighbourhoods</small></div>
+      </div>
+
+      <div class="sec">Where it ranks <span class="tag real">real</span></div>
+      <div class="insight">Georgia’s top <em>2%</em> through middle school. More rentals than most of Alpharetta.</div>
+      <div class="card">
+        <div id="a-tracks"></div>
+        <div class="axis-ends"><div></div><div><span>lowest</span><span>highest</span></div><div></div></div>
+        <div class="key"><span><i class="k-dot"></i>Windward</span><span><i class="k-tick"></i>the median</span></div>
+      </div>
+
+      <div class="sec">In residents’ words <span class="tag real">real</span></div>
+      <div class="insight">“Convenient.” Only <em>1 in 6</em> Alpharetta communities says that.</div>
+      <div class="card">
+        <div id="a-words"></div>
+        <div class="cap">Share of Alpharetta’s 342 communities whose residents use the same word. Short bar = rarer = more theirs.</div>
+        <div class="absent">Not said here: <span>Friendly</span><span>Well maintained</span><span>Neighbors</span></div>
+      </div>
+
+      <div class="sec">What people say online <span class="tag sample">sample</span></div>
+      <div class="insight">Loved for the lake. Argued about for traffic.</div>
+      <div class="card">
+        <div class="senti"><i style="width:68%;background:var(--pos)"></i><i style="width:19%;background:var(--ink3)"></i><i style="width:13%;background:var(--neg)"></i></div>
+        <div class="senti-key"><span><b>68%</b> praise</span><span><b>19%</b> mixed</span><span><b>13%</b> gripes</span></div>
+        <div class="cap">47 comments mentioning Windward · Reddit r/Alpharetta, r/Atlanta · last 24 months</div>
+      </div>
+      <div class="quotes" id="a-quotes"></div>
+      <span class="cta">Live here? Write a review</span>
+
+      <div class="sec">Coming up <span class="tag real">real</span></div>
+      <div class="card" id="a-events"></div>
+
+      <p class="src">Schools: Georgia Milestones proficiency. Community figures: Nextdoor neighbourhood profiles. Events: Awesome Alpharetta.</p>
+    </div>
+  </div></div>
+  <div class="notes">
+    <b>Why this one:</b> rankings are the fastest “is this good?” a buyer can read, and Percho already holds the data — 2,227 schools and 22,730 Georgia communities to rank against.
+    <ul><li>Tracks, medals, word rarity: computable today, no new source.</li><li>Online voices: needs a Reddit source.</li><li>Events: needs a city-calendar feed per metro.</li></ul>
+    <b>Risk:</b> a community with few ranked facts gets a thin page.
+  </div>
+</div>
+
+<!-- ═════════════ B ═════════════ -->
+<div class="col">
+  <h3>B · Life here<small>The page answers “what would my week and my year look like?” — distance and time, not statistics.</small></h3>
+  <div class="phone"><div class="scroll">
+    <div class="hero" data-hero></div>
+    <div class="body">
+      <div class="headline"><div class="name">Windward</div><div class="place">Alpharetta, GA</div></div>
+
+      <div class="onsite">
+        <div><svg viewBox="0 0 24 24"><path d="M3 17c2 0 2-1.5 4.5-1.5S10 17 12 17s2-1.5 4.5-1.5S19 17 21 17M3 21c2 0 2-1.5 4.5-1.5S10 21 12 21s2-1.5 4.5-1.5S19 21 21 21M8 14V5a2 2 0 0 1 4 0M14 14V5a2 2 0 0 1 4 0M8 9h6"/></svg><span>Pool</span></div>
+        <div><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.5 5.800c3 2.600 3 9.800 0 12.400M18.5 5.800c-3 2.600-3 9.800 0 12.400"/></svg><span>Courts</span></div>
+        <div><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6"/></svg><span>Clubhouse</span></div>
+        <div><svg viewBox="0 0 24 24"><path d="M4 21V5l6 3 0 13M10 8l8-3v16M14 21v-5M7 21v-4"/></svg><span>Playground</span></div>
+        <div><svg viewBox="0 0 24 24"><path d="M2 16c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2M2 20c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2M12 3v8M12 4l5 3-5 3"/></svg><span>Lake</span></div>
+      </div>
+
+      <div class="sec">How far is everything <span class="tag real">real</span></div>
+      <div class="insight"><em>12 of 15</em> stops in the film are within 3 miles.</div>
+      <div class="card">
+        <div id="b-strip"></div>
+        <div class="tipline" id="b-tip">Tap a dot.</div>
+      </div>
+
+      <div class="sec">The year here <span class="tag real">real</span></div>
+      <div class="insight">Lights season starts <em>Saturday</em> and runs to January.</div>
+      <div class="card">
+        <div id="b-year"></div>
+        <div class="key"><span><i class="k-dot"></i>one day</span><span><i style="width:18px;height:6px;border-radius:3px;background:var(--accent)"></i>runs for weeks</span><span><i style="width:18px;height:6px;border-radius:3px;border:1.5px dashed var(--ink3)"></i>dates to confirm</span></div>
+      </div>
+
+      <div class="sec">Next up nearby <span class="tag real">real</span></div>
+      <div class="evcards" id="b-events"></div>
+
+      <div class="sec">What neighbours are into <span class="tag real">real</span></div>
+      <div class="insight">Walkers and readers, more than the towns around them.</div>
+      <div class="chips" id="b-interests"></div>
+      <div class="cap"><b style="color:var(--accent)">Highlighted</b> — ranked higher here than in 7 of 10 Alpharetta communities.</div>
+
+      <div class="sec">Overheard <span class="tag sample">sample</span></div>
+      <div class="bubbles" id="b-bubbles"></div>
+      <span class="cta">Live here? Write a review</span>
+
+      <p class="src">Distances: the places in this community’s film. Events: Awesome Alpharetta, Windward Community Services Association. Interests: Nextdoor neighbourhood profiles.</p>
+    </div>
+  </div></div>
+  <div class="notes">
+    <b>Why this one:</b> it continues the film — the film shows the places, the page says how far they are and when things happen. Closest to “what living there feels like”.
+    <ul><li>Distance chart, on-site row, interests: computable today from tour data.</li><li>Year calendar: needs an events source per city, plus each HOA’s own calendar.</li><li>Overheard: needs a Reddit source.</li></ul>
+    <b>Risk:</b> events go stale; needs a weekly refresh job and an “as of” date.
+  </div>
+</div>
+
+<!-- ═════════════ C ═════════════ -->
+<div class="col">
+  <h3>C · The honest take<small>What you get, what you give up, what it costs. Built to help someone decide, not to sell.</small></h3>
+  <div class="phone"><div class="scroll">
+    <div class="hero" data-hero></div>
+    <div class="body">
+      <div class="headline"><div class="name">Windward</div><div class="place">Alpharetta, GA</div></div>
+
+      <div class="fit">
+        <div class="side yes"><h4>Good fit if</h4>
+          <div class="it"><b>Schools come first</b><small>elementary #6 of 1,220 in Georgia</small></div>
+          <div class="it"><b>You want water</b><small>200-acre lake, pool on site</small></div>
+          <div class="it"><b>Short errands</b><small>Trader Joe’s 1.4 mi</small></div>
+        </div>
+        <div class="side no"><h4>Think twice if</h4>
+          <div class="it"><b>You want small</b><small>45 neighbourhoods, 4,589 on Nextdoor</small></div>
+          <div class="it"><b>Dues bother you</b><small>master fee + each enclave’s own</small></div>
+          <div class="it"><b>You commute at 5</b><small>the top gripe online <span class="tag sample">sample</span></small></div>
+        </div>
+      </div>
+
+      <div class="sec">Praise vs gripes <span class="tag sample">sample</span></div>
+      <div class="insight">Schools and the lake win. Traffic and dues lose.</div>
+      <div class="card">
+        <div class="div-head"><div></div><div><span style="color:var(--pos)">◀ praise</span><span style="color:var(--neg)">gripes ▶</span></div></div>
+        <div id="c-div"></div>
+        <div class="div-quote" id="c-quote"></div>
+        <div class="cap">Comments mentioning Windward, by topic · Reddit r/Alpharetta, r/Atlanta · tap a topic</div>
+      </div>
+
+      <div class="sec">Against the area <span class="tag real">real</span></div>
+      <div class="insight">Schools far above the county. Ownership <em>below</em> the city’s norm.</div>
+      <div class="card">
+        <div id="c-dumb"></div>
+        <div class="key"><span><i class="k-dot"></i>Windward</span><span><i class="k-gdot"></i>typical nearby</span></div>
+        <div class="cap">School rows: % proficient vs the Fulton County median school. Owner-occupied vs the median Alpharetta community.</div>
+      </div>
+
+      <div class="sec">What it costs to hold <span class="tag real">real</span> <span class="tag sample">price</span></div>
+      <div class="card">
+        <div class="big">≈ $1,070<small>a month, before the mortgage</small></div>
+        <div class="cap" style="margin:6px 0 10px">On a $900K home — the median of 61 sales in the last year.</div>
+        <div class="cost-bar" id="c-costbar"></div>
+        <div id="c-costs"></div>
+      </div>
+
+      <div class="sec">Coming up <span class="tag real">real</span></div>
+      <div class="card" id="c-events"></div>
+      <span class="cta">Live here? Write a review</span>
+
+      <p class="src">Schools: Georgia Milestones. Tax and utilities: Percho county estimates (Georgia DOR, EIA, UNC EFC). Dues: Windward Community Services Association, 2024. Sale price: third-party MLS summary.</p>
+    </div>
+  </div></div>
+  <div class="notes">
+    <b>Why this one:</b> nobody else tells a buyer what to think twice about. It is the most differentiated page and the one an agent would forward.
+    <ul><li>Against-the-area chart, tax and utility costs: computable today.</li><li>Praise vs gripes: needs a Reddit source and a topic classifier (an LLM pass per community).</li><li>Median price: needs a licensed sales source — not the FMLS feed.</li></ul>
+    <b>Risk:</b> “think twice” lines must each cite a row; the builder or HOA may object to the gripes.
+  </div>
+</div>
+
+</div>
+
+<div class="foot">
+  <b>The two sources none of the three has yet</b>
+  <ul>
+    <li><b>Reddit.</b> It refuses automated readers, so every quote and count marked <span class="tag sample">sample</span> is invented for layout. Real ones need Reddit’s Data API (commercial use needs their approval), then one classifier pass per community.</li>
+    <li><b>Events.</b> City calendars are public and were read by hand here; a community’s own events (the 5K, the swim team) live on HOA pages and newsletters. Needs a weekly job per metro and an “as of” date on the page.</li>
+  </ul>
+</div>
+
+<script>
+/* ── data ─────────────────────────────────────────────────────────────── */
+const HERO = "https://videodelivery.net/ddffd15040c57e3ef063ff45604e4605/thumbnails/thumbnail.jpg?time=3s&height=640";
+const CHIPS = ["Amenities", "Lake", "Schools", "Dining", "Shopping", "Outdoors"];
+
+// Rank among peers. Schools: Georgia Milestones proficiency across Percho's
+// 2,227 school rows. Community rows: Nextdoor figures across active
+// Alpharetta communities.
+const TRACKS = [
+  { l: "Elementary", s: "Lake Windward", pct: 99.6, rank: "#6", of: "of 1,220 in GA" },
+  { l: "Middle", s: "Webb Bridge", pct: 98.7, rank: "#7", of: "of 472 in GA" },
+  { l: "High", s: "Alpharetta HS", pct: 93.2, rank: "#31", of: "of 443 in GA" },
+  { l: "Size", s: "4,589 members", pct: 98.4, rank: "#6", of: "of 314 in city" },
+  { l: "Owner-occupied", s: "74%", pct: 32.7, rank: "#236", of: "of 349 in city" },
+];
+// Windward's resident-stated words, with the share of Alpharetta communities
+// (n=342) that state the same word.
+const WORDS = [
+  ["Convenient", 17], ["Beautiful", 29], ["Walkability", 30], ["Quiet", 42],
+  ["Dog friendly", 46], ["Clean", 47], ["Safe", 55], ["Peaceful", 57], ["Family friendly", 71],
+];
+const QUOTES = [
+  { t: "The lake loop at sunset is why we stayed. Kids bike to the pool all summer.", who: "r/Alpharetta · sample", v: "▲ 41", up: true },
+  { t: "Windward Pkwy at 5pm will test you. Learn the back way to 400.", who: "r/Atlanta · sample", v: "▲ 28", up: false },
+  { t: "Each enclave has its own dues on top of the master fee. Ask before you bid.", who: "r/Alpharetta · sample", v: "▲ 19", up: false },
+];
+const EVENTS = [
+  { m: "NOV", d: "21", t: "Tree lighting", w: "Downtown Alpharetta · free", mi: "" },
+  { m: "NOV", d: "22", t: "Lighting of Avalon", w: "Avalon · ice rink opens", mi: "2.9 mi" },
+  { m: "DEC", d: "4", t: "Lights on the Loop", w: "Alpha Loop · nightly to Jan 4", mi: "" },
+  { m: "DEC", d: "12", t: "Maker’s Market", w: "Avalon · holiday street fair", mi: "2.9 mi" },
+  { m: "MAR", d: "’27", t: "Windward 5K Lake Challenge", w: "Around the lake · 27th year", mi: "0 mi" },
+];
+// Off-site stops in the community's film, with the film's own distances.
+const PLACES = [
+  ["Errands", [["Trader Joe’s", 1.4], ["Publix", 1.9]]],
+  ["Eat & drink", [["Windward Tavern", 1.9], ["Vinny’s on Windward", 2.1], ["Delbar", 2.6], ["MOTW Coffee", 3.7]]],
+  ["Outdoors", [["Lake Windward", 0.9], ["Golf Club of Georgia", 1.3], ["Big Creek Greenway", 2.4], ["Webb Bridge Park", 3.5]]],
+  ["Schools", [["Alpharetta High", 1.9], ["Webb Bridge Middle", 2.1], ["Lake Windward Elementary", 2.4]]],
+  ["Shops & fun", [["Avalon", 2.9], ["Halcyon", 4.8]]],
+];
+const INTERESTS = [
+  ["Home improvement", 0], ["Walking", 1], ["Gardening", 0], ["Dogs", 0], ["Books", 1],
+  ["Hiking & trails", 1], ["Travel", 0], ["Live music", 0], ["Cooking", 0],
+];
+const BUBBLES = [
+  { t: "Saturday morning is the greenway, then coffee at MOTW.", who: "r/Alpharetta · sample" },
+  { t: "The 5K around the lake every March — the whole street turns out.", who: "r/Alpharetta · sample", r: 1 },
+  { t: "Avalon is ten minutes. We skate there every December.", who: "r/Atlanta · sample" },
+];
+const TOPICS = [
+  { l: "Schools", p: 14, n: 1, q: "Lake Windward Elementary is the reason half our street moved here.", who: "r/Alpharetta · sample" },
+  { l: "Lake & trails", p: 11, n: 0, q: "The lake loop at sunset is why we stayed.", who: "r/Alpharetta · sample" },
+  { l: "Location", p: 9, n: 2, q: "Avalon, Halcyon and 400 are all ten minutes. Hard to beat.", who: "r/Atlanta · sample" },
+  { l: "Price", p: 1, n: 5, q: "You pay a lake premium even three streets back from the water.", who: "r/Atlanta · sample" },
+  { l: "HOA & dues", p: 2, n: 6, q: "Each enclave has its own dues on top of the master fee. Ask before you bid.", who: "r/Alpharetta · sample" },
+  { l: "Traffic", p: 1, n: 8, q: "Windward Pkwy at 5pm will test you. Learn the back way to 400.", who: "r/Atlanta · sample" },
+];
+const DUMB = [
+  { l: "Elementary", a: 84, b: 50.5 },
+  { l: "Middle", a: 83, b: 49.5 },
+  { l: "High", a: 67, b: 51 },
+  { l: "Owner-occupied", a: 74, b: 86 },
+];
+// Monthly, on a $900K home. Tax: 1.02% (Percho estimate, Fulton). Dues:
+// $840/yr master assessment (WCSA, 2024). Utilities: Percho county figures.
+const COSTS = [
+  { l: "Property tax", v: 765, c: "#B45309", n: "est. 1.02%" },
+  { l: "Electricity", v: 150, c: "#B9A88F", n: "" },
+  { l: "HOA master dues", v: 70, c: "#B9A88F", n: "$840 / yr" },
+  { l: "Water", v: 54, c: "#B9A88F", n: "est." },
+  { l: "Trash", v: 30, c: "#B9A88F", n: "est." },
+];
+
+/* ── helpers ──────────────────────────────────────────────────────────── */
+const $ = (id) => document.getElementById(id);
+const h = (strings, ...v) => strings.reduce((a, s, i) => a + s + (v[i] ?? ""), "");
+
+document.querySelectorAll("[data-hero]").forEach((el) => {
+  el.style.backgroundImage = `url("${HERO}")`;
+  el.innerHTML = h`<div class="top"><span class="disc"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span><div><span class="disc"><svg viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 13v6h14v-6"/></svg></span><span class="disc"><svg viewBox="0 0 24 24"><path d="M7 4h10v16l-5-4-5 4z"/></svg></span></div></div>
+  <div class="strip">${CHIPS.map((c, i) => `<span class="${i === 0 ? "on" : ""}">${c}</span>`).join("")}</div>`;
+});
+
+/* ── A ────────────────────────────────────────────────────────────────── */
+$("a-tracks").innerHTML = TRACKS.map((t) => h`<div class="track-row">
+  <div class="l"><b>${t.l}</b><small>${t.s}</small></div>
+  <div class="track"><i class="med"></i><i class="dot" style="left:${t.pct}%"></i></div>
+  <div class="r"><b>${t.rank}</b>${t.of}</div></div>`).join("");
+
+$("a-words").innerHTML = WORDS.map(([w, p], i) => h`<div class="bar-row ${i < 3 ? "hot" : ""}">
+  <div class="l">${w}</div><div class="bar"><i style="width:${p}%"></i></div><div class="v">${p}%</div></div>`).join("");
+
+$("a-quotes").innerHTML = QUOTES.map((q) => h`<div class="quote"><p>“${q.t}”</p>
+  <div class="meta"><b>${q.who}</b><span class="${q.up ? "up" : "down"}">${q.up ? "praise" : "gripe"} · ${q.v}</span></div></div>`).join("");
+
+const evRow = (e) => h`<div class="ev"><div class="date"><small>${e.m}</small><b>${e.d}</b></div>
+  <div class="t"><b>${e.t}</b><small>${e.w}</small></div><div class="mi">${e.mi}</div></div>`;
+$("a-events").innerHTML = EVENTS.slice(0, 3).map(evRow).join("");
+$("c-events").innerHTML = EVENTS.slice(0, 2).concat(EVENTS[4]).map(evRow).join("");
+
+/* ── B ────────────────────────────────────────────────────────────────── */
+(function strip() {
+  const W = 326, L = 78, R = 10, rowH = 30, top = 8;
+  const x = (mi) => L + (mi / 5) * (W - L - R);
+  let s = `<svg viewBox="0 0 ${W} ${top + rowH * PLACES.length + 26}" width="100%">`;
+  for (let m = 0; m <= 5; m++) {
+    s += `<line x1="${x(m)}" x2="${x(m)}" y1="${top}" y2="${top + rowH * PLACES.length}" stroke="#EADFD0" stroke-width="1"/>`;
+    s += `<text x="${x(m)}" y="${top + rowH * PLACES.length + 16}" font-size="10.5" fill="#8A7358" text-anchor="middle">${m === 0 ? "home" : m + " mi"}</text>`;
+  }
+  // The 3-mile band the headline is about.
+  s += `<rect x="${x(0)}" y="${top}" width="${x(3) - x(0)}" height="${rowH * PLACES.length}" fill="#B45309" opacity="0.06"/>`;
+  PLACES.forEach(([cat, list], r) => {
+    const y = top + r * rowH + rowH / 2;
+    s += `<text x="0" y="${y + 4}" font-size="12" font-weight="500" fill="#2B2116">${cat}</text>`;
+    list.forEach(([name, mi]) => {
+      s += `<circle class="dotp" data-n="${name}" data-mi="${mi}" cx="${x(mi)}" cy="${y}" r="6" fill="#B45309" stroke="#fff" stroke-width="2"/>`;
+      s += `<circle class="dotp" data-n="${name}" data-mi="${mi}" cx="${x(mi)}" cy="${y}" r="14" fill="transparent"/>`;
+    });
+  });
+  s += "</svg>";
+  $("b-strip").innerHTML = s;
+  $("b-strip").addEventListener("click", (e) => {
+    const d = e.target.closest(".dotp");
+    if (!d) return;
+    $("b-tip").innerHTML = `<b>${d.dataset.n}</b> · ${d.dataset.mi} mi`;
+    $("b-strip").querySelectorAll("circle[r='6']").forEach((c) => c.setAttribute("fill", c.dataset.n === d.dataset.n ? "#2B2116" : "#B45309"));
+  });
+})();
+
+(function year() {
+  // One row per thing, label left, the twelve months right.
+  const ROWS = [
+    { l: "5K Lake Challenge", dots: [[2, 14]] },
+    { l: "Farmers market", bars: [[3, 1, 9, 31]], soft: 1 },
+    { l: "Swim team season", bars: [[4, 10, 6, 20]], soft: 1 },
+    { l: "July 4th fireworks", dots: [[6, 4]] },
+    { l: "Tree lightings", dots: [[10, 21], [10, 22]] },
+    { l: "Avalon on Ice", bars: [[10, 22, 11, 31]] },
+    { l: "Lights on the Loop", bars: [[11, 4, 11, 31], [0, 1, 0, 4]] },
+  ];
+  const W = 326, L = 118, colW = (W - L) / 12, rowH = 24, top = 16, H = top + rowH * ROWS.length + 20;
+  const DIM = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const x = (m, d) => L + (m + (d - 1) / DIM[m]) * colW;
+  const A = "#B45309", I3 = "#B9A88F", INK = "#2B2116";
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%">`;
+  "JFMAMJJASOND".split("").forEach((c, m) => {
+    if (m % 2 === 0) s += `<rect x="${L + m * colW}" y="${top}" width="${colW}" height="${rowH * ROWS.length}" fill="#F7F5F0"/>`;
+    s += `<text x="${L + m * colW + colW / 2}" y="${H - 5}" font-size="10.5" fill="#8A7358" text-anchor="middle">${c}</text>`;
+  });
+  ROWS.forEach((r, i) => {
+    const y = top + i * rowH + rowH / 2;
+    s += `<text x="0" y="${y + 4}" font-size="12" font-weight="500" fill="${INK}">${r.l}</text>`;
+    (r.bars ?? []).forEach(([m1, d1, m2, d2]) => {
+      const x1 = x(m1, d1), w = x(m2, d2) - x1;
+      s += r.soft
+        ? `<rect x="${x1}" y="${y - 3}" width="${w}" height="6" rx="3" fill="none" stroke="${I3}" stroke-width="1.5" stroke-dasharray="4 3"/>`
+        : `<rect x="${x1}" y="${y - 3}" width="${Math.max(w, 6)}" height="6" rx="3" fill="${A}"/>`;
+    });
+    (r.dots ?? []).forEach(([m, d], k) => {
+      s += `<circle cx="${x(m, d) + k * 5}" cy="${y}" r="5" fill="${A}" stroke="#fff" stroke-width="2"/>`;
+    });
+  });
+  const tx = x(10, 15);
+  s += `<line x1="${tx}" x2="${tx}" y1="${top - 4}" y2="${top + rowH * ROWS.length}" stroke="${INK}" stroke-width="1"/>`;
+  s += `<text x="${tx}" y="9" font-size="10" font-weight="700" fill="${INK}" text-anchor="middle">today</text>`;
+  s += "</svg>";
+  $("b-year").innerHTML = s;
+})();
+
+$("b-events").innerHTML = EVENTS.map((e) => h`<div class="evcard"><small>${e.m}</small><div class="d">${e.d}</div><b>${e.t}</b><span>${e.w}${e.mi ? " · " + e.mi : ""}</span></div>`).join("");
+$("b-interests").innerHTML = INTERESTS.map(([t, hot], i) => `<span class="chip ${hot ? "hot" : ""}"><small>${i + 1}</small>${t}</span>`).join("");
+$("b-bubbles").innerHTML = BUBBLES.map((b) => `<div class="bubble ${b.r ? "r" : ""}">${b.t}<small>${b.who}</small></div>`).join("");
+
+/* ── C ────────────────────────────────────────────────────────────────── */
+(function diverging() {
+  const max = Math.max(...TOPICS.flatMap((t) => [t.p, t.n]));
+  const pc = (v) => (v / max) * 44; // % of the bar's width, each side
+  $("c-div").innerHTML = TOPICS.map((t, i) => h`<div class="div-row" data-i="${i}">
+    <div class="l">${t.l}</div>
+    <div class="div-bar">
+      ${t.p ? `<i class="p" style="width:${pc(t.p)}%"></i><span style="right:calc(50% + ${pc(t.p)}% + 5px)">${t.p}</span>` : ""}
+      ${t.n ? `<i class="n" style="width:${pc(t.n)}%"></i><span style="left:calc(50% + ${pc(t.n)}% + 5px)">${t.n}</span>` : ""}
+    </div></div>`).join("");
+  const pick = (i) => {
+    document.querySelectorAll("#c-div .div-row").forEach((r) => r.classList.toggle("on", +r.dataset.i === i));
+    $("c-quote").innerHTML = `“${TOPICS[i].q}”<small>${TOPICS[i].who}</small>`;
+  };
+  $("c-div").addEventListener("click", (e) => { const r = e.target.closest(".div-row"); if (r) pick(+r.dataset.i); });
+  pick(5);
+})();
+
+(function dumbbell() {
+  const W = 326, L = 104, R = 42, rowH = 30, top = 6;
+  const x = (v) => L + (v / 100) * (W - L - R);
+  let s = `<svg viewBox="0 0 ${W} ${top + rowH * DUMB.length + 22}" width="100%">`;
+  [0, 25, 50, 75, 100].forEach((v) => {
+    s += `<line x1="${x(v)}" x2="${x(v)}" y1="${top}" y2="${top + rowH * DUMB.length}" stroke="#EADFD0"/>`;
+    s += `<text x="${x(v)}" y="${top + rowH * DUMB.length + 15}" font-size="10.5" fill="#8A7358" text-anchor="middle">${v}%</text>`;
+  });
+  DUMB.forEach((d, i) => {
+    const y = top + i * rowH + rowH / 2, up = d.a >= d.b;
+    s += `<text x="0" y="${y + 4}" font-size="12" font-weight="500" fill="#2B2116">${d.l}</text>`;
+    s += `<line x1="${x(d.a)}" x2="${x(d.b)}" y1="${y}" y2="${y}" stroke="${up ? "#B45309" : "#B9A88F"}" stroke-width="2" opacity="${up ? 0.35 : 1}"/>`;
+    s += `<circle cx="${x(d.b)}" cy="${y}" r="5.5" fill="#B9A88F" stroke="#fff" stroke-width="2"/>`;
+    s += `<circle cx="${x(d.a)}" cy="${y}" r="6.5" fill="#B45309" stroke="#fff" stroke-width="2"/>`;
+    s += `<text x="${x(d.a) + (up ? 12 : -12)}" y="${y + 4}" font-size="11.5" font-weight="700" fill="#2B2116" text-anchor="${up ? "start" : "end"}">${d.a}%</text>`;
+  });
+  s += "</svg>";
+  $("c-dumb").innerHTML = s;
+})();
+
+(function costs() {
+  const total = COSTS.reduce((a, c) => a + c.v, 0);
+  $("c-costbar").innerHTML = COSTS.map((c) => `<i style="width:${(c.v / total) * 100}%;background:${c.c}"></i>`).join("");
+  $("c-costs").innerHTML = COSTS.map((c) => `<div class="cost-row"><i style="background:${c.c}"></i><span>${c.l} <small>${c.n}</small></span><b>$${c.v}</b></div>`).join("");
+})();
+
+/* ── page chrome ──────────────────────────────────────────────────────── */
+$("clean").addEventListener("change", (e) => document.body.classList.toggle("clean", e.target.checked));
+const show = (n) => {
+  document.querySelectorAll("#tabs button").forEach((x, i) => x.classList.toggle("on", i === n));
+  document.querySelectorAll(".stage .col").forEach((c, i) => c.classList.toggle("on", i === n));
+};
+$("tabs").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  show(+b.dataset.i);
+  window.scrollTo({ top: 0 });
+});
+// #a / #b / #c opens that direction on a phone-width screen.
+const fromHash = "abc".indexOf(location.hash.slice(1).toLowerCase());
+if (location.hash.length === 2 && fromHash >= 0) show(fromHash);
+</script>
+</body>
+</html>
