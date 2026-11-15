@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-16 01:20 UTC — phase338.2: the explore page cut to one screen (demo only)
+
+**Objective**: Owner on the final mix (v2, eight sections, ~5,300 px): "太长了 没人会看这么多 重新设计".
+**Actions**: `apps/web/public/demos/community-explore-v3/index.html`. Under the film and the name: six verdict lines (three ✓, three !), six tiles (ranks — wide; home value; dues; nearby; residents say; coming up — wide), four link pills, the review row. ~800 px below the film, against v2's ~5,000. Each tile is a figure or a word, one small chart, at most one line; tapping it opens a bottom sheet with v2's full chart for that subject (`#ranks` … `#events` opens a sheet on load). v1 and v2 stay up.
+**Decisions**: length was the defect, not the content — so the findings stayed and the sections went. A tile carries the finding; the chart that proves it is on demand. Cut outright: per-chart headline sentences, the twelve-month calendar, price by enclave, social clubs, the identity line, the link card, the section tabs.
+**Learnings**: "information-rich" was read as "more sections" twice. For this owner it means more findings per screen — the constraint is the screen.
+**Still SAMPLE**: Reddit sentiment/quotes, rush-hour drive times.
+
 ## 2026-11-16 00:40 UTC — phase338.1: the final mix for the community explore page (demo only)
 
 **Objective**: Owner on the three directions: "混搭你再想想给我最终方案 不要局限在现有的数据 如果有链接可以加上 比如builder或者社区的主页 reddit还有办法吗".
