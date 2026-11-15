@@ -1,83 +1,54 @@
 /**
- * The city film's cut (phase322). PURE: the planner's shots, the city's photos
- * and its profile in; two acts out.
+ * The city film's cut (phase326). PURE: the script in the city's profile and
+ * the city's photos in; the shot list and the narration out.
  *
- *   Act 1 — the fundamentals. One data frame per `profile.film.frames`, drawn
- *           by the render worker over one of the city's own photos.
- *   Act 2 — the places. ONE shot per place.
+ * The third shape of this file, and the reasons are the owner's:
  *
- * Why this exists: the first city film reused the community recipe — a reel of
- * places — and the owner's verdict was "看完我对这个城市没有基本的了解", with two
- * specific complaints this file answers in code:
+ *   v1 — a reel of places, the community recipe. "看完我对这个城市没有基本的了解."
+ *   v2 — data frames, then one shot per place. "前半部分感觉在罗列数字 不生动
+ *        像ppt 后半部分又过度到非常具体的店面."
+ *   v3 — one claim, then the proof. Every second is a picture of the city; a
+ *        figure is a callout on the shot it belongs to. On its storyboard:
+ *        "第一个还不错 有几个没有照片的感觉不好 … 最好是全部都有对应的照片."
  *
- *   "4个重复的city hall" — City Hall's facade was filed under two POIs (City
- *   Hall, and Town Center Park, whose Google photos are mostly of City Hall),
- *   and each POI got its own clips. So a shot's SUBJECT is what its
- *   description names, not the POI it is filed under (`subjectOf`), and a
- *   subject appears once in the whole film.
- *
- *   "一个狗特写 why????" — a close-up of a deer stood in for the greenway. A
- *   city film shows the place itself (`isPlaceView`): no close-ups, no food,
- *   no wildlife.
- *
- * The acts run about half and half (owner, same day). A clip lasts as long as
- * its line takes to say, so the balance is decided by the script in the
- * profile; `actBalance` reports it and the plan step warns when it drifts.
+ * So the script names its own photographs. A line is spoken over the photos
+ * listed under it and no others, and a line whose photo this city does not
+ * hold is a PROBLEM, not something to paper over with a related picture — the
+ * plan step refuses to plan until there are none. Nothing here chooses a
+ * photo: choosing is the editor's job, done when the line is written.
  */
 
-import type { CityFilmFrame, CityProfile } from '@/lib/zod/city-profile';
+import type { CityFilmCallout, CityProfile } from '@/lib/zod/city-profile';
 
-/** What the film needs to know about a photo. */
+/** What the cut needs to know about one of the city's photos. */
 export interface FilmPhoto {
   id: string;
   poiId: string;
-  /** The vision tagger's one-line description. */
-  description: string;
-  /** `ai_tags.primary_category` — "aerial", "food", "landscape", … */
-  category: string | null;
-  tags: string[];
-  /** Storage path of the file to draw (enhanced when approved). */
-  path: string;
-}
-
-export interface FilmPoi {
-  id: string;
-  name: string;
+  poiName: string;
   bucket: string;
+  width: number | null;
+  height: number | null;
+  /** A paid Seedance clip is already rendered for this photo. */
+  seedanceReady: boolean;
 }
 
-/** A place shot as the planner emits it — only the fields this file touches. */
-export interface PlaceShot {
+/** One clip of the film, in the shape the generate and assemble steps read. */
+export interface FilmShot {
   photo_id: string;
   poi_id: string;
   poi_name: string;
-  bucket?: string;
-  engine: string;
-  move?: string | null;
+  bucket: string;
+  engine: 'kenburns' | 'seedance';
+  move: string | null;
   duration_s: number;
-  prompt?: string | null;
-  ai_generated?: boolean;
-  vo_line?: string;
-  chip_label?: string;
-  label?: string;
-  label_distance?: string;
-  [key: string]: unknown;
-}
-
-/** An Act 1 clip. No `photo_id`: it has no `photo_clips` row to render. */
-export interface DataClip {
-  kind: 'data';
-  frame: Omit<CityFilmFrame, 'say' | 'bgBucket'>;
-  bg_photo_id: string;
-  bg_path: string;
-  duration_s: number;
-  /** What the phone's progress bar and place chip read. */
-  poi_name: string;
+  prompt: null;
+  ai_generated: boolean;
   label: string;
+  chip_label: string;
   label_distance: '';
-  bucket: 'city';
-  engine: 'data';
   sort_order: number;
+  /** Drawn over the clip by the render worker at assembly. */
+  callout?: CityFilmCallout;
 }
 
 export interface NarrationSegment {
@@ -91,318 +62,192 @@ export interface NarrationSegment {
   trimmed: false;
 }
 
-// ─── subjects ───────────────────────────────────────────────────────────────
-
-/**
- * A POI's name without the city and without a branch suffix — the words a
- * photo description would use for it. "Suwanee City Hall" → "city hall".
- */
-export function coreName(name: string, cityName: string): string {
-  const city = cityName.trim().toLowerCase();
-  let s = name.toLowerCase();
-  s = s.replace(/\s+[-–—]\s+.*$/, ''); // "… - Suwanee Branch", "… - Suwanee"
-  if (city)
-    s = s
-      .split(/\s+/)
-      .filter((w) => w !== city)
-      .join(' ');
-  return s
-    .replace(/[^a-z0-9 ]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-/** Two words or eight letters: "park" alone would match half the city. */
-const specific = (core: string) => core.includes(' ') || core.length >= 8;
-
-/**
- * The place a photo actually shows: its own POI when the description names
- * it, another POI of this film when the description names that one instead.
- */
-export function subjectOf(photo: FilmPhoto, pois: readonly FilmPoi[], cityName: string): string {
-  const text = photo.description.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ');
-  const own = pois.find((p) => p.id === photo.poiId);
-  if (own) {
-    const core = coreName(own.name, cityName);
-    if (core && text.includes(core)) return own.id;
-  }
-  // Longest name first, so "town center park" wins over a bare "park" POI.
-  const others = pois
-    .filter((p) => p.id !== photo.poiId)
-    .map((p) => ({ id: p.id, core: coreName(p.name, cityName) }))
-    .filter((p) => specific(p.core))
-    .sort((a, b) => b.core.length - a.core.length);
-  return others.find((p) => text.includes(p.core))?.id ?? photo.poiId;
-}
-
-const NOT_A_PLACE_TAGS = new Set(['wildlife', 'animal', 'animals', 'pet', 'pets']);
-
-/** Whether the photo shows the place itself rather than a detail of it. */
-export function isPlaceView(photo: Pick<FilmPhoto, 'description' | 'category' | 'tags'>): boolean {
-  if (/\bclose[- ]?up\b/i.test(photo.description)) return false;
-  if (photo.category === 'food') return false;
-  return !photo.tags.some((t) => NOT_A_PLACE_TAGS.has(t.toLowerCase()));
+export interface CityFilm {
+  shots: FilmShot[];
+  segments: NarrationSegment[];
+  /** Why the film cannot be made as written. Empty, or nothing is planned. */
+  problems: string[];
+  warnings: string[];
+  /** Running time before the end card. */
+  seconds: number;
 }
 
 // ─── timing ─────────────────────────────────────────────────────────────────
 
 /**
  * The narrator's pace, MEASURED on the worker's TTS voice (Gemini, 2026-11-15):
- * 2.0–2.4 words a second. The first cut assumed 2.5 and eight of its twelve
- * lines had to be sped up to fit their clips.
+ * 2.0–2.4 words a second.
  */
 const WORDS_PER_SECOND = 2.3;
+/** `TOUR_XFADE_S` in the worker: every clip gives this much to the crossfade. */
+const XFADE_S = 0.5;
+/**
+ * Silence a line needs besides its clips' crossfades: the worker keeps 0.35s
+ * between lines (`NARRATION_MIN_GAP_S`), and the pace above is an average.
+ */
+const LINE_AIR_S = 0.6;
+/** A cached Seedance clip is this long, whatever the plan asks for. */
+const SEEDANCE_S = 4;
+/** Shorter than this and a clip is two crossfades with nothing between them. */
+const MIN_SHOT_S = 2.5;
+
 const half = (s: number) => Math.round(s * 2) / 2;
+const halfUp = (s: number) => Math.ceil(s * 2 - 1e-9) / 2;
 const tokens = (text: string) =>
   text
     .trim()
     .split(/\s+/)
     .filter((t) => /[A-Za-z0-9]/.test(t));
-const countWords = (text: string) => tokens(text).length;
 
 /**
  * Words as they are SPOKEN: a figure is one token on the page and two or three
- * words aloud ("1990", "85"). The slowest measured line was the one with a
- * year and a count in it.
+ * words aloud ("1990", "85").
  */
 export function spokenWords(text: string): number {
   return tokens(text).reduce((a, t) => a + (/\d/.test(t) ? 2.5 : 1), 0);
 }
 
 /**
- * How long a clip runs: its line at speaking pace, plus air.
+ * How many seconds of clip a line needs across `shots` clips.
  *
- * The air is not decoration. A line may not start until its clip's crossfade
- * has finished (0.5s, `TOUR_XFADE_S`) and must end a beat before the next line
- * (0.35s, `NARRATION_MIN_GAP_S` in the worker) — 0.85s of every clip that no
- * word can occupy. With less air than that every line overran: the second cut
- * sped up eight of fifteen and pushed four late.
+ * A line owns the screen from its first clip's start to the next line's first
+ * clip, and each clip overlaps its neighbour by the crossfade — so n clips of
+ * total length T give the line T − n × 0.5s to be spoken in.
  */
-export function secondsFor(words: number, kind: 'data' | 'place'): number {
-  const [air, min, max] = kind === 'data' ? [1.3, 5, 12] : [1.1, 3.5, 9];
-  return half(Math.min(max, Math.max(min, words / WORDS_PER_SECOND + air)));
+export function lineSeconds(text: string, shots: number): number {
+  return spokenWords(text) / WORDS_PER_SECOND + LINE_AIR_S + XFADE_S * shots;
+}
+
+// ─── moves ──────────────────────────────────────────────────────────────────
+
+/** The film canvas, `CANVAS_W / CANVAS_H` in the worker. */
+const CANVAS_ASPECT = 1080 / 1576;
+
+/**
+ * A camera move for a photo the script gave none.
+ *
+ * A landscape photo is wider than the canvas, so a pan shows what a centred
+ * crop would cut off; an upright one already fills the frame and gets a push.
+ * `nth` alternates the direction so two neighbours never move alike.
+ */
+function defaultMove(photo: FilmPhoto, nth: number): string {
+  const aspect = photo.width && photo.height ? photo.width / photo.height : 1.33;
+  if (aspect > CANVAS_ASPECT * 1.25) return nth % 2 === 0 ? 'pan_lr' : 'pan_rl';
+  return nth % 2 === 0 ? 'push_in_slow' : 'pull_back';
 }
 
 // ─── the cut ────────────────────────────────────────────────────────────────
 
-export interface CityCut {
-  shots: Array<DataClip | PlaceShot>;
-  segments: NarrationSegment[];
-  dropped: Array<{ photo_id: string; poi_id: string; reason: string }>;
-  warnings: string[];
-  /** Seconds of each act, before crossfades. */
-  balance: { fundamentals: number; places: number };
-}
-
-/** Where the profile's script speaks of this place, or -1. */
-function scriptIndex(shot: PlaceShot, profile: CityProfile, cityName: string): number {
-  const core = coreName(shot.poi_name, cityName);
-  return profile.film.places.findIndex((p) => {
-    const c = coreName(p.poi, cityName);
-    return c !== '' && (c === core || core.includes(c) || c.includes(core));
-  });
-}
-
-/** The line for a place: the profile's, else the curator's caption. */
-function lineFor(shot: PlaceShot, profile: CityProfile, cityName: string): string {
-  const authored = profile.film.places[scriptIndex(shot, profile, cityName)];
-  return (authored?.say ?? shot.vo_line ?? '').trim();
-}
-
-export function buildCityCut(input: {
-  cityName: string;
+export function buildCityFilm(input: {
   profile: CityProfile;
-  /** The planner's shots, in its order. */
-  shots: readonly PlaceShot[];
-  /** Every usable photo of the places in the cut — shots and spares. */
+  /** Every photo this city may use — linked to it and not rejected. */
   photos: readonly FilmPhoto[];
-  pois: readonly FilmPoi[];
-  /** Photos with a ready Seedance clip; anything else renders on a free engine. */
-  seedanceReady: ReadonlySet<string>;
-}): CityCut {
-  const { cityName, profile, pois } = input;
-  const photoById = new Map(input.photos.map((p) => [p.id, p]));
-  const poiById = new Map(pois.map((p) => [p.id, p]));
-  const dropped: CityCut['dropped'] = [];
+}): CityFilm {
+  const problems: string[] = [];
   const warnings: string[] = [];
-  const subject = (p: FilmPhoto) => subjectOf(p, pois, cityName);
-
-  // The title frame's photo is shown whole, so it uses up its subject: an
-  // aerial of the town if there is one, else the planner's opening shot.
-  const views = input.photos.filter(isPlaceView);
-  const firstShotPhoto = input.shots
-    .map((s) => photoById.get(s.photo_id))
-    .find((p) => p && isPlaceView(p));
-  const title = views.find((p) => p.category === 'aerial') ?? firstShotPhoto ?? views[0];
-  const taken = new Set<string>();
-  if (title) taken.add(subject(title));
-
-  // ── Act 2: one shot per subject ──
-  const places: PlaceShot[] = [];
-  for (const shot of input.shots) {
-    const photo = photoById.get(shot.photo_id);
-    const drop = (reason: string) =>
-      dropped.push({ photo_id: shot.photo_id, poi_id: shot.poi_id, reason });
-    if (!photo) {
-      drop('photo not found');
-      continue;
-    }
-    if (photo.id === title?.id) continue; // it is the title frame, not dropped
-    if (!isPlaceView(photo)) {
-      drop('a detail, not the place — a city film shows the place itself');
-      continue;
-    }
-    const subj = subject(photo);
-    if (taken.has(subj)) {
-      const name = poiById.get(subj)?.name ?? 'this place';
-      drop(
-        subj === (title ? subject(title) : null)
-          ? `${name} is the title frame — one view of a place per film`
-          : `${name} already has its shot — one view of a place per film`,
-      );
-      continue;
-    }
-    taken.add(subj);
-    // A photo filed under one POI that shows another is labelled as what it shows.
-    const shown = poiById.get(subj);
-    places.push(
-      shown && subj !== shot.poi_id
-        ? {
-            ...shot,
-            poi_id: shown.id,
-            poi_name: shown.name,
-            chip_label: shown.name,
-            label: shown.name,
-            bucket: shown.bucket,
-          }
-        : { ...shot },
-    );
-  }
-
-  // The script's order is the cut's order: its lines are written to follow one
-  // another ("Next door, the library…"). A place the script does not mention
-  // keeps the planner's order, after the ones it does.
-  const scripted = (s: PlaceShot) => {
-    const i = scriptIndex(s, profile, cityName);
-    return i === -1 ? Number.MAX_SAFE_INTEGER : i;
-  };
-  places.sort((a, b) => scripted(a) - scripted(b));
-
-  for (const shot of places) {
-    const line = lineFor(shot, profile, cityName);
-    const seconds = secondsFor(spokenWords(line), 'place');
-    // A cached Seedance clip is four seconds; a line that needs longer, or a
-    // clip that would have to be paid for, renders as Ken Burns instead.
-    if (shot.engine === 'seedance' && (!input.seedanceReady.has(shot.photo_id) || seconds > 4.5)) {
-      shot.engine = 'kenburns';
-      shot.move = 'push_in_slow';
-      shot.prompt = null;
-      shot.ai_generated = false;
-    }
-    shot.duration_s = shot.engine === 'seedance' ? 4 : seconds;
-    shot.vo_line = line;
-  }
-
-  // ── Act 1: a data frame per profile frame, each over a different photo ──
-  //
-  // Never another view of the title's subject: a second City Hall behind a
-  // chart is still a second City Hall. Spare photos first, so the same picture
-  // is not seen twice; a photo from Act 2 only when the spares run out.
-  const inActTwo = new Set(places.map((s) => s.photo_id));
-  const titleSubject = title ? subject(title) : null;
-  const usable = views.filter((p) => p.id !== title?.id && subject(p) !== titleSubject);
-  const spare = usable.filter((p) => !inActTwo.has(p.id));
-  const reuse = usable.filter((p) => inActTwo.has(p.id));
-  const usedBg = new Set<string>();
-  const usedBgSubjects = new Set<string>();
-  const takeBackground = (bucket: string | undefined): FilmPhoto | undefined => {
-    const fresh = (p: FilmPhoto) => !usedBg.has(p.id);
-    const inBucket = (p: FilmPhoto) => !bucket || poiById.get(p.poiId)?.bucket === bucket;
-    const newSubject = (p: FilmPhoto) => !usedBgSubjects.has(subject(p));
-    const pick =
-      spare.find((p) => fresh(p) && inBucket(p) && newSubject(p)) ??
-      spare.find((p) => fresh(p) && newSubject(p)) ??
-      spare.find(fresh) ??
-      reuse.find((p) => fresh(p) && inBucket(p)) ??
-      reuse.find(fresh) ??
-      title;
-    if (pick) {
-      usedBg.add(pick.id);
-      usedBgSubjects.add(subject(pick));
-    }
-    return pick;
-  };
-
-  const frames: DataClip[] = [];
-  const lines: string[] = [];
-  for (const f of profile.film.frames) {
-    const bg =
-      f.type === 'title' ? (title ?? takeBackground(f.bgBucket)) : takeBackground(f.bgBucket);
-    if (!bg) {
-      warnings.push(`no photo for the "${f.eyebrow}" frame — it was left out`);
-      continue;
-    }
-    const { say, bgBucket: _bgBucket, ...frame } = f;
-    frames.push({
-      kind: 'data',
-      frame,
-      bg_photo_id: bg.id,
-      bg_path: bg.path,
-      duration_s: secondsFor(spokenWords(say), 'data'),
-      poi_name: f.type === 'title' ? cityName : titleCase(f.eyebrow),
-      label: f.type === 'title' ? cityName : titleCase(f.eyebrow),
-      label_distance: '',
-      bucket: 'city',
-      engine: 'data',
-      sort_order: frames.length,
-    });
-    lines.push(say);
-  }
-
-  const shots: CityCut['shots'] = [
-    ...frames,
-    ...places.map((s, i) => ({ ...s, sort_order: frames.length + i })),
-  ];
-  for (const s of places) {
-    lines.push(s.vo_line ?? '');
-    if (!s.vo_line) warnings.push(`no line for ${s.poi_name} — it plays under music alone`);
-  }
-
-  // One narration line per clip, anchored to the clip it describes.
+  const shots: FilmShot[] = [];
   const segments: NarrationSegment[] = [];
+  const usedAt = new Map<string, number>();
+  const lines = input.profile.film.lines;
   let at = 0;
-  shots.forEach((clip, i) => {
-    const text = lines[i] ?? '';
-    if (text) {
-      segments.push({
-        index: segments.length,
-        text,
-        words: countWords(text),
-        startClip: i,
-        endClip: i,
-        startS: at,
-        endS: at + clip.duration_s,
-        trimmed: false,
-      });
+
+  const find = (ref: string): FilmPhoto | string => {
+    const hits = input.photos.filter((p) => p.id === ref || p.id.startsWith(ref));
+    if (hits.length === 1) return hits[0] as FilmPhoto;
+    return hits.length === 0
+      ? `no photo ${ref} among this city's photos`
+      : `${ref} matches ${hits.length} photos — use the full id`;
+  };
+
+  lines.forEach((line, li) => {
+    const n = li + 1;
+    const resolved: Array<{
+      photo: FilmPhoto;
+      weight: number;
+      move?: string;
+      callout?: CityFilmCallout;
+    }> = [];
+    for (const s of line.shots) {
+      const photo = find(s.photo);
+      if (typeof photo === 'string') {
+        problems.push(`line ${n} ("${line.say.slice(0, 40)}…"): ${photo}`);
+        continue;
+      }
+      const before = usedAt.get(photo.id);
+      if (before != null) {
+        problems.push(
+          `line ${n}: photo ${s.photo} is already under line ${before} — a picture is shown once`,
+        );
+        continue;
+      }
+      usedAt.set(photo.id, n);
+      resolved.push({ photo, weight: s.weight ?? 1, move: s.move, callout: s.callout });
     }
-    at += clip.duration_s;
+    // A line that lost a photo is already a problem; do not time what is left.
+    if (resolved.length !== line.shots.length) return;
+
+    // Seedance clips are four seconds, fixed; the line's other clips share
+    // what remains by weight.
+    const need = lineSeconds(line.say, resolved.length);
+    const fixed = resolved.filter((r) => r.photo.seedanceReady);
+    const free = resolved.filter((r) => !r.photo.seedanceReady);
+    let remaining = need - fixed.length * SEEDANCE_S;
+    let weightLeft = free.reduce((a, r) => a + r.weight, 0);
+    // The last line may run on over the end card; any other would run into the
+    // next line's clip.
+    if (free.length === 0 && remaining > 0.25 && li < lines.length - 1) {
+      warnings.push(
+        `line ${n} needs ${need.toFixed(1)}s and its clips are ${fixed.length * SEEDANCE_S}s — it will be sped up or run late; give it another photo`,
+      );
+    }
+
+    const first = shots.length;
+    const lineStart = at;
+    for (const r of resolved) {
+      let seconds = SEEDANCE_S;
+      if (!r.photo.seedanceReady) {
+        // The last free clip takes what is left, rounded UP, so half-second
+        // rounding never leaves the line short.
+        const last = weightLeft === r.weight;
+        const share = last ? remaining : (remaining * r.weight) / weightLeft;
+        seconds = Math.max(MIN_SHOT_S, last ? halfUp(share) : half(share));
+        remaining -= seconds;
+        weightLeft -= r.weight;
+      }
+      const sort = shots.length;
+      shots.push({
+        photo_id: r.photo.id,
+        poi_id: r.photo.poiId,
+        poi_name: r.photo.poiName,
+        bucket: r.photo.bucket,
+        engine: r.photo.seedanceReady ? 'seedance' : 'kenburns',
+        move: r.photo.seedanceReady ? null : (r.move ?? defaultMove(r.photo, sort)),
+        duration_s: seconds,
+        prompt: null,
+        ai_generated: r.photo.seedanceReady,
+        label: r.photo.poiName,
+        chip_label: r.photo.poiName,
+        label_distance: '',
+        sort_order: sort,
+        ...(r.callout ? { callout: r.callout } : {}),
+      });
+      at += seconds;
+    }
+    segments.push({
+      index: segments.length,
+      text: line.say,
+      words: tokens(line.say).length,
+      startClip: first,
+      endClip: shots.length - 1,
+      startS: lineStart,
+      endS: at,
+      trimmed: false,
+    });
   });
 
-  const balance = {
-    fundamentals: frames.reduce((a, c) => a + c.duration_s, 0),
-    places: places.reduce((a, c) => a + c.duration_s, 0),
-  };
-  const share = balance.fundamentals / Math.max(1, balance.fundamentals + balance.places);
-  if (share < 0.4 || share > 0.6) {
-    warnings.push(
-      `the acts are ${Math.round(share * 100)}% fundamentals / ${Math.round((1 - share) * 100)}% places — they should run about half and half`,
-    );
+  const seconds = at - XFADE_S * Math.max(0, shots.length - 1);
+  if (problems.length === 0 && (seconds < 60 || seconds > 120)) {
+    warnings.push(`the film runs ${Math.round(seconds)}s — the owner asked for one to two minutes`);
   }
-
-  return { shots, segments, dropped, warnings, balance };
+  return { shots, segments, problems, warnings, seconds };
 }
-
-const titleCase = (s: string) =>
-  s
-    .toLowerCase()
-    .replace(/(^|[\s&])([a-z])/g, (_, pre: string, ch: string) => pre + ch.toUpperCase());

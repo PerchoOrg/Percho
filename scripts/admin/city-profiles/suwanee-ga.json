@@ -250,179 +250,252 @@
     }
   ],
   "film": {
-    "frames": [
+    "lines": [
       {
-        "type": "title",
-        "eyebrow": "City · Gwinnett County, Georgia",
-        "headline": "Suwanee",
-        "chip": "#1 in Georgia for families · Fortune 2024",
-        "sub": "33 miles northeast of downtown Atlanta",
-        "say": "This is Suwanee, Georgia — Fortune's top city in the state for families, thirty-three miles from downtown Atlanta."
-      },
-      {
-        "type": "rows",
-        "eyebrow": "History",
-        "headline": "A railroad town",
-        "rows": [
+        "say": "Most suburbs just spread. Suwanee, Georgia, built itself a downtown.",
+        "shots": [
           {
-            "k": "1871",
-            "v": "A depot on the Air Line Railroad — the village grows around it"
-          },
-          {
-            "k": "1949",
-            "v": "Incorporated as a city"
-          },
-          {
-            "k": "1979–98",
-            "v": "Home of the Atlanta Falcons' training camp"
-          },
-          {
-            "k": "2005–09",
-            "v": "Town Center Park and City Hall are built"
+            "photo": "3f027b58",
+            "move": "pan_lr",
+            "callout": {
+              "type": "title",
+              "big": "Suwanee",
+              "label": "Georgia · 33 mi northeast of Atlanta"
+            }
           }
-        ],
-        "source": "City of Suwanee",
-        "say": "It grew around a railroad depot, became a city in 1949, and once housed the Atlanta Falcons."
+        ]
       },
       {
-        "type": "bars",
-        "eyebrow": "Growth",
-        "headline": "8.6× since 1990",
-        "sub": "Population, by census",
-        "bars": [
+        "say": "Fortune named it the best place in the state to raise a family.",
+        "shots": [
           {
-            "label": "1990",
-            "value": 2412,
-            "display": "2,412"
+            "photo": "6f88a051",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "#1",
+              "label": "in Georgia · Best Places to Live for Families",
+              "source": "Fortune, 2024"
+            }
           },
           {
-            "label": "2000",
-            "value": 8725,
-            "display": "8,725"
-          },
-          {
-            "label": "2010",
-            "value": 15355,
-            "display": "15,355"
-          },
-          {
-            "label": "2020",
-            "value": 20786,
-            "display": "20,786"
+            "photo": "78dc5c40",
+            "weight": 6
           }
-        ],
-        "source": "U.S. Census Bureau, decennial census",
-        "say": "Since 1990 its population has grown more than eightfold."
+        ]
       },
       {
-        "type": "stats",
-        "eyebrow": "Suwanee vs. Georgia",
-        "headline": "Above the state",
-        "stats": [
+        "say": "It began in 1871, as a stop on the railroad.",
+        "shots": [
           {
-            "value": "$103,260",
-            "label": "median household income — 1.3× Georgia's"
-          },
-          {
-            "value": "62.5%",
-            "label": "of adults hold a bachelor's degree — 1.8× Georgia's"
+            "photo": "6644ffa4",
+            "move": "push_in_slow",
+            "callout": {
+              "type": "stat",
+              "big": "1871",
+              "label": "A depot on the Air Line Railroad",
+              "source": "Map: U.S. Geological Survey, 1897"
+            }
           }
-        ],
-        "source": "U.S. Census Bureau, ACS 2020–2024",
-        "say": "Incomes run a third above the state's; nearly two in three adults hold a degree."
+        ]
       },
       {
-        "type": "stats",
-        "eyebrow": "Schools",
-        "headline": "North Gwinnett High",
-        "stats": [
+        "say": "The trains still run past Old Town, and Main Street still has its brick fronts.",
+        "shots": [
           {
-            "value": "#16",
-            "label": "in Georgia — U.S. News Best High Schools, 2025–26"
+            "photo": "74bc5f84",
+            "weight": 7,
+            "callout": {
+              "type": "tag",
+              "kicker": "Old Town",
+              "text": "The caboose by the tracks"
+            }
           },
           {
-            "value": "95%",
-            "label": "graduate in four years"
+            "photo": "582f51eb",
+            "weight": 8,
+            "callout": {
+              "type": "tag",
+              "kicker": "Main Street",
+              "text": "Old Town's brick storefronts"
+            }
           }
-        ],
-        "source": "U.S. News & World Report; SchoolDigger",
-        "bgBucket": "schools",
-        "say": "Families come for the schools: North Gwinnett High ranks sixteenth in Georgia."
+        ]
       },
       {
-        "type": "rows",
-        "eyebrow": "Getting around",
-        "headline": "On the I-85 corridor",
-        "rows": [
+        "say": "Then Atlanta arrived. In thirty years, the town grew more than eightfold.",
+        "shots": [
           {
-            "k": "~40 min",
-            "v": "to downtown Atlanta, off-peak"
-          },
-          {
-            "k": "45–75 min",
-            "v": "to downtown at rush hour"
-          },
-          {
-            "k": "45–60 min",
-            "v": "to Hartsfield-Jackson airport"
+            "photo": "b3558ddf",
+            "callout": {
+              "type": "count",
+              "from": 2412,
+              "to": 20786,
+              "label": "residents · 1990 → 2020",
+              "source": "U.S. Census Bureau",
+              "series": [
+                {
+                  "label": "1990",
+                  "value": 2412
+                },
+                {
+                  "label": "2000",
+                  "value": 8725
+                },
+                {
+                  "label": "2010",
+                  "value": 15355
+                },
+                {
+                  "label": "2020",
+                  "value": 20786
+                }
+              ]
+            }
           }
-        ],
-        "say": "Interstate 85 puts downtown about forty minutes away off-peak, the airport under an hour."
+        ]
       },
       {
-        "type": "rows",
-        "eyebrow": "Planning",
-        "headline": "Growth, on purpose",
-        "rows": [
+        "say": "Instead of sprawling, the city built a center: a park, a plaza, a city hall.",
+        "shots": [
           {
-            "k": "2024",
-            "v": "Town Center on Main — a 13-acre park beside the library"
+            "photo": "33ffc205",
+            "weight": 8,
+            "callout": {
+              "type": "stat",
+              "big": "2005–09",
+              "label": "Town Center Park and City Hall",
+              "source": "City of Suwanee"
+            }
           },
           {
-            "k": "I-85",
-            "v": "Suwanee Gateway — an office district planned at the interchange"
-          },
-          {
-            "k": "2040",
-            "v": "Comprehensive plan — infill at medium density"
+            "photo": "84446a55",
+            "weight": 7
           }
-        ],
-        "source": "City of Suwanee 2040 Comprehensive Plan",
-        "say": "And it grows on purpose: a new thirteen-acre park, and an office district planned at the interstate."
-      }
-    ],
-    "places": [
-      {
-        "poi": "Town Center Park",
-        "say": "Downtown, a section of the Berlin Wall stands in Town Center Park, home of Suwanee Fest each September."
+        ]
       },
       {
-        "poi": "Gwinnett County Public Library",
-        "say": "Next door, the library anchors the city's newest park."
+        "say": "Now it's where the town gathers — concerts on the lawn, festivals after dark.",
+        "shots": [
+          {
+            "photo": "ac380f96",
+            "weight": 8,
+            "callout": {
+              "type": "tag",
+              "kicker": "Town Center Park",
+              "text": "Concerts and festivals, all year"
+            }
+          },
+          {
+            "photo": "d76971c5",
+            "weight": 6
+          }
+        ]
       },
       {
-        "poi": "Tequila Mama",
-        "say": "Dinner is steps from the green, on the patio at Tequila Mama."
+        "say": "Public art lines its walks, much of it on loan and changing with each new tour.",
+        "shots": [
+          {
+            "photo": "268c3d2e",
+            "weight": 7,
+            "callout": {
+              "type": "tag",
+              "kicker": "SculpTour",
+              "text": "Public art on loan since 2011"
+            }
+          },
+          {
+            "photo": "cf918144",
+            "weight": 7
+          }
+        ]
       },
       {
-        "poi": "StillFire Brewing",
-        "say": "So is StillFire Brewing, with its patio out front."
+        "say": "Families come for the schools: North Gwinnett High ranks sixteenth in Georgia.",
+        "shots": [
+          {
+            "photo": "e5632242",
+            "callout": {
+              "type": "stat",
+              "big": "#16",
+              "label": "in Georgia · North Gwinnett High · 95% graduate in four years",
+              "source": "U.S. News, 2025–26 · SchoolDigger"
+            }
+          }
+        ]
       },
       {
-        "poi": "Suwanee Creek Greenway",
-        "say": "Beyond downtown, the Suwanee Creek Greenway runs four miles through woods and wetland."
+        "say": "A greenway follows the creek through the middle of town, over boardwalks, to lakes tucked between the neighbourhoods.",
+        "shots": [
+          {
+            "photo": "52f135cb",
+            "weight": 9,
+            "callout": {
+              "type": "tag",
+              "kicker": "Suwanee Creek Greenway",
+              "text": "Through the middle of town"
+            }
+          },
+          {
+            "photo": "64214feb",
+            "weight": 5
+          },
+          {
+            "photo": "b825542f",
+            "callout": {
+              "type": "tag",
+              "kicker": "Sims Lake Park"
+            }
+          }
+        ]
       },
       {
-        "poi": "Sims Lake Park",
-        "say": "Sims Lake Park is the quiet one — a path around a lake with a fountain."
+        "say": "Atlanta is thirty-three miles down I-85 — forty minutes, more at rush hour.",
+        "shots": [
+          {
+            "photo": "aeefaa03",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "~40 min",
+              "label": "to downtown Atlanta · 45–75 at rush hour",
+              "source": "33 mi via I-85"
+            }
+          },
+          {
+            "photo": "69dae8ad",
+            "weight": 6
+          }
+        ]
       },
       {
-        "poi": "North Gwinnett High School",
-        "say": "North Gwinnett High School is two miles from Town Center."
+        "say": "And it's still building: a second downtown park opened in 2024, beside the library.",
+        "shots": [
+          {
+            "photo": "ac13dc13",
+            "callout": {
+              "type": "stat",
+              "big": "2024",
+              "label": "Town Center on Main · 13 acres",
+              "source": "City of Suwanee"
+            }
+          },
+          {
+            "photo": "4d0134b9"
+          }
+        ]
       },
       {
-        "poi": "Suwanee Jubilee",
-        "say": "Suwanee Jubilee, two miles out, handles shops, studios and a few restaurants."
+        "say": "Suwanee. A small town that decided what it wanted to be.",
+        "shots": [
+          {
+            "photo": "4f006aa8",
+            "weight": 3
+          },
+          {
+            "photo": "56cb362f"
+          }
+        ]
       }
     ]
   }

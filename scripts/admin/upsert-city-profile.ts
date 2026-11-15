@@ -49,9 +49,9 @@ async function main() {
   }
   const profile = parsed.data;
   const words = (s: string) => s.trim().split(/\s+/).length;
+  const lines = profile.film.lines;
   console.log(
-    `${slug}: ${profile.film.frames.length} frames (${profile.film.frames.reduce((a, f) => a + words(f.say), 0)} words), ` +
-      `${profile.film.places.length} place lines (${profile.film.places.reduce((a, p) => a + words(p.say), 0)} words)`,
+    `${slug}: ${lines.length} lines (${lines.reduce((a, l) => a + words(l.say), 0)} words) over ${lines.reduce((a, l) => a + l.shots.length, 0)} photos`,
   );
   if (checkOnly) return;
 
