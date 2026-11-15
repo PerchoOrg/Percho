@@ -23,6 +23,12 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 21:50 UTC — phase336.3: the shared film pauses on a tap and is shown whole
+
+**Objective**: Owner, on the Suwanee link opened in WeChat (it played): "不能暂停 而且左边被truncate了一部分" — his screenshot shows "1871" and "depot on the Air Line Railroad" cut at the left edge.
+**Cause**: `object-cover` on a WeChat viewport (~0.47 wide-to-tall) against the film's 135:197 (~0.69) cut about a sixth off each side, and the callouts are drawn from the left edge. No control paused the film; only the sound pill was tappable.
+**Actions**: `WatchFilm` — the film is `object-contain object-top`: whole, from the top, black below it where the name, button and credits sit (the callouts end at 74.5% of the film's height, above the panel). A transparent full-screen button over the film toggles play/pause; paused (or autoplay refused) shows the ▶ disc. The first tap after a refused autoplay still plays with sound.
+
 ## 2026-11-15 21:20 UTC — phase336.1: the shared film starts itself, or asks for one tap
 
 **Objective**: Owner: "链接视频没有自动播放".

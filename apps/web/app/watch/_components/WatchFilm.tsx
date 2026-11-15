@@ -40,6 +40,8 @@ export function WatchFilm({ eyebrow, name, line, film, credits, appStoreUrl }: W
    * button — and since that tap IS the gesture, it plays with sound.
    */
   const [blocked, setBlocked] = useState(false);
+  /** Paused by the viewer (phase336.3, owner: "不能暂停") — tap the film to toggle. */
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -75,6 +77,15 @@ export function WatchFilm({ eyebrow, name, line, film, credits, appStoreUrl }: W
     );
   };
 
+  /** A tap on the film: the first one after a refused autoplay plays with sound. */
+  const togglePlay = () => {
+    const el = ref.current;
+    if (!el) return;
+    if (blocked) return playWithSound();
+    if (el.paused) void el.play().catch(() => {});
+    else el.pause();
+  };
+
   const toggleSound = () => {
     const el = ref.current;
     if (!el) return;
@@ -94,28 +105,43 @@ export function WatchFilm({ eyebrow, name, line, film, credits, appStoreUrl }: W
           playsInline
           poster={film.poster ?? undefined}
           // Whatever started it, a film that is playing needs no play button.
-          onPlaying={() => setBlocked(false)}
-          className="absolute inset-0 h-full w-full object-cover"
+          onPlaying={() => {
+            setBlocked(false);
+            setPaused(false);
+          }}
+          onPause={() => setPaused(true)}
+          // The whole film, from the top (phase336.3, owner: "左边被truncate了
+          // 一部分"). A phone screen is far narrower than the film's 135:197,
+          // so `cover` cut its sides — and the figures are drawn from the left
+          // edge. Shown whole, it leaves black below, where the name and the
+          // button sit; the figures end at 74.5% of its height, clear of them.
+          className="absolute inset-0 h-full w-full object-contain object-top"
         />
       ) : null}
 
-      {film && blocked ? (
+      {film ? (
         <button
           type="button"
-          onClick={playWithSound}
-          aria-label="Play the film"
-          className="absolute inset-0 z-10 flex items-center justify-center bg-black/20"
+          onClick={togglePlay}
+          aria-label={blocked || paused ? 'Play the film' : 'Pause the film'}
+          className={`absolute inset-0 z-10 flex items-center justify-center ${
+            blocked || paused ? 'bg-black/20' : ''
+          }`}
         >
-          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white/90 text-3xl text-ink">
-            <span aria-hidden="true" className="ml-1.5">
-              ▶
+          {blocked || paused ? (
+            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white/90 text-3xl text-ink">
+              <span aria-hidden="true" className="ml-1.5">
+                ▶
+              </span>
             </span>
-          </span>
+          ) : null}
         </button>
       ) : null}
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/50 to-transparent" />
-      <p className="absolute left-4 top-4 font-semibold text-lg tracking-tight">Percho</p>
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-24 bg-gradient-to-b from-black/50 to-transparent" />
+      <p className="pointer-events-none absolute left-4 top-4 z-20 font-semibold text-lg tracking-tight">
+        Percho
+      </p>
       {film ? (
         <button
           type="button"
