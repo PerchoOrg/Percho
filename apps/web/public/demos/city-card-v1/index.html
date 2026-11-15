@@ -88,6 +88,21 @@ body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px 16px
 .place div{font:600 12px/1.3 var(--ui);margin-top:5px}
 .place small{font:400 11px var(--ui);color:var(--ink3)}
 .end{height:18px}
+.chip{display:inline-flex;align-items:center;gap:6px;font:700 12px var(--ui);background:#F0A94B;color:#2B2116;border-radius:999px;padding:6px 11px;margin:2px 0 12px}
+.rank .row{display:grid;grid-template-columns:86px 1fr;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.rank .row:last-child{border-bottom:0}
+.rank .n{font:800 24px/1 var(--ui);color:var(--accent)}
+.rank .n small{display:block;font:600 10.5px var(--ui);color:var(--ink3);margin-top:3px;letter-spacing:.2px}
+.rank b{font:600 13.5px var(--ui)}
+.rank p{font:400 12px/1.4 var(--ui);color:var(--ink2);margin-top:2px}
+.vs .item{margin:10px 0 12px}
+.vs .lab{display:flex;justify-content:space-between;font:600 12.5px var(--ui);margin-bottom:5px}
+.vs .lab span:last-child{color:var(--green)}
+.vs .pair{display:grid;grid-template-columns:66px 1fr 72px;gap:8px;align-items:center;font:500 11.5px var(--ui);color:var(--ink2);margin:3px 0}
+.vs .track{height:9px;background:#EFEAE2;border-radius:6px;overflow:hidden}
+.vs .f1{height:100%;background:var(--accent);border-radius:6px}
+.vs .f2{height:100%;background:#C9BFB1;border-radius:6px}
+.vs .val{text-align:right;font-weight:700;color:var(--ink)}
 
 /* ── 3 · storyboard ────────────────────────────────────── */
 .sb{background:var(--surface);border-radius:20px;padding:14px;box-shadow:0 18px 44px rgba(0,0,0,.14)}
@@ -114,7 +129,7 @@ body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px 16px
 <div class="nav">
   <h1>City card v1 — Suwanee, GA</h1>
   <p>The city layer is about <b>the fundamentals</b> — history, growth, schools, getting around, safety, what the city is planning — and only then <b>the places</b>. A community card is the opposite: it starts from the street. Three surfaces below: the card in the feed, the city page it opens, and the new city film (data first, then one shot per place).</p>
-  <p>Every figure is sourced and dated on the page. <b>Safety is drawn but not decided</b> — see the red box.</p>
+  <p>Every figure is sourced and dated on the page; <b>rankings only where a named publisher ranked it</b>. <b>Safety is drawn but not decided</b> — see the red box; it carries no ranking.</p>
 </div>
 
 <div class="cols">
@@ -131,11 +146,12 @@ body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px 16px
           <h2>Suwanee, GA</h2>
           <div class="where">33 mi northeast of downtown Atlanta</div>
           <div class="line">A railroad village that grew 8× in thirty years — and built itself a downtown instead of sprawling.</div>
+          <div class="chip">★ #1 in Georgia for families · Fortune 2024</div>
           <div class="tiles">
             <div class="tile"><div class="k">Population</div><div class="v">20,786</div>
               <svg class="spark" width="140" height="22" viewBox="0 0 140 22"><polyline fill="none" stroke="#F0A94B" stroke-width="2.4" points="4,19 48,15 92,9 136,3"/></svg>
               <div class="s">2,412 in 1990 · 2020 census</div></div>
-            <div class="tile"><div class="k">Schools</div><div class="v">95%</div><div class="s">North Gwinnett High graduates</div></div>
+            <div class="tile"><div class="k">Schools</div><div class="v">#16 in GA</div><div class="s">North Gwinnett High · U.S. News</div></div>
             <div class="tile"><div class="k">Median home</div><div class="v">$480,600</div><div class="s">owner-occupied · ACS 2020–24</div></div>
             <div class="tile"><div class="k">To downtown</div><div class="v">~40 min</div><div class="s">off-peak · 45–75 at rush</div></div>
           </div>
@@ -160,11 +176,35 @@ body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px 16px
       </div>
 
       <div class="sec">
+        <h3>Rankings</h3>
+        <div class="box rank">
+          <div class="row"><div class="n">#1<small>in Georgia</small></div><div><b>Best Places to Live for Families</b><p>Fortune, 2024 — #27 in the U.S. of ~2,000 cities considered; the top Georgia city on the list.</p></div></div>
+          <div class="row"><div class="n">#16<small>in Georgia</small></div><div><b>North Gwinnett High School</b><p>U.S. News Best High Schools, 2025–26 · #21 of 458 on SchoolDigger.</p></div></div>
+          <div class="row"><div class="n">#6<small>in the U.S.</small></div><div><b>Suburbs for city-like living</b><p>StorageCafe, 2023 — walkable downtown, live-work-play.</p></div></div>
+          <div class="row"><div class="n">#10<small>in the U.S.</small></div><div><b>Best Places to Live</b><p>Money magazine, 2007 (small towns).</p></div></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h3>Suwanee vs. Georgia <small>ACS 2020–24</small></h3>
+        <div class="box vs">
+          <div class="item"><div class="lab"><span>Median household income</span><span>1.3× the state</span></div>
+            <div class="pair"><span>Suwanee</span><div class="track"><div class="f1" style="width:100%"></div></div><span class="val">$103,260</span></div>
+            <div class="pair"><span>Georgia</span><div class="track"><div class="f2" style="width:75%"></div></div><span class="val">$77,353</span></div></div>
+          <div class="item"><div class="lab"><span>Adults with a bachelor's or higher</span><span>1.8× the state</span></div>
+            <div class="pair"><span>Suwanee</span><div class="track"><div class="f1" style="width:62.5%"></div></div><span class="val">62.5%</span></div>
+            <div class="pair"><span>Georgia</span><div class="track"><div class="f2" style="width:34.9%"></div></div><span class="val">34.9%</span></div></div>
+          <div class="item"><div class="lab"><span>Median home value</span><span>1.6× the state</span></div>
+            <div class="pair"><span>Suwanee</span><div class="track"><div class="f1" style="width:100%"></div></div><span class="val">$480,600</span></div>
+            <div class="pair"><span>Georgia</span><div class="track"><div class="f2" style="width:63%"></div></div><span class="val">$303,300</span></div></div>
+          <div class="src">U.S. Census Bureau QuickFacts, American Community Survey 2020–2024 (2024 dollars).</div>
+        </div>
+      </div>
+
+      <div class="sec">
         <h3>At a glance <small>Census · ACS 2020–24</small></h3>
         <div class="grid4">
           <div class="stat"><div class="k">Population</div><div class="v">20,786</div><div class="s">2020 census</div></div>
-          <div class="stat"><div class="k">Median household income</div><div class="v">$103,260</div><div class="s">2024 dollars</div></div>
-          <div class="stat"><div class="k">Bachelor's or higher</div><div class="v">62.5%</div><div class="s">adults 25+</div></div>
           <div class="stat"><div class="k">Homes owner-occupied</div><div class="v">59%</div><div class="s">the rest rented</div></div>
         </div>
       </div>
@@ -204,7 +244,7 @@ body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px 16px
           <div class="row"><span>North Gwinnett HS</span><div class="track"><div class="fill" style="width:95.4%"></div></div><span class="num">95.4%</span></div>
           <div class="row"><span>Peachtree Ridge HS</span><div class="track"><div class="fill" style="width:90%"></div></div><span class="num">88–92%</span></div>
           <div class="row"><span>Gwinnett district</span><div class="track"><div class="fill amber" style="width:82.5%"></div></div><span class="num">82.5%</span></div>
-          <div class="src">North Gwinnett: Niche A+, GreatSchools 10/10, #21 of 458 GA high schools (SchoolDigger). Suwanee's 30024 ZIP is also served by Collins Hill (Gwinnett) and Lambert (Forsyth). District rate: AJC, 2021. Which school a home is zoned for is per address.</div>
+          <div class="src">North Gwinnett: #16 in Georgia (U.S. News 2025–26), Niche A+, GreatSchools 10/10, #21 of 458 GA high schools (SchoolDigger). Suwanee's 30024 ZIP is also served by Collins Hill (Gwinnett) and Lambert (Forsyth). District rate: AJC, 2021. Which school a home is zoned for is per address.</div>
         </div>
       </div>
 
@@ -278,17 +318,17 @@ body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px 16px
     <div class="sb">
       <div class="act">Act 1 · The city — 0:00–0:45</div>
 
-      <div class="fr"><div class="thumb"><img src="https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/listing-photos/poi/51ef1ae7-ec38-4166-a07d-66e2d420ed48/c1ede091.jpg" alt=""><div class="ov"><span class="big">Suwanee</span>Gwinnett · GA<br>20,786 people</div></div>
-        <div><div class="meta"><span class="tag data">TITLE</span>0:00–0:07</div><div class="vo">This is Suwanee, Georgia: about twenty-one thousand people, thirty-three miles northeast of downtown Atlanta.</div></div></div>
+      <div class="fr"><div class="thumb"><img src="https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/listing-photos/poi/51ef1ae7-ec38-4166-a07d-66e2d420ed48/c1ede091.jpg" alt=""><div class="ov"><span class="big">Suwanee</span>#1 in GA<br>for families · Fortune</div></div>
+        <div><div class="meta"><span class="tag data">TITLE</span>0:00–0:07</div><div class="vo">This is Suwanee, Georgia — Fortune's top city in the state for families, thirty-three miles northeast of downtown Atlanta.</div></div></div>
 
       <div class="fr"><div class="thumb"><img src="https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/listing-photos/poi/51ef1ae7-ec38-4166-a07d-66e2d420ed48/ff9e64d6.jpg" alt=""><div class="ov"><span class="big">1871</span>depot<br>1949 city · 1979 Falcons</div></div>
         <div><div class="meta"><span class="tag data">HISTORY</span>0:07–0:15</div><div class="vo">It grew up around a railroad depot in 1871, became a city in 1949, and for twenty years was the Atlanta Falcons' home base.</div></div></div>
 
-      <div class="fr"><div class="thumb"><img src="https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/listing-photos/poi/51ef1ae7-ec38-4166-a07d-66e2d420ed48/c1ede091.jpg" alt=""><div class="ov"><span class="big">8.6×</span>since 1990<br>bar chart animates</div></div>
-        <div><div class="meta"><span class="tag data">GROWTH</span>0:15–0:23</div><div class="vo">Since 1990 it has grown more than eightfold, and instead of sprawling it built itself a downtown.</div></div></div>
+      <div class="fr"><div class="thumb"><img src="https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/listing-photos/poi/51ef1ae7-ec38-4166-a07d-66e2d420ed48/c1ede091.jpg" alt=""><div class="ov"><span class="big">8.6×</span>since 1990<br>income 1.3× GA</div></div>
+        <div><div class="meta"><span class="tag data">GROWTH</span>0:15–0:23</div><div class="vo">Since 1990 it has grown more than eightfold — nearly two in three adults hold a degree, almost twice the state rate.</div></div></div>
 
-      <div class="fr"><div class="thumb"><img src="https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/listing-photos/poi/7163aa86-29a3-422e-b8de-fa998bfb0f6f/48b1b85a.jpg" alt=""><div class="ov"><span class="big">95%</span>North Gwinnett<br>graduation rate</div></div>
-        <div><div class="meta"><span class="tag data">SCHOOLS</span>0:23–0:31</div><div class="vo">Most families come for the schools. North Gwinnett High graduates more than ninety-five percent of its students.</div></div></div>
+      <div class="fr"><div class="thumb"><img src="https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/listing-photos/poi/7163aa86-29a3-422e-b8de-fa998bfb0f6f/48b1b85a.jpg" alt=""><div class="ov"><span class="big">#16</span>in Georgia<br>95% graduate</div></div>
+        <div><div class="meta"><span class="tag data">SCHOOLS</span>0:23–0:31</div><div class="vo">Most families come for the schools. North Gwinnett High ranks sixteenth in Georgia and graduates more than ninety-five percent of its students.</div></div></div>
 
       <div class="fr"><div class="thumb"><img src="https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/listing-photos/poi/c6da27f4-3c91-4832-b87c-b643793f2240/fd810751.jpg" alt=""><div class="ov"><span class="big">40 min</span>to downtown<br>map: I-85 corridor</div></div>
         <div><div class="meta"><span class="tag data">GETTING AROUND</span>0:31–0:38</div><div class="vo">I-85 is minutes away: downtown in about forty minutes before rush hour, the airport in under an hour.</div></div></div>
