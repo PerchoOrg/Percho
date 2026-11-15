@@ -48,6 +48,7 @@ import { useCfScores } from "../../hooks/use-cf-scores";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
 import type { FeedCardV3 } from "../../lib/feed/card-types";
+import { cityFilmCard } from "../../lib/feed/city-film-card";
 import { deckKey } from "../../lib/feed/deck-key";
 import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
@@ -562,28 +563,40 @@ export default function FeedScreen() {
 		(card: FeedCardV3, args: CardRenderArgs) => {
 			const isTop = args.role === "top";
 			switch (card.kind) {
-				case "area":
+				case "area": {
+					// A city with a film wears the community card's face — its place
+					// label, its progress bar, its bottom row (phase329: "要保持一致").
+					const film = cityFilmCard(card);
+					const toCity = card.unit.citySlug
+						? () => {
+								emitGesture("explore_tap", card);
+								router.push(`/city/${card.unit.citySlug}`);
+							}
+						: undefined;
+					if (film) {
+						return (
+							<CommunityFace
+								card={film}
+								tag="CITY"
+								saveKind="area"
+								isTop={isTop}
+								suspended={!focused || paused}
+								tapSlot={args.tapSlot}
+								deckGesture={args.deckGesture}
+								{...(toCity ? { onExplore: toCity } : {})}
+							/>
+						);
+					}
 					return (
 						<AreaFace
 							card={card}
 							isTop={isTop}
 							suspended={!focused || paused}
 							tapSlot={args.tapSlot}
-							/* A city we have made a film of has a page (phase327);
-							   one without has nowhere to send the link, so it draws
-							   none. In the stack the tap arrives through
-							   `onTapTarget` → EXPLORE_TAP_TARGET, as on the other
-							   faces. */
-							{...(card.unit.citySlug
-								? {
-										onExplore: () => {
-											emitGesture("explore_tap", card);
-											router.push(`/city/${card.unit.citySlug}`);
-										},
-									}
-								: {})}
+							{...(toCity ? { onExplore: toCity } : {})}
 						/>
 					);
+				}
 				case "listing":
 					return (
 						<ListingFace

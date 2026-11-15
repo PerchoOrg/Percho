@@ -83,7 +83,9 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 	it("carries BOTH corner controls, at the badge's own inset", () => {
 		expect(SRC).toContain("<CardCorner");
 		expect(SRC).toContain("SAVE_TAP_TARGET");
-		expect(SRC).toContain('toggleSaved(card.id, "community")');
+		// Filed as a community unless the face is drawing a city (phase329).
+		expect(SRC).toContain("toggleSaved(card.id, saveKind)");
+		expect(SRC).toContain('saveKind = "community"');
 		// No community-specific offset survives: the control sits where the
 		// listing card's does, which is the whole point of the change.
 		expect(SRC).not.toContain("COMMUNITY_SOUND_TOP");

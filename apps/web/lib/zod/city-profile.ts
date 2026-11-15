@@ -69,7 +69,9 @@ const say = z
  *
  *   stat  — one figure, what it measures, and who says so.
  *   count — a figure that changed: it counts up beside a small line chart.
- *   tag   — a place or a date in the corner; no figure.
+ *
+ * A place NAME is not a callout: the phone draws it, as it does on every
+ * community film, from the shot's `label` (phase329).
  */
 export const cityFilmCalloutSchema = z.discriminatedUnion('type', [
   z.object({
@@ -89,11 +91,6 @@ export const cityFilmCalloutSchema = z.discriminatedUnion('type', [
       .array(z.object({ label: z.string().min(1).max(6), value: z.number().nonnegative() }))
       .min(2)
       .max(6),
-  }),
-  z.object({
-    type: z.literal('tag'),
-    kicker: z.string().min(1).max(28),
-    text: z.string().max(48).optional(),
   }),
 ]);
 export type CityFilmCallout = z.infer<typeof cityFilmCalloutSchema>;
@@ -115,6 +112,12 @@ const filmShot = z.object({
   photo: z
     .string()
     .regex(/^[0-9a-f]{8}(-[0-9a-f-]{27})?$/, 'a photo id, or its first 8 characters'),
+  /**
+   * The place the picture shows, as the card's place pill names it
+   * ("Old Town", "Riverwatch Middle"). Left out, the shot is named for the
+   * place its photo is filed under — which is not always what it shows.
+   */
+  label: z.string().min(1).max(40).optional(),
   /** This shot's share of the line's time, relative to the line's other shots. */
   weight: z.number().positive().max(20).optional(),
   /** The camera move; left out, the cut picks one from the photo's shape. */
@@ -152,6 +155,26 @@ export const cityProfileSchema = z.object({
     source,
   }),
   education: z.object({
+    /**
+     * The schools worth naming, at every level (owner 2026-11-15: "need to
+     * mention top primary, middle and high, even university if any in this
+     * area, not just high school"). A `rank` only where a named publisher made
+     * one; a college is listed for what it is.
+     */
+    schools: z
+      .array(
+        z.object({
+          level: z.enum(['elementary', 'middle', 'high', 'college']),
+          name: z.string().min(1).max(60),
+          /** "#9" */
+          rank: z.string().min(2).max(5).optional(),
+          /** "in Georgia" */
+          scope: z.string().max(20).optional(),
+          detail: z.string().max(160),
+          source,
+        }),
+      )
+      .max(12),
     measure: z.string().min(1).max(40),
     rows: z.array(
       z.object({

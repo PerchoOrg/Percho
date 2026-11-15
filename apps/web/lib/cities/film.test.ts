@@ -202,6 +202,21 @@ describe('buildCityFilm', () => {
     expect(film.shots.map((s) => s.move)).toEqual(['pan_lr', 'pull_back', 'pull_back', 'pan_rl']);
   });
 
+  it('names a shot for the place it shows, which is what the card labels it', () => {
+    const film = buildCityFilm({
+      profile: profileOf([
+        { say: eight, shots: [{ photo: 'aaaaaaaa', label: 'Old Town' }] },
+        { say: eight, shots: [{ photo: 'bbbbbbbb' }] },
+        { say: eight, shots: [{ photo: 'eeeeeeee' }] },
+        { say: eight, shots: [{ photo: 'ffffffff' }] },
+      ]),
+      photos,
+    });
+    expect(film.shots[0]).toMatchObject({ poi_name: 'Old Town', label: 'Old Town' });
+    // Unnamed: the place the photo is filed under.
+    expect(film.shots[1]?.poi_name).toBe('Place bbbbbbbb');
+  });
+
   it('carries a callout on the shot it was written for', () => {
     const film = buildCityFilm({
       profile: profileOf([

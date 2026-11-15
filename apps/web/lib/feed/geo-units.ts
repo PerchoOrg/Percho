@@ -63,6 +63,7 @@ export interface GeoUnitDTO {
    */
   videoUrl?: string;
   citySlug?: string;
+  tourSegments?: Array<{ name: string; endFraction: number }>;
   communityCount: number;
   sampleCommunityNames: string[];
   stats: GeoStatsDTO;

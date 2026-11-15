@@ -287,6 +287,7 @@ export async function GET(request: Request) {
           ...unit,
           videoUrl: film.videoUrl,
           citySlug: film.slug,
+          ...(film.segments.length > 0 ? { tourSegments: film.segments } : {}),
           heroUrl: film.posterUrl,
         }
       : unit;
