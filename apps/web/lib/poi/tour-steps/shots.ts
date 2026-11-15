@@ -74,8 +74,35 @@ const CLIPS_BY_BUCKET: Record<string, number> = {
 };
 const DEFAULT_CLIPS_PER_POI = 2;
 
-function clipsAllowedFor(bucket: string | null | undefined): number {
-  return CLIPS_BY_BUCKET[bucket ?? ''] ?? DEFAULT_CLIPS_PER_POI;
+/**
+ * A city film's quotas (phase320), over the community ones above.
+ *
+ * In a community film the civic buildings and the brewery are background — a
+ * clip each. In a city film they ARE the subject: Suwanee's first plan gave
+ * City Hall and the library one clip apiece and came out at 46s for a town
+ * whose whole story is its downtown. A city has no amenities act either, so
+ * without these the film is half the length of a community's. Schools drop to
+ * two: a city is served by several, and the film names the high school.
+ */
+const CITY_CLIPS_BY_BUCKET: Partial<Record<string, number>> = {
+  civic: 3,
+  outdoor: 3,
+  kids: 2,
+  nightlife: 2,
+  fitness: 2,
+  schools: 2,
+};
+
+function clipsAllowedFor(
+  bucket: string | null | undefined,
+  kind: 'community' | 'city' = 'community',
+): number {
+  const b = bucket ?? '';
+  return (
+    (kind === 'city' ? CITY_CLIPS_BY_BUCKET[b] : undefined) ??
+    CLIPS_BY_BUCKET[b] ??
+    DEFAULT_CLIPS_PER_POI
+  );
 }
 
 /**
@@ -352,7 +379,7 @@ export async function computeFinalShots(
     const groupAmenity = amenityOfKey(groupKey);
     const allowed = groupAmenity
       ? (amenitySlots.get(groupAmenity) ?? 0)
-      : clipsAllowedFor(buckets?.get(arr[0]!.poi_id));
+      : clipsAllowedFor(buckets?.get(arr[0]!.poi_id), owner?.scope.kind);
     // One ESTABLISHING frame is promoted ahead of the score order.
     //
     // A place has to be recognisable before a detail of it means anything, and
@@ -393,7 +420,7 @@ export async function computeFinalShots(
               ? allowed === 0
                 ? `${AMENITY_LABEL[groupAmenity]} got no slot in the community act's ${COMMUNITY_ACT_CLIP_BUDGET} clips`
                 : `not in the top ${allowed} for ${AMENITY_LABEL[groupAmenity]}`
-              : `not in the top ${clipsAllowedFor(buckets?.get(row.poi_id))} for this place`;
+              : `not in the top ${clipsAllowedFor(buckets?.get(row.poi_id), owner?.scope.kind)} for this place`;
       dropped.push({ photo_id: row.id, poi_id: row.poi_id, reason });
     }
   }

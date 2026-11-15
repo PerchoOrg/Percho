@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 01:30 UTC — phase319–320: City Tour index table, Home Nearby tab gone, city clip quotas; Suwanee's first film
+
+**Objective**: Owner: (1) research Suwanee, write a city introduction and a <2 min script, ≥70% of lines over matching footage and ≤30% over related footage; (2) "for city tour, start with table following the pattern from others, dont show the title again"; (3) drop the Home Nearby tab if unused; then (4) "一张一张审核工作量太大 … 你根据调研和分析直接作出判断 … 我只用扫一眼看明显不行的reject 大部分情况直接开始render".
+**Actions**:
+- phase319 (`8c1cd0a7`): `/admin/pipeline/city-tours` is `CommunityNearbyTable` (now `kind="city"`, columns built by `columnsFor`) over the city tables, folded by `foldTourActivity`; no page heading. Home Nearby left the tab bar; its pages still work and Video Jobs rows link to them.
+- Research (web): pop. 20,786 (2020); Town Center built 2005–09; Town Center on Main (13-acre park, 2024) with a rebuilt PlayTown; Berlin Wall section on permanent display in Town Center Park (donated 2018); SculpTour since 2011 (79 sculptures); Suwanee Fest every September (40th year 2024); Suwanee Creek Greenway ~4 mi; Money top-10 (2007), Fortune #1 in Georgia for families (2024); North Gwinnett HS A+ Niche / 10 GreatSchools. Intro + script posted to the owner in chat (not stored).
+- Editorial pass instead of the owner's photo-by-photo review: excluded Medieval Times, Mall of Georgia, Cauley Creek Park from THIS film (`city_pois.status = rejected` — photo status is global, these photos serve other films); rejected globally the two 2004 wooden-PlayTown photos (torn down 2024) and a City Hall photo filed under Big Splash. Note `pending` was never "unapproved": plan picks from pending and writes `approved` for the cut — the 37 pending photos were all usable.
+- First plan: 14 shots / 46.5s — civic/nightlife get 1 clip in a community film. phase320: `CITY_CLIPS_BY_BUCKET` (civic 3, outdoor 3, kids/nightlife/fitness 2, schools 2) via `computeFinalShots`' owner scope → 22 shots / 73.5s.
+- Narration: the generated lines ("Tequila Mama dominates dinner…") replaced by the researched script, fitted to plan's seven sections' word budgets (126 words; `narration.edited` records it). The one uncached Seedance shot moved to DepthFlow orbit (free engines only). `generate,assemble` → **city assembly `55c80509`, `cf_stream_uid 6e390ca21d0d4ec3f3491d819ba82476`, 65.5s, 22 clips** — the first city assembly the worker claimed. Frames: City Hall, greenway deer, Sims Lake pier, Berlin Wall, library vault, StillFire, Jubilee.
+**Issues**: City Hall's facade appears five times — the City Hall POI and Town Center Park both carry City Hall photos. A cross-POI same-subject dedupe belongs in plan. Two Big Splash photos with children were auto-rejected (people in frame); left rejected. Worker logs show transient `MaxRetryError` to Supabase in the claim loop (caught, retried).
+**Next steps**: Owner watches and rejects anything obvious; same-subject dedupe; city card (iOS feed + web city page); then Suwanee's communities.
+
 ## 2026-11-15 00:10 UTC — phase318: cities get their own tables and film pipeline; Suwanee at the review gate
 
 **Objective**: Owner: city cards ("like a community card but general — all the highlights — still specific about uniqueness"); hierarchy country → state → city → community → home, city and community first; start with north-Atlanta cities with good schools, Suwanee first, one by one; "单独建一套城市表".
