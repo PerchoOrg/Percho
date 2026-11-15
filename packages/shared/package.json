@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
+    "./city": "./src/city.ts",
     "./community-compare": "./src/community-compare.ts",
     "./community-take": "./src/community-take.ts",
     "./compare-table": "./src/compare-table.ts",

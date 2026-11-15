@@ -12,12 +12,18 @@ thing, and leaves with the clip.
 
 The callout SPECS are written by the web side from `cities.profile`
 (`apps/web/lib/cities/film.ts`, schema in `lib/zod/city-profile.ts`); this file
-only draws what it is handed. Four kinds:
+only draws what it is handed. Three kinds:
 
-  title — the city's name, large, and where it is.
   stat  — one figure, what it measures, who says so.
   count — a figure that changed: it counts up beside a small line chart.
-  tag   — a place or a date in the top corner; no figure.
+  tag   — a place or a date near the top corner; no figure.
+
+WHERE they are drawn is decided by the phone, not by the picture (phase327).
+The film plays full-frame on the city card, and the card draws over it: a CITY
+pill and the sound/save control across the top 8% of the frame, and the city's
+name, its community count and the Explore link from 77% down. So a tag starts
+at `TAG_TOP` and a figure block ends at `FIGURE_BOTTOM` — the band between is
+the only part of the frame that is always the film's own.
 
 Drawn with Pillow because this worker's ffmpeg has no drawtext (phase66.1).
 `draw_callout` takes the time since the clip started, so one function gives
@@ -43,6 +49,11 @@ COUNT_MAX_S = 2.6
 COUNT_MIN_S = 1.2
 #: What a counter leaves of its clip: its arrival before, a held result after.
 COUNT_REST_S = 2.4
+
+#: Below the card's top chrome (CITY pill, sound/save: 2-8% of the frame).
+TAG_TOP = 0.105
+#: Above the card's own text (name, count, Explore: from 77% of the frame).
+FIGURE_BOTTOM = 0.745
 
 WHITE = (255, 255, 255)
 AMBER = (240, 169, 75)  # `accentOnCard` in apps/mobile/theme/tokens.ts
@@ -172,20 +183,20 @@ def _scrim(c: _Canvas, a: float) -> None:
     w, h = c.w, c.h
     column = Image.new("L", (1, h))
     for row in range(h):
-        k = _ease((row / h - 0.42) / 0.46)
-        column.putpixel((0, row), round(255 * 0.66 * k * a))
+        k = _ease((row / h - 0.30) / 0.42)
+        column.putpixel((0, row), round(255 * 0.62 * k * a))
     layer = Image.new("RGBA", (w, h), WASH + (0,))
     layer.putalpha(column.resize((w, h)))
     c.img = Image.alpha_composite(c.img, layer)
 
 
-def _figure_block(c: _Canvas, callout: dict[str, Any], t: float, big_scale: float) -> None:
-    """`title` and `stat`: a large figure, a rule, a label and (stat) a source."""
+def _figure_block(c: _Canvas, callout: dict[str, Any], t: float) -> None:
+    """`stat`: a large figure, a rule, a label and a source."""
     w, h = c.w, c.h
     mx = round(w * 0.085)
     inner = w - 2 * mx
     big = str(callout.get("big", ""))
-    bfont = _fit(big, _serif, round(w * big_scale), inner, round(w * 0.033))
+    bfont = _fit(big, _serif, round(w * 0.165), inner, round(w * 0.033))
     lfont = _sans(round(w * 0.043), "Semibold")
     lines = _wrap(str(callout.get("label", "")), lfont, inner * 0.92, 2)
     source = str(callout.get("source") or "")
@@ -195,7 +206,7 @@ def _figure_block(c: _Canvas, callout: dict[str, Any], t: float, big_scale: floa
     label_h = round(len(lines) * lfont.size * 1.28)
     source_h = round(sfont.size * 1.9) if source else 0
     total = round(bfont.size * 1.12) + rule_gap + rule_h + rule_gap + label_h + source_h
-    y = round(h * 0.885) - total
+    y = round(h * FIGURE_BOTTOM) - total
 
     _scrim(c, _appear(t))
     c.stamp(lambda d: d.text((mx, y), big, font=bfont, fill=WHITE + (255,)), _appear(t))
@@ -225,14 +236,14 @@ def _count_block(c: _Canvas, callout: dict[str, Any], t: float, clip_seconds: fl
     """`count`: a small line chart, the counter under it, then what it counts."""
     w, h = c.w, c.h
     mx = round(w * 0.085)
-    pad = round(w * 0.042)
+    pad = round(w * 0.036)
     series = callout.get("series") or []
     lo, hi = float(callout.get("from") or 0), float(callout.get("to") or 0)
     q = count_progress(t, clip_seconds)
 
     # Sized for the widest value, so the panel does not breathe as it counts.
     widest = f"{round(max(lo, hi)):,}"
-    bfont = _fit(widest, _serif, round(w * 0.150), w * 0.62, round(w * 0.07))
+    bfont = _fit(widest, _serif, round(w * 0.130), w * 0.62, round(w * 0.07))
     lfont = _sans(round(w * 0.040), "Semibold")
     sfont = _sans(round(w * 0.027), "Regular")
     yfont = _sans(round(w * 0.026), "Medium")
@@ -241,14 +252,14 @@ def _count_block(c: _Canvas, callout: dict[str, Any], t: float, clip_seconds: fl
     lines = _wrap(str(callout.get("label", "")), lfont, inner, 2)
     source = str(callout.get("source") or "")
 
-    chart_h = round(w * 0.150)
+    chart_h = round(w * 0.105)
     years_h = round(yfont.size * 1.9)
-    big_h = round(bfont.size * 1.24)
+    big_h = round(bfont.size * 1.22)
     rule_h = max(4, round(w * 0.006))
     label_h = round(len(lines) * lfont.size * 1.28)
     source_h = round(sfont.size * 1.9) if source else 0
-    panel_h = pad + chart_h + years_h + big_h + rule_h + round(w * 0.04) + label_h + source_h + pad
-    x0, y1 = mx - round(pad * 0.4), round(h * 0.90)
+    panel_h = pad + chart_h + years_h + big_h + rule_h + round(w * 0.034) + label_h + source_h + pad
+    x0, y1 = mx - round(pad * 0.4), round(h * (FIGURE_BOTTOM + 0.01))
     y0 = y1 - panel_h
     arrive = _appear(t)
 
@@ -297,7 +308,7 @@ def _count_block(c: _Canvas, callout: dict[str, Any], t: float, clip_seconds: fl
     y += big_h
     c.stamp(lambda d: d.rounded_rectangle((x0 + pad, y, x0 + pad + round(w * 0.13), y + rule_h),
                                           radius=rule_h // 2, fill=AMBER + (255,)), arrive, rise=0)
-    y += rule_h + round(w * 0.04)
+    y += rule_h + round(w * 0.034)
 
     def label_fn(d, y=y):
         for i, line in enumerate(lines):
@@ -310,7 +321,7 @@ def _count_block(c: _Canvas, callout: dict[str, Any], t: float, clip_seconds: fl
 
 
 def _tag_block(c: _Canvas, callout: dict[str, Any], t: float) -> None:
-    """`tag`: a small plate in the top corner — where this is, or when."""
+    """`tag`: a small plate near the top corner — where this is, or when."""
     w, h = c.w, c.h
     mx = round(w * 0.085)
     pad_x, pad_y = round(w * 0.030), round(w * 0.024)
@@ -326,7 +337,7 @@ def _tag_block(c: _Canvas, callout: dict[str, Any], t: float) -> None:
     body_w = max([_tracked_width(kicker, kfont, track)] + [_PROBE.textlength(l, font=tfont) for l in lines])
     box_w = round(body_w + 2 * pad_x)
     box_h = round(pad_y * 2 + kfont.size * 1.1 + (len(lines) * tfont.size * 1.3 + w * 0.008 if lines else 0))
-    x0, y0 = mx - round(pad_x * 0.5), round(h * 0.062)
+    x0, y0 = mx - round(pad_x * 0.5), round(h * TAG_TOP)
 
     def tag_fn(d):
         d.rounded_rectangle((x0, y0, x0 + box_w, y0 + box_h), radius=round(w * 0.028),
@@ -343,10 +354,8 @@ def draw_callout(callout: dict[str, Any], w: int, h: int, t: float, clip_seconds
     """The callout on a transparent canvas, `t` seconds into its clip."""
     c = _Canvas(w, h)
     kind = callout.get("type")
-    if kind == "title":
-        _figure_block(c, callout, t, 0.185)
-    elif kind == "stat":
-        _figure_block(c, callout, t, 0.165)
+    if kind == "stat":
+        _figure_block(c, callout, t)
     elif kind == "count":
         _count_block(c, callout, t, clip_seconds)
     elif kind == "tag":

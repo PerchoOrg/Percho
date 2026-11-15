@@ -31,7 +31,7 @@ import { TRADEOFFS } from "./content";
 import type { GeoLevel, GeoUnit } from "./geo-unit";
 import { finestAvailableLevel, unitsAtLevel } from "./geo-unit";
 import type { Slot } from "./ratios";
-import { COMMUNITY_ONLY_MIX, STAGE_MIX } from "./ratios";
+import { CITY_FILM_MIX, COMMUNITY_ONLY_MIX, STAGE_MIX } from "./ratios";
 import {
 	byStaleness,
 	kindForFill,
@@ -88,8 +88,9 @@ export interface GenerateFeedInput {
 	 */
 	rotate?: number;
 	/**
-	 * `false` composes the communities-only deck (`COMMUNITY_ONLY_MIX`) — the
-	 * build without listings, `lib/listings-in-app.ts`. Defaults to `true`.
+	 * `false` composes the communities-only deck (`COMMUNITY_ONLY_MIX`, or
+	 * `CITY_FILM_MIX` once a city has a film) — the build without listings,
+	 * `lib/listings-in-app.ts`. Defaults to `true`.
 	 */
 	listings?: boolean;
 }
@@ -1190,9 +1191,20 @@ export function generateFeed(input: GenerateFeedInput): GenerateFeedResult {
 	const { stage, signals, pool, count } = input;
 	const rotate0 = input.rotate ?? 0;
 	const seen = new Set(input.seenIds);
-	const level = finestAvailableLevel(pool.geoUnits);
+	// The communities-only build is a deck of FILMS, so the only cities in it
+	// are the ones with a film (phase327) — the other hundred-odd city units
+	// are a name and a count, which is what got the city card pulled in August.
+	const geoUnits =
+		input.listings === false
+			? pool.geoUnits.filter((u) => !!u.videoUrl)
+			: pool.geoUnits;
+	const level = finestAvailableLevel(geoUnits);
 	const mix =
-		input.listings === false ? [...COMMUNITY_ONLY_MIX] : mixFor(stage, level);
+		input.listings === false
+			? geoUnits.length > 0
+				? [...CITY_FILM_MIX]
+				: [...COMMUNITY_ONLY_MIX]
+			: mixFor(stage, level);
 
 	const ctx: FillContext = {
 		stage,
@@ -1200,7 +1212,7 @@ export function generateFeed(input: GenerateFeedInput): GenerateFeedResult {
 		pool,
 		seen,
 		level,
-		geoRanked: rankGeoUnits(pool.geoUnits, signals),
+		geoRanked: rankGeoUnits(geoUnits, signals),
 		communityRanked: rankCommunities(pool.communities, signals),
 		listingRanked: rankListings(pool, signals),
 		loopedIds: [],

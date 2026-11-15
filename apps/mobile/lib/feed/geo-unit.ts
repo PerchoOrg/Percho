@@ -40,7 +40,10 @@ export interface GeoUnit {
 	parentId?: string;
 	centroid: { lat: number; lng: number };
 	heroUrl?: string;
+	/** The city's film. Only a city we have made one of has it (phase327). */
 	videoUrl?: string;
+	/** The slug of the city's page, `/city/<slug>` — present with the film. */
+	citySlug?: string;
 	communityCount: number;
 	/** ≤3 real `communities.name`. */
 	sampleCommunityNames: readonly string[];

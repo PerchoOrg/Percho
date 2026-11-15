@@ -72,6 +72,25 @@ export const STAGE_MIX: Record<FunnelStage, readonly Slot[]> = {
  */
 export const COMMUNITY_ONLY_MIX: readonly Slot[] = [{ fill: "community" }];
 
+/**
+ * The communities-only deck once a CITY has a film (phase327).
+ *
+ * Owner, 2026-11-14: the cards run country → state → city → community → home,
+ * "for now, lets focus on city and community". So the city card is back in the
+ * deck it was pulled from on 2026-08-22 — but only a city with a film: this
+ * deck is films only, and `generateFeed` hands the geo slot nothing else.
+ *
+ * City first, because a city is the frame its communities are read in. One in
+ * four, so with a single city film the slot is spent on the first card and
+ * then falls to a community like any dry slot.
+ */
+export const CITY_FILM_MIX: readonly Slot[] = [
+	{ fill: "geo", level: "finest" },
+	{ fill: "community" },
+	{ fill: "community" },
+	{ fill: "community" },
+];
+
 /** §1.7 pagination: first page is 12 cards. */
 export const FIRST_PAGE_SIZE = 12;
 /** §1.7: prefetch when the active card is this far from the end. */

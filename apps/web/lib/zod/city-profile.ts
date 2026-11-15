@@ -67,17 +67,11 @@ const say = z
 /**
  * One fact, drawn over the picture it belongs to.
  *
- *   title — the city's name, large, and where it is. The opening shot.
  *   stat  — one figure, what it measures, and who says so.
  *   count — a figure that changed: it counts up beside a small line chart.
  *   tag   — a place or a date in the corner; no figure.
  */
 export const cityFilmCalloutSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('title'),
-    big: z.string().min(1).max(24),
-    label: z.string().min(1).max(64),
-  }),
   z.object({
     type: z.literal('stat'),
     big: z.string().min(1).max(12),

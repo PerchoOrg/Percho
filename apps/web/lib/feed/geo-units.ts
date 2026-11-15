@@ -56,6 +56,13 @@ export interface GeoUnitDTO {
   state: string;
   centroid: { lat: number; lng: number };
   heroUrl?: string;
+  /**
+   * The city's film and the slug of its page — set by the feed route for the
+   * units `lib/cities/detail.ts` finds a film for (phase327), never by the
+   * view. A unit without them is a city we have not made a film of.
+   */
+  videoUrl?: string;
+  citySlug?: string;
   communityCount: number;
   sampleCommunityNames: string[];
   stats: GeoStatsDTO;
