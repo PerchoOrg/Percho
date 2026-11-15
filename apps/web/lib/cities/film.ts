@@ -146,13 +146,32 @@ export function isPlaceView(photo: Pick<FilmPhoto, 'description' | 'category' | 
 
 // ─── timing ─────────────────────────────────────────────────────────────────
 
-const WORDS_PER_SECOND = 2.5;
+/**
+ * The narrator's pace, MEASURED on the worker's TTS voice (Gemini, 2026-11-15):
+ * 2.0–2.4 words a second. The first cut assumed 2.5 and eight of its twelve
+ * lines had to be sped up to fit their clips.
+ */
+const WORDS_PER_SECOND = 2.3;
 const half = (s: number) => Math.round(s * 2) / 2;
-const countWords = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
+const tokens = (text: string) =>
+  text
+    .trim()
+    .split(/\s+/)
+    .filter((t) => /[A-Za-z0-9]/.test(t));
+const countWords = (text: string) => tokens(text).length;
+
+/**
+ * Words as they are SPOKEN: a figure is one token on the page and two or three
+ * words aloud ("1990", "85"). The slowest measured line was the one with a
+ * year and a count in it.
+ */
+export function spokenWords(text: string): number {
+  return tokens(text).reduce((a, t) => a + (/\d/.test(t) ? 2.5 : 1), 0);
+}
 
 /** How long a clip runs: its line at speaking pace, plus air. */
 export function secondsFor(words: number, kind: 'data' | 'place'): number {
-  const [air, min, max] = kind === 'data' ? [1.2, 5, 11] : [0.8, 3.5, 7];
+  const [air, min, max] = kind === 'data' ? [1.0, 5, 12] : [0.7, 3.5, 9];
   return half(Math.min(max, Math.max(min, words / WORDS_PER_SECOND + air)));
 }
 
@@ -167,13 +186,18 @@ export interface CityCut {
   balance: { fundamentals: number; places: number };
 }
 
-/** The line for a place: the profile's, else the curator's caption. */
-function lineFor(shot: PlaceShot, profile: CityProfile, cityName: string): string {
+/** Where the profile's script speaks of this place, or -1. */
+function scriptIndex(shot: PlaceShot, profile: CityProfile, cityName: string): number {
   const core = coreName(shot.poi_name, cityName);
-  const authored = profile.film.places.find((p) => {
+  return profile.film.places.findIndex((p) => {
     const c = coreName(p.poi, cityName);
     return c !== '' && (c === core || core.includes(c) || c.includes(core));
   });
+}
+
+/** The line for a place: the profile's, else the curator's caption. */
+function lineFor(shot: PlaceShot, profile: CityProfile, cityName: string): string {
+  const authored = profile.film.places[scriptIndex(shot, profile, cityName)];
   return (authored?.say ?? shot.vo_line ?? '').trim();
 }
 
@@ -247,9 +271,18 @@ export function buildCityCut(input: {
     );
   }
 
+  // The script's order is the cut's order: its lines are written to follow one
+  // another ("Next door, the library…"). A place the script does not mention
+  // keeps the planner's order, after the ones it does.
+  const scripted = (s: PlaceShot) => {
+    const i = scriptIndex(s, profile, cityName);
+    return i === -1 ? Number.MAX_SAFE_INTEGER : i;
+  };
+  places.sort((a, b) => scripted(a) - scripted(b));
+
   for (const shot of places) {
     const line = lineFor(shot, profile, cityName);
-    const seconds = secondsFor(countWords(line), 'place');
+    const seconds = secondsFor(spokenWords(line), 'place');
     // A cached Seedance clip is four seconds; a line that needs longer, or a
     // clip that would have to be paid for, renders as Ken Burns instead.
     if (shot.engine === 'seedance' && (!input.seedanceReady.has(shot.photo_id) || seconds > 4.5)) {
@@ -307,7 +340,7 @@ export function buildCityCut(input: {
       frame,
       bg_photo_id: bg.id,
       bg_path: bg.path,
-      duration_s: secondsFor(countWords(say), 'data'),
+      duration_s: secondsFor(spokenWords(say), 'data'),
       poi_name: f.type === 'title' ? cityName : titleCase(f.eyebrow),
       label: f.type === 'title' ? cityName : titleCase(f.eyebrow),
       label_distance: '',

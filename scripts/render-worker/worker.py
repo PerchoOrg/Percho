@@ -407,25 +407,36 @@ def clip_start_times(durs: list[float], xfade: float) -> list[float]:
     return [0.0] + [offsets[i - 1] + xfade for i in range(1, len(durs))]
 
 
+# A city film speaks one line per clip — fifteen TTS calls in under a minute,
+# which is over the preview model's rate limit: the first cut lost three lines
+# to 429 (2026-11-15). Waits long enough for a per-minute window to reopen.
+TTS_RETRY_DELAYS_S: tuple[float, ...] = (5, 10, 20, 30)
+
+
 def tts_line(text: str, voice: str, out_wav: Path) -> bool:
     """Speak one line. False on any failure — narration is never worth a tour."""
     try:
-        resp = requests.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/{TTS_MODEL}:generateContent",
-            headers={
-                "x-goog-api-key": os.environ["GEMINI_API_KEY"],
-                "content-type": "application/json",
-            },
-            json={
-                "contents": [{"parts": [{"text": text}]}],
-                "generationConfig": {
-                    "responseModalities": ["AUDIO"],
-                    "speechConfig": {
-                        "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}
+        resp = with_retry(
+            "tts",
+            lambda: requests.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{TTS_MODEL}:generateContent",
+                headers={
+                    "x-goog-api-key": os.environ["GEMINI_API_KEY"],
+                    "content-type": "application/json",
+                },
+                json={
+                    "contents": [{"parts": [{"text": text}]}],
+                    "generationConfig": {
+                        "responseModalities": ["AUDIO"],
+                        "speechConfig": {
+                            "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}
+                        },
                     },
                 },
-            },
-            timeout=120,
+                timeout=120,
+            ),
+            transient=_TRANSIENT,
+            delays=TTS_RETRY_DELAYS_S,
         )
         resp.raise_for_status()
         parts = resp.json()["candidates"][0]["content"]["parts"]
