@@ -1,6 +1,6 @@
 import type { CityFilmLine, CityProfile } from '@/lib/zod/city-profile';
 import { describe, expect, it } from 'vitest';
-import { type FilmPhoto, buildCityFilm, lineSeconds, spokenWords } from './film';
+import { type FilmPhoto, buildCityFilm, lineSeconds, speechSeconds, spokenWords } from './film';
 
 const photo = (id: string, over: Partial<FilmPhoto> = {}): FilmPhoto => ({
   id: `${id}-0000-0000-0000-000000000000`,
@@ -30,6 +30,15 @@ const eight = 'A greenway follows the creek through the town.'; // 8 words
 describe('spokenWords', () => {
   it('counts a figure as the two or three words it is aloud', () => {
     expect(spokenWords('It began in 1871, as a stop on the railroad.')).toBe(9 + 2.5);
+  });
+});
+
+describe('speechSeconds', () => {
+  it('adds a breath for every stop inside the line, and none for the one that ends it', () => {
+    const flat = 'Most suburbs just spread and Suwanee built itself a downtown.';
+    const broken = 'Most suburbs just spread. Suwanee — Georgia: built itself a downtown.';
+    expect(speechSeconds(flat)).toBeCloseTo(10 / 2.3, 5);
+    expect(speechSeconds(broken) - 10 / 2.3).toBeCloseTo(3 * 0.35, 5);
   });
 });
 

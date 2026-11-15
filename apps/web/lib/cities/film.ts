@@ -108,6 +108,25 @@ export function spokenWords(text: string): number {
 }
 
 /**
+ * A full stop, a colon or a dash INSIDE a line is a breath: the voice stops for
+ * about this long. The first v3 cut timed lines by words alone and the four it
+ * had to speed up were the four with a sentence break in them — "Most suburbs
+ * just spread. Suwanee, Georgia, built itself a downtown." took 4.9s, not 4.3.
+ */
+const BREATH_S = 0.35;
+
+/** How long a line takes to say. */
+export function speechSeconds(text: string): number {
+  const breaths = (
+    text
+      .trim()
+      .replace(/[.!?]+$/, '')
+      .match(/[.!?:;—]\s/g) ?? []
+  ).length;
+  return spokenWords(text) / WORDS_PER_SECOND + breaths * BREATH_S;
+}
+
+/**
  * How many seconds of clip a line needs across `shots` clips.
  *
  * A line owns the screen from its first clip's start to the next line's first
@@ -115,7 +134,7 @@ export function spokenWords(text: string): number {
  * total length T give the line T − n × 0.5s to be spoken in.
  */
 export function lineSeconds(text: string, shots: number): number {
-  return spokenWords(text) / WORDS_PER_SECOND + LINE_AIR_S + XFADE_S * shots;
+  return speechSeconds(text) + LINE_AIR_S + XFADE_S * shots;
 }
 
 // ─── moves ──────────────────────────────────────────────────────────────────

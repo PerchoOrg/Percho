@@ -407,10 +407,12 @@ def clip_start_times(durs: list[float], xfade: float) -> list[float]:
     return [0.0] + [offsets[i - 1] + xfade for i in range(1, len(durs))]
 
 
-# A city film speaks one line per clip — fifteen TTS calls in under a minute,
-# which is over the preview model's rate limit: the first cut lost three lines
-# to 429 (2026-11-15). Waits long enough for a per-minute window to reopen.
-TTS_RETRY_DELAYS_S: tuple[float, ...] = (5, 10, 20, 30)
+# A city film speaks a line every few seconds — thirteen to fifteen TTS calls
+# in under a minute, which is over the preview model's per-minute rate limit.
+# The first cut lost three lines to 429 (2026-11-15); with waits of 5-10-20-30s
+# the third still lost one, because 65s of retrying can end just short of the
+# window reopening. The last two waits make sure it cannot.
+TTS_RETRY_DELAYS_S: tuple[float, ...] = (5, 10, 20, 30, 45, 60)
 
 
 def tts_line(text: str, voice: str, out_wav: Path) -> bool:
