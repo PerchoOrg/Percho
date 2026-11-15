@@ -258,9 +258,9 @@
             "photo": "3f027b58",
             "move": "pan_lr",
             "callout": {
-              "type": "title",
-              "big": "Suwanee",
-              "label": "Georgia · 33 mi northeast of Atlanta"
+              "type": "tag",
+              "kicker": "Gwinnett County, Georgia",
+              "text": "33 mi northeast of downtown Atlanta"
             }
           }
         ]

@@ -569,6 +569,19 @@ export default function FeedScreen() {
 							isTop={isTop}
 							suspended={!focused || paused}
 							tapSlot={args.tapSlot}
+							/* A city we have made a film of has a page (phase327);
+							   one without has nowhere to send the link, so it draws
+							   none. In the stack the tap arrives through
+							   `onTapTarget` → EXPLORE_TAP_TARGET, as on the other
+							   faces. */
+							{...(card.unit.citySlug
+								? {
+										onExplore: () => {
+											emitGesture("explore_tap", card);
+											router.push(`/city/${card.unit.citySlug}`);
+										},
+									}
+								: {})}
 						/>
 					);
 				case "listing":
@@ -740,6 +753,11 @@ export default function FeedScreen() {
 				if (top && top.kind === "community") {
 					emitGesture("explore_tap", top);
 					router.push(`/community/${top.slug}`);
+				}
+				// The city card's link, to the city's page (phase327).
+				if (top && top.kind === "area" && top.unit.citySlug) {
+					emitGesture("explore_tap", top);
+					router.push(`/city/${top.unit.citySlug}`);
 				}
 			}
 		},

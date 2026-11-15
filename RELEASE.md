@@ -20,6 +20,16 @@ Everything is learned from the swipes you've already made, on your own
 device — there's no form to fill in, and a left swipe never blacklists
 anything; it just means "less of this for now".
 
+### 2026-11-15
+- **Cities, starting with Suwanee (in the test build of the app).** A city
+  now has its own card in the feed: a short narrated film about the city as
+  a whole — where it came from, how fast it grew, what it built, its
+  schools, the drive to Atlanta, what's next — with each figure shown over
+  the picture it belongs to. Tap Explore for the city's page: how it ranks,
+  how it compares with Georgia, a short history, growth, schools, getting
+  around and what's planned, every number with its source. The city card
+  opens the deck, followed by its neighbourhoods.
+
 ### 2026-11-14
 - **The Percho iPhone app is live on the App Store** (US): neighbourhood
   films, nearby places, costs, comparisons and resident reviews. Today's

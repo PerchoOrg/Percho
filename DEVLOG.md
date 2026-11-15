@@ -23,6 +23,21 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 07:24 UTC — phase327: the city card on iOS — the film in the deck, the fundamentals on a city page
+
+**Objective**: Owner on the v3 Suwanee film: "tts可以付费 这个版本不错 你做出来我去test flights测试看看". So the film goes where he can test it — the iPhone app — and the city gets the page the approved `demos/city-card-v1` design promised.
+**Finding**: the app already had a city card. `AreaFace` ("CITY" pill) draws a `GeoUnit` at level `city`, and `cities.geo_unit_id` (`city:suwanee-ga`) already names the unit a city is. It was pulled from the deck on 2026-08-22 because a city unit was a name and a count. A film is what it was missing, so nothing new was invented: the unit carries the film.
+**Actions**:
+- Server: `lib/cities/detail.ts` — `fetchCityFilms` (geo-unit id → newest ready `city_tour_assemblies`, the rule communities follow) and `fetchCityDetail` (the profile minus its script, the film, and photo credits); `GET /api/mobile/city/<slug>` (zod-checked slug); `/api/mobile/feed` gives a filmed city's unit `videoUrl`, `citySlug` and the film's first frame as `heroUrl` (the view's hero is the cover of whichever community sorts first). `packages/shared/src/city.ts` is the wire type; assigning the stored profile to it in `fetchCityDetail` makes drift a compile error.
+- Credits, now that a city film is shown to users: `cityFilmCredits` — Google authors by name, Commons files with author, licence and file page (what CC BY asks). The page prints both; Commons credits open the file page. Clears the debt logged in phase325/326.
+- Mobile deck: `CITY_FILM_MIX` (city, then three communities) replaces `COMMUNITY_ONLY_MIX` when a city has a film; the geo slot is offered ONLY filmed cities — the deck stays films only. One city film → it opens the deck, then the slot falls to communities; past the end of the pool it loops like every other film.
+- `AreaFace`: the shared `CardCorner` (sound + save) replaces its own save disc and hand-drawn bookmark — a narrated film needs the mute the other faces have; Explore arms the shared `EXPLORE_TAP_TARGET` and the feed sends it to `/city/<slug>` (the link is drawn only for a city that has a page).
+- `app/city/[slug].tsx` + `components/city/CityFilm.tsx`: the film at its own shape, uncropped, below the status bar; then rankings, city-vs-state bars, at a glance, history timeline, growth columns, schools, getting around, what's planned, sources, credits. No safety section. A save is keyed on the card's id (`area-<unit>`), so card and page are one save and the Saved tab already lists it.
+- Callouts moved for the phone (`callouts.py`): the card draws its pill and controls over the film's top 8% and its name, count and Explore from 77% down, so a tag now starts at 10.5% and a figure block ends at 74.5% (`TAG_TOP`, `FIGURE_BOTTOM`; the tests assert the band). The `title` callout is gone — the card prints the city's name directly under where it sat; the opening shot carries a place tag instead. The counter panel is ~15% shorter.
+**Decisions**: not `TourHero` on the city page — it cover-crops the film to a short block and puts a sound toggle and washes where this film's captions are. Not a new card kind either: a city IS the existing area card.
+**Not done**: the web city page and city card — "web must match iOS" still stands; next phase. The released App Store build (1.0.0) ignores the new unit fields, so nothing changes for it.
+**Next steps**: re-assemble Suwanee with the moved callouts once the TTS quota is back, pull the reference worktree for Metro, owner tests on the TestFlight dev client.
+
 ## 2026-11-15 06:45 UTC — phase326: city film v3 in the pipeline — the script names its photos, figures are callouts
 
 **Objective**: Build cut A ("one claim, then the proof") for real, under the owner's new rule that every narrated line has its own matching photo (phase325 entry below), and re-shoot Suwanee.

@@ -1,4 +1,4 @@
-"""City-film callouts stay inside the picture's safe area, and arrive in time."""
+"""City-film callouts stay in the band the phone leaves the film, and arrive in time."""
 
 import sys
 from pathlib import Path
@@ -10,6 +10,8 @@ sys.path.insert(0, str(REPO / "scripts" / "render-worker"))
 
 from callouts import (  # noqa: E402
     ARRIVE_S,
+    FIGURE_BOTTOM,
+    TAG_TOP,
     anim_seconds,
     count_progress,
     count_seconds,
@@ -19,7 +21,6 @@ from callouts import (  # noqa: E402
 W, H = 1080, 1576
 
 CALLOUTS = {
-    "title": {"type": "title", "big": "Suwanee", "label": "Georgia · 33 mi northeast of Atlanta"},
     "stat": {
         "type": "stat",
         "big": "#16",
@@ -45,7 +46,6 @@ CALLOUTS = {
 WORDS_64 = "wide words fill every label right up to the limit of the schema"[:64]
 WORDS_48 = "a source line as long as the schema allows it to"[:48]
 WORST = {
-    "title": {"type": "title", "big": "W" * 24, "label": WORDS_64},
     "stat": {"type": "stat", "big": "W" * 12, "label": WORDS_64, "source": WORDS_48},
     "count": {**CALLOUTS["count"], "to": 9_999_999, "label": WORDS_64, "source": WORDS_48},
     "tag": {"type": "tag", "kicker": "W" * 28, "text": WORDS_48},
@@ -59,24 +59,28 @@ def test_nothing_is_drawn_until_the_crossfade_is_over(name):
 
 @pytest.mark.parametrize("name", sorted(CALLOUTS))
 @pytest.mark.parametrize("specs", [CALLOUTS, WORST], ids=["typical", "longest"])
-def test_arrived_callout_stays_inside_the_safe_area(name, specs):
+def test_arrived_callout_stays_in_the_band_the_card_leaves_the_film(name, specs):
     img = draw_callout(specs[name], W, H, 10.0, 12.0)
     # The scrim under a figure spans the frame by design; measure the opaque ink.
     box = img.getchannel("A").point(lambda v: 255 if v > 200 else 0).getbbox()
     assert box is not None, "the callout drew nothing"
     left, top, right, bottom = box
     assert left >= W * 0.04 and right <= W * 0.96, f"{name} runs off the side: {box}"
-    assert top >= H * 0.04 and bottom <= H * 0.93, f"{name} runs off the frame: {box}"
+    # The city card draws its pill and controls over the top 8% of the film and
+    # its own name and link from 77% down (apps/mobile AreaFace).
+    assert top >= H * 0.10, f"{name} sits under the card's top controls: {box}"
+    assert bottom <= H * 0.765, f"{name} sits under the card's name and link: {box}"
 
 
-def test_a_tag_sits_in_the_top_corner_and_a_figure_in_the_lower_third():
+def test_a_tag_sits_near_the_top_and_a_figure_low_in_the_band():
     ink = lambda name: (  # noqa: E731
         draw_callout(CALLOUTS[name], W, H, 10.0, 12.0)
         .getchannel("A").point(lambda v: 255 if v > 200 else 0).getbbox()
     )
-    assert ink("tag")[3] < H * 0.25
-    for name in ("title", "stat", "count"):
-        assert ink(name)[1] > H * 0.45, f"{name} covers the picture"
+    assert H * TAG_TOP <= ink("tag")[1] and ink("tag")[3] < H * 0.25
+    for name in ("stat", "count"):
+        assert ink(name)[1] > H * 0.38, f"{name} covers the picture"
+        assert ink(name)[3] <= H * (FIGURE_BOTTOM + 0.02)
 
 
 def test_a_counter_starts_at_from_and_ends_at_to_within_its_clip():
@@ -92,5 +96,5 @@ def test_a_counter_starts_at_from_and_ends_at_to_within_its_clip():
 
 
 def test_a_figure_has_arrived_well_inside_the_shortest_clip():
-    for name in ("title", "stat", "tag"):
+    for name in ("stat", "tag"):
         assert anim_seconds(CALLOUTS[name], 2.5) <= 1.6

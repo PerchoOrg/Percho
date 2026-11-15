@@ -26,6 +26,7 @@
  * injected here. Mobile client owns ask interleaving").
  */
 
+import { fetchCityFilms } from '@/lib/cities/detail';
 import { fetchAiTourVideoByCommunity } from '@/lib/feed/ai-tour-videos';
 import type { BrowseCard } from '@/lib/feed/browse-card';
 import {
@@ -247,26 +248,49 @@ export async function GET(request: Request) {
   const needsVideoCommunityIds = needsCommunities && (videosOnly || videoFirst);
   const filmsClient = createUncachedServiceClient();
 
-  const [pageRows, geoUnits, communities, verticalVideos, aiTourVideos, videoCommunityIds] =
-    await Promise.all([
-      needsListingRows
-        ? videosOnly
-          ? fetchBrowseCardsVideosOnly(offset, limit)
-          : fetchBrowseCards(offset, limit)
-        : Promise.resolve([] as BrowseCard[]),
-      fetchCityGeoUnits(),
-      needsCommunities
-        ? fetchCommunityPool({ offset, limit, cities })
-        : Promise.resolve([] as PoolCommunityDTO[]),
-      // Cheap (15 ready rows) and needed for both listings and communities.
-      // Uncached, so a new or re-cut film reaches the phone (phase312).
-      fetchVerticalVideos(filmsClient),
-      // AI-generated community tours (Seedance); only communities have these.
-      needsCommunities ? fetchAiTourVideoByCommunity() : Promise.resolve(new Map<string, string>()),
-      needsVideoCommunityIds
-        ? fetchVerticalVideoCommunityIds(filmsClient)
-        : Promise.resolve([] as string[]),
-    ]);
+  const [
+    pageRows,
+    cityUnits,
+    communities,
+    verticalVideos,
+    aiTourVideos,
+    videoCommunityIds,
+    cityFilms,
+  ] = await Promise.all([
+    needsListingRows
+      ? videosOnly
+        ? fetchBrowseCardsVideosOnly(offset, limit)
+        : fetchBrowseCards(offset, limit)
+      : Promise.resolve([] as BrowseCard[]),
+    fetchCityGeoUnits(),
+    needsCommunities
+      ? fetchCommunityPool({ offset, limit, cities })
+      : Promise.resolve([] as PoolCommunityDTO[]),
+    // Cheap (15 ready rows) and needed for both listings and communities.
+    // Uncached, so a new or re-cut film reaches the phone (phase312).
+    fetchVerticalVideos(filmsClient),
+    // AI-generated community tours (Seedance); only communities have these.
+    needsCommunities ? fetchAiTourVideoByCommunity() : Promise.resolve(new Map<string, string>()),
+    needsVideoCommunityIds
+      ? fetchVerticalVideoCommunityIds(filmsClient)
+      : Promise.resolve([] as string[]),
+    fetchCityFilms(filmsClient),
+  ]);
+
+  // A city with a film plays it on its card and opens its page (phase327). Its
+  // poster is the film's own first frame: the view's `hero_storage_path` is the
+  // cover of whichever community sorts first, which is not a picture of the city.
+  const geoUnits = cityUnits.map((unit) => {
+    const film = cityFilms.get(unit.id);
+    return film
+      ? {
+          ...unit,
+          videoUrl: film.videoUrl,
+          citySlug: film.slug,
+          heroUrl: film.posterUrl,
+        }
+      : unit;
+  });
 
   /**
    * `videoFirst` has to FETCH the video-bearing listings, not just sort the page.

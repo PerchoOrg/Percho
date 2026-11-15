@@ -135,13 +135,13 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 		expect(AREA).toContain(badge);
 		expect(COMMUNITY).toContain(badge);
 
-		// The save disc: AreaFace still draws its own (that face has not been in
-		// the deck since 2026-08-22 and phase140 left it untouched), while the
-		// listing and community cards both take theirs from the shared corner
-		// control.
+		// The save disc is gone from every face. AreaFace was the last to draw
+		// its own — it sat out of the deck from 2026-08-22 — and took the shared
+		// corner control when it came back with a narrated film (phase327).
 		const disc =
 			'width: 40,\n\t\theight: 40,\n\t\tborderRadius: 20,\n\t\tbackgroundColor: "rgba(255,255,255,0.75)"';
-		expect(AREA).toContain(disc);
+		expect(AREA).not.toContain(disc);
+		expect(AREA).toContain("<CardCorner");
 		// The shared corner wears the BADGE's fill since phase175 — the two sit
 		// on one row, so any difference in the white reads as a mistake. Since
 		// phase174 the LISTING face draws no white at all up there, so the

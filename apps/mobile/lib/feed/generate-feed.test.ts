@@ -214,6 +214,49 @@ describe("listings: false — the communities-only deck", () => {
 	});
 });
 
+// ─── a city with a film joins the communities-only deck (phase327) ───────────
+
+describe("listings: false — a city with a film", () => {
+	const filmed: GeoUnit = {
+		...unit("suwanee-ga", "city", "Suwanee"),
+		videoUrl: "https://videodelivery.net/abc/manifest/video.m3u8",
+		citySlug: "suwanee-ga",
+	};
+	const pool: FeedPool = { ...POOL, geoUnits: [...CITIES, filmed] };
+	const deck = (count: number, over = {}) =>
+		gen(4, { listings: false, pool, count, ...over });
+
+	it("opens on the city, then its communities", () => {
+		const { cards } = deck(5);
+		expect(cards.map((c) => c.kind)).toEqual([
+			"area",
+			"community",
+			"community",
+			"community",
+			"community",
+		]);
+		expect(cards[0]).toMatchObject({ id: "area-city:suwanee-ga" });
+	});
+
+	it("never shows a city that has no film — this deck is films only", () => {
+		const { cards } = deck(24);
+		const cities = cards.filter((c) => c.kind === "area").map((c) => c.id);
+		expect(new Set(cities)).toEqual(new Set(["area-city:suwanee-ga"]));
+	});
+
+	it("shows the city once while there are communities it has not shown", () => {
+		const { cards, exhausted } = deck(1 + POOL.communities.length);
+		expect(countKind(cards, "area")).toBe(1);
+		expect(countKind(cards, "community")).toBe(POOL.communities.length);
+		expect(exhausted).toBe(false);
+	});
+
+	it("is the communities-only deck again when no city has a film", () => {
+		const { cards } = gen(4, { listings: false, count: 8 });
+		expect(cards.every((c) => c.kind === "community")).toBe(true);
+	});
+});
+
 // ─── seenIds / determinism / exhaustion (§1.9) ────────────────────────────────
 
 describe("seenIds and exhaustion", () => {

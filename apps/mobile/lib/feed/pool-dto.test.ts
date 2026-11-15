@@ -57,6 +57,19 @@ describe("parseGeoUnit", () => {
 		expect(u?.stats.medianListPrice).toEqual({ value: 594450, sampleSize: 52 });
 	});
 
+	it("carries a city's film and the slug of its page, and neither when absent", () => {
+		const filmed = parseGeoUnit({
+			...UNIT,
+			videoUrl: "https://videodelivery.net/abc/manifest/video.m3u8",
+			citySlug: "decatur-ga",
+		});
+		expect(filmed?.videoUrl).toContain("/abc/");
+		expect(filmed?.citySlug).toBe("decatur-ga");
+		const plain = parseGeoUnit(UNIT);
+		expect(plain && "videoUrl" in plain).toBe(false);
+		expect(plain && "citySlug" in plain).toBe(false);
+	});
+
 	it("drops a unit with no centroid rather than placing it at (0,0)", () => {
 		expect(parseGeoUnit({ ...UNIT, centroid: null })).toBeNull();
 		expect(parseGeoUnit({ ...UNIT, centroid: { lat: 33.7 } })).toBeNull();
