@@ -39,10 +39,14 @@ const STAGES: Record<string, { label: string; rank: number; tone: string }> = {
   failed: { label: 'Failed', rank: 8, tone: 'text-red-500' },
 };
 
-const columns: AdminColumn<CommunityNearbyRow>[] = [
+/**
+ * The City Tour index (phase318) is the same table over the city tables —
+ * only the first column's name and where a row opens differ.
+ */
+const columnsFor = (nameHeader: string, hrefBase: string): AdminColumn<CommunityNearbyRow>[] => [
   {
     key: 'name',
-    header: 'Community',
+    header: nameHeader,
     sortValue: (r) => r.name,
     render: (r) => <span className="font-medium">{r.name}</span>,
   },
@@ -120,21 +124,41 @@ const columns: AdminColumn<CommunityNearbyRow>[] = [
     header: '',
     align: 'right',
     render: (r) => (
-      <Link
-        href={`/admin/pipeline/community-nearby/${r.id}`}
-        className="text-sm text-blue-500 hover:underline"
-      >
+      <Link href={`${hrefBase}/${r.id}`} className="text-sm text-blue-500 hover:underline">
         Open →
       </Link>
     ),
   },
 ];
 
-export default function CommunityNearbyTable({ rows }: { rows: CommunityNearbyRow[] }) {
+const COMMUNITY_COLUMNS = columnsFor('Community', '/admin/pipeline/community-nearby');
+const CITY_COLUMNS = columnsFor('City', '/admin/pipeline/city-tours');
+
+export default function CommunityNearbyTable({
+  rows,
+  kind = 'community',
+}: {
+  rows: CommunityNearbyRow[];
+  kind?: 'community' | 'city';
+}) {
+  if (kind === 'city') {
+    // A handful of rows, all fetched: search in the browser.
+    return (
+      <AdminTable
+        rows={rows}
+        columns={CITY_COLUMNS}
+        rowKey={(r) => r.id}
+        searchable={(r) => `${r.name} ${r.state ?? ''}`}
+        emptyMessage="No cities yet."
+        searchPlaceholder="Search cities…"
+        minWidth={860}
+      />
+    );
+  }
   return (
     <AdminTable
       rows={rows}
-      columns={columns}
+      columns={COMMUNITY_COLUMNS}
       rowKey={(r) => r.id}
       searchable={(r) => `${r.name} ${r.city ?? ''} ${r.state ?? ''}`}
       // Search the whole table, not the page's 500-row window: there are ~8.7k
