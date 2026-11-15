@@ -27,6 +27,25 @@ NARRATION_MAX_TEMPO = 1.15
 NARRATION_END_TOLERANCE_S = 0.1
 
 
+class TtsDailyQuota(RuntimeError):
+    """The TTS model has no requests left today; waiting a minute will not help."""
+
+
+def is_daily_quota(status: int, body: str) -> bool:
+    """Whether a TTS response says the DAILY quota is spent.
+
+    The narration model allows 100 requests a day per project, and a 429 for
+    that looks exactly like the per-minute 429 a retry rides out — the status
+    is the same and only the body names the quota (`…PerDayPerProjectPerModel`,
+    `generate_requests_per_model_per_day`). On 2026-11-15 the worker retried
+    each line of a city film for 170 seconds against a quota that would not
+    reopen for an hour, and was on its way to shipping a film with no narration
+    as the city's newest. Telling the two apart is what lets the assembly fail
+    at once instead, with a reason, and leave the previous film in place.
+    """
+    return status == 429 and ("PerDay" in body or "per_day" in body)
+
+
 def plan_narration_starts(
     made: list[dict[str, Any]],
     total: float,

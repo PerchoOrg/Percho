@@ -44,7 +44,11 @@ import requests
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ken-burns"))
 from xfade import crossfade_offsets, crossfade_total  # type: ignore  # noqa: E402
-from narration_timing import plan_narration_starts  # type: ignore  # noqa: E402
+from narration_timing import (  # type: ignore  # noqa: E402
+    TtsDailyQuota,
+    is_daily_quota,
+    plan_narration_starts,
+)
 from photo_selector import build_plan  # type: ignore  # noqa: E402
 from photo_tagger import MODEL as TAGGER_MODEL, tag_listing_photos  # type: ignore  # noqa: E402
 # The home tour's plan step decides engine and camera move per surface, the
@@ -415,34 +419,48 @@ def clip_start_times(durs: list[float], xfade: float) -> list[float]:
 TTS_RETRY_DELAYS_S: tuple[float, ...] = (5, 10, 20, 30, 45, 60)
 
 
+def _tts_post(text: str, voice: str) -> requests.Response:
+    r = requests.post(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{TTS_MODEL}:generateContent",
+        headers={
+            "x-goog-api-key": os.environ["GEMINI_API_KEY"],
+            "content-type": "application/json",
+        },
+        json={
+            "contents": [{"parts": [{"text": text}]}],
+            "generationConfig": {
+                "responseModalities": ["AUDIO"],
+                "speechConfig": {
+                    "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}
+                },
+            },
+        },
+        timeout=120,
+    )
+    if is_daily_quota(r.status_code, r.text):
+        raise TtsDailyQuota(
+            "the narration model's daily request quota is spent — assemble again after it resets"
+        )
+    return r
+
+
 def tts_line(text: str, voice: str, out_wav: Path) -> bool:
-    """Speak one line. False on any failure — narration is never worth a tour."""
+    """Speak one line. False on a failure a film can live with — narration is
+    never worth a tour. A spent DAILY quota is not one of those: every line
+    after it would fail the same way, so it is raised and fails the assembly.
+    """
     try:
         resp = with_retry(
             "tts",
-            lambda: requests.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/{TTS_MODEL}:generateContent",
-                headers={
-                    "x-goog-api-key": os.environ["GEMINI_API_KEY"],
-                    "content-type": "application/json",
-                },
-                json={
-                    "contents": [{"parts": [{"text": text}]}],
-                    "generationConfig": {
-                        "responseModalities": ["AUDIO"],
-                        "speechConfig": {
-                            "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}
-                        },
-                    },
-                },
-                timeout=120,
-            ),
+            lambda: _tts_post(text, voice),
             transient=_TRANSIENT,
             delays=TTS_RETRY_DELAYS_S,
         )
         resp.raise_for_status()
         parts = resp.json()["candidates"][0]["content"]["parts"]
         b64 = next(p["inlineData"]["data"] for p in parts if p.get("inlineData"))
+    except TtsDailyQuota:
+        raise
     except Exception as exc:  # noqa: BLE001 — any failure falls back to music
         print(f"[narration] tts failed: {exc}", flush=True)
         return False
