@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 22:50 UTC — phase336.5: dev client 1.0.1 (11) with universal links, in TestFlight
+
+**Objective**: Owner: "最新的build" — the build that carries phase335's `associatedDomains`.
+**Finding**: the App ID `co.percho.app` (`6TNYULX4NA`) had only IN_APP_PURCHASE and APPLE_ID_AUTH. A non-interactive `eas build` does not sync capabilities, so the first build (`f6878509`) would have failed signing; it was cancelled.
+**Actions**: ASSOCIATED_DOMAINS enabled on the App ID through the ASC API (`POST /v1/bundleIdCapabilities`, 201) — what an interactive `eas build` would have done. That invalidated profile `T8NGYLDBLL`; `eas build --platform ios --profile development-testflight --non-interactive` with the `EXPO_ASC_*` / `EXPO_APPLE_TEAM_*` env regenerated it (`8H4B532B97`) and built `183ff002-32b9-4052-9d01-17c2ec7e5b76` from `9fe3279b`, FINISHED. `eas submit --id 183ff002… --profile production` (key added to `eas.json` locally, reverted) → submission `b161cd2c…`; ASC build `d8cab220…` 1.0.1 (11) `VALID`, `READY_FOR_BETA_TESTING`, added to `Internal` (`747516ea…`, 204).
+**Learnings**: a new entitlement in `app.json` needs its capability on the App ID before a non-interactive build — check `GET /v1/bundleIds?filter[identifier]=co.percho.app&include=bundleIdCapabilities` first. Build 11 is a DEV CLIENT: never attach it to an App Store version; a store release of this work needs a production build (≥ 12).
+**Next steps**: owner installs 11 from TestFlight; tap a `www.percho.co/watch/…` link in Messages/Notes → should open the app on that community or city. (Inside WeChat, links stay in WeChat's browser — WeChat does not hand universal links to other apps.)
+
 ## 2026-11-15 22:10 UTC — phase336.4: no photo-credit line on the shared film
 
 **Objective**: Owner: "去掉flim photo那一块".
