@@ -31,21 +31,56 @@ export type WatchFilmProps = {
 export function WatchFilm({ eyebrow, name, line, film, credits, appStoreUrl }: WatchFilmProps) {
   const ref = useRef<HTMLVideoElement | null>(null);
   const [muted, setMuted] = useState(true);
+  /**
+   * The browser refused to start the film (phase336.1, owner: "链接视频没有自动
+   * 播放"). The `autoplay muted` attributes are not enough on an iPhone in Low
+   * Power Mode, nor in the in-app browsers chat apps open links in (WeChat's
+   * among them), which all want a tap first. So the film is started
+   * explicitly, and when that is refused the whole screen becomes one play
+   * button — and since that tap IS the gesture, it plays with sound.
+   */
+  const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el || !film) return;
-    if (film.url.endsWith('.m3u8')) return attachHls(el, film.url, { hd: true });
-    el.src = film.url;
+    // Bucket and assembled films are HLS manifests; an AI tour is a plain MP4.
+    let detach = () => {};
+    if (film.url.endsWith('.m3u8')) detach = attachHls(el, film.url, { hd: true });
+    else el.src = film.url;
+    el.muted = true;
+    el.play().then(
+      () => setBlocked(false),
+      () => setBlocked(true),
+    );
+    return detach;
   }, [film]);
+
+  const playWithSound = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.muted = false;
+    setMuted(false);
+    void el.play().then(
+      () => setBlocked(false),
+      () => {
+        // Some browsers refuse even a tapped play with sound; try it silent.
+        el.muted = true;
+        setMuted(true);
+        void el.play().then(
+          () => setBlocked(false),
+          () => {},
+        );
+      },
+    );
+  };
 
   const toggleSound = () => {
     const el = ref.current;
     if (!el) return;
+    if (el.paused) return playWithSound();
     el.muted = !el.muted;
     setMuted(el.muted);
-    // A browser that refused autoplay starts the film on this tap.
-    if (el.paused) void el.play().catch(() => {});
   };
 
   return (
@@ -62,6 +97,21 @@ export function WatchFilm({ eyebrow, name, line, film, credits, appStoreUrl }: W
         />
       ) : null}
 
+      {film && blocked ? (
+        <button
+          type="button"
+          onClick={playWithSound}
+          aria-label="Play the film"
+          className="absolute inset-0 z-10 flex items-center justify-center bg-black/20"
+        >
+          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white/90 text-3xl text-ink">
+            <span aria-hidden="true" className="ml-1.5">
+              ▶
+            </span>
+          </span>
+        </button>
+      ) : null}
+
       <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/50 to-transparent" />
       <p className="absolute left-4 top-4 font-semibold text-lg tracking-tight">Percho</p>
       {film ? (
@@ -69,13 +119,13 @@ export function WatchFilm({ eyebrow, name, line, film, credits, appStoreUrl }: W
           type="button"
           onClick={toggleSound}
           aria-label={muted ? 'Turn sound on' : 'Mute'}
-          className="absolute right-4 top-3 rounded-full bg-white/90 px-3 py-1.5 font-medium text-ink text-xs"
+          className="absolute right-4 top-3 z-20 rounded-full bg-white/90 px-3 py-1.5 font-medium text-ink text-xs"
         >
           {muted ? 'Sound on' : 'Mute'}
         </button>
       ) : null}
 
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/70 to-transparent px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-24">
+      <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black via-black/70 to-transparent px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-24">
         <p className="font-medium text-white/70 text-xs uppercase tracking-[0.14em]">{eyebrow}</p>
         <h1 className="mt-1 font-semibold text-3xl tracking-tight">{name}</h1>
         {line ? <p className="mt-1 text-sm text-white/85 leading-snug">{line}</p> : null}
