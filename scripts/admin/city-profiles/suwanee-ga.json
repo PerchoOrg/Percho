@@ -1,0 +1,207 @@
+{
+  "tagline": "A railroad village that grew 8× in thirty years — and built itself a downtown instead of sprawling.",
+  "summary": "A railroad village of a few thousand people as late as 1990, Suwanee grew eightfold in thirty years. Instead of sprawling, it built a walkable town center in the 2000s and has kept adding parks to it. Most families come for the North Gwinnett schools.",
+  "locationNote": "33 mi northeast of downtown Atlanta",
+  "rankings": [
+    {
+      "rank": "#1",
+      "scope": "in Georgia",
+      "title": "Best Places to Live for Families",
+      "detail": "Fortune, 2024 — #27 in the U.S. of about 2,000 cities considered; the top Georgia city on the list.",
+      "source": { "name": "Fortune", "year": "2024", "url": "https://fortune.com/ranking/best-places-families/2024/suwanee" }
+    },
+    {
+      "rank": "#16",
+      "scope": "in Georgia",
+      "title": "North Gwinnett High School",
+      "detail": "U.S. News Best High Schools, 2025–26 · #21 of 458 Georgia high schools on SchoolDigger.",
+      "source": { "name": "U.S. News & World Report", "year": "2025–26", "url": "https://www.patch.com/georgia/atlanta/top-25-high-schools-ga-2025-26-u-s-news-world-report" }
+    },
+    {
+      "rank": "#6",
+      "scope": "in the U.S.",
+      "title": "Suburbs for city-like living",
+      "detail": "StorageCafe, 2023 — walkable downtown, live-work-play.",
+      "source": { "name": "StorageCafe", "year": "2023", "url": "https://atlantaagentmagazine.com/2023/04/25/suwanee-named-a-top-suburb-for-city-like-living/" }
+    },
+    {
+      "rank": "#10",
+      "scope": "in the U.S.",
+      "title": "Best Places to Live",
+      "detail": "Money magazine, 2007 (small towns).",
+      "source": { "name": "Money", "year": "2007", "url": "https://money.cnn.com/galleries/2007/moneymag/0707/gallery.BPTL_top_100.moneymag/10.html" }
+    }
+  ],
+  "stats": [
+    { "label": "Population", "value": "20,786", "note": "2020 census" },
+    { "label": "Homes owner-occupied", "value": "59%", "note": "the rest rented" }
+  ],
+  "compare": {
+    "against": "Georgia",
+    "rows": [
+      {
+        "label": "Median household income",
+        "city": { "value": 103260, "display": "$103,260" },
+        "state": { "value": 77353, "display": "$77,353" },
+        "takeaway": "1.3× the state"
+      },
+      {
+        "label": "Adults with a bachelor's or higher",
+        "city": { "value": 62.5, "display": "62.5%" },
+        "state": { "value": 34.9, "display": "34.9%" },
+        "takeaway": "1.8× the state"
+      },
+      {
+        "label": "Median home value",
+        "city": { "value": 480600, "display": "$480,600" },
+        "state": { "value": 303300, "display": "$303,300" },
+        "takeaway": "1.6× the state"
+      }
+    ],
+    "source": { "name": "U.S. Census Bureau QuickFacts, ACS 2020–2024", "year": "2024", "url": "https://www.census.gov/quickfacts/fact/table/suwaneecitygeorgia/INC110224" }
+  },
+  "history": [
+    { "year": "Before 1800s", "text": "A Shawnee village; the name is usually traced to the Creek word for Shawnee." },
+    { "year": "1871", "text": "The Air Line Railroad builds a depot — the village grows around it." },
+    { "year": "1949", "text": "Incorporated as a city; still farmland into the 1970s." },
+    { "year": "1979 – 1998", "text": "Home base of the Atlanta Falcons' training facility." },
+    { "year": "2005 – 2009", "text": "Town Center Park and the new City Hall are built — a downtown on purpose." },
+    { "year": "2024", "text": "Town Center on Main opens: a 13-acre park beside the library." }
+  ],
+  "growth": {
+    "series": [
+      { "label": "1990", "value": 2412 },
+      { "label": "2000", "value": 8725 },
+      { "label": "2010", "value": 15355 },
+      { "label": "2020", "value": 20786 }
+    ],
+    "takeaway": "8.6× since 1990",
+    "source": { "name": "U.S. Census Bureau, decennial census", "url": "https://en.wikipedia.org/wiki/Suwanee,_Georgia" }
+  },
+  "education": {
+    "measure": "4-year graduation rate",
+    "rows": [
+      { "label": "North Gwinnett HS", "pct": 95.4, "display": "95.4%" },
+      { "label": "Peachtree Ridge HS", "pct": 90, "display": "88–92%" },
+      { "label": "Gwinnett district", "pct": 82.5, "display": "82.5%", "baseline": true }
+    ],
+    "note": "North Gwinnett: #16 in Georgia (U.S. News 2025–26), Niche A+, GreatSchools 10/10. Suwanee's 30024 ZIP is also served by Collins Hill (Gwinnett) and Lambert (Forsyth). District rate: AJC, 2021. Which school a home is zoned for depends on its address."
+  },
+  "gettingAround": [
+    { "label": "Downtown Atlanta · 33 mi", "value": "~40 min · 45–75 at rush" },
+    { "label": "Hartsfield-Jackson · ~40 mi", "value": "45–60 min via I-85" },
+    { "label": "Nearest rail · MARTA Doraville", "value": "no rail in Suwanee" },
+    { "label": "I-85 · Lawrenceville-Suwanee Rd", "value": "the city's interstate" }
+  ],
+  "planning": [
+    { "title": "2040 Comprehensive Plan (2019)", "text": "Most new building is to be infill at medium density; the city is mapped into 11 character areas, each with its own rules." },
+    { "title": "Suwanee Gateway · I-85", "text": "An aging interstate interchange slated to become a Class-A office district with hotels." },
+    { "title": "Town Center on Main · 2024", "text": "A 13-acre park and DeLay Nature Park on a 25-acre site, with a rebuilt PlayTown playground." },
+    { "title": "2040 Strategic Plan", "text": "A broader city strategy, expected to be adopted in late 2026." }
+  ],
+  "sources": [
+    { "name": "U.S. Census Bureau QuickFacts — Suwanee city, Georgia", "url": "https://www.census.gov/quickfacts/fact/table/suwaneecitygeorgia/INC110224" },
+    { "name": "U.S. Census Bureau QuickFacts — Georgia", "url": "https://www.census.gov/quickfacts/fact/table/GA/INC110224" },
+    { "name": "City of Suwanee — History", "url": "https://suwanee.com/explore-suwanee/about-suwanee/history" },
+    { "name": "City of Suwanee — Town Center on Main", "url": "https://suwanee.com/services/planning-services-inspections-zoning/current-construction-activity/town-center-on-main" },
+    { "name": "City of Suwanee — Suwanee's Vision", "url": "https://www.suwanee.com/explore-suwanee/suwanee-s-vision-2" },
+    { "name": "Fortune — Best Places to Live for Families 2024", "url": "https://fortune.com/ranking/best-places-families/2024/suwanee" },
+    { "name": "SchoolDigger — North Gwinnett High School", "url": "https://www.schooldigger.com/go/GA/schools/0255001123/school.aspx" },
+    { "name": "Pro-Football-Reference — Falcons training camps", "url": "https://www.pro-football-reference.com/teams/atl/training-camps.htm" }
+  ],
+  "film": {
+    "frames": [
+      {
+        "type": "title",
+        "eyebrow": "City · Gwinnett County, Georgia",
+        "headline": "Suwanee",
+        "chip": "#1 in Georgia for families · Fortune 2024",
+        "sub": "33 miles northeast of downtown Atlanta",
+        "say": "This is Suwanee, Georgia — Fortune's top city in the state for families, thirty-three miles from downtown Atlanta."
+      },
+      {
+        "type": "rows",
+        "eyebrow": "History",
+        "headline": "A railroad town",
+        "rows": [
+          { "k": "1871", "v": "A depot on the Air Line Railroad — the village grows around it" },
+          { "k": "1949", "v": "Incorporated as a city" },
+          { "k": "1979–98", "v": "Home of the Atlanta Falcons' training camp" },
+          { "k": "2005–09", "v": "Town Center Park and City Hall are built" }
+        ],
+        "source": "City of Suwanee",
+        "say": "It grew around an 1871 railroad depot, became a city in 1949, and once housed the Atlanta Falcons."
+      },
+      {
+        "type": "bars",
+        "eyebrow": "Growth",
+        "headline": "8.6× since 1990",
+        "sub": "Population, by census",
+        "bars": [
+          { "label": "1990", "value": 2412, "display": "2,412" },
+          { "label": "2000", "value": 8725, "display": "8,725" },
+          { "label": "2010", "value": 15355, "display": "15,355" },
+          { "label": "2020", "value": 20786, "display": "20,786" }
+        ],
+        "source": "U.S. Census Bureau, decennial census",
+        "say": "Since 1990 its population has grown more than eightfold, to about twenty-one thousand."
+      },
+      {
+        "type": "stats",
+        "eyebrow": "Suwanee vs. Georgia",
+        "headline": "Above the state",
+        "stats": [
+          { "value": "$103,260", "label": "median household income — 1.3× Georgia's" },
+          { "value": "62.5%", "label": "of adults hold a bachelor's degree — 1.8× Georgia's" }
+        ],
+        "source": "U.S. Census Bureau, ACS 2020–2024",
+        "say": "Incomes run a third above the state's, and nearly two in three adults hold a degree."
+      },
+      {
+        "type": "stats",
+        "eyebrow": "Schools",
+        "headline": "North Gwinnett High",
+        "stats": [
+          { "value": "#16", "label": "in Georgia — U.S. News Best High Schools, 2025–26" },
+          { "value": "95%", "label": "graduate in four years" }
+        ],
+        "source": "U.S. News & World Report; SchoolDigger",
+        "bgBucket": "schools",
+        "say": "Families come for the schools: North Gwinnett High ranks sixteenth in Georgia and graduates ninety-five percent."
+      },
+      {
+        "type": "rows",
+        "eyebrow": "Getting around",
+        "headline": "On the I-85 corridor",
+        "rows": [
+          { "k": "~40 min", "v": "to downtown Atlanta, off-peak" },
+          { "k": "45–75 min", "v": "to downtown at rush hour" },
+          { "k": "45–60 min", "v": "to Hartsfield-Jackson airport" }
+        ],
+        "say": "Interstate 85 is minutes away — downtown in about forty minutes off-peak, the airport in under an hour."
+      },
+      {
+        "type": "rows",
+        "eyebrow": "Planning",
+        "headline": "Growth, on purpose",
+        "rows": [
+          { "k": "2024", "v": "Town Center on Main — a 13-acre park beside the library" },
+          { "k": "I-85", "v": "Suwanee Gateway — an office district planned at the interchange" },
+          { "k": "2040", "v": "Comprehensive plan — infill at medium density" }
+        ],
+        "source": "City of Suwanee 2040 Comprehensive Plan",
+        "say": "And it grows on purpose: a new thirteen-acre park in 2024, an office district planned at the interstate."
+      }
+    ],
+    "places": [
+      { "poi": "Town Center Park", "say": "Downtown, a section of the Berlin Wall stands in Town Center Park, home of Suwanee Fest each September." },
+      { "poi": "Gwinnett County Public Library", "say": "Next door, the library anchors Town Center on Main, the city's newest park." },
+      { "poi": "Suwanee Creek Greenway", "say": "The Suwanee Creek Greenway runs about four miles through woods and wetland." },
+      { "poi": "Sims Lake Park", "say": "Sims Lake Park is the quiet one: a lake loop, a pier, a pavilion over the water." },
+      { "poi": "Tequila Mama", "say": "Dinner is steps from the green, on the patio at Tequila Mama." },
+      { "poi": "StillFire Brewing", "say": "StillFire Brewing is steps from Town Center, with its patio out front." },
+      { "poi": "North Gwinnett High School", "say": "North Gwinnett High School is two miles from Town Center." },
+      { "poi": "Suwanee Jubilee", "say": "Everyday errands and a few restaurants are at Suwanee Jubilee, two miles out." }
+    ]
+  }
+}

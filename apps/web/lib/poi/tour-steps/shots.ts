@@ -30,10 +30,18 @@ export interface PlannedShot {
   ai_generated: boolean;
 }
 
-/** The shot list the photos step planned, or [] if it has not run. */
+/**
+ * The PHOTO shots the photos step planned, or [] if it has not run.
+ *
+ * A city film's Act 1 clips are data frames (`kind: 'data'`, phase322): the
+ * render worker draws them at assembly, so they have no photo and no
+ * `photo_clips` row, and everything that renders or counts clips skips them.
+ */
 export function plannedShots(run: RunRow): PlannedShot[] {
-  const photos = run.step_results.photos as { shots?: PlannedShot[] } | undefined;
-  return Array.isArray(photos?.shots) ? photos.shots : [];
+  const photos = run.step_results.photos as
+    | { shots?: Array<PlannedShot & { kind?: string }> }
+    | undefined;
+  return Array.isArray(photos?.shots) ? photos.shots.filter((s) => s.kind !== 'data') : [];
 }
 
 /**
@@ -75,34 +83,23 @@ const CLIPS_BY_BUCKET: Record<string, number> = {
 const DEFAULT_CLIPS_PER_POI = 2;
 
 /**
- * A city film's quotas (phase320), over the community ones above.
+ * A city film asks for three candidates per place, whatever its kind
+ * (phase322).
  *
- * In a community film the civic buildings and the brewery are background — a
- * clip each. In a city film they ARE the subject: Suwanee's first plan gave
- * City Hall and the library one clip apiece and came out at 46s for a town
- * whose whole story is its downtown. A city has no amenities act either, so
- * without these the film is half the length of a community's. Schools drop to
- * two: a city is served by several, and the film names the high school.
+ * They are candidates, not clips: `lib/cities/film.ts` keeps ONE shot per
+ * place — and refuses close-ups and repeated subjects — so it needs more than
+ * the planner's first pick to choose from. (phase320 gave civic and outdoor
+ * places three CLIPS each; that is how City Hall reached the screen four
+ * times.)
  */
-const CITY_CLIPS_BY_BUCKET: Partial<Record<string, number>> = {
-  civic: 3,
-  outdoor: 3,
-  kids: 2,
-  nightlife: 2,
-  fitness: 2,
-  schools: 2,
-};
+const CITY_CANDIDATES_PER_PLACE = 3;
 
 function clipsAllowedFor(
   bucket: string | null | undefined,
   kind: 'community' | 'city' = 'community',
 ): number {
-  const b = bucket ?? '';
-  return (
-    (kind === 'city' ? CITY_CLIPS_BY_BUCKET[b] : undefined) ??
-    CLIPS_BY_BUCKET[b] ??
-    DEFAULT_CLIPS_PER_POI
-  );
+  if (kind === 'city') return CITY_CANDIDATES_PER_PLACE;
+  return CLIPS_BY_BUCKET[bucket ?? ''] ?? DEFAULT_CLIPS_PER_POI;
 }
 
 /**

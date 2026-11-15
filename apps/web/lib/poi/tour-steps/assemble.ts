@@ -52,7 +52,10 @@ export async function runAssemble(
   // The warning still matters: the worker SKIPS a photo with nothing ready and
   // says so only in its own log, which is how a 29-clip tour shipped as 19 in
   // phase69.
-  const planned = shots as Array<{ photo_id: string; engine: string }>;
+  // Data frames (a city film's Act 1) are drawn at assembly — nothing to wait for.
+  const planned = (shots as Array<{ photo_id: string; engine: string; kind?: string }>).filter(
+    (sh) => sh.kind !== 'data',
+  );
   const photoIds = [...new Set(planned.map((sh) => sh.photo_id))];
   const { data: clipRows } = (await sb
     .from('photo_clips')

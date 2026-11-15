@@ -52,6 +52,7 @@ from photo_tagger import MODEL as TAGGER_MODEL, tag_listing_photos  # type: igno
 from depthflow_modes import pick_engines, plan_moves  # type: ignore  # noqa: E402
 from hero_prompt import choose_hero_prompt, fallback_hero, looks_aerial  # type: ignore  # noqa: E402
 from storage_retry import with_retry  # type: ignore  # noqa: E402
+from data_frames import render_data_clip  # type: ignore  # noqa: E402
 
 
 def _now_iso() -> str:
@@ -2358,6 +2359,29 @@ def process_assembly(row: dict[str, Any]) -> None:
             for r in rows:
                 by_photo.setdefault(r["photo_id"], []).append(r)
         for i, c in enumerate(ordered, start=1):
+            # A city film's Act 1 (phase322): a data frame, drawn here over one
+            # of the city's photos. It has no photo_clips row to download.
+            if c.get("kind") == "data":
+                dest = workdir / f"{i:02d}.mp4"
+                bg_path = c.get("bg_path") or ""
+                photo = workdir / f"bg-{i:02d}{Path(bg_path).suffix or '.jpg'}"
+                storage_download("listing-photos", bg_path, photo)
+                render_data_clip(
+                    c.get("frame") or {},
+                    photo,
+                    float(c.get("duration_s") or 6),
+                    dest,
+                    workdir / f"data-{i:02d}",
+                    TOUR_CANVAS_W,
+                    TOUR_CANVAS_H,
+                )
+                clip_paths.append(dest)
+                print(
+                    f"[assembly {assembly_id}] drew data frame "
+                    f"{(c.get('frame') or {}).get('eyebrow', '')!r}",
+                    flush=True,
+                )
+                continue
             engine = c.get("engine") or "kenburns"
             candidates = by_photo.get(c.get("photo_id"), [])
             # AI-first: when BOTH a seedance (AI) clip and a local DA+KB clip are
