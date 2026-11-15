@@ -21,7 +21,8 @@
     "test:watch": "vitest",
     "insights": "tsx ../../scripts/admin/generate-move-in-insights.ts",
     "tour": "tsx ../../scripts/admin/run-community-tour.ts",
-    "city:profile": "tsx ../../scripts/admin/upsert-city-profile.ts"
+    "city:profile": "tsx ../../scripts/admin/upsert-city-profile.ts",
+    "city:photos": "tsx ../../scripts/admin/city-photos.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
