@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 04:30 UTC — phase323: city film v2 rejected ("像ppt"); research and four new directions put to the owner
+
+**Objective**: Owner on the 99s Suwanee film (assembly `9d033143`): "效果不好 前半部分感觉在罗列数字 不生动 像ppt 后半部分又过度到非常具体的店面 你再做一做调研看看一般的城市宣传片怎么做 我看到有些还有文化属性 等等 结合我们的需求你给我几个新的方案".
+**What went wrong**: Act 1 made the numbers the SUBJECT — seven near-static text frames of ~8s over blurred photos, no picture, no people, no movement. Act 2 fell to the scale of single businesses (a taqueria front, a barre-studio door), which is community-film material, not a city's. The structure answered "two halves, half and half" literally and lost the film.
+**Research (web)**: destination / place-brand practice — most destination spots fail at storytelling; build an emotional connection and one idea per film; let the place show itself, narration sparse; authenticity over polish; culture is food, festivals, family, everyday life, not only the arts; relocation campaigns pair "what it is like to live here" with a few practical figures; numbers belong next to footage, trends beat isolated figures; short-form retention favours a 3-second hook, cuts every 3–5s and 15–45s lengths. Suwanee's cultural material: Suwanee Fest (September, parade), Suwanee American Craft Beer Fest (USA Today readers' best beer fest, 2022), August Concert, Summer Porch Jam, Jolly Holly Days, Glow in the Park, Atlanta International Night Market, Saturday farmers market (May–Oct), SculpTour (90 sculptures since 2011), the Berlin Wall section.
+**Proposed to the owner (no code yet)**: (A) one thesis + proof — moving pictures at city scale, one figure per beat as a callout, ~50s; (B) a year in Suwanee — the festival calendar as the spine, culture first; (C) map-led — fly up I-85 from Atlanta, the city lights up, pins open pictures; (D) a resident's Saturday, first person. Recommended: A's structure with C's opening and one culture beat from B; the full fundamentals move to the city card/page, where a chart can be read. Common rules for any of them: no slides, no single storefronts, cuts of 3–5s, AI motion (Seedance, ~$0.14/clip — to be priced and approved) or better source photos for the hero shots.
+**Next steps**: Owner picks a direction; then a storyboard on percho.co/demos before any pipeline change. `lib/cities/film.ts` / `data_frames.py` stay as they are until then.
+
 ## 2026-11-15 03:10 UTC — phase322: city film v2 — fundamentals as data frames, then one shot per place; Suwanee re-shot
 
 **Objective**: Owner on the phase321 demo: "整体框架不错 开始开发吧 安全数据先不放 两部分内容差不多一半一半" (after "如果有相关数据支持 可以加入排名 总之就是增加说服力" — rankings and Suwanee-vs-Georgia added to the demo as phase321.1).
