@@ -157,6 +157,7 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
   const shared: CityFundamentals = fundamentals;
 
   let video: { videoUrl: string; posterUrl: string } | undefined;
+  let segments: CityDetailDTO['tourSegments'] = [];
   let credits: CityFilmCredits = { google: [], commons: [] };
   try {
     const service = createUncachedServiceClient();
@@ -175,6 +176,11 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
         videoUrl: streamManifestUrl(row.cf_stream_uid),
         posterUrl: streamPosterUrl(row.cf_stream_uid),
       };
+      segments = tourSegments(row.ordered_clips).map(({ name, endFraction, bucket }) => ({
+        name,
+        endFraction,
+        ...(bucket ? { bucket } : {}),
+      }));
       const ids = clipPhotoIds(row.ordered_clips);
       if (ids.length > 0) {
         const { data: photos } = await service
@@ -196,6 +202,7 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
     ...(city.county ? { county: city.county } : {}),
     ...(city.geo_unit_id ? { geoUnitId: city.geo_unit_id } : {}),
     ...(video ?? {}),
+    tourSegments: segments,
     ...shared,
     credits,
   };

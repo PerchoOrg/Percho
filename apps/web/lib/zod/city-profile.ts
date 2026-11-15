@@ -114,8 +114,9 @@ const filmShot = z.object({
     .regex(/^[0-9a-f]{8}(-[0-9a-f-]{27})?$/, 'a photo id, or its first 8 characters'),
   /**
    * The place the picture shows, as the card's place pill names it
-   * ("Old Town", "Riverwatch Middle"). Left out, the shot is named for the
-   * place its photo is filed under — which is not always what it shows.
+   * ("Old Town", "Riverwatch Middle"). Only a real place gets one: left out,
+   * the pill is hidden for the shot (owner 2026-11-15, on "Suwanee, 1897"
+   * in the corner: "不是地名 不要显示在左上角 不需要所有页面都显示").
    */
   label: z.string().min(1).max(40).optional(),
   /** This shot's share of the line's time, relative to the line's other shots. */
@@ -125,8 +126,25 @@ const filmShot = z.object({
   callout: cityFilmCalloutSchema.optional(),
 });
 
+/**
+ * The film's chapters, as the city page's chip strip names them — the
+ * community page's category strip, for a film that is told in parts rather
+ * than visited place by place. Keys and labels: `@percho/shared/tour-buckets`.
+ */
+export const CITY_FILM_CHAPTERS = [
+  'overview',
+  'history',
+  'growth',
+  'downtown',
+  'schools',
+  'outdoor',
+  'commute',
+  'future',
+] as const;
+
 const filmLine = z.object({
   say,
+  chapter: z.enum(CITY_FILM_CHAPTERS).optional(),
   /** The pictures the line is spoken over, in order. Never empty. */
   shots: z.array(filmShot).min(1).max(4),
 });

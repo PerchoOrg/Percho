@@ -95,5 +95,10 @@ export interface CityDetailDTO extends CityFundamentals {
   /** HLS manifest of the city's film. Absent until one is assembled. */
   videoUrl?: string;
   posterUrl?: string;
+  /**
+   * The film's places in play order, each with its chapter as `bucket` — the
+   * city page's hero groups them into the community page's chip strip.
+   */
+  tourSegments: Array<{ name: string; endFraction: number; bucket?: string }>;
   credits: CityFilmCredits;
 }

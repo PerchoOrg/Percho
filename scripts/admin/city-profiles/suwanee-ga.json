@@ -350,20 +350,20 @@
     "lines": [
       {
         "say": "Most suburbs just spread. Suwanee, Georgia, built itself a downtown.",
+        "chapter": "overview",
         "shots": [
           {
             "photo": "3f027b58",
-            "label": "Town Center Park",
             "move": "pan_lr"
           }
         ]
       },
       {
         "say": "Fortune named it the best place in the state to raise a family.",
+        "chapter": "overview",
         "shots": [
           {
-            "photo": "6f88a051",
-            "label": "Sims Lake Park",
+            "photo": "62e4cfa8",
             "weight": 7,
             "callout": {
               "type": "stat",
@@ -373,18 +373,18 @@
             }
           },
           {
-            "photo": "78dc5c40",
-            "label": "Town Center Park",
+            "photo": "c4890c75",
+            "label": "PlayTown Suwanee",
             "weight": 6
           }
         ]
       },
       {
         "say": "It began in 1871, as a stop on the railroad.",
+        "chapter": "history",
         "shots": [
           {
             "photo": "6644ffa4",
-            "label": "Suwanee, 1897",
             "move": "push_in_slow",
             "callout": {
               "type": "stat",
@@ -397,6 +397,7 @@
       },
       {
         "say": "The trains still run past Old Town, and Main Street still has its brick fronts.",
+        "chapter": "history",
         "shots": [
           {
             "photo": "74bc5f84",
@@ -412,10 +413,10 @@
       },
       {
         "say": "Then Atlanta arrived. In thirty years, the town grew more than eightfold.",
+        "chapter": "growth",
         "shots": [
           {
             "photo": "b3558ddf",
-            "label": "Portland Trail Drive",
             "callout": {
               "type": "count",
               "from": 2412,
@@ -446,57 +447,47 @@
       },
       {
         "say": "Instead of sprawling, the city built a center: a park, a plaza, a city hall.",
+        "chapter": "downtown",
         "shots": [
           {
-            "photo": "33ffc205",
-            "label": "Town Center Park",
-            "weight": 8,
+            "photo": "84446a55",
+            "move": "push_in_slow",
             "callout": {
               "type": "stat",
               "big": "2005–09",
               "label": "Town Center Park and City Hall",
               "source": "City of Suwanee"
             }
-          },
-          {
-            "photo": "84446a55",
-            "label": "Suwanee City Hall",
-            "weight": 7
           }
         ]
       },
       {
-        "say": "Now it's where the town gathers — concerts on the lawn, festivals after dark.",
+        "say": "Now it's where the town gathers, for concerts on the lawn and festivals all year.",
+        "chapter": "downtown",
         "shots": [
           {
             "photo": "ac380f96",
-            "label": "Town Center Park",
-            "weight": 8
-          },
-          {
-            "photo": "d76971c5",
-            "label": "Suwanee City Hall",
-            "weight": 6
+            "label": "Town Center Park"
           }
         ]
       },
       {
         "say": "Public art lines its walks, much of it on loan and changing with each new tour.",
+        "chapter": "downtown",
         "shots": [
           {
             "photo": "268c3d2e",
-            "label": "SculpTour",
             "weight": 7
           },
           {
-            "photo": "cf918144",
-            "label": "SculpTour",
+            "photo": "d2a19432",
             "weight": 7
           }
         ]
       },
       {
         "say": "Families come for the schools. Around Suwanee, they rank in Georgia's top ten at every level, from elementary to high school.",
+        "chapter": "schools",
         "shots": [
           {
             "photo": "6ad7e505",
@@ -505,7 +496,7 @@
             "callout": {
               "type": "stat",
               "big": "#5",
-              "label": "in Georgia · Johns Creek Elementary",
+              "label": "in Georgia · elementary school",
               "source": "U.S. News, 2024"
             }
           },
@@ -516,7 +507,7 @@
             "callout": {
               "type": "stat",
               "big": "#4",
-              "label": "in Georgia · Riverwatch Middle",
+              "label": "in Georgia · middle school",
               "source": "U.S. News, 2025"
             }
           },
@@ -527,7 +518,7 @@
             "callout": {
               "type": "stat",
               "big": "#9",
-              "label": "in Georgia · Lambert High",
+              "label": "in Georgia · high school",
               "source": "U.S. News, 2025–26"
             }
           }
@@ -535,6 +526,7 @@
       },
       {
         "say": "North Gwinnett High is sixteenth. And a medical college, PCOM Georgia, trains doctors and pharmacists right in town.",
+        "chapter": "schools",
         "shots": [
           {
             "photo": "e5632242",
@@ -543,7 +535,7 @@
             "callout": {
               "type": "stat",
               "big": "#16",
-              "label": "in Georgia · North Gwinnett High · 95% graduate",
+              "label": "in Georgia · high school · 95% graduate",
               "source": "U.S. News, 2025–26"
             }
           },
@@ -562,6 +554,7 @@
       },
       {
         "say": "A greenway follows the creek through the middle of town, over boardwalks, to lakes tucked between the neighbourhoods.",
+        "chapter": "outdoor",
         "shots": [
           {
             "photo": "52f135cb",
@@ -581,10 +574,10 @@
       },
       {
         "say": "Atlanta is thirty-three miles down I-85 — forty minutes, more at rush hour.",
+        "chapter": "commute",
         "shots": [
           {
             "photo": "aeefaa03",
-            "label": "Downtown Atlanta",
             "weight": 7,
             "callout": {
               "type": "stat",
@@ -595,21 +588,21 @@
           },
           {
             "photo": "69dae8ad",
-            "label": "Downtown Atlanta",
             "weight": 6
           }
         ]
       },
       {
         "say": "And it's still building: a second downtown park opened in 2024, beside the library.",
+        "chapter": "future",
         "shots": [
           {
-            "photo": "ac13dc13",
+            "photo": "56cb362f",
             "label": "Town Center on Main",
             "callout": {
               "type": "stat",
               "big": "2024",
-              "label": "Town Center on Main · 13 acres",
+              "label": "a second downtown park · 13 acres",
               "source": "City of Suwanee"
             }
           },
@@ -621,15 +614,11 @@
       },
       {
         "say": "Suwanee. A small town that decided what it wanted to be.",
+        "chapter": "overview",
         "shots": [
           {
             "photo": "4f006aa8",
-            "label": "George Pierce Park",
-            "weight": 3
-          },
-          {
-            "photo": "56cb362f",
-            "label": "Town Center on Main"
+            "label": "George Pierce Park"
           }
         ]
       }

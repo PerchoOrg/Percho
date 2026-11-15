@@ -242,13 +242,15 @@ export function buildCityFilm(input: {
       }
       const sort = shots.length;
       // What the card's place pill reads, and what its progress dashes are
-      // grouped by (`lib/feed/tour-segments.ts` reads `poi_name`).
-      const place = r.label ?? r.photo.poiName;
+      // grouped by (`lib/feed/tour-segments.ts` reads `poi_name`). Empty when
+      // the shot is not of a named place: the card then shows no pill.
+      const place = r.label ?? '';
       shots.push({
         photo_id: r.photo.id,
         poi_id: r.photo.poiId,
         poi_name: place,
-        bucket: r.photo.bucket,
+        // The city page's chip strip groups by this: the line's chapter.
+        bucket: line.chapter ?? r.photo.bucket,
         engine: r.photo.seedanceReady ? 'seedance' : 'kenburns',
         move: r.photo.seedanceReady ? null : (r.move ?? defaultMove(r.photo, sort)),
         duration_s: seconds,
