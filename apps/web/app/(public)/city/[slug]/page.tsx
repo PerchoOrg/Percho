@@ -16,12 +16,12 @@
 
 import { CommunityFilm } from '@/app/(public)/_components/CommunityFilm';
 import { CommunityGrid } from '@/app/_components/CommunityGrid';
-import { HeroControl } from '@/app/dashboard/_components/HeroControl';
 import { fetchCityDetail } from '@/lib/cities/detail';
 import { fetchCommunityListCards } from '@/lib/communities/list';
 import { APP_STORE_URL, sharedPageMetadata, siteOrigin } from '@/lib/share/app-links';
 import type { CityDetailDTO, CitySource } from '@percho/shared/city';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { cache } from 'react';
@@ -72,9 +72,11 @@ export default async function CityPage({ params }: { params: Promise<PageParams>
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-16 pt-4">
-      <div className="mb-3">
-        <HeroControl href="/communities">← Neighborhoods</HeroControl>
-      </div>
+      {/* Not `HeroControl`: that is white glass for a dark hero, and this page
+          opens on the cream background (phase335.1). */}
+      <Link href="/communities" className="mb-3 inline-block text-ink2 text-sm hover:text-ink">
+        ← Neighborhoods
+      </Link>
 
       <header>
         <p className="font-medium text-muted text-xs uppercase tracking-[0.14em]">City · {where}</p>
