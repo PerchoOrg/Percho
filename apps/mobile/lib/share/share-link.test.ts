@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { AreaCardV3 } from "../feed/card-types";
+import type { CommunityCardV3, FeedCardV3 } from "../feed/card-types";
 import {
 	appPathForSharedPath,
+	parseSharedParam,
+	putOnTop,
 	shareContent,
 	shareTargetForCard,
 	shareUrl,
+	sharedCardInPool,
 } from "./share-link";
 
 describe("shareUrl", () => {
@@ -28,62 +32,40 @@ describe("shareUrl", () => {
 });
 
 describe("shareContent", () => {
-	it("ends the message with the link, for targets that drop `url`", () => {
-		const c = shareContent({
-			kind: "city",
-			slug: "suwanee-ga",
-			name: "Suwanee",
-		});
-		expect(c.url).toBe("https://www.percho.co/watch/city/suwanee-ga");
-		expect(c.message.endsWith(c.url)).toBe(true);
-		expect(c.message.startsWith("Suwanee")).toBe(true);
+	it("hands the share sheet the link alone, so Messages shows it once", () => {
+		expect(
+			shareContent({ kind: "city", slug: "suwanee-ga", name: "Suwanee" }),
+		).toEqual({ url: "https://www.percho.co/watch/city/suwanee-ga" });
 	});
 });
 
 describe("appPathForSharedPath", () => {
-	it("maps the web community page to the app's community route", () => {
-		expect(appPathForSharedPath("/c/northbrooke")).toBe(
-			"/community/northbrooke",
+	it("opens a shared film in the deck, that card on top", () => {
+		expect(appPathForSharedPath("/watch/c/northbrooke")).toBe(
+			"/feed?shared=community:northbrooke",
 		);
-		expect(appPathForSharedPath("/c/northbrooke/")).toBe(
-			"/community/northbrooke",
-		);
-	});
-
-	it("opens a shared film on the page behind it", () => {
-		expect(
-			appPathForSharedPath("https://www.percho.co/watch/c/northbrooke"),
-		).toBe("/community/northbrooke");
 		expect(appPathForSharedPath("/watch/city/suwanee-ga")).toBe(
-			"/city/suwanee-ga",
+			"/feed?shared=city:suwanee-ga",
 		);
-		expect(appPathForSharedPath("/watch/x/suwanee-ga")).toBeNull();
 	});
 
-	it("takes the whole URL iOS hands over", () => {
-		expect(appPathForSharedPath("https://www.percho.co/c/northbrooke")).toBe(
-			"/community/northbrooke",
+	it("opens the web pages in the deck too", () => {
+		expect(appPathForSharedPath("/c/northbrooke")).toBe(
+			"/feed?shared=community:northbrooke",
 		);
+		expect(appPathForSharedPath("/c/northbrooke/feed/")).toBe(
+			"/feed?shared=community:northbrooke",
+		);
+		expect(appPathForSharedPath("/city/suwanee-ga")).toBe(
+			"/feed?shared=city:suwanee-ga",
+		);
+	});
+
+	it("takes the whole URL iOS hands over, and drops query and hash", () => {
 		expect(
-			appPathForSharedPath("https://www.percho.co/city/suwanee-ga?x=1"),
-		).toBe("/city/suwanee-ga");
+			appPathForSharedPath("https://www.percho.co/watch/c/northbrooke?x=1#t"),
+		).toBe("/feed?shared=community:northbrooke");
 		expect(appPathForSharedPath("percho://feed")).toBeNull();
-	});
-
-	it("sends the web community feed to the community page", () => {
-		expect(appPathForSharedPath("/c/northbrooke/feed")).toBe(
-			"/community/northbrooke",
-		);
-	});
-
-	it("keeps a city on its city route", () => {
-		expect(appPathForSharedPath("/city/suwanee-ga")).toBe("/city/suwanee-ga");
-	});
-
-	it("drops the query and hash", () => {
-		expect(appPathForSharedPath("/c/northbrooke?utm_source=x#top")).toBe(
-			"/community/northbrooke",
-		);
 	});
 
 	it("leaves every other path to the router", () => {
@@ -92,6 +74,27 @@ describe("appPathForSharedPath", () => {
 		expect(appPathForSharedPath("/community/northbrooke")).toBeNull();
 		expect(appPathForSharedPath("/c/")).toBeNull();
 		expect(appPathForSharedPath("/c/a/b")).toBeNull();
+		expect(appPathForSharedPath("/watch/x/suwanee-ga")).toBeNull();
+	});
+});
+
+describe("parseSharedParam", () => {
+	it("reads what appPathForSharedPath writes", () => {
+		expect(parseSharedParam("community:northbrooke")).toEqual({
+			kind: "community",
+			slug: "northbrooke",
+		});
+		expect(parseSharedParam("city:suwanee-ga")).toEqual({
+			kind: "city",
+			slug: "suwanee-ga",
+		});
+	});
+
+	it("ignores anything else", () => {
+		expect(parseSharedParam(undefined)).toBeNull();
+		expect(parseSharedParam(["community:x"])).toBeNull();
+		expect(parseSharedParam("listing:x")).toBeNull();
+		expect(parseSharedParam("community:")).toBeNull();
 	});
 });
 
@@ -122,5 +125,65 @@ describe("shareTargetForCard", () => {
 
 	it("shares nothing for a city with no page", () => {
 		expect(shareTargetForCard(city())).toBeNull();
+	});
+});
+
+describe("sharedCardInPool", () => {
+	const community = {
+		kind: "community",
+		id: "c-1",
+		slug: "northbrooke",
+		name: "Northbrooke",
+	} as CommunityCardV3;
+	const unit = {
+		id: "city:suwanee-ga",
+		level: "city" as const,
+		name: "Suwanee",
+		state: "GA",
+		centroid: { lat: 0, lng: 0 },
+		citySlug: "suwanee-ga",
+		communityCount: 1,
+		sampleCommunityNames: [],
+		stats: {},
+	};
+	const pool = { communities: [community], geoUnits: [unit] };
+
+	it("finds a community by slug", () => {
+		expect(
+			sharedCardInPool(pool, { kind: "community", slug: "northbrooke" }),
+		).toBe(community);
+	});
+
+	it("builds a city's card with the deck's own id", () => {
+		expect(
+			sharedCardInPool(pool, { kind: "city", slug: "suwanee-ga" }),
+		).toEqual({ kind: "area", id: "area-city:suwanee-ga", unit });
+	});
+
+	it("is null until the pool has it", () => {
+		expect(sharedCardInPool(pool, { kind: "community", slug: "x" })).toBeNull();
+		expect(sharedCardInPool(pool, { kind: "city", slug: "x" })).toBeNull();
+	});
+});
+
+describe("putOnTop", () => {
+	const c = (id: string) => ({ kind: "community", id }) as FeedCardV3;
+
+	it("puts the card in front and drops its later copy", () => {
+		const deck = [c("a"), c("b"), c("s"), c("d")];
+		expect(putOnTop(deck, 1, c("s")).map((x) => x.id)).toEqual([
+			"a",
+			"s",
+			"b",
+			"d",
+		]);
+	});
+
+	it("leaves swiped cards alone", () => {
+		expect(putOnTop([c("a"), c("b")], 2, c("s")).map((x) => x.id)).toEqual([
+			"a",
+			"b",
+			"s",
+		]);
 	});
 });
