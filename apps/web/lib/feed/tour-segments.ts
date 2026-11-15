@@ -99,7 +99,11 @@ function parseClips(orderedClips: unknown): ParsedClip[] {
     // neither cannot be grouped, so each clip stands alone.
     const bucket = typeof c.bucket === 'string' ? c.bucket : '';
     out.push({
-      key: id || name || `clip-${out.length}`,
+      // The place AND its name: a city film names some shots of a place and
+      // not others (phase331), and keying on the place alone merged a named
+      // shot into an unnamed neighbour and showed the neighbour's blank. A
+      // community clip's name is always its place's, so nothing changes there.
+      key: id ? `${id}|${name}` : name || `clip-${out.length}`,
       name,
       seconds,
       distance,

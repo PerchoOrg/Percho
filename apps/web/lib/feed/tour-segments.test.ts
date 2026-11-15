@@ -57,6 +57,17 @@ describe('tourSegments', () => {
     expect(segments.map((s) => s.name)).toEqual(['park', 'cafe']);
   });
 
+  it('keeps a named shot of a place apart from an unnamed one beside it', () => {
+    // A city film names only real places (phase331): the concert lawn and the
+    // sculpture after it are filed under one place, and only the lawn is named.
+    const segments = tourSegments([
+      clip('town-center', 4, 'Town Center Park'),
+      clip('town-center', 4, ''),
+      clip('town-center', 4, ''),
+    ]);
+    expect(segments.map((s) => s.name)).toEqual(['Town Center Park', '']);
+  });
+
   it('does not merge a place the film returns to later', () => {
     const segments = tourSegments([clip('a', 3), clip('b', 3), clip('a', 3)]);
     expect(segments.map((s) => s.name)).toEqual(['a', 'b', 'a']);
