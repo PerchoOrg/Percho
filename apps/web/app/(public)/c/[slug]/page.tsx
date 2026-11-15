@@ -20,10 +20,48 @@ import {
   streamPosterUrl,
 } from '@/lib/feed/vertical-videos';
 import { LISTINGS_ON_WEB } from '@/lib/listings/listings-on-web';
+import { sharedPageMetadata, siteOrigin } from '@/lib/share/app-links';
 import type { Row } from '@/lib/supabase/rows';
 import { createClient, createUncachedServiceClient } from '@/lib/supabase/server';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import { CommunityBody } from './_components/CommunityBody';
+
+/**
+ * Every film, read once per request — the metadata wants the film's first
+ * frame for the link card, and the page plays the film.
+ */
+const getFilms = cache(() => fetchVerticalVideos(createUncachedServiceClient()));
+
+/**
+ * The link card a shared community draws in iMessage / WhatsApp, and Safari's
+ * app banner (phase335 — the iOS app shares this page; `lib/share/app-links.ts`).
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const supabase = await createClient();
+  const { data: community } = await supabase
+    .from('communities')
+    .select('id, name, city, state, description, status')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (!community || community.status !== 'active') return { title: 'Community not found' };
+  const filmUid = (await getFilms()).byCommunity.get(community.id);
+  const where = community.city ? `${community.city}, ${community.state}` : community.state;
+  return sharedPageMetadata({
+    title: `${community.name} · ${where}`,
+    description:
+      community.description?.trim() || `Watch ${community.name}'s neighborhood film on Percho.`,
+    path: `/c/${slug}`,
+    image: filmUid ? streamPosterUrl(filmUid) : null,
+    origin: siteOrigin(),
+  });
+}
 
 type CommunityRow = Pick<
   Row<'communities'>,
@@ -97,7 +135,7 @@ export default async function CommunityPage({
 
   // The community's film — the same pick the app makes (phase313). Uncached,
   // so a re-cut reaches this page (see `fetchVerticalVideos`).
-  const films = await fetchVerticalVideos(createUncachedServiceClient());
+  const films = await getFilms();
   const filmUid = films.byCommunity.get(community.id);
   const filmUrl = filmUid
     ? streamManifestUrl(filmUid)
@@ -171,6 +209,22 @@ export default async function CommunityPage({
 
   const heroCoverUrl = heroCover ? heroCover.url : null;
 
+  // The community's city, when it has a page (phase335): a buyer who arrives
+  // on a shared link goes on from here to the city and its other communities.
+  let cityHref: string | null = null;
+  if (community.city) {
+    const { data: city } = await supabase
+      .from('cities')
+      .select('slug')
+      .ilike('name', community.city.trim())
+      .eq('state', community.state)
+      .eq('status', 'active')
+      .not('profile', 'is', null)
+      .limit(1)
+      .maybeSingle();
+    cityHref = city ? `/city/${city.slug}` : null;
+  }
+
   return (
     <CommunityBody
       community={{
@@ -196,6 +250,7 @@ export default async function CommunityPage({
       videos={videos}
       listings={listings}
       film={film}
+      cityHref={cityHref}
     />
   );
 }

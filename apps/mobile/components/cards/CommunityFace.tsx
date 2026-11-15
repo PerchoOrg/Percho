@@ -162,7 +162,11 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
-import { SOUND_TAP_TARGET, type TapSlot } from "../../lib/gesture/tap-slot";
+import {
+	SHARE_TAP_TARGET,
+	SOUND_TAP_TARGET,
+	type TapSlot,
+} from "../../lib/gesture/tap-slot";
 import { type SavedKind, useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
 import { redline, redlineRadii } from "../../theme/tokens";
@@ -275,6 +279,11 @@ interface CommunityFaceProps {
 	 */
 	tag?: "COMMUNITY" | "CITY";
 	saveKind?: SavedKind;
+	/**
+	 * Opens the share sheet (phase335). Absent for a card with no page to send
+	 * someone to; the corner then shows no share cell.
+	 */
+	onShare?: () => void;
 }
 
 export function CommunityFace({
@@ -286,6 +295,7 @@ export function CommunityFace({
 	deckGesture,
 	tag = "COMMUNITY",
 	saveKind = "community",
+	onShare,
 }: CommunityFaceProps) {
 	const icons = signalIcons(card);
 
@@ -644,6 +654,14 @@ export function CommunityFace({
 					onPress: () => toggleSaved(card.id, saveKind),
 					...(tapSlot ? { onTouchStart: arm(SAVE_TAP_TARGET) } : {}),
 				}}
+				{...(onShare
+					? {
+							share: {
+								onPress: onShare,
+								...(tapSlot ? { onTouchStart: arm(SHARE_TAP_TARGET) } : {}),
+							},
+						}
+					: {})}
 			/>
 
 			{/* Bottom scrim — transparent until ~55% down, then darkening to a

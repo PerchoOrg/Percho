@@ -86,8 +86,10 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 	 * from the Phosphor subset instead of being drawn from bordered `View`s.
 	 */
 	it("puts the mute and the bookmark in ONE object, at the badge's height", () => {
-		// Both cells, one container — a pill for two, a disc for one.
-		expect(CORNER).toContain("both ? styles.pill : styles.disc");
+		// Every cell, one container — a pill for two or three (phase335 added
+		// share as the third), a disc for one.
+		expect(CORNER).toContain("pill ? styles.pill : styles.disc");
+		expect(CORNER).toContain('name="share"');
 		expect(CORNER).toContain("const CORNER_HEIGHT = 26");
 		expect(CORNER).toContain("disc: { width: CORNER_HEIGHT");
 		// Real glyphs, no hand-built art: a `View`-drawn speaker is what the

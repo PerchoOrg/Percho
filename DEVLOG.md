@@ -23,6 +23,20 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 20:19 UTC — phase335: share a community or city card — universal links, web city page
+
+**Objective**: Owner: "给percho app加分享功能 use case是 agent可以把某个城市和小区的card 分享给任何buyer buyer再通过这个入口探索其他内容形成飞轮". Rulings in the session: share button in the feed card's top-right corner; universal links yes; the web city page yes ("全部都支持").
+**Actions**:
+- iOS — `CardCorner` takes a third cell, `share`, in the SAME pill after the bookmark (one object in the corner, phase175's rule). `export-fill` (iOS's own share mark) added to both icon subsets through `scripts/icon-fonts/build-icon-font.py`. `CommunityFace` and `AreaFace` take `onShare`; the feed dispatches `SHARE_TAP_TARGET` like save and sound. `lib/share/share-link.ts` (pure, 12 tests): `shareTargetForCard` (a community, or a city with `citySlug`; nothing for listings / trade-offs), `shareUrl`, `shareContent`, `appPathForSharedPath`. The city page's hero now has its share button; the community page's goes through the same helper.
+- Universal links — `app.json` `ios.associatedDomains: ["applinks:www.percho.co"]`, buildNumber 10 → 11. `app/+native-intent.tsx` maps `/c/<slug>` (and `/c/<slug>/feed`) to `/community/<slug>`; `/city/<slug>` is the same on both. A shared link opens a detail page as the app's FIRST screen, so its back button is now `backOrFeed` (back, or replace to `/feed`).
+- Web — `/.well-known/apple-app-site-association` (route handler, `application/json`, static) hands `/c/*` and `/city/*` to `5C84L6M8HT.co.percho.app`. `lib/share/app-links.ts` (4 tests) builds it and `sharedPageMetadata`: og/twitter card with the film's first frame, and Safari's Smart App Banner (`apple-itunes-app`, app-id 6806748456, `app-argument` = the page). `/c/[slug]` got `generateMetadata` (it had none — links previewed as a bare "Percho") and links its city when that city has a page. New `/city/[slug]`: film, ranking badges, at-a-glance tiles + city-vs-state bars, schools by level, getting around, history labels, plans folded, the city's communities (the grid's own set — films only), an App Store button, Commons credits. Every figure opens its source. `CommunityFilm` moved to `app/(public)/_components/` (two subtrees use it).
+**Decisions**:
+- `www` only in `associatedDomains`: the apex answers 308 to `www`, and Apple's CDN does not follow redirects for the association file.
+- No sharer attribution (`?a=<agent>`) this phase. It needs the app to know which signed-in user is an agent (no endpoint does today) and a ruling on lead ownership — `leads.listing_id` is NOT NULL, so a community-sourced lead has nowhere to go. Raised with the owner as a separate decision.
+- No share telemetry: `/api/mobile/events` takes a fixed gesture set; adding `share_tap` is a server change worth doing with attribution.
+**Issues**: the web city page could not be rendered locally — `fetchCommunityListCards` needs the service key, which this host does not have. Checked on the Vercel preview instead.
+**Next steps**: (1) EAS build 1.0.1 (11) for TestFlight — universal links are an entitlement, so Metro cannot deliver them; EAS registers the Associated Domains capability on the App ID. (2) Owner checks on the phone: corner share on a community and on Suwanee, the sheet's preview, a link opened with and without the app.
+
 ## 2026-11-15 18:46 UTC — phase334: every figure on the city page links to its source; only photo credits stay at the foot
 
 **Objective**: Owner asked whether rankings should link to their sources and whether "Sources & photo credits" is needed; agreed to: links on every figure, photo credits kept (folded), the source list dropped, the two-county note moved to the schools card.
