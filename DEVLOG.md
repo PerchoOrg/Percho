@@ -23,6 +23,15 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 23:20 UTC — phase337: a shared link opens the swipe deck with that card on top; one link in Messages
+
+**Objective**: Owner on build 11: "发送message 会有两个链接 并且跳转到app的explore页面 不是swipe的页面".
+**Actions**:
+- `shareContent` hands `Share.share` only `{ url }`. With `message` ending in the same URL beside it, Messages drew the link twice; alone it draws one rich card from the page's og tags.
+- `appPathForSharedPath` now sends every community / city link (`/watch/c|city/<slug>`, `/c/<slug>`, `/c/<slug>/feed`, `/city/<slug>`) to `/feed?shared=community:<slug>` / `city:<slug>`. The feed reads and clears the param, and once a deck exists puts the pool's own card for it in front (`sharedCardInPool`, `putOnTop` — pure, tested; 17 tests in `lib/share`). While the pool lacks it, it fetches more pages; with the pool exhausted and still no card, it opens the detail page.
+**Decisions**: the card comes from the pool rather than being built from the detail API, so it is exactly the card a swipe reaches (its film, segments, signals and swipe events); the cost is a page or two of fetching for a community deep in the pool.
+**Issues**: JS only — build 11 picks it up from Metro. Not testable here (no simulator); owner checks on the phone.
+
 ## 2026-11-15 22:50 UTC — phase336.5: dev client 1.0.1 (11) with universal links, in TestFlight
 
 **Objective**: Owner: "最新的build" — the build that carries phase335's `associatedDomains`.

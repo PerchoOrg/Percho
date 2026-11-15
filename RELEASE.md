@@ -27,8 +27,10 @@ on its own, with a button to see more in the app.
   short history — and lists the neighbourhoods in it. A neighbourhood's page
   links to its city.
 - **Links open in the app.** Opening a shared Percho link on an iPhone with
-  the app installed goes straight into the app. This needs the next app
-  update; until then the links open the website.
+  the app installed goes straight into the app's swipe feed, with the shared
+  neighbourhood or city as the first card — swipe on from there. A shared
+  link now arrives in Messages as one link with the film's picture, not two.
+  This needs the next app update; until then the links open the website.
 
 ## v1.10 — The feed learns from your swipes
 

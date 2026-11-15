@@ -24,7 +24,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
 	type CardRenderArgs,
@@ -67,7 +67,13 @@ import {
 	SOUND_TAP_TARGET,
 } from "../../lib/gesture/tap-slot";
 import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
-import { shareTargetForCard } from "../../lib/share/share-link";
+import {
+	type SharedRef,
+	parseSharedParam,
+	putOnTop,
+	shareTargetForCard,
+	sharedCardInPool,
+} from "../../lib/share/share-link";
 import { openShareSheet } from "../../lib/share/share-sheet";
 import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
@@ -406,6 +412,47 @@ export default function FeedScreen() {
 
 		setEngineExhausted(result.exhausted);
 	}, [stage]);
+
+	/**
+	 * A shared link opened the app here (phase337, owner: "跳转到app的explore页面
+	 * 不是swipe的页面"): `+native-intent` turns `www.percho.co/watch/c/<slug>`
+	 * into `/feed?shared=community:<slug>`. The card goes in FRONT of the deck
+	 * the buyer already has, and they swipe on from it into everything else.
+	 *
+	 * The param is consumed and cleared, so coming back to the tab does not
+	 * put the card on top again. The card comes from the pool — the same card
+	 * a swipe would reach — so while the pool has not loaded it, more pages
+	 * are fetched; if the whole pool is in and it is not there (a community
+	 * with no film, say), its page opens instead, so the link never lands on
+	 * nothing.
+	 */
+	const { shared } = useLocalSearchParams<{ shared?: string }>();
+	const [pendingShare, setPendingShare] = useState<SharedRef | null>(null);
+	useEffect(() => {
+		const ref = parseSharedParam(shared);
+		if (!ref) return;
+		setPendingShare(ref);
+		router.setParams({ shared: undefined });
+	}, [shared]);
+	useEffect(() => {
+		if (!pendingShare || deck.length === 0) return;
+		const card = sharedCardInPool(pool, pendingShare);
+		if (card) {
+			setPendingShare(null);
+			setDeck((d) => putOnTop(d, activeIndex, card));
+			return;
+		}
+		if (!exhausted) {
+			fetchMore();
+			return;
+		}
+		setPendingShare(null);
+		router.push(
+			pendingShare.kind === "community"
+				? `/community/${pendingShare.slug}`
+				: `/city/${pendingShare.slug}`,
+		);
+	}, [pendingShare, deck.length, pool, exhausted, fetchMore, activeIndex]);
 
 	// Prefetch when the active card is 5 from the end (§1.7). Keyed on the
 	// DISTANCE to the end rather than on `activeIndex` and `deck.length`
