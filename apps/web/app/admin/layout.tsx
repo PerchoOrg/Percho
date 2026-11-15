@@ -9,19 +9,15 @@
  * show the same `poi_photos` rows in context. `/admin/pipeline/poi-library`
  * still WORKS and is still linked from those tables' rows; it just isn't a
  * top-level destination.
+ *
+ * 2026-11-14: the Home Nearby tab was dropped (owner: "delete Home Nearby tab
+ * if it is not used anymore") — listings are off on web and iOS. The pages
+ * under /admin/pipeline/listing-nearby still work and Video Jobs rows still
+ * link to them. A City Tour tab was added (phase318).
  */
 
 import { requireAdmin } from '@/lib/auth/require-admin';
-import {
-  Activity,
-  Building2,
-  Film,
-  Home,
-  Landmark,
-  ListVideo,
-  MessageSquare,
-  Music,
-} from 'lucide-react';
+import { Activity, Building2, Film, Landmark, ListVideo, MessageSquare, Music } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { type AdminHubTab, AdminHubTabs } from './_components/AdminHubTabs';
 
@@ -38,12 +34,6 @@ const TABS: AdminHubTab[] = [
     label: 'City Tour',
     href: '/admin/pipeline/city-tours',
     icon: <Landmark size={22} />,
-  },
-  {
-    id: 'listing-nearby',
-    label: 'Home Nearby',
-    href: '/admin/pipeline/listing-nearby',
-    icon: <Home size={22} />,
   },
   {
     id: 'jobs',
