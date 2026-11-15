@@ -12,8 +12,9 @@
  * button goes to the App Store, which says Open when the app is installed and
  * Get when it is not; Safari's banner at the top does the same.
  *
- * The credit line stays: Google's Places terms ask for the author wherever
- * their photos are shown, and the film is cut from them.
+ * No photo-credit line (phase336.4, owner: "去掉flim photo那一块"): the page
+ * is the feed card's film, and the card carries none either. The credits are
+ * on the full pages, `/c/<slug>` and `/city/<slug>`.
  */
 import { attachHls } from '@/app/(public)/_components/feed/attach-hls';
 import { useEffect, useRef, useState } from 'react';
@@ -24,11 +25,10 @@ export type WatchFilmProps = {
   name: string;
   line: string | null;
   film: { url: string; poster: string | null } | null;
-  credits: string[];
   appStoreUrl: string;
 };
 
-export function WatchFilm({ eyebrow, name, line, film, credits, appStoreUrl }: WatchFilmProps) {
+export function WatchFilm({ eyebrow, name, line, film, appStoreUrl }: WatchFilmProps) {
   const ref = useRef<HTMLVideoElement | null>(null);
   const [muted, setMuted] = useState(true);
   /**
@@ -163,11 +163,6 @@ export function WatchFilm({ eyebrow, name, line, film, credits, appStoreUrl }: W
         >
           See more in the Percho app
         </a>
-        {credits.length > 0 ? (
-          <p className="mt-3 line-clamp-2 text-[10px] text-white/50 leading-snug">
-            Film photos by {credits.join(', ')}.
-          </p>
-        ) : null}
       </div>
     </div>
   );

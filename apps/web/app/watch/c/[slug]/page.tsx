@@ -5,7 +5,6 @@
  * The film is the one `/c/<slug>` and the app play: the assembled tour, else
  * the AI tour (`fetchVerticalVideos`, uncached so a re-cut shows — phase312).
  */
-import { fetchFilmPhotoCredits } from '@/lib/communities/film-credits';
 import { fetchAiTourVideoByCommunity } from '@/lib/feed/ai-tour-videos';
 import {
   fetchVerticalVideos,
@@ -63,7 +62,6 @@ export default async function WatchCommunityPage({ params }: { params: Promise<P
   const url = filmUid
     ? streamManifestUrl(filmUid)
     : ((await fetchAiTourVideoByCommunity()).get(community.id) ?? null);
-  const credits = url ? await fetchFilmPhotoCredits(community.id, filmUid) : [];
   const where = community.city ? `${community.city}, ${community.state}` : community.state;
 
   return (
@@ -72,7 +70,6 @@ export default async function WatchCommunityPage({ params }: { params: Promise<P
       name={community.name}
       line={null}
       film={url ? { url, poster: filmUid ? streamPosterUrl(filmUid) : null } : null}
-      credits={credits}
       appStoreUrl={APP_STORE_URL}
     />
   );

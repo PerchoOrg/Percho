@@ -23,6 +23,12 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 22:10 UTC — phase336.4: no photo-credit line on the shared film
+
+**Objective**: Owner: "去掉flim photo那一块".
+**Actions**: `WatchFilm` drops its "Film photos by …" line and its `credits` prop; the two `/watch/` pages stop reading credits.
+**Risk, recorded**: Google's Places terms ask for the author's name wherever a Places photo is displayed, and CC BY asks the same for Commons files. The shared film now shows them uncredited — as the app's feed card already does. The credits remain on `/c/<slug>`, `/city/<slug>` and the app's detail pages. Owner's call; raised with him.
+
 ## 2026-11-15 21:50 UTC — phase336.3: the shared film pauses on a tap and is shown whole
 
 **Objective**: Owner, on the Suwanee link opened in WeChat (it played): "不能暂停 而且左边被truncate了一部分" — his screenshot shows "1871" and "depot on the Air Line Railroad" cut at the left edge.

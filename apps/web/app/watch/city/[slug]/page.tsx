@@ -44,10 +44,6 @@ export default async function WatchCityPage({ params }: { params: Promise<PagePa
       name={city.name}
       line={city.tagline}
       film={city.videoUrl ? { url: city.videoUrl, poster: city.posterUrl ?? null } : null}
-      // Google contributors by name; Commons authors too — a CC BY file asks
-      // for the author wherever it is shown. Their licences and links are on
-      // the city's full page.
-      credits={[...city.credits.google, ...city.credits.commons.map((c) => c.author)]}
       appStoreUrl={APP_STORE_URL}
     />
   );
