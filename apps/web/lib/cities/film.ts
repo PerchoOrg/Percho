@@ -169,9 +169,17 @@ export function spokenWords(text: string): number {
   return tokens(text).reduce((a, t) => a + (/\d/.test(t) ? 2.5 : 1), 0);
 }
 
-/** How long a clip runs: its line at speaking pace, plus air. */
+/**
+ * How long a clip runs: its line at speaking pace, plus air.
+ *
+ * The air is not decoration. A line may not start until its clip's crossfade
+ * has finished (0.5s, `TOUR_XFADE_S`) and must end a beat before the next line
+ * (0.35s, `NARRATION_MIN_GAP_S` in the worker) — 0.85s of every clip that no
+ * word can occupy. With less air than that every line overran: the second cut
+ * sped up eight of fifteen and pushed four late.
+ */
 export function secondsFor(words: number, kind: 'data' | 'place'): number {
-  const [air, min, max] = kind === 'data' ? [1.0, 5, 12] : [0.7, 3.5, 9];
+  const [air, min, max] = kind === 'data' ? [1.3, 5, 12] : [1.1, 3.5, 9];
   return half(Math.min(max, Math.max(min, words / WORDS_PER_SECOND + air)));
 }
 
