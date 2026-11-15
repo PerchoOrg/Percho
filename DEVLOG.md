@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 02:20 UTC — phase321: Suwanee film rejected; city card / city page / film v2 design (demo)
+
+**Objective**: Owner on the 65s Suwanee film: "非常不好 看完我对这个城市没有基本的了解 … 城市卡要侧重基本面 不要跟community card 完全一样 要有基本的历史介绍和数据 便利 安全 教育 发展 规划等等 … 可视化 … 然后再进入城市的具体poi （4个重复的city hall … 一个狗特写 why????）".
+**What went wrong**: the city film reused the community recipe — a reel of places — so it said nothing about the city as a whole. City Hall appeared four-plus times (the City Hall POI and Town Center Park both carry City Hall photos, and the city quotas gave each 3). The "dog" is the greenway deer, kept on purpose because my script said "deer included" — wrong call: an animal close-up tells a buyer nothing about a city.
+**Actions**: Researched the fundamentals (census 1990 2,412 → 2000 8,725 → 2010 15,355 → 2020 20,786; ACS 2020–24 median HH income $103,260, median home $480,600, 59% owner-occupied, 62.5% bachelor's+; railroad depot 1871, incorporated 1949 per suwanee.com, Falcons training base 1979–98; NGHS 95.4% grad, PRHS 88–92%, district 82.5%; ~33 mi / ~40 min to downtown, ~40 mi to ATL; 2040 Comprehensive Plan 2019, Suwanee Gateway, Town Center on Main 2024, Strategic Plan due late 2026; FBI-reported 2022 crime 1.96 violent / 16.55 property per 1,000 via NeighborhoodScout) and Gwinnett costs from `area_metrics`. Built `apps/web/public/demos/city-card-v1/` — feed card (fundamentals tiles over the film), city page (at a glance, history timeline, growth bar chart, graduation bars, getting around, safety [flagged], planning, cost of living, places strip, neighborhoods), and a film v2 storyboard (Act 1: six data frames over the city's own photos; Act 2: one shot per place, no repeated subject, no close-ups standing in for a place).
+**Decisions**: Safety is drawn but marked "not shipped without your OK": `lenses.ts` records that a crime lens needs the owner (fair housing — Zillow/Redfin dropped crime layers). Proposed form: city-wide official rates with year and source, no map shading, no "safe" wording, no ranking.
+**Next steps**: Owner reviews the demo; on his OK — build data-frame rendering for Act 1, the same-subject dedupe and "place must be the subject" rule in plan, then the real city card (iOS) and city page (web).
+
 ## 2026-11-15 01:30 UTC — phase319–320: City Tour index table, Home Nearby tab gone, city clip quotas; Suwanee's first film
 
 **Objective**: Owner: (1) research Suwanee, write a city introduction and a <2 min script, ≥70% of lines over matching footage and ≤30% over related footage; (2) "for city tour, start with table following the pattern from others, dont show the title again"; (3) drop the Home Nearby tab if unused; then (4) "一张一张审核工作量太大 … 你根据调研和分析直接作出判断 … 我只用扫一眼看明显不行的reject 大部分情况直接开始render".
