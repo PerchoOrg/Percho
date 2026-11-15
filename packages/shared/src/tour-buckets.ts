@@ -24,6 +24,8 @@ export interface TourSegment {
   endFraction: number;
   /** `community_pois.intent_bucket`. Absent when the join could not resolve it. */
   bucket?: string;
+  /** How far the place is from the community — "1.4 mi", "0 mi" for its own amenities. */
+  distance?: string;
 }
 
 /**

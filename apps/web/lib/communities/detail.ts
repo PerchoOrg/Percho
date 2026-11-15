@@ -47,8 +47,11 @@ import { fetchVerticalVideos, streamManifestUrl } from '@/lib/feed/vertical-vide
 import {
   type TypedClient,
   createAnonClient,
+  createUncachedAnonClient,
   createUncachedServiceClient,
 } from '@/lib/supabase/server';
+import { parseCommunityProfile } from '@/lib/zod/community-profile';
+import type { CommunityProfile } from '@percho/shared/community-profile';
 import {
   type CommunityReason,
   communityReasons,
@@ -146,6 +149,12 @@ export interface CommunityDetailDTO {
    * (`lib/communities/film-credits.ts`). Absent when the film has none.
    */
   photoCredits?: string[];
+  /**
+   * What the explore page says (`communities.profile`, phase339): the verdict
+   * and the tiles. Absent for a community nobody has researched yet — the
+   * phone then draws the page it always drew.
+   */
+  profile?: CommunityProfile;
 }
 
 type DetailRow = {
@@ -188,11 +197,12 @@ export async function fetchCommunityDetail(idOrSlug: string): Promise<CommunityD
   const row = data as DetailRow;
   // Counts of real places, fetched here too so this page cannot show WEAKER
   // facts than the tile the user tapped to reach it.
-  const [poiCounts, videos, reviews] = await Promise.all([
+  const [poiCounts, videos, reviews, profile] = await Promise.all([
     fetchPoiCounts(supabase, [row.id]),
     // Uncached, so a re-cut film reaches this page — see `fetchVerticalVideos`.
     fetchVerticalVideos(createUncachedServiceClient()),
     fetchCommunityReviews(supabase, row.id),
+    fetchCommunityProfile(row.id),
   ]);
   // The winning-uid rule lives in `fetchVerticalVideos`; re-deciding it here
   // would let this page and the feed card disagree about which film is "the"
@@ -208,9 +218,34 @@ export async function fetchCommunityDetail(idOrSlug: string): Promise<CommunityD
   return {
     ...detail,
     ...(reviews ? { reviews } : {}),
+    ...(profile ? { profile } : {}),
     // A credit with no film on the page would credit nothing the buyer sees.
     ...(detail.videoUrl && photoCredits.length > 0 ? { photoCredits } : {}),
   };
+}
+
+/**
+ * The community's researched profile, or null. Never throws: the page is
+ * worth showing without it.
+ *
+ * Its own read, and uncached, for the two reasons the city page learned the
+ * hard way (`lib/cities/detail.ts`): a profile rewritten by hand must reach the
+ * phone, and a cached copy that no longer fits the schema must not hide a row
+ * that does.
+ */
+async function fetchCommunityProfile(communityId: string): Promise<CommunityProfile | null> {
+  try {
+    const { data, error } = await createUncachedAnonClient()
+      .from('communities')
+      .select('profile')
+      .eq('id', communityId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return parseCommunityProfile(data?.profile);
+  } catch (err) {
+    console.warn('[community] profile unavailable', err);
+    return null;
+  }
 }
 
 /** Latest READY AI community-tour video for a community, or null. */

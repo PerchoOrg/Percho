@@ -17,6 +17,15 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-15
+- **A neighbourhood's page you can read in one look (Windward first).** Under
+  the film: three things it is good for and three to think twice about, then
+  a handful of tiles — where its schools and home values rank, what homes are
+  worth and how that has moved, what the yearly dues cover and what costs
+  extra, how far everyday places are, the word its residents use that few
+  others do, and what is coming up nearby. Tap a tile for the full chart.
+  Links to the community's own site, its rules and dues, and Nextdoor sit at
+  the bottom. Other neighbourhoods keep their current page until they are
+  researched the same way.
 - **A shared link now opens just the film.** Someone without the app sees
   the neighbourhood's or city's film full screen, playing, with one button
   underneath to see more in the Percho app — not the whole web page.

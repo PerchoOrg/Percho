@@ -5,6 +5,7 @@
   "exports": {
     "./city": "./src/city.ts",
     "./community-compare": "./src/community-compare.ts",
+    "./community-profile": "./src/community-profile.ts",
     "./community-take": "./src/community-take.ts",
     "./compare-table": "./src/compare-table.ts",
     "./compare-take": "./src/compare-take.ts",

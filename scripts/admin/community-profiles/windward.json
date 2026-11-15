@@ -1,0 +1,104 @@
+{
+  "asOf": "2026-11-15",
+  "verdict": {
+    "good": ["Top-6 elementaries", "Private 200-acre lake", "Errands under 2 mi"],
+    "watch": ["Pool is a private club", "4,589 neighbours", "HOA approves remodels"]
+  },
+  "ranks": {
+    "rows": [
+      { "group": "Schools", "label": "Elementary", "note": "two zones", "rank": "#3 · #6", "of": "of 1,220 in GA", "percentile": 99.6, "percentile2": 99.8, "tile": "#3–6" },
+      { "group": "Schools", "label": "Middle", "note": "Webb Bridge", "rank": "#7", "of": "of 472 in GA", "percentile": 98.7, "tile": "#7" },
+      { "group": "Schools", "label": "High", "note": "Alpharetta HS", "rank": "#31", "of": "of 443 in GA", "percentile": 93.2, "tile": "#31" },
+      { "group": "Homes", "label": "Home value", "note": "$747K", "rank": "#7", "of": "of 203 metro ZIPs", "percentile": 97, "tile": "#7" },
+      { "group": "Homes", "label": "5-year growth", "note": "+34%", "rank": "#17", "of": "of 203 metro ZIPs", "percentile": 92.1 },
+      { "group": "People", "label": "Size", "note": "4,589 on Nextdoor", "rank": "#6", "of": "of 314 in city", "percentile": 98.4 }
+    ],
+    "schools": [
+      { "name": "Lake Windward ES", "url": "https://lakewindward.fultonschools.org/" },
+      { "name": "Creek View ES", "url": "https://creekview.fultonschools.org/" },
+      { "name": "Webb Bridge MS", "url": "https://webbbridge.fultonschools.org/" },
+      { "name": "Alpharetta HS", "url": "https://alpharettahs.fultonschools.org/" }
+    ],
+    "note": "Which elementary depends on the street."
+  },
+  "homeValue": {
+    "area": "ZIP 30005",
+    "display": "$747K",
+    "change": "+60% since 2020",
+    "headline": "Up 60% since 2020. Flat since 2024.",
+    "baseline": "Metro Atlanta",
+    "series": [
+      { "year": 2016, "value": 414000, "baseline": 197000 },
+      { "year": 2017, "value": 432000, "baseline": 213000 },
+      { "year": 2018, "value": 447000, "baseline": 233000 },
+      { "year": 2019, "value": 453000, "baseline": 246000 },
+      { "year": 2020, "value": 467000, "baseline": 263000 },
+      { "year": 2021, "value": 559000, "baseline": 320000 },
+      { "year": 2022, "value": 686000, "baseline": 384000 },
+      { "year": 2023, "value": 714000, "baseline": 385000 },
+      { "year": 2024, "value": 759000, "baseline": 394000 },
+      { "year": 2025, "value": 756000, "baseline": 382000 },
+      { "year": 2026, "value": 747000, "baseline": 376000 }
+    ],
+    "holding": {
+      "display": "≈ $940",
+      "basis": "a month to hold the typical 30005 home, before the mortgage",
+      "rows": [
+        { "label": "Property tax", "usd": 635, "note": "est. 1.02%" },
+        { "label": "Electricity", "usd": 150 },
+        { "label": "HOA dues", "usd": 69, "note": "$824 / yr" },
+        { "label": "Water", "usd": 54, "note": "est." },
+        { "label": "Trash", "usd": 30, "note": "est." }
+      ]
+    }
+  },
+  "dues": {
+    "display": "$824",
+    "period": "a year",
+    "headline": "The lake is yours. The pool is a club.",
+    "tile": { "included": "Lake, parks, launch", "separate": "Pool, tennis, golf" },
+    "included": [
+      { "title": "Lake Windward", "note": "electric boats, kayaks, fishing" },
+      { "title": "Boat launch", "note": "gated, with a picnic pavilion" },
+      { "title": "Sports park", "note": "playground, ball field, dog runs" },
+      { "title": "3 pocket parks", "note": "two on the water" }
+    ],
+    "separate": [
+      { "title": "Racket Social Club", "note": "pools, tennis, pickleball, padel, marina", "url": "https://www.windwardlakeclub.com/" },
+      { "title": "Golf Club of Georgia", "note": "two Arthur Hills courses", "url": "https://www.golfclubofgeorgia.com/" },
+      { "title": "Some neighbourhoods", "note": "their own dues on top" }
+    ]
+  },
+  "words": {
+    "lead": "Convenient",
+    "leadNote": "1 in 6 communities say it",
+    "scope": "Alpharetta's 342 communities",
+    "rows": [
+      { "word": "Convenient", "pct": 17 },
+      { "word": "Beautiful", "pct": 29 },
+      { "word": "Walkability", "pct": 30 },
+      { "word": "Quiet", "pct": 42 },
+      { "word": "Dog friendly", "pct": 46 }
+    ]
+  },
+  "events": [
+    { "date": "2026-11-21", "title": "Tree lighting", "where": "Downtown Alpharetta · free", "url": "https://www.awesomealpharetta.com/events/dont-miss-events/" },
+    { "date": "2026-11-22", "title": "Lighting of Avalon", "where": "Avalon · 2.9 mi", "url": "https://www.awesomealpharetta.com/event/the-lighting-of-avalon/" },
+    { "date": "2026-11-22", "until": "2027-01-18", "title": "Avalon on Ice", "where": "Avalon · 2.9 mi", "url": "https://www.awesomealpharetta.com/event/the-lighting-of-avalon/" },
+    { "date": "2026-12-04", "until": "2027-01-04", "title": "Lights on the Loop", "where": "Alpha Loop · nightly, free", "url": "https://www.awesomealpharetta.com/lights-on-the-loop-2026/" }
+  ],
+  "links": [
+    { "label": "Community site", "url": "https://www.windwardhomesga.com/" },
+    { "label": "Rules & dues", "url": "https://www.windwardhomesga.com/governance-and-management" },
+    { "label": "Nextdoor", "url": "https://nextdoor.com/neighborhood/windward--alpharetta--ga/" },
+    { "label": "Reddit", "url": "https://www.reddit.com/r/Alpharetta/search/?q=Windward&restrict_sr=1" }
+  ],
+  "sources": [
+    { "name": "Georgia Milestones" },
+    { "name": "Nextdoor" },
+    { "name": "Zillow Home Value Index" },
+    { "name": "Windward Community Services Association", "url": "https://www.windwardhomesga.com/" },
+    { "name": "Percho county estimates" },
+    { "name": "Awesome Alpharetta", "url": "https://www.awesomealpharetta.com/" }
+  ]
+}
