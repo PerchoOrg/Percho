@@ -1,3 +1,4 @@
+import type { CommunityProfile } from "@percho/shared/community-profile";
 import type { ReviewDimension } from "@percho/shared/review-dimensions";
 import type { TourSegment } from "@percho/shared/tour-buckets";
 /**
@@ -78,4 +79,10 @@ export interface CommunityDetailDTO {
 	reviews?: CommunityReviewsDTO;
 	/** Google authors of the film's photos, in film order. Absent when none. */
 	photoCredits?: string[];
+	/**
+	 * What the explore page says (`communities.profile`, phase339). Absent for a
+	 * community nobody has researched — the screen then draws the page it
+	 * always drew.
+	 */
+	profile?: CommunityProfile;
 }

@@ -23,7 +23,26 @@ rotation, not on the way in.
 
 ---
 
-## 2026-11-16 01:20 UTC — phase338.2: the explore page cut to one screen (demo only)
+## 2026-11-15 23:44 UTC — phase339: the one-screen community page in the app, on Windward
+
+**Objective**: Owner, after the one-screen demo (phase338.2) and the Reddit question: "先暂时不导入reddit comments, 把现在的版本push for test". Read as: build that page in the app, without anything from Reddit, so he can test it on the phone.
+**Actions**:
+- `communities.profile jsonb` (`20261115233000_communities_profile.sql`, merged alone as `02312ef7` so the column existed before any code selected it; `echo | pnpm db:push`: "Applying migration 20261115233000_communities_profile.sql... Finished supabase db push."). `database.types.ts` edited by hand for the one column — `db:types` reads a local database this host does not run.
+- Shape: `packages/shared/src/community-profile.ts` (wire) and `apps/web/lib/zod/community-profile.ts` (stored; limits are the tiles' limits — a verdict line over 26 characters is refused when the profile is written; a compile-time line keeps the two from drifting). Writer: `scripts/admin/upsert-community-profile.ts` (`pnpm community:profile <slug> [--check]`), documents under `scripts/admin/community-profiles/`.
+- Server: `fetchCommunityDetail` adds `profile` from its own uncached read that cannot fail the page (the city page's two lessons). The mobile DTO mirrors it; the shared `TourSegment` now declares the `distance` the wire already carried.
+- App: `components/community/ExploreBody.tsx` (six verdict lines; tiles — where it ranks, home value, dues, nearby, residents say, coming up; link pills), `ExploreSheets.tsx` (the full chart each tile opens, in the existing `BottomSheet`), `ExploreCharts.tsx` (rank track, line, stops by distance — plain Views, a line is rotated bars), shaping in `lib/community/explore.ts` (13 tests). `app/community/[slug].tsx` draws this when the community has a profile and the old sections when it does not; with a profile and no reviews, the reviews section is one row.
+- `scripts/admin/community-profiles/windward.json` written to production: "windward: verdict + ranks, homeValue, dues, words, events, links (as of 2026-11-15)" / "wrote the profile of Windward".
+**Decisions**:
+- A hand-researched document per community, as `cities.profile` is — not computed. Fastest honest way to put the page on a phone; the tiles that can be computed for every community (school ranks, word rarity, home value by ZIP) are the next step, and the page will not change shape when they are.
+- Only the nearby tile is computed (from the film's own stops), so it appears for any profiled community without research.
+- A community without a profile keeps today's page exactly — the blast radius of this test is one community.
+- Events that have passed are dropped on the phone, so the dated list cannot go stale on screen.
+**Left out, on purpose**: everything from Reddit (owner), rush-hour drive times and price by enclave (no source), the ownership rank (the fair-housing question is still open with the owner), the Maker's Market date (not confirmed by a second source). The Reddit pill is a link to r/Alpharetta's search, not imported content.
+**Issues**: nothing here can render React Native — the page is typechecked, linted and its geometry tested, and is otherwise unseen until the owner opens it. Event dates come from Awesome Alpharetta through two searches; its pages refuse automated readers, so no page was read directly.
+**Housekeeping**: the three phase338 entries below carried times I had guessed (two of them in the future); they now carry their commits' times.
+**Next steps**: owner opens Windward in the app (Explore on its card). Then: compute ranks / words / home value for every community with a film, and decide the Windward film's "Windward Pool" labels (the pool is a private club).
+
+## 2026-11-15 23:13 UTC — phase338.2: the explore page cut to one screen (demo only)
 
 **Objective**: Owner on the final mix (v2, eight sections, ~5,300 px): "太长了 没人会看这么多 重新设计".
 **Actions**: `apps/web/public/demos/community-explore-v3/index.html`. Under the film and the name: six verdict lines (three ✓, three !), six tiles (ranks — wide; home value; dues; nearby; residents say; coming up — wide), four link pills, the review row. ~800 px below the film, against v2's ~5,000. Each tile is a figure or a word, one small chart, at most one line; tapping it opens a bottom sheet with v2's full chart for that subject (`#ranks` … `#events` opens a sheet on load). v1 and v2 stay up.
@@ -31,7 +50,7 @@ rotation, not on the way in.
 **Learnings**: "information-rich" was read as "more sections" twice. For this owner it means more findings per screen — the constraint is the screen.
 **Still SAMPLE**: Reddit sentiment/quotes, rush-hour drive times.
 
-## 2026-11-16 00:40 UTC — phase338.1: the final mix for the community explore page (demo only)
+## 2026-11-15 22:55 UTC — phase338.1: the final mix for the community explore page (demo only)
 
 **Objective**: Owner on the three directions: "混搭你再想想给我最终方案 不要局限在现有的数据 如果有链接可以加上 比如builder或者社区的主页 reddit还有办法吗".
 **Actions**: `apps/web/public/demos/community-explore-v2/index.html` — one phone, eight sections behind sticky scroll-following tabs (Verdict · Ranks · Voices · Money · Around · Calendar · Inside · Links), with a side table of what each block runs on. Order is a buyer's questions. v1 stays up for comparison.
@@ -44,7 +63,7 @@ rotation, not on the way in.
 **Still SAMPLE**: Reddit block, rush-hour drive times, commute and green-space ranks, price by enclave.
 **Next steps**: owner signs off the page; then build order is the `have` and `free` rows of the table first.
 
-## 2026-11-15 23:55 UTC — phase338: three directions for the community explore page (demo only)
+## 2026-11-15 22:37 UTC — phase338: three directions for the community explore page (demo only)
 
 **Objective**: Owner: "重新设计community的explore page 要有信息量 要有real insights 不要太多文字 多一点图表 但是不要单纯罗列数字 可以有一些ranking 可以从reddit上找一些review comments啥的 也可以加一些events 。 你来设计几个方案". Designs to choose from — no app code changed.
 **Actions**: `apps/web/public/demos/community-explore-v1/index.html` — one static page, three phones, all on Windward (Alpharetta), each section a one-line finding over its chart. `#a` / `#b` / `#c` opens one direction on a phone-width screen.

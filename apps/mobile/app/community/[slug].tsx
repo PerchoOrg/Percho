@@ -38,6 +38,13 @@
  * When a pillar gets a source, §3.3 is the target and this becomes its Vibe
  * section. It is not a placeholder in the meantime — every row on it is a real
  * row.
+ *
+ * ── A community with a profile (phase339) ───────────────────────────────────
+ *
+ * `communities.profile` is a researched document, and a community that has one
+ * gets `ExploreBody` in place of everything between the headline and the
+ * reviews: six verdict lines and a screen of tiles, each opening its chart.
+ * The sections above are what every other community still draws.
  */
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -53,6 +60,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RedlineIcon } from "../../components/cards/redline/RedlineChrome";
+import { ExploreBody } from "../../components/community/ExploreBody";
 import { NearbyChart } from "../../components/community/NearbyChart";
 import { RatingBars } from "../../components/community/RatingBars";
 import { StatBand } from "../../components/community/StatBand";
@@ -196,6 +204,21 @@ export default function CommunityWhyScreen() {
 	}
 
 	const place = [data.city, data.state].filter(Boolean).join(", ");
+	// A researched community gets the one-screen page (phase339); the rest keep
+	// the sections below, which need nothing but the row.
+	const profile = data.profile;
+	// On that page an empty reviews section is one row, not a section.
+	const reviewsRow = !!profile && !data.reviews;
+	const writeReview = () => {
+		if (!uid) {
+			router.push("/auth");
+			return;
+		}
+		router.push({
+			pathname: "/community/review",
+			params: { id: data.id, name: data.name },
+		});
+	};
 
 	return (
 		<View style={styles.root}>
@@ -243,14 +266,24 @@ export default function CommunityWhyScreen() {
 						{!!place && <Text style={styles.place}>{place}</Text>}
 					</View>
 
+					{profile && (
+						<ExploreBody
+							profile={profile}
+							segments={data.tourSegments}
+							interests={interests}
+						/>
+					)}
+
 					{/* Three figures as numerals — the old label/value rows charted. */}
-					<View style={styles.bandWrap}>
-						<StatBand stats={data.stats} />
-					</View>
+					{!profile && (
+						<View style={styles.bandWrap}>
+							<StatBand stats={data.stats} />
+						</View>
+					)}
 
 					{/* Counts of real places, biggest first. The page's densest
 					    numbers, and the evidence under half the reasons below. */}
-					{(data.nearby?.length ?? 0) > 0 && (
+					{!profile && (data.nearby?.length ?? 0) > 0 && (
 						<>
 							<Text style={styles.sectionHead}>WHAT'S NEARBY</Text>
 							<NearbyChart nearby={data.nearby ?? []} />
@@ -264,7 +297,7 @@ export default function CommunityWhyScreen() {
 					 * the key insights the owner's 2026-09-05 note exempts from
 					 * "text is not preferred".
 					 */}
-					{data.topReasons.length > 0 && (
+					{!profile && data.topReasons.length > 0 && (
 						<>
 							<Text style={styles.sectionHead}>WHY PEOPLE LOVE IT</Text>
 							<View style={styles.card}>
@@ -282,7 +315,7 @@ export default function CommunityWhyScreen() {
 					 * sentences carried are charted above — no evidence left the page,
 					 * it stopped being narrated one line at a time.
 					 */}
-					{data.moreReasons.length > 0 && (
+					{!profile && data.moreReasons.length > 0 && (
 						<>
 							<Text style={styles.sectionHead}>ALSO SAID BY RESIDENTS</Text>
 							<View style={styles.chips}>
@@ -296,7 +329,7 @@ export default function CommunityWhyScreen() {
 						</>
 					)}
 
-					{interests.length > 0 && (
+					{!profile && interests.length > 0 && (
 						<>
 							<Text style={styles.sectionHead}>WHAT RESIDENTS ARE INTO</Text>
 							{/*
@@ -321,7 +354,27 @@ export default function CommunityWhyScreen() {
 					 * the door to write one is always visible — an empty section beats
 					 * a generated one.
 					 */}
-					<Text style={styles.sectionHead}>RESIDENT REVIEWS</Text>
+					{reviewsRow && (
+						<View style={styles.reviewRow}>
+							<Text style={styles.reviewRowTxt}>
+								{myStatus === "pending"
+									? "Your review is waiting to be read."
+									: "No resident reviews yet."}
+							</Text>
+							<Pressable
+								hitSlop={8}
+								accessibilityRole="button"
+								onPress={writeReview}
+							>
+								<Text style={styles.reviewRowCta}>
+									{myStatus ? "Edit yours ›" : "Write the first ›"}
+								</Text>
+							</Pressable>
+						</View>
+					)}
+					{!reviewsRow && (
+						<Text style={styles.sectionHead}>RESIDENT REVIEWS</Text>
+					)}
 					{data.reviews ? (
 						<View style={styles.card}>
 							<View style={styles.statRow}>
@@ -365,34 +418,27 @@ export default function CommunityWhyScreen() {
 								</View>
 							))}
 						</View>
-					) : (
+					) : reviewsRow ? null : (
 						<Text style={styles.reviewEmpty}>
 							No resident reviews yet. Live here? Yours would be the first.
 						</Text>
 					)}
-					{myStatus === "pending" && (
+					{!reviewsRow && myStatus === "pending" && (
 						<Text style={styles.reviewPending}>
 							Your review is waiting to be read.
 						</Text>
 					)}
-					<Pressable
-						style={styles.reviewCta}
-						accessibilityRole="button"
-						onPress={() => {
-							if (!uid) {
-								router.push("/auth");
-								return;
-							}
-							router.push({
-								pathname: "/community/review",
-								params: { id: data.id, name: data.name },
-							});
-						}}
-					>
-						<Text style={styles.reviewCtaTxt}>
-							{myStatus ? "Edit your review" : "Write a review"}
-						</Text>
-					</Pressable>
+					{!reviewsRow && (
+						<Pressable
+							style={styles.reviewCta}
+							accessibilityRole="button"
+							onPress={writeReview}
+						>
+							<Text style={styles.reviewCtaTxt}>
+								{myStatus ? "Edit your review" : "Write a review"}
+							</Text>
+						</Pressable>
+					)}
 
 					{/*
 					 * Source line, per §3.4's rule that every evidence block names where
@@ -400,8 +446,9 @@ export default function CommunityWhyScreen() {
 					 * up as several.
 					 */}
 					<Text style={styles.source}>
-						Resident-stated attributes and interests from Nextdoor neighbourhood
-						profiles.
+						{profile
+							? profile.sources.map((src) => src.name).join(" · ")
+							: "Resident-stated attributes and interests from Nextdoor neighbourhood profiles."}
 					</Text>
 					{/*
 					 * Google's Places policy: every displayed photo credits its author.
@@ -570,6 +617,25 @@ const styles = StyleSheet.create({
 		borderColor: colors.accent,
 	},
 	reviewCtaTxt: { ...textStyles.footnote, fontSize: 15, color: colors.accent },
+	reviewRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: 10,
+		marginTop: 16,
+	},
+	reviewRowTxt: {
+		...textStyles.footnote,
+		fontSize: 13,
+		color: colors.ink2,
+		flexShrink: 1,
+	},
+	reviewRowCta: {
+		...textStyles.footnote,
+		fontSize: 14,
+		fontWeight: "500",
+		color: colors.accent,
+	},
 
 	source: {
 		...textStyles.caption,
