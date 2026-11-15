@@ -73,6 +73,7 @@ no URL segment) or underscored (private, never routed).
 |---|---|
 | `(public)/` | Anything an unauthenticated visitor can reach — the browse feed, community pages `c/[slug]`, city pages `city/[slug]` (phase335), listing pages `v/[agentSlug]/[listingSlug]`, saved, search, profile, legal. |
 | `(auth)/` | Login, signup, password reset. Its own layout. |
+| `watch/` | What a link shared from the iOS app opens (phase336): `watch/c/[slug]`, `watch/city/[slug]` — the film alone, full screen, and one button to the app. No site chrome. |
 | `dashboard/` | The agent's workspace. Listing and community editors, leads, analytics. Everything here assumes an authenticated agent. |
 | `admin/` | Internal pipeline console — POI review, video jobs, BGM, tour runs. Gated by `is_admin`; not a customer surface. |
 | `api/` | Route handlers. `api/mobile/*` is the mobile app's contract; `api/admin/*` requires `requireAdmin()`; webhooks verify signatures before doing anything. |
@@ -148,7 +149,7 @@ copied per entity.
 | `lib/feed/` | Feed generation, ordering, rhythm, behavioural signals. |
 | `lib/listing/` | Listing detail: hotspots, tours, section nav. |
 | `lib/gesture/` | Swipe physics and capability detection. |
-| `lib/share/` | Sharing a community or city (phase335): the link (`www.percho.co/c/<slug>`, `/city/<slug>` — a web page and a universal link at once), the share sheet, and the path mapping `+native-intent.tsx` uses. |
+| `lib/share/` | Sharing a community or city (phase335): the link (`www.percho.co/watch/c/<slug>`, `/watch/city/<slug>` — the film alone on the web (phase336) and a universal link at once), the share sheet, and the path mapping `+native-intent.tsx` uses. |
 | `state/` | Zustand stores — funnel stage, sound, preferences. |
 | `theme/` | Design tokens and layout constants. Several tests here assert against component *source text*, so reformatting a card can break them. |
 | `hooks/` | Cross-screen React hooks. |

@@ -2,11 +2,12 @@
  * Shared community and city links (phase335): what iOS needs to open them in
  * the app, and what a chat app needs to draw them as a card.
  *
- * The iOS app shares `www.percho.co/c/<slug>` and `/city/<slug>`. A buyer with
- * the app lands in it — iOS reads `appleAppSiteAssociation()` from
- * `/.well-known/apple-app-site-association` and the app claims `www.percho.co`
- * in its `associatedDomains`. A buyer without it lands on the page, which plays
- * the same film and offers the app through Safari's banner.
+ * The iOS app shares `www.percho.co/watch/c/<slug>` and `/watch/city/<slug>`.
+ * A buyer with the app lands in it — iOS reads `appleAppSiteAssociation()`
+ * from `/.well-known/apple-app-site-association` and the app claims
+ * `www.percho.co` in its `associatedDomains`. A buyer without it gets the film
+ * alone and a button to the app (`app/watch/`, phase336; the owner did not
+ * want a shared link to open the full web page).
  */
 import type { Metadata } from 'next';
 
@@ -19,8 +20,9 @@ export const APP_STORE_URL = `https://apps.apple.com/app/id${APP_STORE_ID}`;
 
 /**
  * The association file. Only the pages the app has a screen for go to it:
- * a community (`/c/<slug>`, and its video feed, which the app shows as the
- * community page) and a city. Everything else stays on the web.
+ * a shared film (`/watch/…`), a community (`/c/<slug>`, and its video feed,
+ * which the app shows as the community page) and a city. Everything else
+ * stays on the web.
  */
 export function appleAppSiteAssociation() {
   return {
@@ -29,8 +31,9 @@ export function appleAppSiteAssociation() {
         {
           appIDs: [APP_ID],
           components: [
-            { '/': '/c/*', comment: 'A community, shared from the app' },
-            { '/': '/city/*', comment: 'A city, shared from the app' },
+            { '/': '/watch/*', comment: 'A shared community or city film' },
+            { '/': '/c/*', comment: 'A community' },
+            { '/': '/city/*', comment: 'A city' },
           ],
         },
       ],

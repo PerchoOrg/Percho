@@ -3,10 +3,12 @@
  * both directions.
  *
  * Owner's use case: an agent sends a city or community card to a buyer, and
- * the buyer explores everything else from there. So the link is the web page
- * (`www.percho.co/c/<slug>`, `/city/<slug>`), which plays the film for a buyer
- * without the app, AND a universal link: `app.json` claims `www.percho.co` and
- * the site's `apple-app-site-association` hands `/c/*` and `/city/*` to the
+ * the buyer explores everything else from there. So the link is a web page
+ * that plays the film and nothing else, with one button to the app
+ * (`www.percho.co/watch/c/<slug>`, `/watch/city/<slug>` — phase336; the owner
+ * did not want a shared link to open the full web page), AND a universal
+ * link: `app.json` claims `www.percho.co` and the site's
+ * `apple-app-site-association` hands `/watch/*`, `/c/*` and `/city/*` to the
  * app, so a buyer WITH the app lands on the same place in it.
  *
  * `www`, not the apex: `percho.co` answers 308 to `www`, and iOS does not
@@ -38,8 +40,8 @@ export function shareTargetForCard(card: FeedCardV3): ShareTarget | null {
 export function shareUrl(target: ShareTarget): string {
 	const slug = encodeURIComponent(target.slug);
 	return target.kind === "community"
-		? `${SHARE_HOST}/c/${slug}`
-		: `${SHARE_HOST}/city/${slug}`;
+		? `${SHARE_HOST}/watch/c/${slug}`
+		: `${SHARE_HOST}/watch/city/${slug}`;
 }
 
 /**
@@ -61,8 +63,10 @@ export function shareContent(target: ShareTarget): {
  * (`https://www.percho.co/c/x`) or a bare path, so the scheme and host are
  * stripped first.
  *
- * The web and the app name the community route differently (`/c/<slug>` vs
- * `/community/<slug>`); the city route is `/city/<slug>` on both. The web
+ * A shared film (`/watch/c/<slug>`, `/watch/city/<slug>`) opens the page
+ * behind it. The web and the app name the community route differently
+ * (`/c/<slug>` vs `/community/<slug>`); the city route is `/city/<slug>` on
+ * both. The web
  * community page's video feed (`/c/<slug>/feed`) has no screen of its own in
  * the app — the community page is the nearest thing. Query and hash are
  * dropped: the app's screens take nothing from them.
@@ -72,9 +76,9 @@ export function appPathForSharedPath(path: string): string | null {
 		/^[a-z][a-z0-9+.-]*:\/\/[^/]*/i,
 		"",
 	);
-	const community = /^\/c\/([^/]+)(?:\/feed)?\/?$/.exec(bare);
+	const community = /^(?:\/watch)?\/c\/([^/]+)(?:\/feed)?\/?$/.exec(bare);
 	if (community?.[1]) return `/community/${community[1]}`;
-	const city = /^\/city\/([^/]+)\/?$/.exec(bare);
+	const city = /^(?:\/watch)?\/city\/([^/]+)\/?$/.exec(bare);
 	if (city?.[1]) return `/city/${city[1]}`;
 	return null;
 }
