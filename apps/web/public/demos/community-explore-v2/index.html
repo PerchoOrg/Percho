@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho community explore page — the final mix</title>
+<style>
+@font-face { font-family: "DM Serif Display"; src: url("/demos/feed-chrome-v1/DMSerifDisplay-Regular.ttf"); }
+:root{
+  --bg:#F7F5F0; --surface:#FFFFFF; --surface2:#F3EDE4; --border:#EADFD0;
+  --ink:#2B2116; --ink2:#8A7358; --ink3:#B9A88F;
+  --accent:#B45309; --accent-soft:#F6E7D6; --pos:#1B7A4D; --neg:#B3402A; --cta:#2B2116;
+  --green:#0E6B57;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --ui: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px 16px 60px}
+.nav{max-width:1300px;margin:0 auto 18px;font:400 14px/1.6 var(--ui)}
+.nav h1{font:400 26px "DM Serif Display",serif;color:var(--green);margin-bottom:4px}
+.nav p{max-width:860px;color:#4A4038}
+.legend{max-width:1300px;margin:0 auto 22px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;font:400 13px var(--ui);color:#4A4038}
+.legend label{display:inline-flex;gap:6px;align-items:center;cursor:pointer;user-select:none}
+.tag{display:inline-block;font:700 9px var(--ui);letter-spacing:.8px;padding:2px 5px;border-radius:4px;vertical-align:middle;text-transform:uppercase}
+.tag.sample{color:#7A4B00;background:#FFE9B8;border:1px dashed #C99A3A}
+.tag.real{color:#0E5C48;background:#DFF0EA}
+body.clean .phone .tag{display:none}
+
+.tabs{display:none}
+.stage{display:flex;gap:28px;justify-content:center;align-items:flex-start;flex-wrap:wrap;max-width:1300px;margin:0 auto}
+.col{display:flex;flex-direction:column;gap:12px;align-items:center;width:390px}
+.col h3{font:600 15px var(--ui);color:#2B2116;text-align:center}
+.col h3 small{display:block;font:400 13px/1.45 var(--ui);color:#5C5046;margin-top:3px}
+.notes{width:390px;background:#fff;border-radius:16px;padding:14px 16px;font:400 12.5px/1.55 var(--ui);color:#4A4038}
+.notes b{color:var(--ink)}
+.notes ul{margin:4px 0 8px 16px}
+.foot{max-width:1226px;margin:28px auto 0;background:#fff;border-radius:16px;padding:16px 20px;font:400 13px/1.6 var(--ui);color:#4A4038}
+.foot b{color:var(--ink)}
+.foot ul{margin:6px 0 0 18px}
+.phone{width:390px;height:844px;background:var(--bg);border-radius:44px;box-shadow:0 12px 40px rgba(0,0,0,.18),0 0 0 8px #1C1A17;position:relative;overflow:hidden}
+.scroll{height:100%;overflow-y:auto;scrollbar-width:none;padding-bottom:40px}
+.scroll::-webkit-scrollbar{display:none}
+
+/* hero (unchanged from the app, shortened here so the page below shows) */
+.hero{height:270px;position:relative;background:#2E2118 center/cover}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.28),transparent 30%,transparent 62%,rgba(0,0,0,.55))}
+.hero .top{position:absolute;z-index:2;top:52px;left:16px;right:16px;display:flex;justify-content:space-between}
+.disc{width:36px;height:36px;border-radius:18px;background:rgba(250,246,240,.92);display:flex;align-items:center;justify-content:center}
+.disc svg{width:18px;height:18px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hero .top div{display:flex;gap:8px}
+.hero .strip{position:absolute;z-index:2;left:0;right:0;bottom:12px;display:flex;gap:6px;padding:0 16px;overflow:hidden}
+.hero .strip span{flex:none;font:600 12px var(--ui);color:#fff;background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:5px 10px}
+.hero .strip span.on{background:rgba(250,246,240,.92);color:var(--ink);border-color:transparent}
+
+.body{padding:18px 18px 0}
+.headline{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.name{font:700 28px var(--serif);color:var(--ink)}
+.place{font:400 14px var(--ui);color:var(--ink2)}
+.sec{font:600 11.5px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);margin:26px 0 4px;display:flex;gap:6px;align-items:center}
+.insight{font:700 20px/1.22 var(--serif);color:var(--ink);margin-bottom:12px;text-wrap:balance}
+.insight em{font-style:normal;color:var(--accent)}
+.card{background:var(--surface);border-radius:16px;border:.5px solid var(--border);padding:14px}
+.cap{font:400 11.5px/1.4 var(--ui);color:var(--ink2);margin-top:8px}
+.cap b{font-weight:600;color:var(--ink)}
+.key{display:flex;gap:14px;font:400 11.5px var(--ui);color:var(--ink2);margin-top:10px;align-items:center}
+.key i{display:inline-block;vertical-align:middle;margin-right:5px}
+.k-dot{width:10px;height:10px;border-radius:5px;background:var(--accent)}
+.k-gdot{width:10px;height:10px;border-radius:5px;background:var(--ink3)}
+.k-tick{width:2px;height:12px;background:var(--ink)}
+.src{font:400 11px/1.5 var(--ui);color:var(--ink3);margin:22px 0 0}
+svg text{font-family:var(--ui)}
+
+/* A — medals */
+.medals{display:flex;gap:8px;margin-top:14px;overflow-x:auto;scrollbar-width:none;margin-right:-18px;padding-right:18px}
+.medals::-webkit-scrollbar{display:none}
+.medal{flex:none;background:var(--surface);border:.5px solid var(--border);border-radius:14px;padding:10px 12px;min-width:112px}
+.medal b{display:block;font:700 24px var(--serif);color:var(--accent);line-height:1}
+.medal span{display:block;font:600 12.5px var(--ui);color:var(--ink);margin-top:6px}
+.medal small{display:block;font:400 11px var(--ui);color:var(--ink2);margin-top:1px}
+
+/* A — rank tracks */
+.track-row{display:grid;grid-template-columns:92px 1fr 74px;gap:10px;align-items:center;padding:9px 0;border-top:.5px solid var(--border)}
+.track-row:first-child{border-top:0;padding-top:0}
+.track-row .l b{display:block;font:600 13px var(--ui);color:var(--ink)}
+.track-row .l small{font:400 11px var(--ui);color:var(--ink2)}
+.track-row .r{text-align:right;font:400 11px var(--ui);color:var(--ink2)}
+.track-row .r b{display:block;font:700 15px var(--ui);color:var(--ink);font-variant-numeric:tabular-nums}
+.track{position:relative;height:18px}
+.track::before{content:"";position:absolute;left:0;right:0;top:8px;height:2px;border-radius:1px;background:var(--border)}
+.track .med{position:absolute;left:50%;top:3px;width:2px;height:12px;background:var(--ink);margin-left:-1px;opacity:.55}
+.track .dot{position:absolute;top:3px;width:12px;height:12px;border-radius:6px;background:var(--accent);margin-left:-6px;box-shadow:0 0 0 2px var(--surface)}
+.axis-ends{display:grid;grid-template-columns:92px 1fr 74px;gap:10px;font:400 10.5px var(--ui);color:var(--ink3);margin-top:2px}
+.axis-ends div:nth-child(2){display:flex;justify-content:space-between}
+
+/* lollipop / bars */
+.bar-row{display:grid;grid-template-columns:104px 1fr 36px;gap:10px;align-items:center;padding:5px 0}
+.bar-row .l{font:500 13px var(--ui);color:var(--ink)}
+.bar-row .v{font:500 12px var(--ui);color:var(--ink2);text-align:right;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:var(--surface2);position:relative}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--ink3)}
+.bar-row.hot .bar i{background:var(--accent)}
+.bar-row.hot .l{font-weight:700}
+.bar-row.hot .v{color:var(--ink);font-weight:700}
+.absent{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center;font:400 11.5px var(--ui);color:var(--ink2)}
+.absent span{border:1px dashed var(--ink3);border-radius:999px;padding:3px 9px;color:var(--ink2)}
+
+/* voices */
+.senti{display:flex;gap:2px;height:10px;border-radius:5px;overflow:hidden;margin:2px 0 6px}
+.senti i{display:block;height:100%}
+.senti-key{display:flex;justify-content:space-between;font:400 11.5px var(--ui);color:var(--ink2)}
+.senti-key b{color:var(--ink);font-weight:700}
+.quotes{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin:12px -18px 0;padding:0 18px}
+.quotes::-webkit-scrollbar{display:none}
+.quote{flex:none;width:262px;background:var(--surface);border:.5px solid var(--border);border-radius:16px;padding:13px 14px}
+.quote p{font:400 15px/1.4 var(--serif);color:var(--ink)}
+.quote .meta{display:flex;justify-content:space-between;margin-top:10px;font:400 11.5px var(--ui);color:var(--ink2)}
+.quote .meta b{font-weight:600}
+.quote .meta .up{color:var(--pos);font-weight:600}
+.quote .meta .down{color:var(--neg);font-weight:600}
+.topic-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.topic-chips span{font:500 12.5px var(--ui);color:var(--ink);background:var(--surface);border:.5px solid var(--border);border-radius:999px;padding:5px 10px}
+.topic-chips span b{color:var(--ink2);font-weight:500;margin-left:4px}
+.cta{display:inline-block;margin-top:14px;font:500 15px var(--ui);color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:9px 16px}
+
+/* events */
+.ev{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:.5px solid var(--border)}
+.ev:first-child{border-top:0;padding-top:0}
+.ev:last-child{padding-bottom:0}
+.date{flex:none;width:46px;height:50px;border-radius:12px;background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.date small{font:700 9.5px var(--ui);letter-spacing:.8px;color:var(--accent)}
+.date b{font:700 19px var(--serif);color:var(--ink);line-height:1.05}
+.ev .t{flex:1;min-width:0}
+.ev .t b{display:block;font:600 14.5px var(--ui);color:var(--ink)}
+.ev .t small{font:400 12px var(--ui);color:var(--ink2)}
+.ev .mi{font:600 12px var(--ui);color:var(--ink2);white-space:nowrap}
+.evcards{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin:0 -18px;padding:0 18px}
+.evcards::-webkit-scrollbar{display:none}
+.evcard{flex:none;width:150px;background:var(--surface);border:.5px solid var(--border);border-radius:16px;padding:12px}
+.evcard small{font:700 10px var(--ui);letter-spacing:.8px;color:var(--accent)}
+.evcard .d{font:700 26px var(--serif);color:var(--ink);line-height:1.05;margin:2px 0 8px}
+.evcard b{display:block;font:600 13.5px/1.25 var(--ui);color:var(--ink)}
+.evcard span{display:block;font:400 11.5px var(--ui);color:var(--ink2);margin-top:4px}
+
+/* B — on site */
+.onsite{display:flex;gap:8px;margin-top:14px}
+.onsite div{flex:1;background:var(--surface);border:.5px solid var(--border);border-radius:14px;padding:10px 0 8px;text-align:center}
+.onsite svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.onsite span{display:block;font:500 11px var(--ui);color:var(--ink);margin-top:3px}
+.tipline{min-height:18px;font:400 12px var(--ui);color:var(--ink2);margin-top:6px}
+.tipline b{color:var(--ink);font-weight:600}
+.dotp{cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{font:500 13.5px var(--ui);color:var(--ink);background:var(--surface);border:.5px solid var(--border);border-radius:999px;padding:6px 11px}
+.chip.hot{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700}
+.chip small{font:500 10.5px var(--ui);color:var(--ink3);margin-right:5px}
+.chip.hot small{color:var(--accent)}
+.bubbles{display:flex;flex-direction:column;gap:8px}
+.bubble{max-width:88%;background:var(--surface);border:.5px solid var(--border);border-radius:16px 16px 16px 4px;padding:10px 13px;font:400 14.5px/1.4 var(--ui);color:var(--ink)}
+.bubble.r{align-self:flex-end;border-radius:16px 16px 4px 16px;background:var(--surface2)}
+.bubble small{display:block;font:400 11px var(--ui);color:var(--ink2);margin-top:5px}
+
+/* C — fit */
+.fit{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.fit .side{background:var(--surface);border:.5px solid var(--border);border-radius:16px;padding:12px}
+.fit h4{font:700 10.5px var(--ui);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.fit .yes h4{color:var(--pos)}
+.fit .no h4{color:var(--neg)}
+.fit .it{padding:7px 0;border-top:.5px solid var(--border)}
+.fit .it:first-of-type{border-top:0;padding-top:0}
+.fit .it b{display:block;font:600 13.5px/1.25 var(--ui);color:var(--ink)}
+.fit .it small{font:400 11.5px var(--ui);color:var(--ink2)}
+.div-row{display:grid;grid-template-columns:78px 1fr;gap:8px;align-items:center;padding:6px 6px;border-radius:10px;cursor:pointer}
+.div-row.on{background:var(--surface2)}
+.div-row .l{font:500 13px var(--ui);color:var(--ink)}
+.div-bar{position:relative;height:14px}
+.div-bar::before{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;width:1px;background:var(--ink3)}
+.div-bar i{position:absolute;top:2px;height:10px}
+.div-bar .p{right:calc(50% + 1px);background:var(--pos);border-radius:4px 0 0 4px}
+.div-bar .n{left:calc(50% + 1px);background:var(--neg);border-radius:0 4px 4px 0}
+.div-bar span{position:absolute;top:0;font:600 10.5px/14px var(--ui);color:var(--ink2);font-variant-numeric:tabular-nums}
+.div-head{display:grid;grid-template-columns:78px 1fr;gap:8px;padding:0 6px 4px;font:600 10.5px var(--ui);letter-spacing:.6px;text-transform:uppercase}
+.div-head div:nth-child(2){display:flex;justify-content:space-between}
+.div-quote{margin-top:10px;padding:11px 12px;background:var(--bg);border-radius:12px;font:400 14.5px/1.4 var(--serif);color:var(--ink);min-height:74px}
+.div-quote small{display:block;font:400 11px var(--ui);color:var(--ink2);margin-top:6px}
+.cost-bar{display:flex;gap:2px;height:16px;margin:4px 0 12px}
+.cost-bar i{display:block;height:100%}
+.cost-bar i:first-child{border-radius:4px 0 0 4px}
+.cost-bar i:last-child{border-radius:0 4px 4px 0}
+.cost-row{display:flex;align-items:center;gap:8px;padding:4px 0;font:400 13px var(--ui);color:var(--ink)}
+.cost-row i{width:10px;height:10px;border-radius:3px;flex:none}
+.cost-row span{flex:1}
+.cost-row small{font:400 11px var(--ui);color:var(--ink3)}
+.cost-row b{font:600 13px var(--ui);font-variant-numeric:tabular-nums}
+.big{font:700 34px var(--serif);color:var(--ink);line-height:1}
+.big small{display:block;font:400 13px var(--ui);color:var(--ink2);margin-top:5px}
+
+
+/* ── final page additions ── */
+.wrap{display:flex;gap:32px;justify-content:center;align-items:flex-start;max-width:1160px;margin:0 auto}
+.aside{flex:1;min-width:0;max-width:640px;display:flex;flex-direction:column;gap:14px}
+.panel{background:#fff;border-radius:16px;padding:16px 18px;font:400 13px/1.55 var(--ui);color:#4A4038}
+.panel h2{font:600 11px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2);margin-bottom:8px}
+.panel b{color:var(--ink)}
+.panel ul{margin:4px 0 0 18px}
+.panel table{width:100%;border-collapse:collapse;font:400 12.5px/1.45 var(--ui)}
+.panel td,.panel th{text-align:left;vertical-align:top;padding:7px 8px 7px 0;border-top:.5px solid var(--border)}
+.panel th{font:600 10.5px var(--ui);letter-spacing:.8px;text-transform:uppercase;color:var(--ink2);border-top:0}
+.panel td:first-child{font-weight:600;color:var(--ink);white-space:nowrap}
+.st{display:inline-block;font:700 9.5px var(--ui);letter-spacing:.6px;text-transform:uppercase;border-radius:4px;padding:2px 5px;white-space:nowrap}
+.st.have{color:#0E5C48;background:#DFF0EA}
+.st.free{color:#1F4E8C;background:#E1ECFA}
+.st.paid{color:#7A4B00;background:#FFE9B8}
+.st.ask{color:#8A2A18;background:#F8E0DA}
+
+.scroll{position:relative}
+.ident{font:400 13px/1.45 var(--ui);color:var(--ink2);margin-top:6px}
+.pills{display:flex;gap:7px;margin:12px -18px 0;padding:0 18px;overflow-x:auto;scrollbar-width:none}
+.pills::-webkit-scrollbar{display:none}
+a.pill{flex:none;text-decoration:none;font:500 13px var(--ui);color:var(--ink);background:var(--surface);border:.5px solid var(--border);border-radius:999px;padding:7px 12px;white-space:nowrap}
+a.pill::after,a.ext::after{content:" ↗";color:var(--accent);font-weight:600}
+a.ext{color:var(--accent);text-decoration:none;font-weight:500}
+.anchors{position:sticky;top:0;z-index:6;background:var(--bg);display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:12px 18px 10px;margin-top:14px;border-bottom:.5px solid var(--border)}
+.anchors::-webkit-scrollbar{display:none}
+.anchors button{flex:none;font:500 13px var(--ui);color:var(--ink2);background:none;border:0;border-radius:999px;padding:6px 11px;cursor:pointer}
+.anchors button.on{background:var(--cta);color:#fff}
+.body2{padding:0 18px}
+.grp{font:600 10px var(--ui);letter-spacing:1px;text-transform:uppercase;color:var(--ink3);margin:12px 0 2px;display:flex;gap:6px;align-items:center}
+.grp:first-child{margin-top:0}
+.grp + .track-row{border-top:0}
+.track .dot.b{opacity:.55}
+.linkchips{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px;font:400 12.5px var(--ui)}
+.sub{font:600 10.5px var(--ui);letter-spacing:1px;text-transform:uppercase;color:var(--ink2);margin:14px 0 8px;display:flex;gap:6px;align-items:center}
+.sub:first-child{margin-top:0}
+.also{font:400 11.5px/1.5 var(--ui);color:var(--ink2);margin-top:8px}
+.review-empty{font:400 14px/1.45 var(--ui);color:var(--ink2)}
+.rush-row{display:grid;grid-template-columns:112px 1fr 62px;gap:10px;align-items:center;padding:5px 0}
+.rush-row .l{font:500 13px var(--ui);color:var(--ink)}
+.rush-row .v{font:500 12px var(--ui);color:var(--ink2);text-align:right;font-variant-numeric:tabular-nums}
+.rush{height:8px;position:relative;background:var(--surface2);border-radius:4px}
+.rush i{position:absolute;top:0;bottom:0;border-radius:4px}
+.rush .peak{background:var(--accent);opacity:.3}
+.rush .off{background:var(--accent)}
+.cover{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cover .c{background:var(--surface);border:.5px solid var(--border);border-radius:16px;padding:12px}
+.cover h4{font:700 10.5px var(--ui);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px}
+.cover .in h4{color:var(--pos)}
+.cover .out h4{color:var(--accent)}
+.cover .amt{font:700 20px var(--serif);color:var(--ink);margin-bottom:6px}
+.cover .amt small{font:400 11.5px var(--ui);color:var(--ink2)}
+.cover .it{padding:7px 0;border-top:.5px solid var(--border)}
+.cover .it b{display:block;font:600 13.5px/1.25 var(--ui);color:var(--ink)}
+.cover .it small{font:400 11.5px/1.35 var(--ui);color:var(--ink2);display:block}
+.range-row{display:grid;grid-template-columns:104px 1fr 70px;gap:10px;align-items:center;padding:5px 0}
+.range-row .l{font:500 13px var(--ui);color:var(--ink)}
+.range-row .v{font:500 12px var(--ui);color:var(--ink2);text-align:right;font-variant-numeric:tabular-nums}
+.range{height:8px;position:relative;background:var(--surface2);border-radius:4px}
+.range i{position:absolute;top:0;bottom:0;border-radius:4px;background:var(--accent)}
+.linkrow{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:.5px solid var(--border);text-decoration:none}
+.linkrow:first-child{border-top:0;padding-top:0}
+.linkrow:last-child{padding-bottom:0}
+.linkrow .t{flex:1;min-width:0}
+.linkrow .t b{display:block;font:600 14.5px var(--ui);color:var(--ink)}
+.linkrow .t small{font:400 12px var(--ui);color:var(--ink2)}
+.linkrow .go{font:600 15px var(--ui);color:var(--accent)}
+.linkrow.dead .go{color:var(--ink3)}
+a.ev{text-decoration:none}
+a.evcard{text-decoration:none;display:block}
+.sec{scroll-margin-top:56px}
+
+@media (max-width: 860px){
+  body{padding:12px 0 40px}
+  .nav,.legend{padding:0 14px}
+  .wrap{flex-direction:column;align-items:center;gap:18px}
+  .phone{width:100%;max-width:430px;height:auto;border-radius:0;box-shadow:none}
+  .scroll{height:auto;overflow:visible}
+  .hero .top{top:14px}
+  .aside{max-width:none;width:100%;padding:0 14px}
+  .panel table{font-size:12px}
+  .panel td:first-child{white-space:normal}
+}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>Community explore page — the final mix</h1>
+  <p>One page, built from the three directions and no longer limited to what Percho stores today. Order follows a buyer’s questions: is it for me → how good → what do people say → what does it cost → how do I get around → what happens here → what do I actually get → where do I read more. Every section is one finding and its chart.</p>
+</div>
+<div class="legend">
+  <span><span class="tag real">real</span> true for Windward today, from a named source</span>
+  <span><span class="tag sample">sample</span> invented for layout — the source is not connected yet</span>
+  <label><input type="checkbox" id="clean"> hide the tags</label>
+</div>
+
+<div class="wrap">
+<div class="phone"><div class="scroll" id="scroll">
+  <div class="hero" data-hero></div>
+  <div class="body" style="padding-bottom:0">
+    <div class="headline"><div class="name">Windward</div><div class="place">Alpharetta, GA</div></div>
+    <div class="ident">Master-planned by Mobil Land · first homes 1983 · 40+ neighbourhoods around a 200-acre private lake</div>
+    <div class="pills">
+      <a class="pill" href="https://www.windwardhomesga.com/" target="_blank" rel="noopener">Community site</a>
+      <a class="pill" href="https://www.windwardhomesga.com/governance-and-management" target="_blank" rel="noopener">Rules &amp; dues</a>
+      <a class="pill" href="https://nextdoor.com/neighborhood/windward--alpharetta--ga/" target="_blank" rel="noopener">Nextdoor</a>
+      <a class="pill" href="https://www.reddit.com/r/Alpharetta/search/?q=Windward&restrict_sr=1" target="_blank" rel="noopener">Reddit</a>
+    </div>
+  </div>
+
+  <div class="anchors" id="anchors"></div>
+
+  <div class="body2">
+
+    <!-- 1 ─ verdict -->
+    <div class="sec" data-tab="Verdict" style="margin-top:18px">The short version <span class="tag real">real</span></div>
+    <div class="fit" style="margin-top:8px">
+      <div class="side yes"><h4>Good fit if</h4>
+        <div class="it"><b>Schools come first</b><small>both elementaries in Georgia’s top 6</small></div>
+        <div class="it"><b>You want a lake</b><small>200 acres, residents only</small></div>
+        <div class="it"><b>Errands stay short</b><small>Trader Joe’s 1.4 mi</small></div>
+      </div>
+      <div class="side no"><h4>Think twice if</h4>
+        <div class="it"><b>You expect a pool</b><small>swim, tennis and marina are a private club</small></div>
+        <div class="it"><b>You want small</b><small>4,589 neighbours on Nextdoor</small></div>
+        <div class="it"><b>You like to remodel</b><small>exterior changes need HOA sign-off</small></div>
+      </div>
+    </div>
+
+    <!-- 2 ─ ranks -->
+    <div class="sec" data-tab="Ranks">Where it ranks</div>
+    <div class="insight">Georgia’s top <em>2%</em> through middle school. Metro Atlanta’s <em>7th</em>-priciest ZIP.</div>
+    <div class="card">
+      <div id="tracks"></div>
+      <div class="axis-ends"><div></div><div><span>lowest</span><span>highest</span></div><div></div></div>
+      <div class="key"><span><i class="k-dot"></i>Windward</span><span><i class="k-tick"></i>the median</span></div>
+      <div class="linkchips">
+        <a class="ext" href="https://lakewindward.fultonschools.org/" target="_blank" rel="noopener">Lake Windward ES</a>
+        <a class="ext" href="https://creekview.fultonschools.org/" target="_blank" rel="noopener">Creek View ES</a>
+        <a class="ext" href="https://webbbridge.fultonschools.org/" target="_blank" rel="noopener">Webb Bridge MS</a>
+        <a class="ext" href="https://alpharettahs.fultonschools.org/" target="_blank" rel="noopener">Alpharetta HS</a>
+      </div>
+      <div class="cap">Which elementary depends on the street.</div>
+    </div>
+
+    <!-- 3 ─ voices -->
+    <div class="sec" data-tab="Voices">What residents say</div>
+    <div class="insight">“Convenient” — a word <em>5 in 6</em> Alpharetta communities don’t use.</div>
+    <div class="card">
+      <div class="sub">Their own words <span class="tag real">real</span></div>
+      <div id="words"></div>
+      <div class="also">Also said, as in half of Alpharetta or more: Clean · Safe · Peaceful · Family friendly</div>
+    </div>
+    <div class="card" style="margin-top:10px">
+      <div class="sub">On Reddit · 47 comments <span class="tag sample">sample</span></div>
+      <div class="div-head"><div></div><div><span style="color:var(--pos)">◀ praise</span><span style="color:var(--neg)">gripes ▶</span></div></div>
+      <div id="div"></div>
+      <div class="div-quote" id="quote"></div>
+      <div class="linkchips"><a class="ext" href="https://www.reddit.com/r/Alpharetta/search/?q=Windward&restrict_sr=1" target="_blank" rel="noopener">Read the threads on r/Alpharetta</a></div>
+    </div>
+    <div class="card" style="margin-top:10px">
+      <div class="sub">Percho residents <span class="tag real">real</span></div>
+      <div class="review-empty">No resident reviews yet. Live here? Yours would be the first.</div>
+      <span class="cta" style="margin-top:10px">Write a review</span>
+    </div>
+
+    <!-- 4 ─ money -->
+    <div class="sec" data-tab="Money">What it costs <span class="tag real">real</span></div>
+    <div class="insight">Up <em>60%</em> since 2020. Flat since 2024.</div>
+    <div class="card">
+      <div id="price"></div>
+      <div class="tipline" id="price-tip">Typical home value · tap a year</div>
+      <div class="key"><span><i class="k-dot"></i>ZIP 30005</span><span><i class="k-gdot"></i>Metro Atlanta</span></div>
+    </div>
+    <div class="card" style="margin-top:10px">
+      <div class="big">≈ $940<small>a month to hold, before the mortgage</small></div>
+      <div class="cap" style="margin:6px 0 10px">On the typical 30005 home, $747K.</div>
+      <div class="cost-bar" id="costbar"></div>
+      <div id="costs"></div>
+    </div>
+
+    <!-- 5 ─ around -->
+    <div class="sec" data-tab="Around">Getting around</div>
+    <div class="insight"><em>12 of 15</em> everyday stops are within 3 miles.</div>
+    <div class="card">
+      <div class="sub">How far <span class="tag real">real</span></div>
+      <div id="strip"></div>
+      <div class="tipline" id="strip-tip">Tap a dot.</div>
+    </div>
+    <div class="card" style="margin-top:10px">
+      <div class="sub">By car, quiet hour vs 5 pm <span class="tag sample">sample</span></div>
+      <div id="rush"></div>
+      <div class="key"><span><i style="width:18px;height:8px;border-radius:4px;background:var(--accent)"></i>quiet hour</span><span><i style="width:18px;height:8px;border-radius:4px;background:var(--accent);opacity:.3"></i>added at 5 pm</span></div>
+    </div>
+
+    <!-- 6 ─ calendar -->
+    <div class="sec" data-tab="Calendar">The year here <span class="tag real">real</span></div>
+    <div class="insight">Lights season starts <em>Saturday</em> and runs to January.</div>
+    <div class="card">
+      <div id="year"></div>
+      <div class="key"><span><i class="k-dot"></i>one day</span><span><i style="width:18px;height:6px;border-radius:3px;background:var(--accent)"></i>weeks</span><span><i style="width:18px;height:6px;border-radius:3px;border:1.5px dashed var(--ink3)"></i>dates to confirm</span></div>
+    </div>
+    <div class="evcards" id="events" style="margin-top:10px"></div>
+
+    <!-- 7 ─ inside -->
+    <div class="sec" data-tab="Inside">What you actually get <span class="tag real">real</span></div>
+    <div class="insight">The lake is yours. The pool is a club.</div>
+    <div class="cover">
+      <div class="c in"><h4>In your dues</h4><div class="amt">$824 <small>a year, 2027</small></div>
+        <div class="it"><b>Lake Windward</b><small>electric boats, kayaks, bass fishing</small></div>
+        <div class="it"><b>Boat launch</b><small>gated, with a pavilion</small></div>
+        <div class="it"><b>Sports park</b><small>playground, ball field, dog runs</small></div>
+        <div class="it"><b>3 pocket parks</b><small>two on the water</small></div>
+      </div>
+      <div class="c out"><h4>Separate, optional</h4><div class="amt">Extra <small>ask each club</small></div>
+        <div class="it"><b>Racket Social Club</b><small>pools, 18 tennis courts, pickleball, padel, marina</small><a class="ext" style="font-size:12px" href="https://www.windwardlakeclub.com/" target="_blank" rel="noopener">Club site</a></div>
+        <div class="it"><b>Golf Club of Georgia</b><small>two Arthur Hills courses</small><a class="ext" style="font-size:12px" href="https://www.golfclubofgeorgia.com/" target="_blank" rel="noopener">Club site</a></div>
+        <div class="it"><b>Some enclaves</b><small>their own dues on top</small></div>
+      </div>
+    </div>
+    <div class="chips" style="margin-top:10px">
+      <span class="chip">Yacht Club</span><span class="chip">Women’s Club</span><span class="chip">Retired Men</span><span class="chip">Women of Windward</span>
+    </div>
+    <div class="card" style="margin-top:10px">
+      <div class="sub">Which part of Windward <span class="tag sample">sample</span></div>
+      <div id="enclaves"></div>
+      <div class="cap">Price band by neighbourhood, last 24 months of sales.</div>
+    </div>
+
+    <!-- 8 ─ links -->
+    <div class="sec" data-tab="Links">Read more <span class="tag real">real</span></div>
+    <div class="card" id="links"></div>
+
+    <p class="src">Schools: Georgia Milestones proficiency. Community figures and words: Nextdoor neighbourhood profiles. Home values: Zillow Home Value Index, ZIP 30005, September 2026. Tax and utilities: Percho county estimates. Dues, lake, parks and clubs: Windward Community Services Association. Events: Awesome Alpharetta. Distances: the places in this community’s film.</p>
+  </div>
+</div></div>
+
+<div class="aside">
+  <div class="panel">
+    <h2>What the mix keeps, and why</h2>
+    <ul>
+      <li><b>From C — the verdict, first.</b> It is the only block that is mostly words, and it is the one nobody else publishes. Every line cites a row further down.</li>
+      <li><b>From A — rank tracks and word rarity.</b> Position instead of numbers. Home value and growth joined the tracks.</li>
+      <li><b>From B — distance and the year.</b> They continue the film: the film shows the places, the page says how far and when.</li>
+      <li><b>New — what the dues cover.</b> The film shows a pool. The association’s own site says the pool is a private club. That gap is the most useful thing on the page.</li>
+      <li><b>New — links.</b> Four pills under the name, a link beside each thing it belongs to, and one card at the end.</li>
+      <li><b>New — section tabs.</b> The page is long on purpose; the tabs stick and follow the scroll.</li>
+    </ul>
+  </div>
+  <div class="panel">
+    <h2>What each block runs on</h2>
+    <table>
+      <tr><th>Block</th><th>Source</th><th>State</th></tr>
+      <tr><td>Verdict</td><td>Rules over the blocks below; one line per cited row</td><td><span class="st have">have</span></td></tr>
+      <tr><td>Ranks · schools, size, ownership</td><td>Percho’s schools and communities tables</td><td><span class="st have">have</span></td></tr>
+      <tr><td>Ranks · value, growth</td><td>Zillow’s public home-value file, by ZIP (203 metro ZIPs)</td><td><span class="st free">free</span></td></tr>
+      <tr><td>Ranks · commute, green space</td><td>A routing API with traffic; park polygons</td><td><span class="st paid">paid</span></td></tr>
+      <tr><td>Their own words</td><td>Nextdoor attributes already stored</td><td><span class="st have">have</span></td></tr>
+      <tr><td>Reddit</td><td>Link to the search today; quotes need Reddit’s API and its approval for commercial use</td><td><span class="st ask">approval</span></td></tr>
+      <tr><td>Price line, holding cost</td><td>Zillow file; county tax and utility table; dues from the HOA site</td><td><span class="st free">free</span></td></tr>
+      <tr><td>Distance</td><td>The film’s own stops</td><td><span class="st have">have</span></td></tr>
+      <tr><td>Rush hour</td><td>Routing API with traffic, six destinations per community</td><td><span class="st paid">paid</span></td></tr>
+      <tr><td>Calendar</td><td>City tourism calendar + the HOA’s events page, refreshed weekly</td><td><span class="st free">free</span></td></tr>
+      <tr><td>Dues cover / separate</td><td>One read of the HOA’s site per community, checked by a person</td><td><span class="st free">free</span></td></tr>
+      <tr><td>Price by enclave</td><td>County deed records joined to subdivision shapes</td><td><span class="st free">free</span></td></tr>
+      <tr><td>Links</td><td><code>communities.website</code> is filled for 4 of 22,730 rows, <code>builder</code> for none; needs a finder job and a health check</td><td><span class="st free">free</span></td></tr>
+    </table>
+  </div>
+  <div class="panel">
+    <h2>Found while building it</h2>
+    <ul>
+      <li>The stored link for Windward (<code>windwardcommunity.org</code>) fails its certificate check. The working site is <code>windwardhomesga.com</code>.</li>
+      <li>The developer, Mobil Land, no longer exists, so there is no builder link here. A community still being built would show its builder as the first pill — Northbrooke’s row already points at Toll Brothers.</li>
+      <li>The film labels a pool and courts “Windward Pool” and “Windward Courts”. The association’s site lists no pool of its own — only the private club’s — so those shots are almost certainly the club.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<script>
+/* ── data ─────────────────────────────────────────────────────────────── */
+const HERO = "https://videodelivery.net/ddffd15040c57e3ef063ff45604e4605/thumbnails/thumbnail.jpg?time=3s&height=640";
+const CHIPS = ["Amenities", "Lake", "Schools", "Dining", "Shopping", "Outdoors"];
+
+// Rank among peers. `pct` is the share of peers ranked below. Schools: Georgia
+// Milestones proficiency over Percho's school rows. Homes: Zillow Home Value
+// Index over the 203 Atlanta-metro ZIPs. People: Nextdoor figures over active
+// Alpharetta communities.
+const TRACKS = [
+  { g: "Schools" },
+  { l: "Elementary", s: "two zones", pct: 99.6, pct2: 99.8, rank: "#3 · #6", of: "of 1,220 in GA" },
+  { l: "Middle", s: "Webb Bridge", pct: 98.7, rank: "#7", of: "of 472 in GA" },
+  { l: "High", s: "Alpharetta HS", pct: 93.2, rank: "#31", of: "of 443 in GA" },
+  { g: "Homes" },
+  { l: "Home value", s: "$747K", pct: 97, rank: "#7", of: "of 203 ZIPs" },
+  { l: "5-year growth", s: "+34%", pct: 92.1, rank: "#17", of: "of 203 ZIPs" },
+  { g: "People" },
+  { l: "Size", s: "4,589 members", pct: 98.4, rank: "#6", of: "of 314 in city" },
+  { l: "Ownership", s: "74% owners", pct: 32.7, rank: "#236", of: "of 349 in city" },
+  { g: "Around", sample: 1 },
+  { l: "Rush hour", s: "to Perimeter", pct: 55, rank: "#141", of: "of 314 in city" },
+  { l: "Green space", s: "within 1 mi", pct: 88, rank: "#38", of: "of 314 in city" },
+];
+const WORDS = [["Convenient", 17], ["Beautiful", 29], ["Walkability", 30], ["Quiet", 42], ["Dog friendly", 46]];
+const TOPICS = [
+  { l: "Schools", p: 14, n: 1, q: "Lake Windward Elementary is the reason half our street moved here.", who: "r/Alpharetta · sample" },
+  { l: "Lake & trails", p: 11, n: 0, q: "The lake loop at sunset is why we stayed.", who: "r/Alpharetta · sample" },
+  { l: "Location", p: 9, n: 2, q: "Avalon, Halcyon and 400 are all ten minutes. Hard to beat.", who: "r/Atlanta · sample" },
+  { l: "Price", p: 1, n: 5, q: "You pay a lake premium even three streets back from the water.", who: "r/Atlanta · sample" },
+  { l: "HOA & dues", p: 2, n: 6, q: "The pool isn’t in the dues. The club is its own membership — ask before you bid.", who: "r/Alpharetta · sample" },
+  { l: "Traffic", p: 1, n: 8, q: "Windward Pkwy at 5pm will test you. Learn the back way to 400.", who: "r/Atlanta · sample" },
+];
+// Zillow Home Value Index, $K, each September.
+const YEARS = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+const ZIP = [414, 432, 447, 453, 467, 559, 686, 714, 759, 756, 747];
+const METRO = [197, 213, 233, 246, 263, 320, 384, 385, 394, 382, 376];
+// Monthly, on the typical 30005 home ($747K). Tax 1.02% (Percho estimate,
+// Fulton). Dues $824/yr (WCSA, 2027). Utilities: Percho county figures.
+const COSTS = [
+  { l: "Property tax", v: 635, c: "#B45309", n: "est. 1.02%" },
+  { l: "Electricity", v: 150, c: "#B9A88F", n: "" },
+  { l: "HOA dues", v: 69, c: "#B9A88F", n: "$824 / yr" },
+  { l: "Water", v: 54, c: "#B9A88F", n: "est." },
+  { l: "Trash", v: 30, c: "#B9A88F", n: "est." },
+];
+const PLACES = [
+  ["Errands", [["Trader Joe’s", 1.4], ["Publix", 1.9]]],
+  ["Eat & drink", [["Windward Tavern", 1.9], ["Vinny’s on Windward", 2.1], ["Delbar", 2.6], ["MOTW Coffee", 3.7]]],
+  ["Outdoors", [["Lake Windward", 0.9], ["Golf Club of Georgia", 1.3], ["Big Creek Greenway", 2.4], ["Webb Bridge Park", 3.5]]],
+  ["Schools", [["Alpharetta High", 1.9], ["Webb Bridge Middle", 2.1], ["Lake Windward Elementary", 2.4]]],
+  ["Shops & fun", [["Avalon", 2.9], ["Halcyon", 4.8]]],
+];
+const RUSH = [["GA-400 ramp", 6, 11], ["Avalon", 9, 16], ["Downtown", 11, 18], ["Perimeter", 22, 41], ["Midtown", 32, 62], ["Airport", 42, 75]];
+const AWESOME = "https://www.awesomealpharetta.com/events/dont-miss-events/";
+const EVENTS = [
+  { m: "NOV", d: "21", t: "Tree lighting", w: "Downtown Alpharetta · free", u: AWESOME },
+  { m: "NOV", d: "22", t: "Lighting of Avalon", w: "Avalon · 2.9 mi", u: "https://www.awesomealpharetta.com/event/the-lighting-of-avalon/" },
+  { m: "DEC", d: "4", t: "Lights on the Loop", w: "Alpha Loop · to Jan 4", u: AWESOME },
+  { m: "DEC", d: "12", t: "Maker’s Market", w: "Avalon · 2.9 mi", u: AWESOME },
+  { m: "MAR", d: "’27", t: "5K Lake Challenge", w: "Residents · 27th year", u: "https://runsignup.com/Race/GA/Alpharetta/WindwardCommunityLakeChallenge" },
+];
+const ENCLAVES = [["Newport Bay", 1.1, 2.4], ["Compass Pointe", 0.9, 1.5], ["Windward Pointe", 0.7, 1.1], ["Masters Way", 0.6, 0.9], ["The Orchards", 0.45, 0.7]];
+const LINKS = [
+  { t: "Windward community site", d: "windwardhomesga.com", u: "https://www.windwardhomesga.com/" },
+  { t: "Rules, dues and management", d: "windwardhomesga.com", u: "https://www.windwardhomesga.com/governance-and-management" },
+  { t: "Racket Social Club at Windward Lake", d: "windwardlakeclub.com", u: "https://www.windwardlakeclub.com/" },
+  { t: "Golf Club of Georgia", d: "golfclubofgeorgia.com", u: "https://www.golfclubofgeorgia.com/" },
+  { t: "Windward on Nextdoor", d: "nextdoor.com", u: "https://nextdoor.com/neighborhood/windward--alpharetta--ga/" },
+  { t: "Windward on r/Alpharetta", d: "reddit.com", u: "https://www.reddit.com/r/Alpharetta/search/?q=Windward&restrict_sr=1" },
+  { t: "City of Alpharetta", d: "alpharetta.ga.us", u: "https://www.alpharetta.ga.us/" },
+  { t: "Developer — Mobil Land, 1980", d: "no longer active", u: "" },
+];
+
+/* ── helpers ──────────────────────────────────────────────────────────── */
+const $ = (id) => document.getElementById(id);
+const h = (strings, ...v) => strings.reduce((a, s, i) => a + s + (v[i] ?? ""), "");
+const SAMPLE = ' <span class="tag sample">sample</span>';
+const REAL = ' <span class="tag real">real</span>';
+
+document.querySelectorAll("[data-hero]").forEach((el) => {
+  el.style.backgroundImage = `url("${HERO}")`;
+  el.innerHTML = h`<div class="top"><span class="disc"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span><div><span class="disc"><svg viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 13v6h14v-6"/></svg></span><span class="disc"><svg viewBox="0 0 24 24"><path d="M7 4h10v16l-5-4-5 4z"/></svg></span></div></div>
+  <div class="strip">${CHIPS.map((c, i) => `<span class="${i === 0 ? "on" : ""}">${c}</span>`).join("")}</div>`;
+});
+
+/* ── ranks ────────────────────────────────────────────────────────────── */
+$("tracks").innerHTML = TRACKS.map((t) => t.g
+  ? `<div class="grp">${t.g}${t.sample ? SAMPLE : REAL}</div>`
+  : h`<div class="track-row">
+  <div class="l"><b>${t.l}</b><small>${t.s}</small></div>
+  <div class="track"><i class="med"></i>${t.pct2 ? `<i class="dot b" style="left:${t.pct2}%"></i>` : ""}<i class="dot" style="left:${t.pct}%"></i></div>
+  <div class="r"><b>${t.rank}</b>${t.of}</div></div>`).join("");
+
+/* ── voices ───────────────────────────────────────────────────────────── */
+$("words").innerHTML = WORDS.map(([w, p], i) => h`<div class="bar-row ${i < 3 ? "hot" : ""}">
+  <div class="l">${w}</div><div class="bar"><i style="width:${p}%"></i></div><div class="v">${p}%</div></div>`).join("")
+  + `<div class="cap">Share of Alpharetta’s 342 communities that use the same word. Shorter = more theirs.</div>`;
+
+(function diverging() {
+  const max = Math.max(...TOPICS.flatMap((t) => [t.p, t.n]));
+  const pc = (v) => (v / max) * 44;
+  $("div").innerHTML = TOPICS.map((t, i) => h`<div class="div-row" data-i="${i}">
+    <div class="l">${t.l}</div>
+    <div class="div-bar">
+      ${t.p ? `<i class="p" style="width:${pc(t.p)}%"></i><span style="right:calc(50% + ${pc(t.p)}% + 5px)">${t.p}</span>` : ""}
+      ${t.n ? `<i class="n" style="width:${pc(t.n)}%"></i><span style="left:calc(50% + ${pc(t.n)}% + 5px)">${t.n}</span>` : ""}
+    </div></div>`).join("");
+  const pick = (i) => {
+    document.querySelectorAll("#div .div-row").forEach((r) => r.classList.toggle("on", +r.dataset.i === i));
+    $("quote").innerHTML = `“${TOPICS[i].q}”<small>${TOPICS[i].who} · <a class="ext" href="https://www.reddit.com/r/Alpharetta/search/?q=Windward&restrict_sr=1" target="_blank" rel="noopener">open thread</a></small>`;
+  };
+  $("div").addEventListener("click", (e) => { const r = e.target.closest(".div-row"); if (r) pick(+r.dataset.i); });
+  pick(4);
+})();
+
+/* ── money ────────────────────────────────────────────────────────────── */
+(function price() {
+  const W = 326, H = 176, L = 4, R = 46, T = 10, B = 22, max = 800;
+  const x = (i) => L + (i / (YEARS.length - 1)) * (W - L - R);
+  const y = (v) => T + (1 - v / max) * (H - T - B);
+  const path = (a) => a.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%">`;
+  [0, 250, 500, 750].forEach((v) => {
+    s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#EADFD0"/>`;
+    if (v) s += `<text x="${L}" y="${y(v) - 4}" font-size="10" fill="#8A7358">$${v}K</text>`;
+  });
+  YEARS.forEach((yr, i) => { if (i % 2 === 0) s += `<text x="${x(i)}" y="${H - 6}" font-size="10.5" fill="#8A7358" text-anchor="${i === 0 ? "start" : "middle"}">’${String(yr).slice(2)}</text>`; });
+  s += `<path d="${path(METRO)}" fill="none" stroke="#B9A88F" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  s += `<path d="${path(ZIP)}" fill="none" stroke="#B45309" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const e = YEARS.length - 1;
+  s += `<circle cx="${x(e)}" cy="${y(METRO[e])}" r="4" fill="#B9A88F" stroke="#fff" stroke-width="2"/><circle cx="${x(e)}" cy="${y(ZIP[e])}" r="4" fill="#B45309" stroke="#fff" stroke-width="2"/>`;
+  s += `<text x="${x(e) + 8}" y="${y(ZIP[e]) + 4}" font-size="12" font-weight="700" fill="#2B2116">$${ZIP[e]}K</text>`;
+  s += `<text x="${x(e) + 8}" y="${y(METRO[e]) + 4}" font-size="11.5" fill="#8A7358">$${METRO[e]}K</text>`;
+  s += `<line id="cross" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="#2B2116" stroke-width="1" visibility="hidden"/>`;
+  const step = (W - L - R) / (YEARS.length - 1);
+  YEARS.forEach((yr, i) => { s += `<rect class="hit" data-i="${i}" x="${x(i) - step / 2}" y="0" width="${step}" height="${H}" fill="transparent"/>`; });
+  s += "</svg>";
+  $("price").innerHTML = s;
+  const show = (i) => {
+    const c = $("cross");
+    c.setAttribute("x1", x(i)); c.setAttribute("x2", x(i)); c.setAttribute("visibility", "visible");
+    $("price-tip").innerHTML = `<b>${YEARS[i]}</b> · here <b>$${ZIP[i]}K</b> · metro $${METRO[i]}K`;
+  };
+  ["click", "mousemove"].forEach((ev) => $("price").addEventListener(ev, (e) => { const r = e.target.closest(".hit"); if (r) show(+r.dataset.i); }));
+})();
+
+(function costs() {
+  const total = COSTS.reduce((a, c) => a + c.v, 0);
+  $("costbar").innerHTML = COSTS.map((c) => `<i style="width:${(c.v / total) * 100}%;background:${c.c}"></i>`).join("");
+  $("costs").innerHTML = COSTS.map((c) => `<div class="cost-row"><i style="background:${c.c}"></i><span>${c.l} <small>${c.n}</small></span><b>$${c.v}</b></div>`).join("")
+    + `<div class="cost-row" style="color:var(--ink2)"><i style="background:none;border:1.5px dashed var(--ink3)"></i><span>Racket club, golf club <small>optional</small></span><b style="font-weight:500">extra</b></div>`;
+})();
+
+/* ── around ───────────────────────────────────────────────────────────── */
+(function strip() {
+  const W = 326, L = 78, R = 10, rowH = 30, top = 4;
+  const x = (mi) => L + (mi / 5) * (W - L - R);
+  let s = `<svg viewBox="0 0 ${W} ${top + rowH * PLACES.length + 22}" width="100%">`;
+  s += `<rect x="${x(0)}" y="${top}" width="${x(3) - x(0)}" height="${rowH * PLACES.length}" fill="#B45309" opacity="0.06"/>`;
+  for (let m = 0; m <= 5; m++) {
+    s += `<line x1="${x(m)}" x2="${x(m)}" y1="${top}" y2="${top + rowH * PLACES.length}" stroke="#EADFD0" stroke-width="1"/>`;
+    s += `<text x="${x(m)}" y="${top + rowH * PLACES.length + 15}" font-size="10.5" fill="#8A7358" text-anchor="middle">${m === 0 ? "home" : m + " mi"}</text>`;
+  }
+  PLACES.forEach(([cat, list], r) => {
+    const y = top + r * rowH + rowH / 2;
+    s += `<text x="0" y="${y + 4}" font-size="12" font-weight="500" fill="#2B2116">${cat}</text>`;
+    list.forEach(([name, mi]) => {
+      s += `<circle class="mark" data-n="${name}" cx="${x(mi)}" cy="${y}" r="6" fill="#B45309" stroke="#fff" stroke-width="2"/>`;
+      s += `<circle class="dotp" data-n="${name}" data-mi="${mi}" cx="${x(mi)}" cy="${y}" r="14" fill="transparent"/>`;
+    });
+  });
+  s += "</svg>";
+  $("strip").innerHTML = s;
+  $("strip").addEventListener("click", (e) => {
+    const d = e.target.closest(".dotp");
+    if (!d) return;
+    $("strip-tip").innerHTML = `<b>${d.dataset.n}</b> · ${d.dataset.mi} mi`;
+    $("strip").querySelectorAll(".mark").forEach((c) => c.setAttribute("fill", c.dataset.n === d.dataset.n ? "#2B2116" : "#B45309"));
+  });
+})();
+
+$("rush").innerHTML = RUSH.map(([l, a, b]) => h`<div class="rush-row"><div class="l">${l}</div>
+  <div class="rush"><i class="peak" style="left:0;width:${(b / 80) * 100}%"></i><i class="off" style="left:0;width:${(a / 80) * 100}%"></i></div>
+  <div class="v">${a}–${b} min</div></div>`).join("");
+
+/* ── calendar ─────────────────────────────────────────────────────────── */
+(function year() {
+  const ROWS = [
+    { l: "5K Lake Challenge", dots: [[2, 14]] },
+    { l: "Farmers market", bars: [[3, 1, 9, 31]], soft: 1 },
+    { l: "Lake raft-ups", bars: [[4, 1, 8, 30]], soft: 1 },
+    { l: "July 4th fireworks", dots: [[6, 4]] },
+    { l: "Tree lightings", dots: [[10, 21], [10, 22]] },
+    { l: "Avalon on Ice", bars: [[10, 22, 11, 31]] },
+    { l: "Lights on the Loop", bars: [[11, 4, 11, 31], [0, 1, 0, 4]] },
+  ];
+  const W = 326, L = 118, colW = (W - L) / 12, rowH = 24, top = 16, H = top + rowH * ROWS.length + 20;
+  const DIM = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const x = (m, d) => L + (m + (d - 1) / DIM[m]) * colW;
+  const A = "#B45309", I3 = "#B9A88F", INK = "#2B2116";
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%">`;
+  "JFMAMJJASOND".split("").forEach((c, m) => {
+    if (m % 2 === 0) s += `<rect x="${L + m * colW}" y="${top}" width="${colW}" height="${rowH * ROWS.length}" fill="#F7F5F0"/>`;
+    s += `<text x="${L + m * colW + colW / 2}" y="${H - 5}" font-size="10.5" fill="#8A7358" text-anchor="middle">${c}</text>`;
+  });
+  ROWS.forEach((r, i) => {
+    const y = top + i * rowH + rowH / 2;
+    s += `<text x="0" y="${y + 4}" font-size="12" font-weight="500" fill="${INK}">${r.l}</text>`;
+    (r.bars ?? []).forEach(([m1, d1, m2, d2]) => {
+      const x1 = x(m1, d1), w = x(m2, d2) - x1;
+      s += r.soft
+        ? `<rect x="${x1}" y="${y - 3}" width="${w}" height="6" rx="3" fill="none" stroke="${I3}" stroke-width="1.5" stroke-dasharray="4 3"/>`
+        : `<rect x="${x1}" y="${y - 3}" width="${Math.max(w, 6)}" height="6" rx="3" fill="${A}"/>`;
+    });
+    (r.dots ?? []).forEach(([m, d], k) => { s += `<circle cx="${x(m, d) + k * 5}" cy="${y}" r="5" fill="${A}" stroke="#fff" stroke-width="2"/>`; });
+  });
+  const tx = x(10, 15);
+  s += `<line x1="${tx}" x2="${tx}" y1="${top - 4}" y2="${top + rowH * ROWS.length}" stroke="${INK}" stroke-width="1"/>`;
+  s += `<text x="${tx}" y="9" font-size="10" font-weight="700" fill="${INK}" text-anchor="middle">today</text>`;
+  s += "</svg>";
+  $("year").innerHTML = s;
+})();
+$("events").innerHTML = EVENTS.map((e) => h`<a class="evcard" href="${e.u}" target="_blank" rel="noopener"><small>${e.m}</small><div class="d">${e.d}</div><b>${e.t}</b><span>${e.w}</span><span style="color:var(--accent);font-weight:600">Details ↗</span></a>`).join("");
+
+/* ── inside ───────────────────────────────────────────────────────────── */
+$("enclaves").innerHTML = ENCLAVES.map(([n, a, b]) => h`<div class="range-row"><div class="l">${n}</div>
+  <div class="range"><i style="left:${(a / 2.5) * 100}%;width:${((b - a) / 2.5) * 100}%"></i></div>
+  <div class="v">$${a}–${b}M</div></div>`).join("");
+
+/* ── links ────────────────────────────────────────────────────────────── */
+$("links").innerHTML = LINKS.map((l) => l.u
+  ? `<a class="linkrow" href="${l.u}" target="_blank" rel="noopener"><div class="t"><b>${l.t}</b><small>${l.d}</small></div><span class="go">↗</span></a>`
+  : `<div class="linkrow dead"><div class="t"><b>${l.t}</b><small>${l.d}</small></div><span class="go">—</span></div>`).join("");
+
+/* ── section tabs: stick, and follow the scroll ───────────────────────── */
+(function anchors() {
+  const secs = [...document.querySelectorAll(".sec[data-tab]")];
+  const bar = $("anchors"), scroll = $("scroll");
+  bar.innerHTML = secs.map((s, i) => `<button data-i="${i}">${s.dataset.tab}</button>`).join("");
+  const framed = () => getComputedStyle(scroll).overflowY !== "visible";
+  const topOf = (el) => el.getBoundingClientRect().top - (framed() ? scroll.getBoundingClientRect().top : 0);
+  const sync = () => {
+    let on = 0;
+    secs.forEach((s, i) => { if (topOf(s) <= 70) on = i; });
+    bar.querySelectorAll("button").forEach((b, i) => b.classList.toggle("on", i === on));
+    const act = bar.children[on];
+    bar.scrollTo({ left: act.offsetLeft - 60, behavior: "smooth" });
+  };
+  bar.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    const d = topOf(secs[+b.dataset.i]) - 56;
+    (framed() ? scroll : window).scrollBy({ top: d, behavior: "smooth" });
+  });
+  scroll.addEventListener("scroll", sync, { passive: true });
+  window.addEventListener("scroll", sync, { passive: true });
+  sync();
+})();
+
+$("clean").addEventListener("change", (e) => document.body.classList.toggle("clean", e.target.checked));
+</script>
+</body>
+</html>

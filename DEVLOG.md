@@ -23,6 +23,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-16 00:40 UTC — phase338.1: the final mix for the community explore page (demo only)
+
+**Objective**: Owner on the three directions: "混搭你再想想给我最终方案 不要局限在现有的数据 如果有链接可以加上 比如builder或者社区的主页 reddit还有办法吗".
+**Actions**: `apps/web/public/demos/community-explore-v2/index.html` — one phone, eight sections behind sticky scroll-following tabs (Verdict · Ranks · Voices · Money · Around · Calendar · Inside · Links), with a side table of what each block runs on. Order is a buyer's questions. v1 stays up for comparison.
+**New real data in it** (all Windward): ZIP 30005 typical home value $747K = #7 of 203 Atlanta-metro ZIPs, +34% in 5 years = #17, +60% since 2020, −1.6% since 2024 (Zillow's public ZHVI file, Sept 2026); Creek View ES 87% proficient = #3 of 1,220 (Windward has two elementary zones); 2027 dues $824, lake private and electric-only, sports park, boat launch, 3 pocket parks — and **the swim/tennis/marina facility and the golf club are separate private clubs**, all from the association's own site (`windwardhomesga.com`). Holding cost recomputed on $747K: ≈ $940/month.
+**Findings**:
+- `communities.website` is filled for 4 of 22,730 active rows, `builder` / `year_built` / `hoa_fee_monthly` / `price_*` / `zip` for none; `nextdoor_url` for 8,678. Windward's stored `website` (`windwardcommunity.org`) fails TLS — the name on the certificate does not match. Links need a finder job and a health check.
+- Windward's film labels shots "Windward Pool" / "Windward Courts" / "Windward Clubhouse" at 0 mi. The association lists no pool of its own; those are almost certainly the private Racket Social Club. The film implies an amenity the dues do not buy — not changed here, raised with the owner.
+- Mobil Land Development (1980 proposal, first homeowner 1983) no longer exists, so Windward has no builder link; the pill is for communities still being built (Northbrooke's row already points at Toll Brothers).
+**Reddit**: still unreachable from here (403 to curl, refused by the search tool; a second attempt with a browser user-agent was stopped by the permission classifier, correctly). The page now carries a real link to the r/Alpharetta search for the community's name; quotes and counts remain SAMPLE. Real quotes need Reddit's Data API with the owner's app credentials, and their approval before commercial display.
+**Still SAMPLE**: Reddit block, rush-hour drive times, commute and green-space ranks, price by enclave.
+**Next steps**: owner signs off the page; then build order is the `have` and `free` rows of the table first.
+
 ## 2026-11-15 23:55 UTC — phase338: three directions for the community explore page (demo only)
 
 **Objective**: Owner: "重新设计community的explore page 要有信息量 要有real insights 不要太多文字 多一点图表 但是不要单纯罗列数字 可以有一些ranking 可以从reddit上找一些review comments啥的 也可以加一些events 。 你来设计几个方案". Designs to choose from — no app code changed.
