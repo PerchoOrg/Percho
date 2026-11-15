@@ -323,6 +323,7 @@ export type Database = {
           lat: number | null
           lng: number | null
           name: string
+          profile: Json | null
           slug: string
           state: string
           status: string
@@ -340,6 +341,7 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           name: string
+          profile?: Json | null
           slug: string
           state?: string
           status?: string
@@ -357,6 +359,7 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           name?: string
+          profile?: Json | null
           slug?: string
           state?: string
           status?: string

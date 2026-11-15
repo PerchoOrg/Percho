@@ -53,12 +53,17 @@ export function googleAuthorNames(rows: readonly PhotoRow[], ids: readonly strin
   return names;
 }
 
-/** `ordered_clips[].photo_id`, in film order, without repeats. */
+/**
+ * Every photo a film displays, in film order, without repeats: a clip's
+ * `photo_id`, or the `bg_photo_id` a city film's data frame is drawn over —
+ * a photo behind a chart is still a photo shown.
+ */
 export function clipPhotoIds(orderedClips: unknown): string[] {
   if (!Array.isArray(orderedClips)) return [];
   const ids: string[] = [];
   for (const clip of orderedClips) {
-    const id = (clip as { photo_id?: unknown } | null)?.photo_id;
+    const c = clip as { photo_id?: unknown; bg_photo_id?: unknown } | null;
+    const id = c?.photo_id ?? c?.bg_photo_id;
     if (typeof id === 'string' && !ids.includes(id)) ids.push(id);
   }
   return ids;
