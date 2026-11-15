@@ -23,6 +23,16 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 08:47 UTC — phase331: one City Hall, place names only for places, the community page's hero on the city page
+
+**Objective**: Owner on the phase330 cut: "好多了" then three fixes — "town center city hall反复了几次", "suwanee 1897 不是地名 不要显示在左上角 不需要所有页面都显示", "city explore page video部分没有和community保持一致".
+**Actions**:
+- Script (`suwanee-ga.json`): City Hall's facade appears once, on "a park, a plaza, a city hall". Out: the splash pad (Town Center), the lantern night (City Hall behind it), a sculpture with City Hall behind it, and the closing repeat of Town Center on Main. In: White Street Park's community garden and PlayTown on the Fortune line, a bronze sculpture on the art line; the 2024 park is the dusk Seedance clip already paid for. Town Center is now the opening aerial, City Hall's plaza and the concert lawn — three different views, each its own beat. 14 lines, 24 photos, none twice.
+- Place pill: `label` is opt-in. A shot without one has an empty `poi_name`, and the card hides the pill (`CommunityFace` already does for an empty name). Labelled: Old Town, PlayTown, Town Center Park (concerts), the five schools and PCOM, the greenway, Sims Lake, Town Center on Main, the library, George Pierce Park. Not labelled: the aerial (the card already says Suwanee), the 1897 map, the street, the art, Atlanta. School callouts no longer repeat the school's name — the pill carries it, the callout says "#5 in Georgia · elementary school".
+- City page hero: `TourHero`, the community page's own component — same clamp(340, 46vh, 460) height, glass back/save buttons, sound toggle, foot wash and chip strip. Its chips group by `bucket`, so a city film's shots carry their LINE's `chapter` as their bucket (`overview | history | growth | downtown | schools | outdoor | commute | future`; labels added to `tour-buckets.ts` next to the community buckets, which never use those keys). `CityDetailDTO.tourSegments` carries them. `onShare` became optional in `TourHero` — a city has no public web page to link to yet. `components/city/CityFilm.tsx` removed.
+**Decisions**: figures survive the hero's crop — the film is cover-cropped ~16% top and bottom there, which puts the 55–69% figure band at ~57–78% of the hero, above the chip strip.
+**Next steps**: re-assemble; owner checks card, film and page on a cold start.
+
 ## 2026-11-15 08:31 UTC — phase330: narration falls back to other TTS models; figures higher; schools first on the city page
 
 **Objective**: Owner: "还是没看到小学和初中 … 地名像community card一样放到左上角，有文字或者图片的地方不要和底部的city名字重合 向上移动 … tts用备选的别的model 不要被block".

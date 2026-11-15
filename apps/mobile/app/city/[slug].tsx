@@ -29,7 +29,7 @@ import {
 	useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CityFilm } from "../../components/city/CityFilm";
+import { TourHero } from "../../components/community/TourHero";
 import { apiBase } from "../../lib/api/base";
 import { useSavedStore } from "../../state/saved";
 import { colors, radii } from "../../theme/tokens";
@@ -69,7 +69,10 @@ function Section({
 export default function CityScreen() {
 	const { slug } = useLocalSearchParams<{ slug: string }>();
 	const insets = useSafeAreaInsets();
-	const { width } = useWindowDimensions();
+	const { width, height: screenH } = useWindowDimensions();
+
+	// The community page's hero height (reference §3.1): clamp(340, 46vh, 460).
+	const heroH = Math.min(Math.max(340, screenH * 0.46), 460);
 	const [data, setData] = useState<CityDetailDTO | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
@@ -124,15 +127,22 @@ export default function CityScreen() {
 	const growthMax = Math.max(...data.growth.series.map((p) => p.value), 1);
 
 	return (
-		<View style={[styles.root, { paddingTop: insets.top }]}>
+		<View style={styles.root}>
 			<ScrollView
 				contentContainerStyle={{ paddingBottom: insets.bottom + 28 }}
 				showsVerticalScrollIndicator={false}
 			>
-				<CityFilm
+				{/* The community page's hero, as is (owner 2026-11-15: "city explore
+				    page video部分没有和community保持一致"): the same height, glass
+				    buttons and sound toggle, and its chip strip — here one chip
+				    per chapter of the film (History, Schools, …). */}
+				<TourHero
 					width={width}
+					height={heroH}
 					{...(data.videoUrl ? { videoUrl: data.videoUrl } : {})}
-					{...(data.posterUrl ? { posterUrl: data.posterUrl } : {})}
+					{...(data.posterUrl ? { heroUrl: data.posterUrl } : {})}
+					initial={data.name.trim().charAt(0).toUpperCase()}
+					segments={data.tourSegments ?? []}
 					saved={saved}
 					onBack={() => router.back()}
 					onToggleSave={() => {

@@ -58,7 +58,8 @@ export interface TourHeroProps {
 	saved: boolean;
 	onBack: () => void;
 	onToggleSave: () => void;
-	onShare: () => void;
+	/** Absent for a page with no public link to share — a city, until the web has one. */
+	onShare?: () => void;
 }
 
 /** Playback ticks every 0.25s — the same cadence the feed card's bar uses. */
@@ -252,15 +253,17 @@ export function TourHero(props: TourHeroProps) {
 					<Text style={styles.gbtnGlyph}>←</Text>
 				</Pressable>
 				<View style={styles.navRight}>
-					<Pressable
-						onPress={onShare}
-						hitSlop={10}
-						style={styles.gbtn}
-						accessibilityRole="button"
-						accessibilityLabel="Share"
-					>
-						<Text style={styles.gbtnGlyph}>↑</Text>
-					</Pressable>
+					{!!onShare && (
+						<Pressable
+							onPress={onShare}
+							hitSlop={10}
+							style={styles.gbtn}
+							accessibilityRole="button"
+							accessibilityLabel="Share"
+						>
+							<Text style={styles.gbtnGlyph}>↑</Text>
+						</Pressable>
+					)}
 					<Pressable
 						onPress={onToggleSave}
 						hitSlop={10}

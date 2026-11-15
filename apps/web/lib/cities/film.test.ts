@@ -202,6 +202,25 @@ describe('buildCityFilm', () => {
     expect(film.shots.map((s) => s.move)).toEqual(['pan_lr', 'pull_back', 'pull_back', 'pan_rl']);
   });
 
+  it("files each shot under its line's chapter, which the city page groups by", () => {
+    const film = buildCityFilm({
+      profile: profileOf([
+        { say: eight, chapter: 'history', shots: [{ photo: 'aaaaaaaa' }] },
+        { say: eight, shots: [{ photo: 'bbbbbbbb' }] },
+        { say: eight, chapter: 'schools', shots: [{ photo: 'eeeeeeee' }, { photo: 'ffffffff' }] },
+        { say: eight, shots: [{ photo: 'cccccccc' }] },
+      ]),
+      photos,
+    });
+    expect(film.shots.map((s) => s.bucket)).toEqual([
+      'history',
+      'outdoor',
+      'schools',
+      'schools',
+      'outdoor',
+    ]);
+  });
+
   it('names a shot for the place it shows, which is what the card labels it', () => {
     const film = buildCityFilm({
       profile: profileOf([
@@ -213,8 +232,9 @@ describe('buildCityFilm', () => {
       photos,
     });
     expect(film.shots[0]).toMatchObject({ poi_name: 'Old Town', label: 'Old Town' });
-    // Unnamed: the place the photo is filed under.
-    expect(film.shots[1]?.poi_name).toBe('Place bbbbbbbb');
+    // Not a named place — a map, a street, a skyline: no pill at all, rather
+    // than the name of whatever the photo is filed under.
+    expect(film.shots[1]).toMatchObject({ poi_name: '', label: '' });
   });
 
   it('carries a callout on the shot it was written for', () => {
