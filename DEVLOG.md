@@ -23,6 +23,22 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 16:42 UTC — phase333: city playbook written down; the city page redrawn as charts
+
+**Objective**: Owner: "把编排经验记录下来可以用来做下一个" and, before the next city, "优化city explore page 现在太多文字 又臭又长 重新设计 比如可以用一些图表".
+**Actions**:
+- `docs/pipelines/city-film-playbook.md` — what a city card is, the film's shape (one claim, then the proof; chapter order), every rule the owner set (one photo per line, one subject once, no families, place pills only for places, figures in the 55–69% band, sources and the two-county ZIP), the step-by-step for the next city with the exact commands, costs and limits, and the mistakes not to repeat. Memory points at it.
+- City page (`app/city/[slug].tsx`), every section a figure — `components/city/CityCharts.tsx` draws, `lib/city/page.ts` shapes (pure, 7 tests):
+  - header: name, county, the one-line tagline (the 3-sentence summary is gone);
+  - rankings: horizontal badges (rank, scope, title, publisher·year) — no detail paragraphs;
+  - AT A GLANCE: tiles with their own chart — residents with a growth sparkline (replaces the separate population tile and the growth section), each state comparison as city-vs-state bars with its takeaway, owner-occupied as a split bar;
+  - SCHOOLS: Elementary / Middle / High columns, best rank first and largest, colleges as a tagged row, graduation bars under them; the two-county note moved to the sources;
+  - HISTORY: a horizontal timeline of short labels (`history[].short`, new), one sentence shown for the stop you tap;
+  - GETTING AROUND: drive-time bars on one half-hour axis, off-peak solid and rush tinted (`gettingAround[].minutes`, new); untimed rows (rail, interstate) as plain pairs;
+  - WHAT'S NEXT and Sources & photo credits fold shut.
+- Profile: Suwanee's history got short labels, its two drive rows got minute ranges (40–75 downtown, 45–60 airport — the ranges the profile already stated).
+**Issues**: not rendered here — the app has no web target, so the page is checked on the owner's phone. No new dependency: the charts are plain Views.
+
 ## 2026-11-15 09:04 UTC — phase332: no photo of a family in the city film
 
 **Objective**: Owner on the third shot (PlayTown's painted path, `c4890c75`): "大人和两个小孩在自家后院的照片不能用 换". A photo of identifiable people — a parent and two children, read as a family at home — is not something a city film shows, wherever it was taken.

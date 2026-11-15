@@ -166,7 +166,14 @@ export const cityProfileSchema = z.object({
     rows: z.array(comparison).max(4),
     source,
   }),
-  history: z.array(z.object({ year: z.string().min(1).max(14), text: z.string().min(1).max(140) })),
+  history: z.array(
+    z.object({
+      year: z.string().min(1).max(14),
+      /** A few words for the page's timeline ("Railroad depot"); `text` shows on tap. */
+      short: z.string().min(1).max(24).optional(),
+      text: z.string().min(1).max(140),
+    }),
+  ),
   growth: z.object({
     series: z.array(z.object({ label: z.string().min(1).max(8), value: z.number().positive() })),
     takeaway: z.string().max(40),
@@ -206,7 +213,15 @@ export const cityProfileSchema = z.object({
     note: z.string().max(360),
   }),
   gettingAround: z.array(
-    z.object({ label: z.string().min(1).max(48), value: z.string().min(1).max(40) }),
+    z.object({
+      label: z.string().min(1).max(48),
+      value: z.string().min(1).max(40),
+      /** Drive time as a range — off-peak to rush — for the page's chart. */
+      minutes: z
+        .object({ min: z.number().positive().max(240), max: z.number().positive().max(240) })
+        .refine((m) => m.max >= m.min, { message: 'max is below min' })
+        .optional(),
+    }),
   ),
   planning: z.array(
     z.object({ title: z.string().min(1).max(60), text: z.string().min(1).max(200) }),
