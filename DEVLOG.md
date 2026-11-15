@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 07:56 UTC — phase328: a spent daily TTS quota fails the assembly instead of shipping a silent film
+
+**Objective**: Stop the failure that has now happened twice in one night: an assembly started while the narration model's daily quota (100 requests, phase326) is spent retries every line for 170s and would finish as a film with no voice — and become the city's newest.
+**What happened the second time**: my own quota poll saw one HTTP 200 at 07:45 UTC and I assembled; the quota was not back (its `retryDelay` pointed at 08:00, midnight Pacific), every line failed again, and I stopped the job (`e60fe77a`) and marked it failed by hand. One successful request is not "the quota is back".
+**Actions**: `narration_timing.is_daily_quota(status, body)` tells the per-day 429 from the per-minute one by the quota named in the body; `worker._tts_post` raises `TtsDailyQuota` on it, `tts_line` lets it through, and the assembly's own failure handler records it — `failed`, with the reason, in seconds. Any other TTS failure is still "narration is never worth a tour". 3 tests.
+**Decisions**: this deliberately fails community films too. A silent re-cut replacing a narrated film is worse than a failed job that says why and leaves the old film in place.
+**Next steps**: assemble Suwanee after 08:00 UTC, having seen TWO consecutive TTS requests succeed. Owner is deciding how to lift the cap (AI Studio tier, or Cloud Text-to-Speech) — phase327 report.
+
 ## 2026-11-15 07:24 UTC — phase327: the city card on iOS — the film in the deck, the fundamentals on a city page
 
 **Objective**: Owner on the v3 Suwanee film: "tts可以付费 这个版本不错 你做出来我去test flights测试看看". So the film goes where he can test it — the iPhone app — and the city gets the page the approved `demos/city-card-v1` design promised.
