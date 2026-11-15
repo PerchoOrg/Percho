@@ -22,6 +22,7 @@
  * caption/badge styling. Inline aspect-square card markup deleted.
  */
 
+import { CommunityFilm, type CommunityFilmProps } from '@/app/(public)/_components/CommunityFilm';
 import { GridCard, GridCardCaption } from '@/app/_components/GridCard';
 import { GridFrame } from '@/app/_components/GridFrame';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
@@ -40,7 +41,6 @@ import {
 import { Fragment } from 'react';
 import { useEffect, useState } from 'react';
 import { CommunityBoundaryMap } from './CommunityBoundaryMap';
-import { CommunityFilm, type CommunityFilmProps } from './CommunityFilm';
 import { SaveCommunityButton } from './SaveCommunityButton';
 
 const CATEGORY_META = new Map(COMMUNITY_VIDEO_CATEGORIES.map((m) => [m.id, m] as const));
@@ -62,6 +62,7 @@ export function CommunityBody({
   videos,
   listings,
   film,
+  cityHref,
 }: {
   community: {
     id: string;
@@ -84,6 +85,8 @@ export function CommunityBody({
   listings: BrowseCard[];
   /** The community's film, when it has one (phase313). */
   film: CommunityFilmProps | null;
+  /** Its city's page, when that city has one (phase335) — the way on from a shared link. */
+  cityHref: string | null;
 }) {
   const [tab, setTab] = useState<Tab>('videos');
 
@@ -129,9 +132,18 @@ export function CommunityBody({
            *   still reads as a sentence, not chrome. State-flips to
            *   "← Walk through" on the listings tab. */}
           <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-sm">
-            <span className="text-surface/90">
-              {community.city ? `${community.city}, ${community.state}` : community.state}
-            </span>
+            {cityHref ? (
+              <a
+                href={cityHref}
+                className="text-surface/90 underline decoration-surface/50 underline-offset-[3px] hover:decoration-surface"
+              >
+                {`${community.city}, ${community.state}`} <span aria-hidden="true">→</span>
+              </a>
+            ) : (
+              <span className="text-surface/90">
+                {community.city ? `${community.city}, ${community.state}` : community.state}
+              </span>
+            )}
             {/* The listings toggle is hidden while listings are off on the
                 web (phase311). */}
             {LISTINGS_ON_WEB ? (

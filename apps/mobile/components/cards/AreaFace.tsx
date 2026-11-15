@@ -2,7 +2,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 import type { AreaCardV3 } from "../../lib/feed/card-types";
-import { SOUND_TAP_TARGET, type TapSlot } from "../../lib/gesture/tap-slot";
+import {
+	SHARE_TAP_TARGET,
+	SOUND_TAP_TARGET,
+	type TapSlot,
+} from "../../lib/gesture/tap-slot";
 import { useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
 import { redline, redlineRadii } from "../../theme/tokens";
@@ -20,6 +24,8 @@ interface AreaFaceProps {
 	suspended?: boolean;
 	tapSlot?: SharedValue<TapSlot>;
 	onExplore?: () => void;
+	/** Opens the share sheet (phase335); absent for a city with no page. */
+	onShare?: () => void;
 }
 
 /**
@@ -42,6 +48,7 @@ export function AreaFace({
 	suspended,
 	tapSlot,
 	onExplore,
+	onShare,
 }: AreaFaceProps) {
 	const { unit } = card;
 	const saved = useSavedStore((s) => s.isSaved(card.id));
@@ -97,6 +104,14 @@ export function AreaFace({
 					onPress: () => toggleSaved(card.id, "area"),
 					...(tapSlot ? { onTouchStart: arm(SAVE_TAP_TARGET) } : {}),
 				}}
+				{...(onShare
+					? {
+							share: {
+								onPress: onShare,
+								...(tapSlot ? { onTouchStart: arm(SHARE_TAP_TARGET) } : {}),
+							},
+						}
+					: {})}
 			/>
 
 			{/* Bottom scrim — transparent until ~55% down, then darkening to a

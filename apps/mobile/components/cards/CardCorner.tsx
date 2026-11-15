@@ -45,6 +45,13 @@
  *
  * A face with only ONE control is still a plain disc of the same height — that
  * is what a photo-only card (no film to mute) renders.
+ *
+ * ── Share joins the same object (phase335) ──────────────────────────────────
+ *
+ * Owner: "feed卡右上角分享按键" — an agent sends a community or city card to a
+ * buyer straight from the deck. It is a third cell in the SAME pill, after the
+ * bookmark, not a second disc beside it: two objects in this corner is exactly
+ * what phase175 removed.
  */
 import { Pressable, StyleSheet, View } from "react-native";
 import { redline } from "../../theme/tokens";
@@ -81,15 +88,34 @@ interface CardCornerProps {
 	sound?: CornerControl & { on: boolean };
 	/** Present when the card is saveable. */
 	save?: CornerControl & { saved: boolean };
+	/** Present when the card has a page to send someone to (phase335). */
+	share?: CornerControl;
 }
 
 /**
- * One object in the corner: a pill when the card has both controls, a disc when
- * it has one, nothing when it has neither.
+ * One object in the corner: a pill when the card has two or three controls, a
+ * disc when it has one, nothing when it has neither.
  */
-export function CardCorner({ sound, save }: CardCornerProps) {
-	const both = sound !== undefined && save !== undefined;
-	if (sound === undefined && save === undefined) return null;
+export function CardCorner({ sound, save, share }: CardCornerProps) {
+	const count = [sound, save, share].filter((c) => c !== undefined).length;
+	if (count === 0) return null;
+	const pill = count > 1;
+
+	/**
+	 * Each cell's hit slop: the full 12pt on the pill's outer edges, half the
+	 * gap between neighbours so two cells never claim the same point.
+	 */
+	const slop = (first: boolean, last: boolean) =>
+		pill
+			? {
+					top: 12,
+					bottom: 12,
+					left: first ? 12 : GAP / 2,
+					right: last ? 12 : GAP / 2,
+				}
+			: 12;
+	const firstKey = sound ? "sound" : save ? "save" : "share";
+	const lastKey = share ? "share" : save ? "save" : "sound";
 
 	const soundCell = sound && (
 		<Pressable
@@ -98,7 +124,7 @@ export function CardCorner({ sound, save }: CardCornerProps) {
 			onPress={sound.onTouchStart ? undefined : sound.onPress}
 			accessibilityRole="button"
 			accessibilityLabel={sound.on ? "Mute" : "Unmute"}
-			hitSlop={both ? { top: 12, bottom: 12, left: 12, right: GAP / 2 } : 12}
+			hitSlop={slop(firstKey === "sound", lastKey === "sound")}
 			style={({ pressed }) => [styles.cell, pressed && styles.pressed]}
 		>
 			<RedlineIcon
@@ -117,7 +143,7 @@ export function CardCorner({ sound, save }: CardCornerProps) {
 			onPress={save.onTouchStart ? undefined : save.onPress}
 			accessibilityRole="button"
 			accessibilityLabel={save.saved ? "Saved" : "Save"}
-			hitSlop={both ? { top: 12, bottom: 12, left: GAP / 2, right: 12 } : 12}
+			hitSlop={slop(firstKey === "save", lastKey === "save")}
 			style={({ pressed }) => [styles.cell, pressed && styles.pressed]}
 		>
 			{/* Saved fills the bookmark and turns it green — the redline's one
@@ -132,10 +158,25 @@ export function CardCorner({ sound, save }: CardCornerProps) {
 		</Pressable>
 	);
 
+	const shareCell = share && (
+		<Pressable
+			key="share"
+			onTouchStart={share.onTouchStart}
+			onPress={share.onTouchStart ? undefined : share.onPress}
+			accessibilityRole="button"
+			accessibilityLabel="Share"
+			hitSlop={slop(firstKey === "share", lastKey === "share")}
+			style={({ pressed }) => [styles.cell, pressed && styles.pressed]}
+		>
+			<RedlineIcon name="share" size={GLYPH} color={INK} weight="outline" />
+		</Pressable>
+	);
+
 	return (
-		<View style={[styles.slot, both ? styles.pill : styles.disc]}>
+		<View style={[styles.slot, pill ? styles.pill : styles.disc]}>
 			{soundCell}
 			{saveCell}
+			{shareCell}
 		</View>
 	);
 }
@@ -159,7 +200,7 @@ const styles = StyleSheet.create({
 		borderRadius: CORNER_HEIGHT / 2,
 		overflow: "hidden",
 	},
-	/** Two glyphs, `GAP` apart, in the badge's height. */
+	/** Two or three glyphs, `GAP` apart, in the badge's height. */
 	pill: { paddingHorizontal: 9, gap: GAP },
 	/** One glyph: a disc of the same height, so both faces show one object. */
 	disc: { width: CORNER_HEIGHT, justifyContent: "center" },

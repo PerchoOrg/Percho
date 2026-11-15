@@ -6,6 +6,28 @@
 
 ---
 
+## v1.11 — Send a neighbourhood to anyone
+
+Any neighbourhood or city card can now be sent to someone else — an agent to
+a buyer, a buyer to their partner. Tap the share button in the card's top
+corner (or on its page) and pick Messages, WhatsApp, email or anything else
+on the phone. The person on the other end gets a link with the film's
+picture in the preview. If they have the Percho app, the link opens straight
+into that neighbourhood or city in the app; if they don't, it opens the same
+page on the website, where the film plays, and from there they can carry on
+to the city and every other neighbourhood in it, or get the app.
+
+### 2026-11-15
+- **Share from the feed.** The card's top-right corner now has a share
+  button next to sound and save, on neighbourhood and city cards.
+- **Cities on the website.** Each city has its own web page — the film, how
+  it ranks, how it compares with the state, its schools, getting around, a
+  short history — and lists the neighbourhoods in it. A neighbourhood's page
+  links to its city.
+- **Links open in the app.** Opening a shared Percho link on an iPhone with
+  the app installed goes straight into the app. This needs the next app
+  update; until then the links open the website.
+
 ## v1.10 — The feed learns from your swipes
 
 The deck now pays attention to what your thumb has been saying. Like a

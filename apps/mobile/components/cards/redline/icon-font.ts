@@ -72,7 +72,10 @@ export type RedlineIconName =
 	// corner drew its speaker from bordered `View`s until this date because no
 	// font here had one — see `CardCorner.tsx`.
 	| "soundOn"
-	| "soundOff";
+	| "soundOff"
+	// phase335: the card corner's share — the box-and-arrow iOS draws for its
+	// own share sheet.
+	| "share";
 
 /** The family name registered with `expo-font`. */
 export const ICON_FONT = "PerchoIcons";
@@ -130,6 +133,7 @@ export const ICON_GLYPH: Record<RedlineIconName, string> = {
 	arrowRight: "\ue06c", // arrow-right-fill — explore link affordance
 	soundOn: "\ue450", // speaker-simple-high-fill  — tour audio playing
 	soundOff: "\ue456", // speaker-simple-slash-fill — muted
+	share: "\ueaf0", // export-fill — send this card (phase335)
 };
 
 /**
@@ -181,6 +185,7 @@ export const ICON_ART_WIDTH: Record<RedlineIconName, number> = {
 	arrowRight: 0.75,
 	soundOn: 0.8438,
 	soundOff: 0.8438,
+	share: 0.6875,
 };
 
 /**
@@ -216,6 +221,7 @@ export const OUTLINE_ART_WIDTH: Record<RedlineIconName, number> = {
 	arrowRight: 0.875,
 	soundOn: 0.8438,
 	soundOff: 0.8438,
+	share: 0.6875,
 };
 
 /**

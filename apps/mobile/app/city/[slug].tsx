@@ -17,7 +17,7 @@
  * city.ts`.
  */
 import type { CityDetailDTO } from "@percho/shared/city";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
 	ActivityIndicator,
@@ -40,6 +40,8 @@ import {
 } from "../../components/city/CityCharts";
 import { TourHero } from "../../components/community/TourHero";
 import { apiBase } from "../../lib/api/base";
+import { backOrFeed } from "../../lib/share/back-or-feed";
+import { openShareSheet } from "../../lib/share/share-sheet";
 import { useSavedStore } from "../../state/saved";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
@@ -96,7 +98,7 @@ export default function CityScreen() {
 		return (
 			<View style={[styles.center, { paddingTop: insets.top }]}>
 				<Text style={styles.err}>Couldn't load this city.</Text>
-				<Pressable onPress={() => router.back()} style={styles.backBtn}>
+				<Pressable onPress={backOrFeed} style={styles.backBtn}>
 					<Text style={styles.backTxt}>Back</Text>
 				</Pressable>
 			</View>
@@ -132,10 +134,15 @@ export default function CityScreen() {
 					initial={data.name.trim().charAt(0).toUpperCase()}
 					segments={data.tourSegments ?? []}
 					saved={saved}
-					onBack={() => router.back()}
+					onBack={backOrFeed}
 					onToggleSave={() => {
 						if (savedId) toggleSaved(savedId, "area");
 					}}
+					// Share (phase335) — the city's web page, which opens here
+					// when the buyer has the app.
+					onShare={() =>
+						openShareSheet({ kind: "city", slug: data.slug, name: data.name })
+					}
 				/>
 
 				<View style={styles.body}>

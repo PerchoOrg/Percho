@@ -58,7 +58,7 @@ export interface TourHeroProps {
 	saved: boolean;
 	onBack: () => void;
 	onToggleSave: () => void;
-	/** Absent for a page with no public link to share — a city, until the web has one. */
+	/** Absent for a page with no public link to share. Every page has one since phase335. */
 	onShare?: () => void;
 }
 

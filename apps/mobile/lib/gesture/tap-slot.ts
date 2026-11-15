@@ -66,6 +66,9 @@ export const CARD_TAP_TARGET = "card";
  */
 export const SOUND_TAP_TARGET = "sound";
 
+/** The card-corner share control's tap id (phase335); same reason to live here. */
+export const SHARE_TAP_TARGET = "share";
+
 /** The exclusive-tap gesture's slot; never read by the card faces. */
 export interface TapSlot {
 	/** Latest tap-target id, or `null` when the last release was not a tap. */

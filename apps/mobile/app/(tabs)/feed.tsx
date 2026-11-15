@@ -61,8 +61,14 @@ import {
 } from "../../lib/feed/generate-feed";
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
 import { preferScope } from "../../lib/feed/scope";
-import { CARD_TAP_TARGET, SOUND_TAP_TARGET } from "../../lib/gesture/tap-slot";
+import {
+	CARD_TAP_TARGET,
+	SHARE_TAP_TARGET,
+	SOUND_TAP_TARGET,
+} from "../../lib/gesture/tap-slot";
 import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
+import { shareTargetForCard } from "../../lib/share/share-link";
+import { openShareSheet } from "../../lib/share/share-sheet";
 import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
@@ -562,6 +568,12 @@ export default function FeedScreen() {
 	const renderCard = useCallback(
 		(card: FeedCardV3, args: CardRenderArgs) => {
 			const isTop = args.role === "top";
+			// The corner's share (phase335, owner: "feed卡右上角分享按键") — a
+			// community, or a city with a page; no cell on any other card.
+			const shareTarget = shareTargetForCard(card);
+			const share = shareTarget
+				? { onShare: () => openShareSheet(shareTarget) }
+				: {};
 			switch (card.kind) {
 				case "area": {
 					// A city with a film wears the community card's face — its place
@@ -584,6 +596,7 @@ export default function FeedScreen() {
 								tapSlot={args.tapSlot}
 								deckGesture={args.deckGesture}
 								{...(toCity ? { onExplore: toCity } : {})}
+								{...share}
 							/>
 						);
 					}
@@ -594,6 +607,7 @@ export default function FeedScreen() {
 							suspended={!focused || paused}
 							tapSlot={args.tapSlot}
 							{...(toCity ? { onExplore: toCity } : {})}
+							{...share}
 						/>
 					);
 				}
@@ -627,6 +641,7 @@ export default function FeedScreen() {
 							/* Lets the progress bar's drag block the deck's swipe —
 							   without it the two race for the same gesture. */
 							deckGesture={args.deckGesture}
+							{...share}
 							/*
 							 * "Why people love it →" now has a destination (owner,
 							 * 2026-08-02: 「最后还有why people love it的跳转button」).
@@ -751,6 +766,12 @@ export default function FeedScreen() {
 				if (top && top.kind !== "tradeoff") {
 					toggleSaved(top.id, top.kind);
 				}
+				return;
+			}
+			if (target === SHARE_TAP_TARGET) {
+				const top = deckRef.current[activeIndex];
+				const shareTarget = top ? shareTargetForCard(top) : null;
+				if (shareTarget) openShareSheet(shareTarget);
 				return;
 			}
 			if (target === EXPLORE_TAP_TARGET) {

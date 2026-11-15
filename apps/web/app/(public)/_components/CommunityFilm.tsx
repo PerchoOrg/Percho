@@ -11,6 +11,9 @@
  * narration, and browsers block autoplay with sound — the viewer presses play.
  * The photo credit line is Google's Places rule ("You must always credit the
  * author when displaying photos"), the same line the app prints.
+ *
+ * The city page plays its film through this too (phase335), so it lives with
+ * the public pages rather than under `c/[slug]`.
  */
 import { attachHls } from '@/app/(public)/_components/feed/attach-hls';
 import { useEffect, useRef } from 'react';

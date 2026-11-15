@@ -112,6 +112,10 @@ GLYPHS = {
     # where the arc-wave one does not.
     "soundOn": "speaker-simple-high-fill",
     "soundOff": "speaker-simple-slash-fill",
+    # Added 2026-11-15 (phase335) for the card corner's share: `export` is the
+    # box-and-arrow iOS itself draws for its share sheet, so the buyer reads it
+    # as "send this" without a label.
+    "share": "export-fill",
 }
 
 

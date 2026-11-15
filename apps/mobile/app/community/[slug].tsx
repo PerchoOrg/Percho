@@ -46,7 +46,6 @@ import {
 	Linking,
 	Pressable,
 	ScrollView,
-	Share,
 	StyleSheet,
 	Text,
 	View,
@@ -68,6 +67,8 @@ import {
 	fetchMyReview,
 	reviewMonth,
 } from "../../lib/reviews/reviews";
+import { backOrFeed } from "../../lib/share/back-or-feed";
+import { openShareSheet } from "../../lib/share/share-sheet";
 import { useAuthStore } from "../../state/auth";
 import { useSavedStore } from "../../state/saved";
 import { colors, radii } from "../../theme/tokens";
@@ -179,7 +180,7 @@ export default function CommunityWhyScreen() {
 		return (
 			<View style={[styles.center, { paddingTop: insets.top }]}>
 				<Text style={styles.err}>Couldn't load this neighbourhood.</Text>
-				<Pressable onPress={() => router.back()} style={styles.backBtn}>
+				<Pressable onPress={backOrFeed} style={styles.backBtn}>
 					<Text style={styles.backTxt}>Back</Text>
 				</Pressable>
 			</View>
@@ -216,16 +217,17 @@ export default function CommunityWhyScreen() {
 					initial={data.name.trim().charAt(0).toUpperCase()}
 					segments={data.tourSegments ?? []}
 					saved={saved}
-					onBack={() => router.back()}
+					onBack={backOrFeed}
 					onToggleSave={() => toggleSaved(data.id, "community")}
-					// Share (phase D) — the public web page for this community.
-					onShare={() => {
-						const url = `https://www.percho.co/c/${data.slug}`;
-						void Share.share({
-							message: `${data.name} — ${url}`,
-							url,
-						}).catch(() => {});
-					}}
+					// Share (phase D) — the public web page for this community,
+					// which opens here when the buyer has the app (phase335).
+					onShare={() =>
+						openShareSheet({
+							kind: "community",
+							slug: data.slug,
+							name: data.name,
+						})
+					}
 				/>
 
 				<View style={styles.body}>
