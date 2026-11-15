@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>City film v3 — Suwanee storyboards</title>
+<style>
+:root{
+  --bg:#F7F5F0; --surface:#FFFFFF; --ink:#2B2116; --ink2:#6F6B65; --ink3:#96918A;
+  --line:rgba(43,33,22,.12); --accent:#B45309; --accentSoft:#F6E7D6; --gold:#F0A94B;
+  --ui:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  --serif:"New York","Iowan Old Style",Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px 16px 60px}
+.nav{max-width:1180px;margin:0 auto 18px}
+.nav h1{font:700 22px var(--ui);margin-bottom:6px}
+.nav p{max-width:860px;color:#5A4E40;font:400 14px/1.6 var(--ui);margin:4px 0}
+.nav b{color:var(--ink)}
+.tabs{max-width:1180px;margin:0 auto 18px;display:flex;gap:8px;flex-wrap:wrap}
+.tab{font:600 14px var(--ui);padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.tab small{font-weight:400;color:var(--ink2);margin-left:6px}
+.tab[aria-selected=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tab[aria-selected=true] small{color:rgba(255,255,255,.7)}
+.wrap{max-width:1180px;margin:0 auto;display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+.left{width:380px;max-width:100%;position:sticky;top:16px}
+.right{flex:1;min-width:300px}
+@media (max-width:820px){.left{position:static;margin:0 auto}}
+
+/* ── the film frame ────────────────────────────────────── */
+.phone{position:relative;width:100%;aspect-ratio:9/16;background:#14100B;border-radius:34px;overflow:hidden;box-shadow:0 18px 44px rgba(0,0,0,.25);cursor:pointer;user-select:none;-webkit-user-select:none}
+.shot{position:absolute;inset:0;overflow:hidden;visibility:hidden}
+.shot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;will-change:transform}
+.shot .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.34) 0%,rgba(0,0,0,0) 20%,rgba(0,0,0,0) 46%,rgba(0,0,0,.62) 80%,rgba(0,0,0,.8) 100%)}
+.need{position:absolute;inset:0;background:repeating-linear-gradient(135deg,#3A2E22 0 14px,#33281E 14px 28px);display:grid;place-items:center;padding:34px}
+.need div{border:1.5px dashed rgba(240,169,75,.8);border-radius:18px;padding:22px 18px;text-align:center;color:#fff;max-width:260px}
+.need b{display:block;font:700 11px var(--ui);letter-spacing:1.6px;color:var(--gold);margin-bottom:8px}
+.need span{font:400 15px/1.4 var(--serif)}
+.co{position:absolute;left:20px;right:20px;color:#fff;will-change:transform,opacity}
+.co.stat,.co.count,.co.title{bottom:118px}
+.co.count{right:auto;background:rgba(20,16,11,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:14px 16px 13px;bottom:104px}
+.co .big{font:700 58px/1 var(--serif);letter-spacing:-1px;text-shadow:0 2px 18px rgba(0,0,0,.45)}
+.co .rule{height:3px;background:var(--gold);border-radius:2px;margin:10px 0 9px;width:56px;transform-origin:left}
+.co .label{font:600 16px/1.3 var(--ui);text-shadow:0 1px 10px rgba(0,0,0,.6)}
+.co .src{font:500 11px var(--ui);opacity:.72;margin-top:5px;letter-spacing:.2px}
+.co.title .big{font-size:66px}
+.co.title .label{font:500 15px var(--ui);opacity:.92}
+.co.tag,.co.time{top:58px;right:auto;max-width:78%}
+.co.tag .pill,.co.time .pill{display:inline-block;background:rgba(20,16,11,.52);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:8px 12px}
+.co.tag .k{font:700 11px var(--ui);letter-spacing:1.3px;text-transform:uppercase;color:var(--gold)}
+.co.tag .t,.co.time .t{font:500 13.5px/1.3 var(--ui);margin-top:2px}
+.co.time .k{font:700 22px/1 var(--ui);letter-spacing:.2px;font-variant-numeric:tabular-nums}
+.day{position:relative;height:3px;background:rgba(255,255,255,.28);border-radius:2px;margin-top:9px;width:150px}
+.day i{position:absolute;top:-3px;width:9px;height:9px;border-radius:50%;background:var(--gold);margin-left:-4px}
+.spark{display:block;margin:0 0 6px}
+.cap{position:absolute;left:18px;right:18px;bottom:34px;color:#fff;font:500 15.5px/1.38 var(--ui);text-align:center;text-shadow:0 1px 8px rgba(0,0,0,.85);min-height:44px;display:flex;align-items:flex-end;justify-content:center;pointer-events:none}
+.bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.2)}
+.bar i{display:block;height:100%;width:0;background:var(--gold)}
+.end{position:absolute;inset:0;background:#1B150E;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;visibility:hidden}
+.end h2{font:700 44px var(--serif);letter-spacing:-.5px}
+.end p{font:500 14px var(--ui);opacity:.75;margin-top:6px}
+.end .chip{margin-top:18px;font:600 12.5px var(--ui);padding:8px 13px;border-radius:999px;background:var(--gold);color:#2B2116}
+.end .mark{position:absolute;bottom:42px;font:700 15px var(--ui);letter-spacing:3px;opacity:.6}
+.big-play{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.28)}
+.big-play span{width:74px;height:74px;border-radius:50%;background:rgba(255,255,255,.94);display:grid;place-items:center;font-size:26px;color:#14100B;padding-left:5px}
+.ctl{display:flex;align-items:center;gap:10px;margin-top:12px}
+.ctl button{font:600 13px var(--ui);padding:8px 13px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.ctl input[type=range]{flex:1;accent-color:var(--accent)}
+.ctl .tm{font:500 12px var(--ui);color:var(--ink2);font-variant-numeric:tabular-nums;min-width:74px;text-align:right}
+.hint{font:400 12.5px/1.5 var(--ui);color:var(--ink2);margin-top:8px}
+
+/* ── storyboard ────────────────────────────────────────── */
+.box{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin-bottom:16px}
+.box h3{font:700 12px var(--ui);letter-spacing:1.3px;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.box p,.box li{font:400 14px/1.6 var(--ui);color:#4A4033}
+.box ul{padding-left:18px}
+.facts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.facts span{font:600 12px var(--ui);padding:5px 10px;border-radius:999px;background:var(--accentSoft);color:#7A3A06}
+.lineblock{border-top:1px solid var(--line);padding:12px 0}
+.lineblock:first-of-type{border-top:0}
+.lineblock q{display:block;font:400 15.5px/1.5 var(--serif);color:var(--ink);quotes:"“" "”"}
+.lineblock .when{font:600 11px var(--ui);color:var(--ink3);letter-spacing:.6px;margin-bottom:4px;font-variant-numeric:tabular-nums}
+.frames{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.frame{width:104px;cursor:pointer}
+.frame .th{position:relative;width:104px;height:185px;border-radius:12px;overflow:hidden;background:#33281E;border:2px solid transparent}
+.frame.on .th{border-color:var(--accent)}
+.frame .th img{width:100%;height:100%;object-fit:cover;display:block}
+.frame .th .n{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:8px;font:600 10.5px/1.35 var(--ui);color:var(--gold);border:1.5px dashed rgba(240,169,75,.7);border-radius:10px;margin:5px}
+.frame .th .o{position:absolute;left:6px;right:6px;bottom:6px;color:#fff;font:700 12px/1.15 var(--ui);text-shadow:0 1px 6px rgba(0,0,0,.9)}
+.frame .th .o small{display:block;font:500 9px/1.25 var(--ui);opacity:.9;margin-top:2px}
+.frame .d{font:500 11px var(--ui);color:var(--ink2);margin-top:4px;font-variant-numeric:tabular-nums}
+.credits{font:400 12px/1.6 var(--ui);color:var(--ink2)}
+.credits a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="nav">
+  <h1>City film v3 — Suwanee, two storyboards</h1>
+  <p>Playable storyboards, not renders: the stills, the timing, the narration voice and the music are the real ones; the camera moves are approximated in the browser. <b>Tap the frame to play.</b> Captions are on in case you are watching without sound.</p>
+  <p>Both cuts follow the same rules, in answer to v2: <b>no slides</b> (every second is a picture; a figure is one callout over it), <b>no single storefronts</b> (parks, streets, landmarks, the town from the air), a cut every 4–5 seconds, and nothing about safety. Dashed frames are shots this cut needs that we do not hold a picture for yet.</p>
+</div>
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" data-cut="A" aria-selected="true">A · Built on purpose<small></small></button>
+  <button class="tab" role="tab" data-cut="D" aria-selected="false">D · A Saturday in Suwanee<small></small></button>
+</div>
+<div class="wrap">
+  <div class="left">
+    <div class="phone" id="phone">
+      <div id="stage"></div>
+      <div class="end" id="end"><h2>Suwanee</h2><p>Gwinnett County, Georgia</p><div class="chip">#1 in Georgia for families · Fortune 2024</div><div class="mark">PERCHO</div></div>
+      <div class="cap" id="cap"></div>
+      <div class="bar"><i id="prog"></i></div>
+      <div class="big-play" id="bigplay"><span>▶</span></div>
+    </div>
+    <div class="ctl">
+      <button id="playbtn">Play</button>
+      <input type="range" id="seek" min="0" max="100" step="0.05" value="0" aria-label="Seek">
+      <span class="tm" id="tm">0:00 / 0:00</span>
+    </div>
+    <div class="hint" id="hint"></div>
+  </div>
+  <div class="right">
+    <div class="box" id="about"></div>
+    <div class="box"><h3>Script and shots</h3><div id="board"></div></div>
+    <div class="box"><h3>Picture credits</h3><div class="credits" id="credits"></div></div>
+  </div>
+</div>
+<script>
+const T = {"A":{"title":"Built on purpose","shots":[{"img":"aerial","pan":[18,50,1.0,62,50,1.08],"co":{"t":"title","big":"Suwanee","label":"Georgia · 33 mi northeast of Atlanta"},"start":0.0,"dur":7.19,"line":0},{"img":"sims-pier","pan":[50,55,1.0,50,45,1.16],"co":{"t":"stat","big":"#1","label":"in Georgia · Best Places to Live for Families","src":"Fortune, 2024"},"start":7.19,"dur":5.19,"line":1},{"img":"map-1897","pan":[50,30,1.0,50,55,1.25],"co":{"t":"stat","big":"1871","label":"A depot on the Air Line Railroad","src":"Map: U.S. Geological Survey, 1897"},"start":12.38,"dur":5.63,"line":2},{"img":"caboose","pan":[20,55,1.05,78,55,1.05],"co":{"t":"tag","k":"Old Town","text":"The caboose by the tracks"},"start":18.01,"dur":2.93,"line":3},{"img":"main-street","pan":[50,50,1.0,50,50,1.12],"co":{"t":"tag","k":"Main Street","text":"Old Town's brick storefronts"},"start":20.94,"dur":3.34,"line":3},{"img":"street","pan":[25,50,1.02,70,50,1.02],"co":{"t":"count","from":2412,"to":20786,"label":"residents · 1990 → 2020","src":"U.S. Census Bureau","series":[2412,8725,15355,20786],"years":["1990","2000","2010","2020"]},"start":24.28,"dur":6.99,"line":4},{"img":"berlin-wall","pan":[50,70,1.0,50,35,1.1],"co":{"t":"stat","big":"2005–09","label":"Town Center Park and City Hall","src":"City of Suwanee"},"start":31.27,"dur":3.94,"line":5},{"img":"cityhall","pan":[50,50,1.0,50,44,1.12],"start":35.21,"dur":3.45,"line":5},{"need":"Suwanee Fest crowd on the Town Center lawn","co":{"t":"tag","k":"Town Center Park","text":"Concerts and festivals, all year"},"start":38.66,"dur":4.54,"line":6},{"need":"Saturday farmers market stalls at Town Center","co":{"t":"tag","k":"Farmers market","text":"Saturdays, May – October"},"start":43.2,"dur":3.41,"line":6},{"need":"A SculpTour sculpture on the Town Center walk","co":{"t":"tag","k":"SculpTour","text":"Public art on loan since 2011"},"start":46.61,"dur":5.23,"line":7},{"img":"auditorium","pan":[50,45,1.0,50,40,1.14],"co":{"t":"stat","big":"#16","label":"in Georgia · North Gwinnett High School","src":"U.S. News Best High Schools, 2025–26"},"start":51.84,"dur":6.13,"line":8},{"img":"library-in","pan":[50,50,1.12,50,50,1.0],"co":{"t":"stat","big":"95%","label":"graduate in four years · district 82.5%","src":"SchoolDigger; AJC, 2021"},"start":57.97,"dur":3.9,"line":8},{"img":"greenway","pan":[50,60,1.0,50,50,1.16],"co":{"t":"tag","k":"Suwanee Creek Greenway","text":"Through the middle of town"},"start":61.87,"dur":3.58,"line":9},{"img":"boardwalk","pan":[50,60,1.0,50,48,1.14],"start":65.45,"dur":1.99,"line":9},{"img":"sims-lake","pan":[12,50,1.03,48,50,1.03],"co":{"t":"tag","k":"Sims Lake Park","text":""},"start":67.44,"dur":2.39,"line":9},{"need":"I-85 at the Suwanee exit, or the skyline from the corridor","co":{"t":"stat","big":"~40 min","label":"to downtown Atlanta · 45–75 at rush hour","src":"33 mi via I-85"},"start":69.82,"dur":6.91,"line":10},{"img":"bridge","pan":[15,50,1.03,80,50,1.03],"co":{"t":"stat","big":"2024","label":"Town Center on Main · 13 acres","src":"City of Suwanee"},"start":76.73,"dur":4.62,"line":11},{"img":"library-out","pan":[55,50,1.0,55,46,1.1],"start":81.35,"dur":2.57,"line":11},{"img":"pierce-park","pan":[50,62,1.0,50,48,1.16],"start":83.92,"dur":5.31,"line":12}],"lines":[{"say":"Most suburbs just spread. Suwanee, Georgia, built itself a downtown.","start":0.6,"end":6.64},{"say":"Fortune named it the best place in the state to raise a family.","start":7.39,"end":11.83},{"say":"It began in 1871, as a stop on the railroad.","start":12.58,"end":17.46},{"say":"The trains still run past Old Town, and Main Street still has its brick fronts.","start":18.21,"end":23.73},{"say":"Then Atlanta arrived. In thirty years, the town grew more than eightfold.","start":24.48,"end":30.72},{"say":"Instead of sprawling, the city built a center: a park, a plaza, a city hall.","start":31.47,"end":38.11},{"say":"Now it's where the town gathers — concerts, a Saturday market, Suwanee Fest each September.","start":38.86,"end":46.06},{"say":"Public sculpture rotates through on loan, a new set every tour.","start":46.81,"end":51.29},{"say":"Families come for the schools. North Gwinnett High ranks sixteenth in Georgia; ninety-five percent graduate in four years.","start":52.04,"end":61.32},{"say":"A greenway follows the creek through the middle of town, over boardwalks, to lakes tucked between the neighbourhoods.","start":62.07,"end":69.27},{"say":"Atlanta is thirty-three miles down I-85 — forty minutes, more at rush hour.","start":70.02,"end":76.18},{"say":"And it's still building: a second downtown park opened in 2024, beside the library.","start":76.93,"end":83.37},{"say":"Suwanee. A small town that decided what it wanted to be.","start":84.12,"end":88.68}],"endAt":89.23,"total":92.83},"D":{"title":"A Saturday in Suwanee","shots":[{"img":"sims-pier","pan":[50,55,1.0,50,45,1.16],"co":{"t":"time","k":"7:30 AM","text":"Sims Lake Park"},"start":0.0,"dur":5.35,"line":0},{"img":"greenway","pan":[50,60,1.0,50,50,1.16],"co":{"t":"time","k":"8:15 AM","text":"Suwanee Creek Greenway"},"start":5.35,"dur":2.96,"line":1},{"img":"boardwalk","pan":[50,60,1.0,50,48,1.14],"start":8.31,"dur":3.95,"line":1},{"need":"Saturday farmers market stalls at Town Center","co":{"t":"time","k":"9:00 AM","text":"Farmers market · Saturdays, May – October"},"start":12.26,"dur":5.27,"line":2},{"img":"berlin-wall","pan":[50,70,1.0,50,35,1.1],"co":{"t":"time","k":"10:00 AM","text":"Town Center Park"},"start":17.53,"dur":4.0,"line":3},{"need":"A SculpTour sculpture on the Town Center walk","co":{"t":"tag","k":"SculpTour","text":"Public art on loan since 2011"},"start":21.53,"dur":2.67,"line":3},{"img":"library-in","pan":[50,50,1.12,50,50,1.0],"co":{"t":"time","k":"11:00 AM","text":"Suwanee Library"},"start":24.2,"dur":2.13,"line":4},{"img":"bridge","pan":[15,50,1.03,80,50,1.03],"co":{"t":"tag","k":"Town Center on Main","text":"13 acres, opened 2024"},"start":26.33,"dur":4.78,"line":4},{"img":"old-town","pan":[30,42,1.0,70,42,1.0],"co":{"t":"time","k":"12:30 PM","text":"Old Town"},"start":31.11,"dur":3.31,"line":5},{"img":"caboose","pan":[20,55,1.05,78,55,1.05],"co":{"t":"tag","k":"1871","text":"A depot on the Air Line Railroad"},"start":34.42,"dur":4.72,"line":5},{"img":"pierce-park","pan":[50,62,1.0,50,48,1.16],"co":{"t":"time","k":"3:00 PM","text":"George Pierce Park"},"start":39.14,"dur":4.31,"line":6},{"img":"street","pan":[25,50,1.02,70,50,1.02],"co":{"t":"time","k":"5:00 PM","text":""},"start":43.45,"dur":3.91,"line":7},{"img":"auditorium","pan":[50,45,1.0,50,40,1.14],"co":{"t":"time","k":"6:30 PM","text":"North Gwinnett High · #16 in Georgia, U.S. News 2025–26"},"start":47.36,"dur":6.75,"line":8},{"img":"aerial","pan":[18,50,1.0,62,50,1.08],"co":{"t":"time","k":"7:30 PM","text":"Town Center Park"},"start":54.11,"dur":4.95,"line":9},{"img":"cityhall-night","pan":[50,60,1.0,50,42,1.12],"co":{"t":"tag","k":"Downtown Atlanta","text":"33 mi · about 40 minutes"},"start":59.06,"dur":6.39,"line":10}],"lines":[{"say":"Saturday. We start at the lake, before anyone's up.","start":0.6,"end":4.8},{"say":"Then the greenway, along the creek, over the boardwalks, all the way into town.","start":5.55,"end":11.71},{"say":"By nine, the farmers market has taken over Town Center.","start":12.46,"end":16.98},{"say":"Everyone stops at the piece of the Berlin Wall, and argues about this year's sculptures.","start":17.73,"end":23.65},{"say":"Library before lunch. The park next door is new — it opened in 2024.","start":24.4,"end":30.56},{"say":"Lunch is in Old Town, by the tracks, where the railroad started all of this in 1871.","start":31.31,"end":38.59},{"say":"The afternoon goes to George Pierce Park.","start":39.34,"end":42.9},{"say":"Home is a few quiet streets away.","start":43.65,"end":46.81},{"say":"Some Saturdays end at the high school — North Gwinnett, one of Georgia's top twenty.","start":47.56,"end":53.56},{"say":"In summer, they end on the lawn, with half the town.","start":54.31,"end":58.51},{"say":"Atlanta is forty minutes down the road. Most Saturdays, nobody goes.","start":59.26,"end":64.9}],"endAt":65.45,"total":69.05}};
+const CREDITS = {"aerial":{"by":"Google Maps contributor","license":"Google Places","src":"Google Places","poi":"Suwanee City Hall"},"cityhall":{"by":"Google Maps contributor","license":"Google Places","src":"Google Places","poi":"Suwanee City Hall"},"cityhall-night":{"by":"Google Maps contributor","license":"Google Places","src":"Google Places","poi":"Suwanee City Hall"},"berlin-wall":{"by":"Google Maps contributor","license":"Google Places","src":"Google Places","poi":"Town Center Park"},"auditorium":{"by":"Google Maps contributor","license":"Google Places","src":"Google Places","poi":"North Gwinnett High School"},"library-in":{"by":"Google Maps contributor","license":"Google Places","src":"Google Places","poi":"Gwinnett County Public Library - Suwanee Branch"},"library-out":{"by":"Google Maps contributor","license":"Google Places","src":"Google Places","poi":"Gwinnett County Public Library - Suwanee Branch"},"greenway":{"by":"Google Maps contributor","license":"Google Places","src":"Google Places","poi":"Suwanee Creek Greenway"},"sims-lake":{"by":"Google Maps contributor","license":"Google Places","src":"Google Places","poi":"Sims Lake Park Suwanee"},"sims-pier":{"by":"Google Maps contributor","license":"Google Places","src":"Google Places","poi":"Sims Lake Park Suwanee"},"map-1897":{"by":"United States Geological Survey","license":"Public domain","page":"https://commons.wikimedia.org/wiki/File:Suwanee_1897_1-125,000_-_PCL_Map_Collection_-_txu-pclmaps-topo-ga-suwanee-1897.jpg","src":"Wikimedia Commons"},"caboose":{"by":"John Phelan","license":"CC BY 4.0","page":"https://commons.wikimedia.org/wiki/File:Suwanee_Caboose,_Suwanee_GA.jpg","src":"Wikimedia Commons"},"main-street":{"by":"Thomson200","license":"CC0","page":"https://commons.wikimedia.org/wiki/File:629_Main_Street,_Suwanee_GA,_March_2019.jpg","src":"Wikimedia Commons"},"old-town":{"by":"走遍美国","license":"CC BY 3.0","page":"https://commons.wikimedia.org/wiki/File:Suwanee,_GA_30024,_USA_-_panoramio_-_%E8%B5%B0%E9%81%8D%E7%BE%8E%E5%9B%BD_(1).jpg","src":"Wikimedia Commons"},"street":{"by":"Thomson200","license":"CC0","page":"https://commons.wikimedia.org/wiki/File:Portland_Trail_Drive,_Suwanee,_GA_May_2021.jpg","src":"Wikimedia Commons"},"boardwalk":{"by":"John Phelan","license":"CC BY 4.0","page":"https://commons.wikimedia.org/wiki/File:Suwanee_Creek_Greenway_1.0_miles,_Suwanee_GA.jpg","src":"Wikimedia Commons"},"bridge":{"by":"John Phelan","license":"CC BY 4.0","page":"https://commons.wikimedia.org/wiki/File:Elevated_pedestrian_bridge_in_Town_Center_on_Main,_Suwanee_GA.jpg","src":"Wikimedia Commons"},"pierce-park":{"by":"Thomson200","license":"CC0","page":"https://commons.wikimedia.org/wiki/File:George_Pierce_Park,_June_2021_02.jpg","src":"Wikimedia Commons"}};
+const ABOUT = {
+  A: {
+    h: 'A · One claim, then the proof',
+    p: 'A narrator makes one claim in the first five seconds — Suwanee built a downtown instead of sprawling — and every shot after it is evidence: where it came from, how fast it grew, what it chose to build, the schools, the green, the road to Atlanta, what is next. Each figure appears once, over the picture it belongs to.',
+    facts: ['#1 in Georgia for families', '1871 railroad depot', '2,412 → 20,786 residents', 'Town Center 2005–09', '#16 high school in Georgia', '95% graduate', '~40 min to Atlanta', '13-acre park, 2024'],
+  },
+  D: {
+    h: 'D · One Saturday, first person',
+    p: 'The same city told as a day, from the lake at 7:30 to the lawn at night. The clock carries the film; the facts ride along as small labels (market hours, the 2024 park, the 1871 depot, the school’s rank). Fewer figures than A, more of what living there feels like. It never enters a business — the day is spent in the city’s own places.',
+    facts: ['Farmers market Sat, May–Oct', 'Town Center on Main, 2024', '1871 railroad depot', '#16 high school in Georgia', '40 min to Atlanta'],
+  },
+};
+const X = 0.35;                     // crossfade, seconds
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const ease = (p) => 1 - Math.pow(1 - p, 3);
+const fmt = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const audio = new Audio(); audio.preload = 'auto';
+let cut = 'A', els = [], frames = [], playing = false, t = 0, last = 0;
+
+function minutesOf(k) {
+  const m = /^(\d+):(\d+) (AM|PM)$/.exec(k); if (!m) return null;
+  return ((+m[1] % 12) + (m[3] === 'PM' ? 12 : 0)) * 60 + +m[2];
+}
+function calloutHtml(co) {
+  if (!co) return '';
+  if (co.t === 'title') return `<div class="co title"><div class="big">${esc(co.big)}</div><div class="rule"></div><div class="label">${esc(co.label)}</div></div>`;
+  if (co.t === 'stat') return `<div class="co stat"><div class="big">${esc(co.big)}</div><div class="rule"></div><div class="label">${esc(co.label)}</div><div class="src">${esc(co.src || '')}</div></div>`;
+  if (co.t === 'count') {
+    const max = Math.max(...co.series), n = co.series.length;
+    const pts = co.series.map((v, i) => `${18 + i * (204 / (n - 1))},${70 - (v / max) * 60}`).join(' ');
+    const dots = co.series.map((v, i) => `<circle cx="${18 + i * (204 / (n - 1))}" cy="${70 - (v / max) * 60}" r="3.5" fill="#F0A94B"/><text x="${18 + i * (204 / (n - 1))}" y="88" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.8)" font-family="-apple-system,Arial">${co.years[i]}</text>`).join('');
+    return `<div class="co count"><svg class="spark" width="240" height="92" viewBox="0 0 240 92"><polyline points="${pts}" fill="none" stroke="#F0A94B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>${dots}</svg><div class="big">0</div><div class="rule"></div><div class="label">${esc(co.label)}</div><div class="src">${esc(co.src || '')}</div></div>`;
+  }
+  if (co.t === 'time') {
+    const m = minutesOf(co.k), pos = m == null ? 0 : clamp((m - 420) / (1260 - 420)) * 100;
+    return `<div class="co time"><div class="pill"><div class="k">${esc(co.k)}</div>${co.text ? `<div class="t">${esc(co.text)}</div>` : ''}<div class="day"><i style="left:${pos}%"></i></div></div></div>`;
+  }
+  return `<div class="co tag"><div class="pill"><div class="k">${esc(co.k)}</div>${co.text ? `<div class="t">${esc(co.text)}</div>` : ''}</div></div>`;
+}
+function build() {
+  const c = T[cut];
+  $('stage').innerHTML = c.shots.map((s) => `<div class="shot">${s.img
+    ? `<img src="img/${s.img}.jpg" alt="" draggable="false"><div class="shade"></div>`
+    : `<div class="need"><div><b>SHOT TO SOURCE</b><span>${esc(s.need)}</span></div></div>`}${calloutHtml(s.co)}</div>`).join('');
+  els = [...$('stage').children];
+  const a = ABOUT[cut], need = c.shots.filter((s) => s.need).length;
+  $('about').innerHTML = `<h3>${esc(a.h)}</h3><p>${esc(a.p)}</p><div class="facts">${a.facts.map((f) => `<span>${esc(f)}</span>`).join('')}</div>`;
+  $('hint').textContent = `${fmt(c.total)} · ${c.shots.length} shots · ${c.lines.length} spoken lines · ${need} shots still to source`;
+  $('board').innerHTML = c.lines.map((l, li) => {
+    const fr = c.shots.map((s, i) => [s, i]).filter(([s]) => s.line === li).map(([s, i]) => {
+      const o = s.co ? `<div class="o">${esc(s.co.big || s.co.k || '')}<small>${esc(s.co.label || s.co.text || '')}</small></div>` : '';
+      const pic = s.img ? `<img loading="lazy" src="img/${s.img}.jpg" alt="" style="object-position:${s.pan[0]}% ${s.pan[1]}%">` : `<div class="n">TO SOURCE<br>${esc(s.need)}</div>`;
+      return `<div class="frame" data-i="${i}"><div class="th">${pic}${s.img ? o : ''}</div><div class="d">${fmt(s.start)} · ${s.dur.toFixed(1)}s</div></div>`;
+    }).join('');
+    return `<div class="lineblock"><div class="when">${fmt(l.start)}</div><q>${esc(l.say)}</q><div class="frames">${fr}</div></div>`;
+  }).join('');
+  frames = [...$('board').querySelectorAll('.frame')];
+  frames.forEach((f) => f.addEventListener('click', () => { seek(c.shots[+f.dataset.i].start + 0.01); play(); }));
+  const used = [...new Set(c.shots.filter((s) => s.img).map((s) => s.img))];
+  $('credits').innerHTML = used.map((n) => { const k = CREDITS[n]; return k.page
+    ? `<a href="${esc(k.page)}" target="_blank" rel="noopener">${esc(n)}</a> — ${esc(k.by)}, ${esc(k.license)} (Wikimedia Commons)`
+    : `${esc(n)} — ${esc(k.poi)} · contributor photo via Google Places`; }).join('<br>');
+  $('seek').max = c.total; audio.src = cut.toLowerCase() + '.mp3';
+  document.querySelectorAll('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.cut === cut)));
+  seek(0);
+}
+function render() {
+  const c = T[cut]; let cur = 0;
+  c.shots.forEach((s, i) => {
+    const el = els[i], end = s.start + s.dur + (i < c.shots.length - 1 ? X : 0);
+    const on = t >= s.start && t < end || (i === 0 && t < s.start);
+    if (!on) { el.style.visibility = 'hidden'; return; }
+    cur = Math.max(cur, t >= s.start + X / 2 ? i : cur);
+    el.style.visibility = 'visible';
+    el.style.opacity = i === 0 ? 1 : clamp((t - s.start) / X);
+    const u = t - s.start, p = clamp(u / (s.dur + X));
+    const img = el.firstElementChild;
+    if (s.img) {
+      const [x0, y0, s0, x1, y1, s1] = s.pan;
+      img.style.objectPosition = `${x0 + (x1 - x0) * p}% ${y0 + (y1 - y0) * p}%`;
+      img.style.transform = `scale(${s0 + (s1 - s0) * p})`;
+    }
+    const co = el.querySelector('.co');
+    if (co) {
+      const a = Math.min(clamp((u - 0.25) / 0.4), clamp((s.dur + X - u) / 0.3));
+      co.style.opacity = a; co.style.transform = `translateY(${(1 - ease(clamp((u - 0.25) / 0.5))) * 14}px)`;
+      const rule = co.querySelector('.rule'); if (rule) rule.style.transform = `scaleX(${ease(clamp((u - 0.4) / 0.6))})`;
+      if (s.co.t === 'count') {
+        const q = ease(clamp((u - 0.5) / Math.min(3, s.dur - 1.6)));
+        co.querySelector('.big').textContent = Math.round(s.co.from + (s.co.to - s.co.from) * q).toLocaleString('en-US');
+        co.querySelector('polyline').setAttribute('stroke-dashoffset', String(1 - q));
+        co.querySelectorAll('circle').forEach((d, k, all) => { d.style.opacity = q >= k / (all.length - 1) - 0.02 ? 1 : 0; });
+      }
+    }
+  });
+  const line = c.lines.find((l) => t >= l.start - 0.1 && t <= l.end + 0.35);
+  $('cap').textContent = line && t < c.endAt ? line.say : '';
+  const e = $('end'), ea = clamp((t - c.endAt) / 0.5);
+  e.style.visibility = ea > 0 ? 'visible' : 'hidden'; e.style.opacity = ea;
+  $('prog').style.width = (t / c.total) * 100 + '%';
+  $('seek').value = t; $('tm').textContent = fmt(t) + ' / ' + fmt(c.total);
+  frames.forEach((f) => f.classList.toggle('on', +f.dataset.i === cur && t < c.endAt));
+}
+function seek(v) { t = clamp(v, 0, T[cut].total); try { audio.currentTime = t; } catch (e) {} render(); }
+function play() {
+  if (t >= T[cut].total - 0.05) seek(0);
+  playing = true; last = performance.now();
+  audio.play().catch(() => {});       // without sound the picture still runs on its own clock
+  $('bigplay').style.display = 'none'; $('playbtn').textContent = 'Pause';
+  requestAnimationFrame(tick);
+}
+function pause() { playing = false; audio.pause(); $('playbtn').textContent = 'Play'; }
+function tick(nowMs) {
+  if (!playing) return;
+  const dt = (nowMs - last) / 1000; last = nowMs;
+  // The audio clock leads when it is running; otherwise the frame clock does.
+  t = !audio.paused && audio.readyState >= 2 && Math.abs(audio.currentTime - t) < 1.5 ? audio.currentTime : t + dt;
+  if (t >= T[cut].total) { t = T[cut].total; render(); pause(); $('bigplay').style.display = ''; return; }
+  render(); requestAnimationFrame(tick);
+}
+$('phone').addEventListener('click', () => (playing ? pause() : play()));
+$('playbtn').addEventListener('click', () => (playing ? pause() : play()));
+$('seek').addEventListener('input', (e) => seek(+e.target.value));
+document.querySelectorAll('.tab').forEach((b) => {
+  b.querySelector('small').textContent = fmt(T[b.dataset.cut].total);
+  b.addEventListener('click', () => { pause(); cut = b.dataset.cut; $('bigplay').style.display = ''; build(); });
+});
+window.__seek = (c, v) => { if (c !== cut) { cut = c; build(); } $('bigplay').style.display = 'none'; seek(v); };
+build();
+</script>
+</body>
+</html>
