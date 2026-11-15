@@ -14,6 +14,7 @@ import {
   coreName,
   isPlaceView,
   secondsFor,
+  spokenWords,
   subjectOf,
 } from './film';
 
@@ -175,6 +176,12 @@ describe('subjectOf', () => {
   });
 });
 
+describe('spokenWords', () => {
+  it('counts a figure as the two or three words it is aloud, and skips a dash', () => {
+    expect(spokenWords('Since 1990 its population has grown — eightfold.')).toBe(6 + 2.5);
+  });
+});
+
 describe('isPlaceView', () => {
   it('refuses a close-up, food and wildlife', () => {
     expect(isPlaceView(photos[5] as FilmPhoto)).toBe(false);
@@ -203,9 +210,31 @@ describe('buildCityCut', () => {
     expect(dropped.find((d) => d.photo_id === 'tcp-hall')?.reason).toMatch(/title frame/);
   });
 
-  it('gives each place exactly one shot, in the planner order', () => {
+  it('gives each place exactly one shot, in the order the script speaks of them', () => {
     const places = cut().shots.filter((s): s is PlaceShot => !('kind' in s));
+    // Script: Town Center Park, Greenway, Library; the school is unscripted, so last.
     expect(places.map((s) => s.photo_id)).toEqual(['wall', 'trail', 'lib-out', 'band']);
+    const reordered = buildCityCut({
+      cityName: 'Suwanee',
+      profile: {
+        film: {
+          frames: profile.film.frames,
+          places: [...profile.film.places].reverse(),
+        },
+      } as unknown as CityProfile,
+      shots: [
+        shot('wall', 'tcp'),
+        shot('trail', 'green'),
+        shot('lib-out', 'lib'),
+        shot('band', 'school'),
+      ],
+      photos,
+      pois,
+      seedanceReady: new Set(),
+    });
+    expect(
+      reordered.shots.filter((s): s is PlaceShot => !('kind' in s)).map((s) => s.photo_id),
+    ).toEqual(['lib-out', 'trail', 'wall', 'band']);
   });
 
   it('never uses a photo twice, and backs the schools frame with a school photo when one is spare', () => {
