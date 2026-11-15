@@ -148,6 +148,48 @@ export default function CityScreen() {
 					<Text style={styles.location}>{data.locationNote}</Text>
 					<Text style={styles.lead}>{data.summary}</Text>
 
+					{/* Schools first: the question families ask first, at every
+					    level (owner 2026-11-15). */}
+					{data.education.schools.length > 0 && (
+						<Section title="SCHOOLS">
+							<View style={styles.card}>
+								{SCHOOL_LEVELS.map(([level, heading]) => {
+									const schools = data.education.schools.filter(
+										(sc) => sc.level === level,
+									);
+									if (schools.length === 0) return null;
+									return (
+										<View key={level} style={styles.levelBlock}>
+											<Text style={styles.levelHead}>{heading}</Text>
+											{schools.map((sc) => (
+												<View key={sc.name} style={styles.rankRow}>
+													<View style={styles.rankFigure}>
+														{sc.rank ? (
+															<>
+																<Text style={styles.rankValue}>{sc.rank}</Text>
+																{!!sc.scope && (
+																	<Text style={styles.rankScope}>
+																		{sc.scope}
+																	</Text>
+																)}
+															</>
+														) : (
+															<Text style={styles.rankScope}>{heading}</Text>
+														)}
+													</View>
+													<View style={styles.rankText}>
+														<Text style={styles.rowLabel}>{sc.name}</Text>
+														<Text style={styles.rowFact}>{sc.detail}</Text>
+													</View>
+												</View>
+											))}
+										</View>
+									);
+								})}
+							</View>
+						</Section>
+					)}
+
 					{data.rankings.length > 0 && (
 						<Section title="RANKINGS">
 							<View style={styles.card}>
@@ -268,46 +310,6 @@ export default function CityScreen() {
 								<Text style={styles.source}>
 									Residents · {cite(data.growth.source)}
 								</Text>
-							</View>
-						</Section>
-					)}
-
-					{data.education.schools.length > 0 && (
-						<Section title="SCHOOLS">
-							<View style={styles.card}>
-								{SCHOOL_LEVELS.map(([level, heading]) => {
-									const schools = data.education.schools.filter(
-										(sc) => sc.level === level,
-									);
-									if (schools.length === 0) return null;
-									return (
-										<View key={level} style={styles.levelBlock}>
-											<Text style={styles.levelHead}>{heading}</Text>
-											{schools.map((sc) => (
-												<View key={sc.name} style={styles.rankRow}>
-													<View style={styles.rankFigure}>
-														{sc.rank ? (
-															<>
-																<Text style={styles.rankValue}>{sc.rank}</Text>
-																{!!sc.scope && (
-																	<Text style={styles.rankScope}>
-																		{sc.scope}
-																	</Text>
-																)}
-															</>
-														) : (
-															<Text style={styles.rankScope}>{heading}</Text>
-														)}
-													</View>
-													<View style={styles.rankText}>
-														<Text style={styles.rowLabel}>{sc.name}</Text>
-														<Text style={styles.rowFact}>{sc.detail}</Text>
-													</View>
-												</View>
-											))}
-										</View>
-									);
-								})}
 							</View>
 						</Section>
 					)}

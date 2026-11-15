@@ -66,7 +66,7 @@ def test_arrived_callout_stays_in_the_band_the_card_leaves_the_film(name, specs)
     # The card draws its place pill and controls over the top 8% of the film,
     # and its eyebrow, name, link and progress bar from ~84% down.
     assert top >= H * 0.10, f"{name} sits under the card's top controls: {box}"
-    assert bottom <= H * 0.765, f"{name} sits under the card's name and link: {box}"
+    assert bottom <= H * 0.71, f"{name} sits too near the card's name and link: {box}"
 
 
 def test_a_figure_sits_low_in_the_band():
@@ -75,7 +75,7 @@ def test_a_figure_sits_low_in_the_band():
         .getchannel("A").point(lambda v: 255 if v > 200 else 0).getbbox()
     )
     for name in ("stat", "count"):
-        assert ink(name)[1] > H * 0.38, f"{name} covers the picture"
+        assert ink(name)[1] > H * 0.33, f"{name} covers the picture"
         assert ink(name)[3] <= H * (FIGURE_BOTTOM + 0.02)
 
 

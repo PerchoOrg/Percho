@@ -15,6 +15,7 @@ overlaps").
 """
 from __future__ import annotations
 
+import re
 from typing import Any, Callable
 
 # A line must finish before the next one starts, with room to breathe.
@@ -28,7 +29,35 @@ NARRATION_END_TOLERANCE_S = 0.1
 
 
 class TtsDailyQuota(RuntimeError):
-    """The TTS model has no requests left today; waiting a minute will not help."""
+    """A TTS model has no requests left today; waiting a minute will not help."""
+
+    def __init__(self, message: str, model: str = "", retry_after_s: float = 3600.0) -> None:
+        super().__init__(message)
+        self.model = model
+        self.retry_after_s = retry_after_s
+
+
+#: A spent model is skipped this long when the 429 names no `retryDelay`.
+DEFAULT_SPENT_S = 3600.0
+
+
+def retry_after_s(body: str) -> float:
+    """The quota's own `retryDelay` ("3319s"), or an hour when it names none."""
+    m = re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', body)
+    return float(m.group(1)) if m else DEFAULT_SPENT_S
+
+
+def usable_tts_models(
+    models: tuple[str, ...], spent_until: dict[str, float], now: float
+) -> list[str]:
+    """The narration models worth trying now, in order of preference.
+
+    Each Gemini TTS model has its OWN daily quota (`…PerDayPerProjectPerModel`),
+    so when the first is spent the next one still answers — owner 2026-11-15:
+    "tts用备选的别的model 不要被block". A spent model comes back once the time
+    its quota named has passed.
+    """
+    return [m for m in models if spent_until.get(m, 0.0) <= now]
 
 
 def is_daily_quota(status: int, body: str) -> bool:

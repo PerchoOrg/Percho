@@ -48,6 +48,8 @@ from narration_timing import (  # type: ignore  # noqa: E402
     TtsDailyQuota,
     is_daily_quota,
     plan_narration_starts,
+    retry_after_s,
+    usable_tts_models,
 )
 from photo_selector import build_plan  # type: ignore  # noqa: E402
 from photo_tagger import MODEL as TAGGER_MODEL, tag_listing_photos  # type: ignore  # noqa: E402
@@ -382,6 +384,16 @@ def pick_bgm(vibe: str = DEFAULT_BGM_VIBE) -> Path | None:
 # INDICES for that reason — the plan's seconds are an estimate.
 
 TTS_MODEL = os.environ.get("GEMINI_TTS_MODEL", "gemini-3.1-flash-tts-preview")
+#: The models narration falls back to, in order, when the one before has spent
+#: its daily quota (100 requests each). All three take the same prebuilt voice
+#: names, so the narrator keeps their voice; a film is voiced by ONE of them.
+TTS_MODELS: tuple[str, ...] = tuple(
+    dict.fromkeys(
+        (TTS_MODEL, "gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts")
+    )
+)
+#: model → epoch seconds until which its daily quota is spent. Per process.
+_TTS_SPENT_UNTIL: dict[str, float] = {}
 
 # Levels, measured rather than judged. Gemini TTS returns about -20 dB mean and
 # the music bed sits at -15.7, so summing them leaves the words underneath the
@@ -419,9 +431,9 @@ def clip_start_times(durs: list[float], xfade: float) -> list[float]:
 TTS_RETRY_DELAYS_S: tuple[float, ...] = (5, 10, 20, 30, 45, 60)
 
 
-def _tts_post(text: str, voice: str) -> requests.Response:
+def _tts_post(text: str, voice: str, model: str) -> requests.Response:
     r = requests.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/{TTS_MODEL}:generateContent",
+        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
         headers={
             "x-goog-api-key": os.environ["GEMINI_API_KEY"],
             "content-type": "application/json",
@@ -439,12 +451,14 @@ def _tts_post(text: str, voice: str) -> requests.Response:
     )
     if is_daily_quota(r.status_code, r.text):
         raise TtsDailyQuota(
-            "the narration model's daily request quota is spent — assemble again after it resets"
+            f"{model}'s daily request quota is spent",
+            model=model,
+            retry_after_s=retry_after_s(r.text),
         )
     return r
 
 
-def tts_line(text: str, voice: str, out_wav: Path) -> bool:
+def tts_line(text: str, voice: str, out_wav: Path, model: str = TTS_MODEL) -> bool:
     """Speak one line. False on a failure a film can live with — narration is
     never worth a tour. A spent DAILY quota is not one of those: every line
     after it would fail the same way, so it is raised and fails the assembly.
@@ -452,7 +466,7 @@ def tts_line(text: str, voice: str, out_wav: Path) -> bool:
     try:
         resp = with_retry(
             "tts",
-            lambda: _tts_post(text, voice),
+            lambda: _tts_post(text, voice, model),
             transient=_TRANSIENT,
             delays=TTS_RETRY_DELAYS_S,
         )
@@ -508,14 +522,29 @@ def render_narration(
     """
     voice = narration.get("voice") or "Kore"
     made: list[dict[str, Any]] = []
-    for seg in narration.get("segments") or []:
-        text = (seg.get("text") or "").strip()
-        idx = seg.get("startClip")
-        if not text or not isinstance(idx, int) or not (0 <= idx < len(starts)):
-            continue
-        wav = workdir / f"vo-{idx}.wav"
-        if tts_line(text, voice, wav):
-            made.append({"wav": wav, "start": starts[idx], "dur": _wav_seconds(wav)})
+    # One model voices the whole film. When the one in use runs out mid-film,
+    # the film starts over on the next — two models reading alternate lines
+    # would be two slightly different narrators.
+    model = ""
+    for model in usable_tts_models(TTS_MODELS, _TTS_SPENT_UNTIL, time.time()):
+        made = []
+        try:
+            for seg in narration.get("segments") or []:
+                text = (seg.get("text") or "").strip()
+                idx = seg.get("startClip")
+                if not text or not isinstance(idx, int) or not (0 <= idx < len(starts)):
+                    continue
+                wav = workdir / f"vo-{idx}.wav"
+                if tts_line(text, voice, wav, model):
+                    made.append({"wav": wav, "start": starts[idx], "dur": _wav_seconds(wav)})
+            break
+        except TtsDailyQuota as spent:
+            _TTS_SPENT_UNTIL[model] = time.time() + spent.retry_after_s
+            print(f"[narration] {spent}; voicing the film on the next model", flush=True)
+    else:
+        raise TtsDailyQuota(
+            "every narration model's daily quota is spent — assemble again after they reset"
+        )
 
     made.sort(key=lambda m: m["start"])
     kept, shifted, sped, dropped = plan_narration_starts(made, total, _speed_up)
@@ -525,7 +554,7 @@ def render_narration(
         note = f" ({sped} sped up, {shifted} shifted, {dropped} dropped)"
     print(
         f"[narration] {len(kept)}/{len(narration.get('segments') or [])} line(s) "
-        f"in voice {voice}{note}",
+        f"in voice {voice} on {model}{note}",
         flush=True,
     )
     return [(m["wav"], m["start"]) for m in kept]
