@@ -276,7 +276,18 @@ export async function fetchPhotosForPoi(
   s: PoiPlaceScope,
   entityId: string,
   poiId: string,
-  opts: { max?: number; maxHeightPx?: number; actor?: PoiActor } = {},
+  opts: {
+    max?: number;
+    maxHeightPx?: number;
+    actor?: PoiActor;
+    /**
+     * Fetch the place's remaining photos even though it already holds some.
+     * A city film needs depth a community film does not — three photos of
+     * Town Center Park cannot show its market, its festival and its sculpture
+     * (phase325). Each photo is still deduplicated by ref and content hash.
+     */
+    topUp?: boolean;
+  } = {},
 ): Promise<PhotoFetchResult> {
   await requireEntity(s, entityId, opts.actor);
   const admin = createServiceClient() as unknown as DynamicClient;
@@ -333,7 +344,7 @@ export async function fetchPhotosForPoi(
     .eq('poi_id', poi.id)
     .limit(1)) as { data: { id: string }[] | null };
 
-  if ((existingAny ?? []).length > 0) {
+  if (!opts.topUp && (existingAny ?? []).length > 0) {
     const refs = targets.map((p) => p.name).filter(Boolean);
     const { data: storedRows } = (await admin
       .from('poi_photos')

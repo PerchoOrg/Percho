@@ -23,6 +23,20 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 06:22 UTC — phase325: owner picks cut A and withdraws the 70/30 rule — every line gets its own photo; city photo sources
+
+**Objective**: Owner on the two storyboards: "第一个还不错 有几个没有照片的感觉不好 收回之前的70%/30% 最好是全部都有对应的照片". So: cut A ("one claim, then the proof") is the city film, and the earlier allowance — ≥70% of lines over matching footage, ≤30% over related footage — is gone. A line with no photograph of what it says is not in the film. That makes material the constraint, so this phase is where a city's photos come from; the film itself is the next phase.
+**Actions**:
+- `supabase/migrations/20261115070000_poi_photos_source_wikimedia.sql` — `poi_photos.source` accepts `wikimedia_commons`.
+- `apps/web/lib/poi/commons.ts` (+ test) — pure: search / lookup URLs, response parsing, and `commonsLicenceOk`: public domain, CC0 and CC BY only. Share-alike is refused (a film is an adaptation; SA would bind the film), NC / ND / anything unknown fail closed.
+- `fetchPhotosForPoi(…, { topUp: true })` — fetch a place's remaining Google photos although it already holds some. The POI-level "has photos → just link" shortcut stays the default; a city film needs depth a community film does not.
+- `scripts/admin/city-photos.ts` (`pnpm city:photos <slug> …`): `topup` (up to 10 per place), `place "<query>"` (a place research did not name, by text search, refused if it resolves >15 km away), `commons-search`, and `commons "<label>" "File:…"` (ingest under one synthetic place per label; `attribution` = author, licence, file page).
+- Suwanee: top-up brought ~110 more Google photos across 11 places; `place` added Town Center on Main, White Street Park / Harvest Farm and Suwanee Arts Center.
+**Decisions**: Photos are named by the film script, not auto-matched — the editor (me) picks the exact picture each line is spoken over, which is the only way "every line has its photo" can be checked before rendering. Everything new lands `pending` and untagged like any pipeline photo.
+**Issues**: "Suwanee Farmers Market" and "Old Town Suwanee" both resolve to Town Center on Main (the market is held there); George Pierce Park resolves to an address with no photos — Commons covers it. One StillFire photo exceeded the storage size limit and was skipped. The top-up re-downloaded some pictures the place already held under a rotated ref with different bytes, so a few visual duplicates exist; the script picks by eye.
+**Debt**: Commons photos are CC BY — the city page must print author + licence before a city film is shown publicly (`film-credits.ts` credits Google authors only). Nothing public shows a city film yet.
+**Next steps**: `db push`, ingest the Commons files, tag, then phase326: the film — script with photo ids in `cities.profile.film`, callouts burned over the clips by the worker, plan fails when any line lacks its photo.
+
 ## 2026-11-15 05:45 UTC — phase324: owner picks directions A and D, 1–2 min; two playable storyboards on percho.co/demos
 
 **Objective**: Owner on the four directions: "a和d更合适 时长在1-2分钟" — A (one claim, then the proof) and D (a resident's Saturday, first person). As promised, a storyboard before any pipeline change.
