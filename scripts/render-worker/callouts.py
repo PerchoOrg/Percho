@@ -52,8 +52,11 @@ COUNT_MIN_S = 1.2
 #: What a counter leaves of its clip: its arrival before, a held result after.
 COUNT_REST_S = 2.4
 
-#: Above the card's own text (eyebrow, name, Explore, progress: from ~84%).
-FIGURE_BOTTOM = 0.745
+#: Above the card's own text (eyebrow, name, Explore, progress: from ~84%),
+#: with room to spare: a card capped by a short screen crops the film's top
+#: and bottom, and the owner asked for figures well clear of the name
+#: ("不要和底部的city名字重合 向上移动", 2026-11-15).
+FIGURE_BOTTOM = 0.69
 
 WHITE = (255, 255, 255)
 AMBER = (240, 169, 75)  # `accentOnCard` in apps/mobile/theme/tokens.ts

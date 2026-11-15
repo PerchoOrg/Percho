@@ -23,6 +23,16 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-15 08:31 UTC — phase330: narration falls back to other TTS models; figures higher; schools first on the city page
+
+**Objective**: Owner: "还是没看到小学和初中 … 地名像community card一样放到左上角，有文字或者图片的地方不要和底部的city名字重合 向上移动 … tts用备选的别的model 不要被block".
+**Finding**: the app's events show the owner's last session at 07:40–07:56 UTC, before phase329 went live (08:12 UTC) — the card, film and city page reviewed were phase327's (`AreaFace`, the first cut with figures at 88% and place names burned in, a page with only the high school). Phase329 already moved place names to the card's top-left pill, gave the card the community card's progress bar, and listed every school level.
+**Actions**:
+- TTS fallback: `TTS_MODELS` = the configured model, then `gemini-2.5-flash-preview-tts`, then `gemini-2.5-pro-preview-tts` — each has its own 100-a-day quota and all three take the same prebuilt voices (tested with `Autonoe`, 200 on both). On a per-day 429 the model is marked spent until its own `retryDelay` (`retry_after_s`; an hour if none) and the WHOLE film is voiced again on the next model, so one film is one narrator. Only when every model is spent does the assembly fail (phase328's behaviour). `usable_tts_models` / `retry_after_s` are pure, 4 tests. The log line now names the model.
+- Figures: `FIGURE_BOTTOM` 0.745 → 0.69, well clear of the card's eyebrow, name and progress bar (they start ~84%) even when a short screen crops the film.
+- City page: SCHOOLS (elementary, middle, high, college) moved to the top, right after the summary.
+**Next steps**: re-assemble Suwanee; owner reloads the dev client (it fetches the new JS on a cold start).
+
 ## 2026-11-15 08:12 UTC — phase329: the city card IS the community card; schools at every level
 
 **Objective**: Owner on the first city card in the app: "school section is thin, need to mention top primary, middle and high, even university if any in this area, not just high school" and "视频本身的字和卡片的字重合了 city label也没有像community卡的位置一样 视频没有进度条 等等 你再看看community card, 要保持一致".
