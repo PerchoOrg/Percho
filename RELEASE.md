@@ -34,6 +34,11 @@ anything; it just means "less of this for now".
   are in the film and can be dragged, and nothing in the film sits under the
   card's own text. The city page lists the top-ranked elementary, middle and
   high schools around Suwanee, and the medical college in town.
+- **The city page is now mostly charts.** Rankings as badges; the key
+  numbers as small cards with their own charts (growth since 1990, Suwanee
+  against Georgia); schools side by side by level; a tappable history
+  timeline; drive times to Atlanta and the airport, off-peak against rush
+  hour. Plans and sources fold away until you want them.
 
 ### 2026-11-14
 - **The Percho iPhone app is live on the App Store** (US): neighbourhood

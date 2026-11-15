@@ -52,7 +52,7 @@ export interface CityFundamentals {
     }>;
     source: CitySource;
   };
-  history: Array<{ year: string; text: string }>;
+  history: Array<{ year: string; short?: string; text: string }>;
   growth: {
     series: Array<{ label: string; value: number }>;
     takeaway: string;
@@ -72,7 +72,12 @@ export interface CityFundamentals {
     rows: Array<{ label: string; pct: number; display: string; baseline?: boolean }>;
     note: string;
   };
-  gettingAround: Array<{ label: string; value: string }>;
+  gettingAround: Array<{
+    label: string;
+    value: string;
+    /** Off-peak to rush, in minutes. */
+    minutes?: { min: number; max: number };
+  }>;
   planning: Array<{ title: string; text: string }>;
   sources: CitySource[];
 }

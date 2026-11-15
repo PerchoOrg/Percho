@@ -109,26 +109,32 @@
   "history": [
     {
       "year": "Before 1800s",
+      "short": "Shawnee village",
       "text": "A Shawnee village; the name is usually traced to the Creek word for Shawnee."
     },
     {
       "year": "1871",
+      "short": "Railroad depot",
       "text": "The Air Line Railroad builds a depot — the village grows around it."
     },
     {
       "year": "1949",
+      "short": "Becomes a city",
       "text": "Incorporated as a city; still farmland into the 1970s."
     },
     {
       "year": "1979 – 1998",
+      "short": "Falcons' training camp",
       "text": "Home base of the Atlanta Falcons' training facility."
     },
     {
       "year": "2005 – 2009",
+      "short": "Town Center built",
       "text": "Town Center Park and the new City Hall are built — a downtown on purpose."
     },
     {
       "year": "2024",
+      "short": "13-acre park opens",
       "text": "Town Center on Main opens: a 13-acre park beside the library."
     }
   ],
@@ -265,11 +271,19 @@
   "gettingAround": [
     {
       "label": "Downtown Atlanta · 33 mi",
-      "value": "~40 min · 45–75 at rush"
+      "value": "~40 min · 45–75 at rush",
+      "minutes": {
+        "min": 40,
+        "max": 75
+      }
     },
     {
       "label": "Hartsfield-Jackson · ~40 mi",
-      "value": "45–60 min via I-85"
+      "value": "45–60 min via I-85",
+      "minutes": {
+        "min": 45,
+        "max": 60
+      }
     },
     {
       "label": "Nearest rail · MARTA Doraville",
