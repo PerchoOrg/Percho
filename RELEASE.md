@@ -17,9 +17,10 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-16
-- **Johns Creek is the second city.** A film of under two minutes — why U.S.
-  News calls it the best place to live in America, from the creek it is named
-  after to the lakeside town center it opened this year — and its own city page
+- **Johns Creek is the second city.** A ninety-second film — U.S. News calls it
+  the best place to live in America, yet it had no downtown until this year:
+  the schools, Bobby Jones's golf club, the river, and the lakeside town center
+  it finally built — and its own city page
   with schools at every level, how it compares with Georgia, drive times and
   what is being built.
 - **iPhone app 1.0.1 sent to Apple for review.** It brings cities, the

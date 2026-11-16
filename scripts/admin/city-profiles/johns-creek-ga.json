@@ -395,7 +395,7 @@
   "film": {
     "lines": [
       {
-        "say": "U.S. News calls Johns Creek, Georgia, the best place to live in America.",
+        "say": "U.S. News ranks Johns Creek, Georgia, the best place to live in America.",
         "chapter": "overview",
         "shots": [
           {
@@ -407,54 +407,15 @@
               "label": "in the U.S. · Best Places to Live",
               "source": "U.S. News & World Report, 2025–26"
             }
-          }
-        ]
-      },
-      {
-        "say": "It's named for a small creek, and the creek for Johnson Rogers, son of an early settler.",
-        "chapter": "history",
-        "shots": [
+          },
           {
-            "photo": "807e2e8c",
-            "label": "Johns Creek (the creek)",
-            "move": "push_in_slow"
+            "photo": "566300e6",
+            "label": "Autrey Mill Nature Preserve"
           }
         ]
       },
       {
-        "say": "For a century, this was farm country along the Chattahoochee.",
-        "chapter": "history",
-        "shots": [
-          {
-            "photo": "60cadcb5",
-            "label": "Autrey Mill",
-            "callout": {
-              "type": "stat",
-              "big": "1880s",
-              "label": "the Summerour farmhouse",
-              "source": "Autrey Mill Nature Preserve"
-            }
-          }
-        ]
-      },
-      {
-        "say": "In 1967, the Atlanta Athletic Club moved here, and brought golf's biggest championships with it.",
-        "chapter": "history",
-        "shots": [
-          {
-            "photo": "53188b06",
-            "label": "Atlanta Athletic Club",
-            "callout": {
-              "type": "stat",
-              "big": "1976",
-              "label": "U.S. Open · PGA Championships 1981, 2001, 2011",
-              "source": "Atlanta Athletic Club"
-            }
-          }
-        ]
-      },
-      {
-        "say": "In 1981, Georgia Tech graduates laid out Technology Park, named for the creek on an old map.",
+        "say": "Yet it grew out of an office park, became a city only in 2006, and never had a downtown.",
         "chapter": "history",
         "shots": [
           {
@@ -462,37 +423,25 @@
             "label": "Technology Park",
             "callout": {
               "type": "stat",
-              "big": "1981",
-              "label": "Technology Park · about 1,700 acres",
-              "source": "AJC"
-            }
-          }
-        ]
-      },
-      {
-        "say": "In 2006, residents voted to become a city. About eighty-two thousand people live here now.",
-        "chapter": "growth",
-        "shots": [
-          {
-            "photo": "a7a07bd5",
-            "label": "Johns Creek City Hall",
-            "callout": {
-              "type": "stat",
               "big": "2006",
-              "label": "became a city · 82,453 residents in 2020",
-              "source": "City of Johns Creek · U.S. Census"
-            }
+              "label": "became a city · the office park dates from 1981",
+              "source": "City of Johns Creek"
+            },
+            "weight": 6
+          },
+          {
+            "photo": "6f97d573",
+            "weight": 5
           }
         ]
       },
       {
-        "say": "Its public schools rank among Georgia's best at every level.",
+        "say": "What it had was the schools: among Georgia's best at every level, with ninety-seven percent of seniors graduating.",
         "chapter": "schools",
         "shots": [
           {
             "photo": "fb968da0",
             "label": "Shakerag Elementary",
-            "weight": 6,
             "callout": {
               "type": "stat",
               "big": "#18",
@@ -503,7 +452,6 @@
           {
             "photo": "d6882c5f",
             "label": "River Trail Middle",
-            "weight": 6,
             "callout": {
               "type": "stat",
               "big": "#4",
@@ -514,52 +462,71 @@
           {
             "photo": "9b471790",
             "label": "Northview High",
-            "weight": 7,
             "callout": {
               "type": "stat",
               "big": "#8",
               "label": "in Georgia · high school",
               "source": "U.S. News, 2026–27"
             }
-          }
-        ]
-      },
-      {
-        "say": "Two more high schools are in the state's top twenty-five, and ninety-seven percent of their students graduate.",
-        "chapter": "schools",
-        "shots": [
+          },
           {
             "photo": "f99a56d8",
             "label": "Chattahoochee High",
-            "weight": 7,
             "callout": {
               "type": "stat",
               "big": "#15",
               "label": "in Georgia · high school · 97% graduate",
               "source": "U.S. News, 2026–27 · Fulton County Schools"
             }
-          },
+          }
+        ]
+      },
+      {
+        "say": "It had golf's biggest stage. The Atlanta Athletic Club, Bobby Jones's club, moved here in 1967.",
+        "chapter": "outdoor",
+        "shots": [
           {
-            "photo": "0030b237",
-            "label": "Johns Creek High",
-            "weight": 7,
+            "photo": "1c9948f9",
+            "label": "Atlanta Athletic Club",
+            "weight": 8,
             "callout": {
               "type": "stat",
-              "big": "#23",
-              "label": "in Georgia · high school · 97% graduate",
-              "source": "U.S. News, 2026–27 · Fulton County Schools"
+              "big": "1967",
+              "label": "the club moves here from East Lake",
+              "source": "Atlanta Athletic Club"
+            }
+          },
+          {
+            "photo": "fa7ddaf8",
+            "label": "Atlanta Athletic Club",
+            "weight": 6
+          }
+        ]
+      },
+      {
+        "say": "It has hosted the U.S. Open and three PGA Championships.",
+        "chapter": "outdoor",
+        "shots": [
+          {
+            "photo": "53188b06",
+            "label": "Atlanta Athletic Club",
+            "callout": {
+              "type": "stat",
+              "big": "4 majors",
+              "label": "U.S. Open 1976 · PGA 1981, 2001, 2011",
+              "source": "Atlanta Athletic Club"
             }
           }
         ]
       },
       {
-        "say": "The Chattahoochee River forms its border with Gwinnett County, with quiet water and launches for kayaks.",
+        "say": "It had the Chattahoochee along its edge, quiet enough for a kayak.",
         "chapter": "outdoor",
         "shots": [
           {
             "photo": "47a33843",
             "label": "Chattahoochee River",
-            "weight": 7
+            "weight": 6
           },
           {
             "photo": "2a1b5f41",
@@ -569,13 +536,12 @@
         ]
       },
       {
-        "say": "In 2023, Cauley Creek Park opened on two hundred acres by the river, doubling the city's parkland.",
+        "say": "Beside the river, two hundred acres of new park, and a 1912 bridge rebuilt for walkers.",
         "chapter": "outdoor",
         "shots": [
           {
             "photo": "90a94c55",
             "label": "Cauley Creek Park",
-            "weight": 8,
             "callout": {
               "type": "stat",
               "big": "203",
@@ -583,17 +549,6 @@
               "source": "City of Johns Creek"
             }
           },
-          {
-            "photo": "d06615b0",
-            "label": "Cauley Creek Park",
-            "weight": 6
-          }
-        ]
-      },
-      {
-        "say": "Next to it, a 1912 cotton bridge, closed for fifty years, came back as a footbridge.",
-        "chapter": "outdoor",
-        "shots": [
           {
             "photo": "4145bfce",
             "label": "Rogers Bridge",
@@ -607,7 +562,17 @@
         ]
       },
       {
-        "say": "Downtown Atlanta is thirty miles south: about forty-five minutes, more at rush hour.",
+        "say": "And every summer, concerts and fireworks at Newtown Park.",
+        "chapter": "outdoor",
+        "shots": [
+          {
+            "photo": "2719b046",
+            "label": "Newtown Park"
+          }
+        ]
+      },
+      {
+        "say": "Atlanta is thirty miles south: about forty-five minutes, more at rush hour.",
         "chapter": "commute",
         "shots": [
           {
@@ -622,7 +587,23 @@
         ]
       },
       {
-        "say": "And this year it built a center: a lakeside park behind City Hall, with a stage over the water.",
+        "say": "The one thing missing was a center. So this year, behind City Hall, the city built one.",
+        "chapter": "downtown",
+        "shots": [
+          {
+            "photo": "a7a07bd5",
+            "label": "Johns Creek City Hall",
+            "weight": 5
+          },
+          {
+            "photo": "61f2af14",
+            "label": "The Boardwalk at Town Center",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "A lake, a boardwalk around it, and a stage over the water.",
         "chapter": "downtown",
         "shots": [
           {
@@ -644,12 +625,12 @@
         ]
       },
       {
-        "say": "Johns Creek. The best place to live in America, and now a place to gather, too.",
+        "say": "Johns Creek. The best place to live in America finally has a downtown.",
         "chapter": "overview",
         "shots": [
           {
-            "photo": "2719b046",
-            "label": "Newtown Park"
+            "photo": "0153a578",
+            "label": "The Boardwalk at Town Center"
           }
         ]
       }

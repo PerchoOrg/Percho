@@ -23,6 +23,20 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-16 20:58 UTC — phase344.2: Johns Creek re-cut on the "contradiction" spine
+
+**Objective**: Owner, on the proposals of phase344.1: "按照a来" — re-cut Johns Creek now-first: the gap, what it had, the gap closed; history one line; golf as the hero.
+**Actions**:
+- `johns-creek-ga.json` `film`: 12 lines, 167 words, 22 photos. #1 in America → "grew out of an office park, became a city only in 2006, and never had a downtown" (the only history line, ~10 s; was 41 s) → schools at every level in one line (Shakerag #18, River Trail #4, Northview #8, Chattahoochee #15 · 97% graduate) → the Atlanta Athletic Club, Bobby Jones's club, here since 1967; four majors → the Chattahoochee → Cauley Creek Park and Rogers Bridge → concerts and fireworks at Newtown Park → 45 minutes to Atlanta → "the one thing missing was a center" → the lake, the boardwalk, the stage → the boardwalk at night. Johns Creek High (#23) and the full history stay on the page.
+- **Assembly `bd30b774`, stream `94b4448f…`, 1:31**, checked frame by frame, narration on every line. Live: `/api/mobile/city/johns-creek-ga` serves it with 20 segments; the city's 22 approved photos are the film's 22.
+- `run-community-tour.ts` prints a plan's warnings. Playbook §2.1: the fixed baseline, the spines, and a table recording each city's spine, opening, history and hero.
+**Issues**:
+- The previous cut (`61c327b6`) had a flaw I missed: its opening photo plays as a 4 s Seedance clip under a 7 s line, and the plan said so in a warning the CLI did not print. The opening line now has a second photo.
+- Cut `f3ac3af3` held one photo for ~10 s twice (the office park, City Hall); each line got a second photo (the former city hall in the office park; the lake behind City Hall).
+- No licence-clean photo of the International Festival, Diwali on the Boardwalk or the symphony on Commons, so the gathering beat is Newtown Park's fireworks.
+**Cost**: 24 TTS requests (two assemblies), free engines only, no new Google or Seedance spend.
+**Next steps**: owner watches on the phone. Alpharetta next, on a different spine (a Saturday, or a route).
+
 ## 2026-11-16 08:55 UTC — phase344.1: owner on Johns Creek — too much history, do not clone Suwanee
 
 **Objective**: Owner on the 1:49 film: "刚开始一段历史讲了很多 不一定重做但是这个feedback你要知道 不要千篇一律完全仿照suwanee 有没有什么特色的 形式也不一定都一样 … 你再想想别的方案？保证基准不乱 并且变化多一些".
