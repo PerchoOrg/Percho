@@ -662,6 +662,7 @@ export function CommunityTourSection({
           onGenerateClip={generateClip}
           plan={planByPhoto}
           dropReasons={dropReasons}
+          {...(placeKind === 'city' ? { cityId: communityId } : {})}
         />
       </section>
     </div>

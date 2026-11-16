@@ -8,7 +8,9 @@
  * (see filters in lib/poi/{listing,community}-video-actions.ts).
  *
  * Per-scope curation lives on `listing_poi_photos.status` /
- * `community_poi_photos.status` and is a separate decision.
+ * `community_poi_photos.status` and is a separate decision. A CITY's review
+ * writes only its own row (`setCityPhotoStatus`, phase343); the one global
+ * write a city's table can make is a legal rejection (`rejectPhotoEverywhere`).
  *
  * `listing_photos.review_status` is the home tour's gate and is narrower than
  * either: it decides which of a home's OWN photos reach its tour, and nothing
@@ -16,7 +18,10 @@
  */
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { LEGAL_REASON_PREFIX } from '@/lib/cities/photo-verdict';
+import { writeCityVerdicts } from '@/lib/cities/photo-verdict-store';
 import { createServiceClient } from '@/lib/supabase/server';
+import { cityPhotoVerdictSchema, legalRejectionSchema } from '@/lib/zod/city-photo-verdict';
 import { revalidatePath } from 'next/cache';
 
 export type GlobalPhotoDecision = 'approved' | 'rejected' | 'pending';
@@ -53,6 +58,64 @@ export async function setGlobalPhotoStatus(
   // The POI detail page keys off this row; refresh it so the next SSR
   // pull reflects the decision immediately.
   revalidatePath('/admin/pipeline/poi-library');
+  return { ok: true };
+}
+
+/**
+ * A city's own verdict on one photo (phase343). Touches nothing any other
+ * place reads — owner 2026-11-15: "每个community或者city都是单独approval process".
+ */
+export async function setCityPhotoStatus(
+  cityId: string,
+  photoId: string,
+  decision: GlobalPhotoDecision,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, message: 'Not authorized.' };
+  const input = cityPhotoVerdictSchema.safeParse({ cityId, photoId, status: decision });
+  if (!input.success) return { ok: false, message: 'Invalid input.' };
+
+  try {
+    await writeCityVerdicts(createServiceClient(), input.data.cityId, [input.data.photoId], {
+      status: input.data.status,
+      reason: 'rejected in review',
+      reviewedBy: admin.id,
+    });
+  } catch (err) {
+    console.error('[admin-photo-actions] city verdict failed', { cityId, photoId, decision, err });
+    return { ok: false, message: err instanceof Error ? err.message : 'Failed' };
+  }
+  revalidatePath(`/admin/pipeline/city-tours/${input.data.cityId}`);
+  return { ok: true };
+}
+
+/**
+ * Reject a photo EVERYWHERE, for a legal reason — the one verdict that is not
+ * a place's own (owner 2026-11-15: "因为全局原因比如legal拒绝的是可以全局").
+ * The reason is stored with the `legal — ` prefix that makes it binding.
+ */
+export async function rejectPhotoEverywhere(
+  photoId: string,
+  reason: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, message: 'Not authorized.' };
+  const input = legalRejectionSchema.safeParse({ photoId, reason });
+  if (!input.success) return { ok: false, message: 'Give the legal reason (3–200 characters).' };
+
+  const { error } = await createServiceClient()
+    .from('poi_photos')
+    .update({
+      status: 'rejected',
+      rejection_reason: `${LEGAL_REASON_PREFIX}${input.data.reason}`,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: admin.id,
+    })
+    .eq('id', input.data.photoId);
+  if (error) {
+    console.error('[admin-photo-actions] legal rejection failed', { photoId, error });
+    return { ok: false, message: error.message };
+  }
   return { ok: true };
 }
 

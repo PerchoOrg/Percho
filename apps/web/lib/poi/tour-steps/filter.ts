@@ -15,6 +15,10 @@
  * Only rows still 'pending' are touched. A verdict the owner has already given
  * is his, and a re-run must not quietly overturn it.
  *
+ * A CITY judges and writes on its own rows (`city_poi_photos`, phase343): what
+ * communities decided about a shared photo is theirs, and the city reaches its
+ * own verdict from the same tags.
+ *
  * The gate at the end is the point. Automated filters cut the pile down; they
  * do not make the editorial call. Owner 2026-08-19, defining the workflow:
  * "for each community, you will do the heavy lift work, including agent
@@ -22,6 +26,8 @@
  * second manual review of approved and rejected ones, after that, you can
  * continue on the planning, clip generation and assembly."
  */
+import { cityVerdict } from '@/lib/cities/photo-verdict';
+import { readCityVerdictRows, writeCityVerdicts } from '@/lib/cities/photo-verdict-store';
 import { tourPoiIds } from '../tour-poi-set';
 import { type RunRow, type TourDb, mustWrite, saveStep, setRunStatus } from './shared';
 import { initialVerdict } from './shots';
@@ -58,17 +64,29 @@ export async function runFilter(
     return { error: 'no_pois', message: 'Nothing to filter — run the fetch steps first.' };
   }
 
-  type Judgeable = Record<string, unknown> & { id: string };
+  const cityRows = run.scope.kind === 'city' ? await readCityVerdictRows(sb, run.entity_id) : null;
+
+  type Judgeable = Record<string, unknown> & {
+    id: string;
+    status: string | null;
+    rejection_reason: string | null;
+  };
   const toJudge: Judgeable[] = [];
   for (let i = 0; i < poiIds.length; i += 100) {
-    const { data } = (await sb
+    const q = sb
       .from('poi_photos')
       .select(
-        'id, status, ai_tags, width_px, height_px, enhanced_status, enhanced_meta, storage_path',
+        'id, status, rejection_reason, ai_tags, width_px, height_px, enhanced_status, enhanced_meta, storage_path',
       )
-      .in('poi_id', poiIds.slice(i, i + 100))
-      .eq('status', 'pending')) as { data: Judgeable[] | null };
-    toJudge.push(...(data ?? []));
+      .in('poi_id', poiIds.slice(i, i + 100));
+    const { data } = (await (cityRows ? q : q.eq('status', 'pending'))) as {
+      data: Judgeable[] | null;
+    };
+    toJudge.push(
+      ...(data ?? []).filter(
+        (r) => !cityRows || cityVerdict(r, cityRows.get(r.id)).status === 'pending',
+      ),
+    );
   }
 
   // An untagged photo has no `ai_tags`, so `initialVerdict` cannot see whether
@@ -107,10 +125,17 @@ export async function runFilter(
   for (const [reason, ids] of byReason) {
     rejected += ids.length;
     reasons[reason] = ids.length;
-    await mustWrite(
-      `reject ${ids.length} photo(s): ${reason}`,
-      sb.from('poi_photos').update({ status: 'rejected', rejection_reason: reason }).in('id', ids),
-    );
+    if (cityRows) {
+      await writeCityVerdicts(sb, run.entity_id, ids, { status: 'rejected', reason });
+    } else {
+      await mustWrite(
+        `reject ${ids.length} photo(s): ${reason}`,
+        sb
+          .from('poi_photos')
+          .update({ status: 'rejected', rejection_reason: reason })
+          .in('id', ids),
+      );
+    }
   }
 
   await saveStep(sb, run, 'filter', {

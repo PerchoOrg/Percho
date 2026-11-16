@@ -126,6 +126,21 @@ describe('buildCityFilm', () => {
     expect(film.segments).toHaveLength(3);
   });
 
+  it('refuses a photo the city rejected, and says why', () => {
+    const film = buildCityFilm({
+      profile: profileOf([
+        { say: eight, shots: [{ photo: 'aaaaaaaa' }] },
+        { say: eight, shots: [{ photo: 'bbbbbbbb' }] },
+      ]),
+      photos: photos.map((p) =>
+        p.id.startsWith('bbbbbbbb') ? { ...p, rejected: 'rejected for this city (outdated)' } : p,
+      ),
+    });
+    expect(film.problems).toHaveLength(1);
+    expect(film.problems[0]).toContain('bbbbbbbb is rejected for this city (outdated)');
+    expect(film.shots).toHaveLength(1);
+  });
+
   it('shows a picture once', () => {
     const film = buildCityFilm({
       profile: profileOf([

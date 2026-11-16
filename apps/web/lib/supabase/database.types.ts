@@ -398,19 +398,25 @@ export type Database = {
         Row: {
           city_id: string
           poi_photo_id: string
+          rejection_reason: string | null
           reviewed_at: string | null
+          reviewed_by: string | null
           status: string
         }
         Insert: {
           city_id: string
           poi_photo_id: string
+          rejection_reason?: string | null
           reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
         }
         Update: {
           city_id?: string
           poi_photo_id?: string
+          rejection_reason?: string | null
           reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
         }
         Relationships: [
@@ -426,6 +432,13 @@ export type Database = {
             columns: ["poi_photo_id"]
             isOneToOne: false
             referencedRelation: "poi_photos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_poi_photos_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "agents"
             referencedColumns: ["id"]
           },
         ]

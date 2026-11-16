@@ -25,12 +25,14 @@ import {
   setEnhancedDecision,
 } from '@/lib/poi/admin-enhance-actions';
 import {
+  rejectPhotoEverywhere,
+  setCityPhotoStatus,
   setGlobalPhotoStatus,
   setListingPhotoHero,
   setListingPhotoReview,
 } from '@/lib/poi/admin-photo-actions';
 import { projectTags, resolutionWarning } from '@/lib/poi/photo-tag-view';
-import { Check, Film, Sparkles, Star, X } from 'lucide-react';
+import { Check, Film, Scale, Sparkles, Star, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ClipCell, PhotoSourceBadge, ReframedCell, Thumb } from './photo-table/cells';
@@ -81,6 +83,7 @@ export function PhotoTable({
   onGenerateClip,
   plan,
   dropReasons,
+  cityId,
 }: {
   table: PhotoTableName;
   storageBase: string;
@@ -100,6 +103,9 @@ export function PhotoTable({
   /** Community tour, Dropped table: why each photo is out, by photo_id. The
       column replaces Plan — a dropped photo has no plan to show. */
   dropReasons?: Record<string, string>;
+  /** City tour: verdicts are this city's own (`city_poi_photos`, phase343),
+      not the shared photo's. */
+  cityId?: string;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
@@ -315,9 +321,38 @@ export function PhotoTable({
     void (async () => {
       const res = isListing
         ? await setListingPhotoReview(id, decision)
-        : await setGlobalPhotoStatus(id, decision);
+        : cityId
+          ? await setCityPhotoStatus(cityId, id, decision)
+          : await setGlobalPhotoStatus(id, decision);
       if (!res.ok) {
         // Put it back: a verdict that did not persist must not look like it did.
+        setVerdicts((v) => {
+          const next = { ...v };
+          if (previous) next[id] = previous;
+          else delete next[id];
+          return next;
+        });
+        setError(res.message ?? 'Failed');
+      }
+    })();
+  }
+
+  /**
+   * City tour: reject everywhere, for a legal reason — the one verdict a city's
+   * table may make for every place (owner 2026-11-15). Asks for the reason,
+   * because it is stored and shown wherever the photo is.
+   */
+  function rejectEverywhere(id: string) {
+    const reason = window.prompt(
+      'Legal reason — this rejects the photo in every community and city:',
+    );
+    if (!reason?.trim()) return;
+    const previous = verdicts[id];
+    setVerdicts((v) => ({ ...v, [id]: 'rejected' }));
+    setError(null);
+    void (async () => {
+      const res = await rejectPhotoEverywhere(id, reason);
+      if (!res.ok) {
         setVerdicts((v) => {
           const next = { ...v };
           if (previous) next[id] = previous;
@@ -533,13 +568,25 @@ export function PhotoTable({
                             {truncate(p.rejection_reason, 48)}
                           </span>
                         )}
+                        {/* City tour: what other places decided — a
+                            reference, never this city's verdict. */}
+                        {p.elsewhere && (
+                          <span
+                            className="block text-[10px] text-ink2 leading-tight"
+                            title={p.elsewhere}
+                          >
+                            {truncate(p.elsewhere, 48)}
+                          </span>
+                        )}
                         <div className="flex gap-1">
                           <MiniBtn
                             label={<Check size={11} />}
                             title={
                               isListing
                                 ? 'Approve photo — it stays a candidate for this home tour'
-                                : 'Approve photo (platform-wide) — the only gate for final video material'
+                                : cityId
+                                  ? 'Approve for this city only'
+                                  : 'Approve photo (platform-wide) — the only gate for final video material'
                             }
                             active={rowStatus === 'approved'}
                             onClick={() => decide(p.id, 'approved')}
@@ -549,12 +596,22 @@ export function PhotoTable({
                             title={
                               isListing
                                 ? 'Reject photo — the plan step will leave it out of the cut'
-                                : 'Reject photo — removes it from every video pool'
+                                : cityId
+                                  ? 'Reject for this city only'
+                                  : 'Reject photo — removes it from every video pool'
                             }
                             danger
                             active={rowStatus === 'rejected'}
                             onClick={() => decide(p.id, 'rejected')}
                           />
+                          {cityId && (
+                            <MiniBtn
+                              label={<Scale size={11} />}
+                              title="Reject everywhere — legal reasons only (licence, likeness, fair housing)"
+                              danger
+                              onClick={() => rejectEverywhere(p.id)}
+                            />
+                          )}
                           {/* Home tour only. The hero is the cut's opening
                               shot and the one shot Seedance animates; the
                               planner picks it well most of the time, and this

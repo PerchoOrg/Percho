@@ -33,9 +33,8 @@ export async function runPlan(sb: TourDb, run: RunRow) {
   // city's profile, so its plan is that script timed — or an error naming the
   // lines whose photo the city does not hold.
   //
-  // It also leaves `poi_photos.status` alone. `approved` means "in the current
-  // cut" of a COMMUNITY film, the flag is global, and a city shares its places
-  // with every community around them.
+  // It leaves `poi_photos.status` alone: a city's verdicts are its own, on
+  // `city_poi_photos` (phase343), and `planCityFilm` stamps the cut there.
   if (run.scope.kind === 'city') {
     const city = await planCityFilm(sb, run);
     const bgm = await chooseBgm(sb, run, city.shots);
@@ -54,8 +53,8 @@ export async function runPlan(sb: TourDb, run: RunRow) {
       ok: true,
       shots: city.shots.length,
       dropped: 0,
-      approved: 0,
-      unapproved: 0,
+      approved: city.approved,
+      unapproved: city.unapproved,
       plan: { seconds: city.seconds, warnings: city.narration.warnings },
       narration: { lines: city.narration.segments.length, voice: city.narration.voice },
       bgm,
