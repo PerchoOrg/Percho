@@ -49,6 +49,8 @@ export interface PhotoRow {
   status?: string | null;
   /** Why it is out. Written by the photos step or the review click. */
   rejection_reason?: string | null;
+  /** City tour: what other places decided, for reference (phase343). */
+  elsewhere?: string | null;
   applicable_buckets?: string[] | null;
   poi_name?: string | null;
   /** poi_photos: the owning POI, so the row can link to its detail page. */

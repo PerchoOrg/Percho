@@ -6,8 +6,14 @@
  * Nothing of the community plan runs for a city. That plan CHOOSES photos —
  * budgets, curator, scheduler — and a city film's photos are chosen by whoever
  * wrote each line of its script.
+ *
+ * What it shares with the community plan is the meaning of `approved`: in the
+ * current cut. For a city that verdict is the city's own (`city_poi_photos`,
+ * phase343), so the review page and the film cannot disagree.
  */
 import { type CityFilm, type FilmPhoto, buildCityFilm } from '@/lib/cities/film';
+import { type Verdict, approvalChanges, cityVerdict } from '@/lib/cities/photo-verdict';
+import { readCityVerdictRows, writeCityVerdicts } from '@/lib/cities/photo-verdict-store';
 import { readAllPages } from '@/lib/supabase/paginate';
 import { parseCityProfile } from '@/lib/zod/city-profile';
 import { voiceForCommunity } from '../tour-orchestrator/narration';
@@ -18,6 +24,9 @@ export interface CityPlan {
   /** The places the film visits, in film order. */
   cutPoiIds: string[];
   seconds: number;
+  /** Photos newly approved for this city, and approvals withdrawn. */
+  approved: number;
+  unapproved: number;
   narration: {
     ok: true;
     voice: string;
@@ -42,7 +51,8 @@ export async function planCityFilm(sb: TourDb, run: RunRow): Promise<CityPlan> {
     );
   }
 
-  // Every photo the city may use: behind a place linked to it, and not rejected.
+  // Every photo behind a place linked to the city. Rejected ones stay in the
+  // list, flagged, so a script that names one is told why it cannot have it.
   const { data: links } = (await sb
     .from('city_pois')
     .select('poi_id, intent_bucket, pois!inner(display_name)')
@@ -57,7 +67,14 @@ export async function planCityFilm(sb: TourDb, run: RunRow): Promise<CityPlan> {
   const placeById = new Map((links ?? []).map((l) => [l.poi_id, l]));
   const poiIds = [...placeById.keys()];
 
-  type PhotoRow = { id: string; poi_id: string; width_px: number | null; height_px: number | null };
+  type PhotoRow = {
+    id: string;
+    poi_id: string;
+    width_px: number | null;
+    height_px: number | null;
+    status: string | null;
+    rejection_reason: string | null;
+  };
   const rows: PhotoRow[] = [];
   // Chunked for the URL, paged for PostgREST's 1,000-row cap: a city's places
   // hold ten photos each from Google and up to eighty from an ingested page.
@@ -67,9 +84,8 @@ export async function planCityFilm(sb: TourDb, run: RunRow): Promise<CityPlan> {
       ...(await readAllPages<PhotoRow>((from, to) =>
         sb
           .from('poi_photos')
-          .select('id, poi_id, width_px, height_px')
+          .select('id, poi_id, width_px, height_px, status, rejection_reason')
           .in('poi_id', chunk)
-          .neq('status', 'rejected')
           .order('id')
           .range(from, to),
       )),
@@ -90,6 +106,9 @@ export async function planCityFilm(sb: TourDb, run: RunRow): Promise<CityPlan> {
     .eq('status', 'ready')) as { data: Array<{ photo_id: string }> | null };
   const seedanceReady = new Set((ready ?? []).map((r) => r.photo_id));
 
+  const verdictRows = await readCityVerdictRows(sb, run.entity_id);
+  const verdictOf = (r: PhotoRow) => cityVerdict(r, verdictRows.get(r.id));
+
   const photos: FilmPhoto[] = rows.map((r) => ({
     id: r.id,
     poiId: r.poi_id,
@@ -98,6 +117,11 @@ export async function planCityFilm(sb: TourDb, run: RunRow): Promise<CityPlan> {
     width: r.width_px,
     height: r.height_px,
     seedanceReady: seedanceReady.has(r.id),
+    rejected: (() => {
+      const v = verdictOf(r);
+      if (v.status !== 'rejected') return undefined;
+      return `${v.everywhere ? 'rejected everywhere' : 'rejected for this city'}${v.reason ? ` (${v.reason})` : ''}`;
+    })(),
   }));
 
   const film = buildCityFilm({ profile, photos });
@@ -109,10 +133,24 @@ export async function planCityFilm(sb: TourDb, run: RunRow): Promise<CityPlan> {
     );
   }
 
+  // `approved` = in this city's cut, exactly as a community plan stamps its
+  // own — but on the city's row, never the shared photo.
+  const current = new Map<string, Verdict>(
+    [...verdictRows].map(([id, row]) => [id, row.status === 'approved' ? 'approved' : 'pending']),
+  );
+  const { approve, unapprove } = approvalChanges(
+    current,
+    new Set(film.shots.map((s) => s.photo_id)),
+  );
+  await writeCityVerdicts(sb, run.entity_id, approve, { status: 'approved' });
+  await writeCityVerdicts(sb, run.entity_id, unapprove, { status: 'pending' });
+
   return {
     shots: film.shots,
     cutPoiIds: [...new Set(film.shots.map((s) => s.poi_id))],
     seconds: film.seconds,
+    approved: approve.length,
+    unapproved: unapprove.length,
     narration: {
       ok: true,
       voice: voiceForCommunity(run.entity_id),

@@ -13,8 +13,14 @@
  * Photos live in the GLOBAL `poi_photos` table; `{community,listing}_poi_photos`
  * carries the per-scope review status. The table shows the global row (that's
  * what the renderer reads) — per-scope curation stays in the POI panel.
+ *
+ * A CITY is the exception (phase343): its table shows the city's own verdict
+ * (`city_poi_photos`), with what communities and other cities decided beside
+ * it as a reference, and "used in" is the city's current film.
  */
 
+import { cityVerdict, elsewhereNote } from '@/lib/cities/photo-verdict';
+import { readCityVerdictRows } from '@/lib/cities/photo-verdict-store';
 import { type TypedClient, createServiceClient } from '@/lib/supabase/server';
 import { keepPhotoForTour } from './nearby-photo-scope';
 import { tourPoiIds } from './tour-poi-set';
@@ -50,6 +56,8 @@ export interface NearbyPhotoRow {
   outpaint_meta: Record<string, unknown> | null;
   outpaint_error: string | null;
   used_in: string[];
+  /** City only: what other places decided about this photo, for reference. */
+  elsewhere?: string | null;
 }
 
 type Scope =
@@ -131,21 +139,24 @@ export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> 
     > | null;
   };
 
+  const scoped =
+    scope.kind === 'city' ? await withCityVerdicts(sb, scope.id, photos ?? []) : photos;
   const rows =
     scope.kind === 'listing'
-      ? (photos ?? [])
+      ? (scoped ?? [])
       : await narrowToTour(
           sb,
           scope.kind === 'city' ? CITY_TOUR : COMMUNITY_TOUR,
           scope.id,
-          photos ?? [],
+          scoped ?? [],
         );
   if (rows.length === 0) return [];
 
   // Which rendered videos used each photo. Scoped to THIS owner — a photo used
   // in another community's video is not "in this community's video".
-  // A city has no bucket videos (phase318), so nothing to look up.
-  const usedIn = new Map<string, string[]>();
+  // A city has no bucket videos (phase318); its one video is the film.
+  const usedIn =
+    scope.kind === 'city' ? await cityFilmPhotos(sb, scope.id) : new Map<string, string[]>();
   const { data: vids } = (
     scope.kind === 'city'
       ? { data: [] }
@@ -220,4 +231,76 @@ export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> 
     trimmed.push(...kept);
   }
   return trimmed;
+}
+
+/**
+ * Swap the shared verdict for the city's own, and keep the shared one — and
+ * any other city's — as a reference line (phase343).
+ */
+async function withCityVerdicts<
+  T extends {
+    id: string;
+    status: string | null;
+    rejection_reason: string | null;
+    reviewed_by: string | null;
+  },
+>(sb: TypedClient, cityId: string, rows: T[]): Promise<Array<T & { elsewhere: string | null }>> {
+  const own = await readCityVerdictRows(sb, cityId);
+
+  const others = new Map<
+    string,
+    Array<{ name: string; status: string; rejection_reason: string | null }>
+  >();
+  for (let i = 0; i < rows.length; i += 100) {
+    const { data } = (await sb
+      .from('city_poi_photos')
+      .select('poi_photo_id, status, rejection_reason, cities!inner(name)')
+      .in(
+        'poi_photo_id',
+        rows.slice(i, i + 100).map((r) => r.id),
+      )
+      .neq('city_id', cityId)) as {
+      data: Array<{
+        poi_photo_id: string;
+        status: string;
+        rejection_reason: string | null;
+        cities: { name: string } | null;
+      }> | null;
+    };
+    for (const o of data ?? []) {
+      const list = others.get(o.poi_photo_id) ?? [];
+      list.push({
+        name: o.cities?.name ?? 'another city',
+        status: o.status,
+        rejection_reason: o.rejection_reason,
+      });
+      others.set(o.poi_photo_id, list);
+    }
+  }
+
+  return rows.map((r) => {
+    const v = cityVerdict(r, own.get(r.id));
+    return {
+      ...r,
+      status: v.status,
+      rejection_reason: v.everywhere ? `everywhere — ${v.reason ?? 'legal'}` : v.reason,
+      reviewed_by: v.reviewedBy,
+      elsewhere: elsewhereNote(r, others.get(r.id) ?? []),
+    };
+  });
+}
+
+/** The photos in the city's newest ready film, each labelled "film". */
+async function cityFilmPhotos(sb: TypedClient, cityId: string): Promise<Map<string, string[]>> {
+  const { data } = (await sb
+    .from('city_tour_assemblies')
+    .select('ordered_clips')
+    .eq('city_id', cityId)
+    .eq('status', 'ready')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()) as { data: { ordered_clips: Array<{ photo_id?: string }> | null } | null };
+  const out = new Map<string, string[]>();
+  for (const c of data?.ordered_clips ?? []) if (c.photo_id) out.set(c.photo_id, ['film']);
+  return out;
 }

@@ -87,13 +87,21 @@ chapters, in order — reuse the order, not the words:
      town centre; refused if it resolves >15 km away;
    - `pnpm city:photos <slug> commons-search "<query>"`, then `commons "<label>" "File:…"` —
      public domain / CC0 / CC BY only (share-alike is refused: a film is a derivative work).
-   - Then `pnpm tour <slug> --city --steps tag`.
+   - Then `pnpm tour <slug> --city --steps tag,filter`.
+   - **Verdicts are the city's own** (phase343): filter, plan and the review page
+     at `/admin/pipeline/city-tours/<id>` read and write `city_poi_photos`, never
+     the shared `poi_photos.status`. What communities and other cities decided is
+     shown under each row as a reference, not applied. The ⚖ button rejects a
+     photo EVERYWHERE and is for legal reasons only (licence, likeness, fair
+     housing); any other "no" is the X, for this city.
 5. **Pick photos by eye** from a contact sheet; write `film.lines` naming photo ids,
    `label` only for real places, `chapter` per line, callouts per §3.
 6. **Storyboard first** for any new shape of film (a playable HTML page on
    percho.co/demos). Suwanee's two rejected films were made without one.
 7. `pnpm city:profile <slug>`, then `pnpm tour <slug> --city --steps plan,generate,assemble`.
-   The plan step refuses a line whose photo the city does not hold.
+   The plan step refuses a line whose photo the city does not hold or has rejected,
+   and stamps the film's photos `approved` for the city (any other approval goes
+   back to pending) — so the review page's Approved section IS the film.
 8. **Check the cut** frame by frame against the card's chrome zones before telling
    the owner; check the feed and `/api/mobile/city/<slug>` serve it.
 

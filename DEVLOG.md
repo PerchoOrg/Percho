@@ -23,6 +23,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-16 06:35 UTC — phase343: a city's photo verdicts are its own
+
+**Objective**: Owner: "suwanne的admin页面里的照片approval情况和视频里使用的没有一致吗" — Suwanee's review page showed 23 of the film's 24 photos as `pending`, and 8 of its 9 `approved` photos were not in the film. Cause: one shared `poi_photos.status`, which community plans stamp, while the city plan (phase326) used any non-rejected photo its script named and stamped nothing; the page's "used in" column was empty for a city. Ruling: "每个community或者city都是单独approval process 不要搞全局 但是可以参考别的approval … 可以复用的pipeline 之后可以在别的city也可以用"; then "现有的community不要动" and "因为全局原因比如legal拒绝的是可以全局 因为其他筛选原因的不是全局".
+**Actions**:
+- Migration `20261116040000_city_photo_verdicts.sql`: `city_poi_photos` (phase318, already RLS'd) gains `rejection_reason`, `reviewed_by`. Seeds each city with the verdicts its film was cut under: every globally rejected photo behind its places becomes a city rejection with the same reason (the city plan honoured all of them until now), and the newest ready film's photos become `approved`.
+- `lib/cities/photo-verdict.ts` (pure, 7 tests): `cityVerdict` — the city's row decides; the shared status binds only a LEGAL rejection (`isLegalRejection`: the fair-housing reason or a `legal — ` prefix); `elsewhereNote` — what communities / other cities decided, as a reference line; `approvalChanges` — approved = in this city's cut. `photo-verdict-store.ts` reads/upserts the rows.
+- City plan: reads the city's verdicts; a script naming a city-rejected photo fails with "<id> is rejected for this city (<reason>)" (`FilmPhoto.rejected`, test added); after the cut, the film's photos are approved for the city and any other approval goes back to pending. `runPlan` reports the counts.
+- Filter: for a city, judges photos still undecided FOR THE CITY and writes rejections to `city_poi_photos`. Community path unchanged.
+- Admin page (`loadNearbyPhotos`, city scope): status and reason are the city's; a grey line under the status shows the reference ("communities: rejected — tagger-unusable · Duluth: approved"); "used in" = `film` for the newest ready film's photos. Buttons on a city table: ✓ / ✕ write the city row (`setCityPhotoStatus`), ⚖ rejects everywhere with a legal reason the click asks for (`rejectPhotoEverywhere`, `legal — ` prefix). zod schemas in `lib/zod/city-photo-verdict.ts`.
+- Playbook §4 says all of this for the next city.
+**Decisions**: communities untouched — code and data. Their tables, filter and plan still use `poi_photos.status`; moving them onto `community_poi_photos` is the same pattern when the owner wants it. Automated filter reasons (listing photo, tagger-unusable, religious) are deterministic per photo, so each city reaches the same verdict from the same tags without a global write. Legal-only global is a reason prefix, not a new column: the one existing global-binding reason (fair housing) already has a fixed string.
+**Not done**: the tag and enhance steps still skip globally rejected photos (spend only — tags are global anyway).
+
 ## 2026-11-16 02:52 UTC — phase342: iOS 1.0.1 (12) submitted to App Review
 
 **Objective**: Owner: "现在的版本可以发布到ios吗？" then "打包正式送审".

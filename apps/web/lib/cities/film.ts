@@ -30,6 +30,8 @@ export interface FilmPhoto {
   height: number | null;
   /** A paid Seedance clip is already rendered for this photo. */
   seedanceReady: boolean;
+  /** Why the city may not use it, when it may not (phase343). */
+  rejected?: string;
 }
 
 /** One clip of the film, in the shape the generate and assemble steps read. */
@@ -159,7 +161,7 @@ function defaultMove(photo: FilmPhoto, nth: number): string {
 
 export function buildCityFilm(input: {
   profile: CityProfile;
-  /** Every photo this city may use — linked to it and not rejected. */
+  /** Every photo linked to this city; a rejected one carries `rejected`. */
   photos: readonly FilmPhoto[];
 }): CityFilm {
   const problems: string[] = [];
@@ -172,7 +174,10 @@ export function buildCityFilm(input: {
 
   const find = (ref: string): FilmPhoto | string => {
     const hits = input.photos.filter((p) => p.id === ref || p.id.startsWith(ref));
-    if (hits.length === 1) return hits[0] as FilmPhoto;
+    if (hits.length === 1) {
+      const hit = hits[0] as FilmPhoto;
+      return hit.rejected ? `${ref} is ${hit.rejected}` : hit;
+    }
     return hits.length === 0
       ? `no photo ${ref} among this city's photos`
       : `${ref} matches ${hits.length} photos — use the full id`;
