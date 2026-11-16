@@ -17,6 +17,11 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-16
+- **Johns Creek is the second city.** A film of under two minutes — why U.S.
+  News calls it the best place to live in America, from the creek it is named
+  after to the lakeside town center it opened this year — and its own city page
+  with schools at every level, how it compares with Georgia, drive times and
+  what is being built.
 - **iPhone app 1.0.1 sent to Apple for review.** It brings cities, the
   one-look neighbourhood page, sharing links that open the app, and Sign in
   with Google to the App Store. Once Apple approves it, we choose the day it
