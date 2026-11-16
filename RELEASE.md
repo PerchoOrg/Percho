@@ -16,6 +16,12 @@ picture in the preview. If they have the Percho app, the link opens straight
 into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
+### 2026-11-16
+- **iPhone app 1.0.1 sent to Apple for review.** It brings cities, the
+  one-look neighbourhood page, sharing links that open the app, and Sign in
+  with Google to the App Store. Once Apple approves it, we choose the day it
+  goes live.
+
 ### 2026-11-15
 - **Every neighbourhood now has the one-look page.** Where the nearest
   schools rank in Georgia, what homes in its city are worth and how that has

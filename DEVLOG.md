@@ -23,6 +23,20 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-16 02:52 UTC — phase342: iOS 1.0.1 (12) submitted to App Review
+
+**Objective**: Owner: "现在的版本可以发布到ios吗？" then "打包正式送审".
+**Actions**:
+- Pre-flight: App ID `co.percho.app` already carries IN_APP_PURCHASE, APPLE_ID_AUTH and ASSOCIATED_DOMAINS (phase336.5), so a non-interactive build signs. Main at `0c2fb542`: mobile tsc 0, vitest 866.
+- Build from a clean worktree of `0c2fb542`: `eas build --platform ios --profile production --non-interactive` → `3971cb7e-216c-4b8c-bbcd-2239277ba385`, FINISHED, 1.0.1 (12). `eas submit --id 3971cb7e… --profile production` (ASC key in `eas.json` locally, reverted) → submission `892a99e5…`; ASC build `2ecaddf0-9189-4f39-8015-bb76329fc274` `VALID`, `usesNonExemptEncryption: false`; added to `Internal` (204). `app.json` buildNumber 12 committed here — it must say what shipped.
+- ASC (API): version **1.0.1** created (`93d985a6-eb9d-44be-bf88-f39b17627710`, release type MANUAL); description, keywords, screenshots, copyright and review contact copied over from 1.0.0. What's New written (cities; the one-look neighbourhood page; share links that open the app; Sign in with Google). Review notes rewritten for 1.0.1 — they had said schools show "proficiency % for the nearest public school, with no rating", and the page now ranks nearby schools; the notes now say so, say they are not attendance zones, that words describing residents are not shown, and that home values are Zillow's, credited. Demo account `app-review@percho.co` checked: password sign-in 200.
+- Build 12 attached; `reviewSubmissions` `7a43fd82-47c6-4d31-8836-8daf414ee19b` → submitted 2026-11-16 02:52 UTC; version 1.0.1 `WAITING_FOR_REVIEW`.
+**Issues**:
+- The first submit returned 409: the age rating needs `socialMedia`, a question Apple made mandatory for every update from September 2026. Answered **No** on the editable app info (`1331b9ee…`): Apple's definition is redistributing, amplifying or interacting with user content through a feed or similar discovery that spreads it to many users; Percho's reviews are a moderated, anonymous, unranked list on a neighbourhood page — no likes, comments, follows, feed or messaging. UGC stays Yes. Rating stays 4+. Owner can change it in App Store Connect → App Information → Age Rating.
+- The demo account's password was printed into this session's tool output once while reading the review details back. It is in no file and no commit; rotating it would mean editing the review details mid-review, so it is left until after the review.
+**Not in this build / open**: the owner has not seen the one-screen neighbourhood page on a phone (phase339/340 went straight to this build); Zillow's terms for commercial display are unconfirmed (its research page asks for attribution, its general terms say non-commercial without an agreement); the four screenshots are from 1.0.0 and show the old neighbourhood page; the "Windward Pool" labels in Windward's film.
+**Next steps**: watch the review (Resolution Center if Apple asks); on approval nothing goes live by itself (MANUAL) — the owner picks the day. After release, new communities and cities are content only; any change to the screens needs a build and a review (no `expo-updates`).
+
 ## 2026-11-16 01:44 UTC — phase341: Community Partner billing, backend only
 
 **Objective**: Owner, after the pricing research (four options, recommended A+B merged as a "Community Partner" plan): "实现收费的后端功能 暂时不在app里显示". He declined the clarifying questions, so the recommended defaults stand: Stripe; one product, a monthly Community Partner subscription; 2 seats per community. Any of the three is a one-line change if he rules otherwise.
