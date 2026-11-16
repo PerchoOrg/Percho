@@ -317,6 +317,8 @@ function summarise(step: Step, result: unknown): string {
       return `${r.tagged}/${r.total} tagged${
         r.unreached ? `, ${r.unreached} not reached — run tag again` : ''
       }${r.failed ? `, ${r.failed} failed` : ''}`;
+    case 'plan':
+      return `${r.shots} shots, ${r.approved} approved, ${r.unapproved} unapproved`;
     case 'generate':
       return `${r.created} clips queued, ${r.requeued} requeued`;
     case 'assemble':

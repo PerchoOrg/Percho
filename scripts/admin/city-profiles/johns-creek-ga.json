@@ -1,0 +1,658 @@
+{
+  "tagline": "U.S. News's best place to live in America — and, twenty years after becoming a city, it finally has a downtown.",
+  "summary": "Cherokee land and then a century of farms along the Chattahoochee, Johns Creek grew around a golf club that moved here in 1967 and an office park laid out in 1981. Its neighbourhoods voted to become a city in 2006. The schools are among Georgia's best at every level, and in 2026 the city opened the town center it never had.",
+  "locationNote": "30 mi north-northeast of downtown Atlanta",
+  "rankings": [
+    {
+      "rank": "#1",
+      "scope": "in the U.S.",
+      "title": "Best Places to Live",
+      "detail": "U.S. News & World Report, 2025–26 — first of 250 cities, and first in Georgia.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2025–26",
+        "url": "https://realestate.usnews.com/real-estate/articles/why-johns-creek-georgia-is-the-best-place-to-live-in-2025-2026"
+      }
+    },
+    {
+      "rank": "#8",
+      "scope": "in Georgia",
+      "title": "Northview High School",
+      "detail": "U.S. News Best High Schools, 2026–27 · #318 in the U.S.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2026–27",
+        "url": "https://patch.com/georgia/atlanta/new-ranking-gas-public-high-schools-released-u-s-news"
+      }
+    },
+    {
+      "rank": "#4",
+      "scope": "in Georgia",
+      "title": "River Trail Middle School",
+      "detail": "U.S. News Best Middle Schools, 2027.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2027",
+        "url": "https://patch.com/georgia/across-ga/these-are-best-public-middle-schools-ga-u-s-news-ranking"
+      }
+    },
+    {
+      "rank": "#1",
+      "scope": "in the U.S.",
+      "title": "Best suburb to live in",
+      "detail": "Travel + Leisure, July 2024.",
+      "source": {
+        "name": "Travel + Leisure",
+        "year": "2024",
+        "url": "https://www.fox5atlanta.com/news/johns-creek-named-best-suburb-travel-leisure-list"
+      }
+    }
+  ],
+  "stats": [
+    {
+      "label": "Population",
+      "value": "82,453",
+      "note": "2020 census"
+    },
+    {
+      "label": "Homes owner-occupied",
+      "value": "80%",
+      "note": "the rest rented"
+    }
+  ],
+  "compare": {
+    "against": "Georgia",
+    "rows": [
+      {
+        "label": "Median household income",
+        "city": {
+          "value": 160093,
+          "display": "$160,093"
+        },
+        "state": {
+          "value": 77353,
+          "display": "$77,353"
+        },
+        "takeaway": "2.1× the state"
+      },
+      {
+        "label": "Adults with a bachelor's or higher",
+        "city": {
+          "value": 72.7,
+          "display": "72.7%"
+        },
+        "state": {
+          "value": 34.9,
+          "display": "34.9%"
+        },
+        "takeaway": "2.1× the state"
+      },
+      {
+        "label": "Median home value",
+        "city": {
+          "value": 629400,
+          "display": "$629,400"
+        },
+        "state": {
+          "value": 303300,
+          "display": "$303,300"
+        },
+        "takeaway": "2.1× the state"
+      }
+    ],
+    "source": {
+      "name": "U.S. Census Bureau, ACS 2020–2024",
+      "year": "2024",
+      "url": "https://mmcganalytics.com/georgia/fulton-county/johns-creek/"
+    }
+  },
+  "history": [
+    {
+      "year": "Before 1830s",
+      "short": "Cherokee land",
+      "text": "Cherokee land. The creek, and later the city, is named for Johnson K. Rogers, son of early settler John Rogers."
+    },
+    {
+      "year": "1880s",
+      "short": "Farm country",
+      "text": "Farms along the Chattahoochee; the Summerour farmhouse of the 1880s now stands at Autrey Mill."
+    },
+    {
+      "year": "1912",
+      "short": "Rogers Bridge",
+      "text": "A steel bridge carries cotton across the river to the railroad at Duluth; it closes in the 1970s."
+    },
+    {
+      "year": "1967",
+      "short": "Athletic Club arrives",
+      "text": "The Atlanta Athletic Club moves here from East Lake: 1976 U.S. Open, PGA Championships 1981, 2001, 2011."
+    },
+    {
+      "year": "1981",
+      "short": "Technology Park",
+      "text": "Georgia Tech graduates buy about 1,700 acres for an office park and name it after the creek on an old map."
+    },
+    {
+      "year": "2006",
+      "short": "Becomes a city",
+      "text": "Residents vote for cityhood on July 18; Johns Creek is incorporated on December 1."
+    },
+    {
+      "year": "2023",
+      "short": "Cauley Creek Park",
+      "text": "Cauley Creek Park opens on 203 acres by the river; Rogers Bridge reopens as a footbridge to Duluth."
+    },
+    {
+      "year": "2026",
+      "short": "A town center",
+      "text": "The Boardwalk at Town Center opens behind City Hall in May; Medley's shops and homes open in October."
+    }
+  ],
+  "growth": {
+    "series": [
+      {
+        "label": "2010",
+        "value": 76728
+      },
+      {
+        "label": "2020",
+        "value": 82453
+      }
+    ],
+    "takeaway": "+7% in its first decade as a city",
+    "source": {
+      "name": "U.S. Census Bureau, decennial census",
+      "url": "https://en.wikipedia.org/wiki/Johns_Creek,_Georgia"
+    }
+  },
+  "education": {
+    "schools": [
+      {
+        "level": "elementary",
+        "name": "Shakerag Elementary",
+        "rank": "#18",
+        "scope": "in Georgia",
+        "detail": "Fulton County Schools, Duluth mailing address. U.S. News Best Elementary Schools, 2026.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026",
+          "url": "https://patch.com/georgia/atlanta/these-are-top-elementary-schools-ga-u-s-news-says-latest-ranking"
+        }
+      },
+      {
+        "level": "middle",
+        "name": "River Trail Middle",
+        "rank": "#4",
+        "scope": "in Georgia",
+        "detail": "Fulton County Schools. U.S. News Best Middle Schools, 2027.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2027",
+          "url": "https://patch.com/georgia/across-ga/these-are-best-public-middle-schools-ga-u-s-news-ranking"
+        }
+      },
+      {
+        "level": "middle",
+        "name": "Autrey Mill Middle",
+        "rank": "#16",
+        "scope": "in Georgia",
+        "detail": "Fulton County Schools, Alpharetta mailing address. U.S. News Best Middle Schools, 2027.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2027",
+          "url": "https://patch.com/georgia/across-ga/these-are-best-public-middle-schools-ga-u-s-news-ranking"
+        }
+      },
+      {
+        "level": "middle",
+        "name": "Taylor Road Middle",
+        "rank": "#18",
+        "scope": "in Georgia",
+        "detail": "Fulton County Schools, Alpharetta mailing address. U.S. News Best Middle Schools, 2027.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2027",
+          "url": "https://patch.com/georgia/across-ga/these-are-best-public-middle-schools-ga-u-s-news-ranking"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Northview High",
+        "rank": "#8",
+        "scope": "in Georgia",
+        "detail": "Fulton County Schools. U.S. News Best High Schools, 2026–27 · #318 in the U.S.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026–27",
+          "url": "https://patch.com/georgia/atlanta/new-ranking-gas-public-high-schools-released-u-s-news"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Chattahoochee High",
+        "rank": "#15",
+        "scope": "in Georgia",
+        "detail": "Fulton County Schools. U.S. News Best High Schools, 2026–27 · #607 in the U.S.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026–27",
+          "url": "https://www.usnews.com/education/best-high-schools/georgia/districts/fulton-county-schools/chattahoochee-high-school-5918"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Johns Creek High",
+        "rank": "#23",
+        "scope": "in Georgia",
+        "detail": "Fulton County Schools. U.S. News Best High Schools, 2026–27.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026–27",
+          "url": "https://www.usnews.com/education/best-high-schools/georgia/rankings"
+        }
+      }
+    ],
+    "measure": "Graduate in 4 years · class of 2025",
+    "rows": [
+      {
+        "label": "Northview HS",
+        "pct": 98,
+        "display": "98.0%"
+      },
+      {
+        "label": "Johns Creek HS",
+        "pct": 97.1,
+        "display": "97.1%"
+      },
+      {
+        "label": "Chattahoochee HS",
+        "pct": 97,
+        "display": "97.0%"
+      },
+      {
+        "label": "Fulton district",
+        "pct": 91.9,
+        "display": "91.9%",
+        "baseline": true
+      }
+    ],
+    "note": "All are Fulton County schools; several carry Duluth or Alpharetta mailing addresses. Graduation rates: Fulton County Schools, class of 2025."
+  },
+  "gettingAround": [
+    {
+      "label": "Downtown Atlanta · 30 mi",
+      "value": "~45 min · 50–75 at rush",
+      "minutes": {
+        "min": 45,
+        "max": 75
+      }
+    },
+    {
+      "label": "Hartsfield-Jackson · ~38 mi",
+      "value": "50–75 min",
+      "minutes": {
+        "min": 50,
+        "max": 75
+      }
+    },
+    {
+      "label": "Perimeter Center · 19 mi",
+      "value": "30–60 min",
+      "minutes": {
+        "min": 30,
+        "max": 60
+      }
+    },
+    {
+      "label": "Avalon, Alpharetta · 6 mi",
+      "value": "~15 min",
+      "minutes": {
+        "min": 13,
+        "max": 17
+      }
+    },
+    {
+      "label": "Nearest rail · MARTA North Springs",
+      "value": "no rail in Johns Creek"
+    }
+  ],
+  "planning": [
+    {
+      "title": "Town Center Vision and Plan (2021)",
+      "text": "A 20-year plan to turn 192 acres of Technology Park into a walkable town center."
+    },
+    {
+      "title": "The Boardwalk at Town Center · 2026",
+      "text": "A lakeside park behind City Hall: an elevated boardwalk, a three-acre wetland and an amphitheater with a deck over the water. Opened May 8, 2026."
+    },
+    {
+      "title": "Medley · 2026",
+      "text": "A 43-acre mixed-use district beside it: offices, 340 homes and 125,000 sq ft of shops, opened October 29, 2026. A second phase follows in 2027, a hotel in 2028."
+    },
+    {
+      "title": "Cauley Creek Park · 2023",
+      "text": "203 acres on the Chattahoochee at Bell Road, which the city says effectively doubled its parkland."
+    }
+  ],
+  "sources": [
+    {
+      "name": "U.S. Census Bureau ACS 2020–2024 — Johns Creek (MMCG Analytics)",
+      "url": "https://mmcganalytics.com/georgia/fulton-county/johns-creek/"
+    },
+    {
+      "name": "Data USA — Johns Creek, GA",
+      "url": "https://datausa.io/profile/geo/johns-creek-ga"
+    },
+    {
+      "name": "U.S. Census Bureau QuickFacts — Georgia",
+      "url": "https://www.census.gov/quickfacts/fact/table/GA/INC110224"
+    },
+    {
+      "name": "City of Johns Creek — About",
+      "url": "https://johnscreekga.gov/about"
+    },
+    {
+      "name": "Rough Draft Atlanta — The history of Johns Creek",
+      "url": "https://roughdraftatlanta.com/2023/04/06/breaking-down-the-history-of-johns-creek-georgia/"
+    },
+    {
+      "name": "Wikipedia — Atlanta Athletic Club",
+      "url": "https://en.wikipedia.org/wiki/Atlanta_Athletic_Club"
+    },
+    {
+      "name": "Autrey Mill Nature Preserve — Heritage Village",
+      "url": "https://autreymill.org/?p=248"
+    },
+    {
+      "name": "WSB-TV — Century-old Rogers Bridge removed",
+      "url": "https://wsbtv.com/news/local/gwinnett-county/century-old-abandoned-bridge-over-chattahoochee-removed-make-way-new-bridge/KBB5DKO3G5DRVN5EECJICW4OAI"
+    },
+    {
+      "name": "Atlanta News First — Rogers Bridge opens, July 2023",
+      "url": "https://www.atlantanewsfirst.com/2023/07/11/new-pedestrian-bridge-that-connects-duluth-johns-creek-opens/"
+    },
+    {
+      "name": "FOX 5 — Cauley Creek Park grand opening",
+      "url": "https://www.fox5atlanta.com/news/johns-creek-park-grand-opening"
+    },
+    {
+      "name": "North Atlanta Star — The Boardwalk at Town Center opens",
+      "url": "https://northatlantastar.com/johns-creek-boardwalk-town-center-open/"
+    },
+    {
+      "name": "AJC — Medley opens, October 2026",
+      "url": "https://www.ajc.com/business/2026/10/johns-creeks-medley-project-opens-ushering-new-era-for-atlanta-suburb/"
+    },
+    {
+      "name": "Fulton County Schools graduation rates, class of 2025",
+      "url": "https://news.fultonschools.org/details/~board/district-news-stories/post/fcs-breaks-grad-record-five-years-in-a-row"
+    },
+    {
+      "name": "Drive times: Google Routes, from City Hall, typical traffic",
+      "url": "https://maps.google.com"
+    }
+  ],
+  "film": {
+    "lines": [
+      {
+        "say": "U.S. News calls Johns Creek, Georgia, the best place to live in America.",
+        "chapter": "overview",
+        "shots": [
+          {
+            "photo": "1c9b66bb",
+            "move": "push_in_slow",
+            "callout": {
+              "type": "stat",
+              "big": "#1",
+              "label": "in the U.S. · Best Places to Live",
+              "source": "U.S. News & World Report, 2025–26"
+            }
+          }
+        ]
+      },
+      {
+        "say": "It's named for a small creek, and the creek for Johnson Rogers, son of an early settler.",
+        "chapter": "history",
+        "shots": [
+          {
+            "photo": "807e2e8c",
+            "label": "Johns Creek (the creek)",
+            "move": "push_in_slow"
+          }
+        ]
+      },
+      {
+        "say": "For a century, this was farm country along the Chattahoochee.",
+        "chapter": "history",
+        "shots": [
+          {
+            "photo": "60cadcb5",
+            "label": "Autrey Mill",
+            "callout": {
+              "type": "stat",
+              "big": "1880s",
+              "label": "the Summerour farmhouse",
+              "source": "Autrey Mill Nature Preserve"
+            }
+          }
+        ]
+      },
+      {
+        "say": "In 1967, the Atlanta Athletic Club moved here, and brought golf's biggest championships with it.",
+        "chapter": "history",
+        "shots": [
+          {
+            "photo": "53188b06",
+            "label": "Atlanta Athletic Club",
+            "callout": {
+              "type": "stat",
+              "big": "1976",
+              "label": "U.S. Open · PGA Championships 1981, 2001, 2011",
+              "source": "Atlanta Athletic Club"
+            }
+          }
+        ]
+      },
+      {
+        "say": "In 1981, Georgia Tech graduates laid out Technology Park, named for the creek on an old map.",
+        "chapter": "history",
+        "shots": [
+          {
+            "photo": "cf7de7dd",
+            "label": "Technology Park",
+            "callout": {
+              "type": "stat",
+              "big": "1981",
+              "label": "Technology Park · about 1,700 acres",
+              "source": "AJC"
+            }
+          }
+        ]
+      },
+      {
+        "say": "In 2006, residents voted to become a city. About eighty-two thousand people live here now.",
+        "chapter": "growth",
+        "shots": [
+          {
+            "photo": "a7a07bd5",
+            "label": "Johns Creek City Hall",
+            "callout": {
+              "type": "stat",
+              "big": "2006",
+              "label": "became a city · 82,453 residents in 2020",
+              "source": "City of Johns Creek · U.S. Census"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Its public schools rank among Georgia's best at every level.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "fb968da0",
+            "label": "Shakerag Elementary",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "#18",
+              "label": "in Georgia · elementary school",
+              "source": "U.S. News, 2026"
+            }
+          },
+          {
+            "photo": "d6882c5f",
+            "label": "River Trail Middle",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "#4",
+              "label": "in Georgia · middle school",
+              "source": "U.S. News, 2027"
+            }
+          },
+          {
+            "photo": "9b471790",
+            "label": "Northview High",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "#8",
+              "label": "in Georgia · high school",
+              "source": "U.S. News, 2026–27"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Two more high schools are in the state's top twenty-five, and ninety-seven percent of their students graduate.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "f99a56d8",
+            "label": "Chattahoochee High",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "#15",
+              "label": "in Georgia · high school · 97% graduate",
+              "source": "U.S. News, 2026–27 · Fulton County Schools"
+            }
+          },
+          {
+            "photo": "0030b237",
+            "label": "Johns Creek High",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "#23",
+              "label": "in Georgia · high school · 97% graduate",
+              "source": "U.S. News, 2026–27 · Fulton County Schools"
+            }
+          }
+        ]
+      },
+      {
+        "say": "The Chattahoochee River forms its border with Gwinnett County, with quiet water and launches for kayaks.",
+        "chapter": "outdoor",
+        "shots": [
+          {
+            "photo": "47a33843",
+            "label": "Chattahoochee River",
+            "weight": 7
+          },
+          {
+            "photo": "2a1b5f41",
+            "label": "Abbotts Bridge",
+            "weight": 7
+          }
+        ]
+      },
+      {
+        "say": "In 2023, Cauley Creek Park opened on two hundred acres by the river, doubling the city's parkland.",
+        "chapter": "outdoor",
+        "shots": [
+          {
+            "photo": "90a94c55",
+            "label": "Cauley Creek Park",
+            "weight": 8,
+            "callout": {
+              "type": "stat",
+              "big": "203",
+              "label": "acres · opened 2023, doubling the city's parks",
+              "source": "City of Johns Creek"
+            }
+          },
+          {
+            "photo": "d06615b0",
+            "label": "Cauley Creek Park",
+            "weight": 6
+          }
+        ]
+      },
+      {
+        "say": "Next to it, a 1912 cotton bridge, closed for fifty years, came back as a footbridge.",
+        "chapter": "outdoor",
+        "shots": [
+          {
+            "photo": "4145bfce",
+            "label": "Rogers Bridge",
+            "callout": {
+              "type": "stat",
+              "big": "1912",
+              "label": "rebuilt for walkers and bikes · 2023",
+              "source": "City of Johns Creek"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Downtown Atlanta is thirty miles south: about forty-five minutes, more at rush hour.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "b11407a1",
+            "callout": {
+              "type": "stat",
+              "big": "~45 min",
+              "label": "to downtown Atlanta · 50–75 at rush hour",
+              "source": "30 mi · Google Maps, typical traffic"
+            }
+          }
+        ]
+      },
+      {
+        "say": "And this year it built a center: a lakeside park behind City Hall, with a stage over the water.",
+        "chapter": "downtown",
+        "shots": [
+          {
+            "photo": "53205082",
+            "label": "The Boardwalk at Town Center",
+            "weight": 8,
+            "callout": {
+              "type": "stat",
+              "big": "2026",
+              "label": "The Boardwalk at Town Center · opened May 8",
+              "source": "City of Johns Creek"
+            }
+          },
+          {
+            "photo": "756e96a9",
+            "label": "The Boardwalk at Town Center",
+            "weight": 6
+          }
+        ]
+      },
+      {
+        "say": "Johns Creek. The best place to live in America, and now a place to gather, too.",
+        "chapter": "overview",
+        "shots": [
+          {
+            "photo": "2719b046",
+            "label": "Newtown Park"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 # City film & city card — playbook
 
-**Status**: in use · **Last updated**: 2026-11-15 · **Built on**: Suwanee, GA (phase318–333)
+**Status**: in use · **Last updated**: 2026-11-16 · **Built on**: Suwanee, GA (phase318–333), Johns Creek, GA (phase344)
 **Read this before making the next city** (Johns Creek → Alpharetta → Milton → Cumming → Sugar Hill/Buford).
 
 Suwanee took fifteen phases, two rejected finished films and a dozen assemblies.
@@ -75,19 +75,29 @@ chapters, in order — reuse the order, not the words:
 ## 4. Steps for the next city
 
 1. **Row**: insert into `cities` (slug, name, state, county, lat/lng of the town
-   centre, `geo_unit_id` = the feed's `city:<slug>` unit).
+   centre, `geo_unit_id` = the feed's `city:<slug>` unit), `status = 'inactive'`
+   until the film has been checked.
 2. **Research → profile**: write `scripts/admin/city-profiles/<slug>.json`
    (rankings, compare-vs-state, history with short labels, growth series, schools
    by level, getting around with drive minutes, planning, sources). Validate with
    `pnpm city:profile <slug> --check`.
+   - census.gov (QuickFacts and the API) and usnews.com refuse scripts from here.
+     ACS 5-year figures: MMCG Analytics / Data USA, which name the vintage. School
+     ranks: Patch's write-up of each U.S. News list; usnews.com pages via search.
+     Drive times: Google Routes (`computeRoutes`, `BEST_GUESS`, a weekday 10:30 and
+     7:45 departure) — `PESSIMISTIC` overstates them by a third.
 3. **Pipeline photos**: `pnpm tour <slug> --city` (research → resolve → photos).
+   Then check every resolved place is IN the city: Johns Creek's research returned
+   Suwanee's Town Center Park and Peachtree Corners' Forum. Reject those, single
+   businesses and dog parks at the place level (`city_pois.status = 'rejected'`)
+   before topping up, so no photos are fetched for them.
 4. **More photos** — the pipeline's ~40 are never enough (Suwanee: ~10 usable subjects):
    - `pnpm city:photos <slug> topup` — up to 10 Google photos per place;
    - `pnpm city:photos <slug> place "<name>"` — schools, colleges, new parks, the
      town centre; refused if it resolves >15 km away;
    - `pnpm city:photos <slug> commons-search "<query>"`, then `commons "<label>" "File:…"` —
      public domain / CC0 / CC BY only (share-alike is refused: a film is a derivative work).
-   - Then `pnpm tour <slug> --city --steps tag,filter`.
+   - Then `pnpm tour <slug> --city --steps tag` (the filter runs at the end of tag).
    - **Verdicts are the city's own** (phase343): filter, plan and the review page
      at `/admin/pipeline/city-tours/<id>` read and write `city_poi_photos`, never
      the shared `poi_photos.status`. What communities and other cities decided is
@@ -125,3 +135,6 @@ chapters, in order — reuse the order, not the words:
   `mobile_events` timestamps) — one round of feedback was about a build he
   reviewed before the fix went live.
 - Running `biome --write` on a whole folder: it reformats unrelated files.
+- Writing a line before knowing a photo exists for it: Medley (Johns Creek's new
+  district) had only a restaurant front with people in it, so it is on the page,
+  not in the film. Look at the contact sheet first, then write.
