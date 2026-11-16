@@ -45,6 +45,32 @@ opening from the one before it. What stays fixed is §3 and the city page.
 
 14 lines, ~200 words, ~25 shots, cuts every 3–5 s.
 
+### 2.1 The spine is chosen per city (owner 2026-11-16: "保证基准不乱 并且变化多一些")
+
+**Fixed for every city** — the baseline: the rules in §3; the facts a film must
+cover (one credible claim, schools at every level, the commute, what is new); the
+city page's structure, which is where cities stay comparable.
+
+**Chosen per city**: the spine, the opening, the hero subject, the form (length,
+voice, pacing). Before writing, answer "what does only this city have?" — if the
+answer fits the city next door, keep researching. Spines so far:
+
+| Spine | How it runs | Suits |
+|---|---|---|
+| Claim → proof | one sentence of what the city IS, then evidence in chapter order | a city with one clear thesis (Suwanee) |
+| Contradiction | now-first: the surprising gap, "it had X, it had Y…", the gap closed; history one line | a city with a tension (Johns Creek) |
+| A route | follow a river, a road or a greenway; facts appear where the route passes them | a city with a strong line through it |
+| A Saturday | one day, morning to night; figures only as callouts (direction D, phase324) | a city people use on foot |
+| A hero subject | one signature thing takes a third of the film | horse country, a lake, a mill town |
+| A calendar | the year's events as the spine; culture first | only with licence-clean event photos |
+
+No two consecutive cities share a spine or an opening. Record each film here:
+
+| City | Spine | Opens on | History | Hero | Length |
+|---|---|---|---|---|---|
+| Suwanee | Claim → proof | aerial of Town Center + the claim | 2 lines + growth | the downtown it built | ~1:50 |
+| Johns Creek | Contradiction | a pond + the #1 ranking | 1 line (~10 s) | golf: Bobby Jones's club, four majors | ~1:30 |
+
 ## 3. Rules the owner set (each one cost a round)
 
 **Pictures**
@@ -140,6 +166,11 @@ opening from the one before it. What stays fixed is §3 and the city page.
   `mobile_events` timestamps) — one round of feedback was about a build he
   reviewed before the fix went live.
 - Running `biome --write` on a whole folder: it reformats unrelated files.
+- Planning without reading the plan's warnings: a photo with a paid Seedance clip
+  plays for a fixed 4 s, so a longer line over it runs late — give that line a
+  second photo. The CLI now prints the warnings.
+- A single Ken Burns shot of 9–10 s (one line, one photo): give a long line two
+  photos so the cut stays at 3–5 s.
 - Writing a line before knowing a photo exists for it: Medley (Johns Creek's new
   district) had only a restaurant front with people in it, so it is on the page,
   not in the film. Look at the contact sheet first, then write.

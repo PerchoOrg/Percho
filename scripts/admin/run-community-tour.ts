@@ -317,8 +317,13 @@ function summarise(step: Step, result: unknown): string {
       return `${r.tagged}/${r.total} tagged${
         r.unreached ? `, ${r.unreached} not reached — run tag again` : ''
       }${r.failed ? `, ${r.failed} failed` : ''}`;
-    case 'plan':
-      return `${r.shots} shots, ${r.approved} approved, ${r.unapproved} unapproved`;
+    case 'plan': {
+      // A city plan's warnings name the lines that will not fit their clips.
+      const warnings = (r.plan as { warnings?: string[] } | undefined)?.warnings ?? [];
+      return `${r.shots} shots, ${r.approved} approved, ${r.unapproved} unapproved${warnings
+        .map((w) => `\n  WARNING ${w}`)
+        .join('')}`;
+    }
     case 'generate':
       return `${r.created} clips queued, ${r.requeued} requeued`;
     case 'assemble':
