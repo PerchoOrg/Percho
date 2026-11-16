@@ -106,31 +106,49 @@ export function ExploreBody({
 	const sparkMax = homeValue
 		? axisTop(homeValue.series.flatMap((p) => [p.value, p.baseline]))
 		: 1;
+	// Half tiles sit two to a row; when their number is odd the last one takes
+	// the row, so the grid never ends on a hole. A computed profile often has
+	// only one or three (no dues without research, no nearby without a film).
+	const halves = [
+		homeValue && "homeValue",
+		dues && "dues",
+		nearby && "nearby",
+		words && "words",
+	].filter(Boolean);
+	const lone = halves.length % 2 === 1 ? halves[halves.length - 1] : null;
 
 	return (
 		<>
-			<View style={styles.verdict}>
-				<View style={styles.verdictCol}>
-					{verdict.good.map((line) => (
-						<View key={line} style={styles.verdictLine}>
-							<View style={[styles.mark, styles.markGood]}>
-								<Text style={styles.markText}>✓</Text>
-							</View>
-							<Text style={styles.verdictText}>{line}</Text>
+			{/* A computed profile leads with a finding only when one is strong
+			    enough; with none, the page opens on its tiles. */}
+			{verdict.good.length + verdict.watch.length > 0 && (
+				<View style={styles.verdict}>
+					{verdict.good.length > 0 && (
+						<View style={styles.verdictCol}>
+							{verdict.good.map((line) => (
+								<View key={line} style={styles.verdictLine}>
+									<View style={[styles.mark, styles.markGood]}>
+										<Text style={styles.markText}>✓</Text>
+									</View>
+									<Text style={styles.verdictText}>{line}</Text>
+								</View>
+							))}
 						</View>
-					))}
-				</View>
-				<View style={styles.verdictCol}>
-					{verdict.watch.map((line) => (
-						<View key={line} style={styles.verdictLine}>
-							<View style={[styles.mark, styles.markWatch]}>
-								<Text style={styles.markText}>!</Text>
-							</View>
-							<Text style={styles.verdictText}>{line}</Text>
+					)}
+					{verdict.watch.length > 0 && (
+						<View style={styles.verdictCol}>
+							{verdict.watch.map((line) => (
+								<View key={line} style={styles.verdictLine}>
+									<View style={[styles.mark, styles.markWatch]}>
+										<Text style={styles.markText}>!</Text>
+									</View>
+									<Text style={styles.verdictText}>{line}</Text>
+								</View>
+							))}
 						</View>
-					))}
+					)}
 				</View>
-			</View>
+			)}
 
 			<View style={styles.grid}>
 				{ranks.length > 0 && (
@@ -154,12 +172,20 @@ export function ExploreBody({
 								</View>
 							))}
 						</View>
+						{/* Whose schools these are — nearby, not assigned — belongs
+						    beside the ranks, not behind a tap. */}
+						{!!profile.ranks?.note && (
+							<Text style={styles.tileNote} numberOfLines={2}>
+								{profile.ranks.note}
+							</Text>
+						)}
 					</Tile>
 				)}
 
 				{homeValue && (
 					<Tile
 						label="Home value"
+						wide={lone === "homeValue"}
 						width={half}
 						onPress={() => setSheet("homeValue")}
 					>
@@ -188,7 +214,12 @@ export function ExploreBody({
 				)}
 
 				{dues && (
-					<Tile label="Dues" width={half} onPress={() => setSheet("dues")}>
+					<Tile
+						label="Dues"
+						wide={lone === "dues"}
+						width={half}
+						onPress={() => setSheet("dues")}
+					>
 						<Text style={styles.figure}>
 							{dues.display}
 							<Text style={styles.figureUnit}>{`  ${dues.period}`}</Text>
@@ -207,7 +238,12 @@ export function ExploreBody({
 				)}
 
 				{nearby && (
-					<Tile label="Nearby" width={half} onPress={() => setSheet("nearby")}>
+					<Tile
+						label="Nearby"
+						wide={lone === "nearby"}
+						width={half}
+						onPress={() => setSheet("nearby")}
+					>
 						<Text style={styles.figure}>
 							{nearby.near} of {nearby.stops.length}
 						</Text>
@@ -221,6 +257,7 @@ export function ExploreBody({
 				{words && (
 					<Tile
 						label="Residents say"
+						wide={lone === "words"}
 						width={half}
 						onPress={() => setSheet("words")}
 					>
@@ -369,6 +406,13 @@ const styles = StyleSheet.create({
 		marginTop: 5,
 	},
 	tiny: { ...textStyles.footnote, fontSize: 10.5, color: colors.ink2 },
+	tileNote: {
+		...textStyles.footnote,
+		fontSize: 10.5,
+		lineHeight: 14,
+		color: colors.ink2,
+		marginTop: 6,
+	},
 
 	rankCells: { flexDirection: "row", gap: GAP, marginTop: 6 },
 	rankCell: { flex: 1, minWidth: 0 },

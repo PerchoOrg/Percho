@@ -6,7 +6,7 @@
   },
   "ranks": {
     "rows": [
-      { "group": "Schools", "label": "Elementary", "note": "two zones", "rank": "#3 · #6", "of": "of 1,220 in GA", "percentile": 99.6, "percentile2": 99.8, "tile": "#3–6" },
+      { "group": "Schools", "label": "Elementary", "note": "two serve it", "rank": "#3 · #6", "of": "of 1,220 in GA", "percentile": 99.6, "percentile2": 99.8, "tile": "#3–6" },
       { "group": "Schools", "label": "Middle", "note": "Webb Bridge", "rank": "#7", "of": "of 472 in GA", "percentile": 98.7, "tile": "#7" },
       { "group": "Schools", "label": "High", "note": "Alpharetta HS", "rank": "#31", "of": "of 443 in GA", "percentile": 93.2, "tile": "#31" },
       { "group": "Homes", "label": "Home value", "note": "$747K", "rank": "#7", "of": "of 203 metro ZIPs", "percentile": 97, "tile": "#7" },
@@ -19,7 +19,7 @@
       { "name": "Webb Bridge MS", "url": "https://webbbridge.fultonschools.org/" },
       { "name": "Alpharetta HS", "url": "https://alpharettahs.fultonschools.org/" }
     ],
-    "note": "Which elementary depends on the street."
+    "note": "Two elementaries serve Windward; the address decides. Ask the district."
   },
   "homeValue": {
     "area": "ZIP 30005",

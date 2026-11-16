@@ -78,7 +78,7 @@ function Ranks({ ranks }: { ranks: NonNullable<CommunityProfile["ranks"]> }) {
 					<View style={styles.rankRight} />
 				</View>
 				<Text style={styles.caption}>
-					The dot is this community; the tick is the median.
+					The dot is where it stands; the tick is the median.
 				</Text>
 			</View>
 			{(ranks.schools?.length ?? 0) > 0 && (
