@@ -24,7 +24,12 @@ answers **"what is this place as a whole"** — not "what is near this house".
 
 Open on one sentence that says what the city IS ("Most suburbs just spread.
 Suwanee built itself a downtown."). Every line after it is evidence. Suwanee's
-chapters, in order — reuse the order, not the words:
+chapters, in order. **This table is Suwanee's film, not a template** — owner
+2026-11-16, on Johns Creek, which followed it line for line and spent 41 of
+110 s on history: "刚开始一段历史讲了很多 … 不要千篇一律完全仿照suwanee 有没有什么
+特色的 形式也不一定都一样". Start from what only this city has; history is one
+line unless history IS the city; the next city takes a different spine and
+opening from the one before it. What stays fixed is §3 and the city page.
 
 | Chapter (`chapter`) | What the line does | Typical figure |
 |---|---|---|

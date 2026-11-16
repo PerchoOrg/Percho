@@ -23,6 +23,13 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-16 08:55 UTC — phase344.1: owner on Johns Creek — too much history, do not clone Suwanee
+
+**Objective**: Owner on the 1:49 film: "刚开始一段历史讲了很多 不一定重做但是这个feedback你要知道 不要千篇一律完全仿照suwanee 有没有什么特色的 形式也不一定都一样 … 你再想想别的方案？保证基准不乱 并且变化多一些".
+**Finding**: history (32 s) plus cityhood (9 s) is 41 of ~110 s, five of fourteen lines — the script reused Suwanee's chapter order because the playbook said "reuse the order". What only Johns Creek has was underplayed: the country's top-ranked place to live had no downtown until 2026; Bobby Jones's club and four majors; a city that began as an office park; its festivals (International Festival, Diwali on the Boardwalk), a symphony orchestra.
+**Actions**: playbook §2 now says the chapter table is Suwanee's film, not a template. Nothing re-cut ("不一定重做"). Proposed to the owner in chat: a fixed baseline (picture/word rules, the facts every city covers, the city page) and a per-city spine, opening, hero subject and form, with no two consecutive cities sharing a spine — his pick pending.
+**Cost of phase344** (list prices, not from the billing console): ~169 Google photo downloads, ~35 text searches, ~30 place lookups, 16 route calls, one grounded research call and 181 photo tags — about $3–4, likely inside Google's monthly free usage; 28 of the day's 100 TTS requests; no new Seedance (the opening reuses a clip bought 2026-08-23).
+
 ## 2026-11-16 08:10 UTC — phase344: Johns Creek, the second city film
 
 **Objective**: Owner: "准备好了我们做下一个city". Next in the playbook's order (Johns Creek → Alpharetta → Milton → Cumming → Sugar Hill/Buford), run end to end under the playbook and phase343's per-city verdicts.
