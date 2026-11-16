@@ -284,6 +284,32 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_customers: {
+        Row: {
+          agent_id: string
+          created_at: string
+          stripe_customer_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          stripe_customer_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          stripe_customer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_customers_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buyers: {
         Row: {
           avatar_url: string | null
@@ -737,6 +763,63 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "community_likes_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_partnerships: {
+        Row: {
+          agent_id: string
+          community_id: string
+          created_at: string
+          current_period_end: string | null
+          hold_expires_at: string | null
+          id: string
+          last_event_at: string | null
+          status: string
+          stripe_checkout_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          community_id: string
+          created_at?: string
+          current_period_end?: string | null
+          hold_expires_at?: string | null
+          id?: string
+          last_event_at?: string | null
+          status?: string
+          stripe_checkout_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          community_id?: string
+          created_at?: string
+          current_period_end?: string | null
+          hold_expires_at?: string | null
+          id?: string
+          last_event_at?: string | null
+          status?: string
+          stripe_checkout_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_partnerships_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_partnerships_community_id_fkey"
             columns: ["community_id"]
             isOneToOne: false
             referencedRelation: "communities"
@@ -3495,6 +3578,18 @@ export type Database = {
             Returns: string
           }
       agent_is_public: { Args: { p_agent_id: string }; Returns: boolean }
+      claim_partner_seat: {
+        Args: {
+          p_agent_id: string
+          p_community_id: string
+          p_hold_until: string
+          p_seats: number
+        }
+        Returns: {
+          partnership_id: string | null
+          reason: string
+        }[]
+      }
       claim_community: {
         Args: { p_community_id: string }
         Returns: {
