@@ -17,6 +17,12 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-15
+- **Every neighbourhood now has the one-look page.** Where the nearest
+  schools rank in Georgia, what homes in its city are worth and how that has
+  moved against the metro, what a month of owning costs before the mortgage,
+  the words its residents use that their neighbours don't, and links to its
+  Nextdoor page and its own site. School ranks are for nearby schools — the
+  page says so, because it does not know attendance zones.
 - **A neighbourhood's page you can read in one look (Windward first).** Under
   the film: three things it is good for and three to think twice about, then
   a handful of tiles — where its schools and home values rank, what homes are

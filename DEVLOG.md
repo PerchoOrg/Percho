@@ -23,6 +23,25 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-16 01:19 UTC — phase340: the one-screen page for every community, computed
+
+**Objective**: Owner, after opening Windward's new page (phase339): "可以 apply to all other communities".
+**Actions**:
+- `apps/web/lib/communities/profile-build.ts` (pure, 12 tests) builds the same document from what is already held: the nearest scored school at each level ranked against every Georgia school of that level; the city's Zillow home value and five-year growth ranked against metro Atlanta's 146 cities; the community's Nextdoor size against its city's; the city's value year by year against the metro, with a month's holding cost from the county's `area_metrics`; the words residents use, by how rare each is in their city (the whole state when the city has under 30 communities); its Nextdoor page and its own site; its city's dated events.
+- `scripts/admin/upsert-community-profile.ts` is now the one writer for both kinds: `--all` or a slug, dry run unless `--apply`, pages every read, writes only rows whose profile differs. A researched document under `community-profiles/` is laid over the computed one block by block (`mergeProfile`); Windward's stays as it was.
+- `scripts/admin/import-zhvi.ts` cuts Zillow's public city and metro files to `data/zhvi-ga.json` (517 Georgia cities, 11 Septembers each, ~200 KB); `data/city-events.json` holds Alpharetta's four dated events.
+- App: the verdict is drawn only when it has lines; the ranks tile prints the block's note; an odd number of half tiles gives the last one the row. Schema: verdict lines up to 30 characters and possibly none, `words.lead` up to 16.
+**Decisions**:
+- **Nearby, never assigned.** `attendance_zones` has no polygons and the narration is already forbidden attendance phrasing, so a school row is the nearest one (or the one the community's own place list names, which is what its film visits — Aberdeen's page says Riverwatch because its film does), the ranks note says "not an attendance zone" on the tile itself, and the verdict says "nearby". Windward's researched note lost the word "zones" for the same reason.
+- **No verdict line is a low school score** — a page telling a buyer to think twice about a neighbourhood's schools is steering. The rank is on the track, neutrally.
+- **The words block is about the place.** 47 of Nextdoor's words may be charted; "Family Friendly", "Safe", "Security", "Diversity", "Kids", "Young" (who lives there) and "Nice", "Pleasant", "Atmosphere" (nothing) are left out, and 13 slight ones ("Birds", "Yards") are charted but never lead the page. The old page showed "Safe" and "Family Friendly" as reasons; the new one does not. Owner to confirm.
+- **Nothing city-wide in the verdict.** A first cut put the city's value trend there; every community in a city then said the same line. The verdict is about this community; the trend is the tile's.
+- City-level home value for everyone but Windward (whose researched block is its ZIP): `communities.zip` is empty on all rows.
+**Result (dry run over 22,730)**: a profile for 22,729; ranks 22,727, home value 21,444 (holding cost 21,071), words 7,836, links 8,679, events 912, a verdict on 11,614 — 9,866 with one ✓ line, 1,653 with two; 360 "Big" lines. One community has nothing to say and keeps the old page.
+**Issues**: `lib/docs/devlog-order.test.ts` failed on main after phase339.2 — my doing: I had replaced my three guessed phase338 times with commit times, which put them under phase337's own guessed time (23:20, committed 22:16). The three entries around it (phase337, 336.5, 336.4) now carry their commit times as well, all read from `git log`.
+**Risks**: Zillow asks for attribution (the source line carries it) and its terms are worth a read before the store release; the holding cost leans on `property_tax_rate_pct`, still marked estimated; a school rank is one year's Milestones score; events are one city, by hand.
+**Next steps**: owner looks at a few communities with and without films; say whether "Safe" / "Family Friendly" should come back; a ZIP per community would make home value local.
+
 ## 2026-11-15 23:44 UTC — phase339: the one-screen community page in the app, on Windward
 
 **Objective**: Owner, after the one-screen demo (phase338.2) and the Reddit question: "先暂时不导入reddit comments, 把现在的版本push for test". Read as: build that page in the app, without anything from Reddit, so he can test it on the phone.
@@ -75,7 +94,7 @@ rotation, not on the way in.
 **Decisions**: the three are angles (rank / rhythm / trade-off), not skins — sections can be mixed. Rank tracks and word rarity need no new source; voices need Reddit's Data API (commercial use needs their approval) plus a classifier pass; events need a per-metro job and an "as of" date.
 **Next steps**: owner picks a direction or a mix; then the real work is the two missing sources, and deciding whether the fair-housing rule that keeps `avg_income` off the page also covers the owner-occupied comparison.
 
-## 2026-11-15 23:20 UTC — phase337: a shared link opens the swipe deck with that card on top; one link in Messages
+## 2026-11-15 22:16 UTC — phase337: a shared link opens the swipe deck with that card on top; one link in Messages
 
 **Objective**: Owner on build 11: "发送message 会有两个链接 并且跳转到app的explore页面 不是swipe的页面".
 **Actions**:
@@ -84,7 +103,7 @@ rotation, not on the way in.
 **Decisions**: the card comes from the pool rather than being built from the detail API, so it is exactly the card a swipe reaches (its film, segments, signals and swipe events); the cost is a page or two of fetching for a community deep in the pool.
 **Issues**: JS only — build 11 picks it up from Metro. Not testable here (no simulator); owner checks on the phone.
 
-## 2026-11-15 22:50 UTC — phase336.5: dev client 1.0.1 (11) with universal links, in TestFlight
+## 2026-11-15 22:09 UTC — phase336.5: dev client 1.0.1 (11) with universal links, in TestFlight
 
 **Objective**: Owner: "最新的build" — the build that carries phase335's `associatedDomains`.
 **Finding**: the App ID `co.percho.app` (`6TNYULX4NA`) had only IN_APP_PURCHASE and APPLE_ID_AUTH. A non-interactive `eas build` does not sync capabilities, so the first build (`f6878509`) would have failed signing; it was cancelled.
@@ -92,7 +111,7 @@ rotation, not on the way in.
 **Learnings**: a new entitlement in `app.json` needs its capability on the App ID before a non-interactive build — check `GET /v1/bundleIds?filter[identifier]=co.percho.app&include=bundleIdCapabilities` first. Build 11 is a DEV CLIENT: never attach it to an App Store version; a store release of this work needs a production build (≥ 12).
 **Next steps**: owner installs 11 from TestFlight; tap a `www.percho.co/watch/…` link in Messages/Notes → should open the app on that community or city. (Inside WeChat, links stay in WeChat's browser — WeChat does not hand universal links to other apps.)
 
-## 2026-11-15 22:10 UTC — phase336.4: no photo-credit line on the shared film
+## 2026-11-15 21:59 UTC — phase336.4: no photo-credit line on the shared film
 
 **Objective**: Owner: "去掉flim photo那一块".
 **Actions**: `WatchFilm` drops its "Film photos by …" line and its `credits` prop; the two `/watch/` pages stop reading credits.

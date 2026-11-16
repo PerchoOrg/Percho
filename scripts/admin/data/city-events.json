@@ -1,0 +1,11 @@
+{
+  "alpharetta": {
+    "source": "Awesome Alpharetta",
+    "events": [
+      { "date": "2026-11-21", "title": "Tree lighting", "where": "Downtown Alpharetta · free", "url": "https://www.awesomealpharetta.com/events/dont-miss-events/" },
+      { "date": "2026-11-22", "title": "Lighting of Avalon", "where": "Avalon", "url": "https://www.awesomealpharetta.com/event/the-lighting-of-avalon/" },
+      { "date": "2026-11-22", "until": "2027-01-18", "title": "Avalon on Ice", "where": "Avalon", "url": "https://www.awesomealpharetta.com/event/the-lighting-of-avalon/" },
+      { "date": "2026-12-04", "until": "2027-01-04", "title": "Lights on the Loop", "where": "Alpha Loop · nightly, free", "url": "https://www.awesomealpharetta.com/lights-on-the-loop-2026/" }
+    ]
+  }
+}

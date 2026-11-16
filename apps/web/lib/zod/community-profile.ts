@@ -19,8 +19,8 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const link = z.string().url().startsWith('https://');
 /** A figure as it is printed: "$747K", "#3 · #6". */
 const display = z.string().min(1).max(16);
-/** One verdict line — half the page wide. */
-const verdictLine = z.string().min(3).max(26);
+/** One verdict line — half the page wide, two lines at most. */
+const verdictLine = z.string().min(3).max(30);
 
 const rank = z.object({
   group: z.string().min(1).max(16),
@@ -36,7 +36,10 @@ const rank = z.object({
 export const communityProfileSchema = z.object({
   asOf: day,
   verdict: z.object({
-    good: z.array(verdictLine).min(1).max(3),
+    // Both may be empty: a computed profile leads with a finding only when one
+    // is strong enough (`lib/communities/profile-build.ts`), and the page then
+    // opens on its tiles.
+    good: z.array(verdictLine).max(3),
     watch: z.array(verdictLine).max(3),
   }),
   ranks: z
@@ -69,7 +72,7 @@ export const communityProfileSchema = z.object({
       holding: z
         .object({
           display,
-          basis: z.string().min(1).max(72),
+          basis: z.string().min(1).max(80),
           rows: z
             .array(
               z.object({
@@ -110,7 +113,7 @@ export const communityProfileSchema = z.object({
     .optional(),
   words: z
     .object({
-      lead: z.string().min(1).max(12),
+      lead: z.string().min(1).max(16),
       leadNote: z.string().min(1).max(30),
       scope: z.string().min(1).max(40),
       rows: z
@@ -145,6 +148,12 @@ export type StoredCommunityProfile = z.infer<typeof communityProfileSchema>;
 // compile when the two drift.
 const _fitsTheWire = (p: StoredCommunityProfile): CommunityProfile => p;
 void _fitsTheWire;
+
+/**
+ * A researched document under `scripts/admin/community-profiles/`: any of the
+ * blocks, each replacing the computed one (`mergeProfile`).
+ */
+export const communityProfileResearchSchema = communityProfileSchema.partial();
 
 /** A stored profile, or null when the column is empty or no longer fits. */
 export function parseCommunityProfile(raw: unknown): StoredCommunityProfile | null {
