@@ -109,6 +109,7 @@ No React in here. If it renders, it belongs in `app/`.
 | `geo/` | Geometry — `distance.ts` (the one haversine, miles and meters, plus bounding boxes), point-in-polygon, and `find-community.ts`, which asks the `match_community` RPC rather than computing anything itself. |
 | `bgm/` | Background-music library: catalogue, storage paths, vibe state. |
 | `cloudflare/` | Cloudflare Stream URLs and thumbnails. |
+| `billing/` | Community Partner billing (phase341): an agent pays monthly through Stripe for one of a community's two partner seats. `stripe.ts` is Stripe over plain fetch plus webhook signature checks (no SDK); `partnership.ts` is the rules without I/O — seat count, hold times, and the one row update each Stripe event implies. Routes: `api/billing/checkout`, `api/billing/portal` (both 404 unless `BILLING_ENABLED=true`) and `api/webhooks/stripe`, the only writer of a partnership's status. Seats are held in SQL by `claim_partner_seat`, which only the service role may run. Nothing in the dashboard or the app links to any of it yet. |
 | `buyer/` | Anonymous-buyer identity and likes (device id, no account required). |
 | `copy/` | Static marketing copy kept out of components. |
 | `worker-hub/` | What the `/admin` Worker console reads: the queue specs the two local workers drain, the launchd/`ps`/log readers for the box they run on, and the alert rules over both. The host readers answer "not the worker host" everywhere but the Mac mini. |

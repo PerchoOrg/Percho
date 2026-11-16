@@ -23,6 +23,23 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-16 01:44 UTC — phase341: Community Partner billing, backend only
+
+**Objective**: Owner, after the pricing research (four options, recommended A+B merged as a "Community Partner" plan): "实现收费的后端功能 暂时不在app里显示". He declined the clarifying questions, so the recommended defaults stand: Stripe; one product, a monthly Community Partner subscription; 2 seats per community. Any of the three is a one-line change if he rules otherwise.
+**Actions**:
+- `supabase/migrations/20261116000000_community_partnerships.sql`: `billing_customers` (agent ↔ Stripe customer) and `community_partnerships` (pending → active / past_due / canceled / expired, Stripe ids, period end, `last_event_at`). RLS: an agent reads their own rows; no write policies — the service role writes. `claim_partner_seat(agent, community, seats, hold_until)` holds a seat under a per-community advisory lock, releases lapsed holds first, and hands back the agent's own open hold as `pending`; EXECUTE revoked from public/anon/authenticated.
+- `lib/billing/stripe.ts` (Stripe over fetch, bracket form encoding, `Stripe-Signature` check with several `v1` values for secret rolls), `lib/billing/partnership.ts` (seats, hold times, Stripe status → partnership status, event → row update), `lib/zod/billing.ts`. 17 tests.
+- Routes: `POST /api/billing/checkout` `{ community_id }` → `{ url }` (Stripe Checkout, 30-minute session, seat held 40 minutes); `POST /api/billing/portal` → `{ url }`; `POST /api/webhooks/stripe`. The first two 404 unless `BILLING_ENABLED=true`; the webhook runs regardless, so a live subscription keeps its state while checkout is off.
+- `database.types.ts` edited by hand for the two tables and the function (`db:types` needs a local database). `.env.example`: `BILLING_ENABLED`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_COMMUNITY_PARTNER`. ARCHITECTURE: a `billing/` row.
+**Decisions**:
+- No Stripe SDK: three calls and one HMAC; the Cloudflare webhook already verifies by hand. Nothing billing-related reaches a client bundle.
+- The seat is held at checkout, not at payment, so two agents cannot both pay for the last seat. The hold outlives the Stripe session by 10 minutes so a last-minute payment still finds it.
+- Rows are found by `partnership_id` metadata stamped on both the session and the subscription, so events apply in any order; an event older than `last_event_at` changes nothing (replays and reordering are no-ops). No events table — every update is idempotent under that guard.
+- Price lives in Stripe (`STRIPE_PRICE_COMMUNITY_PARTNER`), not in code, so $149 can change without a deploy.
+- No checkout idempotency key: `expires_at` differs per call and Stripe refuses a reused key with different parameters.
+**Issues**: nothing has talked to Stripe — there is no account or key yet. The webhook and checkout are verified by unit tests and `next build` only.
+**Next steps (owner)**: create the Stripe account; a recurring monthly Price; a webhook endpoint at `https://www.percho.co/api/webhooks/stripe` subscribed to checkout.session.completed / expired and customer.subscription.created / updated / deleted; enable the Customer Portal; then set the four env vars in Vercel (test-mode keys first). Then: one test-mode checkout end to end before any UI. Also needs a Georgia real-estate attorney's read that a flat partner fee is not a referral fee (research note, 2026-11-15).
+
 ## 2026-11-16 01:19 UTC — phase340: the one-screen page for every community, computed
 
 **Objective**: Owner, after opening Windward's new page (phase339): "可以 apply to all other communities".
