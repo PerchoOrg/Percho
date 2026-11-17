@@ -488,6 +488,20 @@ export function CommunityFace({
 		[bounds, byChapter, card.id],
 	);
 	const chapterIndex = chapterAt?.id === card.id ? chapterAt.index : 0;
+	/**
+	 * The names the row prints: each once, with the stretch a tap starts. A
+	 * film made before sections existed returns to one — "Overview" at both
+	 * ends — and a row that says a name twice reads as a mistake.
+	 */
+	const chapterNames = useMemo(() => {
+		const seen = new Set<string>();
+		return chapters.flatMap((c, index) => {
+			if (seen.has(c.name)) return [];
+			seen.add(c.name);
+			return [{ name: c.name, index }];
+		});
+	}, [chapters]);
+	const playingName = chapters[chapterIndex]?.name;
 
 	/**
 	 * A tapped chapter name starts that chapter from its first frame. The
@@ -834,28 +848,28 @@ export function CommunityFace({
 						</Animated.View>
 					)}
 				</View>
-				{/* A city film's chapters, ALL of them, in film order (owner
+				{/* A city film's sections, ALL of them, in film order (owner
 				    2026-11-17: "如果不点击下面的进度条章节名不自己显示 我怎么知道有哪些章节
-				    呢？"). The lit one is playing; a tap starts that chapter. It
-				    wraps rather than scrolls: a sideways scroll here is the deck's
-				    swipe, and eleven short words fit two lines.
+				    呢？", then "不要太多太密 大致的划分几个就好" — the server sends five
+				    at most). The lit one is playing; a tap starts it. It wraps
+				    rather than scrolls: a sideways scroll here is the deck's swipe.
 
 				    Inside the info block, under the name, so it rides up with the
 				    block and nothing has to know its height. */}
 				{byChapter && (
 					<View style={styles.chapterRow}>
-						{chapters.map((c, i) => (
+						{chapterNames.map((c) => (
 							<View
-								key={`${c.name}-${c.endFraction}`}
+								key={c.name}
 								style={styles.chapterCell}
 								{...(tapSlot
-									? { onTouchStart: arm(`${CHAPTER_TAP_PREFIX}${i}`) }
+									? { onTouchStart: arm(`${CHAPTER_TAP_PREFIX}${c.index}`) }
 									: {})}
 							>
 								<Text
 									style={[
 										styles.chapterName,
-										i === chapterIndex && styles.chapterNameOn,
+										c.name === playingName && styles.chapterNameOn,
 									]}
 								>
 									{c.name}
@@ -1117,13 +1131,14 @@ const styles = StyleSheet.create({
 	chapterRow: {
 		flexDirection: "row",
 		flexWrap: "wrap",
-		columnGap: 12,
+		columnGap: 16,
 		marginTop: 8,
 	},
-	/** The touch target: the word plus 5pt above and below. */
-	chapterCell: { paddingVertical: 5 },
+	/** The touch target: the word plus 6pt above and below. */
+	chapterCell: { paddingVertical: 6 },
 	chapterName: {
 		...redlineText.listingCard.address,
+		fontSize: 13,
 		color: "rgba(255,255,255,0.6)",
 	},
 	chapterNameOn: { color: "#FFFFFF", fontWeight: "700" },

@@ -33,6 +33,7 @@ import {
 import { parseCityProfile } from '@/lib/zod/city-profile';
 import type { CityDetailDTO, CityFilmCredits, CityFundamentals } from '@percho/shared/city';
 import { buildTourChapters } from '@percho/shared/tour-buckets';
+import { bySection } from './chapters';
 
 export interface CityFilm {
   slug: string;
@@ -129,8 +130,9 @@ export async function fetchCityFilms(
         name,
         endFraction,
       })),
-      // In the card's own segment shape, so its parser reads both alike.
-      chapters: buildTourChapters(tourSegments(film.ordered_clips)).map((c) => ({
+      // The film's SECTIONS, in the card's own segment shape so its parser
+      // reads both alike. Five at most — see `CITY_FILM_SECTIONS`.
+      chapters: buildTourChapters(bySection(tourSegments(film.ordered_clips))).map((c) => ({
         name: c.label,
         endFraction: c.endFraction,
       })),
@@ -184,7 +186,7 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
         videoUrl: streamManifestUrl(row.cf_stream_uid),
         posterUrl: streamPosterUrl(row.cf_stream_uid),
       };
-      segments = tourSegments(row.ordered_clips).map(
+      segments = bySection(tourSegments(row.ordered_clips)).map(
         ({ name, endFraction, bucket, bucketLabel }) => ({
           name,
           endFraction,

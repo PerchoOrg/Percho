@@ -427,28 +427,73 @@
         ]
       },
       {
-        "say": "From Alpharetta, downtown Atlanta is twenty-six miles down Georgia 400: forty-five minutes, sixty-five at rush hour.",
-        "chapter": "commute",
+        "say": "Alpharetta was chartered in 1858 as a county seat. In 1980 it had three thousand residents; now, sixty-six thousand.",
+        "chapter": "history",
         "shots": [
           {
-            "photo": "d1e1c711",
-            "weight": 7,
-            "callout": {
-              "type": "stat",
-              "big": "~45 min",
-              "label": "to downtown Atlanta · 65 at rush hour",
-              "source": "26 mi · Google Maps, typical traffic"
-            }
-          },
-          {
-            "photo": "cdf8b4f2",
+            "photo": "6e188c07",
+            "label": "Main Street",
             "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "22 min",
-              "label": "to Perimeter Center · 37 at rush hour",
-              "source": "12 mi · Google Maps, typical traffic"
+              "big": "1858",
+              "label": "chartered as the seat of Milton County"
             }
+          },
+          {
+            "photo": "b3d6804c",
+            "weight": 8,
+            "callout": {
+              "type": "count",
+              "from": 3128,
+              "to": 65818,
+              "label": "residents · 1980 → 2020",
+              "source": "U.S. Census Bureau",
+              "series": [
+                {
+                  "label": "1980",
+                  "value": 3128
+                },
+                {
+                  "label": "1990",
+                  "value": 13002
+                },
+                {
+                  "label": "2000",
+                  "value": 34854
+                },
+                {
+                  "label": "2010",
+                  "value": 57551
+                },
+                {
+                  "label": "2020",
+                  "value": 65818
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "say": "In 2026 Alpharetta approved rebuilding North Point Mall around a hockey arena, if the NHL awards Atlanta a team.",
+        "chapter": "future",
+        "shots": [
+          {
+            "photo": "935476f5",
+            "label": "North Point Mall",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "20,000",
+              "label": "seat arena · approved August 2026, pending an NHL team",
+              "source": "AJC"
+            }
+          },
+          {
+            "photo": "ca056548",
+            "label": "North Point Mall",
+            "weight": 5
           }
         ]
       },
@@ -541,6 +586,32 @@
         ]
       },
       {
+        "say": "From Alpharetta, downtown Atlanta is twenty-six miles down Georgia 400: forty-five minutes, sixty-five at rush hour.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "d1e1c711",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "~45 min",
+              "label": "to downtown Atlanta · 65 at rush hour",
+              "source": "26 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "cdf8b4f2",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "22 min",
+              "label": "to Perimeter Center · 37 at rush hour",
+              "source": "12 mi · Google Maps, typical traffic"
+            }
+          }
+        ]
+      },
+      {
         "say": "In Alpharetta, errands stay close: the county library is downtown, and Avalon's shops opened in 2014.",
         "chapter": "daily",
         "shots": [
@@ -562,28 +633,6 @@
           {
             "photo": "b16b07a4",
             "label": "Avalon",
-            "weight": 5
-          }
-        ]
-      },
-      {
-        "say": "In 2026 Alpharetta approved rebuilding North Point Mall around a hockey arena, if the NHL awards Atlanta a team.",
-        "chapter": "future",
-        "shots": [
-          {
-            "photo": "935476f5",
-            "label": "North Point Mall",
-            "weight": 7,
-            "callout": {
-              "type": "stat",
-              "big": "20,000",
-              "label": "seat arena · approved August 2026, pending an NHL team",
-              "source": "AJC"
-            }
-          },
-          {
-            "photo": "ca056548",
-            "label": "North Point Mall",
             "weight": 5
           }
         ]
@@ -612,55 +661,6 @@
             "photo": "ca95a5bb",
             "label": "Wills Park Equestrian Center",
             "weight": 6
-          }
-        ]
-      },
-      {
-        "say": "Alpharetta was chartered in 1858 as a county seat. In 1980 it had three thousand residents; now, sixty-six thousand.",
-        "chapter": "history",
-        "shots": [
-          {
-            "photo": "6e188c07",
-            "label": "Main Street",
-            "weight": 6,
-            "callout": {
-              "type": "stat",
-              "big": "1858",
-              "label": "chartered as the seat of Milton County"
-            }
-          },
-          {
-            "photo": "b3d6804c",
-            "weight": 8,
-            "callout": {
-              "type": "count",
-              "from": 3128,
-              "to": 65818,
-              "label": "residents · 1980 → 2020",
-              "source": "U.S. Census Bureau",
-              "series": [
-                {
-                  "label": "1980",
-                  "value": 3128
-                },
-                {
-                  "label": "1990",
-                  "value": 13002
-                },
-                {
-                  "label": "2000",
-                  "value": 34854
-                },
-                {
-                  "label": "2010",
-                  "value": 57551
-                },
-                {
-                  "label": "2020",
-                  "value": 65818
-                }
-              ]
-            }
           }
         ]
       },

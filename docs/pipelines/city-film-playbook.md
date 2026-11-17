@@ -71,7 +71,7 @@ No two consecutive cities share a spine or an opening. Record each film here:
 |---|---|---|---|---|---|
 | Suwanee | Claim → proof | aerial of Town Center + the claim | 2 lines + growth | the downtown it built | ~1:50 |
 | Johns Creek | Contradiction | a pond + the #1 ranking | 1 line (~10 s) | golf: Bobby Jones's club, four majors | ~1:30 |
-| Alpharetta | A day (first city built as chapters, §2.2) | sunset aerial of the Town Green + "a suburb people commute to" | 1 chapter (~11 s) | Tech: 700 companies, 122,000 people by day | 1:52 |
+| Alpharetta | A day → sections in a buyer's order, ending at night (first city built as chapters, §2.2) | Lake Windward from the air (Seedance) + "a suburb people commute to" | 1 chapter (~11 s) | Tech: 700 companies, 122,000 people by day | 1:54 |
 
 ### 2.2 The chapters (owner 2026-11-16/17: "模块化内容 可以让人自主选择 … 每一个章节可以做得独立一些可以单独拉出来看 … 每个city尽量覆盖")
 
@@ -97,6 +97,21 @@ one of these; the list is the same for every city.
 
 Never a chapter: safety ("安全数据先不放"), who lives there, places of worship.
 
+**What the viewer sees is five sections, not twelve chapters** (owner 2026-11-17:
+"不要太多太密 大致的划分几个就好"). The card's bar, its row of names and the page
+chips group the chapters (`CITY_FILM_SECTIONS` in `lib/cities/chapters.ts`):
+
+| Section | Its chapters |
+|---|---|
+| Overview | `overview`, `signature`, `history`, `growth`, `future` |
+| Schools | `schools` |
+| Homes | `homes` |
+| Commute | `commute` |
+| Life | `daily`, `outdoor`, `downtown`, `events` |
+
+A section is one stretch of the bar, so its chapters sit together in the film —
+the profile check refuses a split section. The sections may come in any order.
+
 **What makes a chapter watchable alone** (`lib/cities/chapters.ts` refuses a
 profile that breaks the first four; `pnpm city:profile <slug> --check`):
 - every line belongs to a chapter, and a chapter is ONE unbroken block;
@@ -105,9 +120,9 @@ profile that breaks the first four; `pnpm city:profile <slug> --check`):
 - a chapter's first sentence stands on its own — no "it also had…", no pronoun
   reaching back into the chapter before; the card prints "CITY · <chapter>";
 - at least two shots, and its own callouts;
-- on the card every chapter's NAME is visible without a touch — a wrapping row
-  under the city's name, the playing one lit, a tap starts it (owner 2026-11-17:
-  "如果不点击下面的进度条章节名不自己显示 我怎么知道有哪些章节呢？");
+- on the card every SECTION's name is visible without a touch — a row under the
+  city's name, the playing one lit, a tap starts it (owner 2026-11-17: "如果不点击
+  下面的进度条章节名不自己显示 我怎么知道有哪些章节呢？");
 - the four required chapters say the same KIND of thing in every city, so one
   city's Schools can be watched against another's.
 
@@ -246,6 +261,9 @@ seedance 比如第一个 总体不要超过三个就好".
 - Picking a photo from a landscape contact sheet: the film crops to 9:16. An
   office behind trees became a forest; a library sign became half a word. Judge
   the centre third of a landscape photo, not the whole frame.
+- Shipping a phone UI change and waiting for feedback without knowing which build
+  the owner has: a production TestFlight build never receives new screens. See
+  the memory note on builds; say it when a production build is uploaded.
 - Writing a line before knowing a photo exists for it: Medley (Johns Creek's new
   district) had only a restaurant front with people in it, so it is on the page,
   not in the film. Look at the contact sheet first, then write.
