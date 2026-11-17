@@ -204,7 +204,7 @@ describe('buildCityFilm', () => {
     expect(last.warnings.some((w) => w.startsWith('line 4 needs'))).toBe(false);
   });
 
-  it('pans a landscape photo and pushes an upright one, unless the script says otherwise', () => {
+  it('leaves the move to the directing step, unless the script names one', () => {
     const film = buildCityFilm({
       profile: profileOf([
         { say: eight, shots: [{ photo: 'aaaaaaaa' }] },
@@ -214,7 +214,45 @@ describe('buildCityFilm', () => {
       ]),
       photos,
     });
-    expect(film.shots.map((s) => s.move)).toEqual(['pan_lr', 'pull_back', 'pull_back', 'pan_rl']);
+    expect(film.shots.map((s) => s.move)).toEqual([null, null, 'pull_back', null]);
+  });
+
+  it('plays a photo the script spends Seedance on as a four-second clip', () => {
+    const film = buildCityFilm({
+      profile: profileOf([
+        {
+          say: `${eight} ${eight}`,
+          shots: [{ photo: 'aaaaaaaa', seedance: true }, { photo: 'bbbbbbbb' }],
+        },
+        { say: eight, shots: [{ photo: 'eeeeeeee' }] },
+        { say: eight, shots: [{ photo: 'ffffffff' }] },
+        { say: eight, shots: [{ photo: 'cccccccc' }] },
+      ]),
+      photos,
+    });
+    expect(film.shots[0]).toMatchObject({ engine: 'seedance', duration_s: 4, ai_generated: true });
+    expect(film.problems).toEqual([]);
+  });
+
+  it('refuses a fourth Seedance shot, counting the photos that already have a clip', () => {
+    const film = buildCityFilm({
+      profile: profileOf([
+        {
+          say: eight,
+          shots: [
+            { photo: 'aaaaaaaa', seedance: true },
+            { photo: 'bbbbbbbb', seedance: true },
+          ],
+        },
+        { say: eight, shots: [{ photo: 'eeeeeeee', seedance: true }, { photo: 'ffffffff' }] },
+        { say: eight, shots: [{ photo: 'dddddddd' }, { photo: 'cccccccc' }] },
+        { say: eight, shots: [{ photo: 'aaaaaaab' }] },
+      ]),
+      photos: [...photos, photo('aaaaaaab')],
+    });
+    expect(film.problems).toEqual([
+      '4 shots play as Seedance — a film has at most 3 (photos with a cached clip count)',
+    ]);
   });
 
   it("files each shot under its line's chapter, which the city page groups by", () => {

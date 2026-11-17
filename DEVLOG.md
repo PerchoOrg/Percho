@@ -23,6 +23,23 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-17 09:52 UTC — phase347: city films are directed by the tour orchestrator; chapter names on the card; Alpharetta re-cut
+
+**Objective**: Owner on Alpharetta: (1) "如果不点击下面的进度条章节名不自己显示 我怎么知道有哪些章节呢？" and (2) "所有照片的效果都只是左右滑动？？我们一整套的用在home 和community的编排去哪了 有针对性的对合适的照片要用seedance 比如第一个 总体不要超过三个就好".
+**Finding**: both were mine. (1) phase345 put the current chapter beside the tag and the names behind a touch on the bar; nothing listed the chapters. (2) The city plan (phase326) returns before the community plan runs, which also skipped Curator → Scheduler → Guard; `film.ts` gave every shot `defaultMove` — a landscape photo pans. Alpharetta's cut `a18e96ea`: 27 pans of 29 shots, all Ken Burns. A community film of the same size: 13 DepthFlow, 2 Seedance, a dozen moves.
+**Actions**:
+- `tour-orchestrator/scheduler.ts`: `scheduleInOrder(shots, seedanceIds)` — engine and move for a shot list whose order is fixed: the same DepthFlow quota, people ban, adjacency repair, subject preferences and no-repeat rule as `scheduleClips`, with Seedance named by the caller instead of chosen. `seedanceBlocker` says why a photo cannot be Seedance (`seedanceEligible` now reads it). `assignEngines` takes the named set. 5 tests.
+- `lib/cities/motion.ts` (pure, 5 tests) `directCityFilm`: refuses a script-named Seedance shot the blocker rejects — before anything is paid for — then `scheduleInOrder` + `guardClips` set engine, move and the Seedance prompt. A move the script names stays Ken Burns with that move; a cached Seedance clip is never re-judged; a photo with no annotation gets `defaultMove` and a warning.
+- `film.ts`: a shot may say `seedance: true` (4 s, fixed, like a cached clip); more than three Seedance shots in a film — cached ones count — is a problem; moves are no longer assigned here. `zod/city-profile.ts`: `seedance` on a shot.
+- `tour-steps/city-plan.ts`: reads each film photo's Curator annotation (`poi_photos.curator_tags`, cached as on the community side; uncached ones go to `curateBatch` in batches of 16 and are stored), then directs.
+- Card (`CommunityFace`): a wrapping row of ALL the chapter names under the city's name, the playing one lit. A name's tap is armed on touch-start as `chapter:<i>` and decided by the deck at release, like every tap on a card; the feed turns it into `jumpTo` for the top card, which seeks to the chapter's first frame and un-pauses. The tag is back to "CITY". Wrapping, not scrolling: a sideways scroll there is the deck's swipe.
+- Alpharetta re-cut: opening is now Lake Windward from the air (Seedance) — the Town Green aerial moved to `downtown`; `homes` is a cul-de-sac, City Center's homes and Lake Windward Drive; `events` ends on the July 4 fireworks over Wills Park. **Assembly `125520e2`, stream `50837f9f…`, 1:54**: 17 Ken Burns, 9 DepthFlow, 3 Seedance, 14 moves, 7 pans; checked frame by frame, narration on every line; the city's 29 approved photos are the film's 29.
+**Decisions**: Seedance is named by the script, not auto-picked — the owner asked for it "有针对性", and the cap is a count the plan can check. The guard is not bypassed for the opening: the Town Green aerial (readable signage, many people) and the fountain (street perspective) were refused, the fireworks too (people in the foreground), so the opening photo was chosen for what Seedance can do. What passes is water and foliage.
+**Cost**: three Seedance clips at $0.1396 = **$0.42** (`photo_clips.cost_usd`); 27 photos annotated by the Curator once (Gemini, cached); 12 TTS requests.
+**Not verified here**: the chapter row and its taps on a phone.
+**Verification**: web tsc 0, biome 0 errors, vitest 1337; mobile tsc 0, biome 0 errors, vitest 870.
+**Next steps**: owner checks the card and the film on the phone. Suwanee and Johns Creek keep their old cuts (pans, no chapters) until he says to redo them.
+
 ## 2026-11-17 09:12 UTC — phase346: Alpharetta, the first city built as chapters
 
 **Objective**: Owner: "可以 就这个 记录下来 做下一个城市 如果效果好 回过头把已经有的两个也重新做了". Third city, written to playbook §2.2 from the start.

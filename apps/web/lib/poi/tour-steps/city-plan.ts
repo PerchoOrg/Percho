@@ -11,13 +11,16 @@
  * current cut. For a city that verdict is the city's own (`city_poi_photos`,
  * phase343), so the review page and the film cannot disagree.
  */
-import { type CityFilm, type FilmPhoto, buildCityFilm } from '@/lib/cities/film';
+import { type CityFilm, type FilmPhoto, type FilmShot, buildCityFilm } from '@/lib/cities/film';
+import { directCityFilm } from '@/lib/cities/motion';
 import { type Verdict, approvalChanges, cityVerdict } from '@/lib/cities/photo-verdict';
 import { readCityVerdictRows, writeCityVerdicts } from '@/lib/cities/photo-verdict-store';
 import { readAllPages } from '@/lib/supabase/paginate';
 import { parseCityProfile } from '@/lib/zod/city-profile';
+import { CURATOR_VERSION, type CuratorPhoto, curateBatch } from '../tour-orchestrator/curator';
 import { voiceForCommunity } from '../tour-orchestrator/narration';
-import type { RunRow, TourDb } from './shared';
+import { type PhotoAnnotation, type PhotoMeta, annotationSchema } from '../tour-orchestrator/types';
+import { type RunRow, type TourDb, mustWrite } from './shared';
 
 export interface CityPlan {
   shots: CityFilm['shots'];
@@ -133,6 +136,18 @@ export async function planCityFilm(sb: TourDb, run: RunRow): Promise<CityPlan> {
     );
   }
 
+  // Direct it: engine and move per shot, by the code that directs a community
+  // tour, and a Seedance prompt for the shots the script spends one on.
+  const { annotations, metas } = await readShots(sb, film.shots);
+  const directed = directCityFilm({ shots: film.shots, annotations, metas, seedanceReady });
+  if (directed.problems.length > 0) {
+    throw new Error(
+      `the script cannot be directed as written:\n  ${directed.problems.join('\n  ')}`,
+    );
+  }
+  film.shots = directed.shots;
+  film.warnings.push(...directed.warnings);
+
   // `approved` = in this city's cut, exactly as a community plan stamps its
   // own — but on the city's row, never the shared photo.
   const current = new Map<string, Verdict>(
@@ -160,4 +175,102 @@ export async function planCityFilm(sb: TourDb, run: RunRow): Promise<CityPlan> {
       warnings: film.warnings,
     },
   };
+}
+
+/** The Curator sends ~230 tokens a photo back; this keeps a batch well inside its limit. */
+const CURATOR_BATCH = 16;
+
+/**
+ * The Curator's annotation and the pixel facts for each of the film's photos.
+ *
+ * Annotations are cached on the photo (`poi_photos.curator_tags`), as they are
+ * for a community tour: a photo is uploaded to the model once, ever. A photo
+ * the Curator returns nothing for is simply absent — `directCityFilm` gives it
+ * a plain move and says so.
+ */
+async function readShots(
+  sb: TourDb,
+  shots: readonly FilmShot[],
+): Promise<{ annotations: Map<string, PhotoAnnotation>; metas: Map<string, PhotoMeta> }> {
+  const annotations = new Map<string, PhotoAnnotation>();
+  const metas = new Map<string, PhotoMeta>();
+  if (shots.length === 0) return { annotations, metas };
+
+  const { data: rows } = (await sb
+    .from('poi_photos')
+    .select('id, storage_path, width_px, height_px, ai_tags, curator_tags, curator_version')
+    .in(
+      'id',
+      shots.map((s) => s.photo_id),
+    )) as {
+    data: Array<{
+      id: string;
+      storage_path: string | null;
+      width_px: number | null;
+      height_px: number | null;
+      ai_tags: { description?: string } | null;
+      curator_tags: Record<string, unknown> | null;
+      curator_version: number | null;
+    }> | null;
+  };
+  const rowById = new Map((rows ?? []).map((r) => [r.id, r]));
+
+  const uncached: CuratorPhoto[] = [];
+  for (const shot of shots) {
+    const row = rowById.get(shot.photo_id);
+    const width = row?.width_px ?? 0;
+    const height = row?.height_px ?? 0;
+    if (!row || width <= 0 || height <= 0) continue;
+    metas.set(row.id, {
+      photo_id: row.id,
+      poi_id: shot.poi_id,
+      poi_name: shot.poi_name,
+      bucket: shot.bucket,
+      width_px: width,
+      height_px: height,
+      description: row.ai_tags?.description ?? '',
+    });
+    const cached =
+      row.curator_version === CURATOR_VERSION && row.curator_tags
+        ? annotationSchema.safeParse(row.curator_tags)
+        : null;
+    if (cached?.success) {
+      annotations.set(row.id, cached.data);
+      continue;
+    }
+    if (!row.storage_path) continue;
+    // The ORIGINAL file, as on the community side: enhancement changes the
+    // light, and the Curator judges time of day from the light.
+    const { data: blob } = await sb.storage.from('listing-photos').download(row.storage_path);
+    if (!blob) continue;
+    uncached.push({
+      photo_id: row.id,
+      poi_name: shot.poi_name,
+      bucket: shot.bucket,
+      width_px: width,
+      height_px: height,
+      bytes: new Uint8Array(await blob.arrayBuffer()),
+      mime_type: 'image/jpeg',
+    });
+  }
+
+  for (let i = 0; i < uncached.length; i += CURATOR_BATCH) {
+    const { annotations: fresh } = await curateBatch(uncached.slice(i, i + CURATOR_BATCH));
+    for (const annotation of fresh) {
+      annotations.set(annotation.photo_id, annotation);
+      // Losing this silently means paying the Curator again on every plan.
+      await mustWrite(
+        `cache curator_tags(${annotation.photo_id})`,
+        sb
+          .from('poi_photos')
+          .update({
+            curator_tags: annotation,
+            curator_version: CURATOR_VERSION,
+            curated_at: new Date().toISOString(),
+          })
+          .eq('id', annotation.photo_id),
+      );
+    }
+  }
+  return { annotations, metas };
 }

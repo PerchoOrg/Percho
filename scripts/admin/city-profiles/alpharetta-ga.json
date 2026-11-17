@@ -376,8 +376,10 @@
         "chapter": "overview",
         "shots": [
           {
-            "photo": "328ad05f",
+            "photo": "4dcca2f1",
+            "label": "Lake Windward",
             "weight": 8,
+            "seedance": true,
             "callout": {
               "type": "stat",
               "big": "#2",
@@ -406,8 +408,10 @@
             }
           },
           {
-            "photo": "c8355ad6",
-            "weight": 5
+            "photo": "123d4dcd",
+            "weight": 5,
+            "label": "Sanctuary Park",
+            "seedance": true
           },
           {
             "photo": "f66fbfff",
@@ -505,8 +509,7 @@
         "chapter": "homes",
         "shots": [
           {
-            "photo": "4dcca2f1",
-            "label": "Lake Windward",
+            "photo": "c7094611",
             "weight": 7,
             "callout": {
               "type": "stat",
@@ -516,8 +519,7 @@
             }
           },
           {
-            "photo": "278afd65",
-            "label": "Lake Windward",
+            "photo": "faa0b10a",
             "weight": 6,
             "callout": {
               "type": "stat",
@@ -593,7 +595,7 @@
           {
             "photo": "b576c36e",
             "label": "Big Creek Greenway",
-            "weight": 7,
+            "weight": 6,
             "callout": {
               "type": "stat",
               "big": "8 miles",
@@ -603,12 +605,13 @@
           {
             "photo": "39c5089c",
             "label": "Big Creek Greenway",
-            "weight": 5
+            "weight": 5,
+            "seedance": true
           },
           {
             "photo": "ca95a5bb",
             "label": "Wills Park Equestrian Center",
-            "weight": 5
+            "weight": 6
           }
         ]
       },
@@ -666,8 +669,8 @@
         "chapter": "downtown",
         "shots": [
           {
-            "photo": "99e73b4d",
-            "label": "Alpharetta City Hall",
+            "photo": "328ad05f",
+            "label": "Town Green",
             "weight": 7,
             "callout": {
               "type": "stat",
@@ -676,25 +679,25 @@
             }
           },
           {
-            "photo": "7d5758a6",
-            "label": "Town Green",
+            "photo": "99e73b4d",
+            "label": "Alpharetta City Hall",
             "weight": 6
           }
         ]
       },
       {
-        "say": "On summer nights, twelve thousand people fill Ameris Bank Amphitheatre, and bands play Brooke Street Park.",
+        "say": "On summer nights, twelve thousand people fill Ameris Bank Amphitheatre, and every Fourth of July, fireworks rise over Wills Park.",
         "chapter": "events",
         "shots": [
           {
             "photo": "4d65b0d2",
             "label": "Ameris Bank Amphitheatre",
-            "weight": 5
+            "weight": 4
           },
           {
             "photo": "3ee0bd12",
             "label": "Ameris Bank Amphitheatre",
-            "weight": 7,
+            "weight": 6,
             "callout": {
               "type": "stat",
               "big": "12,000",
@@ -702,9 +705,9 @@
             }
           },
           {
-            "photo": "7828cc81",
-            "label": "Brooke Street Park",
-            "weight": 6
+            "photo": "9b87b3cb",
+            "label": "Wills Park",
+            "weight": 7
           }
         ]
       }
