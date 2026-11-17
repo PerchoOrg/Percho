@@ -66,6 +66,8 @@ export interface TourSegment {
    * own `bucket` when the assembly recorded one. Absent when neither knows.
    */
   bucket?: string;
+  /** A city film's own label for the bucket (its `signature` chapter). */
+  bucketLabel?: string;
 }
 
 interface ParsedClip {
@@ -80,6 +82,7 @@ interface ParsedClip {
    * Seedance ones do not, which is why the `community_pois` join exists.
    */
   bucket: string;
+  bucketLabel: string;
 }
 
 function parseClips(orderedClips: unknown): ParsedClip[] {
@@ -103,12 +106,17 @@ function parseClips(orderedClips: unknown): ParsedClip[] {
       // not others (phase331), and keying on the place alone merged a named
       // shot into an unnamed neighbour and showed the neighbour's blank. A
       // community clip's name is always its place's, so nothing changes there.
-      key: id ? `${id}|${name}` : name || `clip-${out.length}`,
+      //
+      // And its chapter (phase345): two shots of one place in two chapters of
+      // a city film are two stretches, or the chapter boundary between them is
+      // lost. A community place has one bucket, so again nothing changes.
+      key: id ? `${id}|${name}|${bucket}` : name || `clip-${out.length}`,
       name,
       seconds,
       distance,
       poiId: id,
       bucket,
+      bucketLabel: typeof c.bucket_label === 'string' ? c.bucket_label : '',
     });
   }
   return out;
@@ -157,6 +165,7 @@ export function tourSegments(orderedClips: unknown, xfade = TOUR_XFADE_S): TourS
       ...(clip.distance ? { distance: clip.distance } : {}),
       ...(clip.poiId ? { poiId: clip.poiId } : {}),
       ...(clip.bucket ? { bucket: clip.bucket } : {}),
+      ...(clip.bucketLabel ? { bucketLabel: clip.bucketLabel } : {}),
     });
   }
 

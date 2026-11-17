@@ -248,6 +248,8 @@ function signalIcons(card: CommunityCardV3): CardIconName[] {
  * exists so the deck's tap gesture does not read a bar tap as a bare card tap.
  */
 const SCRUB_TAP_TARGET = "scrub";
+/** How far a finger may drift on a chapter before the touch is a drag, in points. */
+const CHAPTER_TAP_SLOP = 8;
 
 interface CommunityFaceProps {
 	card: CommunityCardV3;
@@ -357,6 +359,16 @@ export function CommunityFace({
 	const progress = useSharedValue(0);
 	const fill = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
 	const segments = card.tourSegments ?? [];
+	/**
+	 * What the bar is cut into. A city film is told in CHAPTERS and its bar is
+	 * cut by them — six or seven stretches a viewer can name, instead of a dash
+	 * for each of twenty shots (owner 2026-11-16: "可视化视频进度 模块化内容 可以让人
+	 * 自主选择"). Everything else is cut by place, as it always was. The place
+	 * LABEL follows `segments` either way.
+	 */
+	const chapters = card.tourChapters ?? [];
+	const byChapter = chapters.length > 0;
+	const bars = byChapter ? chapters : segments;
 
 	/* ── Scrubbing ────────────────────────────────────────────────────────── */
 
@@ -376,7 +388,10 @@ export function CommunityFace({
 	 * A worklet may only close over values Reanimated can serialise, and this is
 	 * read on the UI thread on every move. Numbers, not the segment objects.
 	 */
-	const bounds = useMemo(
+	const bounds = useMemo(() => bars.map((bar) => bar.endFraction), [bars]);
+	/** The PLACE boundaries, for the top-left pill — the same array as `bounds`
+	 *  unless the bar is cut by chapter. */
+	const placeBounds = useMemo(
 		() => segments.map((seg) => seg.endFraction),
 		[segments],
 	);
@@ -392,11 +407,9 @@ export function CommunityFace({
 		() => scrubIndex.value,
 		(index, previous) => {
 			if (index === previous) return;
-			runOnJS(setScrubbedName)(
-				index < 0 ? null : (segments[index]?.name ?? null),
-			);
+			runOnJS(setScrubbedName)(index < 0 ? null : (bars[index]?.name ?? null));
 		},
-		[segments],
+		[bars],
 	);
 
 	/**
@@ -424,18 +437,46 @@ export function CommunityFace({
 	useAnimatedReaction(
 		() => {
 			const ratio = progress.value;
+			for (let i = 0; i < placeBounds.length; i++) {
+				if (ratio <= (placeBounds[i] ?? 1)) return i;
+			}
+			return placeBounds.length - 1;
+		},
+		(index, previous) => {
+			if (index === previous) return;
+			runOnJS(setPlaying)({ id: card.id, index });
+		},
+		[placeBounds, card.id],
+	);
+	const place = segments[placeIndex];
+
+	/**
+	 * Which CHAPTER the film is in — printed beside the tag, so the card reads
+	 * "CITY · Schools" while the schools chapter plays. Same derivation as the
+	 * place above, and stored with its card for the same reason.
+	 */
+	const [chapterAt, setChapterAt] = useState<{
+		id: string;
+		index: number;
+	} | null>(null);
+	useAnimatedReaction(
+		() => {
+			if (!byChapter) return -1;
+			const ratio = progress.value;
 			for (let i = 0; i < bounds.length; i++) {
 				if (ratio <= (bounds[i] ?? 1)) return i;
 			}
 			return bounds.length - 1;
 		},
 		(index, previous) => {
-			if (index === previous) return;
-			runOnJS(setPlaying)({ id: card.id, index });
+			if (index === previous || index < 0) return;
+			runOnJS(setChapterAt)({ id: card.id, index });
 		},
-		[bounds, card.id],
+		[bounds, byChapter, card.id],
 	);
-	const place = segments[placeIndex];
+	const chapter = byChapter
+		? chapters[chapterAt?.id === card.id ? chapterAt.index : 0]
+		: undefined;
 
 	/**
 	 * Drag the bar to move through the film.
@@ -471,6 +512,17 @@ export function CommunityFace({
 			scrubIndex.value = dashAt(ratio);
 		};
 		/**
+		 * A touch on a CHAPTER lands on its first frame, not on the point under
+		 * the finger: the bar is offering "watch Schools", and Schools from the
+		 * middle of a sentence is not that. A drag still goes where it is dragged.
+		 */
+		const snap = (x: number) => {
+			"worklet";
+			const index = dashAt(locate(x));
+			progress.value = index <= 0 ? 0 : (bounds[index - 1] ?? 0);
+			scrubIndex.value = index;
+		};
+		/**
 		 * Hand the bar back to playback and ask the film to go where the finger
 		 * left it.
 		 *
@@ -504,7 +556,8 @@ export function CommunityFace({
 				// Arm a target the feed does not handle.
 				if (tapSlot) tapSlot.value = { target: SCRUB_TAP_TARGET };
 				scrubbing.value = true;
-				track(e.x);
+				if (byChapter) snap(e.x);
+				else track(e.x);
 				// Seek from touch-DOWN, not only from the release. This is the one
 				// callback a tap is guaranteed to reach — it is what draws the fill
 				// and names the place, both of which the owner sees on a tap that
@@ -513,7 +566,11 @@ export function CommunityFace({
 				// where the finger pressed is what the bar is promising anyway.
 				seekTo.value = progress.value;
 			})
-			.onUpdate((e) => track(e.x))
+			.onUpdate((e) => {
+				// A chapter tap that wobbles a few points is still a tap.
+				if (byChapter && Math.abs(e.translationX) < CHAPTER_TAP_SLOP) return;
+				track(e.x);
+			})
 			// The pointer lift, ahead of any gesture-state decision.
 			.onTouchesUp(commit)
 			// A pointer that stops being tracked for any other reason.
@@ -525,6 +582,7 @@ export function CommunityFace({
 		return gesture;
 	}, [
 		bounds,
+		byChapter,
 		isTop,
 		card.videoUrl,
 		deckGesture,
@@ -698,7 +756,9 @@ export function CommunityFace({
 			    glyphs on a short name and the name itself on a long one. */}
 			<View style={styles.info}>
 				<View style={styles.tagRow}>
-					<Text style={styles.badgeLabel}>{tag}</Text>
+					<Text style={styles.badgeLabel}>
+						{chapter ? `${tag} · ${chapter.name}` : tag}
+					</Text>
 				</View>
 				<View style={styles.infoRow}>
 					<View style={styles.infoLeft}>
@@ -773,13 +833,13 @@ export function CommunityFace({
 							</View>
 						)}
 						<View style={styles.progressRow} onLayout={onBarLayout}>
-							{segments.length > 0 ? (
-								segments.map((seg, i) => (
+							{bars.length > 0 ? (
+								bars.map((bar, i) => (
 									<ProgressDash
-										key={`${seg.name}-${seg.endFraction}`}
+										key={`${bar.name}-${bar.endFraction}`}
 										progress={progress}
-										start={i === 0 ? 0 : (segments[i - 1]?.endFraction ?? 0)}
-										end={seg.endFraction}
+										start={i === 0 ? 0 : (bars[i - 1]?.endFraction ?? 0)}
+										end={bar.endFraction}
 									/>
 								))
 							) : (

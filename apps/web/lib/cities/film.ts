@@ -47,6 +47,8 @@ export interface FilmShot {
   ai_generated: boolean;
   label: string;
   chip_label: string;
+  /** The chapter's chip label, where only the city can name it (`signature`). */
+  bucket_label?: string;
   label_distance: '';
   sort_order: number;
   /** Drawn over the clip by the render worker at assembly. */
@@ -263,6 +265,9 @@ export function buildCityFilm(input: {
         ai_generated: r.photo.seedanceReady,
         label: place,
         chip_label: place,
+        ...(line.chapter === 'signature' && input.profile.film.signature
+          ? { bucket_label: input.profile.film.signature }
+          : {}),
         label_distance: '',
         sort_order: sort,
         ...(r.callout ? { callout: r.callout } : {}),

@@ -49,6 +49,12 @@ export interface GeoUnit {
 	 * dashed progress bar — the community card's `tourSegments`, same shape.
 	 */
 	tourSegments?: readonly { name: string; endFraction: number }[];
+	/**
+	 * The film's chapters, in film order — `name` is the chapter's label
+	 * ("Schools"). When present the card's bar is cut by chapter instead of by
+	 * place, so a viewer can jump to the part they came for (phase345).
+	 */
+	tourChapters?: readonly { name: string; endFraction: number }[];
 	communityCount: number;
 	/** ≤3 real `communities.name`. */
 	sampleCommunityNames: readonly string[];

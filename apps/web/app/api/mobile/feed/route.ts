@@ -288,6 +288,7 @@ export async function GET(request: Request) {
           videoUrl: film.videoUrl,
           citySlug: film.slug,
           ...(film.segments.length > 0 ? { tourSegments: film.segments } : {}),
+          ...(film.chapters.length > 0 ? { tourChapters: film.chapters } : {}),
           heroUrl: film.posterUrl,
         }
       : unit;

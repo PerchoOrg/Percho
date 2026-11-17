@@ -20,6 +20,7 @@ import { fetchCityDetail } from '@/lib/cities/detail';
 import { fetchCommunityListCards } from '@/lib/communities/list';
 import { APP_STORE_URL, sharedPageMetadata, siteOrigin } from '@/lib/share/app-links';
 import type { CityDetailDTO, CitySource } from '@percho/shared/city';
+import { buildTourChapters } from '@percho/shared/tour-buckets';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -90,6 +91,7 @@ export default async function CityPage({ params }: { params: Promise<PageParams>
             url={city.videoUrl}
             poster={city.posterUrl ?? null}
             credits={city.credits.google}
+            chapters={buildTourChapters(city.tourSegments)}
           />
         </div>
       ) : null}

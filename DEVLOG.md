@@ -23,6 +23,23 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-17 08:31 UTC — phase345: a city film is chapters a viewer can jump to
+
+**Objective**: Owner: "一个city视频很长 不是所有人都对历史或者前面的介绍感兴趣 比如有人只想看不同城市的学区部分 有没有办法可以可视化视频进度 模块化内容 可以让人自主选择？", then "好就按照这个方向 每一个章节可以做得独立一些可以单独拉出来看 先propose一个包含所有的章节名单 每个city尽量覆盖", and on the list: "可以 就这个 记录下来 做下一个城市 如果效果好 回过头把已经有的两个也重新做了".
+**What existed**: the app's city page already had a chip per chapter that seeks (`TourHero`, phase331). The feed card's bar was one dash per SHOT (22 on Johns Creek) with no chapter names; the web city page had no chips; chapters were whatever the script's order produced (golf, river, parks and fireworks all "outdoor").
+**The list** (playbook §2.2): `overview`, `schools`, `homes`, `commute` — required in every city; `daily`, `outdoor`, `downtown`, `events`, `signature` (named per city in `film.signature`), `growth`, `history`, `future` — when the city has the material. Never: safety, who lives there, places of worship. Under 2:00, so nine or ten per city.
+**Actions**:
+- `lib/zod/city-profile.ts`: the twelve chapter keys; `film.signature`. `lib/cities/chapters.ts` (pure, 4 tests) `chapterProblems`: every line in a chapter, each chapter one unbroken block, the four required present, overview first, a named signature. `upsert-city-profile.ts` refuses a profile with problems — at the WRITE, not in the schema, so a film stored before the list still parses and its page still renders.
+- `@percho/shared/tour-buckets`: chip labels for the new keys; `TourSegment.bucketLabel` (a city's own name for its signature chapter) wins over the table; `buildTourChapters` joins consecutive segments of a chapter into one stretch, and returns nothing unless every segment is in a named chapter.
+- `lib/cities/film.ts`: a signature shot's clip carries `bucket_label`. `lib/feed/tour-segments.ts`: reads it, and a segment's key includes its bucket, so one place shown in two chapters is two stretches.
+- Feed: a filmed city's unit carries `tourChapters` (`{ name: label, endFraction }`, the card's segment shape). City detail: segments carry `bucketLabel`.
+- iOS card (`CommunityFace`): with `tourChapters` the bar is cut by chapter; a touch lands on the chapter's FIRST frame (a drag past 8 pt still scrubs); the floating label names the chapter; the tag reads "CITY · Schools" as the film plays. The place pill still follows the per-shot segments. Community cards are unchanged — they never carry chapters.
+- Web city page: `CommunityFilm` takes `chapters` and draws a chip row under the film; the lit chip follows playback, a click starts the chapter.
+**Decisions**: one film with seekable chapters, not one file per chapter — nothing is re-rendered, and "watch only Schools across cities" can be built later on the same ranges (deferred until there are four or five cities). The bar stays a timeline: a chapter the film returns to would be a second stretch, which is why the write-time check forbids it.
+**Not verified here**: the card's new bar and tag on a phone — the app has no web target; owner checks on the dev client.
+**Existing films**: Suwanee and Johns Creek keep their cuts and get chapter bars from their old chapter keys (Johns Creek shows "Overview" twice — its closing line). They are redone only after the owner has judged the first city built this way.
+**Verification**: web tsc 0, biome 0 errors, vitest 1325, `next build` passes; mobile tsc 0, biome 0 errors, vitest 870; shared tsc 0.
+
 ## 2026-11-16 20:58 UTC — phase344.2: Johns Creek re-cut on the "contradiction" spine
 
 **Objective**: Owner, on the proposals of phase344.1: "按照a来" — re-cut Johns Creek now-first: the gap, what it had, the gap closed; history one line; golf as the hero.

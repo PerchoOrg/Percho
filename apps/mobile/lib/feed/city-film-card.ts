@@ -34,5 +34,8 @@ export function cityFilmCard(card: AreaCardV3): CommunityCardV3 | null {
 		...(unit.tourSegments && unit.tourSegments.length > 0
 			? { tourSegments: unit.tourSegments }
 			: {}),
+		...(unit.tourChapters && unit.tourChapters.length > 0
+			? { tourChapters: unit.tourChapters }
+			: {}),
 	};
 }

@@ -71,6 +71,49 @@ No two consecutive cities share a spine or an opening. Record each film here:
 | Suwanee | Claim → proof | aerial of Town Center + the claim | 2 lines + growth | the downtown it built | ~1:50 |
 | Johns Creek | Contradiction | a pond + the #1 ranking | 1 line (~10 s) | golf: Bobby Jones's club, four majors | ~1:30 |
 
+### 2.2 The chapters (owner 2026-11-16/17: "模块化内容 可以让人自主选择 … 每一个章节可以做得独立一些可以单独拉出来看 … 每个city尽量覆盖")
+
+A city film is told in chapters a viewer can jump to — the card's bar is cut by
+them, the city page (app and web) has a chip for each — because nobody wants all
+of it: one buyer only compares schools across cities. Every line's `chapter` is
+one of these; the list is the same for every city.
+
+| `chapter` | Chip | The question it answers | What it always contains | |
+|---|---|---|---|---|
+| `overview` | Overview | What kind of place is this? | one sentence of identity + one sourced ranking | **required** |
+| `schools` | Schools | How are the schools? | the best-ranked elementary, middle and high school, graduation rate against the district; a college if there is one | **required** |
+| `homes` | Homes | What does living here cost? | median home value, against the state, the recent trend, share owner-occupied — over streetscapes, never one house | **required** |
+| `commute` | Commute | How long to get anywhere? | downtown Atlanta off-peak and at rush, the airport, the nearest job centre, rail and interstate | **required** |
+| `daily` | Daily life | Is everyday life easy? | hospital, library, where people shop | when it has the material |
+| `outdoor` | Parks | Where do weekends go? | parks, trails, rivers and lakes | when it has the material |
+| `downtown` | Downtown | Is there a centre? | what the centre is and when it was built | when it has the material |
+| `events` | Events | What happens in a year? | festivals, concerts, public art | when it has the material |
+| `signature` | named per city (`film.signature`: "Golf") | What does only this city have? | the one thing | when it has the material |
+| `growth` | Growth | Is it growing; where is the work? | population trend, the main job districts | when it has the material |
+| `history` | History | Where did it come from? | two or three dates | when it has the material |
+| `future` | What's next | What is being built? | projects under way or approved | when it has the material |
+
+Never a chapter: safety ("安全数据先不放"), who lives there, places of worship.
+
+**What makes a chapter watchable alone** (`lib/cities/chapters.ts` refuses a
+profile that breaks the first four; `pnpm city:profile <slug> --check`):
+- every line belongs to a chapter, and a chapter is ONE unbroken block;
+- the four required chapters are there, and the film opens on the overview;
+- a `signature` chapter has its name in `film.signature`;
+- a chapter's first sentence stands on its own — no "it also had…", no pronoun
+  reaching back into the chapter before; the card prints "CITY · <chapter>";
+- at least two shots, and its own callouts;
+- the four required chapters say the same KIND of thing in every city, so one
+  city's Schools can be watched against another's.
+
+The spine (§2.1) still varies: it is how the overview is put, the ORDER of the
+chapters, and which one is the hero and runs longer. Length stays under 2:00 —
+8–12 s a chapter, schools up to 20 — so a city carries nine or ten of the twelve.
+There is no closing line that returns to the overview: the end card closes.
+
+Suwanee and Johns Creek predate the list (no `homes`, a chapter told twice); they
+are redone once the owner has judged the first city made this way.
+
 ## 3. Rules the owner set (each one cost a round)
 
 **Pictures**

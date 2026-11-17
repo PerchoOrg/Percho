@@ -64,6 +64,8 @@ export interface GeoUnitDTO {
   videoUrl?: string;
   citySlug?: string;
   tourSegments?: Array<{ name: string; endFraction: number }>;
+  /** The film's chapters, for the card's progress bar: `name` is the chapter's label (phase345). */
+  tourChapters?: Array<{ name: string; endFraction: number }>;
   communityCount: number;
   sampleCommunityNames: string[];
   stats: GeoStatsDTO;
