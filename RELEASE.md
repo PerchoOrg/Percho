@@ -17,9 +17,9 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-17
-- **City cards list their chapters.** Under a city's name the card now shows
-  every chapter of its film; the one playing is highlighted, and tapping a
-  name starts that chapter.
+- **City cards show the parts of their film.** Under a city's name the card
+  lists five parts — Overview, Schools, Homes, Commute, Life; the one playing
+  is highlighted, and tapping a name starts it. (Needs the next app build.)
 - **Alpharetta's film moves like the neighbourhood films.** Its shots now orbit,
   push in and tilt instead of only sliding sideways, and three of them — the
   opening over Lake Windward among them — are animated.
@@ -27,11 +27,10 @@ on its own, with a button to see more in the app.
   Tech, Commute, Schools, Homes, Daily life, What's next, Parks, History,
   Downtown and Events, each one watchable on its own. It follows a day in the
   city, from the morning's office parks to a night at the amphitheatre.
-- **City films come in chapters you can jump to.** The bar under a city's
-  film is now divided into its chapters — Overview, Schools, Homes, Commute
-  and so on — and the card shows which one is playing. Tap a chapter to start
-  it, so someone who only cares about schools goes straight there. The city
-  page on the website has the same chapter buttons under its film.
+- **City films come in parts you can jump to.** The bar under a city's film
+  is divided into five parts, so someone who only cares about schools goes
+  straight there. The city page on the website has the same buttons under
+  its film.
 
 ### 2026-11-16
 - **Johns Creek is the second city.** A ninety-second film — U.S. News calls it

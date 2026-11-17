@@ -49,6 +49,10 @@ export function CommunityFilm({ url, poster, credits, chapters = [] }: Community
     const index = chapters.findIndex((c) => at <= c.endFraction);
     setActive(index < 0 ? chapters.length - 1 : index);
   };
+  // Each name once: a film made before sections existed returns to one.
+  const chips = chapters.flatMap((c, index) =>
+    chapters.findIndex((other) => other.label === c.label) === index ? [{ ...c, index }] : [],
+  );
 
   useEffect(() => {
     const el = ref.current;
@@ -72,19 +76,22 @@ export function CommunityFilm({ url, poster, credits, chapters = [] }: Community
         />
         {chapters.length > 0 ? (
           <div className="-mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1 pb-1">
-            {chapters.map((c, i) => (
-              <button
-                key={`${c.key}-${c.endFraction}`}
-                type="button"
-                onClick={() => play(i)}
-                aria-pressed={i === active}
-                className={`shrink-0 rounded-full px-3 py-1 text-xs ${
-                  i === active ? 'bg-ink text-white' : 'bg-ink/5 text-ink2'
-                }`}
-              >
-                {c.label}
-              </button>
-            ))}
+            {chips.map((c) => {
+              const on = chapters[active]?.label === c.label;
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => play(c.index)}
+                  aria-pressed={on}
+                  className={`shrink-0 rounded-full px-3 py-1 text-xs ${
+                    on ? 'bg-ink text-white' : 'bg-ink/5 text-ink2'
+                  }`}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
           </div>
         ) : null}
         {credits.length > 0 ? (

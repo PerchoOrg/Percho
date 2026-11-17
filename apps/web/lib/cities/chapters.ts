@@ -14,6 +14,49 @@
  */
 import type { CityFilmChapter, CityFilmLine } from '@/lib/zod/city-profile';
 
+/**
+ * The few SECTIONS a viewer navigates by (phase348). Twelve chapters is how a
+ * film is WRITTEN; eleven names on a phone card is a wall — owner 2026-11-17:
+ * "不要太多太密 大致的划分几个就好". So the card's bar, its row of names and the
+ * city page's chips show these five, each a run of chapters.
+ */
+export const CITY_FILM_SECTIONS = [
+  {
+    key: 'about',
+    label: 'Overview',
+    chapters: ['overview', 'signature', 'history', 'growth', 'future'],
+  },
+  { key: 'schools', label: 'Schools', chapters: ['schools'] },
+  { key: 'homes', label: 'Homes', chapters: ['homes'] },
+  { key: 'commute', label: 'Commute', chapters: ['commute'] },
+  { key: 'life', label: 'Life', chapters: ['daily', 'outdoor', 'downtown', 'events'] },
+] as const satisfies ReadonlyArray<{
+  key: string;
+  label: string;
+  chapters: readonly CityFilmChapter[];
+}>;
+
+/** The section a chapter belongs to; null for a key that is not a chapter. */
+export function sectionOf(chapter: string): { key: string; label: string } | null {
+  const section = CITY_FILM_SECTIONS.find((s) =>
+    (s.chapters as readonly string[]).includes(chapter),
+  );
+  return section ? { key: section.key, label: section.label } : null;
+}
+
+/**
+ * A film's segments, re-filed under their SECTION — what the card and the
+ * pages group by. A segment whose bucket is not a chapter is left as it is.
+ */
+export function bySection<T extends { bucket?: string; bucketLabel?: string }>(
+  segments: readonly T[],
+): T[] {
+  return segments.map((segment) => {
+    const section = segment.bucket ? sectionOf(segment.bucket) : null;
+    return section ? { ...segment, bucket: section.key, bucketLabel: section.label } : segment;
+  });
+}
+
 /** In every city's film — what a buyer compares cities by. */
 export const REQUIRED_CHAPTERS: readonly CityFilmChapter[] = [
   'overview',
@@ -26,7 +69,9 @@ export const REQUIRED_CHAPTERS: readonly CityFilmChapter[] = [
  * Why the script is not a film of chapters, one line per problem; empty when
  * it is. What it checks is what makes a chapter something a viewer can jump
  * to: every line is in one, each is ONE unbroken block, the four required are
- * there, the film opens on the overview, and a `signature` chapter has a name.
+ * there, the film opens on the overview, and a `signature` chapter has a name —
+ * and that each SECTION's chapters sit together, since a section is one stretch
+ * of the bar.
  */
 export function chapterProblems(lines: readonly CityFilmLine[], signature?: string): string[] {
   const problems: string[] = [];
@@ -47,6 +92,16 @@ export function chapterProblems(lines: readonly CityFilmLine[], signature?: stri
       );
     }
     seen.add(chapter);
+  }
+
+  const sections: string[] = [];
+  for (const chapter of blocks) {
+    const label = sectionOf(chapter)?.label ?? chapter;
+    if (sections[sections.length - 1] !== label) sections.push(label);
+  }
+  for (const label of new Set(sections.filter((l, i) => sections.indexOf(l) !== i))) {
+    const members = CITY_FILM_SECTIONS.find((s) => s.label === label)?.chapters.join(', ');
+    problems.push(`the "${label}" section is split — keep its chapters together (${members})`);
   }
 
   for (const required of REQUIRED_CHAPTERS) {

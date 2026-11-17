@@ -1,6 +1,6 @@
 import type { CityFilmChapter, CityFilmLine } from '@/lib/zod/city-profile';
 import { describe, expect, it } from 'vitest';
-import { chapterProblems } from './chapters';
+import { bySection, chapterProblems, sectionOf } from './chapters';
 
 const line = (chapter?: CityFilmChapter): CityFilmLine =>
   ({
@@ -14,16 +14,36 @@ describe('chapterProblems', () => {
   it('accepts a film of whole chapters with the four every city has', () => {
     expect(
       chapterProblems(
-        film('overview', 'schools', 'schools', 'homes', 'signature', 'commute', 'history'),
+        film(
+          'overview',
+          'signature',
+          'history',
+          'schools',
+          'schools',
+          'homes',
+          'commute',
+          'outdoor',
+        ),
         'Golf',
       ),
     ).toEqual([]);
   });
 
+  it('wants a section in one piece — it is one stretch of the bar', () => {
+    const problems = chapterProblems(
+      film('overview', 'schools', 'homes', 'commute', 'outdoor', 'history', 'events'),
+    );
+    expect(problems).toEqual([
+      'the "Overview" section is split — keep its chapters together (overview, signature, history, growth, future)',
+      'the "Life" section is split — keep its chapters together (daily, outdoor, downtown, events)',
+    ]);
+  });
+
   it('refuses a chapter told in two places — it could not be watched alone', () => {
     const problems = chapterProblems(film('overview', 'schools', 'homes', 'commute', 'overview'));
-    expect(problems).toHaveLength(1);
     expect(problems[0]).toContain('"overview" is told in two places');
+    // …which also splits its section.
+    expect(problems).toHaveLength(2);
   });
 
   it('names each required chapter that is missing', () => {
@@ -40,5 +60,29 @@ describe('chapterProblems', () => {
     expect(problems.some((p) => p.includes('has no chapter'))).toBe(true);
     expect(problems).toContain('the film opens on the overview');
     expect(problems.some((p) => p.includes('film.signature'))).toBe(true);
+  });
+});
+
+describe('sections', () => {
+  it('files every chapter under one of five', () => {
+    expect(sectionOf('signature')).toEqual({ key: 'about', label: 'Overview' });
+    expect(sectionOf('events')?.label).toBe('Life');
+    expect(sectionOf('dining')).toBeNull();
+  });
+
+  it('re-files segments, and leaves alone what is not a chapter', () => {
+    expect(
+      bySection([
+        { bucket: 'signature', bucketLabel: 'Golf' },
+        { bucket: 'outdoor' },
+        { bucket: 'dining' },
+        {},
+      ]),
+    ).toEqual([
+      { bucket: 'about', bucketLabel: 'Overview' },
+      { bucket: 'life', bucketLabel: 'Life' },
+      { bucket: 'dining' },
+      {},
+    ]);
   });
 });
