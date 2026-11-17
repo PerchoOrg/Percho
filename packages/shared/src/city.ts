@@ -104,6 +104,12 @@ export interface CityDetailDTO extends CityFundamentals {
    * The film's places in play order, each with its chapter as `bucket` — the
    * city page's hero groups them into the community page's chip strip.
    */
-  tourSegments: Array<{ name: string; endFraction: number; bucket?: string }>;
+  tourSegments: Array<{
+    name: string;
+    endFraction: number;
+    bucket?: string;
+    /** The city's own name for its `signature` chapter. */
+    bucketLabel?: string;
+  }>;
   credits: CityFilmCredits;
 }

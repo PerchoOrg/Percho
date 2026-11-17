@@ -32,13 +32,16 @@ import {
 } from '@/lib/supabase/server';
 import { parseCityProfile } from '@/lib/zod/city-profile';
 import type { CityDetailDTO, CityFilmCredits, CityFundamentals } from '@percho/shared/city';
+import { buildTourChapters } from '@percho/shared/tour-buckets';
 
 export interface CityFilm {
   slug: string;
   videoUrl: string;
   posterUrl: string;
-  /** One per place the film shows — the card's place label and progress dashes. */
+  /** One per place the film shows — the card's place label. */
   segments: TourSegment[];
+  /** The film's chapters — the card's progress bar, when the film has them (phase345). */
+  chapters: Array<{ name: string; endFraction: number }>;
 }
 
 interface PhotoRow {
@@ -120,11 +123,16 @@ export async function fetchCityFilms(
       slug: city.slug,
       videoUrl: streamManifestUrl(film.cf_stream_uid),
       posterUrl: streamPosterUrl(film.cf_stream_uid),
-      // The community card's place label and dashes read these; a city's
-      // shots are named for the place they show (`lib/cities/film.ts`).
+      // The community card's place label reads these; a city's shots are
+      // named for the place they show (`lib/cities/film.ts`).
       segments: tourSegments(film.ordered_clips).map(({ name, endFraction }) => ({
         name,
         endFraction,
+      })),
+      // In the card's own segment shape, so its parser reads both alike.
+      chapters: buildTourChapters(tourSegments(film.ordered_clips)).map((c) => ({
+        name: c.label,
+        endFraction: c.endFraction,
       })),
     });
   }
@@ -176,11 +184,14 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
         videoUrl: streamManifestUrl(row.cf_stream_uid),
         posterUrl: streamPosterUrl(row.cf_stream_uid),
       };
-      segments = tourSegments(row.ordered_clips).map(({ name, endFraction, bucket }) => ({
-        name,
-        endFraction,
-        ...(bucket ? { bucket } : {}),
-      }));
+      segments = tourSegments(row.ordered_clips).map(
+        ({ name, endFraction, bucket, bucketLabel }) => ({
+          name,
+          endFraction,
+          ...(bucket ? { bucket } : {}),
+          ...(bucketLabel ? { bucketLabel } : {}),
+        }),
+      );
       const ids = clipPhotoIds(row.ordered_clips);
       if (ids.length > 0) {
         const { data: photos } = await service

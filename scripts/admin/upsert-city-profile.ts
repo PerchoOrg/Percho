@@ -20,6 +20,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
+import { chapterProblems } from '../../apps/web/lib/cities/chapters.js';
 import { cityProfileSchema } from '../../apps/web/lib/zod/city-profile.js';
 
 function requireEnv(name: string): string {
@@ -50,6 +51,14 @@ async function main() {
   const profile = parsed.data;
   const words = (s: string) => s.trim().split(/\s+/).length;
   const lines = profile.film.lines;
+  // A film is chapters a viewer can jump to (phase345). Checked here, at the
+  // write, so a film stored before the rule still reads.
+  const problems = chapterProblems(lines, profile.film.signature);
+  if (problems.length > 0) {
+    console.error(`${file} is not a film of chapters:`);
+    for (const problem of problems) console.error(`  ${problem}`);
+    process.exit(1);
+  }
   console.log(
     `${slug}: ${lines.length} lines (${lines.reduce((a, l) => a + words(l.say), 0)} words) over ${lines.reduce((a, l) => a + l.shots.length, 0)} photos`,
   );

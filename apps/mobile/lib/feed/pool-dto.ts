@@ -189,6 +189,11 @@ export function parseGeoUnit(v: unknown): GeoUnit | null {
 	const videoUrl = str(raw.videoUrl);
 	const citySlug = str(raw.citySlug);
 	const segments = tourSegments(raw.tourSegments);
+	// Same shape, same checks: a chapter bar with a bad boundary is as wrong
+	// as a place bar with one.
+	const chapters = tourSegments(raw.tourChapters).map(
+		({ name, endFraction }) => ({ name, endFraction }),
+	);
 	return {
 		id,
 		level: lvl,
@@ -200,6 +205,7 @@ export function parseGeoUnit(v: unknown): GeoUnit | null {
 		...(videoUrl ? { videoUrl } : {}),
 		...(citySlug ? { citySlug } : {}),
 		...(segments.length > 0 ? { tourSegments: segments } : {}),
+		...(chapters.length > 0 ? { tourChapters: chapters } : {}),
 		communityCount: num(raw.communityCount) ?? 0,
 		sampleCommunityNames: strings(raw.sampleCommunityNames).slice(0, 3),
 		stats: stats(raw.stats),

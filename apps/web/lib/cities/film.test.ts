@@ -236,6 +236,16 @@ describe('buildCityFilm', () => {
     ]);
   });
 
+  it("gives the signature chapter's shots the city's own name for it", () => {
+    const profile = profileOf([
+      { say: eight, chapter: 'overview', shots: [{ photo: 'aaaaaaaa' }] },
+      { say: eight, chapter: 'signature', shots: [{ photo: 'bbbbbbbb' }] },
+    ]);
+    profile.film.signature = 'Golf';
+    const film = buildCityFilm({ profile, photos });
+    expect(film.shots.map((s) => s.bucket_label)).toEqual([undefined, 'Golf']);
+  });
+
   it('names a shot for the place it shows, which is what the card labels it', () => {
     const film = buildCityFilm({
       profile: profileOf([

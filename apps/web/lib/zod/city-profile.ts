@@ -133,14 +133,19 @@ const filmShot = z.object({
  */
 export const CITY_FILM_CHAPTERS = [
   'overview',
-  'history',
-  'growth',
-  'downtown',
   'schools',
-  'outdoor',
+  'homes',
   'commute',
+  'daily',
+  'outdoor',
+  'downtown',
+  'events',
+  'signature',
+  'growth',
+  'history',
   'future',
 ] as const;
+export type CityFilmChapter = (typeof CITY_FILM_CHAPTERS)[number];
 
 const filmLine = z.object({
   say,
@@ -230,6 +235,12 @@ export const cityProfileSchema = z.object({
 
   film: z.object({
     lines: z.array(filmLine).min(4).max(24),
+    /**
+     * What the `signature` chapter is called on the chips — the one thing only
+     * this city has ("Golf", "Public art"). Required by `chapterProblems` when
+     * a line uses that chapter.
+     */
+    signature: z.string().min(2).max(14).optional(),
   }),
 });
 export type CityProfile = z.infer<typeof cityProfileSchema>;

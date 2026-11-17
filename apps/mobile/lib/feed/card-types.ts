@@ -260,6 +260,13 @@ export interface CommunityCardV3 {
 		endFraction: number;
 		distance?: string;
 	}[];
+	/**
+	 * A city film's chapters, in film order — `name` is the chapter's label
+	 * ("Schools"). When present the bar is cut by chapter rather than by place
+	 * and a tap jumps to the chapter's start (phase345); the place label still
+	 * follows `tourSegments`. Never set for a community.
+	 */
+	tourChapters?: readonly { name: string; endFraction: number }[];
 }
 
 // ─── Trade-off (§1.6) ───────────────────────────────────────────────

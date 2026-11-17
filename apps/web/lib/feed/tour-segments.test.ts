@@ -68,6 +68,20 @@ describe('tourSegments', () => {
     expect(segments.map((s) => s.name)).toEqual(['Town Center Park', '']);
   });
 
+  it("splits one place at a chapter boundary and carries a chapter's own label", () => {
+    // A city film (phase345): the club is in the signature chapter, then the
+    // same place opens the outdoor chapter. Two stretches, or no boundary.
+    const segments = tourSegments([
+      { ...clip('club', 4, 'Athletic Club'), bucket: 'signature', bucket_label: 'Golf' },
+      { ...clip('club', 4, 'Athletic Club'), bucket: 'signature', bucket_label: 'Golf' },
+      { ...clip('club', 4, 'Athletic Club'), bucket: 'outdoor' },
+    ]);
+    expect(segments.map((s) => [s.bucket, s.bucketLabel])).toEqual([
+      ['signature', 'Golf'],
+      ['outdoor', undefined],
+    ]);
+  });
+
   it('does not merge a place the film returns to later', () => {
     const segments = tourSegments([clip('a', 3), clip('b', 3), clip('a', 3)]);
     expect(segments.map((s) => s.name)).toEqual(['a', 'b', 'a']);

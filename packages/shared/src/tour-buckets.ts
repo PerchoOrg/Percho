@@ -26,6 +26,11 @@ export interface TourSegment {
   bucket?: string;
   /** How far the place is from the community — "1.4 mi", "0 mi" for its own amenities. */
   distance?: string;
+  /**
+   * The chip's label, where the table below has none: a city film's
+   * `signature` chapter is named per city ("Golf"). Wins over the table.
+   */
+  bucketLabel?: string;
 }
 
 /**
@@ -55,12 +60,17 @@ const BUCKET_LABELS: Record<string, string> = {
   civic: 'Civic',
   faith: 'Faith',
   work_hubs: 'Work',
-  // A city film's chapters (phase331) — never a community's intent bucket.
+  // A city film's chapters (phase331; the full list is phase345) — never a
+  // community's intent bucket. `schools` and `outdoor` are shared with the
+  // rows above; `signature` has no label here — the city names its own.
   overview: 'Overview',
-  history: 'History',
-  growth: 'Growth',
-  downtown: 'Downtown',
+  homes: 'Homes',
   commute: 'Commute',
+  daily: 'Daily life',
+  downtown: 'Downtown',
+  events: 'Events',
+  growth: 'Growth',
+  history: 'History',
   future: "What's next",
 };
 
@@ -97,7 +107,7 @@ const EMPTY: TourGroups = { groups: [], keyByIndex: [] };
  */
 export function buildTourGroups(segments: readonly TourSegment[]): TourGroups {
   if (segments.length === 0) return EMPTY;
-  if (!segments.some((s) => s.bucket && bucketLabel(s.bucket))) return EMPTY;
+  if (!segments.some((s) => s.bucket && (s.bucketLabel ?? bucketLabel(s.bucket)))) return EMPTY;
 
   const keyByIndex: string[] = [];
   const groups: TourGroup[] = [];
@@ -105,7 +115,7 @@ export function buildTourGroups(segments: readonly TourSegment[]): TourGroups {
 
   for (let i = 0; i < segments.length; i++) {
     const bucket = segments[i]?.bucket ?? '';
-    const label = bucket ? bucketLabel(bucket) : null;
+    const label = bucket ? (segments[i]?.bucketLabel ?? bucketLabel(bucket)) : null;
     const key = label ? bucket : 'more';
     keyByIndex.push(key);
 
@@ -125,4 +135,33 @@ export function buildTourGroups(segments: readonly TourSegment[]): TourGroups {
   }
 
   return { groups, keyByIndex };
+}
+
+/** One chapter of a city film on the card's progress bar. */
+export interface TourChapter {
+  key: string;
+  label: string;
+  /** 0..1 — where the chapter ENDS. */
+  endFraction: number;
+}
+
+/**
+ * A city film's chapters, in film order: consecutive segments of one chapter
+ * become one stretch of the bar (owner 2026-11-16: "可视化视频进度 模块化内容
+ * 可以让人自主选择"). A chapter the film returns to later is a second stretch —
+ * the bar is a timeline, so it never reorders.
+ *
+ * Empty unless EVERY segment belongs to a named chapter: a bar that is part
+ * chapters and part unnamed gaps would promise a jump it cannot label.
+ */
+export function buildTourChapters(segments: readonly TourSegment[]): TourChapter[] {
+  const out: TourChapter[] = [];
+  for (const seg of segments) {
+    const label = seg.bucket ? (seg.bucketLabel ?? bucketLabel(seg.bucket)) : null;
+    if (!seg.bucket || !label) return [];
+    const last = out[out.length - 1];
+    if (last && last.key === seg.bucket) last.endFraction = seg.endFraction;
+    else out.push({ key: seg.bucket, label, endFraction: seg.endFraction });
+  }
+  return out;
 }

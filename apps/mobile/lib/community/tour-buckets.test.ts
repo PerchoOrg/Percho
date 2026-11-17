@@ -1,6 +1,7 @@
 import {
 	type TourSegment,
 	bucketLabel,
+	buildTourChapters,
 	buildTourGroups,
 } from "@percho/shared/tour-buckets";
 import { describe, expect, it } from "vitest";
@@ -97,5 +98,41 @@ describe("buildTourGroups", () => {
 
 	it("draws no strip for a film with no places", () => {
 		expect(buildTourGroups([])).toEqual({ groups: [], keyByIndex: [] });
+	});
+});
+
+describe("buildTourChapters", () => {
+	it("joins consecutive shots of a chapter into one stretch, in film order", () => {
+		expect(
+			buildTourChapters([
+				seg("", 0.1, "overview"),
+				seg("Shakerag Elementary", 0.2, "schools"),
+				seg("Northview High", 0.3, "schools"),
+				seg("", 0.6, "homes"),
+				seg("", 1, "commute"),
+			]),
+		).toEqual([
+			{ key: "overview", label: "Overview", endFraction: 0.1 },
+			{ key: "schools", label: "Schools", endFraction: 0.3 },
+			{ key: "homes", label: "Homes", endFraction: 0.6 },
+			{ key: "commute", label: "Commute", endFraction: 1 },
+		]);
+	});
+
+	it("names the signature chapter what the city calls it", () => {
+		const chapters = buildTourChapters([
+			seg("", 0.4, "overview"),
+			{ ...seg("Atlanta Athletic Club", 1, "signature"), bucketLabel: "Golf" },
+		]);
+		expect(chapters.map((c) => c.label)).toEqual(["Overview", "Golf"]);
+	});
+
+	it("offers no chapters when any stretch of the film is outside one", () => {
+		expect(buildTourChapters([seg("a", 0.5, "overview"), seg("b", 1)])).toEqual(
+			[],
+		);
+		expect(
+			buildTourChapters([seg("a", 0.5, "overview"), seg("b", 1, "signature")]),
+		).toEqual([]);
 	});
 });

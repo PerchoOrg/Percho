@@ -16,6 +16,13 @@ picture in the preview. If they have the Percho app, the link opens straight
 into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
+### 2026-11-17
+- **City films come in chapters you can jump to.** The bar under a city's
+  film is now divided into its chapters — Overview, Schools, Homes, Commute
+  and so on — and the card shows which one is playing. Tap a chapter to start
+  it, so someone who only cares about schools goes straight there. The city
+  page on the website has the same chapter buttons under its film.
+
 ### 2026-11-16
 - **Johns Creek is the second city.** A ninety-second film — U.S. News calls it
   the best place to live in America, yet it had no downtown until this year:

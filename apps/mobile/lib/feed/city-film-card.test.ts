@@ -48,6 +48,22 @@ describe("cityFilmCard", () => {
 		]);
 	});
 
+	it("hands the film's chapters to the card's bar", () => {
+		const card = cityFilmCard(
+			area({
+				videoUrl: "https://v/x.m3u8",
+				tourChapters: [
+					{ name: "Overview", endFraction: 0.2 },
+					{ name: "Schools", endFraction: 1 },
+				],
+			}),
+		);
+		expect(card?.tourChapters?.map((c) => c.name)).toEqual([
+			"Overview",
+			"Schools",
+		]);
+	});
+
 	it("draws a plain bar when the film's structure did not come down with it", () => {
 		const card = cityFilmCard(area({ videoUrl: "https://v/x.m3u8" }));
 		expect(card && "tourSegments" in card).toBe(false);
