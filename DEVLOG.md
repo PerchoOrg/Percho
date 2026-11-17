@@ -23,6 +23,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-17 18:15 UTC — phase349: four directions for the city card's bottom row (demo only)
+
+**Objective**: Owner, now on the dev client (1.0.1 (11), connected by the manual URL) and seeing phase348's row for the first time: "没对齐 也不好看 有没有别的方案 设计几个给我看看 包括这个explore button 最底下这一排如何呈现".
+**What is wrong with the row as built**: the five names are laid out by word width and the bar under them by each part's LENGTH, so a name never sits over its own stretch; and Explore hangs on the name's line, unrelated to either.
+**Actions**: `apps/web/public/demos/city-card-bottom-v1/` — one page, the real card at 361×527 with Alpharetta's film playing (HLS; `hls.light.min.js` copied from the web app's own `hls.js` for browsers without native HLS), the place pill and the lit part following playback, a tap on a part starting it. "Now" plus four directions, each with its own Explore:
+- **A · Labelled bar** — five equal columns, each name on its own stretch of the bar; Explore a link.
+- **B · Word tabs** — no separate bar; each word's underline fills as its part plays; Explore a round button.
+- **C · Segmented control** — one glass bar, five equal cells, the playing one lit; Explore a solid pill.
+- **D · Side rail** — the parts in a glass list under the corner controls; the bottom is the name, a full-width Explore button and one plain bar.
+`?t=0.45` freezes every card at that point of the film.
+**Decisions**: equal-width cells in A and C — alignment over proportionality; the fill inside the cell still shows progress. No app code touched: the card stays as phase348 until he picks.
+**Next steps**: owner picks a direction (or a mix); then build it in `CommunityFace`.
+
 ## 2026-11-17 17:20 UTC — phase348: five sections, not eleven chapter names; why the owner could not see them
 
 **Objective**: Owner: "还是看不到章节名 不要太多太密 大致的划分几个就好".
