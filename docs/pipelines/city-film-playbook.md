@@ -105,6 +105,9 @@ profile that breaks the first four; `pnpm city:profile <slug> --check`):
 - a chapter's first sentence stands on its own — no "it also had…", no pronoun
   reaching back into the chapter before; the card prints "CITY · <chapter>";
 - at least two shots, and its own callouts;
+- on the card every chapter's NAME is visible without a touch — a wrapping row
+  under the city's name, the playing one lit, a tap starts it (owner 2026-11-17:
+  "如果不点击下面的进度条章节名不自己显示 我怎么知道有哪些章节呢？");
 - the four required chapters say the same KIND of thing in every city, so one
   city's Schools can be watched against another's.
 
@@ -115,6 +118,26 @@ There is no closing line that returns to the overview: the end card closes.
 
 Suwanee and Johns Creek predate the list (no `homes`, a chapter told twice); they
 are redone once the owner has judged the first city made this way.
+
+### 2.3 Motion: the script picks the photo, the orchestrator directs it
+
+Owner 2026-11-17, on a cut that was 27 pans in 29 shots: "所有照片的效果都只是左右
+滑动？？我们一整套的用在home 和community的编排去哪了 有针对性的对合适的照片要用
+seedance 比如第一个 总体不要超过三个就好".
+
+- The script decides photo, order and timing. Engine and move come from the tour
+  orchestrator — the Curator's reading of each photo, the Scheduler's DepthFlow
+  share, people ban, subject preferences and no-repeat rule, the Guard's Seedance
+  prompt (`lib/cities/motion.ts`). A script may still name a Ken Burns `move`.
+- **Seedance: at most three shots a film**, named in the script (`"seedance":
+  true`), the opening first. A photo that already has a Seedance clip plays as it
+  and counts. The plan refuses a photo Seedance cannot do — readable signage,
+  people in the foreground, a facade or street perspective, nothing moving — and
+  says which; choose another photo. In practice what passes is water and foliage,
+  so pick the opening with that in mind (Alpharetta opens on a lake from the air,
+  not on its downtown, for this reason).
+- Read the plan's engine and move tally before rendering. Alpharetta as directed:
+  17 Ken Burns, 9 DepthFlow, 3 Seedance, 14 different moves, 7 pans.
 
 ## 3. Rules the owner set (each one cost a round)
 

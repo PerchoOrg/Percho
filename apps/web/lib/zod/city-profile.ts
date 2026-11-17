@@ -121,8 +121,19 @@ const filmShot = z.object({
   label: z.string().min(1).max(40).optional(),
   /** This shot's share of the line's time, relative to the line's other shots. */
   weight: z.number().positive().max(20).optional(),
-  /** The camera move; left out, the cut picks one from the photo's shape. */
+  /**
+   * A Ken Burns move the script insists on. Left out, the shot is directed
+   * like every other tour's: engine and move from what the photo shows
+   * (`lib/cities/motion.ts`, phase347).
+   */
   move: z.enum(CITY_FILM_MOVES).optional(),
+  /**
+   * Animate this photo with Seedance — the paid engine, spent on purpose. At
+   * most three shots of a film play as Seedance (owner 2026-11-17: "有针对性的对
+   * 合适的照片要用seedance 比如第一个 总体不要超过三个就好"); a photo that already has
+   * a Seedance clip plays as it and counts toward the three.
+   */
+  seedance: z.boolean().optional(),
   callout: cityFilmCalloutSchema.optional(),
 });
 

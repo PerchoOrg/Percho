@@ -32,7 +32,10 @@ import {
 	SwipeStack,
 } from "../../components/SwipeStack";
 import { AreaFace } from "../../components/cards/AreaFace";
-import { CommunityFace } from "../../components/cards/CommunityFace";
+import {
+	CHAPTER_TAP_PREFIX,
+	CommunityFace,
+} from "../../components/cards/CommunityFace";
 import {
 	EXPLORE_TAP_TARGET,
 	ListingFace,
@@ -220,6 +223,16 @@ export default function FeedScreen() {
 	 * not inherit a pause either.
 	 */
 	const [paused, setPaused] = useState(false);
+	/**
+	 * The chapter a city card was asked to start, by a tap on its name
+	 * (phase347). Kept with the card it was for, so a later card does not
+	 * inherit it; `nonce` makes two taps on one chapter two jumps.
+	 */
+	const [chapterJump, setChapterJump] = useState<{
+		cardId: string;
+		index: number;
+		nonce: number;
+	} | null>(null);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: activeIndex is the trigger, not a read
 	useEffect(() => {
 		setPaused(false);
@@ -642,6 +655,7 @@ export default function FeedScreen() {
 								suspended={!focused || paused}
 								tapSlot={args.tapSlot}
 								deckGesture={args.deckGesture}
+								jumpTo={chapterJump?.cardId === card.id ? chapterJump : null}
 								{...(toCity ? { onExplore: toCity } : {})}
 								{...share}
 							/>
@@ -727,6 +741,7 @@ export default function FeedScreen() {
 			takeSeq,
 			focused,
 			paused,
+			chapterJump,
 		],
 	);
 
@@ -788,6 +803,21 @@ export default function FeedScreen() {
 							? !!top.videoUrl
 							: false;
 				if (hasVideo) setPaused((p) => !p);
+				return;
+			}
+			if (target.startsWith(CHAPTER_TAP_PREFIX)) {
+				// A chapter's name on a city card: start that chapter, and play —
+				// a jump into a paused film would look like nothing happened.
+				const top = deckRef.current[activeIndex];
+				const index = Number(target.slice(CHAPTER_TAP_PREFIX.length));
+				if (top && Number.isInteger(index)) {
+					setChapterJump((j) => ({
+						cardId: top.id,
+						index,
+						nonce: (j?.nonce ?? 0) + 1,
+					}));
+					setPaused(false);
+				}
 				return;
 			}
 			if (target === SOUND_TAP_TARGET) {

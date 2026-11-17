@@ -136,7 +136,7 @@ import type { CardIconName } from "@percho/shared/icons";
  * its evidence, and that screen is where the CTA goes.
  */
 import { LinearGradient } from "expo-linear-gradient";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	type LayoutChangeEvent,
 	type NativeSyntheticEvent,
@@ -250,6 +250,12 @@ function signalIcons(card: CommunityCardV3): CardIconName[] {
 const SCRUB_TAP_TARGET = "scrub";
 /** How far a finger may drift on a chapter before the touch is a drag, in points. */
 const CHAPTER_TAP_SLOP = 8;
+/**
+ * Tap target of a chapter's NAME, followed by its index ("chapter:3"). The
+ * feed turns it into a `jumpTo` for the card on top — a tap inside the deck is
+ * decided at release by the deck, never by the element (see `tapSlot`).
+ */
+export const CHAPTER_TAP_PREFIX = "chapter:";
 
 interface CommunityFaceProps {
 	card: CommunityCardV3;
@@ -282,6 +288,12 @@ interface CommunityFaceProps {
 	tag?: "COMMUNITY" | "CITY";
 	saveKind?: SavedKind;
 	/**
+	 * Start this chapter — the feed sets it when a chapter's name is tapped
+	 * (phase347). `nonce` rises on every tap, so the same chapter can be asked
+	 * for twice running.
+	 */
+	jumpTo?: { index: number; nonce: number } | null;
+	/**
 	 * Opens the share sheet (phase335). Absent for a card with no page to send
 	 * someone to; the corner then shows no share cell.
 	 */
@@ -297,6 +309,7 @@ export function CommunityFace({
 	deckGesture,
 	tag = "COMMUNITY",
 	saveKind = "community",
+	jumpTo,
 	onShare,
 }: CommunityFaceProps) {
 	const icons = signalIcons(card);
@@ -451,9 +464,9 @@ export function CommunityFace({
 	const place = segments[placeIndex];
 
 	/**
-	 * Which CHAPTER the film is in — printed beside the tag, so the card reads
-	 * "CITY · Schools" while the schools chapter plays. Same derivation as the
-	 * place above, and stored with its card for the same reason.
+	 * Which CHAPTER the film is in — the lit name in the chapter row. Same
+	 * derivation as the place above, and stored with its card for the same
+	 * reason.
 	 */
 	const [chapterAt, setChapterAt] = useState<{
 		id: string;
@@ -474,9 +487,23 @@ export function CommunityFace({
 		},
 		[bounds, byChapter, card.id],
 	);
-	const chapter = byChapter
-		? chapters[chapterAt?.id === card.id ? chapterAt.index : 0]
-		: undefined;
+	const chapterIndex = chapterAt?.id === card.id ? chapterAt.index : 0;
+
+	/**
+	 * A tapped chapter name starts that chapter from its first frame. The
+	 * nonce, not the index, is what is new: the film's structure can be
+	 * re-sent by a pool refresh, and that must not replay the last jump.
+	 */
+	const handledJump = useRef(0);
+	useEffect(() => {
+		if (!jumpTo || !byChapter || jumpTo.nonce === handledJump.current) return;
+		handledJump.current = jumpTo.nonce;
+		const start =
+			jumpTo.index <= 0 ? 0 : (chapters[jumpTo.index - 1]?.endFraction ?? 0);
+		progress.value = start;
+		seekTo.value = start;
+		setChapterAt({ id: card.id, index: jumpTo.index });
+	}, [jumpTo, byChapter, chapters, progress, seekTo, card.id]);
 
 	/**
 	 * Drag the bar to move through the film.
@@ -756,9 +783,7 @@ export function CommunityFace({
 			    glyphs on a short name and the name itself on a long one. */}
 			<View style={styles.info}>
 				<View style={styles.tagRow}>
-					<Text style={styles.badgeLabel}>
-						{chapter ? `${tag} · ${chapter.name}` : tag}
-					</Text>
+					<Text style={styles.badgeLabel}>{tag}</Text>
 				</View>
 				<View style={styles.infoRow}>
 					<View style={styles.infoLeft}>
@@ -809,6 +834,36 @@ export function CommunityFace({
 						</Animated.View>
 					)}
 				</View>
+				{/* A city film's chapters, ALL of them, in film order (owner
+				    2026-11-17: "如果不点击下面的进度条章节名不自己显示 我怎么知道有哪些章节
+				    呢？"). The lit one is playing; a tap starts that chapter. It
+				    wraps rather than scrolls: a sideways scroll here is the deck's
+				    swipe, and eleven short words fit two lines.
+
+				    Inside the info block, under the name, so it rides up with the
+				    block and nothing has to know its height. */}
+				{byChapter && (
+					<View style={styles.chapterRow}>
+						{chapters.map((c, i) => (
+							<View
+								key={`${c.name}-${c.endFraction}`}
+								style={styles.chapterCell}
+								{...(tapSlot
+									? { onTouchStart: arm(`${CHAPTER_TAP_PREFIX}${i}`) }
+									: {})}
+							>
+								<Text
+									style={[
+										styles.chapterName,
+										i === chapterIndex && styles.chapterNameOn,
+									]}
+								>
+									{c.name}
+								</Text>
+							</View>
+						))}
+					</View>
+				)}
 			</View>
 
 			{/* Tour progress — one dash per PLACE when the film's structure came
@@ -1055,6 +1110,23 @@ const styles = StyleSheet.create({
 		marginBottom: 9,
 		overflow: "hidden",
 	},
+	/**
+	 * The chapter row: every chapter's name, wrapping. Dim until it plays —
+	 * the same white-on-scrim the Explore link uses, a step quieter.
+	 */
+	chapterRow: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		columnGap: 12,
+		marginTop: 8,
+	},
+	/** The touch target: the word plus 5pt above and below. */
+	chapterCell: { paddingVertical: 5 },
+	chapterName: {
+		...redlineText.listingCard.address,
+		color: "rgba(255,255,255,0.6)",
+	},
+	chapterNameOn: { color: "#FFFFFF", fontWeight: "700" },
 	/** The name + glyphs + Explore line — what `info` used to be. */
 	infoRow: {
 		flexDirection: "row",

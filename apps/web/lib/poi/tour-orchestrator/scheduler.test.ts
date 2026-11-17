@@ -20,6 +20,8 @@ import {
   isTooLowRes,
   overflow,
   scheduleClips,
+  scheduleInOrder,
+  seedanceBlocker,
   upscaleFactor,
 } from './scheduler';
 import type { PhotoAnnotation, PhotoMeta } from './types';
@@ -548,5 +550,71 @@ describe('scheduleClips — degenerate inputs', () => {
     for (let i = 1; i < clips.length; i++) {
       expect(clips[i]!.move).not.toBe(clips[i - 1]!.move);
     }
+  });
+});
+
+describe('scheduleInOrder — a shot list whose order is already decided', () => {
+  const metaById = new Map(GOLDEN_PHOTOS.map((p) => [p.photo_id, p]));
+  const shots = GOLDEN_ANNOTATIONS.flatMap((annotation) => {
+    const meta = metaById.get(annotation.photo_id);
+    return meta ? [{ annotation, meta }] : [];
+  });
+  const first = shots[0]?.annotation.photo_id ?? '';
+
+  it('keeps the order it was given', () => {
+    const { clips } = scheduleInOrder(shots, new Set());
+    expect(clips.map((c) => c.photo_id)).toEqual(shots.map((s) => s.annotation.photo_id));
+  });
+
+  it('spends Seedance on exactly the photos named, and on no others', () => {
+    expect(scheduleInOrder(shots, new Set()).clips.some((c) => c.engine === 'seedance')).toBe(
+      false,
+    );
+    const { clips } = scheduleInOrder(shots, new Set([first]));
+    expect(clips.filter((c) => c.engine === 'seedance').map((c) => c.photo_id)).toEqual([first]);
+  });
+
+  it('directs like a community tour: a DepthFlow share, never on people, never the same move twice running', () => {
+    const { clips } = scheduleInOrder(shots, new Set());
+    const depthflow = clips.filter((c) => c.engine === 'depthflow');
+    expect(depthflow.length).toBe(depthflowQuota(clips.length));
+    const peopled = new Set(
+      GOLDEN_ANNOTATIONS.filter((a) => a.people_prominence !== 'none').map((a) => a.photo_id),
+    );
+    expect(depthflow.some((c) => peopled.has(c.photo_id))).toBe(false);
+    for (let i = 1; i < clips.length; i++) {
+      expect(clips[i]?.move).not.toBe(clips[i - 1]?.move);
+    }
+    // The failure this exists for: a film that is all pans.
+    const pans = clips.filter((c) => c.move === 'pan_lr' || c.move === 'pan_rl').length;
+    expect(pans).toBeLessThan(clips.length / 2);
+  });
+});
+
+describe('seedanceBlocker', () => {
+  const base = GOLDEN_ANNOTATIONS[0] as PhotoAnnotation;
+  const ok: PhotoAnnotation = {
+    ...base,
+    has_natural_motion: true,
+    dominant_subject: 'nature',
+    has_readable_brand_signage: false,
+    people_prominence: 'none',
+  };
+
+  it('lets through a frame with real motion and nothing Seedance would redraw', () => {
+    expect(seedanceBlocker(ok, false)).toBeNull();
+  });
+
+  it('says why not', () => {
+    expect(seedanceBlocker({ ...ok, has_natural_motion: false }, false)).toBe(
+      'nothing in it moves',
+    );
+    expect(seedanceBlocker({ ...ok, dominant_subject: 'building_facade' }, false)).toContain(
+      'building facade',
+    );
+    expect(seedanceBlocker({ ...ok, people_prominence: 'foreground' }, false)).toBe(
+      'people in the foreground',
+    );
+    expect(seedanceBlocker(ok, true)).toContain('panorama');
   });
 });

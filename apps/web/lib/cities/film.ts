@@ -40,10 +40,15 @@ export interface FilmShot {
   poi_id: string;
   poi_name: string;
   bucket: string;
-  engine: 'kenburns' | 'seedance';
+  engine: 'kenburns' | 'depthflow' | 'seedance';
+  /**
+   * Null until the shot is directed (`lib/cities/motion.ts`), unless the
+   * script asked for a Ken Burns move by name.
+   */
   move: string | null;
   duration_s: number;
-  prompt: null;
+  /** Seedance only — written when the shot is directed. */
+  prompt: string | null;
   ai_generated: boolean;
   label: string;
   chip_label: string;
@@ -90,8 +95,10 @@ const XFADE_S = 0.5;
  * between lines (`NARRATION_MIN_GAP_S`), and the pace above is an average.
  */
 const LINE_AIR_S = 0.6;
-/** A cached Seedance clip is this long, whatever the plan asks for. */
+/** A Seedance clip is this long, whatever the plan asks for. */
 const SEEDANCE_S = 4;
+/** Owner 2026-11-17: "总体不要超过三个就好". */
+export const MAX_SEEDANCE_SHOTS = 3;
 /** Shorter than this and a clip is two crossfades with nothing between them. */
 const MIN_SHOT_S = 2.5;
 
@@ -147,13 +154,15 @@ export function lineSeconds(text: string, shots: number): number {
 const CANVAS_ASPECT = 1080 / 1576;
 
 /**
- * A camera move for a photo the script gave none.
+ * A camera move for a shot nobody could direct — a photo the Curator returned
+ * no annotation for (`lib/cities/motion.ts`). Until phase347 this was EVERY
+ * shot's move, which made a film of landscape photos a film of pans.
  *
  * A landscape photo is wider than the canvas, so a pan shows what a centred
  * crop would cut off; an upright one already fills the frame and gets a push.
  * `nth` alternates the direction so two neighbours never move alike.
  */
-function defaultMove(photo: FilmPhoto, nth: number): string {
+export function defaultMove(photo: Pick<FilmPhoto, 'width' | 'height'>, nth: number): string {
   const aspect = photo.width && photo.height ? photo.width / photo.height : 1.33;
   if (aspect > CANVAS_ASPECT * 1.25) return nth % 2 === 0 ? 'pan_lr' : 'pan_rl';
   return nth % 2 === 0 ? 'push_in_slow' : 'pull_back';
@@ -190,6 +199,8 @@ export function buildCityFilm(input: {
     const resolved: Array<{
       photo: FilmPhoto;
       weight: number;
+      /** Plays as a Seedance clip: one is cached, or the script asks for one. */
+      seedance: boolean;
       move?: string;
       label?: string;
       callout?: CityFilmCallout;
@@ -211,6 +222,7 @@ export function buildCityFilm(input: {
       resolved.push({
         photo,
         weight: s.weight ?? 1,
+        seedance: photo.seedanceReady || s.seedance === true,
         move: s.move,
         label: s.label,
         callout: s.callout,
@@ -222,8 +234,8 @@ export function buildCityFilm(input: {
     // Seedance clips are four seconds, fixed; the line's other clips share
     // what remains by weight.
     const need = lineSeconds(line.say, resolved.length);
-    const fixed = resolved.filter((r) => r.photo.seedanceReady);
-    const free = resolved.filter((r) => !r.photo.seedanceReady);
+    const fixed = resolved.filter((r) => r.seedance);
+    const free = resolved.filter((r) => !r.seedance);
     let remaining = need - fixed.length * SEEDANCE_S;
     let weightLeft = free.reduce((a, r) => a + r.weight, 0);
     // The last line may run on over the end card; any other would run into the
@@ -238,7 +250,7 @@ export function buildCityFilm(input: {
     const lineStart = at;
     for (const r of resolved) {
       let seconds = SEEDANCE_S;
-      if (!r.photo.seedanceReady) {
+      if (!r.seedance) {
         // The last free clip takes what is left, rounded UP, so half-second
         // rounding never leaves the line short.
         const last = weightLeft === r.weight;
@@ -258,11 +270,11 @@ export function buildCityFilm(input: {
         poi_name: place,
         // The city page's chip strip groups by this: the line's chapter.
         bucket: line.chapter ?? r.photo.bucket,
-        engine: r.photo.seedanceReady ? 'seedance' : 'kenburns',
-        move: r.photo.seedanceReady ? null : (r.move ?? defaultMove(r.photo, sort)),
+        engine: r.seedance ? 'seedance' : 'kenburns',
+        move: r.seedance ? null : (r.move ?? null),
         duration_s: seconds,
         prompt: null,
-        ai_generated: r.photo.seedanceReady,
+        ai_generated: r.seedance,
         label: place,
         chip_label: place,
         ...(line.chapter === 'signature' && input.profile.film.signature
@@ -285,6 +297,13 @@ export function buildCityFilm(input: {
       trimmed: false,
     });
   });
+
+  const seedanceShots = shots.filter((s) => s.engine === 'seedance').length;
+  if (seedanceShots > MAX_SEEDANCE_SHOTS) {
+    problems.push(
+      `${seedanceShots} shots play as Seedance — a film has at most ${MAX_SEEDANCE_SHOTS} (photos with a cached clip count)`,
+    );
+  }
 
   const seconds = at - XFADE_S * Math.max(0, shots.length - 1);
   if (problems.length === 0 && (seconds < 60 || seconds > 120)) {

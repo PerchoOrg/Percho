@@ -17,6 +17,12 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-17
+- **City cards list their chapters.** Under a city's name the card now shows
+  every chapter of its film; the one playing is highlighted, and tapping a
+  name starts that chapter.
+- **Alpharetta's film moves like the neighbourhood films.** Its shots now orbit,
+  push in and tilt instead of only sliding sideways, and three of them — the
+  opening over Lake Windward among them — are animated.
 - **Alpharetta is the third city**, and the first made in chapters: Overview,
   Tech, Commute, Schools, Homes, Daily life, What's next, Parks, History,
   Downtown and Events, each one watchable on its own. It follows a day in the

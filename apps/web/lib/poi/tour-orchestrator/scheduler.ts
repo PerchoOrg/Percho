@@ -668,13 +668,23 @@ function hasPeople(e: Entry): boolean {
 }
 
 function seedanceEligible(e: Entry): boolean {
-  const a = e.annotation;
-  if (e.letterbox) return false;
-  if (!a.has_natural_motion) return false;
-  if (SEEDANCE_BLOCKED_SUBJECTS.includes(a.dominant_subject)) return false;
-  if (a.has_readable_brand_signage) return false;
-  if (a.people_prominence === 'foreground') return false;
-  return true;
+  return seedanceBlocker(e.annotation, e.letterbox) === null;
+}
+
+/**
+ * Why a photo cannot be a Seedance clip, or null when it can. The same test
+ * `seedanceEligible` applies — spelled out, because a city film's script NAMES
+ * its Seedance shots (phase347) and a refusal has to say why.
+ */
+export function seedanceBlocker(a: PhotoAnnotation, letterbox: boolean): string | null {
+  if (letterbox) return 'a panorama is letterboxed, not animated';
+  if (!a.has_natural_motion) return 'nothing in it moves';
+  if (SEEDANCE_BLOCKED_SUBJECTS.includes(a.dominant_subject)) {
+    return `a ${a.dominant_subject.replace('_', ' ')} is geometry Seedance would have to invent`;
+  }
+  if (a.has_readable_brand_signage) return 'readable brand signage — Seedance may redraw it';
+  if (a.people_prominence === 'foreground') return 'people in the foreground';
+  return null;
 }
 
 /** DepthFlow count for a non-Seedance pool of `n`: 0.40 target, [1/3, 1/2]. */
@@ -687,21 +697,32 @@ export function depthflowQuota(n: number): number {
   return Math.min(n, Math.max(withinBand, Math.min(DEPTHFLOW_MIN_CLIPS, n)));
 }
 
-function assignEngines(ordered: Entry[], warnings: PlanWarning[]): Engine[] {
+function assignEngines(
+  ordered: Entry[],
+  warnings: PlanWarning[],
+  /** Exactly these photos are Seedance, and no others — see `scheduleInOrder`. */
+  seedanceIds?: ReadonlySet<string>,
+): Engine[] {
   const n = ordered.length;
   const engines: Engine[] = new Array(n).fill('kenburns');
 
-  // Seedance: strongest eligible frames, hard-capped by cost.
-  const eligible = ordered
-    .map((e, i) => ({ e, i }))
-    .filter(({ e }) => seedanceEligible(e))
-    .sort(
-      (a, b) =>
-        b.e.annotation.emotional_weight - a.e.annotation.emotional_weight ||
-        a.e.annotation.photo_id.localeCompare(b.e.annotation.photo_id),
-    )
-    .slice(0, SEEDANCE_MAX_CLIPS);
-  for (const { i } of eligible) engines[i] = 'seedance';
+  if (seedanceIds) {
+    ordered.forEach((e, i) => {
+      if (seedanceIds.has(e.annotation.photo_id)) engines[i] = 'seedance';
+    });
+  } else {
+    // Seedance: strongest eligible frames, hard-capped by cost.
+    const eligible = ordered
+      .map((e, i) => ({ e, i }))
+      .filter(({ e }) => seedanceEligible(e))
+      .sort(
+        (a, b) =>
+          b.e.annotation.emotional_weight - a.e.annotation.emotional_weight ||
+          a.e.annotation.photo_id.localeCompare(b.e.annotation.photo_id),
+      )
+      .slice(0, SEEDANCE_MAX_CLIPS);
+    for (const { i } of eligible) engines[i] = 'seedance';
+  }
 
   // DepthFlow: quota is the hard constraint, the overflow threshold is a
   // preference. A pool short on qualifying photos gets filled anyway, loudly.
@@ -929,5 +950,67 @@ export function scheduleClips(annotations: PhotoAnnotation[], photos: PhotoMeta[
     });
   }
 
+  return { clips, warnings };
+}
+
+/**
+ * Engine and move for a shot list whose ORDER is already decided (phase347).
+ *
+ * A city film's script fixes which photo plays under which line, so the
+ * ordering half of this file does not apply to it — but everything else does,
+ * and leaving it out is how Alpharetta's first cut came to be 27 left-right
+ * pans out of 29 shots (owner 2026-11-17: "所有照片的效果都只是左右滑动？？我们一整
+ * 套的用在home 和community的编排去哪了"). Same DepthFlow quota, same people ban,
+ * same adjacency repair, same subject preferences and no-repeat rule.
+ *
+ * Seedance is not chosen here: the caller names it (`seedanceIds`), because a
+ * city film spends it on purpose and on at most three shots.
+ *
+ * `duration_s` is a placeholder — the caller's script times each clip.
+ */
+export function scheduleInOrder(
+  shots: ReadonlyArray<{ annotation: PhotoAnnotation; meta: PhotoMeta }>,
+  seedanceIds: ReadonlySet<string>,
+): SchedulePlan {
+  const warnings: PlanWarning[] = [];
+  const ordered: Entry[] = shots.map(({ annotation, meta }) => ({
+    annotation,
+    meta,
+    overflow: overflow(meta.width_px, meta.height_px),
+    letterbox: isPanorama(meta.width_px, meta.height_px),
+  }));
+  const engines = assignEngines(ordered, warnings, seedanceIds);
+
+  const clips: ScheduledClip[] = [];
+  let previousMove: string | null = null;
+  ordered.forEach((e, i) => {
+    const engine = engines[i] ?? 'kenburns';
+    const move =
+      engine === 'seedance'
+        ? seedanceMove(e, previousMove)
+        : moveFor(
+            engine,
+            e.annotation.dominant_subject,
+            e.annotation.photo_id,
+            previousMove,
+            e.letterbox,
+          );
+    previousMove = move;
+    clips.push({
+      photo_id: e.annotation.photo_id,
+      poi_id: e.meta.poi_id,
+      poi_name: e.meta.poi_name,
+      bucket: e.meta.bucket,
+      sort_order: i,
+      engine,
+      move,
+      duration_s: DURATION_BASE,
+      overflow: e.overflow,
+      letterbox: e.letterbox,
+      camera_fixed: engine === 'seedance' && move === 'camera_fixed',
+      vo_line: '',
+      chip_label: e.annotation.chip_label,
+    });
+  });
   return { clips, warnings };
 }
