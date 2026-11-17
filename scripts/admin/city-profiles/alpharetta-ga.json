@@ -1,0 +1,713 @@
+{
+  "tagline": "A suburb people commute to: 700 technology companies, a rebuilt downtown, and second in Georgia on U.S. News's list.",
+  "summary": "The seat of a county that no longer exists, Alpharetta had three thousand residents in 1980. Georgia 400 and the office parks along it made it the place north Fulton goes to work: by day the city nearly doubles. It rebuilt its downtown around a new City Hall in 2015, and its schools rank among Georgia's best.",
+  "locationNote": "26 mi north of downtown Atlanta",
+  "rankings": [
+    {
+      "rank": "#2",
+      "scope": "in Georgia",
+      "title": "Best Places to Live",
+      "detail": "U.S. News & World Report, 2026–27 — #34 in the U.S. and #20 among small cities.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2026–27",
+        "url": "https://realestate.usnews.com/places/rankings/best-places-to-live-in-georgia"
+      }
+    },
+    {
+      "rank": "#1",
+      "scope": "in the U.S.",
+      "title": "Small city for jobs and quality of life",
+      "detail": "CoworkingCafe study of nearly 300 cities under 250,000 people, 2026 — as reported by NRI Pulse.",
+      "source": {
+        "name": "CoworkingCafe",
+        "year": "2026",
+        "url": "https://nripulse.com/?p=63025"
+      }
+    },
+    {
+      "rank": "#10",
+      "scope": "in Georgia",
+      "title": "Webb Bridge Middle School",
+      "detail": "U.S. News Best Middle Schools, 2027.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2027",
+        "url": "https://patch.com/georgia/across-ga/these-are-best-public-middle-schools-ga-u-s-news-ranking"
+      }
+    },
+    {
+      "rank": "#14",
+      "scope": "in Georgia",
+      "title": "Lake Windward Elementary School",
+      "detail": "U.S. News Best Elementary Schools, 2026.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2026",
+        "url": "https://patch.com/georgia/atlanta/these-are-top-elementary-schools-ga-u-s-news-says-latest-ranking"
+      }
+    }
+  ],
+  "stats": [
+    {
+      "label": "Population",
+      "value": "65,818",
+      "note": "2020 census"
+    },
+    {
+      "label": "People here by day",
+      "value": "122,000",
+      "note": "City of Alpharetta"
+    },
+    {
+      "label": "Homes owner-occupied",
+      "value": "65%",
+      "note": "the rest rented"
+    }
+  ],
+  "compare": {
+    "against": "Georgia",
+    "rows": [
+      {
+        "label": "Median household income",
+        "city": {
+          "value": 147612,
+          "display": "$147,612"
+        },
+        "state": {
+          "value": 77353,
+          "display": "$77,353"
+        },
+        "takeaway": "1.9× the state"
+      },
+      {
+        "label": "Adults with a bachelor's or higher",
+        "city": {
+          "value": 70.7,
+          "display": "70.7%"
+        },
+        "state": {
+          "value": 34.9,
+          "display": "34.9%"
+        },
+        "takeaway": "2.0× the state"
+      },
+      {
+        "label": "Median home value",
+        "city": {
+          "value": 649000,
+          "display": "$649,000"
+        },
+        "state": {
+          "value": 303300,
+          "display": "$303,300"
+        },
+        "takeaway": "2.1× the state"
+      }
+    ],
+    "source": {
+      "name": "U.S. Census Bureau, ACS 2020–2024",
+      "year": "2024",
+      "url": "https://mmcganalytics.com/georgia/fulton-county/alpharetta/"
+    }
+  },
+  "history": [
+    {
+      "year": "1830s",
+      "short": "Settled",
+      "text": "Farmers settle the land after the Cherokee removal; the Rucker log house dates from 1833."
+    },
+    {
+      "year": "1858",
+      "short": "County seat",
+      "text": "Chartered on December 11 as the seat of Milton County."
+    },
+    {
+      "year": "1931",
+      "short": "Joins Fulton",
+      "text": "Milton County merges into Fulton County during the Depression."
+    },
+    {
+      "year": "1980",
+      "short": "3,128 residents",
+      "text": "Still a small town; Georgia 400 and its office parks are about to change that."
+    },
+    {
+      "year": "2008",
+      "short": "Amphitheatre",
+      "text": "A 12,000-seat amphitheatre opens with the Atlanta Symphony Orchestra."
+    },
+    {
+      "year": "2014",
+      "short": "Avalon",
+      "text": "Avalon opens: 86 acres of shops, offices and homes."
+    },
+    {
+      "year": "2015",
+      "short": "New downtown",
+      "text": "City Hall, the county library, Brooke Street Park and the Town Green open; shops and homes follow by 2019."
+    },
+    {
+      "year": "2026",
+      "short": "North Point vote",
+      "text": "The city approves rebuilding North Point Mall around a 20,000-seat arena, if the NHL awards a team."
+    }
+  ],
+  "growth": {
+    "series": [
+      {
+        "label": "1980",
+        "value": 3128
+      },
+      {
+        "label": "1990",
+        "value": 13002
+      },
+      {
+        "label": "2000",
+        "value": 34854
+      },
+      {
+        "label": "2010",
+        "value": 57551
+      },
+      {
+        "label": "2020",
+        "value": 65818
+      }
+    ],
+    "takeaway": "21× since 1980",
+    "source": {
+      "name": "U.S. Census Bureau, decennial census",
+      "url": "https://en.wikipedia.org/wiki/Alpharetta,_Georgia"
+    }
+  },
+  "education": {
+    "schools": [
+      {
+        "level": "elementary",
+        "name": "Lake Windward Elementary",
+        "rank": "#14",
+        "scope": "in Georgia",
+        "detail": "Fulton County Schools. U.S. News Best Elementary Schools, 2026.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026",
+          "url": "https://patch.com/georgia/atlanta/these-are-top-elementary-schools-ga-u-s-news-says-latest-ranking"
+        }
+      },
+      {
+        "level": "elementary",
+        "name": "Creek View Elementary",
+        "rank": "#16",
+        "scope": "in Georgia",
+        "detail": "Fulton County Schools. U.S. News Best Elementary Schools, 2026.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026",
+          "url": "https://patch.com/georgia/atlanta/these-are-top-elementary-schools-ga-u-s-news-says-latest-ranking"
+        }
+      },
+      {
+        "level": "middle",
+        "name": "Webb Bridge Middle",
+        "rank": "#10",
+        "scope": "in Georgia",
+        "detail": "Fulton County Schools. U.S. News Best Middle Schools, 2027.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2027",
+          "url": "https://patch.com/georgia/across-ga/these-are-best-public-middle-schools-ga-u-s-news-ranking"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Alpharetta High",
+        "rank": "#32",
+        "scope": "in Georgia",
+        "detail": "Fulton County Schools. U.S. News Best High Schools, 2026–27 · 98.4% graduated in 2025.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026–27",
+          "url": "https://www.usnews.com/education/best-high-schools/georgia/districts/fulton-county-schools/alpharetta-high-school-5921"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Innovation Academy",
+        "detail": "A Fulton County STEM magnet high school downtown, opened in 2021 on the old Milton High site.",
+        "source": {
+          "name": "Wikipedia — FCS Innovation Academy",
+          "url": "https://en.wikipedia.org/wiki/FCS_Innovation_Academy"
+        }
+      }
+    ],
+    "measure": "Graduate in 4 years · class of 2025",
+    "rows": [
+      {
+        "label": "Alpharetta HS",
+        "pct": 98.4,
+        "display": "98.4%"
+      },
+      {
+        "label": "Fulton district",
+        "pct": 91.9,
+        "display": "91.9%",
+        "baseline": true
+      }
+    ],
+    "note": "All are Fulton County schools. Lake Windward Elementary is the city's best-ranked elementary; the film shows Creek View. Graduation rates: Fulton County Schools, class of 2025."
+  },
+  "gettingAround": [
+    {
+      "label": "Downtown Atlanta · 26 mi",
+      "value": "~45 min · 65 at rush",
+      "minutes": {
+        "min": 45,
+        "max": 65
+      }
+    },
+    {
+      "label": "Hartsfield-Jackson · 34 mi",
+      "value": "50–70 min",
+      "minutes": {
+        "min": 50,
+        "max": 70
+      }
+    },
+    {
+      "label": "Buckhead · 18 mi",
+      "value": "30–50 min",
+      "minutes": {
+        "min": 32,
+        "max": 50
+      }
+    },
+    {
+      "label": "Perimeter Center · 12 mi",
+      "value": "22–37 min",
+      "minutes": {
+        "min": 22,
+        "max": 37
+      }
+    },
+    {
+      "label": "Nearest rail · MARTA North Springs",
+      "value": "no rail in Alpharetta"
+    },
+    {
+      "label": "Georgia 400",
+      "value": "the city's highway"
+    }
+  ],
+  "planning": [
+    {
+      "title": "North Point Mall · approved August 2026",
+      "text": "A mixed-use district around a 20,000-seat hockey arena, with about 1,400 apartments. It depends on the NHL awarding a team by August 2031, or the zoning reverts."
+    },
+    {
+      "title": "Alpha Loop",
+      "text": "A ring of trails joining downtown, Avalon and the office parks: a 3.3-mile inner loop and a 5.25-mile outer one. Segments opened in 2020 and June 2024; more are planned."
+    },
+    {
+      "title": "Alpharetta City Center · 2015–2019",
+      "text": "26 acres downtown: City Hall, the library, the Town Green and a parking deck opened in January 2015; shops, restaurants and apartments through 2019."
+    }
+  ],
+  "sources": [
+    {
+      "name": "U.S. Census Bureau ACS 2020–2024 — Alpharetta (MMCG Analytics)",
+      "url": "https://mmcganalytics.com/georgia/fulton-county/alpharetta/"
+    },
+    {
+      "name": "Data USA — Alpharetta, GA",
+      "url": "https://datausa.io/profile/geo/alpharetta-ga"
+    },
+    {
+      "name": "U.S. Census Bureau QuickFacts — Georgia",
+      "url": "https://www.census.gov/quickfacts/fact/table/GA/INC110224"
+    },
+    {
+      "name": "Wikipedia — Alpharetta, Georgia",
+      "url": "https://en.wikipedia.org/wiki/Alpharetta,_Georgia"
+    },
+    {
+      "name": "Tech Alpharetta — more than 700 technology companies",
+      "url": "https://techalpharetta.com/alpharetta-now-home-to-more-than-700-technology-companies-2/"
+    },
+    {
+      "name": "Saporta Report — Tech Alpharetta: daytime population",
+      "url": "https://saportareport.com/?p=1027236"
+    },
+    {
+      "name": "Wikipedia — Ameris Bank Amphitheatre",
+      "url": "https://en.wikipedia.org/wiki/Ameris_Bank_Amphitheatre"
+    },
+    {
+      "name": "Wikipedia — Big Creek Greenway",
+      "url": "https://en.wikipedia.org/wiki/Big_Creek_Greenway"
+    },
+    {
+      "name": "Patch — City Center project wins awards",
+      "url": "https://patch.com/georgia/alpharetta/city-center-project-wins-multi-state-awards"
+    },
+    {
+      "name": "AJC — Alpharetta approves North Point Mall redevelopment",
+      "url": "https://www.ajc.com/business/2026/08/alpharetta-approves-north-point-mall-redevelopment-plan-targeting-nhl-expansion/"
+    },
+    {
+      "name": "AJC — Inside Alpharetta's Alpha Loop",
+      "url": "https://www.ajc.com/news/atlanta-news/inside-alpharettas-alpha-loop/QMIMWWHYSBDJRGD65OC2H5KSZQ/"
+    },
+    {
+      "name": "Fulton County Schools graduation rates, class of 2025",
+      "url": "https://news.fultonschools.org/details/~board/district-news-stories/post/fcs-breaks-grad-record-five-years-in-a-row"
+    },
+    {
+      "name": "Drive times: Google Routes, from City Hall, typical traffic",
+      "url": "https://maps.google.com"
+    }
+  ],
+  "film": {
+    "signature": "Tech",
+    "lines": [
+      {
+        "say": "Alpharetta, Georgia, is a suburb people commute to. U.S. News ranks it second in the state.",
+        "chapter": "overview",
+        "shots": [
+          {
+            "photo": "328ad05f",
+            "weight": 8,
+            "callout": {
+              "type": "stat",
+              "big": "#2",
+              "label": "in Georgia · Best Places to Live",
+              "source": "U.S. News & World Report, 2026–27"
+            }
+          },
+          {
+            "photo": "dbfcfd21",
+            "weight": 6
+          }
+        ]
+      },
+      {
+        "say": "More than seven hundred technology companies work in Alpharetta, and by day the city nearly doubles, to a hundred and twenty-two thousand people.",
+        "chapter": "signature",
+        "shots": [
+          {
+            "photo": "0d0b4efc",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "700+",
+              "label": "technology companies",
+              "source": "Tech Alpharetta"
+            }
+          },
+          {
+            "photo": "c8355ad6",
+            "weight": 5
+          },
+          {
+            "photo": "f66fbfff",
+            "label": "Windward Parkway",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "122,000",
+              "label": "people by day · 66,855 residents",
+              "source": "City of Alpharetta · ACS 2020–24"
+            }
+          }
+        ]
+      },
+      {
+        "say": "From Alpharetta, downtown Atlanta is twenty-six miles down Georgia 400: forty-five minutes, sixty-five at rush hour.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "d1e1c711",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "~45 min",
+              "label": "to downtown Atlanta · 65 at rush hour",
+              "source": "26 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "cdf8b4f2",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "22 min",
+              "label": "to Perimeter Center · 37 at rush hour",
+              "source": "12 mi · Google Maps, typical traffic"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Alpharetta's public schools rank high in Georgia: Creek View Elementary sixteenth, Webb Bridge Middle tenth.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "62b694e8",
+            "label": "Creek View Elementary",
+            "callout": {
+              "type": "stat",
+              "big": "#16",
+              "label": "in Georgia · elementary school",
+              "source": "U.S. News, 2026"
+            }
+          },
+          {
+            "photo": "36f3e78d",
+            "label": "Webb Bridge Middle",
+            "callout": {
+              "type": "stat",
+              "big": "#10",
+              "label": "in Georgia · middle school",
+              "source": "U.S. News, 2027"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Alpharetta High graduates ninety-eight percent of its seniors; a STEM high school, Innovation Academy, opened downtown in 2021.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "e9513cc1",
+            "label": "Alpharetta High",
+            "callout": {
+              "type": "stat",
+              "big": "#32",
+              "label": "in Georgia · high school · 98% graduate",
+              "source": "U.S. News, 2026–27 · Fulton County Schools"
+            }
+          },
+          {
+            "photo": "5ceccac9",
+            "label": "Innovation Academy",
+            "callout": {
+              "type": "stat",
+              "big": "2021",
+              "label": "a STEM magnet high school",
+              "source": "Fulton County Schools"
+            }
+          }
+        ]
+      },
+      {
+        "say": "The median Alpharetta home is worth six hundred forty-nine thousand dollars, about twice Georgia's median, and two in three are owner-occupied.",
+        "chapter": "homes",
+        "shots": [
+          {
+            "photo": "4dcca2f1",
+            "label": "Lake Windward",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "$649,000",
+              "label": "median home value · 2.1× Georgia",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          },
+          {
+            "photo": "278afd65",
+            "label": "Lake Windward",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "+7%",
+              "label": "on the previous Census estimate",
+              "source": "ACS 2019–23 → 2020–24 · Data USA"
+            }
+          },
+          {
+            "photo": "be01a3bc",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "65%",
+              "label": "of homes are owner-occupied",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          }
+        ]
+      },
+      {
+        "say": "In Alpharetta, errands stay close: the county library is downtown, and Avalon's shops opened in 2014.",
+        "chapter": "daily",
+        "shots": [
+          {
+            "photo": "baae15c6",
+            "label": "Alpharetta Library",
+            "weight": 5
+          },
+          {
+            "photo": "aa48756c",
+            "label": "Avalon",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "86 acres",
+              "label": "shops, offices and homes · opened 2014"
+            }
+          },
+          {
+            "photo": "b16b07a4",
+            "label": "Avalon",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "In 2026 Alpharetta approved rebuilding North Point Mall around a hockey arena, if the NHL awards Atlanta a team.",
+        "chapter": "future",
+        "shots": [
+          {
+            "photo": "935476f5",
+            "label": "North Point Mall",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "20,000",
+              "label": "seat arena · approved August 2026, pending an NHL team",
+              "source": "AJC"
+            }
+          },
+          {
+            "photo": "ca056548",
+            "label": "North Point Mall",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "Big Creek Greenway runs eight miles through Alpharetta, and Wills Park keeps arenas for horse shows.",
+        "chapter": "outdoor",
+        "shots": [
+          {
+            "photo": "b576c36e",
+            "label": "Big Creek Greenway",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "8 miles",
+              "label": "of greenway · Alpharetta to Roswell"
+            }
+          },
+          {
+            "photo": "39c5089c",
+            "label": "Big Creek Greenway",
+            "weight": 5
+          },
+          {
+            "photo": "ca95a5bb",
+            "label": "Wills Park Equestrian Center",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "Alpharetta was chartered in 1858 as a county seat. In 1980 it had three thousand residents; now, sixty-six thousand.",
+        "chapter": "history",
+        "shots": [
+          {
+            "photo": "6e188c07",
+            "label": "Main Street",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "1858",
+              "label": "chartered as the seat of Milton County"
+            }
+          },
+          {
+            "photo": "b3d6804c",
+            "weight": 8,
+            "callout": {
+              "type": "count",
+              "from": 3128,
+              "to": 65818,
+              "label": "residents · 1980 → 2020",
+              "source": "U.S. Census Bureau",
+              "series": [
+                {
+                  "label": "1980",
+                  "value": 3128
+                },
+                {
+                  "label": "1990",
+                  "value": 13002
+                },
+                {
+                  "label": "2000",
+                  "value": 34854
+                },
+                {
+                  "label": "2010",
+                  "value": 57551
+                },
+                {
+                  "label": "2020",
+                  "value": 65818
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "say": "Downtown Alpharetta was rebuilt around a new City Hall and town green, opened in 2015.",
+        "chapter": "downtown",
+        "shots": [
+          {
+            "photo": "99e73b4d",
+            "label": "Alpharetta City Hall",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "2015",
+              "label": "City Hall, the library and the Town Green open"
+            }
+          },
+          {
+            "photo": "7d5758a6",
+            "label": "Town Green",
+            "weight": 6
+          }
+        ]
+      },
+      {
+        "say": "On summer nights, twelve thousand people fill Ameris Bank Amphitheatre, and bands play Brooke Street Park.",
+        "chapter": "events",
+        "shots": [
+          {
+            "photo": "4d65b0d2",
+            "label": "Ameris Bank Amphitheatre",
+            "weight": 5
+          },
+          {
+            "photo": "3ee0bd12",
+            "label": "Ameris Bank Amphitheatre",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "12,000",
+              "label": "seats · opened 2008"
+            }
+          },
+          {
+            "photo": "7828cc81",
+            "label": "Brooke Street Park",
+            "weight": 6
+          }
+        ]
+      }
+    ]
+  }
+}

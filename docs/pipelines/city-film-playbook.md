@@ -1,6 +1,6 @@
 # City film & city card — playbook
 
-**Status**: in use · **Last updated**: 2026-11-16 · **Built on**: Suwanee, GA (phase318–333), Johns Creek, GA (phase344)
+**Status**: in use · **Last updated**: 2026-11-17 · **Built on**: Suwanee, GA (phase318–333), Johns Creek, GA (phase344), Alpharetta, GA (phase346)
 **Read this before making the next city** (Johns Creek → Alpharetta → Milton → Cumming → Sugar Hill/Buford).
 
 Suwanee took fifteen phases, two rejected finished films and a dozen assemblies.
@@ -63,6 +63,7 @@ answer fits the city next door, keep researching. Spines so far:
 | A Saturday | one day, morning to night; figures only as callouts (direction D, phase324) | a city people use on foot |
 | A hero subject | one signature thing takes a third of the film | horse country, a lake, a mill town |
 | A calendar | the year's events as the spine; culture first | only with licence-clean event photos |
+| A day | chapters in the order of a day — work, school, errands, parks, evening downtown, a night out — and the pictures follow the light | a city with a strong daytime AND night-time life (Alpharetta) |
 
 No two consecutive cities share a spine or an opening. Record each film here:
 
@@ -70,6 +71,7 @@ No two consecutive cities share a spine or an opening. Record each film here:
 |---|---|---|---|---|---|
 | Suwanee | Claim → proof | aerial of Town Center + the claim | 2 lines + growth | the downtown it built | ~1:50 |
 | Johns Creek | Contradiction | a pond + the #1 ranking | 1 line (~10 s) | golf: Bobby Jones's club, four majors | ~1:30 |
+| Alpharetta | A day (first city built as chapters, §2.2) | sunset aerial of the Town Green + "a suburb people commute to" | 1 chapter (~11 s) | Tech: 700 companies, 122,000 people by day | 1:52 |
 
 ### 2.2 The chapters (owner 2026-11-16/17: "模块化内容 可以让人自主选择 … 每一个章节可以做得独立一些可以单独拉出来看 … 每个city尽量覆盖")
 
@@ -214,6 +216,13 @@ are redone once the owner has judged the first city made this way.
   second photo. The CLI now prints the warnings.
 - A single Ken Burns shot of 9–10 s (one line, one photo): give a long line two
   photos so the cut stays at 3–5 s.
+- Citing a ranking without checking for a newer edition: Johns Creek's film says
+  U.S. News ranks it the best place to live in America — true of the 2025–26
+  list; the 2026–27 list (May 2026) has it #5. Search "<publisher> <next edition>
+  <city>" before using any ranking, and say the edition in the callout.
+- Picking a photo from a landscape contact sheet: the film crops to 9:16. An
+  office behind trees became a forest; a library sign became half a word. Judge
+  the centre third of a landscape photo, not the whole frame.
 - Writing a line before knowing a photo exists for it: Medley (Johns Creek's new
   district) had only a restaurant front with people in it, so it is on the page,
   not in the film. Look at the contact sheet first, then write.
