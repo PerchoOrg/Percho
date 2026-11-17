@@ -23,7 +23,7 @@ rotation, not on the way in.
 
 ---
 
-## 2026-11-17 17:25 UTC — phase348: five sections, not eleven chapter names; why the owner could not see them
+## 2026-11-17 17:20 UTC — phase348: five sections, not eleven chapter names; why the owner could not see them
 
 **Objective**: Owner: "还是看不到章节名 不要太多太密 大致的划分几个就好".
 **Finding — why he could not see them**: his phone was almost certainly on **1.0.1 (12)**, the production build in App Review. Its JS was frozen at `0c2fb542` (no `expo-updates`), so it shows new films on the OLD card: the per-shot scrubber, whose touch label is what his first report ("如果不点击下面的进度条章节名不自己显示") described. Evidence: ASC `betaBuildUsages` — build 12: 1 install, 6 sessions; build 11 (the dev client that loads JS from Metro): 25 sessions; his `mobile_events` today are `sessionN: 7` on one install. Metro itself was serving the new card (the module fetched from `127.0.0.1:443` contains `chapterRow`). I had not checked the build before changing the UI twice; phase345's and phase347's card work was unseen. Told him the free fix: TestFlight → Previous Builds → 1.0.1 (11), automatic updates off; a dev-client build numbered above 12 is the alternative, not started.
@@ -33,6 +33,7 @@ rotation, not on the way in.
 - Card and web chips print each name once (a film from before sections returns to "Overview"); the card row's type is 13 pt with wider gaps.
 - Alpharetta: chapters reordered so sections are whole — overview, Tech, history, what's next · schools · homes · commute · daily, parks, downtown, events. **Assembly `e8132334`, stream `0b3b0ee8…`, 1:54**; the three Seedance clips reused (no new spend); 17 Ken Burns / 9 DepthFlow / 3 Seedance, 7 pans; frames and narration checked.
 **Decisions**: the twelve chapters stay as how a script is written and checked; only what is SHOWN is coarser. The `signature` chapter's own name ("Tech") is no longer on screen anywhere — it sits inside Overview; `film.signature` is kept in the profile.
+**Verified live** (after deploy): `/api/mobile/feed` sends Alpharetta `[Overview, Schools, Homes, Commute, Life]`; Suwanee and Johns Creek send six stretches with repeats (their films predate sections — the card and chips print each name once); `/city/alpharetta-ga` renders five chips; the page API groups the same five.
 **Not verified**: the card on a phone — still nobody has seen the chapter row rendered.
 **Next steps**: owner installs build 11 and looks. Suwanee and Johns Creek stay as they are until he asks.
 
