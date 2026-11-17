@@ -23,7 +23,7 @@ rotation, not on the way in.
 
 ---
 
-## 2026-11-17 18:15 UTC — phase349: four directions for the city card's bottom row (demo only)
+## 2026-11-17 18:09 UTC — phase349: four directions for the city card's bottom row (demo only)
 
 **Objective**: Owner, now on the dev client (1.0.1 (11), connected by the manual URL) and seeing phase348's row for the first time: "没对齐 也不好看 有没有别的方案 设计几个给我看看 包括这个explore button 最底下这一排如何呈现".
 **What is wrong with the row as built**: the five names are laid out by word width and the bar under them by each part's LENGTH, so a name never sits over its own stretch; and Explore hangs on the name's line, unrelated to either.
