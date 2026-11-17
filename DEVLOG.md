@@ -23,6 +23,22 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-17 09:25 UTC — phase346: Alpharetta, the first city built as chapters
+
+**Objective**: Owner: "可以 就这个 记录下来 做下一个城市 如果效果好 回过头把已经有的两个也重新做了". Third city, written to playbook §2.2 from the start.
+**Actions**:
+- `cities` row `21b1fa81…` (`alpharetta-ga`, Fulton, City Hall 34.0746, -84.2923, `geo_unit_id city:alpharetta-ga`), inactive until checked, now **active**.
+- `pnpm tour alpharetta-ga --city`: run `f3b4b495…`, 17 places. Rejected at the place level: Roswell Mill Waterfall (Roswell), two Trader Joe's, Lapeer and Roaring Social (single businesses). Added by `place`: City Hall, Lake Windward and Creek View Elementary, the library, Webb Bridge Park, Wills Park Equestrian Center, Innovation Academy, Sanctuary Park, the Town Green, downtown, two Windward places; `topup`; 32 Commons files (CC0 / CC BY / PD). 230 photos, 28 rejected for the city by the filter.
+- Profile `scripts/admin/city-profiles/alpharetta-ga.json`: U.S. News 2026–27 #2 in Georgia (#34 U.S.); CoworkingCafe 2026 #1 small city for careers; ACS 2020–24 income $147,612 / bachelor's 70.7% / home $649,000 (2.1× Georgia), 65% owner-occupied; 700+ technology companies (Tech Alpharetta), 122,000 people by day (city); schools Lake Windward #14 and Creek View #16 (elem, 2026), Webb Bridge #10 (middle, 2027), Alpharetta High #32 (2026–27), 98.4% graduating in 2025 against the district's 91.9%, Innovation Academy (2021); drive times from Google Routes; North Point Mall redevelopment approved August 2026 (20,000-seat arena, pending an NHL team by 2031); Alpha Loop; City Center 2015–2019.
+- Film: spine "a day" — overview → Tech (`signature`) → commute → schools → homes → daily → future → outdoor → history → downtown → events, the pictures going from morning to night. 12 lines, 207 words, 29 photos, eleven chapters, each one block and each opening on a sentence that names its subject. **Assembly `a18e96ea`, stream `7c309397…`, 1:52**, checked frame by frame, narration on every line; free engines only.
+- Live: `/api/mobile/city/alpharetta-ga` serves the film with 24 segments in 11 chapters; `/api/mobile/feed` sends `tourChapters` for all three cities (Alpharetta's eleven; Suwanee's and Johns Creek's from their old keys, "Overview" twice); `/city/alpharetta-ga` renders the eleven chips; the city's 29 approved photos are the film's 29.
+**Decisions**: Lake Windward Elementary (#14) has no usable photo of the school, so the film shows Creek View (#16) and the page lists both. Wills Park's arena is shown empty — the jumping photo's rider looks like a minor. `future` sits mid-film beside `daily` (both are about where the city shops) so the film ends at night, not on a mall.
+**Issues**:
+- First cut `a579a1c6`: two landscape photos lost their subject to the 9:16 crop (an office behind pines became a forest; the library's sign became half a word). Both replaced; playbook §6 says to judge the centre third.
+- **Johns Creek's film states a superseded ranking.** Researching Alpharetta surfaced U.S. News's 2026–27 list (May 2026): Johns Creek is #5 in the U.S. and #1 in Georgia; the film says "ranks … the best place to live in America" over a callout dated 2025–26. One source hinted at this during phase344 and was not followed up. Reported to the owner; to be corrected when Johns Creek is redone as chapters (its profile no longer passes the write-time chapter check, so a wording-only fix needs the redo or a bypass).
+**Not verified here**: the card's chapter bar and "CITY · <chapter>" tag on a phone.
+**Next steps**: owner judges Alpharetta on the phone — the film and the chapter bar. If it works: redo Suwanee and Johns Creek as chapters (adding `homes`, fixing the Johns Creek ranking). Then Milton.
+
 ## 2026-11-17 08:31 UTC — phase345: a city film is chapters a viewer can jump to
 
 **Objective**: Owner: "一个city视频很长 不是所有人都对历史或者前面的介绍感兴趣 比如有人只想看不同城市的学区部分 有没有办法可以可视化视频进度 模块化内容 可以让人自主选择？", then "好就按照这个方向 每一个章节可以做得独立一些可以单独拉出来看 先propose一个包含所有的章节名单 每个city尽量覆盖", and on the list: "可以 就这个 记录下来 做下一个城市 如果效果好 回过头把已经有的两个也重新做了".

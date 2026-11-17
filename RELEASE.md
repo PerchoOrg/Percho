@@ -17,6 +17,10 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-17
+- **Alpharetta is the third city**, and the first made in chapters: Overview,
+  Tech, Commute, Schools, Homes, Daily life, What's next, Parks, History,
+  Downtown and Events, each one watchable on its own. It follows a day in the
+  city, from the morning's office parks to a night at the amphitheatre.
 - **City films come in chapters you can jump to.** The bar under a city's
   film is now divided into its chapters — Overview, Schools, Homes, Commute
   and so on — and the card shows which one is playing. Tap a chapter to start
