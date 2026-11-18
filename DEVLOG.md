@@ -23,7 +23,7 @@ rotation, not on the way in.
 
 ---
 
-## 2026-11-17 18:40 UTC — phase350: the segmented control, four takes (demo only)
+## 2026-11-18 03:25 UTC — phase350: the segmented control, four takes (demo only)
 
 **Objective**: Owner on phase349's four directions: "C不错 但是有点呆 再设计设计".
 **What reads as stiff in C**: five boxes of one width whatever the word, square corners and a border, and a highlight that switches from box to box with nothing in between.
