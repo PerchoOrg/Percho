@@ -136,7 +136,7 @@ import type { CardIconName } from "@percho/shared/icons";
  * its evidence, and that screen is where the CTA goes.
  */
 import { LinearGradient } from "expo-linear-gradient";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	type LayoutChangeEvent,
 	type NativeSyntheticEvent,
@@ -248,14 +248,16 @@ function signalIcons(card: CommunityCardV3): CardIconName[] {
  * exists so the deck's tap gesture does not read a bar tap as a bare card tap.
  */
 const SCRUB_TAP_TARGET = "scrub";
-/** How far a finger may drift on a chapter before the touch is a drag, in points. */
+/** How far a finger may drift on a part before the touch is a slide, in points. */
 const CHAPTER_TAP_SLOP = 8;
 /**
- * Tap target of a chapter's NAME, followed by its index ("chapter:3"). The
- * feed turns it into a `jumpTo` for the card on top — a tap inside the deck is
- * decided at release by the deck, never by the element (see `tapSlot`).
+ * Armed into `tapSlot` by a touch on a city card's band of parts. The band
+ * seeks the film itself; the feed's only part is to un-pause — a jump into a
+ * paused film would look like nothing happened.
  */
-export const CHAPTER_TAP_PREFIX = "chapter:";
+export const CHAPTER_TAP_TARGET = "chapter";
+/** Height of that band — and how far the info block rides above it. */
+const BAND_H = 46;
 
 interface CommunityFaceProps {
 	card: CommunityCardV3;
@@ -288,12 +290,6 @@ interface CommunityFaceProps {
 	tag?: "COMMUNITY" | "CITY";
 	saveKind?: SavedKind;
 	/**
-	 * Start this chapter — the feed sets it when a chapter's name is tapped
-	 * (phase347). `nonce` rises on every tap, so the same chapter can be asked
-	 * for twice running.
-	 */
-	jumpTo?: { index: number; nonce: number } | null;
-	/**
 	 * Opens the share sheet (phase335). Absent for a card with no page to send
 	 * someone to; the corner then shows no share cell.
 	 */
@@ -309,7 +305,6 @@ export function CommunityFace({
 	deckGesture,
 	tag = "COMMUNITY",
 	saveKind = "community",
-	jumpTo,
 	onShare,
 }: CommunityFaceProps) {
 	const icons = signalIcons(card);
@@ -373,11 +368,11 @@ export function CommunityFace({
 	const fill = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
 	const segments = card.tourSegments ?? [];
 	/**
-	 * What the bar is cut into. A city film is told in CHAPTERS and its bar is
-	 * cut by them — six or seven stretches a viewer can name, instead of a dash
-	 * for each of twenty shots (owner 2026-11-16: "可视化视频进度 模块化内容 可以让人
-	 * 自主选择"). Everything else is cut by place, as it always was. The place
-	 * LABEL follows `segments` either way.
+	 * A city film is told in PARTS — five at most — and its card names them in
+	 * a band across its foot instead of cutting a bar into a dash per shot
+	 * (owner 2026-11-16: "可视化视频进度 模块化内容 可以让人自主选择"). Everything else
+	 * is cut by place, as it always was. The place LABEL follows `segments`
+	 * either way.
 	 */
 	const chapters = card.tourChapters ?? [];
 	const byChapter = chapters.length > 0;
@@ -464,9 +459,8 @@ export function CommunityFace({
 	const place = segments[placeIndex];
 
 	/**
-	 * Which CHAPTER the film is in — the lit name in the chapter row. Same
-	 * derivation as the place above, and stored with its card for the same
-	 * reason.
+	 * Which part the film is in — the lit word in the band. Same derivation as
+	 * the place above, and stored with its card for the same reason.
 	 */
 	const [chapterAt, setChapterAt] = useState<{
 		id: string;
@@ -489,9 +483,9 @@ export function CommunityFace({
 	);
 	const chapterIndex = chapterAt?.id === card.id ? chapterAt.index : 0;
 	/**
-	 * The names the row prints: each once, with the stretch a tap starts. A
+	 * The words the band prints: each once, with the stretch a tap starts. A
 	 * film made before sections existed returns to one — "Overview" at both
-	 * ends — and a row that says a name twice reads as a mistake.
+	 * ends — and a band that says a word twice reads as a mistake.
 	 */
 	const chapterNames = useMemo(() => {
 		const seen = new Set<string>();
@@ -502,22 +496,22 @@ export function CommunityFace({
 		});
 	}, [chapters]);
 	const playingName = chapters[chapterIndex]?.name;
-
 	/**
-	 * A tapped chapter name starts that chapter from its first frame. The
-	 * nonce, not the index, is what is new: the film's structure can be
-	 * re-sent by a pool refresh, and that must not replay the last jump.
+	 * Where each of the band's words starts in the film (0..1), as plain
+	 * numbers for the gesture's worklets. The words are equal cells, so a touch
+	 * picks a cell by position and the cell says where to go.
 	 */
-	const handledJump = useRef(0);
-	useEffect(() => {
-		if (!jumpTo || !byChapter || jumpTo.nonce === handledJump.current) return;
-		handledJump.current = jumpTo.nonce;
-		const start =
-			jumpTo.index <= 0 ? 0 : (chapters[jumpTo.index - 1]?.endFraction ?? 0);
-		progress.value = start;
-		seekTo.value = start;
-		setChapterAt({ id: card.id, index: jumpTo.index });
-	}, [jumpTo, byChapter, chapters, progress, seekTo, card.id]);
+	const cellStarts = useMemo(
+		() =>
+			chapterNames.map((c) =>
+				c.index <= 0
+					? 0
+					: // A hair INSIDE the part: exactly on the boundary still reads as
+						// the part before it, and the word that lights would be the wrong one.
+						Math.min((chapters[c.index - 1]?.endFraction ?? 0) + 0.002, 1),
+			),
+		[chapterNames, chapters],
+	);
 
 	/**
 	 * Drag the bar to move through the film.
@@ -553,15 +547,17 @@ export function CommunityFace({
 			scrubIndex.value = dashAt(ratio);
 		};
 		/**
-		 * A touch on a CHAPTER lands on its first frame, not on the point under
-		 * the finger: the bar is offering "watch Schools", and Schools from the
-		 * middle of a sentence is not that. A drag still goes where it is dragged.
+		 * A touch on the band lands on the first frame of the part under the
+		 * finger: the band is offering "watch Schools", and Schools from the
+		 * middle of a sentence is not that. The words are equal cells, so the
+		 * cell comes from the position, not from the film's proportions.
 		 */
 		const snap = (x: number) => {
 			"worklet";
-			const index = dashAt(locate(x));
-			progress.value = index <= 0 ? 0 : (bounds[index - 1] ?? 0);
-			scrubIndex.value = index;
+			const count = cellStarts.length;
+			if (count === 0) return;
+			const cell = Math.min(Math.floor(locate(x) * count), count - 1);
+			progress.value = cellStarts[cell] ?? 0;
 		};
 		/**
 		 * Hand the bar back to playback and ask the film to go where the finger
@@ -594,8 +590,13 @@ export function CommunityFace({
 				// The deck's tap gesture runs alongside this pan (only the deck's
 				// PAN is blocked below), so a still tap on the bar would also
 				// dispatch as a bare card tap and pause the film it just sought.
-				// Arm a target the feed does not handle.
-				if (tapSlot) tapSlot.value = { target: SCRUB_TAP_TARGET };
+				// Arm a target the feed does not handle — or, on a city card's
+				// band, one that only makes it play.
+				if (tapSlot) {
+					tapSlot.value = {
+						target: byChapter ? CHAPTER_TAP_TARGET : SCRUB_TAP_TARGET,
+					};
+				}
 				scrubbing.value = true;
 				if (byChapter) snap(e.x);
 				else track(e.x);
@@ -608,8 +609,12 @@ export function CommunityFace({
 				seekTo.value = progress.value;
 			})
 			.onUpdate((e) => {
-				// A chapter tap that wobbles a few points is still a tap.
-				if (byChapter && Math.abs(e.translationX) < CHAPTER_TAP_SLOP) return;
+				if (byChapter) {
+					// A tap that wobbles a few points is still a tap; past that, a
+					// finger sliding along the band picks the part it is over.
+					if (Math.abs(e.translationX) >= CHAPTER_TAP_SLOP) snap(e.x);
+					return;
+				}
 				track(e.x);
 			})
 			// The pointer lift, ahead of any gesture-state decision.
@@ -624,6 +629,7 @@ export function CommunityFace({
 	}, [
 		bounds,
 		byChapter,
+		cellStarts,
 		isTop,
 		card.videoUrl,
 		deckGesture,
@@ -795,7 +801,7 @@ export function CommunityFace({
 			    it takes no width from the row, so the name keeps all of it and
 			    the glyphs keep their place — beside the name, the tag cost the
 			    glyphs on a short name and the name itself on a long one. */}
-			<View style={styles.info}>
+			<View style={[styles.info, byChapter && styles.infoOverBand]}>
 				<View style={styles.tagRow}>
 					<Text style={styles.badgeLabel}>{tag}</Text>
 				</View>
@@ -837,53 +843,54 @@ export function CommunityFace({
 								hitSlop={12}
 								style={({ pressed }) => [
 									styles.ctaLink,
+									byChapter && styles.ctaPill,
 									pressed && styles.ctaPressed,
 								]}
 							>
-								<Text style={styles.ctaLabel} numberOfLines={1}>
+								<Text
+									style={[styles.ctaLabel, byChapter && styles.ctaPillLabel]}
+									numberOfLines={1}
+								>
 									Explore
 								</Text>
-								<ArrowRightIcon />
+								<ArrowRightIcon dark={byChapter} />
 							</Pressable>
 						</Animated.View>
 					)}
 				</View>
-				{/* A city film's sections, ALL of them, in film order (owner
-				    2026-11-17: "如果不点击下面的进度条章节名不自己显示 我怎么知道有哪些章节
-				    呢？", then "不要太多太密 大致的划分几个就好" — the server sends five
-				    at most). The lit one is playing; a tap starts it. It wraps
-				    rather than scrolls: a sideways scroll here is the deck's swipe.
+			</View>
 
-				    Inside the info block, under the name, so it rides up with the
-				    block and nothing has to know its height. */}
-				{byChapter && (
-					<View style={styles.chapterRow}>
+			{/* Tour progress — one dash per PLACE when the film's structure came
+			    down with it, one continuous bar when it did not, and draggable
+			    either way. Only for a card that actually plays something. */}
+			{/* A city film's parts: a band across the card's foot, edge to edge,
+			    one equal cell a word, the playing word lit; the line along its
+			    top edge is the whole film's progress (owner 2026-11-18, of four
+			    demos: "2"). Nothing moves inside a word — "每个label里走进度感觉over
+			    complicated". A touch on a word starts that part. */}
+			{!!card.videoUrl && byChapter && (
+				<GestureDetector gesture={scrub}>
+					<View style={styles.band} onLayout={onBarLayout}>
+						<View style={styles.bandTrack}>
+							<Animated.View style={[styles.bandFill, fill]} />
+						</View>
 						{chapterNames.map((c) => (
-							<View
-								key={c.name}
-								style={styles.chapterCell}
-								{...(tapSlot
-									? { onTouchStart: arm(`${CHAPTER_TAP_PREFIX}${c.index}`) }
-									: {})}
-							>
+							<View key={c.name} style={styles.bandCell}>
 								<Text
 									style={[
-										styles.chapterName,
-										c.name === playingName && styles.chapterNameOn,
+										styles.bandWord,
+										c.name === playingName && styles.bandWordOn,
 									]}
+									numberOfLines={1}
 								>
 									{c.name}
 								</Text>
 							</View>
 						))}
 					</View>
-				)}
-			</View>
-
-			{/* Tour progress — one dash per PLACE when the film's structure came
-			    down with it, one continuous bar when it did not, and draggable
-			    either way. Only for a card that actually plays something. */}
-			{!!card.videoUrl && (
+				</GestureDetector>
+			)}
+			{!!card.videoUrl && !byChapter && (
 				<GestureDetector gesture={scrub}>
 					{/* The TOUCH target, not the art: a 3pt bar cannot be hit. The
 					    padding gives it a ~28pt band while the bar stays 3pt, which
@@ -974,11 +981,11 @@ const ARROW_K = ARROW_SIZE / 24;
 /** Side of the rotated square whose top+right borders draw the arrowhead. */
 const ARROW_HEAD = 7 * ARROW_K * Math.SQRT2;
 
-function ArrowRightIcon() {
+function ArrowRightIcon({ dark = false }: { dark?: boolean }) {
 	return (
 		<View style={styles.arrowBox}>
-			<View style={styles.arrowShaft} />
-			<View style={styles.arrowHead} />
+			<View style={[styles.arrowShaft, dark && styles.arrowShaftDark]} />
+			<View style={[styles.arrowHead, dark && styles.arrowHeadDark]} />
 		</View>
 	);
 }
@@ -1124,24 +1131,41 @@ const styles = StyleSheet.create({
 		marginBottom: 9,
 		overflow: "hidden",
 	},
+	/** Above the band of parts, by the gap the name keeps from the card's foot. */
+	infoOverBand: { bottom: BAND_H + 14 },
 	/**
-	 * The chapter row: every chapter's name, wrapping. Dim until it plays —
-	 * the same white-on-scrim the Explore link uses, a step quieter.
+	 * The band of parts — from one edge of the card to the other, clipped by
+	 * the card's own bottom corners. A dark veil rather than a blur: there is
+	 * no blur module in this build, and the scrim under it is already near
+	 * black here.
 	 */
-	chapterRow: {
+	band: {
+		position: "absolute",
+		left: 0,
+		right: 0,
+		bottom: 0,
+		height: BAND_H,
+		zIndex: 3,
 		flexDirection: "row",
-		flexWrap: "wrap",
-		columnGap: 16,
-		marginTop: 8,
+		backgroundColor: "rgba(18,20,18,0.42)",
 	},
-	/** The touch target: the word plus 6pt above and below. */
-	chapterCell: { paddingVertical: 6 },
-	chapterName: {
+	/** The film's progress, along the band's top edge — not the card's. */
+	bandTrack: {
+		position: "absolute",
+		left: 0,
+		right: 0,
+		top: 0,
+		height: 2,
+		backgroundColor: "rgba(255,255,255,0.2)",
+	},
+	bandFill: { height: 2, backgroundColor: "#FFFFFF" },
+	bandCell: { flex: 1, alignItems: "center", justifyContent: "center" },
+	bandWord: {
 		...redlineText.listingCard.address,
-		fontSize: 13,
-		color: "rgba(255,255,255,0.6)",
+		fontWeight: "500",
+		color: "rgba(255,255,255,0.62)",
 	},
-	chapterNameOn: { color: "#FFFFFF", fontWeight: "700" },
+	bandWordOn: { color: "#FFFFFF", fontWeight: "700" },
 	/** The name + glyphs + Explore line — what `info` used to be. */
 	infoRow: {
 		flexDirection: "row",
@@ -1218,6 +1242,15 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 2,
 	},
 	ctaPressed: { opacity: 0.7 },
+	/** Explore on a city card: a solid pill, the one white thing at the foot. */
+	ctaPill: {
+		height: 34,
+		minHeight: 34,
+		paddingHorizontal: 14,
+		borderRadius: 17,
+		backgroundColor: "rgba(255,255,255,0.92)",
+	},
+	ctaPillLabel: { fontSize: 13.5, fontWeight: "600", color: "#181B18" },
 	ctaLabel: {
 		...redlineText.listingCard.cta,
 		fontSize: 15,
@@ -1352,6 +1385,8 @@ const styles = StyleSheet.create({
 		borderTopRightRadius: OUTLINE_STROKE,
 		transform: [{ rotate: "45deg" }],
 	},
+	arrowShaftDark: { backgroundColor: "#181B18" },
+	arrowHeadDark: { borderColor: "#181B18" },
 	bookmarkBox: { width: BOOKMARK_SIZE, height: BOOKMARK_SIZE },
 	bookmarkFill: {
 		position: "absolute",

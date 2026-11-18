@@ -16,6 +16,13 @@ picture in the preview. If they have the Percho app, the link opens straight
 into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
+### 2026-11-18
+- **A cleaner foot for city cards.** The film's parts now sit in one band
+  across the bottom of the card — Overview, Schools, Homes, Commute, Life —
+  with the one playing lit and a single line showing how far the film has
+  run. Tap a word to start that part. Explore is a white button beside the
+  city's name. (Needs the next app build.)
+
 ### 2026-11-17
 - **City cards show the parts of their film.** Under a city's name the card
   lists five parts — Overview, Schools, Homes, Commute, Life; the one playing

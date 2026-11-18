@@ -120,9 +120,12 @@ profile that breaks the first four; `pnpm city:profile <slug> --check`):
 - a chapter's first sentence stands on its own — no "it also had…", no pronoun
   reaching back into the chapter before; the card prints "CITY · <chapter>";
 - at least two shots, and its own callouts;
-- on the card every SECTION's name is visible without a touch — a row under the
-  city's name, the playing one lit, a tap starts it (owner 2026-11-17: "如果不点击
-  下面的进度条章节名不自己显示 我怎么知道有哪些章节呢？");
+- on the card every SECTION's name is visible without a touch (owner 2026-11-17:
+  "如果不点击下面的进度条章节名不自己显示 我怎么知道有哪些章节呢？") — a band across
+  the card's foot, edge to edge, one equal cell a word, the playing word lit, a
+  tap starts it; one line along the band's top edge is the film's progress and
+  nothing moves inside a word (his pick of the demos at
+  `/demos/city-card-bottom-v3/`, 2026-11-18);
 - the four required chapters say the same KIND of thing in every city, so one
   city's Schools can be watched against another's.
 
