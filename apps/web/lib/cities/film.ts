@@ -19,6 +19,7 @@
  */
 
 import type { CityFilmCallout, CityProfile } from '@/lib/zod/city-profile';
+import { shortSections } from './chapters';
 
 /** What the cut needs to know about one of the city's photos. */
 export interface FilmPhoto {
@@ -302,6 +303,16 @@ export function buildCityFilm(input: {
   if (seedanceShots > MAX_SEEDANCE_SHOTS) {
     problems.push(
       `${seedanceShots} shots play as Seedance — a film has at most ${MAX_SEEDANCE_SHOTS} (photos with a cached clip count)`,
+    );
+  }
+
+  // Every section long enough to carry its name on the card's bar. Only for a
+  // film written in chapters throughout — an older script has no sections.
+  if (problems.length === 0 && lines.every((l) => l.chapter)) {
+    problems.push(
+      ...shortSections(
+        segments.map((s, i) => ({ chapter: lines[i]?.chapter, seconds: s.endS - s.startS })),
+      ),
     );
   }
 
