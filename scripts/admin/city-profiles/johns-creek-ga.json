@@ -1,17 +1,17 @@
 {
-  "tagline": "U.S. News's best place to live in America — and, twenty years after becoming a city, it finally has a downtown.",
+  "tagline": "First in Georgia and fifth in America on U.S. News's list — and, twenty years after becoming a city, it finally has a downtown.",
   "summary": "Cherokee land and then a century of farms along the Chattahoochee, Johns Creek grew around a golf club that moved here in 1967 and an office park laid out in 1981. Its neighbourhoods voted to become a city in 2006. The schools are among Georgia's best at every level, and in 2026 the city opened the town center it never had.",
   "locationNote": "30 mi north-northeast of downtown Atlanta",
   "rankings": [
     {
       "rank": "#1",
-      "scope": "in the U.S.",
+      "scope": "in Georgia",
       "title": "Best Places to Live",
-      "detail": "U.S. News & World Report, 2025–26 — first of 250 cities, and first in Georgia.",
+      "detail": "U.S. News & World Report, 2026–27 — #5 in the U.S. It was #1 in the U.S. on the 2025–26 list.",
       "source": {
         "name": "U.S. News & World Report",
-        "year": "2025–26",
-        "url": "https://realestate.usnews.com/real-estate/articles/why-johns-creek-georgia-is-the-best-place-to-live-in-2025-2026"
+        "year": "2026–27",
+        "url": "https://johnscreekga.gov/news/2026/05/johns-creek-ranked-1-best-place-to-live-in-georgia/"
       }
     },
     {
@@ -58,6 +58,11 @@
       "label": "Homes owner-occupied",
       "value": "80%",
       "note": "the rest rented"
+    },
+    {
+      "label": "Median rent",
+      "value": "$2,257",
+      "note": "a month · ACS 2020–24"
     }
   ],
   "compare": {
@@ -169,14 +174,26 @@
     "schools": [
       {
         "level": "elementary",
-        "name": "Shakerag Elementary",
-        "rank": "#18",
+        "name": "Wilson Creek Elementary",
+        "rank": "#10",
         "scope": "in Georgia",
-        "detail": "Fulton County Schools, Duluth mailing address. U.S. News Best Elementary Schools, 2026.",
+        "detail": "Fulton County Schools, Duluth mailing address. U.S. News Best Elementary Schools, 2027.",
         "source": {
           "name": "U.S. News & World Report",
-          "year": "2026",
-          "url": "https://patch.com/georgia/atlanta/these-are-top-elementary-schools-ga-u-s-news-says-latest-ranking"
+          "year": "2027",
+          "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+        }
+      },
+      {
+        "level": "elementary",
+        "name": "Shakerag Elementary",
+        "rank": "#40",
+        "scope": "in Georgia",
+        "detail": "Fulton County Schools. U.S. News Best Elementary Schools, 2027.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2027",
+          "url": "https://www.usnews.com/education/k12/georgia/shakerag-elementary-school-223141"
         }
       },
       {
@@ -276,44 +293,48 @@
         "baseline": true
       }
     ],
-    "note": "All are Fulton County schools; several carry Duluth or Alpharetta mailing addresses. Graduation rates: Fulton County Schools, class of 2025."
+    "note": "All are Fulton County schools; several carry Duluth or Alpharetta mailing addresses. Wilson Creek is the best-ranked elementary; the film shows Shakerag. Graduation rates: Fulton County Schools, class of 2025."
   },
   "gettingAround": [
     {
       "label": "Downtown Atlanta · 30 mi",
-      "value": "~45 min · 50–75 at rush",
+      "value": "~50 min · 75 at rush",
       "minutes": {
-        "min": 45,
-        "max": 75
+        "min": 50,
+        "max": 73
       }
     },
     {
-      "label": "Hartsfield-Jackson · ~38 mi",
-      "value": "50–75 min",
+      "label": "Hartsfield-Jackson · 38 mi",
+      "value": "55–77 min",
       "minutes": {
-        "min": 50,
-        "max": 75
+        "min": 55,
+        "max": 77
+      }
+    },
+    {
+      "label": "Buckhead · 23 mi",
+      "value": "40–60 min",
+      "minutes": {
+        "min": 39,
+        "max": 62
       }
     },
     {
       "label": "Perimeter Center · 19 mi",
-      "value": "30–60 min",
+      "value": "33–56 min",
+      "minutes": {
+        "min": 33,
+        "max": 56
+      }
+    },
+    {
+      "label": "MARTA Doraville · 15 mi",
+      "value": "30–46 min · no rail in Johns Creek",
       "minutes": {
         "min": 30,
-        "max": 60
+        "max": 46
       }
-    },
-    {
-      "label": "Avalon, Alpharetta · 6 mi",
-      "value": "~15 min",
-      "minutes": {
-        "min": 13,
-        "max": 17
-      }
-    },
-    {
-      "label": "Nearest rail · MARTA North Springs",
-      "value": "no rail in Johns Creek"
     }
   ],
   "planning": [
@@ -390,53 +411,82 @@
     {
       "name": "Drive times: Google Routes, from City Hall, typical traffic",
       "url": "https://maps.google.com"
+    },
+    {
+      "name": "City of Johns Creek — ranked #1 in Georgia, #5 in the U.S. (2026–27)",
+      "url": "https://johnscreekga.gov/news/2026/05/johns-creek-ranked-1-best-place-to-live-in-georgia/"
+    },
+    {
+      "name": "U.S. News 2027 K-8 rankings (Savannah Morning News)",
+      "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+    },
+    {
+      "name": "U.S. News — Shakerag Elementary",
+      "url": "https://www.usnews.com/education/k12/georgia/shakerag-elementary-school-223141"
     }
   ],
   "film": {
+    "signature": "Golf",
     "lines": [
       {
-        "say": "U.S. News ranks Johns Creek, Georgia, the best place to live in America.",
+        "say": "U.S. News ranks Johns Creek first in Georgia and fifth in America to live in. Until this year, it had no downtown.",
         "chapter": "overview",
         "shots": [
           {
             "photo": "1c9b66bb",
-            "move": "push_in_slow",
             "callout": {
               "type": "stat",
               "big": "#1",
-              "label": "in the U.S. · Best Places to Live",
-              "source": "U.S. News & World Report, 2025–26"
+              "label": "in Georgia · #5 in the U.S. · Best Places to Live",
+              "source": "U.S. News & World Report, 2026–27"
             }
           },
           {
-            "photo": "566300e6",
+            "photo": "3cbaba75",
             "label": "Autrey Mill Nature Preserve"
+          },
+          {
+            "photo": "cf7de7dd",
+            "weight": 6,
+            "label": "Technology Park"
           }
         ]
       },
       {
-        "say": "Yet it grew out of an office park, became a city only in 2006, and never had a downtown.",
-        "chapter": "history",
+        "say": "Johns Creek is home to the Atlanta Athletic Club, Bobby Jones's club, host of the U.S. Open and three PGA Championships.",
+        "chapter": "signature",
         "shots": [
           {
-            "photo": "cf7de7dd",
-            "label": "Technology Park",
+            "photo": "1c9948f9",
+            "label": "Atlanta Athletic Club",
+            "weight": 7,
             "callout": {
               "type": "stat",
-              "big": "2006",
-              "label": "became a city · the office park dates from 1981",
-              "source": "City of Johns Creek"
-            },
-            "weight": 6
+              "big": "1967",
+              "label": "the club moves here from East Lake",
+              "source": "Atlanta Athletic Club"
+            }
           },
           {
-            "photo": "6f97d573",
+            "photo": "53188b06",
+            "label": "Atlanta Athletic Club",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "4 majors",
+              "label": "U.S. Open 1976 · PGA 1981, 2001, 2011",
+              "source": "Atlanta Athletic Club"
+            }
+          },
+          {
+            "photo": "fa7ddaf8",
+            "label": "Atlanta Athletic Club",
             "weight": 5
           }
         ]
       },
       {
-        "say": "What it had was the schools: among Georgia's best at every level, with ninety-seven percent of seniors graduating.",
+        "say": "Johns Creek's public schools rank among Georgia's best at every level; River Trail Middle is fourth in the state.",
         "chapter": "schools",
         "shots": [
           {
@@ -444,9 +494,9 @@
             "label": "Shakerag Elementary",
             "callout": {
               "type": "stat",
-              "big": "#18",
+              "big": "#40",
               "label": "in Georgia · elementary school",
-              "source": "U.S. News, 2026"
+              "source": "U.S. News, 2027"
             }
           },
           {
@@ -458,7 +508,13 @@
               "label": "in Georgia · middle school",
               "source": "U.S. News, 2027"
             }
-          },
+          }
+        ]
+      },
+      {
+        "say": "Northview High ranks eighth in Georgia and Chattahoochee High fifteenth; ninety-seven percent of their seniors graduate, against ninety-two across the district.",
+        "chapter": "schools",
+        "shots": [
           {
             "photo": "9b471790",
             "label": "Northview High",
@@ -478,49 +534,135 @@
               "label": "in Georgia · high school · 97% graduate",
               "source": "U.S. News, 2026–27 · Fulton County Schools"
             }
+          },
+          {
+            "photo": "0030b237",
+            "label": "Johns Creek High",
+            "callout": {
+              "type": "stat",
+              "big": "#23",
+              "label": "in Georgia · high school",
+              "source": "U.S. News, 2026–27"
+            }
           }
         ]
       },
       {
-        "say": "It had golf's biggest stage. The Atlanta Athletic Club, Bobby Jones's club, moved here in 1967.",
-        "chapter": "outdoor",
+        "say": "The median Johns Creek home is worth six hundred twenty-nine thousand dollars, twice Georgia's median, and four in five are owner-occupied.",
+        "chapter": "homes",
         "shots": [
           {
-            "photo": "1c9948f9",
-            "label": "Atlanta Athletic Club",
-            "weight": 8,
+            "photo": "dbef4fbe",
+            "label": "St Ives",
+            "weight": 7,
             "callout": {
               "type": "stat",
-              "big": "1967",
-              "label": "the club moves here from East Lake",
-              "source": "Atlanta Athletic Club"
+              "big": "$629,400",
+              "label": "median home value · 2.1× Georgia",
+              "source": "U.S. Census Bureau, ACS 2020–24"
             }
           },
           {
-            "photo": "fa7ddaf8",
-            "label": "Atlanta Athletic Club",
-            "weight": 6
-          }
-        ]
-      },
-      {
-        "say": "It has hosted the U.S. Open and three PGA Championships.",
-        "chapter": "outdoor",
-        "shots": [
-          {
-            "photo": "53188b06",
-            "label": "Atlanta Athletic Club",
+            "photo": "e25e4348",
+            "label": "Country Club of the South",
+            "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "4 majors",
-              "label": "U.S. Open 1976 · PGA 1981, 2001, 2011",
-              "source": "Atlanta Athletic Club"
+              "big": "+8%",
+              "label": "on the previous Census estimate",
+              "source": "ACS 2019–23 → 2020–24 · Data USA"
             }
           }
         ]
       },
       {
-        "say": "It had the Chattahoochee along its edge, quiet enough for a kayak.",
+        "say": "Household income in Johns Creek is twice the state's, at a hundred sixty thousand dollars; one home in five is rented, near twenty-two fifty a month.",
+        "chapter": "homes",
+        "shots": [
+          {
+            "photo": "73d2387d",
+            "label": "Seven Oaks",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "$160,093",
+              "label": "median household income · 2.1× Georgia",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          },
+          {
+            "photo": "05e61e88",
+            "label": "Johns Creek Walk",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "$2,257",
+              "label": "median rent a month · 20% of homes are rented",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          }
+        ]
+      },
+      {
+        "say": "From Johns Creek, downtown Atlanta is thirty miles south: about fifty minutes, seventy-five at rush hour.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "79fb15f6",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "~50 min",
+              "label": "to downtown Atlanta · 75 at rush hour",
+              "source": "30 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "b11407a1",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "Buckhead is forty minutes from Johns Creek and the airport fifty-five; the nearest MARTA stations are half an hour away.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "caf1621c",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "39 min",
+              "label": "to Buckhead · 62 at rush hour",
+              "source": "23 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "bdc248bb",
+            "label": "Hartsfield-Jackson",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "55 min",
+              "label": "to the airport · 77 at rush hour",
+              "source": "38 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "8e6cbb43",
+            "label": "North Springs station",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "30 min",
+              "label": "to MARTA rail · Doraville or North Springs",
+              "source": "15–20 mi · Google Maps, typical traffic"
+            }
+          }
+        ]
+      },
+      {
+        "say": "The Chattahoochee runs along Johns Creek's edge; beside it, Cauley Creek Park opened in 2023 with two hundred acres and a rebuilt 1912 bridge.",
         "chapter": "outdoor",
         "shots": [
           {
@@ -529,19 +671,13 @@
             "weight": 6
           },
           {
-            "photo": "2a1b5f41",
-            "label": "Abbotts Bridge",
-            "weight": 7
-          }
-        ]
-      },
-      {
-        "say": "Beside the river, two hundred acres of new park, and a 1912 bridge rebuilt for walkers.",
-        "chapter": "outdoor",
-        "shots": [
+            "photo": "f94fa3b0",
+            "label": "Cauley Creek Park"
+          },
           {
             "photo": "90a94c55",
             "label": "Cauley Creek Park",
+            "weight": 7,
             "callout": {
               "type": "stat",
               "big": "203",
@@ -552,6 +688,7 @@
           {
             "photo": "4145bfce",
             "label": "Rogers Bridge",
+            "weight": 6,
             "callout": {
               "type": "stat",
               "big": "1912",
@@ -562,32 +699,7 @@
         ]
       },
       {
-        "say": "And every summer, concerts and fireworks at Newtown Park.",
-        "chapter": "outdoor",
-        "shots": [
-          {
-            "photo": "2719b046",
-            "label": "Newtown Park"
-          }
-        ]
-      },
-      {
-        "say": "Atlanta is thirty miles south: about forty-five minutes, more at rush hour.",
-        "chapter": "commute",
-        "shots": [
-          {
-            "photo": "b11407a1",
-            "callout": {
-              "type": "stat",
-              "big": "~45 min",
-              "label": "to downtown Atlanta · 50–75 at rush hour",
-              "source": "30 mi · Google Maps, typical traffic"
-            }
-          }
-        ]
-      },
-      {
-        "say": "The one thing missing was a center. So this year, behind City Hall, the city built one.",
+        "say": "In 2026 Johns Creek opened its first town center: a lake behind City Hall, a boardwalk around it and a stage over the water.",
         "chapter": "downtown",
         "shots": [
           {
@@ -596,20 +708,9 @@
             "weight": 5
           },
           {
-            "photo": "61f2af14",
-            "label": "The Boardwalk at Town Center",
-            "weight": 5
-          }
-        ]
-      },
-      {
-        "say": "A lake, a boardwalk around it, and a stage over the water.",
-        "chapter": "downtown",
-        "shots": [
-          {
             "photo": "53205082",
             "label": "The Boardwalk at Town Center",
-            "weight": 8,
+            "weight": 7,
             "callout": {
               "type": "stat",
               "big": "2026",
@@ -620,17 +721,26 @@
           {
             "photo": "756e96a9",
             "label": "The Boardwalk at Town Center",
-            "weight": 6
+            "weight": 5
+          },
+          {
+            "photo": "0153a578",
+            "label": "The Boardwalk at Town Center",
+            "weight": 5
           }
         ]
       },
       {
-        "say": "Johns Creek. The best place to live in America finally has a downtown.",
-        "chapter": "overview",
+        "say": "Every summer brings concerts and fireworks to Johns Creek's Newtown Park.",
+        "chapter": "events",
         "shots": [
           {
-            "photo": "0153a578",
-            "label": "The Boardwalk at Town Center"
+            "photo": "2719b046",
+            "label": "Newtown Park"
+          },
+          {
+            "photo": "14cd9394",
+            "label": "Newtown Park"
           }
         ]
       }

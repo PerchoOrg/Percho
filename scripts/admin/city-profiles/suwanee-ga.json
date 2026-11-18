@@ -1,6 +1,6 @@
 {
   "tagline": "A railroad village that grew 8× in thirty years — and built itself a downtown instead of sprawling.",
-  "summary": "A railroad village of a few thousand people as late as 1990, Suwanee grew eightfold in thirty years. Instead of sprawling, it built a walkable town center in the 2000s and has kept adding parks to it. Most families come for the North Gwinnett schools.",
+  "summary": "A railroad village of a few thousand people as late as 1990, Suwanee grew eightfold in thirty years. Instead of sprawling, it built a walkable town center in the 2000s and has kept adding parks to it. Most families come for the schools around it, in Gwinnett and Forsyth counties.",
   "locationNote": "33 mi northeast of downtown Atlanta",
   "rankings": [
     {
@@ -15,14 +15,25 @@
       }
     },
     {
-      "rank": "#16",
+      "rank": "#6",
       "scope": "in Georgia",
-      "title": "North Gwinnett High School",
-      "detail": "U.S. News Best High Schools, 2025–26 · #21 of 458 Georgia high schools on SchoolDigger.",
+      "title": "North Gwinnett Middle School",
+      "detail": "U.S. News Best Middle Schools, 2027 · Riverwatch Middle, with a Suwanee address in Forsyth County, is #7.",
       "source": {
         "name": "U.S. News & World Report",
-        "year": "2025–26",
-        "url": "https://www.patch.com/georgia/atlanta/top-25-high-schools-ga-2025-26-u-s-news-world-report"
+        "year": "2027",
+        "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+      }
+    },
+    {
+      "rank": "#9",
+      "scope": "in Georgia",
+      "title": "Lambert High School",
+      "detail": "U.S. News Best High Schools, 2026–27 · #349 in the U.S. A Forsyth County school with a Suwanee address.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2026–27",
+        "url": "https://www.usnews.com/education/best-high-schools/georgia/rankings"
       }
     },
     {
@@ -58,6 +69,11 @@
       "label": "Homes owner-occupied",
       "value": "59%",
       "note": "the rest rented"
+    },
+    {
+      "label": "Median rent",
+      "value": "$1,885",
+      "note": "a month · ACS 2020–24"
     }
   ],
   "compare": {
@@ -167,50 +183,50 @@
     "schools": [
       {
         "level": "elementary",
-        "name": "Johns Creek Elementary",
-        "rank": "#5",
+        "name": "Level Creek Elementary",
+        "rank": "#11",
         "scope": "in Georgia",
-        "detail": "Forsyth County Schools, Suwanee address. U.S. News Best Elementary Schools, 2024.",
+        "detail": "Gwinnett County Public Schools, North Gwinnett cluster. U.S. News Best Elementary Schools, 2027 · first in Gwinnett County.",
         "source": {
           "name": "U.S. News & World Report",
-          "year": "2024",
-          "url": "https://new.patch.com/georgia/across-ga/these-are-best-elementary-middle-schools-ga-new-ranking-says"
+          "year": "2027",
+          "url": "https://www.usnews.com/education/k12/georgia/level-creek-elementary-school-218127"
         }
       },
       {
         "level": "elementary",
-        "name": "Level Creek Elementary",
-        "rank": "#9",
+        "name": "Johns Creek Elementary",
+        "rank": "#28",
         "scope": "in Georgia",
-        "detail": "Gwinnett County Public Schools, North Gwinnett cluster. U.S. News Best Elementary Schools, 2024.",
+        "detail": "Forsyth County Schools, Suwanee address. U.S. News Best Elementary Schools, 2027.",
         "source": {
           "name": "U.S. News & World Report",
-          "year": "2024",
-          "url": "https://new.patch.com/georgia/across-ga/these-are-best-elementary-middle-schools-ga-new-ranking-says"
-        }
-      },
-      {
-        "level": "middle",
-        "name": "Riverwatch Middle",
-        "rank": "#4",
-        "scope": "in Georgia",
-        "detail": "Forsyth County Schools, Suwanee address. U.S. News Best Middle Schools, 2025.",
-        "source": {
-          "name": "U.S. News & World Report",
-          "year": "2025",
-          "url": "https://patch.com/georgia/atlanta/these-are-best-middle-schools-ga-u-s-news-ranking"
+          "year": "2027",
+          "url": "https://www.usnews.com/education/k12/georgia/johns-creek-elementary-217241"
         }
       },
       {
         "level": "middle",
         "name": "North Gwinnett Middle",
-        "rank": "#8",
+        "rank": "#6",
         "scope": "in Georgia",
-        "detail": "Gwinnett County Public Schools, North Gwinnett cluster (Sugar Hill address). U.S. News Best Middle Schools, 2025.",
+        "detail": "Gwinnett County Public Schools, North Gwinnett cluster (Sugar Hill address). U.S. News Best Middle Schools, 2027.",
         "source": {
           "name": "U.S. News & World Report",
-          "year": "2025",
-          "url": "https://patch.com/georgia/atlanta/these-are-best-middle-schools-ga-u-s-news-ranking"
+          "year": "2027",
+          "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+        }
+      },
+      {
+        "level": "middle",
+        "name": "Riverwatch Middle",
+        "rank": "#7",
+        "scope": "in Georgia",
+        "detail": "Forsyth County Schools, Suwanee address. U.S. News Best Middle Schools, 2027.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2027",
+          "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
         }
       },
       {
@@ -218,23 +234,23 @@
         "name": "Lambert High",
         "rank": "#9",
         "scope": "in Georgia",
-        "detail": "Forsyth County Schools, Suwanee address. U.S. News Best High Schools, 2025–26.",
+        "detail": "Forsyth County Schools, Suwanee address. U.S. News Best High Schools, 2026–27.",
         "source": {
           "name": "U.S. News & World Report",
-          "year": "2025–26",
-          "url": "https://new.patch.com/georgia/atlanta/top-25-high-schools-ga-2025-26-u-s-news-world-report"
+          "year": "2026–27",
+          "url": "https://www.usnews.com/education/best-high-schools/georgia/rankings"
         }
       },
       {
         "level": "high",
         "name": "North Gwinnett High",
-        "rank": "#16",
+        "rank": "#21",
         "scope": "in Georgia",
-        "detail": "Gwinnett County Public Schools; 95% graduate in four years. U.S. News Best High Schools, 2025–26.",
+        "detail": "Gwinnett County Public Schools. U.S. News Best High Schools, 2026–27 · 97.4% graduated in 2025.",
         "source": {
           "name": "U.S. News & World Report",
-          "year": "2025–26",
-          "url": "https://new.patch.com/georgia/atlanta/top-25-high-schools-ga-2025-26-u-s-news-world-report"
+          "year": "2026–27",
+          "url": "https://www.usnews.com/education/best-high-schools/georgia/rankings"
         }
       },
       {
@@ -247,47 +263,67 @@
         }
       }
     ],
-    "measure": "Graduate in 4 years · SchoolDigger, AJC",
+    "measure": "Graduate in 4 years · class of 2025",
     "rows": [
       {
         "label": "North Gwinnett HS",
-        "pct": 95.4,
-        "display": "95.4%"
+        "pct": 97.4,
+        "display": "97.4%"
       },
       {
         "label": "Peachtree Ridge HS",
-        "pct": 90,
-        "display": "88–92%"
+        "pct": 94.8,
+        "display": "94.8%"
       },
       {
         "label": "Gwinnett district",
-        "pct": 82.5,
-        "display": "82.5%",
+        "pct": 85.4,
+        "display": "85.4%",
         "baseline": true
       }
     ],
-    "note": "Suwanee's 30024 ZIP spans two counties: Johns Creek Elementary, Riverwatch Middle and Lambert High are Forsyth County schools."
+    "note": "Suwanee's 30024 ZIP spans two counties: Johns Creek Elementary, Riverwatch Middle and Lambert High are Forsyth County schools. Graduation rates: Gwinnett County Public Schools, class of 2025."
   },
   "gettingAround": [
     {
       "label": "Downtown Atlanta · 33 mi",
-      "value": "~40 min · 45–75 at rush",
+      "value": "~50 min · 75 at rush",
       "minutes": {
-        "min": 40,
-        "max": 75
+        "min": 49,
+        "max": 74
       }
     },
     {
-      "label": "Hartsfield-Jackson · ~40 mi",
-      "value": "45–60 min via I-85",
+      "label": "Hartsfield-Jackson · 41 mi",
+      "value": "55–80 min",
       "minutes": {
-        "min": 45,
-        "max": 60
+        "min": 53,
+        "max": 78
       }
     },
     {
-      "label": "Nearest rail · MARTA Doraville",
-      "value": "no rail in Suwanee"
+      "label": "Buckhead · 29 mi",
+      "value": "40–70 min",
+      "minutes": {
+        "min": 42,
+        "max": 68
+      }
+    },
+    {
+      "label": "Perimeter Center · 27 mi",
+      "value": "35–65 min",
+      "minutes": {
+        "min": 36,
+        "max": 66
+      }
+    },
+    {
+      "label": "MARTA Doraville · 20 mi",
+      "value": "30–50 min · no rail in Suwanee",
+      "minutes": {
+        "min": 30,
+        "max": 52
+      }
     },
     {
       "label": "I-85 · Lawrenceville-Suwanee Rd",
@@ -338,46 +374,55 @@
       "url": "https://fortune.com/ranking/best-places-families/2024/suwanee"
     },
     {
-      "name": "SchoolDigger — North Gwinnett High School",
-      "url": "https://www.schooldigger.com/go/GA/schools/0255001123/school.aspx"
-    },
-    {
       "name": "Pro-Football-Reference — Falcons training camps",
       "url": "https://www.pro-football-reference.com/teams/atl/training-camps.htm"
     },
     {
-      "name": "U.S. News & World Report",
-      "year": "2024",
-      "url": "https://new.patch.com/georgia/across-ga/these-are-best-elementary-middle-schools-ga-new-ranking-says"
-    },
-    {
-      "name": "U.S. News & World Report",
-      "year": "2025",
-      "url": "https://patch.com/georgia/atlanta/these-are-best-middle-schools-ga-u-s-news-ranking"
-    },
-    {
       "name": "Philadelphia College of Osteopathic Medicine",
       "url": "https://www.pcom.edu/georgia"
+    },
+    {
+      "name": "U.S. News 2027 K-8 rankings (Savannah Morning News)",
+      "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+    },
+    {
+      "name": "U.S. News — Level Creek Elementary",
+      "url": "https://www.usnews.com/education/k12/georgia/level-creek-elementary-school-218127"
+    },
+    {
+      "name": "U.S. News — Best High Schools in Georgia, 2026–27",
+      "url": "https://www.usnews.com/education/best-high-schools/georgia/rankings"
+    },
+    {
+      "name": "Gwinnett County Public Schools — graduation rates, class of 2025",
+      "url": "https://www.gcpsk12.org/news-details/~board/news-releases/post/gcps-graduation-rate-reaches-highest-point-in-a-decade-for-second-year-in-a-row"
+    },
+    {
+      "name": "U.S. Census Bureau ACS 2020–2024 — Suwanee (MMCG Analytics)",
+      "url": "https://mmcganalytics.com/georgia/gwinnett-county/suwanee/"
+    },
+    {
+      "name": "Data USA — Suwanee, GA",
+      "url": "https://datausa.io/profile/geo/suwanee-ga"
+    },
+    {
+      "name": "Drive times: Google Routes, from Town Center, typical traffic",
+      "url": "https://maps.google.com"
     }
   ],
   "film": {
     "lines": [
       {
-        "say": "Most suburbs just spread. Suwanee, Georgia, built itself a downtown.",
+        "say": "Most suburbs just spread. Suwanee, Georgia, built itself a downtown, and in 2024 Fortune named it the state's best place to raise a family.",
         "chapter": "overview",
         "shots": [
           {
             "photo": "3f027b58",
-            "move": "pan_lr"
-          }
-        ]
-      },
-      {
-        "say": "Fortune named it the best place in the state to raise a family.",
-        "chapter": "overview",
-        "shots": [
+            "weight": 7
+          },
           {
             "photo": "62e4cfa8",
+            "label": "White Street Park",
             "weight": 7,
             "callout": {
               "type": "stat",
@@ -385,20 +430,16 @@
               "label": "in Georgia · Best Places to Live for Families",
               "source": "Fortune, 2024"
             }
-          },
-          {
-            "photo": "478cd2a8",
-            "label": "PlayTown Suwanee",
-            "weight": 6
           }
         ]
       },
       {
-        "say": "It began in 1871, as a stop on the railroad.",
+        "say": "Suwanee began in 1871 as a stop on the railroad; from 1990 to 2020 it grew more than eightfold.",
         "chapter": "history",
         "shots": [
           {
             "photo": "6644ffa4",
+            "weight": 6,
             "move": "push_in_slow",
             "callout": {
               "type": "stat",
@@ -406,31 +447,11 @@
               "label": "A depot on the Air Line Railroad",
               "source": "Map: U.S. Geological Survey, 1897"
             }
-          }
-        ]
-      },
-      {
-        "say": "The trains still run past Old Town, and Main Street still has its brick fronts.",
-        "chapter": "history",
-        "shots": [
+          },
           {
             "photo": "74bc5f84",
             "label": "Old Town",
-            "weight": 7
-          },
-          {
-            "photo": "582f51eb",
-            "label": "Old Town",
-            "weight": 8
-          }
-        ]
-      },
-      {
-        "say": "Then Atlanta arrived. In thirty years, the town grew more than eightfold.",
-        "chapter": "growth",
-        "shots": [
-          {
-            "photo": "b3558ddf",
+            "weight": 8,
             "callout": {
               "type": "count",
               "from": 2412,
@@ -460,86 +481,43 @@
         ]
       },
       {
-        "say": "Instead of sprawling, the city built a center: a park, a plaza, a city hall.",
-        "chapter": "downtown",
-        "shots": [
-          {
-            "photo": "84446a55",
-            "move": "push_in_slow",
-            "callout": {
-              "type": "stat",
-              "big": "2005–09",
-              "label": "Town Center Park and City Hall",
-              "source": "City of Suwanee"
-            }
-          }
-        ]
-      },
-      {
-        "say": "Now it's where the town gathers, for concerts on the lawn and festivals all year.",
-        "chapter": "downtown",
-        "shots": [
-          {
-            "photo": "ac380f96",
-            "label": "Town Center Park"
-          }
-        ]
-      },
-      {
-        "say": "Public art lines its walks, much of it on loan and changing with each new tour.",
-        "chapter": "downtown",
-        "shots": [
-          {
-            "photo": "268c3d2e",
-            "weight": 7
-          },
-          {
-            "photo": "d2a19432",
-            "weight": 7
-          }
-        ]
-      },
-      {
-        "say": "Families come for the schools. Around Suwanee, they rank in Georgia's top ten at every level, from elementary to high school.",
+        "say": "Around Suwanee, public schools rank near the top of Georgia: Riverwatch Middle is seventh in the state and Lambert High ninth.",
         "chapter": "schools",
         "shots": [
           {
             "photo": "6ad7e505",
             "label": "Johns Creek Elementary",
-            "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "#5",
+              "big": "#28",
               "label": "in Georgia · elementary school",
-              "source": "U.S. News, 2024"
+              "source": "U.S. News, 2027"
             }
           },
           {
             "photo": "4b8dc00a",
             "label": "Riverwatch Middle",
-            "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "#4",
+              "big": "#7",
               "label": "in Georgia · middle school",
-              "source": "U.S. News, 2025"
+              "source": "U.S. News, 2027"
             }
           },
           {
             "photo": "e261814d",
             "label": "Lambert High",
-            "weight": 7,
             "callout": {
               "type": "stat",
               "big": "#9",
               "label": "in Georgia · high school",
-              "source": "U.S. News, 2025–26"
+              "source": "U.S. News, 2026–27"
             }
           }
         ]
       },
       {
-        "say": "North Gwinnett High is sixteenth. And a medical college, PCOM Georgia, trains doctors and pharmacists right in town.",
+        "say": "North Gwinnett High graduates ninety-seven percent of its seniors, against eighty-five percent across its district; a medical college, PCOM Georgia, is in town.",
         "chapter": "schools",
         "shots": [
           {
@@ -548,15 +526,15 @@
             "weight": 7,
             "callout": {
               "type": "stat",
-              "big": "#16",
-              "label": "in Georgia · high school · 95% graduate",
-              "source": "U.S. News, 2025–26"
+              "big": "#21",
+              "label": "in Georgia · high school · 97% graduate",
+              "source": "U.S. News, 2026–27 · Gwinnett County Schools"
             }
           },
           {
             "photo": "9647a951",
             "label": "PCOM Georgia",
-            "weight": 8,
+            "weight": 7,
             "callout": {
               "type": "stat",
               "big": "Since 2005",
@@ -567,27 +545,61 @@
         ]
       },
       {
-        "say": "A greenway follows the creek through the middle of town, over boardwalks, to lakes tucked between the neighbourhoods.",
-        "chapter": "outdoor",
+        "say": "The median Suwanee home is worth four hundred eighty thousand dollars, about one and a half times Georgia's median; six in ten are owner-occupied.",
+        "chapter": "homes",
         "shots": [
           {
-            "photo": "52f135cb",
-            "label": "Suwanee Creek Greenway",
-            "weight": 9
+            "photo": "b3558ddf",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "$480,600",
+              "label": "median home value · 1.6× Georgia",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
           },
           {
-            "photo": "64214feb",
-            "label": "Suwanee Creek Greenway",
-            "weight": 5
-          },
-          {
-            "photo": "b825542f",
-            "label": "Sims Lake Park"
+            "photo": "00fa4aa4",
+            "label": "Greystone Townhomes",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "+9%",
+              "label": "on the previous Census estimate",
+              "source": "ACS 2019–23 → 2020–24 · Data USA"
+            }
           }
         ]
       },
       {
-        "say": "Atlanta is thirty-three miles down I-85 — forty minutes, more at rush hour.",
+        "say": "Suwanee's renters pay a median of about nineteen hundred dollars a month; household income runs a third above the state's.",
+        "chapter": "homes",
+        "shots": [
+          {
+            "photo": "e905335d",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "$1,885",
+              "label": "median rent a month · 41% of homes are rented",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          },
+          {
+            "photo": "e33e1394",
+            "label": "Greystone Townhomes",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "$103,260",
+              "label": "median household income · 1.3× Georgia",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          }
+        ]
+      },
+      {
+        "say": "From Suwanee, downtown Atlanta is thirty-three miles down Interstate 85: about fifty minutes, seventy-five at rush hour.",
         "chapter": "commute",
         "shots": [
           {
@@ -595,20 +607,83 @@
             "weight": 7,
             "callout": {
               "type": "stat",
-              "big": "~40 min",
-              "label": "to downtown Atlanta · 45–75 at rush hour",
-              "source": "33 mi via I-85"
+              "big": "~50 min",
+              "label": "to downtown Atlanta · 75 at rush hour",
+              "source": "33 mi · Google Maps, typical traffic"
             }
           },
           {
             "photo": "69dae8ad",
-            "weight": 6
+            "weight": 5
           }
         ]
       },
       {
-        "say": "And it's still building: a second downtown park opened in 2024, beside the library.",
-        "chapter": "future",
+        "say": "Buckhead is about forty minutes from Suwanee and the airport fifty-five; the nearest MARTA station, Doraville, is half an hour away.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "06e74151",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "42 min",
+              "label": "to Buckhead · 68 at rush hour",
+              "source": "29 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "e154e7f7",
+            "label": "Hartsfield-Jackson",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "53 min",
+              "label": "to the airport · 78 at rush hour",
+              "source": "41 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "3d925b44",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "30 min",
+              "label": "to MARTA rail at Doraville · 52 at rush hour",
+              "source": "20 mi · Google Maps, typical traffic"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Suwanee's Town Center opened in 2009: a park, a plaza and City Hall, where the town gathers for concerts, with public art along its walks.",
+        "chapter": "downtown",
+        "shots": [
+          {
+            "photo": "84446a55",
+            "label": "Suwanee City Hall",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "2005–09",
+              "label": "Town Center Park and City Hall",
+              "source": "City of Suwanee"
+            }
+          },
+          {
+            "photo": "ac380f96",
+            "label": "Town Center Park",
+            "weight": 6
+          },
+          {
+            "photo": "d2a19432",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "In 2024 Suwanee opened a second downtown park, Town Center on Main, beside the library.",
+        "chapter": "downtown",
         "shots": [
           {
             "photo": "56cb362f",
@@ -627,12 +702,17 @@
         ]
       },
       {
-        "say": "Suwanee. A small town that decided what it wanted to be.",
-        "chapter": "overview",
+        "say": "A greenway follows Suwanee Creek through town, over boardwalks, to lakes tucked between the neighbourhoods.",
+        "chapter": "outdoor",
         "shots": [
           {
-            "photo": "4f006aa8",
-            "label": "George Pierce Park"
+            "photo": "52f135cb",
+            "label": "Suwanee Creek Greenway",
+            "weight": 7
+          },
+          {
+            "photo": "b825542f",
+            "label": "Sims Lake Park"
           }
         ]
       }

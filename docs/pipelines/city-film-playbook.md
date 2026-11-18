@@ -1,6 +1,6 @@
 # City film & city card — playbook
 
-**Status**: in use · **Last updated**: 2026-11-17 · **Built on**: Suwanee, GA (phase318–333), Johns Creek, GA (phase344), Alpharetta, GA (phase346)
+**Status**: in use · **Last updated**: 2026-11-18 · **Built on**: Suwanee, GA (phase318–333), Johns Creek, GA (phase344), Alpharetta, GA (phase346); all three recut as chapter films (phase354–355)
 **Read this before making the next city** (Johns Creek → Alpharetta → Milton → Cumming → Sugar Hill/Buford).
 
 Suwanee took fifteen phases, two rejected finished films and a dozen assemblies.
@@ -69,8 +69,8 @@ No two consecutive cities share a spine or an opening. Record each film here:
 
 | City | Spine | Opens on | History | Hero | Length |
 |---|---|---|---|---|---|
-| Suwanee | Claim → proof | aerial of Town Center + the claim | 2 lines + growth | the downtown it built | ~1:50 |
-| Johns Creek | Contradiction | a pond + the #1 ranking | 1 line (~10 s) | golf: Bobby Jones's club, four majors | ~1:30 |
+| Suwanee | Claim → proof (recut as chapters, phase355) | aerial of Town Center + the claim + Fortune's #1 | one line: 1871 and the eightfold growth | the downtown it built — two lines, at the head of Life | ~1:55 |
+| Johns Creek | Contradiction (recut as chapters, phase355) | a pond, a creek, then an office park: "#1 in Georgia, #5 in America. Until this year, it had no downtown." | none in the film — on the page | golf: Bobby Jones's club, four majors (`signature`); the film ends on the new town center | ~1:55 |
 | Alpharetta | A day → sections in a buyer's order, ending at night (first city built as chapters, §2.2) | Lake Windward from the air (Seedance) + "a suburb people commute to" | none in the film since the 15% rule — on the page | Tech: 700 companies, 122,000 people by day | ~1:55 |
 
 ### 2.2 The chapters (owner 2026-11-16/17: "模块化内容 可以让人自主选择 … 每一个章节可以做得独立一些可以单独拉出来看 … 每个city尽量覆盖")
@@ -148,8 +148,12 @@ chapters, and which one is the hero and runs longer. Length stays under 2:00 —
 8–12 s a chapter, schools up to 20 — so a city carries nine or ten of the twelve.
 There is no closing line that returns to the overview: the end card closes.
 
-Suwanee and Johns Creek predate the list (no `homes`, a chapter told twice); they
-are redone once the owner has judged the first city made this way.
+Suwanee and Johns Creek predated the list (no `homes`, a chapter told twice) and
+were redone in phase355. What a recut costs an older film: the 15% floor takes the
+time history had — Suwanee's two history lines became one, Johns Creek's left the
+film — and Homes and Commute each need two lines' worth of pictures, which the first
+photo pass never looked for (streets of houses, an apartment building, the airport,
+a MARTA station). Find those before writing.
 
 ### 2.3 Motion: the script picks the photo, the orchestrator directs it
 
@@ -274,10 +278,22 @@ seedance 比如第一个 总体不要超过三个就好".
 - Citing a ranking without checking for a newer edition: Johns Creek's film says
   U.S. News ranks it the best place to live in America — true of the 2025–26
   list; the 2026–27 list (May 2026) has it #5. Search "<publisher> <next edition>
-  <city>" before using any ranking, and say the edition in the callout.
+  <city>" before using any ranking, and say the edition in the callout. Fixed in
+  phase355 ("first in Georgia and fifth in America"). The same pass found the
+  elementary and middle lists had turned over too (U.S. News 2027, October 2026):
+  school ranks go stale every autumn, so recheck every school on a recut.
 - Picking a photo from a landscape contact sheet: the film crops to 9:16. An
   office behind trees became a forest; a library sign became half a word. Judge
   the centre third of a landscape photo, not the whole frame.
+- A Homes line over a road, a lawn or a tree (phase355, both recuts' first
+  assemblies): Google's photos of a subdivision are its pool, its sign and its
+  landscaping, and a "residential street" from Commons crops to the trees between
+  the houses. Houses come from an aerial (a builder's or a club's), an apartment
+  building's own listing, or a golf course with the houses above it. Check that a
+  roof is in the 9:16 crop before writing the line.
+- Trusting `city:photos place` to find what was typed: "Shadowbrook at Town
+  Center" (townhomes) resolved to Shadowbrook Church. Read the name it prints, and
+  reject the link when it is the wrong place — a place of worship is never used.
 - Shipping a phone UI change and waiting for feedback without knowing which build
   the owner has: a production TestFlight build never receives new screens. See
   the memory note on builds; say it when a production build is uploaded.

@@ -17,6 +17,19 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-18
+- **Suwanee's and Johns Creek's films were made again.** Both now run in the
+  same five parts as Alpharetta's — Overview, Schools, Homes, Commute, Life —
+  so the band on the card is even and each part can be watched on its own.
+  Both gained what they never had: what a home is worth and what renting
+  costs, how incomes compare, and how long it takes to reach Buckhead, the
+  airport and the nearest MARTA station. The history is shorter (Suwanee) or
+  on the city's page instead (Johns Creek), and the pictures move the way the
+  neighbourhood films do.
+- **Johns Creek's ranking is current.** The film said U.S. News ranks it the
+  best place to live in America, which was last year's list. It now says
+  first in Georgia and fifth in America, with the year.
+- **School rankings updated in all three cities** to this autumn's lists, on
+  the films and on the city pages.
 - **A cleaner foot for city cards.** The film's parts now sit in one band
   across the bottom of the card — Overview, Schools, Homes, Commute, Life —
   with the one playing lit and a single line showing how far the film has
