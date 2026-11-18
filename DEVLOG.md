@@ -23,6 +23,31 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-18 17:39 UTC — phase355: Suwanee and Johns Creek redone as chapter films; school ranks moved to the newest lists in all three cities
+
+**Objective**: Owner, after phase354: "重做" — the two films that predate the chapter list (phase345), the orchestrated motion (phase347), the five sections (phase348) and the 15% floor (phase354) are made again under all of them. Johns Creek's stale "best place to live in America" goes with it.
+**Actions**:
+- `scripts/admin/city-profiles/suwanee-ga.json`, `johns-creek-ga.json`: new scripts, 11 lines each, every line with a `chapter`; page data (rankings, schools, graduation rates, rent, drive times, sources) brought to the current editions. `alpharetta-ga.json`: one schools line and the school rows.
+- **Suwanee** — spine unchanged (claim → proof), told in sections: overview (the claim + Fortune's #1) · history (one line: 1871 and the eightfold growth, was two) · schools ×2 · homes ×2 (new: $480,600 · 1.6× Georgia · +9%; rent $1,885, 41% rented; income $103,260) · commute ×2 (new: Buckhead 42/68 min, airport 53/78, MARTA Doraville 30/52) · downtown ×2 · outdoor. Dropped: the second history line and the events line. **Assembly `7fd6d135`, stream `81d697ea…`, 1:57**, 25 shots — 14 Ken Burns, 9 DepthFlow, 2 Seedance (cached), 13 moves, 5 pans. Sections 21 / 19 / 19 / 17 / 24%.
+- **Johns Creek** — spine unchanged (contradiction): "U.S. News ranks Johns Creek first in Georgia and fifth in America to live in. Until this year, it had no downtown." over a pond, a creek and an office park · signature Golf · schools ×2 · homes ×2 (new) · commute ×2 (new) · outdoor · downtown (the film now ENDS at the town center, then fireworks) · events. Dropped: the history line (on the page). **Assembly `3fdfecb8`, stream `f36143c2…`, 1:56**, 30 shots — 16 Ken Burns, 11 DepthFlow, 3 Seedance (cached), 15 moves, 5 pans. Sections 19 / 18 / 20 / 16 / 27%.
+- **Alpharetta** — schools line now "Webb Bridge Middle is tenth in the state, Lake Windward Elementary ninth" (it cited Creek View #16 and Lake Windward #14 from the 2026 list). **Assembly `580f0e10`, stream `7ccdd502…`, 2:00**, 28 shots; sections 17 / 19 / 19 / 17 / 29%.
+- Research: U.S. News 2027 K-8 lists (released 2026-10-20) and 2026–27 high schools; class-of-2025 graduation rates (Gwinnett, Fulton); ACS 2020–24 (value, rent, tenure, income); Google Routes at 10:30 and 7:45 from each city's centre.
+- Photos: Google `place` for neighbourhoods, apartments, the airport and MARTA stations, Commons for roads; all tagged. `docs/pipelines/city-film-playbook.md`: per-city table, what a recut costs an older film, two new mistakes.
+**Decisions**:
+- History gave way, not Homes or Commute: five sections at 15% leave 25%, and both older films spent it on history. Suwanee keeps one line because the growth IS its story; Johns Creek's is on the page.
+- Johns Creek keeps no closing line ("…finally has a downtown" is gone) — chapters stand alone, the end card closes (§2.2).
+- Wilson Creek (#10) is Johns Creek's best elementary but every photo of it has children in it — the film shows Shakerag (#40) and the page lists both, with a note.
+- Creek View Elementary (Alpharetta) stays on the page with its 2026 rank and edition; its 2027 rank could not be confirmed, so it left the film.
+**Issues**:
+- First assemblies of both recuts had Homes lines over pictures with no house in them (a lawn, a red maple, two tree-lined roads) — the 9:16 crop removed what the tagger's description promised. Replaced (Greystone Townhomes from the air; St Ives, Country Club of the South, Seven Oaks) and assembled again. The discarded assemblies are `bc94e3e2`, `4a1e3b39`, `cdafc7b3`.
+- `city:photos place "Shadowbrook at Town Center"` resolved to Shadowbrook Church; its `city_pois` link is `rejected`.
+- Lake Windward Elementary has two exterior photos on Google, both behind the same tree; it plays second and shorter.
+**Verified**: frames tiled every 2 s for each film; speech-band level inside every line's window (34 of 34 voiced, −19 to −23 dB against −27 to −31 on the end cards); each city's approved photos equal its film (25 / 30 / 28); `/api/mobile/feed` returns five sections for each, none under 16%; the three city pages serve the new streams and the new figures.
+**Cost**: no new Seedance (0 clips created; 8 cached clips reused). ~70 TTS requests across two rounds of three films. Google Places: ~14 text searches and their photos; Routes: 2 calls; ~110 photo tags.
+**Not verified**: the films on a phone; the band (phase352/354) is still unconfirmed there.
+**Tech debt**: narration is voiced again on every assembly, even for unchanged lines — a second round of three films used a third of the day's quota. Seven Oaks ($160,093) is a pond with one house behind it — the weakest Homes picture left.
+**Next steps**: owner watches the three; next new city is Milton.
+
 ## 2026-11-18 09:16 UTC — phase354: the band is a timeline; every section at least 15% of the film; Alpharetta re-cut to it
 
 **Objective**: Owner on phase353's demos: "1 把字放到对应的区间下面 另外 确定一个区间最少时长 不完全均匀可以介绍 但是某个太短不好看" — dots at the parts' true times, each word under its own stretch, and a floor on how short a part may be.
