@@ -23,6 +23,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-18 07:31 UTC — phase352: the city card's band of parts, and Explore as a white pill
+
+**Objective**: Owner, of the four demos at `/demos/city-card-bottom-v3/`: "2" — the edge-to-edge band with the playing word lit.
+**Actions** (`CommunityFace`, only for a card that carries `tourChapters` — a city; community cards are untouched):
+- A band across the card's foot, 46 pt, edge to edge (the card's corners clip it), one equal cell a word, the playing word white and bold, the rest at 62%. One 2 pt line along the band's TOP edge is the whole film's progress. It replaces both phase348's row of names under the city name and the dashed bar.
+- The info block rides 14 pt above the band. Explore is a white pill with a dark arrow (`ArrowRightIcon dark`).
+- Touch: the band is the bar's own pan gesture (`blocksExternalGesture(deckGesture)`, seek on touch-down, commit on `onTouchesUp`) — the mechanism proven on device since 2026-08-23 — with a different mapping: equal cells, so the cell comes from x and `cellStarts` says where it begins (+0.002, so the lit word is the tapped one and not the part ending on that boundary). A finger sliding along the band picks the part under it. It arms `CHAPTER_TAP_TARGET`, which the feed answers by un-pausing.
+- Removed, mine from phase347: the `chapter:<i>` tap targets, the feed's `chapterJump` state and the `jumpTo` prop — never verified on a phone, and two paths to one seek.
+- Playbook §2.2 describes the band.
+**Decisions**: a dark veil (`rgba(18,20,18,0.42)`), not a blur — `expo-blur` is not in this build and adding it means a new native build; the scrim under the band is already near black, which is what the demo showed too. Dragging no longer scrubs a city film continuously: the band's cells are equal, so position along it is not time; the film is navigated by part.
+**Not verified**: on a phone. tsc 0, biome 0 errors, vitest 870 — none of which draws a card.
+**Next steps**: owner cold-starts the dev client (1.0.1 (11)) and looks at a city card: the band, the lit word following the film, a tap on a word, the white Explore. Then: redo Suwanee and Johns Creek as chapter films (their bands show four words now, in film order) when he says so.
+
 ## 2026-11-18 06:58 UTC — phase351: the bottom row, simpler and edge to edge (demo only)
 
 **Objective**: Owner on phase350's four takes: "每个label里走进度感觉over complicated 退一步再想想、 左右无边界如何？".
