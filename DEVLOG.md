@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-17 18:40 UTC — phase350: the segmented control, four takes (demo only)
+
+**Objective**: Owner on phase349's four directions: "C不错 但是有点呆 再设计设计".
+**What reads as stiff in C**: five boxes of one width whatever the word, square corners and a border, and a highlight that switches from box to box with nothing in between.
+**Actions**: `apps/web/public/demos/city-card-bottom-v2/` — C as picked, then four takes, same card and film as v1 (it loads v1's `hls.light.min.js`):
+- **C1 · Sliding pill** — a round capsule, each word as wide as it needs; one white pill slides to the playing part on a slight spring, a green line along its foot is that part's progress. Explore: the white pill beside the name.
+- **C2 · The pill fills** — the playing part fills with white left to right as it plays and its word turns dark as the white passes; nothing jumps. Explore is glass, so one thing on the card is white.
+- **C3 · With icons** — a small tab bar, an icon over each word, a white tile sliding between them (icons are stand-ins for the app's set). Tallest.
+- **C4 · One row with Explore** — the sliding pill and a white round arrow share the bottom row; the name has its line to itself.
+**Verification**: driven over CDP in a real (non-virtual-time) headless session — all five films play, a tap on Life then Schools seeks each film (80.0 s, 43.2 s) and the pill's left/width equal the active word's (e.g. C1 272/272, 37/37). Chrome's `--virtual-time-budget` screenshots freeze CSS transitions mid-way, so stills (`?t=`) switch the transition off.
+**Next steps**: owner picks; then `CommunityFace` (Reanimated: a shared value for the pill's x/width from each word's `onLayout`).
+
 ## 2026-11-17 18:09 UTC — phase349: four directions for the city card's bottom row (demo only)
 
 **Objective**: Owner, now on the dev client (1.0.1 (11), connected by the manual URL) and seeing phase348's row for the first time: "没对齐 也不好看 有没有别的方案 设计几个给我看看 包括这个explore button 最底下这一排如何呈现".
