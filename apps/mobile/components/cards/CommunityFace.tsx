@@ -483,34 +483,17 @@ export function CommunityFace({
 	);
 	const chapterIndex = chapterAt?.id === card.id ? chapterAt.index : 0;
 	/**
-	 * The words the band prints: each once, with the stretch a tap starts. A
-	 * film made before sections existed returns to one — "Overview" at both
-	 * ends — and a band that says a word twice reads as a mistake.
+	 * Where each part starts in the film (0..1), as plain numbers for the
+	 * gesture's worklets — a hair INSIDE the part: exactly on the boundary still
+	 * reads as the part before it, and the word that lights would be the wrong
+	 * one.
 	 */
-	const chapterNames = useMemo(() => {
-		const seen = new Set<string>();
-		return chapters.flatMap((c, index) => {
-			if (seen.has(c.name)) return [];
-			seen.add(c.name);
-			return [{ name: c.name, index }];
-		});
-	}, [chapters]);
-	const playingName = chapters[chapterIndex]?.name;
-	/**
-	 * Where each of the band's words starts in the film (0..1), as plain
-	 * numbers for the gesture's worklets. The words are equal cells, so a touch
-	 * picks a cell by position and the cell says where to go.
-	 */
-	const cellStarts = useMemo(
+	const partStarts = useMemo(
 		() =>
-			chapterNames.map((c) =>
-				c.index <= 0
-					? 0
-					: // A hair INSIDE the part: exactly on the boundary still reads as
-						// the part before it, and the word that lights would be the wrong one.
-						Math.min((chapters[c.index - 1]?.endFraction ?? 0) + 0.002, 1),
+			chapters.map((_, i) =>
+				i === 0 ? 0 : Math.min((chapters[i - 1]?.endFraction ?? 0) + 0.002, 1),
 			),
-		[chapterNames, chapters],
+		[chapters],
 	);
 
 	/**
@@ -549,15 +532,13 @@ export function CommunityFace({
 		/**
 		 * A touch on the band lands on the first frame of the part under the
 		 * finger: the band is offering "watch Schools", and Schools from the
-		 * middle of a sentence is not that. The words are equal cells, so the
-		 * cell comes from the position, not from the film's proportions.
+		 * middle of a sentence is not that. The band is a timeline — each word
+		 * sits under its own stretch of the film — so the part under the finger
+		 * is the part playing at that point.
 		 */
 		const snap = (x: number) => {
 			"worklet";
-			const count = cellStarts.length;
-			if (count === 0) return;
-			const cell = Math.min(Math.floor(locate(x) * count), count - 1);
-			progress.value = cellStarts[cell] ?? 0;
+			progress.value = partStarts[dashAt(locate(x))] ?? 0;
 		};
 		/**
 		 * Hand the bar back to playback and ask the film to go where the finger
@@ -609,12 +590,10 @@ export function CommunityFace({
 				seekTo.value = progress.value;
 			})
 			.onUpdate((e) => {
-				if (byChapter) {
-					// A tap that wobbles a few points is still a tap; past that, a
-					// finger sliding along the band picks the part it is over.
-					if (Math.abs(e.translationX) >= CHAPTER_TAP_SLOP) snap(e.x);
-					return;
-				}
+				// On the band a tap that wobbles a few points is still a tap, and
+				// stays on the part's first frame; past that it is a drag, and a
+				// drag goes where it is dragged.
+				if (byChapter && Math.abs(e.translationX) < CHAPTER_TAP_SLOP) return;
 				track(e.x);
 			})
 			// The pointer lift, ahead of any gesture-state decision.
@@ -629,7 +608,7 @@ export function CommunityFace({
 	}, [
 		bounds,
 		byChapter,
-		cellStarts,
+		partStarts,
 		isTop,
 		card.videoUrl,
 		deckGesture,
@@ -864,28 +843,51 @@ export function CommunityFace({
 			    down with it, one continuous bar when it did not, and draggable
 			    either way. Only for a card that actually plays something. */}
 			{/* A city film's parts: a band across the card's foot, edge to edge,
-			    one equal cell a word, the playing word lit; the line along its
-			    top edge is the whole film's progress (owner 2026-11-18, of four
-			    demos: "2"). Nothing moves inside a word — "每个label里走进度感觉over
-			    complicated". A touch on a word starts that part. */}
+			    and a timeline. The line along its top edge is the film's
+			    progress, a dot marks where one part hands over to the next, and
+			    each part's name sits under its own stretch (owner 2026-11-18:
+			    "把字放到对应的区间下面"). The playing word is lit; nothing moves
+			    inside a word. A touch on a word starts that part.
+
+			    A stretch too short for its name shrinks the name a little — the
+			    planner keeps every section to 15% of the film so that it need
+			    not (`MIN_SECTION_SHARE`); films cut before that rule may. */}
 			{!!card.videoUrl && byChapter && (
 				<GestureDetector gesture={scrub}>
 					<View style={styles.band} onLayout={onBarLayout}>
-						<View style={styles.bandTrack}>
-							<Animated.View style={[styles.bandFill, fill]} />
-						</View>
-						{chapterNames.map((c) => (
-							<View key={c.name} style={styles.bandCell}>
+						{chapters.map((c, i) => (
+							<View
+								key={`${c.name}-${c.endFraction}`}
+								style={[
+									styles.bandCell,
+									{
+										flexGrow:
+											c.endFraction - (chapters[i - 1]?.endFraction ?? 0),
+									},
+								]}
+							>
 								<Text
 									style={[
 										styles.bandWord,
-										c.name === playingName && styles.bandWordOn,
+										i === chapterIndex && styles.bandWordOn,
 									]}
 									numberOfLines={1}
+									adjustsFontSizeToFit
+									minimumFontScale={0.8}
 								>
 									{c.name}
 								</Text>
 							</View>
+						))}
+						<View style={styles.bandTrack}>
+							<Animated.View style={[styles.bandFill, fill]} />
+						</View>
+						{chapters.slice(0, -1).map((c) => (
+							<BandDot
+								key={`dot-${c.endFraction}`}
+								progress={progress}
+								at={c.endFraction}
+							/>
 						))}
 					</View>
 				</GestureDetector>
@@ -927,6 +929,31 @@ export function CommunityFace({
 					</View>
 				</GestureDetector>
 			)}
+		</View>
+	);
+}
+
+/**
+ * A dot on the band's progress line, where one part of a city film hands over
+ * to the next. White once the film has passed it. Its own component for the
+ * reason `ProgressDash` is: one `useAnimatedStyle` each.
+ */
+function BandDot({
+	progress,
+	at,
+}: {
+	progress: SharedValue<number>;
+	at: number;
+}) {
+	const style = useAnimatedStyle(() => ({
+		backgroundColor: progress.value >= at ? "#FFFFFF" : "#8E918E",
+	}));
+	return (
+		<View
+			style={[styles.bandDotRing, { left: `${at * 100}%` }]}
+			pointerEvents="none"
+		>
+			<Animated.View style={[styles.bandDot, style]} />
 		</View>
 	);
 }
@@ -1159,7 +1186,30 @@ const styles = StyleSheet.create({
 		backgroundColor: "rgba(255,255,255,0.2)",
 	},
 	bandFill: { height: 2, backgroundColor: "#FFFFFF" },
-	bandCell: { flex: 1, alignItems: "center", justifyContent: "center" },
+	/** A part's cell: as wide as its share of the film (`flexGrow`, inline). */
+	bandCell: {
+		flexBasis: 0,
+		minWidth: 0,
+		alignItems: "center",
+		justifyContent: "center",
+		paddingHorizontal: 3,
+	},
+	/**
+	 * The dot's dark ring, centred on the line: 10pt across, so its centre is
+	 * 5pt left of `left` and 4pt above the 2pt line's top.
+	 */
+	bandDotRing: {
+		position: "absolute",
+		top: -4,
+		marginLeft: -5,
+		width: 10,
+		height: 10,
+		borderRadius: 5,
+		backgroundColor: "rgba(18,20,18,0.55)",
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	bandDot: { width: 6, height: 6, borderRadius: 3 },
 	bandWord: {
 		...redlineText.listingCard.address,
 		fontWeight: "500",

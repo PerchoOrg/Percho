@@ -20,8 +20,13 @@ on its own, with a button to see more in the app.
 - **A cleaner foot for city cards.** The film's parts now sit in one band
   across the bottom of the card — Overview, Schools, Homes, Commute, Life —
   with the one playing lit and a single line showing how far the film has
-  run. Tap a word to start that part. Explore is a white button beside the
-  city's name. (Needs the next app build.)
+  run, a dot on it wherever one part gives way to the next, and each word
+  sitting under its own stretch. Tap a word to start that part, or drag along
+  the band. Explore is a white button beside the city's name. (Needs the
+  next app build.)
+- **Alpharetta's film gives homes and the commute more room.** It now says
+  what renting costs and how incomes compare, and how long it takes to reach
+  Buckhead, the airport and the nearest MARTA station.
 
 ### 2026-11-17
 - **City cards show the parts of their film.** Under a city's name the card

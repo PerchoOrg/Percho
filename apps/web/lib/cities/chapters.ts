@@ -36,6 +36,41 @@ export const CITY_FILM_SECTIONS = [
   chapters: readonly CityFilmChapter[];
 }>;
 
+/**
+ * The least of the film a section may take (phase354).
+ *
+ * The card draws the sections as a timeline: a dot where one hands over to the
+ * next and each section's name under its own stretch (owner 2026-11-18: "把字放
+ * 到对应的区间下面 … 确定一个区间最少时长 不完全均匀可以接受 但是某个太短不好看").
+ * A name needs room: 15% of the narrowest card (343 pt) is 51 pt, which the
+ * longest name, "Commute", fits at a point under full size. Below that the
+ * names collide — Alpharetta's Homes was 9% and Commute 8%.
+ */
+export const MIN_SECTION_SHARE = 0.15;
+
+/**
+ * The sections that take less of the film than a section may, as problems.
+ * `parts` is the film in order: each line's chapter and how long it runs.
+ */
+export function shortSections(
+  parts: ReadonlyArray<{ chapter: string | undefined; seconds: number }>,
+): string[] {
+  const total = parts.reduce((a, p) => a + p.seconds, 0);
+  if (total <= 0) return [];
+  const bySection = new Map<string, number>();
+  for (const part of parts) {
+    const section = part.chapter ? sectionOf(part.chapter) : null;
+    if (section) bySection.set(section.label, (bySection.get(section.label) ?? 0) + part.seconds);
+  }
+  const need = Math.ceil(total * MIN_SECTION_SHARE);
+  return [...bySection]
+    .filter(([, seconds]) => seconds / total < MIN_SECTION_SHARE)
+    .map(
+      ([label, seconds]) =>
+        `the "${label}" section runs ${Math.round(seconds)}s, ${Math.round((seconds / total) * 100)}% of the film — a section needs ${Math.round(MIN_SECTION_SHARE * 100)}% (about ${need}s here) so its name fits under its stretch of the bar; give it another line, or shorten the others`,
+    );
+}
+
 /** The section a chapter belongs to; null for a key that is not a chapter. */
 export function sectionOf(chapter: string): { key: string; label: string } | null {
   const section = CITY_FILM_SECTIONS.find((s) =>

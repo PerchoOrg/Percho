@@ -71,7 +71,7 @@ No two consecutive cities share a spine or an opening. Record each film here:
 |---|---|---|---|---|---|
 | Suwanee | Claim → proof | aerial of Town Center + the claim | 2 lines + growth | the downtown it built | ~1:50 |
 | Johns Creek | Contradiction | a pond + the #1 ranking | 1 line (~10 s) | golf: Bobby Jones's club, four majors | ~1:30 |
-| Alpharetta | A day → sections in a buyer's order, ending at night (first city built as chapters, §2.2) | Lake Windward from the air (Seedance) + "a suburb people commute to" | 1 chapter (~11 s) | Tech: 700 companies, 122,000 people by day | 1:54 |
+| Alpharetta | A day → sections in a buyer's order, ending at night (first city built as chapters, §2.2) | Lake Windward from the air (Seedance) + "a suburb people commute to" | none in the film since the 15% rule — on the page | Tech: 700 companies, 122,000 people by day | ~1:55 |
 
 ### 2.2 The chapters (owner 2026-11-16/17: "模块化内容 可以让人自主选择 … 每一个章节可以做得独立一些可以单独拉出来看 … 每个city尽量覆盖")
 
@@ -112,6 +112,19 @@ chips group the chapters (`CITY_FILM_SECTIONS` in `lib/cities/chapters.ts`):
 A section is one stretch of the bar, so its chapters sit together in the film —
 the profile check refuses a split section. The sections may come in any order.
 
+**Every section takes at least 15% of the film** (`MIN_SECTION_SHARE`; the plan
+step refuses a film with a shorter one). The card's bar is a timeline — a dot
+where one section hands over to the next, each name under its own stretch — and
+a name needs room: owner 2026-11-18, "确定一个区间最少时长 不完全均匀可以接受 但是
+某个太短不好看". 15% of the narrowest card (343 pt) is 51 pt, which "Commute" fits
+at 85% of full size; Alpharetta's first cut had Homes at 9% and Commute at 8% and
+the names collided. In a 1:55 film that is about 17 s a section, so Homes and
+Commute are two lines each, not one: value and trend, then rent and income;
+downtown, then the airport, the nearest job centre and rail. With five sections
+at 15% the remaining 25% is what the Overview and Life have to share beyond
+their own floor — history, growth and what's next compete for it, and not all
+of them make the film (they are all on the page).
+
 **What makes a chapter watchable alone** (`lib/cities/chapters.ts` refuses a
 profile that breaks the first four; `pnpm city:profile <slug> --check`):
 - every line belongs to a chapter, and a chapter is ONE unbroken block;
@@ -122,10 +135,11 @@ profile that breaks the first four; `pnpm city:profile <slug> --check`):
 - at least two shots, and its own callouts;
 - on the card every SECTION's name is visible without a touch (owner 2026-11-17:
   "如果不点击下面的进度条章节名不自己显示 我怎么知道有哪些章节呢？") — a band across
-  the card's foot, edge to edge, one equal cell a word, the playing word lit, a
-  tap starts it; one line along the band's top edge is the film's progress and
-  nothing moves inside a word (his pick of the demos at
-  `/demos/city-card-bottom-v3/`, 2026-11-18);
+  the card's foot, edge to edge, that is a timeline: one line along its top edge
+  is the film's progress, a dot marks where each section hands over to the next,
+  and each name sits under its own stretch, the playing one lit; a tap starts a
+  section, a drag scrubs; nothing moves inside a word (his picks of the demos at
+  `/demos/city-card-bottom-v3/` and `/demos/city-card-band-dots-v1/`, 2026-11-18);
 - the four required chapters say the same KIND of thing in every city, so one
   city's Schools can be watched against another's.
 

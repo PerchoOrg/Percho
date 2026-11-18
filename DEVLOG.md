@@ -23,6 +23,20 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-18 09:16 UTC — phase354: the band is a timeline; every section at least 15% of the film; Alpharetta re-cut to it
+
+**Objective**: Owner on phase353's demos: "1 把字放到对应的区间下面 另外 确定一个区间最少时长 不完全均匀可以介绍 但是某个太短不好看" — dots at the parts' true times, each word under its own stretch, and a floor on how short a part may be.
+**Actions**:
+- Card (`CommunityFace`, city cards only): the band's cells are as wide as their part's share of the film (`flexGrow`), a `BandDot` sits on the progress line at each handover (white once passed), the word is centred under its stretch, lit when playing; `adjustsFontSizeToFit` to 0.8 if a stretch is narrower than its word. A touch starts the part under the finger (by time — the band is a timeline again), and a drag past 8 pt scrubs continuously, which phase352 had dropped. The band lists the film's stretches as they come; phase348's print-each-name-once is gone with the equal cells.
+- **Rule**: `MIN_SECTION_SHARE = 0.15` (`lib/cities/chapters.ts`, `shortSections`, 2 tests). `buildCityFilm` reports a section under 15% as a PROBLEM — the plan step throws, naming the section, its share and the seconds it needs. Only for a film written in chapters throughout.
+- Why 15%: mocked the band in HTML at 343 / 361 / 398 pt with the app's metrics. At the floor on the narrowest card "Commute" lit shrinks to 85% and "Overview" to 94% — inside the 0.8 limit; Alpharetta before the rule (Homes 9%, Commute 8%) clips both.
+- Alpharetta re-cut to it — sections were 37 / 15 / 9 / 8 / 31%, now **17 / 17 / 19 / 17 / 30%**: `homes` gains a line (a third rented at a median $1,948 a month; household income 1.9× the state — ACS 2020–24) and `commute` gains one (Buckhead 32 min, the airport 50, MARTA North Springs 24 — Google Routes), with Commons photos of the airport's atrium and a train at North Springs. To stay under two minutes the film loses the history/growth line, the North Point Mall line and the library shot — all still on the page; Avalon keeps a line of its own (`daily`). The Perimeter Center callout that sat over a Midtown skyline is gone: the picture was not of what it said.
+- **Assembly `1172d82e`, stream `8083ab03…`, 1:58**: 28 shots — 15 Ken Burns, 10 DepthFlow, 3 Seedance (the three bought on 2026-11-17, reused), 15 moves, 5 pans; frames and narration checked; the city's 28 approved photos are the film's 28.
+**Decisions**: the floor is on the FILM, not faked in the drawing — a bar that widens a short part would stop being the timeline he chose. Five sections at 15% leave 25% free, so Homes and Commute are now two lines each and the Overview's optional chapters compete for what is left; playbook §2.2 says so.
+**Cost**: free engines and Commons; 12 TTS requests; one Google Routes call; 8 photo tags and ~10 Curator annotations.
+**Not verified**: the band on a phone — and phase352's band was never confirmed there either.
+**Next steps**: owner looks at Alpharetta's card. Suwanee and Johns Creek still carry old films whose stretches are uneven and repeat ("Overview … Overview"); their words will shrink or crowd until they are redone.
+
 ## 2026-11-18 08:48 UTC — phase353: dots on the band's progress line, three ways (demo only)
 
 **Objective**: Owner, on the band as built (phase352): "For each section, maybe add some dots in the line to mark the starting and ending points? Give some demo".

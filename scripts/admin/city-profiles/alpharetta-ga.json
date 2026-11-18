@@ -63,6 +63,11 @@
       "label": "Homes owner-occupied",
       "value": "65%",
       "note": "the rest rented"
+    },
+    {
+      "label": "Median rent",
+      "value": "$1,948",
+      "note": "a month · ACS 2020–24"
     }
   ],
   "compare": {
@@ -292,8 +297,12 @@
       }
     },
     {
-      "label": "Nearest rail · MARTA North Springs",
-      "value": "no rail in Alpharetta"
+      "label": "MARTA North Springs · 13 mi",
+      "value": "24–39 min · no rail in Alpharetta",
+      "minutes": {
+        "min": 24,
+        "max": 39
+      }
     },
     {
       "label": "Georgia 400",
@@ -427,77 +436,6 @@
         ]
       },
       {
-        "say": "Alpharetta was chartered in 1858 as a county seat. In 1980 it had three thousand residents; now, sixty-six thousand.",
-        "chapter": "history",
-        "shots": [
-          {
-            "photo": "6e188c07",
-            "label": "Main Street",
-            "weight": 6,
-            "callout": {
-              "type": "stat",
-              "big": "1858",
-              "label": "chartered as the seat of Milton County"
-            }
-          },
-          {
-            "photo": "b3d6804c",
-            "weight": 8,
-            "callout": {
-              "type": "count",
-              "from": 3128,
-              "to": 65818,
-              "label": "residents · 1980 → 2020",
-              "source": "U.S. Census Bureau",
-              "series": [
-                {
-                  "label": "1980",
-                  "value": 3128
-                },
-                {
-                  "label": "1990",
-                  "value": 13002
-                },
-                {
-                  "label": "2000",
-                  "value": 34854
-                },
-                {
-                  "label": "2010",
-                  "value": 57551
-                },
-                {
-                  "label": "2020",
-                  "value": 65818
-                }
-              ]
-            }
-          }
-        ]
-      },
-      {
-        "say": "In 2026 Alpharetta approved rebuilding North Point Mall around a hockey arena, if the NHL awards Atlanta a team.",
-        "chapter": "future",
-        "shots": [
-          {
-            "photo": "935476f5",
-            "label": "North Point Mall",
-            "weight": 7,
-            "callout": {
-              "type": "stat",
-              "big": "20,000",
-              "label": "seat arena · approved August 2026, pending an NHL team",
-              "source": "AJC"
-            }
-          },
-          {
-            "photo": "ca056548",
-            "label": "North Point Mall",
-            "weight": 5
-          }
-        ]
-      },
-      {
         "say": "Alpharetta's public schools rank high in Georgia: Creek View Elementary sixteenth, Webb Bridge Middle tenth.",
         "chapter": "schools",
         "shots": [
@@ -524,7 +462,7 @@
         ]
       },
       {
-        "say": "Alpharetta High graduates ninety-eight percent of its seniors; a STEM high school, Innovation Academy, opened downtown in 2021.",
+        "say": "Alpharetta High graduates ninety-eight percent of its seniors, against ninety-two percent across the district; a STEM high school, Innovation Academy, opened downtown in 2021.",
         "chapter": "schools",
         "shots": [
           {
@@ -564,7 +502,7 @@
             }
           },
           {
-            "photo": "faa0b10a",
+            "photo": "be01a3bc",
             "weight": 6,
             "callout": {
               "type": "stat",
@@ -572,14 +510,30 @@
               "label": "on the previous Census estimate",
               "source": "ACS 2019–23 → 2020–24 · Data USA"
             }
+          }
+        ]
+      },
+      {
+        "say": "The other third of Alpharetta's homes are rented, at a median near nineteen hundred fifty dollars a month; household income is almost twice the state's.",
+        "chapter": "homes",
+        "shots": [
+          {
+            "photo": "faa0b10a",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "$1,948",
+              "label": "median rent a month · 35% of homes are rented",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
           },
           {
-            "photo": "be01a3bc",
+            "photo": "12c59b0d",
             "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "65%",
-              "label": "of homes are owner-occupied",
+              "big": "$147,612",
+              "label": "median household income · 1.9× Georgia",
               "source": "U.S. Census Bureau, ACS 2020–24"
             }
           }
@@ -590,7 +544,7 @@
         "chapter": "commute",
         "shots": [
           {
-            "photo": "d1e1c711",
+            "photo": "dc1f5a67",
             "weight": 7,
             "callout": {
               "type": "stat",
@@ -601,39 +555,45 @@
           },
           {
             "photo": "cdf8b4f2",
-            "weight": 6,
-            "callout": {
-              "type": "stat",
-              "big": "22 min",
-              "label": "to Perimeter Center · 37 at rush hour",
-              "source": "12 mi · Google Maps, typical traffic"
-            }
+            "weight": 5
           }
         ]
       },
       {
-        "say": "In Alpharetta, errands stay close: the county library is downtown, and Avalon's shops opened in 2014.",
-        "chapter": "daily",
+        "say": "Buckhead is half an hour from Alpharetta and the airport fifty minutes; the nearest MARTA station, North Springs, is about twenty-five.",
+        "chapter": "commute",
         "shots": [
           {
-            "photo": "baae15c6",
-            "label": "Alpharetta Library",
-            "weight": 5
-          },
-          {
-            "photo": "aa48756c",
-            "label": "Avalon",
-            "weight": 7,
+            "photo": "d1e1c711",
+            "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "86 acres",
-              "label": "shops, offices and homes · opened 2014"
+              "big": "32 min",
+              "label": "to Buckhead · 50 at rush hour",
+              "source": "18 mi · Google Maps, typical traffic"
             }
           },
           {
-            "photo": "b16b07a4",
-            "label": "Avalon",
-            "weight": 5
+            "photo": "63966c6f",
+            "label": "Hartsfield-Jackson",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "50 min",
+              "label": "to the airport · 70 at rush hour",
+              "source": "34 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "626edecf",
+            "label": "North Springs station",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "24 min",
+              "label": "to MARTA rail · 39 at rush hour",
+              "source": "13 mi · Google Maps, typical traffic"
+            }
           }
         ]
       },
@@ -682,6 +642,27 @@
             "photo": "99e73b4d",
             "label": "Alpharetta City Hall",
             "weight": 6
+          }
+        ]
+      },
+      {
+        "say": "Avalon, Alpharetta's open-air district of shops, offices and homes, opened in 2014 on eighty-six acres.",
+        "chapter": "daily",
+        "shots": [
+          {
+            "photo": "aa48756c",
+            "label": "Avalon",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "86 acres",
+              "label": "shops, offices and homes · opened 2014"
+            }
+          },
+          {
+            "photo": "b16b07a4",
+            "label": "Avalon",
+            "weight": 5
           }
         ]
       },

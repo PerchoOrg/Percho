@@ -1,6 +1,6 @@
 import type { CityFilmChapter, CityFilmLine } from '@/lib/zod/city-profile';
 import { describe, expect, it } from 'vitest';
-import { bySection, chapterProblems, sectionOf } from './chapters';
+import { bySection, chapterProblems, sectionOf, shortSections } from './chapters';
 
 const line = (chapter?: CityFilmChapter): CityFilmLine =>
   ({
@@ -84,5 +84,37 @@ describe('sections', () => {
       { bucket: 'dining' },
       {},
     ]);
+  });
+});
+
+describe('shortSections', () => {
+  const part = (chapter: CityFilmChapter, seconds: number) => ({ chapter, seconds });
+
+  it('passes a film whose sections each take 15% or more', () => {
+    expect(
+      shortSections([
+        part('overview', 10),
+        part('signature', 15),
+        part('schools', 18),
+        part('homes', 17),
+        part('commute', 17),
+        part('outdoor', 12),
+        part('events', 11),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('names a section too short to carry its name, and what it needs', () => {
+    const problems = shortSections([
+      part('overview', 42),
+      part('schools', 17),
+      part('homes', 10),
+      part('commute', 9),
+      part('outdoor', 35),
+    ]);
+    expect(problems).toHaveLength(2);
+    expect(problems[0]).toContain('the "Homes" section runs 10s, 9% of the film');
+    expect(problems[0]).toContain('about 17s here');
+    expect(problems[1]).toContain('"Commute"');
   });
 });
