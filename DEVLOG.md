@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-18 08:48 UTC — phase353: dots on the band's progress line, three ways (demo only)
+
+**Objective**: Owner, on the band as built (phase352): "For each section, maybe add some dots in the line to mark the starting and ending points? Give some demo".
+**The catch**: the band's five words are equal cells, the film's parts are not equal lengths (Alpharetta: Overview 37%, Schools 15%, Homes 9%, Commute 8%, Life 31%). Dots at the parts' true times cannot also sit between the words.
+**Actions**: `apps/web/public/demos/city-card-band-dots-v1/` — the band as the app draws it, then:
+- **1 · Dots in real time** — a dot where each part hands over to the next, at its true position; the line stays a timeline, the dots do not line up with the words.
+- **2 · Dots lined up with the words** — the line is five equal stretches with a dot between each pair of words; the fill takes each stretch at that part's own pace.
+- **3 · Stations** — a dot over the middle of each word, where that part begins; the fill runs stop to stop and the current stop grows.
+No dot at the card's two edges: the edges are the film's start and end.
+**Verification**: over CDP in real time, locally — four films play, taps on Life and Schools seek (≈80 s, ≈43.5 s).
+**Next steps**: owner picks; then build it in `CommunityFace` (2 and 3 need the fill mapped per part instead of `progress` directly).
+
 ## 2026-11-18 07:31 UTC — phase352: the city card's band of parts, and Explore as a white pill
 
 **Objective**: Owner, of the four demos at `/demos/city-card-bottom-v3/`: "2" — the edge-to-edge band with the playing word lit.
