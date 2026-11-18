@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho city card — the bottom row, edge to edge</title>
+<style>
+:root{
+  --card-ink:#181B18;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --ui: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:24px 12px 60px}
+.nav{max-width:1200px;margin:0 auto 20px;font:400 14px/1.6 var(--ui)}
+.nav h1{font:600 24px var(--serif);color:#086B5B;margin-bottom:4px}
+.nav p{max-width:760px;color:#5A4E40;margin:6px 0}
+.gallery{display:flex;flex-wrap:wrap;gap:28px 24px;align-items:flex-start;justify-content:center}
+.frame{width:361px}
+.cap{height:96px;padding:6px 2px 10px;font:600 16px/1.25 var(--ui);overflow:hidden}
+.cap small{display:block;font:400 12.5px/1.35 var(--ui);color:#6F6B65;margin-top:3px}
+.card{position:relative;width:361px;height:527px;border-radius:28px;overflow:hidden;background:#20262A;box-shadow:0 3px 10px rgba(32,28,22,.05),0 16px 38px rgba(32,28,22,.16)}
+.card video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.18) 0%,transparent 16%,transparent 58%,rgba(0,0,0,.5) 80%,rgba(0,0,0,.9) 100%);z-index:1;pointer-events:none}
+/* top chrome — as the app draws it */
+.pill{position:absolute;top:12px;left:12px;z-index:2;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.92);border-radius:14px;padding:7px 10px;font:600 10.5px var(--ui);color:var(--card-ink);max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill svg{color:#0E6B57;flex:none}
+.pill:empty,.pill.off{display:none}
+.corner{position:absolute;top:12px;right:12px;z-index:2;display:flex;gap:2px;background:rgba(24,27,24,.42);border-radius:16px;padding:3px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.corner span{width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#fff}
+/* bottom block */
+.info{position:absolute;left:24px;right:24px;bottom:22px;z-index:2;color:#fff}
+.tag{display:inline-block;background:rgba(255,255,255,.92);border-radius:6px;padding:4px 8px;font:700 9.5px var(--ui);letter-spacing:1px;color:var(--card-ink);margin-bottom:9px}
+.row{display:flex;align-items:center;gap:12px}
+.name{font:600 27px/30px var(--serif);flex:1;min-width:0}
+.cta{flex:none;display:inline-flex;align-items:center;gap:6px;font:500 15px var(--ui);color:rgba(255,255,255,.92);background:none;border:0;cursor:pointer}
+button{font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+
+.pillbtn{flex:none;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:17px;border:0;background:rgba(255,255,255,.92);color:var(--card-ink);font:600 13.5px var(--ui)}
+
+/* ── 1 · the capsule, simplified: a pill that slides, nothing inside it ── */
+.cap2{position:relative;display:flex;justify-content:space-between;margin-top:14px;padding:4px;border-radius:999px;background:rgba(255,255,255,.17);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.cap2 button{position:relative;z-index:1;border:0;background:none;height:30px;padding:0 8px;font:600 12px/30px var(--ui);color:rgba(255,255,255,.8);transition:color .3s}
+.cap2 button.on{color:var(--card-ink)}
+.cap2 .mark{position:absolute;top:4px;left:4px;height:30px;width:0;border-radius:15px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.28);transition:left .45s cubic-bezier(.3,1.3,.5,1),width .45s cubic-bezier(.3,1.3,.5,1)}
+
+/* ── edge to edge: the row belongs to the card's bottom edge ── */
+.edge .info{bottom:60px}
+.strip{position:absolute;left:0;right:0;bottom:0;height:46px;z-index:2;display:grid;grid-template-columns:repeat(5,1fr)}
+.strip button{position:relative;z-index:1;border:0;background:none;padding:0;font:500 12px/46px var(--ui);color:rgba(255,255,255,.62);transition:color .25s}
+.strip button.on{color:#fff;font-weight:700}
+/* one line for the whole film, along the row's top edge */
+.strip .track{position:absolute;left:0;right:0;top:0;height:2px;background:rgba(255,255,255,.2)}
+.strip .track b{display:block;height:100%;width:0;background:#fff}
+
+/* 2 · frosted strip, the playing word lit */
+.E2 .strip{background:rgba(18,20,18,.42);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+
+/* 3 · frosted strip, the playing cell lit */
+.E3 .strip{background:rgba(18,20,18,.42);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.E3 .strip button.on{color:var(--card-ink)}
+.E3 .strip .mark{position:absolute;top:0;bottom:0;left:0;width:0;background:rgba(255,255,255,.94);transition:left .4s cubic-bezier(.3,1.2,.5,1)}
+.E3 .strip .track{z-index:2}
+
+/* 4 · no strip: a hairline, and a white piece of it over the playing word */
+.E4 .strip .track{background:rgba(255,255,255,.28);height:1px}
+.E4 .strip .mark{position:absolute;top:-1px;left:0;height:3px;width:0;border-radius:2px;background:#fff;transition:left .4s cubic-bezier(.3,1.2,.5,1),width .4s cubic-bezier(.3,1.2,.5,1)}
+</style>
+</head>
+<body>
+<div class="nav">
+  <h1>City card — the bottom row, edge to edge</h1>
+  <p>Stepping back. The row has two jobs: say which parts the film has, and which one is playing. So no progress inside the labels — where progress is shown at all, it is one line for the whole film. First the capsule from last round with everything taken out of it; then three where the row runs from one edge of the card to the other. Tap a part to jump.</p>
+</div>
+<div class="gallery" id="gallery"></div>
+
+<script src="/demos/city-card-bottom-v1/hls.light.min.js"></script>
+<script>
+const UID = '0b3b0ee8a86c09a7cd4d176f86e22f0a';
+const FILM = `https://videodelivery.net/${UID}/manifest/video.m3u8`;
+// ?t=0.45 freezes every card at that point of the film (for a still look).
+const FROZEN = new URLSearchParams(location.search).get('t');
+const POSTER = `https://videodelivery.net/${UID}/thumbnails/thumbnail.jpg?time=${FROZEN ? Math.round(Number(FROZEN) * 114) : 1}s&height=1054`;
+const SECTIONS = [["Overview",0.3677],["Schools",0.5202],["Homes",0.6099],["Commute",0.6906],["Life",1]];
+const PLACES = [["Lake Windward",0.0359],["",0.0807],["",0.1121],["Sanctuary Park",0.1435],["Windward Parkway",0.1794],["Main Street",0.2197],["",0.278],["North Point Mall",0.3677],["Creek View Elementary",0.3991],["Webb Bridge Middle",0.435],["Alpharetta High",0.4753],["Innovation Academy",0.5202],["",0.5516],["",0.5785],["",0.6099],["",0.6906],["Alpharetta Library",0.713],["Avalon",0.7713],["Big Creek Greenway",0.8206],["Wills Park Equestrian Center",0.843],["Town Green",0.8789],["Alpharetta City Hall",0.9148],["Ameris Bank Amphitheatre",0.9641],["Wills Park",1]];
+
+const ARROW = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>';
+const PIN = '<svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a5 5 0 0 0-5 5c0 3.6 5 9 5 9s5-5.4 5-9a5 5 0 0 0-5-5zm0 7a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>';
+const ICON = (d, size = 15) => `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const CORNER = `<div class="corner"><span>${ICON('<path d="M3 6h2l3-3v10l-3-3H3zM11 5.5a3.5 3.5 0 0 1 0 5"/>')}</span><span>${ICON('<path d="M8 10V2M5 5l3-3 3 3M3 9v4h10V9"/>')}</span><span>${ICON('<path d="M4 2h8v12l-4-3-4 3z"/>')}</span></div>`;
+// Stand-ins for the app's own icon set.
+const TOP_CHROME = `<div class="pill"></div>${CORNER}`;
+const words = () => SECTIONS.map(([n], i) => `<button data-s="${i}">${n}</button>`).join('');
+const info = `<div class="info"><span class="tag">CITY</span><div class="row"><div class="name">Alpharetta</div><button class="pillbtn">Explore ${ARROW}</button></div>`;
+const TRACK = '<div class="track"><b></b></div>';
+
+const VARIANTS = [
+  { id: 'E1', title: '1 · The capsule, emptied', note: 'Last round\'s sliding pill with nothing inside it: the white pill says where you are, and that is all. Still has edges — here to compare.',
+    html: `${info}<div class="cap2"><div class="mark"></div>${words()}</div></div>` },
+  { id: 'E2 edge', title: '2 · Edge to edge — lit word', note: 'A frosted band across the foot of the card, five words spread evenly, the playing one bright. One line along the band\'s top edge is the whole film\'s progress.',
+    html: `${info}</div><div class="strip">${TRACK}${words()}</div>` },
+  { id: 'E3 edge', title: '3 · Edge to edge — lit cell', note: 'The same band, but the playing part is a white block that slides along it — the segmented control you liked, without a box around it.',
+    html: `${info}</div><div class="strip"><div class="mark" data-fit="cell"></div>${TRACK}${words()}</div>` },
+  { id: 'E4 edge', title: '4 · Edge to edge — just a line', note: 'No band at all: one hairline across the card, the words under it, and a white piece of the line sits over the playing word. The lightest; shows no progress.',
+    html: `${info}</div><div class="strip">${TRACK}<div class="mark" data-fit="word"></div>${SECTIONS.map(([n], i) => `<button data-s="${i}"><span>${n}</span></button>`).join('')}</div>` },
+];
+
+const gallery = document.getElementById('gallery');
+for (const v of VARIANTS) {
+  const frame = document.createElement('div');
+  frame.className = 'frame';
+  frame.innerHTML = `<div class="cap">${v.title}<small>${v.note}</small></div>
+    <div class="card ${v.id}"><video muted playsinline loop preload="metadata" poster="${POSTER}"></video><div class="scrim"></div>${TOP_CHROME}${v.html}</div>`;
+  gallery.appendChild(frame);
+  wire(frame.querySelector('.card'));
+}
+
+function wire(card) {
+  const video = card.querySelector('video');
+  video.addEventListener('loadedmetadata', () => { card.dataset.ready = '1'; });
+  if (FROZEN) { /* poster only */ }
+  else if (video.canPlayType('application/vnd.apple.mpegurl')) video.src = FILM;
+  else if (window.Hls && Hls.isSupported()) { const h = new Hls({ capLevelToPlayerSize: true }); h.loadSource(FILM); h.attachMedia(video); }
+
+  const startOf = (i) => (i === 0 ? 0 : SECTIONS[i - 1][1]);
+  const buttons = [...card.querySelectorAll('[data-s]')];
+  for (const b of buttons) b.addEventListener('click', () => {
+    if (!video.duration) return;
+    video.currentTime = startOf(Number(b.dataset.s)) * video.duration + 0.05;
+    video.play();
+  });
+  const pill = card.querySelector('.pill');
+  const mark = card.querySelector('.mark');
+  const track = card.querySelector('.track b');
+
+  const paint = () => {
+    const at = FROZEN ? Number(FROZEN) : video.duration ? video.currentTime / video.duration : 0;
+    const cur = Math.max(0, SECTIONS.findIndex(([, e]) => at <= e));
+    for (const b of buttons) b.classList.toggle('on', Number(b.dataset.s) === cur);
+    const active = buttons[cur];
+    if (mark && active) {
+      if (FROZEN) mark.style.transition = 'none';
+      // The mark covers the cell, or just the word in it.
+      const word = mark.dataset.fit === 'word' ? active.firstElementChild : null;
+      mark.style.left = `${active.offsetLeft + (word ? word.offsetLeft : 0)}px`;
+      mark.style.width = `${word ? word.offsetWidth : active.offsetWidth}px`;
+    }
+    if (track && !card.classList.contains('E4')) track.style.width = `${at * 100}%`;
+    const place = (PLACES.find(([, e]) => at <= e) || ['', 1])[0];
+    pill.innerHTML = place ? `${PIN}${place}` : '';
+    pill.classList.toggle('off', !place);
+    requestAnimationFrame(paint);
+  };
+  requestAnimationFrame(paint);
+
+  // Only the card on screen plays.
+  new IntersectionObserver(([e]) => { if (e.isIntersecting) video.play().catch(() => {}); else video.pause(); }, { threshold: 0.5 }).observe(card);
+}
+</script>
+</body>
+</html>

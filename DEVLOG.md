@@ -23,6 +23,20 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-18 06:58 UTC — phase351: the bottom row, simpler and edge to edge (demo only)
+
+**Objective**: Owner on phase350's four takes: "每个label里走进度感觉over complicated 退一步再想想、 左右无边界如何？".
+**Stepping back**: the row has two jobs — say which parts the film has and which one is playing. Progress inside a label is a third job nobody asked of it. So: no progress in any label; where progress is shown it is one line for the whole film. "左右无边界" read as: the row is not a capsule inset from the card's sides but runs from one edge of the card to the other.
+**Actions**: `apps/web/public/demos/city-card-bottom-v3/` (same card, film and `hls.light.min.js` as v1):
+- **1 · The capsule, emptied** — phase350's sliding pill with nothing inside it; kept as the with-edges comparison.
+- **2 · Edge to edge — lit word** — a frosted band across the card's foot, five equal cells, the playing word bright; one line along the band's top edge is the film's progress.
+- **3 · Edge to edge — lit cell** — the same band; the playing part is a white block that slides along it (the segmented control he liked, with no box around it).
+- **4 · Edge to edge — just a line** — no band: a hairline across the card, the words under it, a white piece of the line over the playing word; no progress shown.
+The white Explore pill beside the name is the same in all four.
+**Decisions**: the film's progress line sits on the band's TOP edge, not on the card's bottom edge — a hairline flush with the card's edge is what the owner called "ugly and not easy to find" on 2026-08-22 (`CommunityFace`'s `progressRow` comment).
+**Verification**: over CDP in real time, locally — four films play; taps on Life and Schools seek (≈80 s, ≈43.5 s); the pill / block / line lands on the tapped part in all three that have one.
+**Next steps**: owner picks; then build it in `CommunityFace`.
+
 ## 2026-11-18 03:25 UTC — phase350: the segmented control, four takes (demo only)
 
 **Objective**: Owner on phase349's four directions: "C不错 但是有点呆 再设计设计".
