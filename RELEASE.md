@@ -16,6 +16,15 @@ picture in the preview. If they have the Percho app, the link opens straight
 into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
+### 2026-11-19
+- **Cumming has a city film.** The fourth city, and the first outside Fulton
+  and Gwinnett. Cumming is the only city in Forsyth County and most homes
+  with a Cumming address sit outside its limits, so the film says so and
+  covers both: the county's schools, home values, rent and commute, and the
+  city's own numbers where they differ. Lake Lanier, Sawnee Mountain, the
+  new City Center and the October fair are in it; the city's page carries
+  the full figures.
+
 ### 2026-11-18
 - **Suwanee's and Johns Creek's films were made again.** Both now run in the
   same five parts as Alpharetta's — Overview, Schools, Homes, Commute, Life —

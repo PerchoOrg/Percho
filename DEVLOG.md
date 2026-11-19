@@ -23,6 +23,32 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-19 08:10 UTC — phase356: Cumming, the fourth city film — one city, one county
+
+**Objective**: Owner, 2026-11-19, on the list of candidate cities: "cumming sugar hill buford duluth peachtree … 开一个新的thread". This thread makes them in that order, one at a time; Cumming is the first.
+**Actions**:
+- `cities` row `cumming-ga` (Forsyth, centre = the courthouse square, `geo_unit_id = city:cumming-ga`), `inactive` until the film was checked, now `active`.
+- `scripts/admin/city-profiles/cumming-ga.json`: the page (rankings, city and county figures side by side, history, growth series, schools by level, drive times, planning, sources) and a 12-line film.
+- Pipeline: research → resolve (17 places, all in Cumming; three single businesses rejected at the place level) → photos; `city:photos topup`, 24 `place` searches (schools, UNG, courthouse, marinas, lake parks, golf communities, apartments, hospital), Commons for Lake Lanier, Buford Dam, Sawnee Mountain, the Atlanta skyline, the airport and North Springs; 346 photos tagged.
+- **Film — assembly `683d704a`, stream `1ab3e7c0…`, 1:59**, 27 shots: 14 Ken Burns, 10 DepthFlow, 3 Seedance, 14 moves, 3 pans. Sections 26 / 18 / 17 / 16 / 23%. overview · growth · signature (Lake Lanier) · schools ×2 · homes ×2 · commute ×2 · downtown (City Center) · outdoor (Sawnee Mountain) · events (the Country Fair).
+- `docs/pipelines/city-film-playbook.md`: the per-city table, a new spine, two notes.
+**Decisions**:
+- **What the film is about.** The city proper holds about 12,500 people; nearly every home with a Cumming address is in unincorporated Forsyth County, and Cumming is the county's only city. The film says so in its second line and is about "Cumming and the county that carries its address": schools, home values, rent and income are the county's and every callout says "Forsyth County"; the city's own figures ($382,900, 52% rented) get one Homes shot and their own rows on the page.
+- **Spine: one city, one county** — opens on City Hall with Sawnee Mountain behind it ("Forsyth County, Georgia, has one city") and widens. Not a lake opening (Alpharetta's), not a contradiction (Johns Creek's). The ranking is the Atlanta Regional Commission's reading of the Census Bureau's 2025 estimates: +23.6% in a year, the fastest-growing city in the metro.
+- Signature is Lake Lanier; Sawnee Mountain is the outdoor line. Buford and Sugar Hill also touch the lake — their films should lead with something else.
+- **No elementary school in the film.** Daves Creek Elementary is #6 in Georgia (U.S. News 2027) and has no photograph on Google or Commons; Big Creek and Vickery Creek have none either. Every line needs its own photo, so it is on the page with a note, and the film covers middle (#8), high (#5, #20) and the university campus.
+- Graduation rate is the district's class of 2026 (97.5% against 88.5% statewide) — newer than the class-of-2025 figures in the other three films.
+**Issues**:
+- The plan refused the first script: two of its photos already had Seedance clips bought for communities (Windermere, a Sawnee boardwalk), so three more made five. Kept the two cached ones and one new.
+- The opening photo cannot be Seedance ("a street perspective is geometry Seedance would have to invent"); the new clip went to the first Lake Lanier shot and the opening is a DepthFlow orbit.
+- forsythnews.com shows only an article's first sentence; the 2027 K-8 ranks came from Yahoo's write-up, high schools from usnews.com search results.
+- One oversized Google photo failed to upload during the photos step ("object exceeded the maximum allowed size"); the step went on without it.
+**Verified**: frames tiled every 2 s (all 27 shots, every callout against its picture); speech-band level in each of the 12 lines' windows (−20 to −23 dB, end card −36); the city's 27 approved photos equal the film's 27; `/api/mobile/feed` returns Cumming with five sections, the shortest 15.5%; `percho.co/city/cumming-ga` serves the stream and the figures.
+**Cost**: one new Seedance clip, $0.1396 (two cached reused). 12 TTS requests. Google Places: ~26 text searches and their photos; Routes: 12 calls; ~350 photo tags.
+**Not verified**: the film on a phone.
+**Tech debt / weak spots**: South Forsyth High's only usable exterior is a dusk photo with a car in front of it (3 s). Buckhead and North Springs are the same two Commons photos Alpharetta's film uses. The narration says "eleven nights" where the callout says "11 days". The geo unit counts 306 communities for Cumming against 994 by mailing address.
+**Next steps**: owner watches Cumming; next is Sugar Hill, then Buford, Duluth, and "peachtree" — ask which one before starting it.
+
 ## 2026-11-18 17:39 UTC — phase355: Suwanee and Johns Creek redone as chapter films; school ranks moved to the newest lists in all three cities
 
 **Objective**: Owner, after phase354: "重做" — the two films that predate the chapter list (phase345), the orchestrated motion (phase347), the five sections (phase348) and the 15% floor (phase354) are made again under all of them. Johns Creek's stale "best place to live in America" goes with it.

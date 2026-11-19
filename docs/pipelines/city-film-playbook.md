@@ -1,6 +1,6 @@
 # City film & city card — playbook
 
-**Status**: in use · **Last updated**: 2026-11-18 · **Built on**: Suwanee, GA (phase318–333), Johns Creek, GA (phase344), Alpharetta, GA (phase346); all three recut as chapter films (phase354–355)
+**Status**: in use · **Last updated**: 2026-11-19 · **Built on**: Suwanee, GA (phase318–333), Johns Creek, GA (phase344), Alpharetta, GA (phase346); all three recut as chapter films (phase354–355); Cumming, GA (phase356)
 **Read this before making the next city** (Johns Creek → Alpharetta → Milton → Cumming → Sugar Hill/Buford).
 
 Suwanee took fifteen phases, two rejected finished films and a dozen assemblies.
@@ -63,6 +63,7 @@ answer fits the city next door, keep researching. Spines so far:
 | A Saturday | one day, morning to night; figures only as callouts (direction D, phase324) | a city people use on foot |
 | A hero subject | one signature thing takes a third of the film | horse country, a lake, a mill town |
 | A calendar | the year's events as the spine; culture first | only with licence-clean event photos |
+| One city, one county | open in the small city, say that its address reaches far past its limits, then widen to the county; county figures labelled as the county's, the city's own where they differ | a county seat whose mailing address is mostly unincorporated (Cumming) |
 | A day | chapters in the order of a day — work, school, errands, parks, evening downtown, a night out — and the pictures follow the light | a city with a strong daytime AND night-time life (Alpharetta) |
 
 No two consecutive cities share a spine or an opening. Record each film here:
@@ -72,6 +73,7 @@ No two consecutive cities share a spine or an opening. Record each film here:
 | Suwanee | Claim → proof (recut as chapters, phase355) | aerial of Town Center + the claim + Fortune's #1 | one line: 1871 and the eightfold growth | the downtown it built — two lines, at the head of Life | ~1:55 |
 | Johns Creek | Contradiction (recut as chapters, phase355) | a pond, a creek, then an office park: "#1 in Georgia, #5 in America. Until this year, it had no downtown." | none in the film — on the page | golf: Bobby Jones's club, four majors (`signature`); the film ends on the new town center | ~1:55 |
 | Alpharetta | A day → sections in a buyer's order, ending at night (first city built as chapters, §2.2) | Lake Windward from the air (Seedance) + "a suburb people commute to" | none in the film since the 15% rule — on the page | Tech: 700 companies, 122,000 people by day | ~1:55 |
+| Cumming | One city, one county (phase356) | City Hall with Sawnee Mountain behind it: "Forsyth County, Georgia, has one city" + fastest-growing city in the metro | none in the film — on the page | Lake Lanier (`signature`); the film is about the county that carries the city's address, and says so | ~1:59 |
 
 ### 2.2 The chapters (owner 2026-11-16/17: "模块化内容 可以让人自主选择 … 每一个章节可以做得独立一些可以单独拉出来看 … 每个city尽量覆盖")
 
@@ -297,6 +299,8 @@ seedance 比如第一个 总体不要超过三个就好".
 - Shipping a phone UI change and waiting for feedback without knowing which build
   the owner has: a production TestFlight build never receives new screens. See
   the memory note on builds; say it when a production build is uploaded.
+- Marking three Seedance shots without checking for cached clips: photos shared with communities may already have one, and cached clips count toward the three (Cumming: two cached, so one new). Query `photo_clips` for the film's photos first.
+- Assuming a top-ranked school has a photograph: Daves Creek Elementary (#6 in Georgia) has none on Google or Commons, and neither do two other Forsyth elementaries. Check photos before building the Schools lines around a rank; a school without one goes on the page with a note.
 - Writing a line before knowing a photo exists for it: Medley (Johns Creek's new
   district) had only a restaurant front with people in it, so it is on the page,
   not in the film. Look at the contact sheet first, then write.
