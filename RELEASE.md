@@ -17,6 +17,10 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-19
+- **Sugar Hill has a city film.** It opens on how the city got its name and
+  is about what its City Hall runs — a theatre, an amphitheater, a gym, a
+  golf course. Its parts come in a different order from the other cities':
+  life in town first, schools last.
 - **Cumming has a city film.** The fourth city, and the first outside Fulton
   and Gwinnett. Cumming is the only city in Forsyth County and most homes
   with a Cumming address sit outside its limits, so the film says so and

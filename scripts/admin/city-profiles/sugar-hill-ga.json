@@ -1,0 +1,661 @@
+{
+  "tagline": "A city that runs its own theatre, amphitheater, gym, golf course and gas company, around a downtown that did not exist before 2013.",
+  "summary": "Sugar Hill was a town of 2,500 in 1980 and has ten times that today. It had no centre until the city built one: City Hall in 2013, then the E Center, with the Eagle Theatre and a public gym, in 2018, and The Bowl amphitheater behind them. The city also runs a golf course and its own natural gas utility. It sits in north Gwinnett County between Suwanee and Buford, a few miles below Lake Lanier.",
+  "locationNote": "39 mi northeast of downtown Atlanta",
+  "rankings": [
+    {
+      "rank": "#6",
+      "scope": "in Georgia",
+      "title": "North Gwinnett Middle School",
+      "detail": "In Sugar Hill. U.S. News Best Middle Schools, 2027.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2027",
+        "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+      }
+    },
+    {
+      "rank": "#57",
+      "scope": "in Georgia",
+      "title": "Lanier High School",
+      "detail": "U.S. News Best High Schools, 2026–27 — #2,073 in the U.S.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2026–27",
+        "url": "https://www.usnews.com/education/best-high-schools/georgia/districts/gwinnett-county-school-district/lanier-high-school-91591"
+      }
+    },
+    {
+      "rank": "#54",
+      "scope": "in Georgia",
+      "title": "White Oak Elementary School",
+      "detail": "U.S. News Best Elementary Schools, as listed on usnews.com in November 2026 — #6 in Gwinnett County.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "url": "https://www.usnews.com/education/k12/georgia/white-oak-elementary-school-225553"
+      }
+    }
+  ],
+  "stats": [
+    {
+      "label": "Population",
+      "value": "26,128",
+      "note": "ACS 2020–24 · 25,076 in 2020"
+    },
+    {
+      "label": "Homes owner-occupied",
+      "value": "80%",
+      "note": "the rest rented"
+    },
+    {
+      "label": "Median rent",
+      "value": "$1,862",
+      "note": "a month · ACS 2020–24"
+    },
+    {
+      "label": "Rounds at the city's golf course",
+      "value": "33,000",
+      "note": "a year · City of Sugar Hill"
+    }
+  ],
+  "compare": {
+    "against": "Georgia",
+    "rows": [
+      {
+        "label": "Median household income",
+        "city": {
+          "value": 107389,
+          "display": "$107,389"
+        },
+        "state": {
+          "value": 77353,
+          "display": "$77,353"
+        },
+        "takeaway": "1.4× the state"
+      },
+      {
+        "label": "Adults with a bachelor's or higher",
+        "city": {
+          "value": 48.5,
+          "display": "48.5%"
+        },
+        "state": {
+          "value": 34.9,
+          "display": "34.9%"
+        },
+        "takeaway": "1.4× the state"
+      },
+      {
+        "label": "Median home value",
+        "city": {
+          "value": 413400,
+          "display": "$413,400"
+        },
+        "state": {
+          "value": 303300,
+          "display": "$303,300"
+        },
+        "takeaway": "1.4× the state"
+      }
+    ],
+    "source": {
+      "name": "U.S. Census Bureau, ACS 2020–2024",
+      "year": "2024",
+      "url": "https://mmcganalytics.com/georgia/gwinnett-county/sugar-hill/"
+    }
+  },
+  "history": [
+    {
+      "year": "1939",
+      "short": "A town",
+      "text": "The General Assembly charters the Town of Sugar Hill on March 24; 599 people are counted the next year."
+    },
+    {
+      "year": "1966",
+      "short": "The sugar story",
+      "text": "The Atlanta Journal prints the story of the farmer whose 100-pound bag of sugar fell off his wagon; others credit the gold mines' quartz."
+    },
+    {
+      "year": "1975",
+      "short": "A city",
+      "text": "The town is renamed the City of Sugar Hill."
+    },
+    {
+      "year": "1992",
+      "short": "Golf",
+      "text": "Sugar Hill Golf Club opens on Suwanee Dam Road."
+    },
+    {
+      "year": "2001",
+      "short": "Gas revolt",
+      "text": "After a spike in the city utility's gas prices, 1,600 residents petition to dissolve the utility and the city itself; both survive."
+    },
+    {
+      "year": "2013",
+      "short": "City Hall",
+      "text": "A new City Hall opens on West Broad Street, the first building of a downtown."
+    },
+    {
+      "year": "2018",
+      "short": "E Center",
+      "text": "The E Center opens beside it: the 406-seat Eagle Theatre, a gym, shops and offices."
+    }
+  ],
+  "growth": {
+    "series": [
+      {
+        "label": "1980",
+        "value": 2473
+      },
+      {
+        "label": "1990",
+        "value": 4557
+      },
+      {
+        "label": "2000",
+        "value": 11399
+      },
+      {
+        "label": "2010",
+        "value": 18522
+      },
+      {
+        "label": "2020",
+        "value": 25076
+      }
+    ],
+    "takeaway": "10× since 1980",
+    "source": {
+      "name": "U.S. Census Bureau, decennial census",
+      "url": "https://en.wikipedia.org/wiki/Sugar_Hill,_Georgia"
+    }
+  },
+  "education": {
+    "schools": [
+      {
+        "level": "elementary",
+        "name": "White Oak Elementary",
+        "rank": "#54",
+        "scope": "in Georgia",
+        "detail": "Gwinnett County Public Schools, Lanier cluster. U.S. News, as listed in November 2026. Not in the film: no usable photograph of it exists.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "url": "https://www.usnews.com/education/k12/georgia/white-oak-elementary-school-225553"
+        }
+      },
+      {
+        "level": "elementary",
+        "name": "Sugar Hill Elementary",
+        "rank": "#167",
+        "scope": "in Georgia",
+        "detail": "Gwinnett County Public Schools, Lanier cluster. U.S. News, as listed in November 2026, of 1,244 ranked.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "url": "https://www.usnews.com/education/k12/georgia/sugar-hill-elementary-school-223962"
+        }
+      },
+      {
+        "level": "middle",
+        "name": "North Gwinnett Middle",
+        "rank": "#6",
+        "scope": "in Georgia",
+        "detail": "In Sugar Hill, North Gwinnett cluster. U.S. News Best Middle Schools, 2027. Not in the film: no usable photograph of it exists.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2027",
+          "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+        }
+      },
+      {
+        "level": "middle",
+        "name": "Lanier Middle",
+        "rank": "#55",
+        "scope": "in Georgia",
+        "detail": "Gwinnett County Public Schools, Lanier cluster. U.S. News Best Middle Schools, 2026 edition.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026",
+          "url": "https://www.usnews.com/education/k12/georgia/lanier-middle-school-264956"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Lanier High",
+        "rank": "#57",
+        "scope": "in Georgia",
+        "detail": "Opened in 2010 in Sugar Hill. U.S. News Best High Schools, 2026–27 · 94.8% graduated in 2025.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026–27",
+          "url": "https://www.usnews.com/education/best-high-schools/georgia/districts/gwinnett-county-school-district/lanier-high-school-91591"
+        }
+      },
+      {
+        "level": "high",
+        "name": "North Gwinnett High",
+        "rank": "#21",
+        "scope": "in Georgia",
+        "detail": "In Suwanee; serves the south-west of Sugar Hill. U.S. News Best High Schools, 2026–27 · 97.4% graduated in 2025.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026–27",
+          "url": "https://www.usnews.com/education/best-high-schools/georgia/districts/gwinnett-county-school-district/north-gwinnett-high-school-5942"
+        }
+      }
+    ],
+    "measure": "Graduate in 4 years · class of 2025",
+    "rows": [
+      {
+        "label": "North Gwinnett HS",
+        "pct": 97.4,
+        "display": "97.4%"
+      },
+      {
+        "label": "Lanier HS",
+        "pct": 94.8,
+        "display": "94.8%"
+      },
+      {
+        "label": "Gwinnett district",
+        "pct": 85.4,
+        "display": "85.4%",
+        "baseline": true
+      }
+    ],
+    "note": "All are Gwinnett County Public Schools. The city is split between the Lanier and North Gwinnett clusters. Graduation rates: Gwinnett County Public Schools, class of 2025."
+  },
+  "gettingAround": [
+    {
+      "label": "Downtown Atlanta · 39 mi",
+      "value": "~55 min · 83 at rush",
+      "minutes": {
+        "min": 55,
+        "max": 83
+      }
+    },
+    {
+      "label": "Hartsfield-Jackson · 46 mi",
+      "value": "59–86 min",
+      "minutes": {
+        "min": 59,
+        "max": 86
+      }
+    },
+    {
+      "label": "Buckhead · 35 mi",
+      "value": "48–76 min",
+      "minutes": {
+        "min": 48,
+        "max": 76
+      }
+    },
+    {
+      "label": "Perimeter Center · 32 mi",
+      "value": "42–75 min",
+      "minutes": {
+        "min": 42,
+        "max": 75
+      }
+    },
+    {
+      "label": "MARTA Doraville · 25 mi",
+      "value": "37–61 min · no rail in Gwinnett",
+      "minutes": {
+        "min": 37,
+        "max": 61
+      }
+    },
+    {
+      "label": "Mall of Georgia · 4 mi",
+      "value": "~13 min",
+      "minutes": {
+        "min": 12,
+        "max": 13
+      }
+    },
+    {
+      "label": "Georgia 20 · I-85 and I-985",
+      "value": "the city's roads out"
+    }
+  ],
+  "planning": [
+    {
+      "title": "Sugar Hill Greenway",
+      "text": "A trail planned to circle the city for about 16 miles, passing Gold Mine Park and one of the old mines. About five miles are open, from downtown towards the parks on Level Creek."
+    },
+    {
+      "title": "Riverlands and Ridge Lake Park",
+      "text": "The city is seeking builders for a hiking and biking trail at Riverlands, off Highway 20, and for a third phase of the 22-acre Ridge Lake Park."
+    }
+  ],
+  "sources": [
+    {
+      "name": "U.S. Census Bureau ACS 2020–2024 — Sugar Hill (MMCG Analytics)",
+      "url": "https://mmcganalytics.com/georgia/gwinnett-county/sugar-hill/"
+    },
+    {
+      "name": "Data USA — Sugar Hill, GA",
+      "url": "https://datausa.io/profile/geo/sugar-hill-ga"
+    },
+    {
+      "name": "Wikipedia — Sugar Hill, Georgia",
+      "url": "https://en.wikipedia.org/wiki/Sugar_Hill,_Georgia"
+    },
+    {
+      "name": "North Gwinnett Voice — a past and maybe a name like no other",
+      "url": "https://northgwinnettvoice.com/sugar-hill-a-past-and-maybe-a-name-like-no-other"
+    },
+    {
+      "name": "City of Sugar Hill — The Eagle Theatre",
+      "url": "https://cityofsugarhill.com/get-involved/the-eagle-theatre-at-sugar-hill/"
+    },
+    {
+      "name": "City of Sugar Hill — Sugar Hill Golf Club",
+      "url": "https://cityofsugarhill.com/services/parks-recreation/sugar-hill-golf-club/"
+    },
+    {
+      "name": "City of Sugar Hill — Gas Utility",
+      "url": "https://cityofsugarhill.com/services/gas-utility/"
+    },
+    {
+      "name": "City of Sugar Hill — Parks, Greenspace & Recreation",
+      "url": "https://cityofsugarhill.com/services/parks-recreation/"
+    },
+    {
+      "name": "Business View Magazine — Sugar Hill, July 2019",
+      "url": "https://businessviewmagazine.com/digital-magazines/july-2019/369"
+    },
+    {
+      "name": "Yahoo News — U.S. News 2027 K-8 rankings, Georgia",
+      "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+    },
+    {
+      "name": "Drive times: Google Routes, from City Hall, typical traffic on a Thursday",
+      "url": "https://maps.google.com"
+    }
+  ],
+  "film": {
+    "signature": "City-run",
+    "lines": [
+      {
+        "say": "Sugar Hill, Georgia, is named, they say, for a bag of sugar that fell off a wagon, or for the quartz of its gold mines.",
+        "chapter": "overview",
+        "shots": [
+          {
+            "photo": "9a07c9d5",
+            "weight": 8,
+            "callout": {
+              "type": "stat",
+              "big": "1939",
+              "label": "a town by charter · 26,128 residents today",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          },
+          {
+            "photo": "daaf796e",
+            "label": "Gold Mine Park",
+            "weight": 6
+          }
+        ]
+      },
+      {
+        "say": "Sugar Hill's City Hall runs the Eagle Theatre, an amphitheater called The Bowl, and a public gym.",
+        "chapter": "signature",
+        "shots": [
+          {
+            "photo": "45caaf25",
+            "label": "Eagle Theatre",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "406 seats",
+              "label": "built by the city in 2018",
+              "source": "City of Sugar Hill"
+            }
+          },
+          {
+            "photo": "59a4a4b5",
+            "label": "The Bowl",
+            "weight": 5
+          },
+          {
+            "photo": "61e89b36",
+            "label": "E Center",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "Sugar Hill also runs its own golf course, open since 1992, and its own natural gas utility.",
+        "chapter": "signature",
+        "shots": [
+          {
+            "photo": "72c4ec22",
+            "label": "Sugar Hill Golf Club",
+            "weight": 6,
+            "seedance": true,
+            "callout": {
+              "type": "stat",
+              "big": "33,000",
+              "label": "rounds a year · the city's course since 1992",
+              "source": "City of Sugar Hill"
+            }
+          },
+          {
+            "photo": "584d62a5",
+            "label": "Sugar Hill Golf Club",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "Downtown Sugar Hill is new: City Hall opened in 2013, the E Center beside it in 2018.",
+        "chapter": "downtown",
+        "shots": [
+          {
+            "photo": "b3ec2a30",
+            "label": "Sugar Hill City Hall",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "2013",
+              "label": "City Hall opens · the E Center follows in 2018"
+            }
+          },
+          {
+            "photo": "24c3259f",
+            "label": "E Center",
+            "weight": 6
+          }
+        ]
+      },
+      {
+        "say": "The Sugar Hill Greenway is planned to circle the city for sixteen miles; about five are open.",
+        "chapter": "outdoor",
+        "shots": [
+          {
+            "photo": "c264c63a",
+            "label": "Sugar Hill Greenway",
+            "weight": 6,
+            "seedance": true,
+            "callout": {
+              "type": "stat",
+              "big": "16 miles",
+              "label": "planned · about 5 open",
+              "source": "City of Sugar Hill"
+            }
+          },
+          {
+            "photo": "08e34297",
+            "label": "Sugar Hill Greenway",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "On summer nights The Bowl fills for concerts; each winter the plaza beside it becomes an ice rink.",
+        "chapter": "events",
+        "shots": [
+          {
+            "photo": "23cbfe10",
+            "label": "The Bowl",
+            "weight": 6
+          },
+          {
+            "photo": "9c736aa4",
+            "label": "The Ice Rink at Sugar Hill",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "The median Sugar Hill home is worth four hundred thirteen thousand dollars, a third above Georgia's, and four in five are owner-occupied.",
+        "chapter": "homes",
+        "shots": [
+          {
+            "photo": "f5f6ae3c",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "$413,400",
+              "label": "median home value · 1.4× Georgia",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          },
+          {
+            "photo": "e575bb9b",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "+10%",
+              "label": "on the previous Census estimate",
+              "source": "ACS 2019–23 → 2020–24 · Data USA"
+            }
+          }
+        ]
+      },
+      {
+        "say": "A fifth of Sugar Hill's homes are rented, at about nineteen hundred dollars a month; household income is forty percent above the state's.",
+        "chapter": "homes",
+        "shots": [
+          {
+            "photo": "227aeddb",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "$1,862",
+              "label": "median rent a month · 20% of homes are rented",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          },
+          {
+            "photo": "a81ddfb5",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "$107,389",
+              "label": "median household income · 1.4× Georgia",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          }
+        ]
+      },
+      {
+        "say": "From Sugar Hill, downtown Atlanta is thirty-nine miles by Interstate 85: fifty-five minutes, eighty-three at rush hour.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "dee6b3d8",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "~55 min",
+              "label": "to downtown Atlanta · 83 at rush hour",
+              "source": "39 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "714bd778",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "Buckhead is forty-eight minutes from Sugar Hill and the airport an hour; at rush hour, allow half an hour more.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "58960935",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "48 min",
+              "label": "to Buckhead · 76 at rush hour",
+              "source": "35 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "cc92bee8",
+            "label": "Hartsfield-Jackson",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "59 min",
+              "label": "to the airport · 86 at rush hour",
+              "source": "46 mi · Google Maps, typical traffic"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Sugar Hill's children start at Sugar Hill, Sycamore or White Oak Elementary, all Gwinnett County schools, and most finish at Lanier High.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "f889f1c5",
+            "label": "Sugar Hill Elementary",
+            "weight": 5
+          },
+          {
+            "photo": "93dd3866",
+            "label": "Lanier High",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "2010",
+              "label": "Lanier High opens in Sugar Hill"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Lanier High ranks fifty-seventh in Georgia, and ninety-five percent of its seniors graduate, against eighty-five across the district.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "07084b2e",
+            "label": "Lanier High",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "#57",
+              "label": "in Georgia · high school",
+              "source": "U.S. News, 2026–27"
+            }
+          },
+          {
+            "photo": "dc933356",
+            "label": "Lanier High",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "94.8%",
+              "label": "graduate · district 85.4%",
+              "source": "Gwinnett County Public Schools, class of 2025"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
