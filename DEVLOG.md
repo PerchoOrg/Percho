@@ -23,6 +23,31 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-19 08:55 UTC — phase357: Sugar Hill, the fifth city film — named for a spilled bag of sugar, run by its City Hall
+
+**Objective**: Second of the owner's list (Cumming → Sugar Hill → Buford → Duluth → "peachtree"). His one instruction for it, 2026-11-19: "next 不要千篇一律就好" — the next one, as long as they are not all alike.
+**Actions**:
+- `cities` row `sugar-hill-ga` (Gwinnett, centre = City Hall), `inactive` until checked, now `active`. `scripts/admin/city-profiles/sugar-hill-ga.json`: the page and a 12-line film.
+- Pipeline: research → resolve (17 places; seven rejected at the place level — two single businesses, Costco, Mall of Georgia, and three places that are Suwanee's: Town Center Park, George Pierce Park, North Gwinnett High) → photos; topup, ~30 `place` searches (golf club, schools, parks, the ice rink, apartments, subdivisions), Commons for City Hall, Lanier High, the skyline, the airport; ~290 photos tagged.
+- **Film — assembly `903c2e64`, stream `148156b1…`, 1:58.5**, 25 shots: 14 Ken Burns, 9 DepthFlow, 2 Seedance, 14 moves. Sections **Overview 25 · Life 24 · Homes 18 · Commute 16 · Schools 16%**.
+- Playbook: the per-city table, two new mistakes (Friday drive times; a line count that plans at 1:59 assembles over two minutes).
+**Decisions — how this one differs from the other four**:
+- **It opens on a story, not a ranking**: "named, they say, for a bag of sugar that fell off a wagon, or for the quartz of its gold mines" — over the rotunda that carries the city's name, then the gated shaft at Gold Mine Park. Sugar Hill is on no major best-places list this year, so there is no ranking to open on; the 1966 Atlanta Journal story is on the page with its date.
+- **The hero is what the city runs** (`signature`: "City-run"): the Eagle Theatre (406 seats, 2018), The Bowl, the E Center gym, a golf course (since 1992, 33,000 rounds a year) and its own gas utility. Suwanee's claim is that it built a downtown; Sugar Hill's downtown gets one line, and the film's point is the municipal ownership, which the neighbours do not have.
+- **Section order is new**: Overview → Life → Homes → Commute → Schools. The four earlier films all run Overview → Schools → Homes → Commute → Life.
+- Lake Lanier is not in it (Cumming's signature; Buford's dam is next).
+**Issues**:
+- **Three of the best schools have no photograph anywhere**: North Gwinnett Middle (#6 in Georgia, U.S. News 2027, in Sugar Hill), White Oak Elementary (#54) and Lanier Middle. They are on the page, each with a note. The film's Schools section is one shot of Sugar Hill Elementary and three of Lanier High (#57; 94.8% graduate against 85.4% in the district) — the weakest section of the film.
+- No MARTA shot: the only free photo of Doraville station is 640×480. Doraville (37 min) is on the page.
+- Google Routes for a FRIDAY 7:45 departure returned rush-hour times within three minutes of mid-morning (56 against 53 to downtown); a Thursday gives 83. All figures are Thursday's. Cumming's (phase356) were already Thursday's and re-checked the same.
+- The first plan ran 121 s, the second 119 s — which assembles to about 2:01 with the end card. Cut to a 116 s plan (233 words).
+- A Commons ingest fails whole if one file name is wrong (nothing added, no clear message).
+**Verified**: frames tiled every 2 s (25 shots, callouts against pictures); speech-band level in each of the 12 lines (−19 to −21 dB, end card −32); approved photos equal the film's 25; `/api/mobile/feed` returns five sections, shortest 16.4%; `percho.co/city/sugar-hill-ga` serves the stream and the figures.
+**Cost**: two new Seedance clips, $0.2792 (the golf course at sunrise, the greenway); no cached clips existed for this city. 12 TTS requests (24 today with Cumming). Google Places ~32 text searches and their photos; Routes 24 calls; ~290 photo tags.
+**Not verified**: the film on a phone.
+**Tech debt / weak spots**: the Schools section (above). White Oak's and Sugar Hill Elementary's ranks are from usnews.com pages whose edition the search results do not state — the page says "as listed in November 2026" and they are not in the film. The Bowl's capacity is 1,750 or 1,800 depending on the source, so the film gives none.
+**Next steps**: owner watches Cumming and Sugar Hill; next is Buford (its own city school district; Gwinnett and Hall; the dam and the Mall of Georgia), then Duluth, then "peachtree" — ask which.
+
 ## 2026-11-19 08:10 UTC — phase356: Cumming, the fourth city film — one city, one county
 
 **Objective**: Owner, 2026-11-19, on the list of candidate cities: "cumming sugar hill buford duluth peachtree … 开一个新的thread". This thread makes them in that order, one at a time; Cumming is the first.
