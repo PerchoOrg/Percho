@@ -1,0 +1,735 @@
+{
+  "tagline": "The one city in Forsyth County: a county seat whose address reaches 280,000 people, between Lake Lanier and Sawnee Mountain.",
+  "summary": "Cumming is the seat of Forsyth County and its only incorporated city. About ten thousand people live inside the city limits; most homes with a Cumming address are outside them, in a county of 280,000 that was a tenth that size in 1980. Georgia 400 made it a commuter county, Lake Lanier is its eastern edge, and its schools rank among Georgia's best. Figures here are Forsyth County's unless they say the city.",
+  "locationNote": "39 mi north of downtown Atlanta",
+  "rankings": [
+    {
+      "rank": "#1",
+      "scope": "in metro Atlanta",
+      "title": "Fastest-growing city, 2024–25",
+      "detail": "Cumming grew 23.6% between July 2024 and July 2025, to 12,494 residents — Atlanta Regional Commission, from Census Bureau estimates.",
+      "source": {
+        "name": "Atlanta Regional Commission",
+        "year": "2025",
+        "url": "https://33n.atlantaregional.com/population/atlantas-growth-hotspots-the-cities-surging-ahead"
+      }
+    },
+    {
+      "rank": "#6",
+      "scope": "in Georgia",
+      "title": "Daves Creek Elementary School",
+      "detail": "U.S. News Best Elementary Schools, 2027.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2027",
+        "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+      }
+    },
+    {
+      "rank": "#8",
+      "scope": "in Georgia",
+      "title": "South Forsyth Middle School",
+      "detail": "U.S. News Best Middle Schools, 2027.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2027",
+        "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+      }
+    },
+    {
+      "rank": "#5",
+      "scope": "in Georgia",
+      "title": "Alliance Academy for Innovation",
+      "detail": "U.S. News Best High Schools, 2026–27 — #154 in the U.S.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2026–27",
+        "url": "https://www.usnews.com/education/best-high-schools/georgia/rankings"
+      }
+    }
+  ],
+  "stats": [
+    {
+      "label": "City of Cumming",
+      "value": "12,494",
+      "note": "July 2025 estimate · 7,318 in 2020"
+    },
+    {
+      "label": "Forsyth County",
+      "value": "280,096",
+      "note": "July 2024 estimate"
+    },
+    {
+      "label": "Homes owner-occupied",
+      "value": "84%",
+      "note": "county · 48% inside the city"
+    },
+    {
+      "label": "Median rent",
+      "value": "$2,090",
+      "note": "a month · county · ACS 2020–24"
+    }
+  ],
+  "compare": {
+    "against": "Georgia",
+    "rows": [
+      {
+        "label": "Median household income · county",
+        "city": {
+          "value": 143784,
+          "display": "$143,784"
+        },
+        "state": {
+          "value": 77353,
+          "display": "$77,353"
+        },
+        "takeaway": "1.9× the state"
+      },
+      {
+        "label": "Adults with a bachelor's or higher · county",
+        "city": {
+          "value": 57.1,
+          "display": "57.1%"
+        },
+        "state": {
+          "value": 34.9,
+          "display": "34.9%"
+        },
+        "takeaway": "1.6× the state"
+      },
+      {
+        "label": "Median home value · county",
+        "city": {
+          "value": 550400,
+          "display": "$550,400"
+        },
+        "state": {
+          "value": 303300,
+          "display": "$303,300"
+        },
+        "takeaway": "1.8× the state"
+      },
+      {
+        "label": "Median home value · inside the city",
+        "city": {
+          "value": 382900,
+          "display": "$382,900"
+        },
+        "state": {
+          "value": 303300,
+          "display": "$303,300"
+        },
+        "takeaway": "1.3× the state"
+      }
+    ],
+    "source": {
+      "name": "U.S. Census Bureau, ACS 2020–2024",
+      "year": "2024",
+      "url": "https://mmcganalytics.com/georgia/forsyth-county/"
+    }
+  },
+  "history": [
+    {
+      "year": "1832",
+      "short": "County",
+      "text": "Forsyth County is created from Cherokee land and distributed by lottery."
+    },
+    {
+      "year": "1834",
+      "short": "Incorporated",
+      "text": "Cumming, laid out the year before on two 40-acre lots as the county seat, is incorporated."
+    },
+    {
+      "year": "1956",
+      "short": "Lake Lanier",
+      "text": "Buford Dam closes its gates on the Chattahoochee and Lake Lanier begins to fill along the county's eastern edge."
+    },
+    {
+      "year": "1980",
+      "short": "27,958 in the county",
+      "text": "Forsyth is still rural; Georgia 400 is about to make it a commuter county."
+    },
+    {
+      "year": "1995",
+      "short": "The fair",
+      "text": "The Cumming Country Fair & Festival begins at the city's fairgrounds; it has run every October since."
+    },
+    {
+      "year": "2022",
+      "short": "City Center",
+      "text": "The city cuts the ribbon on Cumming City Center, 75 acres of shops, trails and an amphitheater; tenants open from spring 2023."
+    },
+    {
+      "year": "2025",
+      "short": "12,494 in the city",
+      "text": "Cumming grows 23.6% in a year, the fastest of any city in metro Atlanta."
+    }
+  ],
+  "growth": {
+    "series": [
+      {
+        "label": "1980",
+        "value": 27958
+      },
+      {
+        "label": "1990",
+        "value": 44083
+      },
+      {
+        "label": "2000",
+        "value": 98407
+      },
+      {
+        "label": "2010",
+        "value": 175511
+      },
+      {
+        "label": "2020",
+        "value": 251283
+      }
+    ],
+    "takeaway": "Forsyth County · 9× since 1980",
+    "source": {
+      "name": "U.S. Census Bureau, decennial census",
+      "url": "https://en.wikipedia.org/wiki/Forsyth_County,_Georgia"
+    }
+  },
+  "education": {
+    "schools": [
+      {
+        "level": "elementary",
+        "name": "Daves Creek Elementary",
+        "rank": "#6",
+        "scope": "in Georgia",
+        "detail": "Forsyth County Schools, south of the city. U.S. News Best Elementary Schools, 2027. Not in the film: no usable photograph of it exists.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2027",
+          "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+        }
+      },
+      {
+        "level": "middle",
+        "name": "South Forsyth Middle",
+        "rank": "#8",
+        "scope": "in Georgia",
+        "detail": "Forsyth County Schools, south of the city. U.S. News Best Middle Schools, 2027.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2027",
+          "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Alliance Academy for Innovation",
+        "rank": "#5",
+        "scope": "in Georgia",
+        "detail": "A public career academy in Cumming. U.S. News Best High Schools, 2026–27 · #154 in the U.S.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026–27",
+          "url": "https://www.usnews.com/education/best-high-schools/georgia/rankings"
+        }
+      },
+      {
+        "level": "high",
+        "name": "South Forsyth High",
+        "rank": "#20",
+        "scope": "in Georgia",
+        "detail": "Forsyth County Schools, south of the city. U.S. News Best High Schools, 2026–27.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026–27",
+          "url": "https://www.usnews.com/education/best-high-schools/georgia/rankings"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Forsyth Central High",
+        "rank": "#123",
+        "scope": "in Georgia",
+        "detail": "The high school inside the city limits. U.S. News Best High Schools, 2026–27.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026–27",
+          "url": "https://www.usnews.com/education/best-high-schools/georgia/rankings"
+        }
+      },
+      {
+        "level": "college",
+        "name": "University of North Georgia — Cumming",
+        "detail": "A campus of the state university, opened in 2012 beside the Cumming Aquatic Center.",
+        "source": {
+          "name": "University of North Georgia",
+          "url": "https://ung.edu/campuses/cumming/"
+        }
+      }
+    ],
+    "measure": "Graduate in 4 years · class of 2026",
+    "rows": [
+      {
+        "label": "Forsyth County Schools",
+        "pct": 97.5,
+        "display": "97.5%"
+      },
+      {
+        "label": "Georgia",
+        "pct": 88.5,
+        "display": "88.5%",
+        "baseline": true
+      }
+    ],
+    "note": "All are Forsyth County Schools; the district serves the city and the whole county. Schools south of the city carry a Cumming address but sit outside the city limits. Graduation rates: Forsyth County Schools and the Georgia Department of Education, class of 2026."
+  },
+  "gettingAround": [
+    {
+      "label": "Downtown Atlanta · 39 mi",
+      "value": "~52 min · 83 at rush",
+      "minutes": {
+        "min": 52,
+        "max": 83
+      }
+    },
+    {
+      "label": "Hartsfield-Jackson · 47 mi",
+      "value": "56–86 min",
+      "minutes": {
+        "min": 56,
+        "max": 86
+      }
+    },
+    {
+      "label": "Buckhead · 31 mi",
+      "value": "40–66 min",
+      "minutes": {
+        "min": 40,
+        "max": 66
+      }
+    },
+    {
+      "label": "Perimeter Center · 25 mi",
+      "value": "31–53 min",
+      "minutes": {
+        "min": 31,
+        "max": 53
+      }
+    },
+    {
+      "label": "Alpharetta (Avalon) · 15 mi",
+      "value": "22–26 min",
+      "minutes": {
+        "min": 22,
+        "max": 26
+      }
+    },
+    {
+      "label": "MARTA North Springs · 26 mi",
+      "value": "33–55 min · no rail in Forsyth",
+      "minutes": {
+        "min": 33,
+        "max": 55
+      }
+    },
+    {
+      "label": "Georgia 400",
+      "value": "the county's highway"
+    }
+  ],
+  "planning": [
+    {
+      "title": "Overlook at City Center · broke ground March 2026",
+      "text": "301 apartments, the first homes at Cumming City Center; a second phase, the Garden District, would add houses priced up to about $1 million."
+    },
+    {
+      "title": "Cumming City Center · 2022",
+      "text": "About 75 acres west of downtown: shops and restaurants, the Lou Sobh Amphitheater, and trails and boardwalks over Kelly Mill Branch. Ribbon cut June 2022; tenants opened from spring 2023."
+    }
+  ],
+  "sources": [
+    {
+      "name": "U.S. Census Bureau ACS 2020–2024 — Forsyth County (MMCG Analytics)",
+      "url": "https://mmcganalytics.com/georgia/forsyth-county/"
+    },
+    {
+      "name": "U.S. Census Bureau ACS 2020–2024 — Cumming (MMCG Analytics)",
+      "url": "https://mmcganalytics.com/georgia/forsyth-county/cumming/"
+    },
+    {
+      "name": "Data USA — Forsyth County, GA",
+      "url": "https://datausa.io/profile/geo/forsyth-county-ga"
+    },
+    {
+      "name": "Atlanta Regional Commission — the cities surging ahead, 2024–25",
+      "url": "https://33n.atlantaregional.com/population/atlantas-growth-hotspots-the-cities-surging-ahead"
+    },
+    {
+      "name": "Wikipedia — Cumming, Georgia",
+      "url": "https://en.wikipedia.org/wiki/Cumming,_Georgia"
+    },
+    {
+      "name": "Wikipedia — Forsyth County, Georgia",
+      "url": "https://en.wikipedia.org/wiki/Forsyth_County,_Georgia"
+    },
+    {
+      "name": "Wikipedia — Lake Lanier",
+      "url": "https://en.wikipedia.org/wiki/Lake_Lanier"
+    },
+    {
+      "name": "Wikipedia — Sawnee Mountain",
+      "url": "https://en.wikipedia.org/wiki/Sawnee_Mountain"
+    },
+    {
+      "name": "Yahoo News — U.S. News 2027 K-8 rankings, Georgia",
+      "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+    },
+    {
+      "name": "Appen Media — Forsyth class of 2026 graduation rate",
+      "url": "https://www.appenmedia.com/forsyth/forsyth-schools-class-of-2026-sets-new-district-sat-record/article_22a65536-0429-49a0-8c14-34a18415005b.html"
+    },
+    {
+      "name": "City of Cumming — Cumming City Center",
+      "url": "https://www.cityofcumming.net/?p=9228"
+    },
+    {
+      "name": "Forsyth County News — Overlook groundbreaking at City Center",
+      "url": "https://www.forsythnews.com/news/growth-development/groundbreaking-held-at-cumming-city-center-for-overlook-apartment-complex/"
+    },
+    {
+      "name": "Drive times: Google Routes, from the courthouse square, typical traffic",
+      "url": "https://maps.google.com"
+    }
+  ],
+  "film": {
+    "signature": "Lake Lanier",
+    "lines": [
+      {
+        "say": "Forsyth County, Georgia, has one city. Cumming, its county seat, was metro Atlanta's fastest-growing city last year.",
+        "chapter": "overview",
+        "shots": [
+          {
+            "photo": "134111d5",
+            "weight": 8
+          },
+          {
+            "photo": "a812a25b",
+            "label": "Forsyth County Courthouse",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "#1",
+              "label": "fastest-growing city in metro Atlanta · +23.6%",
+              "source": "Atlanta Regional Commission, 2024–25"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Most Cumming addresses lie outside the city limits, in a county grown from twenty-eight thousand people in 1980 to two hundred eighty thousand.",
+        "chapter": "growth",
+        "shots": [
+          {
+            "photo": "f18a9510",
+            "weight": 7,
+            "callout": {
+              "type": "count",
+              "from": 27958,
+              "to": 280096,
+              "label": "people in Forsyth County",
+              "source": "U.S. Census Bureau",
+              "series": [
+                {
+                  "label": "1980",
+                  "value": 27958
+                },
+                {
+                  "label": "2000",
+                  "value": 98407
+                },
+                {
+                  "label": "2020",
+                  "value": 251283
+                },
+                {
+                  "label": "2024",
+                  "value": 280096
+                }
+              ]
+            }
+          },
+          {
+            "photo": "9eac2d98",
+            "weight": 6
+          }
+        ]
+      },
+      {
+        "say": "Lake Lanier is Forsyth County's eastern shore: thirty-seven thousand acres behind Buford Dam, with parks and marinas minutes from Cumming.",
+        "chapter": "signature",
+        "shots": [
+          {
+            "photo": "70a8ab59",
+            "label": "Mary Alice Park",
+            "weight": 6,
+            "seedance": true
+          },
+          {
+            "photo": "6aa3797a",
+            "label": "Buford Dam",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "37,000",
+              "label": "acres of lake · filled from 1956"
+            }
+          },
+          {
+            "photo": "093329a4",
+            "label": "Bald Ridge Marina",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "Around Cumming, South Forsyth Middle ranks eighth in Georgia, South Forsyth High twentieth, and Alliance Academy for Innovation fifth.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "a8f2bc4a",
+            "label": "South Forsyth Middle",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "#8",
+              "label": "in Georgia · middle school",
+              "source": "U.S. News, 2027"
+            }
+          },
+          {
+            "photo": "1ca21dd2",
+            "label": "South Forsyth High",
+            "weight": 5,
+            "callout": {
+              "type": "stat",
+              "big": "#20",
+              "label": "in Georgia · high school",
+              "source": "U.S. News, 2026–27"
+            }
+          },
+          {
+            "photo": "0a4af449",
+            "label": "Alliance Academy for Innovation",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "#5",
+              "label": "in Georgia · public high school",
+              "source": "U.S. News, 2026–27"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Forsyth County Schools graduated ninety-seven percent of the class of 2026, against eighty-eight statewide; the University of North Georgia has a Cumming campus.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "b316549b",
+            "label": "Forsyth Central High",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "97.5%",
+              "label": "graduate · Georgia 88.5%",
+              "source": "Forsyth County Schools, class of 2026"
+            }
+          },
+          {
+            "photo": "0988d2eb",
+            "label": "University of North Georgia",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "2012",
+              "label": "a state university campus in Cumming"
+            }
+          }
+        ]
+      },
+      {
+        "say": "The median Forsyth County home is worth five hundred fifty thousand dollars, almost twice Georgia's, and four in five are owner-occupied.",
+        "chapter": "homes",
+        "shots": [
+          {
+            "photo": "25f543a6",
+            "label": "Windermere",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "$550,400",
+              "label": "median home value · 1.8× Georgia",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          },
+          {
+            "photo": "d4f75f7e",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "+11%",
+              "label": "on the previous Census estimate",
+              "source": "ACS 2019–23 → 2020–24 · Data USA"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Forsyth County's median rent is about twenty-one hundred dollars a month; inside Cumming's city limits, half the homes are rented.",
+        "chapter": "homes",
+        "shots": [
+          {
+            "photo": "9fa55ecd",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "$2,090",
+              "label": "median rent a month · Forsyth County",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          },
+          {
+            "photo": "bddb3429",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "$382,900",
+              "label": "median home value in the city · 52% rented",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          }
+        ]
+      },
+      {
+        "say": "From Cumming, downtown Atlanta is thirty-nine miles down Georgia 400: fifty-two minutes, eighty-three at rush hour.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "288d06a4",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "~52 min",
+              "label": "to downtown Atlanta · 83 at rush hour",
+              "source": "39 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "c6973802",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "Buckhead is forty minutes from Cumming and the airport fifty-six; the nearest MARTA station, North Springs, is thirty-three.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "da82a0ea",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "40 min",
+              "label": "to Buckhead · 66 at rush hour",
+              "source": "31 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "4d38e10f",
+            "label": "Hartsfield-Jackson",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "56 min",
+              "label": "to the airport · 86 at rush hour",
+              "source": "47 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "1b573187",
+            "label": "North Springs station",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "33 min",
+              "label": "to MARTA rail · 55 at rush hour",
+              "source": "26 mi · Google Maps, typical traffic"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Cumming City Center opened in 2022: seventy-five acres of shops, trails and an amphitheater, west of the courthouse square.",
+        "chapter": "downtown",
+        "shots": [
+          {
+            "photo": "6c938280",
+            "label": "Cumming City Center",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "75 acres",
+              "label": "shops, trails and an amphitheater · 2022"
+            }
+          },
+          {
+            "photo": "284539f8",
+            "label": "Lou Sobh Amphitheater",
+            "weight": 6
+          }
+        ]
+      },
+      {
+        "say": "Sawnee Mountain Preserve keeps nine hundred sixty-three acres above Cumming, and the Indian Seats look north to the Blue Ridge.",
+        "chapter": "outdoor",
+        "shots": [
+          {
+            "photo": "0c186a4a",
+            "label": "Sawnee Mountain Preserve",
+            "weight": 5
+          },
+          {
+            "photo": "aa201e83",
+            "label": "Indian Seats",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "963 acres",
+              "label": "of preserve · summit 1,946 ft"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Every October, the Cumming Country Fair and Festival lights the city's fairgrounds for eleven nights.",
+        "chapter": "events",
+        "shots": [
+          {
+            "photo": "3b33073c",
+            "label": "Cumming Fairgrounds",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "11 days",
+              "label": "every October · since 1995"
+            }
+          },
+          {
+            "photo": "d206d24d",
+            "label": "Cumming Fairgrounds",
+            "weight": 5
+          }
+        ]
+      }
+    ]
+  }
+}
