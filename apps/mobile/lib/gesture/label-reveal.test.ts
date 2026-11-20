@@ -13,7 +13,15 @@
  * under the card now showing it.
  */
 import { describe, expect, it } from "vitest";
-import { REST_EPSILON, labelOpacity } from "./label-reveal";
+import {
+	REST_EPSILON,
+	VERDICT_MARK_FROM,
+	VERDICT_MARK_FULL,
+	VERDICT_MARK_MIN_SCALE,
+	VERDICT_WASH_MAX,
+	labelOpacity,
+	verdictVisual,
+} from "./label-reveal";
 
 const SPAN = 105; // 300 * 0.35
 
@@ -103,5 +111,49 @@ describe("labelOpacity — reveal ramp (§1.8)", () => {
 	it("is invisible when the card has no measured width yet", () => {
 		expect(call(50, true, "right", 0).opacity).toBe(0);
 		expect(call(50, true, "right", -1).opacity).toBe(0);
+	});
+});
+
+describe("verdictVisual — the wash, the mark and the lock", () => {
+	it("shows nothing at rest", () => {
+		expect(verdictVisual(0)).toEqual({
+			wash: 0,
+			markOpacity: 0,
+			markScale: VERDICT_MARK_MIN_SCALE,
+			locked: false,
+		});
+	});
+
+	it("keeps the mark hidden through the swipe-hint's 16pt nudge", () => {
+		// 16pt of a 126pt threshold (a 360pt card).
+		expect(verdictVisual(16 / 126).markOpacity).toBe(0);
+		expect(verdictVisual(VERDICT_MARK_FROM).markOpacity).toBe(0);
+	});
+
+	it("has the mark fully visible well before the threshold", () => {
+		expect(verdictVisual(VERDICT_MARK_FULL).markOpacity).toBe(1);
+		expect(verdictVisual(0.3).markOpacity).toBeCloseTo(0.5);
+	});
+
+	it("grows the mark and deepens the wash all the way to the threshold", () => {
+		let last = verdictVisual(0);
+		for (const p of [0.2, 0.4, 0.6, 0.8, 1]) {
+			const v = verdictVisual(p);
+			expect(v.markScale).toBeGreaterThan(last.markScale);
+			expect(v.wash).toBeGreaterThan(last.wash);
+			last = v;
+		}
+		expect(last.markScale).toBe(1);
+		expect(last.wash).toBe(VERDICT_WASH_MAX);
+	});
+
+	it("locks at the threshold and not a hair before", () => {
+		expect(verdictVisual(0.999).locked).toBe(false);
+		expect(verdictVisual(1).locked).toBe(true);
+	});
+
+	it("clamps what it is given", () => {
+		expect(verdictVisual(-1)).toEqual(verdictVisual(0));
+		expect(verdictVisual(5)).toEqual(verdictVisual(1));
 	});
 });
