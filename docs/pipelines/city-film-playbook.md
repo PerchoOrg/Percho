@@ -89,7 +89,7 @@ one of these; the list is the same for every city.
 | `overview` | Overview | What kind of place is this? | one sentence of identity + one sourced ranking | **required** |
 | `schools` | Schools | How are the schools? | the best-ranked elementary, middle and high school, graduation rate against the district; a college if there is one | **required** |
 | `homes` | Homes | What does living here cost? | median home value, against the state, the recent trend, share owner-occupied — over streetscapes, never one house | **required** |
-| `commute` | Commute | How long to get anywhere? | line 1, the same in every city: downtown Atlanta off-peak and at rush. Line 2, the city's OWN (phase361): share working from home and average trip to work against Georgia (ACS), and the road it is on — over that city's own road, not a skyline. Buckhead, airport, MARTA go on the page | **required** |
+| `commute` | Commute | How long to get anywhere? | line 1, the same in every city: downtown Atlanta off-peak and at rush. Line 2, the city's OWN (phase361–362): average trip to work against Georgia (ACS), the road it is on, and a nearby job centre if it has one — never the share working from home (owner: "没有任何价值") — over that city's own road, not a skyline. Buckhead, airport, MARTA go on the page | **required** |
 | `daily` | Daily life | Is everyday life easy? | hospital, library, where people shop | when it has the material |
 | `outdoor` | Parks | Where do weekends go? | parks, trails, rivers and lakes | when it has the material |
 | `downtown` | Downtown | Is there a centre? | what the centre is and when it was built | when it has the material |

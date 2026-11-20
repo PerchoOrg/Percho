@@ -619,13 +619,13 @@
         ]
       },
       {
-        "say": "Interstate 85 runs along Suwanee's edge; its workers average thirty minutes to work, and a quarter now work from home.",
+        "say": "Interstate 85 runs along Suwanee's edge; its workers average thirty minutes to work, close to Georgia's average.",
         "chapter": "commute",
         "shots": [
           {
             "photo": "416df41c",
-            "label": "Interstate 85",
             "weight": 6,
+            "label": "Interstate 85",
             "callout": {
               "type": "stat",
               "big": "30 min",
@@ -635,13 +635,7 @@
           },
           {
             "photo": "d537094e",
-            "weight": 6,
-            "callout": {
-              "type": "stat",
-              "big": "25.9%",
-              "label": "of workers work from home · Georgia 15.9%",
-              "source": "ACS 2020–24 · Data USA"
-            }
+            "weight": 6
           }
         ]
       },

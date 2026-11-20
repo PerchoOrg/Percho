@@ -624,13 +624,13 @@
         ]
       },
       {
-        "say": "Johns Creek has no interstate and no rail: its drives run on four-lane roads, and almost two in five residents work from home.",
+        "say": "Johns Creek has no interstate and no rail: its drives run on four-lane roads, and the average trip to work is thirty minutes.",
         "chapter": "commute",
         "shots": [
           {
             "photo": "f39e9cae",
-            "label": "Holcomb Bridge Road",
             "weight": 6,
+            "label": "Holcomb Bridge Road",
             "callout": {
               "type": "stat",
               "big": "0",
@@ -639,12 +639,12 @@
           },
           {
             "photo": "45ed7d72",
-            "label": "Findley Road",
             "weight": 6,
+            "label": "Findley Road",
             "callout": {
               "type": "stat",
-              "big": "37.8%",
-              "label": "of workers work from home · Georgia 15.9%",
+              "big": "30 min",
+              "label": "average trip to work · Georgia 28",
               "source": "ACS 2020–24 · Data USA"
             }
           }
