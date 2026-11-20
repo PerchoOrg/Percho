@@ -16,6 +16,13 @@ picture in the preview. If they have the Percho app, the link opens straight
 into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
+### 2026-11-20
+- **Buford has a city film.** It is about the schools first: Buford is the
+  one city in Gwinnett County that runs its own school district, and the
+  film opens on its new stadium. It also tells where the city came from —
+  the tannery that made saddles for Hollywood's cowboys — and covers the
+  dam, the lake, the Mall of Georgia, homes and the commute.
+
 ### 2026-11-19
 - **Sugar Hill has a city film.** It opens on how the city got its name and
   is about what its City Hall runs — a theatre, an amphitheater, a gym, a

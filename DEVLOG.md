@@ -23,6 +23,32 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-20 01:50 UTC — phase358: Buford, the sixth city film — the Leather City that kept its own schools
+
+**Objective**: Third of the owner's list (Cumming → Sugar Hill → Buford → Duluth → "peachtree"); his go-ahead, 2026-11-19: "go". Standing instruction from phase357: not all alike.
+**Actions**:
+- `cities` row `buford-ga` (Gwinnett; centre = Main Street), `inactive` until checked, now `active`. `scripts/admin/city-profiles/buford-ga.json`: the page and a 12-line film.
+- Pipeline: research → resolve (18 places; rejected at the place level: two restaurants, Costco, a resort, a leather shop the search mistook for the Bona Allen factory, a wedding venue, a memorial chapel, a shopping centre, a ballpark in Lawrenceville, and Suwanee's two parks again) → photos; topup; ~45 `place` searches; Commons for the dam, Bona Allen, the mall, the skyline and the airport; ~320 photos tagged.
+- **School photos were checked BEFORE the script** (the lesson of phase356/357): Buford High, Phillip Beard Stadium, Buford Middle and Buford Elementary have them; Buford Academy (#50) and Buford Senior Academy have none.
+- **Film — assembly `3d731907`, stream `f5f455fb…`, 1:56**, 23 shots: 13 Ken Burns, 9 DepthFlow, 1 Seedance, 14 moves, 3 pans. Sections **Overview 19 · Schools 24 · Life 21 · Homes 19 · Commute 17%**.
+**Decisions — how this one differs**:
+- **Schools are the hero** and take a quarter of the film, second in the order: the only city school district in Gwinnett County (five schools, about 6,000 students); Buford High #18 in Georgia on an $85 million campus (2019), Buford Middle #23; fifteen state football titles. No `signature` chapter — the hero is a required chapter run long.
+- **It opens on the stadium from the air**: "a city of eighteen thousand that runs its own schools, and built its high school a sixty-two million dollar stadium."
+- **History is in the film** (one line), because here it is the city: the Leather City, Bona Allen's saddles for Hollywood's cowboys, 2,200 workers in 1932 — over the bronze of the rearing horse downtown and a saddle in the Museum of Buford. Cumming's and Sugar Hill's history stayed on the page.
+- Order Overview → Schools → Life → Homes → Commute: the third order in three films.
+- Life is Main Street and Tannery Row, the dam and the lake, the Mall of Georgia (Georgia's largest, outside the city limits — "beside Buford").
+**Issues**:
+- First assembly (`71487710`) had "+6%" over a white wall and a hedge — the 9:16 crop of a townhome. Replaced with a townhome front that keeps its roof and garage; assembled again.
+- **No streetscape of houses exists for Buford**: Google's photos are single listings' interiors and one builder's model home (the filter rejects both, rightly). Homes is a row of older townhomes, a newer one, and two apartment communities — a third of the city rents, so it is not false, but it is plain.
+- Buford Middle's only usable photo is a game on its field at dusk, not the building.
+- Buford High's graduation rate: U.S. News lists 95% without naming the class and no 2025 state figure turned up. The film gives no rate; the page shows 95% with that caveat.
+- Buford Middle's #23 is from a usnews.com page whose edition the search result did not state; the callout reads "as listed Nov 2026".
+- The stream returned 404 for about a minute after the assembly reported `ready`.
+**Verified**: frames tiled every 2 s on the first assembly and the Homes stretch again on the second; 12 of 12 lines voiced (−20 to −22 dB, end card −35); approved photos equal the film's 23; `/api/mobile/feed` returns five sections, shortest 17.2%; `percho.co/city/buford-ga` serves the stream and the figures.
+**Cost**: one new Seedance clip, $0.1396 (Lake Lanier's islands from the air). 24 TTS requests over two assemblies (48 in this quota day). Google Places ~45 text searches and their photos; Routes 16 calls; ~320 photo tags.
+**Not verified**: the film on a phone.
+**Next steps**: owner watches Cumming, Sugar Hill and Buford; next is Duluth (next to Suwanee — it must not look like it), then "peachtree" — ask which.
+
 ## 2026-11-19 08:55 UTC — phase357: Sugar Hill, the fifth city film — named for a spilled bag of sugar, run by its City Hall
 
 **Objective**: Second of the owner's list (Cumming → Sugar Hill → Buford → Duluth → "peachtree"). His one instruction for it, 2026-11-19: "next 不要千篇一律就好" — the next one, as long as they are not all alike.
