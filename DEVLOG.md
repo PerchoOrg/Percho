@@ -23,6 +23,23 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-20 08:26 UTC — phase363: the swipe verdict is drawn across the card
+
+**Objective**: Owner, 2026-11-20: "card 左右滑动的like pass太不明显了 没有起到作用 重新设计一下".
+**Actions**: `apps/mobile/components/cards/SwipeLabels.tsx` redrawn; `lib/gesture/label-reveal.ts` gains the pure `verdictVisual(progress)` (+6 tests). The old label (pick "D2") was an 11pt word in a hairline box at the card's top corner, fading in linearly, identical at the commit threshold and just short of it. Now, on every `decide` card (community, city, listing, area — the trade-off card still draws its own):
+- **Wash** — the verdict's colour (`pos` right, `neg` left) over the whole card, 0 → 45% at the threshold.
+- **Mark** — in the middle of the card: a 96pt white-ringed disc with a heart (right) or a cross (left) and the word under it at 28pt/800. Hidden for the first 15% of the way to the threshold, fully visible by 45%, growing from 0.6 to 1.
+- **Lock** — at the threshold (35% of the card's width, unchanged) the disc fills with the colour and pops 14% over 120ms: releasing now decides. A right swipe's existing haptic tick lands on the same frame.
+**Decisions**:
+- Built straight into the app rather than as a hosted demo: a drag's legibility can only be judged under a thumb.
+- The mark is centred, not in a corner — the corners carry the place pill and the save/sound/share control, which is part of why the old label was lost.
+- The heart is the Saved tab's glyph (tab-bar fill font); the cross is two bars. Neither card icon font has either, and re-subsetting needs `fonttools`, which is not on this host.
+- The 15% dead zone exists for the swipe-hint: its 16pt nudge would otherwise flicker a faint PASS mark.
+- Gesture physics, thresholds, copy (`swipeLabelsFor`) and haptics are untouched; a pass still has no haptic (§0.5), so its lock is visual only.
+**Verified**: `pnpm typecheck` clean, `pnpm lint` no errors (5 pre-existing warnings), `pnpm test` 876/876. **Not seen on a device** — no simulator run from this session; the owner's dev client (Metro, reference worktree) is the first real look.
+**Risks**: the sizes and the wash strength are judged from numbers, not from a screen; dark green/red washes over a dark frame may want lifting. The heart's vertical centring reuses the tab bar's measured offset at a larger size.
+**Next steps**: owner drags a card on the phone. Not done, worth a ruling: the swipe-hint still only nudges 16pt left and shows no verdict — it could demonstrate both directions with the new mark.
+
 ## 2026-11-20 07:25 UTC — phase362: no work-from-home figures in the commute
 
 **Objective**: Owner on phase361: "不用说百分比在家办公 没有任何价值".

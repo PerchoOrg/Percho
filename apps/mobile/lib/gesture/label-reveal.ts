@@ -60,3 +60,50 @@ export function labelOpacity({
 	if (signed <= 0) return { opacity: 0, armed: true };
 	return { opacity: Math.min(signed / span, 1), armed: true };
 }
+
+/**
+ * Where the verdict mark starts and finishes appearing, as a share of the way
+ * to the commit threshold.
+ *
+ * The start is not zero because the swipe-hint nudges the card 16pt (~13% of
+ * the way on a phone): a mark that tracked the drag from the first point would
+ * flicker a faint "PASS" through every hint. It is fully there by 45% so the
+ * buyer reads the verdict long before the release that commits it.
+ */
+export const VERDICT_MARK_FROM = 0.15;
+export const VERDICT_MARK_FULL = 0.45;
+/** The colour wash over the whole card at the commit threshold. */
+export const VERDICT_WASH_MAX = 0.45;
+/** The mark's scale when it first appears; it reaches 1 at the threshold. */
+export const VERDICT_MARK_MIN_SCALE = 0.6;
+
+export interface VerdictVisual {
+	/** Opacity of the card-wide colour wash. */
+	wash: number;
+	markOpacity: number;
+	markScale: number;
+	/** At the commit threshold: releasing now decides. The mark fills in. */
+	locked: boolean;
+}
+
+/**
+ * What the swipe verdict looks like at `progress` — the armed, one-sided value
+ * `labelOpacity` returns (0 at rest, 1 at the commit threshold).
+ */
+export function verdictVisual(progress: number): VerdictVisual {
+	"worklet";
+	const p = Math.max(0, Math.min(1, progress));
+	const appear = Math.max(
+		0,
+		Math.min(
+			1,
+			(p - VERDICT_MARK_FROM) / (VERDICT_MARK_FULL - VERDICT_MARK_FROM),
+		),
+	);
+	return {
+		wash: p * VERDICT_WASH_MAX,
+		markOpacity: appear,
+		markScale: VERDICT_MARK_MIN_SCALE + (1 - VERDICT_MARK_MIN_SCALE) * p,
+		locked: p >= 1,
+	};
+}
