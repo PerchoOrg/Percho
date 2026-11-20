@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-20 09:11 UTC — phase365: the swipe-hint shows a like and a pass
+
+**Objective**: Follow-up to the swipe verdict (2026-11-20 08:26 UTC, merged as phase363). The hint still nudged the card 16pt left and showed nothing of the new verdict; owner, asked whether it should demonstrate both sides: "好改".
+**Actions**: `apps/mobile/components/SwipeStack.tsx` — the hint handle's `nudge` now carries the top card right, holds, returns, carries it left, holds, returns (380 / 340 / 260 ms each way, ~2s in all). It drives the same `tx` a finger does, so the green wash + LIKE mark and the red wash + PASS mark appear by themselves. `lib/gesture/label-reveal.ts`: `HINT_REACH = 0.8` and `hintReach(cardWidth)` (+3 tests) — 80% of the way to the commit threshold, where the mark is fully drawn and the lock is not reached.
+**Decisions**: stops short of the lock on purpose — the filled disc means "letting go decides", and a demonstration decides nothing; a test asserts `decideSwipe` returns `none` at that offset. The never-nag rules are untouched (never after a real swipe; at most 3 app opens). Like first, pass second: the app's first word about a neighbourhood should not be a rejection.
+**Verified**: `pnpm typecheck` clean, `pnpm lint` no errors, `pnpm test` 879/879. **Not seen on a device.** The owner's phone has already swiped, so the hint will not play there without clearing the dev client's stored data (`percho-v3:swipe-hint:v1`).
+**Risks**: a touch that starts mid-demonstration takes over `tx` from wherever the card is, as it did with the old nudge — now from up to ~100pt out instead of 16.
+
 ## 2026-11-20 08:45 UTC — phase364: Duluth, the seventh city film — a route from the river to the interstate
 
 **Numbering**: merged to main as "Merge phase363: Duluth city film" (`84f084be`) while another agent's phase363 (the swipe verdict) landed at the same time. This entry is the Duluth work under phase364; the merge commit's title cannot be changed on main.

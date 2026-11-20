@@ -2,7 +2,9 @@
  * The swipe-hint state (owner spec, 2026-08-13).
  *
  * On the FIRST entry to the feed (after the card settles ~500-800ms) the top
- * card nudges left 14-18pt and back — the motion hint that the cards swipe.
+ * card shows itself being liked, then passed, and comes back — the motion hint
+ * that the cards swipe and what each side means (a 14-18pt nudge to the left
+ * until phase365).
  * It must never nag:
  *
  *   - `hasDiscoveredSwipe` — set the moment the buyer completes ANY real

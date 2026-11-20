@@ -13,12 +13,15 @@
  * under the card now showing it.
  */
 import { describe, expect, it } from "vitest";
+import { SWIPE_THRESHOLD_RATIO, decideSwipe } from "./decide-swipe";
 import {
+	HINT_REACH,
 	REST_EPSILON,
 	VERDICT_MARK_FROM,
 	VERDICT_MARK_FULL,
 	VERDICT_MARK_MIN_SCALE,
 	VERDICT_WASH_MAX,
+	hintReach,
 	labelOpacity,
 	verdictVisual,
 } from "./label-reveal";
@@ -124,9 +127,8 @@ describe("verdictVisual — the wash, the mark and the lock", () => {
 		});
 	});
 
-	it("keeps the mark hidden through the swipe-hint's 16pt nudge", () => {
-		// 16pt of a 126pt threshold (a 360pt card).
-		expect(verdictVisual(16 / 126).markOpacity).toBe(0);
+	it("keeps the mark hidden for the first points of a drag", () => {
+		expect(verdictVisual(0.1).markOpacity).toBe(0);
 		expect(verdictVisual(VERDICT_MARK_FROM).markOpacity).toBe(0);
 	});
 
@@ -155,5 +157,33 @@ describe("verdictVisual — the wash, the mark and the lock", () => {
 	it("clamps what it is given", () => {
 		expect(verdictVisual(-1)).toEqual(verdictVisual(0));
 		expect(verdictVisual(5)).toEqual(verdictVisual(1));
+	});
+});
+
+describe("hintReach — the swipe-hint shows the verdict and decides nothing", () => {
+	it("draws the mark in full without locking", () => {
+		const v = verdictVisual(HINT_REACH);
+		expect(v.markOpacity).toBe(1);
+		expect(v.locked).toBe(false);
+	});
+
+	it("stops short of the commit threshold", () => {
+		const reach = hintReach(360);
+		expect(reach).toBeCloseTo(360 * SWIPE_THRESHOLD_RATIO * HINT_REACH);
+		for (const translationX of [reach, -reach]) {
+			expect(
+				decideSwipe({
+					translationX,
+					translationY: 0,
+					velocityX: 0,
+					cardWidth: 360,
+				}),
+			).toBe("none");
+		}
+	});
+
+	it("is zero for an unmeasured card", () => {
+		expect(hintReach(0)).toBe(0);
+		expect(hintReach(-1)).toBe(0);
 	});
 });

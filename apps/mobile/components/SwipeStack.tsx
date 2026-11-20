@@ -51,7 +51,13 @@
  * brighten with the finger and the direction labels fade in with it. Without it
  * exposed, those faces cannot be built at all.
  */
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
+} from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import {
 	GestureDetector,
@@ -61,6 +67,7 @@ import Animated, {
 	runOnUI,
 	type SharedValue,
 	useAnimatedStyle,
+	withDelay,
 	withSequence,
 	withTiming,
 } from "react-native-reanimated";
@@ -69,7 +76,8 @@ import {
 	type CardCapability,
 	INERT_CAPABILITY,
 } from "../lib/gesture/capability";
-import { cardStackVisual } from "../lib/gesture/stack-layer";
+import { hintReach } from "../lib/gesture/label-reveal";
+import { advanceFromDrag, cardStackVisual } from "../lib/gesture/stack-layer";
 import type { TapSlot, TapStatus } from "../lib/gesture/tap-slot";
 import { cardFrameHeight } from "../theme/card-frame";
 import { colors, radii } from "../theme/tokens";
@@ -93,13 +101,20 @@ const PEEK_PT = 0;
  */
 const CLIP_OVERFLOW_PT = 120;
 
+/** The swipe-hint's timing: out to one side, hold there, back. Twice. */
+const HINT_OUT_MS = 380;
+const HINT_HOLD_MS = 340;
+const HINT_BACK_MS = 260;
+
 type CardRole = "top" | "next" | "after";
 
 /** The imperative swipe-hint handle passed to `onHintReady`. */
 export interface SwipeHintHandle {
 	/**
-	 * Nudge the stack left 16pt and back — the swipe-hint. Runs on the UI
-	 * thread; safe to call after mount (no-op if the stack is gone).
+	 * The swipe-hint: the top card shows itself being liked, comes back, shows
+	 * itself being passed, comes back — the drag's own wash and mark appear
+	 * with each (see `hintReach`). Nothing commits. Runs on the UI thread; safe
+	 * to call after mount (no-op if the stack is gone).
 	 */
 	nudge: () => void;
 }
@@ -383,6 +398,9 @@ export function SwipeStack<T>({
 		topAbs.value = activeIndex;
 	}, [activeIndex, topAbs]);
 
+	const widthRef = useRef(cardWidth);
+	widthRef.current = cardWidth;
+
 	// Hand the live shared values to the caller ONCE (the swipe-hint needs
 	// them to run its nudge on the UI thread; it must not re-fire on every
 	// render, which would reset the hint's run-once latch).
@@ -390,18 +408,28 @@ export function SwipeStack<T>({
 	useEffect(() => {
 		const handle: SwipeHintHandle = {
 			nudge: () => {
+				// Read on the JS thread at call time: the effect runs once, on mount,
+				// and must not pin the width the stack happened to have then.
+				const reach = hintReach(widthRef.current);
+				const lift = advanceFromDrag(reach, widthRef.current);
 				// Run the animation on the UI thread. `runOnUI` serializes the
 				// closure — capturing `tx`/`advance` (SharedValues) directly is
 				// safe; capturing the handle itself is not.
 				runOnUI(() => {
 					"worklet";
+					const out = { duration: HINT_OUT_MS };
+					const back = { duration: HINT_BACK_MS };
 					tx.value = withSequence(
-						withTiming(-16, { duration: 240 }),
-						withTiming(0, { duration: 240 }),
+						withTiming(reach, out),
+						withDelay(HINT_HOLD_MS, withTiming(0, back)),
+						withTiming(-reach, out),
+						withDelay(HINT_HOLD_MS, withTiming(0, back)),
 					);
 					advance.value = withSequence(
-						withTiming(0.035, { duration: 240 }),
-						withTiming(0, { duration: 240 }),
+						withTiming(lift, out),
+						withDelay(HINT_HOLD_MS, withTiming(0, back)),
+						withTiming(lift, out),
+						withDelay(HINT_HOLD_MS, withTiming(0, back)),
 					);
 				})();
 			},

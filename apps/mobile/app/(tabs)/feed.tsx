@@ -734,9 +734,12 @@ export default function FeedScreen() {
 	);
 
 	/**
-	 * The swipe-hint (owner spec, 2026-08-13): once the first card has
-	 * settled (~500-800ms), nudge the stack left 16pt and back so the buyer
-	 * sees the next card peek — the proof the cards swipe. Never nags:
+	 * The swipe-hint (owner spec, 2026-08-13; redrawn phase365): once the
+	 * first card has settled (~500-800ms), it shows itself being liked and
+	 * then passed — out to the right with the green wash and the LIKE mark,
+	 * back, out to the left with PASS, back — so the buyer sees both that the
+	 * cards swipe and what each side means. It was a 16pt nudge to the left
+	 * until the owner's "好改" on 2026-11-20. Never nags:
 	 * a real swipe (recordSwipe in `onDecision`) disables it forever; without
 	 * a swipe it plays at most MAX_HINT_SESSIONS app opens.
 	 *
