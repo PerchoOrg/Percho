@@ -580,28 +580,27 @@
         ]
       },
       {
-        "say": "Buckhead is forty-eight minutes from Sugar Hill and the airport an hour; at rush hour, allow half an hour more.",
+        "say": "Sugar Hill's workers spend thirty-three minutes getting to work, five more than Georgia's average, much of it on Interstate 985.",
         "chapter": "commute",
         "shots": [
           {
-            "photo": "58960935",
+            "photo": "17cf0774",
             "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "48 min",
-              "label": "to Buckhead · 76 at rush hour",
-              "source": "35 mi · Google Maps, typical traffic"
+              "big": "33 min",
+              "label": "average trip to work · Georgia 28",
+              "source": "ACS 2020–24 · Data USA"
             }
           },
           {
-            "photo": "cc92bee8",
-            "label": "Hartsfield-Jackson",
+            "photo": "adc8c3e4",
             "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "59 min",
-              "label": "to the airport · 86 at rush hour",
-              "source": "46 mi · Google Maps, typical traffic"
+              "big": "23.5%",
+              "label": "of workers work from home",
+              "source": "ACS 2020–24 · Data USA"
             }
           }
         ]

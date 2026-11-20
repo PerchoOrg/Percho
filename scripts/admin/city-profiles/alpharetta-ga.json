@@ -562,39 +562,27 @@
         ]
       },
       {
-        "say": "Buckhead is half an hour from Alpharetta and the airport fifty minutes; the nearest MARTA station, North Springs, is about twenty-five.",
+        "say": "Alpharetta's own commute is short: twenty-six minutes on average, and over a third of its workers stay home.",
         "chapter": "commute",
         "shots": [
           {
-            "photo": "d1e1c711",
+            "photo": "4b3def84",
             "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "32 min",
-              "label": "to Buckhead · 50 at rush hour",
-              "source": "18 mi · Google Maps, typical traffic"
+              "big": "26 min",
+              "label": "average trip to work · Georgia 28",
+              "source": "ACS 2020–24 · Data USA"
             }
           },
           {
-            "photo": "63966c6f",
-            "label": "Hartsfield-Jackson",
+            "photo": "30f022c3",
             "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "50 min",
-              "label": "to the airport · 70 at rush hour",
-              "source": "34 mi · Google Maps, typical traffic"
-            }
-          },
-          {
-            "photo": "626edecf",
-            "label": "North Springs station",
-            "weight": 6,
-            "callout": {
-              "type": "stat",
-              "big": "24 min",
-              "label": "to MARTA rail · 39 at rush hour",
-              "source": "13 mi · Google Maps, typical traffic"
+              "big": "36.7%",
+              "label": "of workers work from home · Georgia 15.9%",
+              "source": "ACS 2020–24 · Data USA"
             }
           }
         ]

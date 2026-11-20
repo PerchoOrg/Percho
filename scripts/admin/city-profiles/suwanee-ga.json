@@ -619,38 +619,28 @@
         ]
       },
       {
-        "say": "Buckhead is about forty minutes from Suwanee and the airport fifty-five; the nearest MARTA station, Doraville, is half an hour away.",
+        "say": "Interstate 85 runs along Suwanee's edge; its workers average thirty minutes to work, and a quarter now work from home.",
         "chapter": "commute",
         "shots": [
           {
-            "photo": "06e74151",
-            "weight": 6,
-            "callout": {
-              "type": "stat",
-              "big": "42 min",
-              "label": "to Buckhead · 68 at rush hour",
-              "source": "29 mi · Google Maps, typical traffic"
-            }
-          },
-          {
-            "photo": "e154e7f7",
-            "label": "Hartsfield-Jackson",
-            "weight": 6,
-            "callout": {
-              "type": "stat",
-              "big": "53 min",
-              "label": "to the airport · 78 at rush hour",
-              "source": "41 mi · Google Maps, typical traffic"
-            }
-          },
-          {
-            "photo": "3d925b44",
+            "photo": "416df41c",
+            "label": "Interstate 85",
             "weight": 6,
             "callout": {
               "type": "stat",
               "big": "30 min",
-              "label": "to MARTA rail at Doraville · 52 at rush hour",
-              "source": "20 mi · Google Maps, typical traffic"
+              "label": "average trip to work · Georgia 28",
+              "source": "ACS 2020–24 · Data USA"
+            }
+          },
+          {
+            "photo": "d537094e",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "25.9%",
+              "label": "of workers work from home · Georgia 15.9%",
+              "source": "ACS 2020–24 · Data USA"
             }
           }
         ]
