@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho city card — the parts on the right</title>
+<style>
+:root{
+  --card-ink:#181B18;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --ui: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:24px 12px 60px}
+.nav{max-width:1200px;margin:0 auto 20px;font:400 14px/1.6 var(--ui)}
+.nav h1{font:600 24px var(--serif);color:#086B5B;margin-bottom:4px}
+.nav p{max-width:760px;color:#5A4E40;margin:6px 0}
+.gallery{display:flex;flex-wrap:wrap;gap:28px 24px;align-items:flex-start;justify-content:center}
+.frame{width:361px}
+.cap{height:112px;padding:6px 2px 10px;font:600 16px/1.25 var(--ui);overflow:hidden}
+.cap small{display:block;font:400 12.5px/1.35 var(--ui);color:#6F6B65;margin-top:3px}
+.card{position:relative;width:361px;height:527px;border-radius:28px;overflow:hidden;background:#20262A;box-shadow:0 3px 10px rgba(32,28,22,.05),0 16px 38px rgba(32,28,22,.16)}
+.card video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.18) 0%,transparent 16%,transparent 58%,rgba(0,0,0,.5) 80%,rgba(0,0,0,.9) 100%);z-index:1;pointer-events:none}
+/* the right-hand variants darken the edge the words sit on */
+.side .scrim{background:linear-gradient(to left,rgba(0,0,0,.5) 0%,rgba(0,0,0,.22) 20%,transparent 38%),linear-gradient(to bottom,rgba(0,0,0,.18) 0%,transparent 16%,transparent 62%,rgba(0,0,0,.5) 84%,rgba(0,0,0,.88) 100%)}
+/* top chrome — as the app draws it */
+.pill{position:absolute;top:12px;left:12px;z-index:2;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.92);border-radius:14px;padding:7px 10px;font:600 10.5px var(--ui);color:var(--card-ink);max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill svg{color:#0E6B57;flex:none}
+.pill:empty,.pill.off{display:none}
+.corner{position:absolute;top:12px;right:12px;z-index:2;display:flex;gap:2px;background:rgba(24,27,24,.42);border-radius:16px;padding:3px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.corner span{width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#fff}
+/* bottom block */
+.info{position:absolute;left:24px;right:24px;bottom:22px;z-index:2;color:#fff}
+.tag{display:inline-block;background:rgba(255,255,255,.92);border-radius:6px;padding:4px 8px;font:700 9.5px var(--ui);letter-spacing:1px;color:var(--card-ink);margin-bottom:9px}
+.row{display:flex;align-items:center;gap:12px}
+.name{font:600 27px/30px var(--serif);flex:1;min-width:0}
+button{font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pillbtn{flex:none;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:17px;border:0;background:rgba(255,255,255,.92);color:var(--card-ink);font:600 13.5px var(--ui)}
+
+/* NOW — the band along the foot, as the app draws it (phase354) */
+.R0 .info{bottom:60px}
+.strip{position:absolute;left:0;right:0;bottom:0;height:46px;z-index:2;display:flex;background:rgba(18,20,18,.42)}
+.strip button{position:relative;z-index:1;border:0;background:none;padding:0;min-width:0;font:500 12px/46px var(--ui);color:rgba(255,255,255,.62);transition:color .25s}
+.strip button.on{color:#fff;font-weight:700}
+.strip .track{position:absolute;left:0;right:0;top:0;height:2px;background:rgba(255,255,255,.2)}
+.strip .track b{display:block;height:100%;width:0;background:#fff}
+.strip .track i{position:absolute;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#8E918E;box-shadow:0 0 0 2px rgba(18,20,18,.55);transition:background .25s}
+.strip .track i.on{background:#fff}
+
+/* THE RAIL — a timeline down the right edge, top to bottom */
+.rail{position:absolute;z-index:2;right:0;top:58px;bottom:92px;width:112px}
+.rail .track{position:absolute;right:15px;top:0;bottom:0;width:2px;border-radius:1px;background:rgba(255,255,255,.26)}
+.rail .track b{display:block;width:100%;height:0;border-radius:1px;background:#fff}
+.rail .track i{position:absolute;left:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#8E918E;box-shadow:0 0 0 2px rgba(18,20,18,.45);transition:background .25s,transform .25s}
+.rail .track i.on{background:#fff}
+.rail button{position:absolute;right:0;border:0;background:none;padding:0 28px 0 8px;text-align:right;font:500 12px var(--ui);color:rgba(255,255,255,.66);text-shadow:0 1px 3px rgba(0,0,0,.55);transition:color .25s;display:flex;align-items:center;justify-content:flex-end;width:100%}
+.rail button.on{color:#fff;font-weight:700}
+
+/* 2 — the words turned to run along the line: a narrow rail */
+.R2 .rail{width:44px}
+.R2 .rail button{padding:0;justify-content:center;width:26px;right:18px}
+.R2 .rail button span{writing-mode:vertical-rl;font-size:11px;letter-spacing:.3px}
+
+/* 3 — stations: five evenly spaced stops, the line runs stop to stop */
+.R3 .rail{top:78px;bottom:112px}
+.R3 .rail .track i{width:8px;height:8px;margin:-4px 0 0 -4px}
+.R3 .rail .track i.now{transform:scale(1.45);box-shadow:0 0 0 2px rgba(18,20,18,.45),0 0 8px rgba(255,255,255,.75)}
+.R3 .rail button{height:30px;margin-top:-15px}
+</style>
+</head>
+<body>
+<div class="nav">
+  <h1>City card — the parts on the right</h1>
+  <p>The band of parts moved from the foot of the card to its right edge, three ways, next to what the app draws now. The film is Buford's. Down the edge the line reads top to bottom; a dot marks where one part hands over to the next; tap a word to jump. With the band gone the name and Explore sit at the very foot again.</p>
+  <p>One thing a still cannot show: on the right, a drag along the line (to scrub) runs the same way as the feed's own up-and-down swipe. These demos jump on a tap only.</p>
+</div>
+<div class="gallery" id="gallery"></div>
+
+<script src="/demos/city-card-bottom-v1/hls.light.min.js"></script>
+<script>
+const UID = 'f5f455fb2683c28899d6ffaef5a9b5af';
+const FILM = `https://videodelivery.net/${UID}/manifest/video.m3u8`;
+// ?t=0.45 freezes every card at that point of the film (for a still look).
+const FROZEN = new URLSearchParams(location.search).get('t');
+const POSTER = `https://videodelivery.net/${UID}/thumbnails/thumbnail.jpg?time=${FROZEN ? Math.round(Number(FROZEN) * 116) : 1}s&height=1054`;
+const SECTIONS = [["Overview",0.1938],["Schools",0.4317],["Life",0.6388],["Homes",0.8282],["Commute",1]];
+const PLACES = [["",0.1454],["Museum of Buford",0.1938],["Buford High",0.2423],["Buford Elementary",0.2775],["Buford High",0.326],["Buford Middle",0.37],["",0.4317],["Main Street",0.467],["Tannery Row",0.5066],["Lake Lanier",0.5374],["Buford Dam",0.5727],["Mall of Georgia",0.6388],["",0.9604],["Hartsfield-Jackson",1]];
+
+const ARROW = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>';
+const PIN = '<svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a5 5 0 0 0-5 5c0 3.6 5 9 5 9s5-5.4 5-9a5 5 0 0 0-5-5zm0 7a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>';
+const ICON = (d, size = 15) => `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+// Stand-ins for the app's own icon set.
+const CORNER = `<div class="corner"><span>${ICON('<path d="M3 6h2l3-3v10l-3-3H3zM11 5.5a3.5 3.5 0 0 1 0 5"/>')}</span><span>${ICON('<path d="M8 10V2M5 5l3-3 3 3M3 9v4h10V9"/>')}</span><span>${ICON('<path d="M4 2h8v12l-4-3-4 3z"/>')}</span></div>`;
+const TOP_CHROME = `<div class="pill"></div>${CORNER}`;
+const info = `<div class="info"><span class="tag">CITY</span><div class="row"><div class="name">Buford</div><button class="pillbtn">Explore ${ARROW}</button></div></div>`;
+const N = SECTIONS.length;
+const startOf = (i) => (i === 0 ? 0 : SECTIONS[i - 1][1]);
+const share = (i) => SECTIONS[i][1] - startOf(i);
+
+// Where each variant puts its dots and words along the line (% of its length)
+// and how far the white has run for a position in the film.
+const TRUE_TIME = {
+  dots: SECTIONS.slice(0, -1).map(([, e]) => e * 100),
+  word: (i) => ({ at: startOf(i) * 100, size: share(i) * 100 }),
+  fill: (at) => at * 100,
+};
+const STATIONS = {
+  dots: [0, 20, 40, 60, 80],
+  word: (i) => ({ at: i * 20, size: 0 }),
+  fill: (at, cur, local) => (cur + local) * 20,
+};
+const LINES = { R0: TRUE_TIME, R1: TRUE_TIME, R2: TRUE_TIME, R3: STATIONS };
+
+const VARIANTS = [
+  { id: 'R0', title: 'Now', note: 'The band across the foot: a timeline left to right, each name under its own stretch.' },
+  { id: 'R1', title: '1 · Rail, words beside it', note: 'The same timeline stood on end. Each name sits beside its own stretch, level, easy to read; it takes about a quarter of the card\'s width from the picture.' },
+  { id: 'R2', title: '2 · Narrow rail, words along it', note: 'The names turned to run down the line. The rail is a third as wide, so the picture keeps almost all of the card — but the words read sideways.' },
+  { id: 'R3', title: '3 · Stations', note: 'Five evenly spaced stops, one per part, the white running stop to stop and the stop you are at lit. Tidy and even, but no longer a true timeline: a long part and a short one look the same.' },
+];
+
+const strip = () => `<div class="strip"><div class="track"><b></b>${TRUE_TIME.dots.map((x) => `<i style="left:${x}%"></i>`).join('')}</div>${SECTIONS.map(([n], i) => `<button data-s="${i}" style="flex:${share(i)} 0 0">${n}</button>`).join('')}</div>`;
+const rail = (id) => {
+  const line = LINES[id];
+  const words = SECTIONS.map(([n], i) => {
+    const { at, size } = line.word(i);
+    return `<button data-s="${i}" style="top:${at}%;${size ? `height:${size}%` : ''}"><span>${n}</span></button>`;
+  }).join('');
+  return `<div class="rail"><div class="track"><b></b>${line.dots.map((y) => `<i style="top:${y}%"></i>`).join('')}</div>${words}</div>`;
+};
+
+const gallery = document.getElementById('gallery');
+for (const v of VARIANTS) {
+  const frame = document.createElement('div');
+  frame.className = 'frame';
+  frame.innerHTML = `<div class="cap">${v.title}<small>${v.note}</small></div>
+    <div class="card ${v.id}${v.id === 'R0' ? '' : ' side'}"><video muted playsinline loop preload="metadata" poster="${POSTER}"></video><div class="scrim"></div>${TOP_CHROME}${info}${v.id === 'R0' ? strip() : rail(v.id)}</div>`;
+  gallery.appendChild(frame);
+  wire(frame.querySelector('.card'), v.id);
+}
+
+function wire(card, id) {
+  const video = card.querySelector('video');
+  if (FROZEN) { /* poster only */ }
+  else if (video.canPlayType('application/vnd.apple.mpegurl')) video.src = FILM;
+  else if (window.Hls && Hls.isSupported()) { const h = new Hls({ capLevelToPlayerSize: true }); h.loadSource(FILM); h.attachMedia(video); }
+
+  const buttons = [...card.querySelectorAll('[data-s]')];
+  for (const b of buttons) b.addEventListener('click', () => {
+    if (!video.duration) return;
+    video.currentTime = startOf(Number(b.dataset.s)) * video.duration + 0.05;
+    video.play();
+  });
+  const pill = card.querySelector('.pill');
+  const fill = card.querySelector('.track b');
+  const marks = [...card.querySelectorAll('.track i')];
+  const line = LINES[id];
+  const upright = id !== 'R0';
+
+  const paint = () => {
+    const at = FROZEN ? Number(FROZEN) : video.duration ? video.currentTime / video.duration : 0;
+    const cur = Math.max(0, SECTIONS.findIndex(([, e]) => at <= e));
+    const local = Math.min(Math.max((at - startOf(cur)) / share(cur), 0), 1);
+    for (const b of buttons) b.classList.toggle('on', Number(b.dataset.s) === cur);
+    const run = line.fill(at, cur, local);
+    fill.style[upright ? 'height' : 'width'] = `${run}%`;
+    marks.forEach((m, i) => {
+      m.classList.toggle('on', line.dots[i] <= run + 0.01);
+      m.classList.toggle('now', id === 'R3' && i === cur);
+    });
+    const place = (PLACES.find(([, e]) => at <= e) || ['', 1])[0];
+    pill.innerHTML = place ? `${PIN}${place}` : '';
+    pill.classList.toggle('off', !place);
+    requestAnimationFrame(paint);
+  };
+  requestAnimationFrame(paint);
+
+  // Only the card on screen plays.
+  new IntersectionObserver(([e]) => { if (e.isIntersecting) video.play().catch(() => {}); else video.pause(); }, { threshold: 0.5 }).observe(card);
+}
+</script>
+</body>
+</html>

@@ -378,23 +378,22 @@
     "signature": "City-run",
     "lines": [
       {
-        "say": "Sugar Hill, Georgia, is named, they say, for a bag of sugar that fell off a wagon, or for the quartz of its gold mines.",
+        "say": "Sugar Hill, Georgia, is named, they say, for a hundred-pound bag of sugar that fell off a farmer's wagon on the road to Cumming.",
         "chapter": "overview",
         "shots": [
           {
+            "photo": "b3ec2a30",
+            "weight": 7
+          },
+          {
             "photo": "9a07c9d5",
-            "weight": 8,
+            "weight": 7,
             "callout": {
               "type": "stat",
               "big": "1939",
               "label": "a town by charter · 26,128 residents today",
               "source": "U.S. Census Bureau, ACS 2020–24"
             }
-          },
-          {
-            "photo": "daaf796e",
-            "label": "Gold Mine Park",
-            "weight": 6
           }
         ]
       },
@@ -453,17 +452,17 @@
         "chapter": "downtown",
         "shots": [
           {
-            "photo": "b3ec2a30",
-            "label": "Sugar Hill City Hall",
+            "photo": "24c3259f",
+            "label": "E Center",
             "weight": 7,
             "callout": {
               "type": "stat",
-              "big": "2013",
-              "label": "City Hall opens · the E Center follows in 2018"
+              "big": "2018",
+              "label": "the E Center opens · City Hall came in 2013"
             }
           },
           {
-            "photo": "24c3259f",
+            "photo": "7c538acc",
             "label": "E Center",
             "weight": 6
           }

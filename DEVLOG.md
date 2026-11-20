@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-20 02:40 UTC — phase359: Sugar Hill's opening without the mine shaft; the city card's parts on the right (demo only)
+
+**Objective**: Owner, 2026-11-20: "suger hill第二个照片太奇怪 gold mine park 换掉" and "city底部的进度条有点审美疲劳 放在右边怎么样 给我个demo看看".
+**Actions**:
+- `scripts/admin/city-profiles/sugar-hill-ga.json`: the opening line is now only the sugar story ("a hundred-pound bag of sugar that fell off a farmer's wagon on the road to Cumming"); its shots are City Hall across the plaza, then the rotunda with the city's name. The gated mine shaft at Gold Mine Park is out, and with it the "quartz of its gold mines" half of the line (still on the page's history). The downtown line moved off City Hall to two shots of the E Center, so the building is not shown three times; its callout reads "2018 · the E Center opens · City Hall came in 2013".
+- **Sugar Hill re-assembled: `d01c04ff`, stream `2b6cb435…`, 1:58.5**; 25 shots, sections unchanged (25 / 24 / 18 / 16 / 16%).
+- `apps/web/public/demos/city-card-right-rail-v1/`: the band of parts on the card's right edge, three ways beside what the app draws now, on Buford's film — (1) a vertical timeline with each name level beside its stretch; (2) a narrow rail with the names turned to run along it; (3) five evenly spaced stations. Name and Explore return to the foot in all three.
+**Decisions**: no app code changed — the owner asked to see it first. The demo says what a still cannot: a drag along a vertical rail runs the same way as the feed's own swipe, so scrubbing would have to be reconsidered; the demos jump on a tap only.
+**Verified**: the new opening and downtown stretches frame by frame; 12 of 12 lines voiced; approved photos equal the film's 25 and the mine shaft is no longer among them; the demo rendered at two points of the film in headless Chrome.
+**Cost**: no new Seedance. 12 TTS requests (60 in this quota day).
+**Next steps**: owner picks a rail (or none); then Duluth.
+
 ## 2026-11-20 01:50 UTC — phase358: Buford, the sixth city film — the Leather City that kept its own schools
 
 **Objective**: Third of the owner's list (Cumming → Sugar Hill → Buford → Duluth → "peachtree"); his go-ahead, 2026-11-19: "go". Standing instruction from phase357: not all alike.
