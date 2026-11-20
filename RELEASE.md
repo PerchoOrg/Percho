@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-20
+- **Duluth has a city film.** It travels the city from north to south — the old Rogers Bridge over the Chattahoochee, the railroad that gave Duluth its name, the Town Green and its fall festival, the arena — then covers the commute, schools and homes.
 - **Swiping a card now shows clearly what it means.** As you drag, the whole card tints green for a like or red for a pass, and a large heart or cross with the word appears in the middle. When you have dragged far enough that letting go will count, the mark fills in.
 - **Each city's Commute part says something of its own.** It still opens with the drive to downtown Atlanta, so cities can be compared; the second half is now that city's own story — how long the average trip to work takes against the state's, which road it is on, and the nearby place its people drive to — shown on that city's own roads. The airport, Buckhead and MARTA times are on each city's page.
 - **Figures in city films stay clear of the parts on the right.**

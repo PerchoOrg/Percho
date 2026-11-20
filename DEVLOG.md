@@ -23,6 +23,28 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-20 08:45 UTC — phase364: Duluth, the seventh city film — a route from the river to the interstate
+
+**Numbering**: merged to main as "Merge phase363: Duluth city film" (`84f084be`) while another agent's phase363 (the swipe verdict) landed at the same time. This entry is the Duluth work under phase364; the merge commit's title cannot be changed on main.
+**Objective**: Fourth of the owner's list; his go-ahead, 2026-11-20: "duluth". Standing instruction: not all alike (phase357).
+**Actions**:
+- `cities` row `duluth-ga` (Gwinnett; centre = Town Green), `inactive` until checked, now `active`. `scripts/admin/city-profiles/duluth-ga.json`: page and an 11-line film.
+- Pipeline: research → resolve (18 places; rejected at the place level: restaurants, a brewery, H Mart, Trader Joe's, Bass Pro, Sugarloaf Mills, the dog park, a shopping centre the mall search returned, and the two Fulton elementaries the research step returned); topup; ~30 `place` searches; Commons for downtown, Rogers Bridge, the depot and museum, Gwinnett Place Mall, Duluth High; ~245 photos tagged.
+- **Film — assembly `cc220ec2`, stream `487d1bbd…`, 1:54**, 22 shots, 2 Seedance (new). Sections **Overview 26 · Life 17 · Commute 19 · Schools 18 · Homes 20%**.
+**Decisions — how this one differs**:
+- **Spine: a route**, north to south — "Duluth runs south from the Chattahoochee River to Interstate 85, and its story runs the same way": Rogers Bridge and the river (Seedance), the 1871 depot and the railway museum (the name, borrowed from Duluth, Minnesota), Gwinnett Place Mall (bought by the county in 2020 to rebuild), the Town Green, the Fall Festival (40 years), Gas South Arena (13,000 seats). The first route spine of the seven.
+- Order Overview → Life → Commute → Schools → Homes, ending on homes — new.
+- Commute per phase362: downtown 48/72 min; then Pleasant Hill Road over I-85, MARTA Doraville 25 min (32 at rush), average trip 30 min. Duluth is the first city where rail is near enough to be its own commute fact.
+- Schools: inside the city they are Gwinnett's — Peachtree Ridge High (#53, 94.8%) for the north, Duluth High for the south (shown without its #108). River Trail Middle (#4) is named as what it is: Fulton County's, for Duluth addresses across the river.
+**Issues**:
+- No photographs exist of the Gwinnett elementaries inside the city (Mason, Chattahoochee, Harris, Berkeley Lake) or of Duluth Middle; every photo of Hull Middle and Wilson Creek Elementary has children in it. Page only.
+- First assembly (`f54ad885`) had the mall line's second shot on an empty highway sky and "+10%" over a tree and a gatehouse. The mall line now has one shot of the mall; the +10% moved to an apartment building's front. Re-assembled.
+- Phase number collided with another agent's (above). Memory note phase-numbers-race-between-agents applies: re-check origin/main's DEVLOG right before merging.
+**Verified**: frames tiled every 2 s on the first assembly and the changed stretches on the second; 11 of 11 lines voiced (−19 to −21 dB, end card −33); approved photos equal the film's 22; feed returns five sections, shortest 17.4%; `percho.co/city/duluth-ga` serves the stream.
+**Cost**: two new Seedance clips, $0.2792 (Rogers Bridge, the river). 22 TTS requests. Google Places ~30 searches; Routes 14 calls.
+**Not verified**: on a phone.
+**Next steps**: owner watches Duluth; the last of the list is "peachtree" — Peachtree City or Peachtree Corners, his call.
+
 ## 2026-11-20 08:26 UTC — phase363: the swipe verdict is drawn across the card
 
 **Objective**: Owner, 2026-11-20: "card 左右滑动的like pass太不明显了 没有起到作用 重新设计一下".

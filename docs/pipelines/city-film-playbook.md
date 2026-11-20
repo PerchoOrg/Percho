@@ -1,6 +1,6 @@
 # City film & city card — playbook
 
-**Status**: in use · **Last updated**: 2026-11-20 · **Built on**: Suwanee, GA (phase318–333), Johns Creek, GA (phase344), Alpharetta, GA (phase346); all three recut as chapter films (phase354–355); Cumming, GA (phase356), Sugar Hill, GA (phase357), Buford, GA (phase358)
+**Status**: in use · **Last updated**: 2026-11-20 · **Built on**: Suwanee, GA (phase318–333), Johns Creek, GA (phase344), Alpharetta, GA (phase346); all three recut as chapter films (phase354–355); Cumming, GA (phase356), Sugar Hill, GA (phase357), Buford, GA (phase358), Duluth, GA (phase364)
 **Read this before making the next city** (Johns Creek → Alpharetta → Milton → Cumming → Sugar Hill/Buford).
 
 Suwanee took fifteen phases, two rejected finished films and a dozen assemblies.
@@ -76,6 +76,7 @@ No two consecutive cities share a spine or an opening. Record each film here:
 | Cumming | One city, one county (phase356) | City Hall with Sawnee Mountain behind it: "Forsyth County, Georgia, has one city" + fastest-growing city in the metro | none in the film — on the page | Lake Lanier (`signature`); the film is about the county that carries the city's address, and says so | ~1:59 |
 | Sugar Hill | A hero subject: what the city runs (phase357); sections reordered — Overview → Life → Homes → Commute → Schools | City Hall across its plaza, then the rotunda with the city's name + the story of the spilled bag of sugar; no ranking (the mine shaft that first followed it was removed — owner: "太奇怪") | the name story is the opening; dates on the page | City-run (`signature`): theatre, amphitheater, gym, golf course, gas utility | ~1:58 |
 | Buford | A hero subject that is a required chapter: Schools, a quarter of the film (phase358); Overview → Schools → Life → Homes → Commute | Phillip Beard Stadium from the air: "runs its own schools, and built its high school a sixty-two million dollar stadium" | one line IN the film — the Leather City, Bona Allen's saddles | the city school district: #18 high school, $85M campus, 15 football titles; no `signature` chapter | ~1:56 |
+| Duluth | A route, north to south (phase364); Overview → Life → Commute → Schools → Homes | Rogers Bridge and the Chattahoochee (Seedance ×2): "runs south from the river to Interstate 85, and its story runs the same way" | in the film along the route: 1871, the name from Duluth, Minnesota | the route itself; no `signature` chapter | ~1:54 |
 
 ### 2.2 The chapters (owner 2026-11-16/17: "模块化内容 可以让人自主选择 … 每一个章节可以做得独立一些可以单独拉出来看 … 每个city尽量覆盖")
 
