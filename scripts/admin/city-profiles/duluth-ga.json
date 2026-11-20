@@ -1,0 +1,628 @@
+{
+  "tagline": "A railroad town named for a joke about Duluth, Minnesota, running from the Chattahoochee to Interstate 85.",
+  "summary": "Duluth began as Howell's Crossing and took its name in 1871, when the railroad arrived — borrowed from Duluth, Minnesota, whose own railroad a congressman had just mocked. The city runs south from the Chattahoochee River across the tracks and its Town Green to Interstate 85, Gas South Arena and the old Gwinnett Place Mall, which the county bought in 2020 to rebuild. About 32,000 people live in the city; its schools are Gwinnett County's, and homes north of the river with a Duluth address are in Fulton County.",
+  "locationNote": "25 mi northeast of downtown Atlanta",
+  "rankings": [
+    {
+      "rank": "#53",
+      "scope": "in Georgia",
+      "title": "Peachtree Ridge High School",
+      "detail": "U.S. News Best High Schools, 2026–27 — serves north Duluth; 94.8% graduated in 2025.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2026–27",
+        "url": "https://www.usnews.com/education/best-high-schools/georgia/districts/gwinnett-county-school-district/peachtree-ridge-high-school-5953"
+      }
+    },
+    {
+      "rank": "#4",
+      "scope": "in Georgia",
+      "title": "River Trail Middle School",
+      "detail": "Fulton County Schools, for Duluth addresses north of the river. U.S. News Best Middle Schools, 2027.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2027",
+        "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+      }
+    },
+    {
+      "rank": "#10",
+      "scope": "in Georgia",
+      "title": "Wilson Creek Elementary School",
+      "detail": "Fulton County Schools, Duluth mailing address. U.S. News Best Elementary Schools, 2027.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2027",
+        "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+      }
+    }
+  ],
+  "stats": [
+    {
+      "label": "Population",
+      "value": "32,426",
+      "note": "ACS 2020–24 · 2,956 in 1980"
+    },
+    {
+      "label": "Homes owner-occupied",
+      "value": "57%",
+      "note": "the rest rented"
+    },
+    {
+      "label": "Median rent",
+      "value": "$1,828",
+      "note": "a month · ACS 2020–24"
+    },
+    {
+      "label": "Railcars at the museum",
+      "value": "90+",
+      "note": "Southeastern Railway Museum"
+    }
+  ],
+  "compare": {
+    "against": "Georgia",
+    "rows": [
+      {
+        "label": "Median household income",
+        "city": {
+          "value": 95331,
+          "display": "$95,331"
+        },
+        "state": {
+          "value": 77353,
+          "display": "$77,353"
+        },
+        "takeaway": "1.2× the state"
+      },
+      {
+        "label": "Adults with a bachelor's or higher",
+        "city": {
+          "value": 53.7,
+          "display": "53.7%"
+        },
+        "state": {
+          "value": 34.9,
+          "display": "34.9%"
+        },
+        "takeaway": "1.5× the state"
+      },
+      {
+        "label": "Median home value",
+        "city": {
+          "value": 400800,
+          "display": "$400,800"
+        },
+        "state": {
+          "value": 303300,
+          "display": "$303,300"
+        },
+        "takeaway": "1.3× the state"
+      }
+    ],
+    "source": {
+      "name": "U.S. Census Bureau, ACS 2020–2024",
+      "year": "2024",
+      "url": "https://mmcganalytics.com/georgia/gwinnett-county/duluth/"
+    }
+  },
+  "history": [
+    {
+      "year": "1820s",
+      "short": "Howell's Crossing",
+      "text": "Cotton merchant Evan Howell cuts a road from his gin on the Chattahoochee to Old Peachtree Road; the crossroads takes his name."
+    },
+    {
+      "year": "1871",
+      "short": "Duluth",
+      "text": "The railroad arrives and the town is renamed Duluth, after Duluth, Minnesota, whose railroad Rep. J. Proctor Knott had mocked in Congress."
+    },
+    {
+      "year": "1970",
+      "short": "Railway museum",
+      "text": "The Southeastern Railway Museum is founded; it later moves to Duluth and restores the 1871 depot."
+    },
+    {
+      "year": "1984",
+      "short": "Gwinnett Place",
+      "text": "Gwinnett Place Mall opens on Pleasant Hill Road and becomes the region's leading mall."
+    },
+    {
+      "year": "2003",
+      "short": "The arena",
+      "text": "Gas South Arena, then the Gwinnett Arena, opens with about 13,000 seats."
+    },
+    {
+      "year": "2020",
+      "short": "County buys the mall",
+      "text": "Gwinnett County's redevelopment agency buys the declining mall site to rebuild it as homes, park and shops."
+    },
+    {
+      "year": "2023",
+      "short": "Rogers Bridge",
+      "text": "The old Rogers Bridge over the Chattahoochee reopens for walkers and cyclists, joining Duluth to Johns Creek."
+    }
+  ],
+  "growth": {
+    "series": [
+      {
+        "label": "1980",
+        "value": 2956
+      },
+      {
+        "label": "1990",
+        "value": 9029
+      },
+      {
+        "label": "2000",
+        "value": 22122
+      },
+      {
+        "label": "2010",
+        "value": 26600
+      },
+      {
+        "label": "2020",
+        "value": 31873
+      }
+    ],
+    "takeaway": "11× since 1980",
+    "source": {
+      "name": "U.S. Census Bureau, decennial census",
+      "url": "https://en.wikipedia.org/wiki/Duluth,_Georgia"
+    }
+  },
+  "education": {
+    "schools": [
+      {
+        "level": "elementary",
+        "name": "Wilson Creek Elementary",
+        "rank": "#10",
+        "scope": "in Georgia",
+        "detail": "Fulton County Schools, Duluth mailing address, north of the river. U.S. News, 2027. Not in the film: every photograph of it shows children.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2027",
+          "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+        }
+      },
+      {
+        "level": "elementary",
+        "name": "Mason, Chattahoochee, Harris and Berkeley Lake Elementary",
+        "detail": "Gwinnett County Public Schools inside the city. No photographs of them exist, so they are not in the film.",
+        "source": {
+          "name": "Gwinnett County Public Schools",
+          "url": "https://www.gcpsk12.org"
+        }
+      },
+      {
+        "level": "middle",
+        "name": "River Trail Middle",
+        "rank": "#4",
+        "scope": "in Georgia",
+        "detail": "Fulton County Schools, for Duluth addresses north of the river. U.S. News Best Middle Schools, 2027.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2027",
+          "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+        }
+      },
+      {
+        "level": "middle",
+        "name": "Hull Middle",
+        "rank": "#27",
+        "scope": "in Georgia",
+        "detail": "Gwinnett County Public Schools, Peachtree Ridge cluster. U.S. News, as listed on usnews.com in November 2026.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "url": "https://www.usnews.com/education/k12/middle-schools/georgia/gwinnett-county-106134"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Peachtree Ridge High",
+        "rank": "#53",
+        "scope": "in Georgia",
+        "detail": "Gwinnett County Public Schools; serves north Duluth. U.S. News Best High Schools, 2026–27 · 94.8% graduated in 2025.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026–27",
+          "url": "https://www.usnews.com/education/best-high-schools/georgia/districts/gwinnett-county-school-district/peachtree-ridge-high-school-5953"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Duluth High",
+        "rank": "#108",
+        "scope": "in Georgia",
+        "detail": "Gwinnett County Public Schools; serves south Duluth. U.S. News Best High Schools, 2026–27.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026–27",
+          "url": "https://www.usnews.com/education/best-high-schools/georgia/districts/gwinnett-county-school-district/duluth-high-school-5941"
+        }
+      }
+    ],
+    "measure": "Graduate in 4 years · class of 2025",
+    "rows": [
+      {
+        "label": "Peachtree Ridge HS",
+        "pct": 94.8,
+        "display": "94.8%"
+      },
+      {
+        "label": "Gwinnett district",
+        "pct": 85.4,
+        "display": "85.4%",
+        "baseline": true
+      }
+    ],
+    "note": "Inside the city, schools are Gwinnett County's: Peachtree Ridge cluster to the north, Duluth cluster to the south. Duluth mailing addresses north of the Chattahoochee are in Johns Creek and go to Fulton County schools. Graduation: Gwinnett County Public Schools, class of 2025."
+  },
+  "gettingAround": [
+    {
+      "label": "Downtown Atlanta · 30 mi",
+      "value": "~48 min · 72 at rush",
+      "minutes": {
+        "min": 48,
+        "max": 72
+      }
+    },
+    {
+      "label": "Hartsfield-Jackson · 37 mi",
+      "value": "52–76 min",
+      "minutes": {
+        "min": 52,
+        "max": 76
+      }
+    },
+    {
+      "label": "Buckhead · 21 mi",
+      "value": "35–55 min",
+      "minutes": {
+        "min": 35,
+        "max": 55
+      }
+    },
+    {
+      "label": "Perimeter Center · 18 mi",
+      "value": "28–45 min",
+      "minutes": {
+        "min": 28,
+        "max": 45
+      }
+    },
+    {
+      "label": "MARTA Doraville · 11 mi",
+      "value": "25–32 min",
+      "minutes": {
+        "min": 25,
+        "max": 32
+      }
+    },
+    {
+      "label": "Peachtree Corners · 6 mi",
+      "value": "13–15 min",
+      "minutes": {
+        "min": 13,
+        "max": 15
+      }
+    },
+    {
+      "label": "Interstate 85 · Peachtree Industrial",
+      "value": "the city's roads out"
+    }
+  ],
+  "planning": [
+    {
+      "title": "Gwinnett Place Mall site",
+      "text": "Gwinnett County bought the mall in 2020 and the Macy's in 2024; its plan for the site is housing, a central park and an international cultural centre, built over about 20 years."
+    },
+    {
+      "title": "Gas South Arena",
+      "text": "A $170 million renovation of the 13,000-seat arena was under way in 2025."
+    }
+  ],
+  "sources": [
+    {
+      "name": "U.S. Census Bureau ACS 2020–2024 — Duluth (MMCG Analytics)",
+      "url": "https://mmcganalytics.com/georgia/gwinnett-county/duluth/"
+    },
+    {
+      "name": "Data USA — Duluth, GA",
+      "url": "https://datausa.io/profile/geo/duluth-ga"
+    },
+    {
+      "name": "Wikipedia — Duluth, Georgia",
+      "url": "https://en.wikipedia.org/wiki/Duluth,_Georgia"
+    },
+    {
+      "name": "Wikipedia — Southeastern Railway Museum",
+      "url": "https://en.wikipedia.org/wiki/Southeastern_Railway_Museum"
+    },
+    {
+      "name": "Wikipedia — Gwinnett Place Mall",
+      "url": "https://en.wikipedia.org/wiki/Gwinnett_Place_Mall"
+    },
+    {
+      "name": "Wikipedia — Gas South Arena",
+      "url": "https://en.wikipedia.org/wiki/Gas_South_Arena"
+    },
+    {
+      "name": "Wikipedia — Rogers Bridge Park",
+      "url": "https://en.wikipedia.org/wiki/Rogers_Bridge_Park"
+    },
+    {
+      "name": "Fox 5 Atlanta — Duluth Fall Festival at 40",
+      "url": "https://fox5atlanta.com/news/duluth-fall-festival-celebrates-40-years-of-family-fun"
+    },
+    {
+      "name": "Yahoo News — U.S. News 2027 K-8 rankings, Georgia",
+      "url": "https://www.yahoo.com/news/us/articles/best-schools-ga-u-news-140748215.html"
+    },
+    {
+      "name": "Drive times: Google Routes, from Town Green, typical traffic on a Thursday",
+      "url": "https://maps.google.com"
+    }
+  ],
+  "film": {
+    "lines": [
+      {
+        "say": "Duluth, Georgia, runs south from the Chattahoochee River to Interstate 85, and its story runs the same way.",
+        "chapter": "overview",
+        "shots": [
+          {
+            "photo": "5101936b",
+            "weight": 7,
+            "label": "Rogers Bridge",
+            "seedance": true
+          },
+          {
+            "photo": "7c4faaf1",
+            "weight": 6,
+            "label": "Chattahoochee River",
+            "seedance": true
+          },
+          {
+            "photo": "6180149f",
+            "label": "Rogers Bridge",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "The railroad came in 1871 and named the town after Duluth, Minnesota; its first depot now stands at the Southeastern Railway Museum.",
+        "chapter": "history",
+        "shots": [
+          {
+            "photo": "d8f0de74",
+            "weight": 6,
+            "label": "Duluth Depot",
+            "callout": {
+              "type": "stat",
+              "big": "1871",
+              "label": "the railroad arrives · the town becomes Duluth"
+            }
+          },
+          {
+            "photo": "b17b4038",
+            "weight": 6,
+            "label": "Southeastern Railway Museum",
+            "callout": {
+              "type": "stat",
+              "big": "90+",
+              "label": "railcars · Georgia's transportation museum"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Gwinnett County bought Duluth's old Gwinnett Place Mall in 2020, to rebuild it.",
+        "chapter": "future",
+        "shots": [
+          {
+            "photo": "660a3505",
+            "label": "Gwinnett Place Mall",
+            "weight": 8,
+            "callout": {
+              "type": "stat",
+              "big": "1984",
+              "label": "the mall opens · the county buys it in 2020"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Downtown, City Hall faces the Town Green across a fountain, a short walk from the tracks.",
+        "chapter": "downtown",
+        "shots": [
+          {
+            "photo": "1f7212e0",
+            "weight": 6,
+            "label": "Town Green"
+          },
+          {
+            "photo": "c04869ff",
+            "weight": 5,
+            "label": "Duluth Festival Center"
+          }
+        ]
+      },
+      {
+        "say": "Every September the Fall Festival fills the Town Green, as it has for forty years, and Gas South Arena seats thirteen thousand for hockey.",
+        "chapter": "events",
+        "shots": [
+          {
+            "photo": "8af28afc",
+            "weight": 5,
+            "label": "Town Green",
+            "callout": {
+              "type": "stat",
+              "big": "40 years",
+              "label": "of the Fall Festival · last weekend of September"
+            }
+          },
+          {
+            "photo": "4c395c9e",
+            "weight": 6,
+            "label": "Gas South Arena",
+            "callout": {
+              "type": "stat",
+              "big": "13,000",
+              "label": "seats · opened 2003"
+            }
+          }
+        ]
+      },
+      {
+        "say": "From Duluth, downtown Atlanta is thirty miles down Interstate 85: forty-eight minutes, seventy-two at rush hour.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "38b8175f",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "~48 min",
+              "label": "to downtown Atlanta · 72 at rush hour",
+              "source": "30 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "43da3446",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "Pleasant Hill Road crosses Interstate 85 in Duluth; MARTA's Doraville station is twenty-five minutes away, and the average trip to work is thirty.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "ac7455fa",
+            "weight": 6,
+            "label": "Pleasant Hill Road",
+            "callout": {
+              "type": "stat",
+              "big": "25 min",
+              "label": "to MARTA rail at Doraville · 32 at rush hour",
+              "source": "11 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "e206deab",
+            "weight": 5,
+            "callout": {
+              "type": "stat",
+              "big": "30 min",
+              "label": "average trip to work · Georgia 28",
+              "source": "ACS 2020–24 · Data USA"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Duluth's public schools are Gwinnett County's; Peachtree Ridge High, serving the north of the city, ranks fifty-third in Georgia.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "22518086",
+            "weight": 7,
+            "label": "Peachtree Ridge High",
+            "callout": {
+              "type": "stat",
+              "big": "#53",
+              "label": "in Georgia · high school",
+              "source": "U.S. News, 2026–27"
+            }
+          },
+          {
+            "photo": "74574df7",
+            "weight": 5,
+            "label": "Peachtree Ridge High",
+            "callout": {
+              "type": "stat",
+              "big": "94.8%",
+              "label": "graduate · district 85.4%",
+              "source": "Gwinnett County Public Schools, class of 2025"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Duluth High serves the south of the city; across the river, Duluth addresses attend Fulton County's River Trail Middle, fourth in Georgia.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "adb6fb03",
+            "weight": 5,
+            "label": "Duluth High"
+          },
+          {
+            "photo": "ab8ed8e5",
+            "weight": 6,
+            "label": "River Trail Middle",
+            "callout": {
+              "type": "stat",
+              "big": "#4",
+              "label": "in Georgia · middle school",
+              "source": "U.S. News, 2027"
+            }
+          }
+        ]
+      },
+      {
+        "say": "The median Duluth home is worth four hundred one thousand dollars, a third above Georgia's; the largest stand around TPC Sugarloaf.",
+        "chapter": "homes",
+        "shots": [
+          {
+            "photo": "44fca8cd",
+            "weight": 7,
+            "label": "TPC Sugarloaf",
+            "callout": {
+              "type": "stat",
+              "big": "$400,800",
+              "label": "median home value · 1.3× Georgia",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          },
+          {
+            "photo": "e899f476",
+            "weight": 5,
+            "callout": {
+              "type": "stat",
+              "big": "+10%",
+              "label": "on the previous Census estimate",
+              "source": "ACS 2019–23 → 2020–24 · Data USA"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Almost half of Duluth's homes are rented, at a median near eighteen hundred dollars a month; household income is a fifth above the state's.",
+        "chapter": "homes",
+        "shots": [
+          {
+            "photo": "c8983bd4",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "$1,828",
+              "label": "median rent a month · 43% of homes are rented",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          },
+          {
+            "photo": "86e0a1f1",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "$95,331",
+              "label": "median household income · 1.2× Georgia",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
