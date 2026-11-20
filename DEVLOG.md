@@ -23,6 +23,21 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-20 07:25 UTC — phase362: no work-from-home figures in the commute
+
+**Objective**: Owner on phase361: "不用说百分比在家办公 没有任何价值".
+**Actions**: every share-working-from-home line and callout is gone from the six profiles. Each city's second commute line now carries its average trip to work against Georgia's 28 minutes (ACS 2020–24) and its road, plus one destination where the city has one that is its own:
+- Cumming: 31 min, mostly on Georgia 400; Avalon in Alpharetta 22 min (26 at rush, Google Routes, Thursday).
+- Sugar Hill: 33 min, five over Georgia's, much of it on I-985.
+- Buford: Gainesville 28 min up I-985 (32 at rush); its average trip is 27.5 min.
+- Suwanee: I-85 along its edge; 30 min.
+- Johns Creek: no interstate, no rail; 30 min.
+- Alpharetta: 26 min, two under Georgia's; Georgia 400 through the city.
+All six re-assembled: Cumming `eba89cd8` (1:59), Sugar Hill `310f775c` (1:58.5), Buford `5b1fa41f` (1:57.5), Suwanee `34ec5cbd` (1:56), Johns Creek `551968a4` (1:57), Alpharetta `a7c38cfa` (1:58.5).
+**Verified**: the six commute stretches frame by frame (no home-working figure anywhere); every line voiced; approved photos equal each film; feed serves the six streams, shortest section 15.9%; each city page serves its stream.
+**Cost**: no Seedance; ~70 TTS requests, on the fallback models.
+**Learnings**: a statistic is not a commute fact unless a buyer would decide on it. Playbook updated.
+
 ## 2026-11-20 07:00 UTC — phase361: Commute told per city in all six films; callouts kept clear of the card's rail
 
 **Objective**: Owner, 2026-11-20: "commute这一个板块讲的都差不多 距离dt 机场啥的 能不能再设计一下 有点差异化" — and on the risk that a long callout touches the new rail (phase360): "你觉得有必要就改". Go-ahead: "做吧 tts额度用完了用fallback的option".

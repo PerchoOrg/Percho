@@ -595,13 +595,7 @@
           },
           {
             "photo": "adc8c3e4",
-            "weight": 6,
-            "callout": {
-              "type": "stat",
-              "big": "23.5%",
-              "label": "of workers work from home",
-              "source": "ACS 2020–24 · Data USA"
-            }
+            "weight": 6
           }
         ]
       },

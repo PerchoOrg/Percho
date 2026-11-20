@@ -562,7 +562,7 @@
         ]
       },
       {
-        "say": "Alpharetta's own commute is short: twenty-six minutes on average, and over a third of its workers stay home.",
+        "say": "Alpharetta's own commute is short: twenty-six minutes on average, two below Georgia's, with Georgia 400 through the city.",
         "chapter": "commute",
         "shots": [
           {
@@ -577,13 +577,7 @@
           },
           {
             "photo": "30f022c3",
-            "weight": 6,
-            "callout": {
-              "type": "stat",
-              "big": "36.7%",
-              "label": "of workers work from home · Georgia 15.9%",
-              "source": "ACS 2020–24 · Data USA"
-            }
+            "weight": 6
           }
         ]
       },

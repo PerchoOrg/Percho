@@ -605,7 +605,7 @@
         ]
       },
       {
-        "say": "Interstate 985 runs north through Buford: Gainesville is twenty-eight minutes away, and only one Buford worker in seven works from home.",
+        "say": "Interstate 985 runs north through Buford: Gainesville is twenty-eight minutes away, and Buford's average trip to work is the same.",
         "chapter": "commute",
         "shots": [
           {
@@ -623,8 +623,8 @@
             "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "13.9%",
-              "label": "of workers work from home · Georgia 15.9%",
+              "big": "27.5 min",
+              "label": "average trip to work · Georgia 28",
               "source": "ACS 2020–24 · Data USA"
             }
           }
