@@ -144,6 +144,12 @@ profile that breaks the first four; `pnpm city:profile <slug> --check`):
   and each name sits under its own stretch, the playing one lit; a tap starts a
   section, a drag scrubs; nothing moves inside a word (his picks of the demos at
   `/demos/city-card-bottom-v3/` and `/demos/city-card-band-dots-v1/`, 2026-11-18);
+  — **since phase360 the timeline runs down the card's RIGHT edge** (his pick of
+  `/demos/city-card-right-rail-v1/`, 2026-11-20: the band across the foot had
+  gone stale): the line fills top to bottom, a dot at each handover, each name
+  level beside its own stretch; tap to start a part, slide along it to scrub.
+  Keep a callout's label inside the left 75% of the frame — the rail's words
+  begin at about 78%;
 - the four required chapters say the same KIND of thing in every city, so one
   city's Schools can be watched against another's.
 

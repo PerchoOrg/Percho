@@ -23,6 +23,23 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-20 02:55 UTC — phase360: the city card's parts run down its right edge
+
+**Objective**: Owner on `/demos/city-card-right-rail-v1/` (phase359), 2026-11-20: "1" — the first of the three: a vertical timeline on the right, each name level beside its stretch. His reason for moving it: the band across the foot "有点审美疲劳".
+**Actions** (`apps/mobile/components/cards/CommunityFace.tsx`, city cards only — a card with `tourChapters`):
+- The band across the foot is gone. A rail runs down the right edge from under the top-right capsule to above the name row (`RAIL_TOP` 58, `RAIL_BOTTOM` 92, 112pt wide): a 2pt line 15pt from the edge that fills top to bottom, a dot where one part hands over to the next (`RailDot`, white once passed), and each part's name right-aligned beside its own stretch, the playing one lit. Cells are `flexGrow` by share of the film, as the band's were.
+- A second scrim darkens the right edge under the words (they sit on the photograph now, with a text shadow, not on a veil).
+- The name row drops back to the card's foot (`infoOverBand` removed); Explore keeps its white pill.
+- Gesture: the same `scrub` pan, read along y on a city card — a touch starts the part under the finger, a drag past 8pt scrubs. `barWidth` holds the rail's height there.
+**Decisions**:
+- Drag-to-scrub stays. The demo's note worried that a vertical drag would fight the feed; the deck's swipe is sideways, so the rail's up-and-down drag has less to contend with than the band's did. `blocksExternalGesture(deckGesture)` is unchanged.
+- `adjustsFontSizeToFit` is gone from the words: a part's floor of 15% is about 56pt of rail, and a word needs one line of it.
+- `MIN_SECTION_SHARE` (15%) stays as the planner's rule; it was sized for the band's width and is more than the rail needs.
+**Verified**: `pnpm typecheck`, biome on the file, `pnpm test` (870 passed) in `apps/mobile`. The layout is the demo's, which was rendered at two points of Buford's film.
+**Not verified**: on a phone — nothing here could run the app. It needs the dev client (1.0.1 build 11) on Metro; a production TestFlight build will not show it.
+**Risks**: the films' burned-in callout labels run to about 80% of the frame's width at their longest ("median rent a month · 32% of homes are rented"); the rail's words start at about 78%. A dim word can touch the end of a long label when they share a height. If it shows on the phone, the fix is in the renderer (cap the label's width), not on the card.
+**Next steps**: owner looks on the phone; then Duluth.
+
 ## 2026-11-20 02:40 UTC — phase359: Sugar Hill's opening without the mine shaft; the city card's parts on the right (demo only)
 
 **Objective**: Owner, 2026-11-20: "suger hill第二个照片太奇怪 gold mine park 换掉" and "city底部的进度条有点审美疲劳 放在右边怎么样 给我个demo看看".
