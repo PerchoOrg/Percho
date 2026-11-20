@@ -23,6 +23,27 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-20 07:00 UTC — phase361: Commute told per city in all six films; callouts kept clear of the card's rail
+
+**Objective**: Owner, 2026-11-20: "commute这一个板块讲的都差不多 距离dt 机场啥的 能不能再设计一下 有点差异化" — and on the risk that a long callout touches the new rail (phase360): "你觉得有必要就改". Go-ahead: "做吧 tts额度用完了用fallback的option".
+**Actions**:
+- **Commute = one comparable line + one line of the city's own.** The first line is unchanged in every film (downtown Atlanta, off-peak and rush) so cities stay comparable. The second line — Buckhead, the airport and MARTA, the same in all six — is replaced by how that city actually gets to work, from ACS 2020–24 (Data USA) against Georgia's 28.3 min and 15.9% working from home, over that city's own road:
+  - Cumming: a third of Forsyth's workers work from home (32.5%); the rest average 31 min, mostly on Georgia 400 — GA 400 traffic and its gantries.
+  - Sugar Hill: 33 min, five over Georgia's average, much of it on I-985; 23.5% at home — I-985 in fog.
+  - Buford: I-985 runs north through it, Gainesville 28 min (32 at rush, Google Routes); only 13.9% work from home — the North 985 shield at mile 8, I-985 traffic.
+  - Suwanee: I-85 along its edge; 30 min; 25.9% at home — I-85 at sunset, I-85 traffic.
+  - Johns Creek: no interstate and no rail, four-lane roads; 37.8% at home, the most of the six — Holcomb Bridge Road and Findley Road (Commons, CC0).
+  - Alpharetta: its residents' own commute is the shortest, 26 min; 36.7% at home — roads at Georgia 400 Center.
+  Buckhead, the airport and MARTA stay on each city page (`gettingAround`).
+- `scripts/render-worker/callouts.py`: `RIGHT_EDGE = 0.725` — a stat's figure, label and source and a counter's panel end at 72.5% of the frame's width, short of the rail's words (from ~77%). Test asserts it. The three render workers were restarted after the merge (`launchctl kickstart`, start 22:25 PT) — callouts are burned at assembly, so every film assembled since carries it.
+- Road photos: `city:photos place` for GA 400, I-985, I-85, Peachtree Industrial, Buford Highway, the Cumming park-and-ride; Commons for Johns Creek's roads and I-985 at US 129. "Quality Inn Suwanee I-85" (what an exit search returned) rejected at the place level.
+- **All six re-assembled**: Cumming `c3201f75` (1:59), Sugar Hill `396f3ad4` (1:58.5), Buford `7c377a94` (1:58), Suwanee `6a3f1413` (1:57.5), Johns Creek `ab06e704` (1:57), Alpharetta `c39d80e1` (1:58). Commute shares 15.6–18.6%.
+**Decisions**: kept downtown as the shared first line — a buyer comparing commutes across cities needs one number that means the same everywhere. Cumming's growth line and both new lines were shortened to keep the films under two minutes.
+**Issues**: Google's photos of highways are drivers' phone shots through the windscreen — plain, but each is that city's own road. Georgia 400's Google place is the same for Cumming and Alpharetta; each film uses different photos of it.
+**Verified**: each film's commute stretch frame by frame (new callouts wrap inside the left 72.5%); narration in every line (12/12, and 11/11 for Suwanee and Johns Creek); approved photos equal each film's; `/api/mobile/feed` serves the six new streams with every section ≥15%; each city page serves its new stream.
+**Cost**: no Seedance. 70 TTS requests in one batch (past the main model's 100 for the day; the worker's fallback models voiced the rest, as the owner asked). Google Places ~16 searches; Routes 2 calls.
+**Next steps**: owner watches; then Duluth.
+
 ## 2026-11-20 02:55 UTC — phase360: the city card's parts run down its right edge
 
 **Objective**: Owner on `/demos/city-card-right-rail-v1/` (phase359), 2026-11-20: "1" — the first of the three: a vertical timeline on the right, each name level beside its stretch. His reason for moving it: the band across the foot "有点审美疲劳".
