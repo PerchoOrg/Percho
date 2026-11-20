@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-20
+- **Sugar Hill's film opens differently.** The picture of the old mine entrance is gone; the film now opens on City Hall across its plaza and tells only the story of the spilled sugar.
 - **Buford has a city film.** It is about the schools first: Buford is the
   one city in Gwinnett County that runs its own school district, and the
   film opens on its new stadium. It also tells where the city came from —
