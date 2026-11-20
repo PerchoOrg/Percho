@@ -630,39 +630,27 @@
         ]
       },
       {
-        "say": "Buckhead is forty minutes from Cumming and the airport fifty-six; the nearest MARTA station, North Springs, is thirty-three.",
+        "say": "A third of Forsyth's workers now work from home; the rest average thirty-one minutes, most of it on Georgia 400.",
         "chapter": "commute",
         "shots": [
           {
-            "photo": "da82a0ea",
+            "photo": "18924ed7",
             "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "40 min",
-              "label": "to Buckhead · 66 at rush hour",
-              "source": "31 mi · Google Maps, typical traffic"
+              "big": "32.5%",
+              "label": "of workers work from home · Georgia 15.9%",
+              "source": "ACS 2020–24 · Data USA"
             }
           },
           {
-            "photo": "4d38e10f",
-            "label": "Hartsfield-Jackson",
+            "photo": "91ae3684",
             "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "56 min",
-              "label": "to the airport · 86 at rush hour",
-              "source": "47 mi · Google Maps, typical traffic"
-            }
-          },
-          {
-            "photo": "1b573187",
-            "label": "North Springs station",
-            "weight": 6,
-            "callout": {
-              "type": "stat",
-              "big": "33 min",
-              "label": "to MARTA rail · 55 at rush hour",
-              "source": "26 mi · Google Maps, typical traffic"
+              "big": "31 min",
+              "label": "average trip to work · Georgia 28",
+              "source": "ACS 2020–24 · Data USA"
             }
           }
         ]

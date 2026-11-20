@@ -624,39 +624,28 @@
         ]
       },
       {
-        "say": "Buckhead is forty minutes from Johns Creek and the airport fifty-five; the nearest MARTA stations are half an hour away.",
+        "say": "Johns Creek has no interstate and no rail: its drives run on four-lane roads, and almost two in five residents work from home.",
         "chapter": "commute",
         "shots": [
           {
-            "photo": "caf1621c",
+            "photo": "f39e9cae",
+            "label": "Holcomb Bridge Road",
             "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "39 min",
-              "label": "to Buckhead · 62 at rush hour",
-              "source": "23 mi · Google Maps, typical traffic"
+              "big": "0",
+              "label": "interstate exits or rail stations in the city"
             }
           },
           {
-            "photo": "bdc248bb",
-            "label": "Hartsfield-Jackson",
+            "photo": "45ed7d72",
+            "label": "Findley Road",
             "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "55 min",
-              "label": "to the airport · 77 at rush hour",
-              "source": "38 mi · Google Maps, typical traffic"
-            }
-          },
-          {
-            "photo": "8e6cbb43",
-            "label": "North Springs station",
-            "weight": 6,
-            "callout": {
-              "type": "stat",
-              "big": "30 min",
-              "label": "to MARTA rail · Doraville or North Springs",
-              "source": "15–20 mi · Google Maps, typical traffic"
+              "big": "37.8%",
+              "label": "of workers work from home · Georgia 15.9%",
+              "source": "ACS 2020–24 · Data USA"
             }
           }
         ]

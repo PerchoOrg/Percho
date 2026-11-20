@@ -605,28 +605,27 @@
         ]
       },
       {
-        "say": "Buckhead is forty-nine minutes from Buford and the airport an hour; add half an hour at rush hour.",
+        "say": "Interstate 985 runs north through Buford: Gainesville is twenty-eight minutes away, and only one Buford worker in seven works from home.",
         "chapter": "commute",
         "shots": [
           {
-            "photo": "60fe9129",
+            "photo": "3f1ab361",
             "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "49 min",
-              "label": "to Buckhead · 77 at rush hour",
-              "source": "35 mi · Google Maps, typical traffic"
+              "big": "28 min",
+              "label": "to Gainesville · 32 at rush hour",
+              "source": "19 mi · Google Maps, typical traffic"
             }
           },
           {
-            "photo": "383114bf",
-            "label": "Hartsfield-Jackson",
+            "photo": "eecc84df",
             "weight": 6,
             "callout": {
               "type": "stat",
-              "big": "60 min",
-              "label": "to the airport · 87 at rush hour",
-              "source": "46 mi · Google Maps, typical traffic"
+              "big": "13.9%",
+              "label": "of workers work from home · Georgia 15.9%",
+              "source": "ACS 2020–24 · Data USA"
             }
           }
         ]

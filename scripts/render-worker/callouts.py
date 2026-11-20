@@ -57,6 +57,9 @@ COUNT_REST_S = 2.4
 #: and bottom, and the owner asked for figures well clear of the name
 #: ("不要和底部的city名字重合 向上移动", 2026-11-15).
 FIGURE_BOTTOM = 0.69
+#: Nothing reaches past this, from the left: a city card names its parts down
+#: its right edge (phase360), the words starting at about 77% of the width.
+RIGHT_EDGE = 0.725
 
 WHITE = (255, 255, 255)
 AMBER = (240, 169, 75)  # `accentOnCard` in apps/mobile/theme/tokens.ts
@@ -197,11 +200,11 @@ def _figure_block(c: _Canvas, callout: dict[str, Any], t: float) -> None:
     """`stat`: a large figure, a rule, a label and a source."""
     w, h = c.w, c.h
     mx = round(w * 0.085)
-    inner = w - 2 * mx
+    inner = round(w * RIGHT_EDGE) - mx
     big = str(callout.get("big", ""))
     bfont = _fit(big, _serif, round(w * 0.165), inner, round(w * 0.033))
     lfont = _sans(round(w * 0.043), "Semibold")
-    lines = _wrap(str(callout.get("label", "")), lfont, inner * 0.92, 2)
+    lines = _wrap(str(callout.get("label", "")), lfont, inner, 2)
     source = str(callout.get("source") or "")
     sfont = _sans(round(w * 0.027), "Regular")
 
@@ -246,12 +249,13 @@ def _count_block(c: _Canvas, callout: dict[str, Any], t: float, clip_seconds: fl
 
     # Sized for the widest value, so the panel does not breathe as it counts.
     widest = f"{round(max(lo, hi)):,}"
-    bfont = _fit(widest, _serif, round(w * 0.130), w * 0.62, round(w * 0.07))
+    x0 = mx - round(pad * 0.4)
+    panel_w = round(w * RIGHT_EDGE) - x0
+    inner = panel_w - 2 * pad
+    bfont = _fit(widest, _serif, round(w * 0.130), inner, round(w * 0.07))
     lfont = _sans(round(w * 0.040), "Semibold")
     sfont = _sans(round(w * 0.027), "Regular")
     yfont = _sans(round(w * 0.026), "Medium")
-    panel_w = round(w * 0.70)
-    inner = panel_w - 2 * pad
     lines = _wrap(str(callout.get("label", "")), lfont, inner, 2)
     source = str(callout.get("source") or "")
 
@@ -262,7 +266,7 @@ def _count_block(c: _Canvas, callout: dict[str, Any], t: float, clip_seconds: fl
     label_h = round(len(lines) * lfont.size * 1.28)
     source_h = round(sfont.size * 1.9) if source else 0
     panel_h = pad + chart_h + years_h + big_h + rule_h + round(w * 0.034) + label_h + source_h + pad
-    x0, y1 = mx - round(pad * 0.4), round(h * (FIGURE_BOTTOM + 0.01))
+    y1 = round(h * (FIGURE_BOTTOM + 0.01))
     y0 = y1 - panel_h
     arrive = _appear(t)
 

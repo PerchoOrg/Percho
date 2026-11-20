@@ -11,6 +11,7 @@ sys.path.insert(0, str(REPO / "scripts" / "render-worker"))
 from callouts import (  # noqa: E402
     ARRIVE_S,
     FIGURE_BOTTOM,
+    RIGHT_EDGE,
     anim_seconds,
     count_progress,
     count_seconds,
@@ -62,7 +63,9 @@ def test_arrived_callout_stays_in_the_band_the_card_leaves_the_film(name, specs)
     box = img.getchannel("A").point(lambda v: 255 if v > 200 else 0).getbbox()
     assert box is not None, "the callout drew nothing"
     left, top, right, bottom = box
-    assert left >= W * 0.04 and right <= W * 0.96, f"{name} runs off the side: {box}"
+    assert left >= W * 0.04, f"{name} runs off the side: {box}"
+    # A city card's rail of parts runs down the right edge (phase360).
+    assert right <= W * (RIGHT_EDGE + 0.005), f"{name} runs under the card's rail: {box}"
     # The card draws its place pill and controls over the top 8% of the film,
     # and its eyebrow, name, link and progress bar from ~84% down.
     assert top >= H * 0.10, f"{name} sits under the card's top controls: {box}"
