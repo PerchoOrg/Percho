@@ -251,13 +251,17 @@ const SCRUB_TAP_TARGET = "scrub";
 /** How far a finger may drift on a part before the touch is a slide, in points. */
 const CHAPTER_TAP_SLOP = 8;
 /**
- * Armed into `tapSlot` by a touch on a city card's band of parts. The band
+ * Armed into `tapSlot` by a touch on a city card's rail of parts. The rail
  * seeks the film itself; the feed's only part is to un-pause — a jump into a
  * paused film would look like nothing happened.
  */
 export const CHAPTER_TAP_TARGET = "chapter";
-/** Height of that band — and how far the info block rides above it. */
-const BAND_H = 46;
+/**
+ * Where that rail runs, down the card's right edge: from under the top-right
+ * capsule to above the name row.
+ */
+const RAIL_TOP = 58;
+const RAIL_BOTTOM = 92;
 
 interface CommunityFaceProps {
 	card: CommunityCardV3;
@@ -366,11 +370,17 @@ export function CommunityFace({
 	/** 0..1 playback position, written by `CardVideo` off the UI thread. */
 	const progress = useSharedValue(0);
 	const fill = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
+	/** The same position, for a city card's rail: it runs top to bottom. */
+	const railFill = useAnimatedStyle(() => ({
+		height: `${progress.value * 100}%`,
+	}));
 	const segments = card.tourSegments ?? [];
 	/**
-	 * A city film is told in PARTS — five at most — and its card names them in
-	 * a band across its foot instead of cutting a bar into a dash per shot
-	 * (owner 2026-11-16: "可视化视频进度 模块化内容 可以让人自主选择"). Everything else
+	 * A city film is told in PARTS — five at most — and its card names them
+	 * down a rail on its right edge instead of cutting a bar into a dash per
+	 * shot (owner 2026-11-16: "可视化视频进度 模块化内容 可以让人自主选择"; on the right
+	 * since phase360, the band across the foot having gone stale: "审美疲劳 放在
+	 * 右边怎么样"). Everything else
 	 * is cut by place, as it always was. The place LABEL follows `segments`
 	 * either way.
 	 */
@@ -380,7 +390,10 @@ export function CommunityFace({
 
 	/* ── Scrubbing ────────────────────────────────────────────────────────── */
 
-	/** Measured width of the bar, so a touch x can become a fraction. */
+	/**
+	 * Measured length of the bar, so a touch can become a fraction: its width,
+	 * or the HEIGHT of a city card's rail, which is dragged up and down.
+	 */
 	const barWidth = useSharedValue(0);
 	/** True while a finger is down on the bar; `CardVideo` stops writing then. */
 	const scrubbing = useSharedValue(false);
@@ -459,7 +472,7 @@ export function CommunityFace({
 	const place = segments[placeIndex];
 
 	/**
-	 * Which part the film is in — the lit word in the band. Same derivation as
+	 * Which part the film is in — the lit word on the rail. Same derivation as
 	 * the place above, and stored with its card for the same reason.
 	 */
 	const [chapterAt, setChapterAt] = useState<{
@@ -510,11 +523,12 @@ export function CommunityFace({
 	 * would freeze the bar for the rest of the card's life.
 	 */
 	const scrub = useMemo(() => {
-		const locate = (x: number) => {
+		/** `at` is the touch along the bar: x, or y on a city card's rail. */
+		const locate = (at: number) => {
 			"worklet";
-			const width = barWidth.value;
-			if (width <= 0) return 0;
-			return Math.min(Math.max(x / width, 0), 1);
+			const length = barWidth.value;
+			if (length <= 0) return 0;
+			return Math.min(Math.max(at / length, 0), 1);
 		};
 		const dashAt = (ratio: number) => {
 			"worklet";
@@ -530,10 +544,10 @@ export function CommunityFace({
 			scrubIndex.value = dashAt(ratio);
 		};
 		/**
-		 * A touch on the band lands on the first frame of the part under the
-		 * finger: the band is offering "watch Schools", and Schools from the
-		 * middle of a sentence is not that. The band is a timeline — each word
-		 * sits under its own stretch of the film — so the part under the finger
+		 * A touch on the rail lands on the first frame of the part under the
+		 * finger: the rail is offering "watch Schools", and Schools from the
+		 * middle of a sentence is not that. The rail is a timeline — each word
+		 * sits beside its own stretch of the film — so the part under the finger
 		 * is the part playing at that point.
 		 */
 		const snap = (x: number) => {
@@ -572,14 +586,14 @@ export function CommunityFace({
 				// PAN is blocked below), so a still tap on the bar would also
 				// dispatch as a bare card tap and pause the film it just sought.
 				// Arm a target the feed does not handle — or, on a city card's
-				// band, one that only makes it play.
+				// rail, one that only makes it play.
 				if (tapSlot) {
 					tapSlot.value = {
 						target: byChapter ? CHAPTER_TAP_TARGET : SCRUB_TAP_TARGET,
 					};
 				}
 				scrubbing.value = true;
-				if (byChapter) snap(e.x);
+				if (byChapter) snap(e.y);
 				else track(e.x);
 				// Seek from touch-DOWN, not only from the release. This is the one
 				// callback a tap is guaranteed to reach — it is what draws the fill
@@ -590,11 +604,11 @@ export function CommunityFace({
 				seekTo.value = progress.value;
 			})
 			.onUpdate((e) => {
-				// On the band a tap that wobbles a few points is still a tap, and
+				// On the rail a tap that wobbles a few points is still a tap, and
 				// stays on the part's first frame; past that it is a drag, and a
 				// drag goes where it is dragged.
-				if (byChapter && Math.abs(e.translationX) < CHAPTER_TAP_SLOP) return;
-				track(e.x);
+				if (byChapter && Math.abs(e.translationY) < CHAPTER_TAP_SLOP) return;
+				track(byChapter ? e.y : e.x);
 			})
 			// The pointer lift, ahead of any gesture-state decision.
 			.onTouchesUp(commit)
@@ -621,7 +635,8 @@ export function CommunityFace({
 	]);
 
 	const onBarLayout = (e: LayoutChangeEvent) => {
-		barWidth.value = e.nativeEvent.layout.width;
+		const { width, height } = e.nativeEvent.layout;
+		barWidth.value = byChapter ? height : width;
 	};
 
 	/** True once this card's tour has passed `CardVideo`'s 82% mark. */
@@ -780,7 +795,7 @@ export function CommunityFace({
 			    it takes no width from the row, so the name keeps all of it and
 			    the glyphs keep their place — beside the name, the tag cost the
 			    glyphs on a short name and the name itself on a long one. */}
-			<View style={[styles.info, byChapter && styles.infoOverBand]}>
+			<View style={styles.info}>
 				<View style={styles.tagRow}>
 					<Text style={styles.badgeLabel}>{tag}</Text>
 				</View>
@@ -842,55 +857,65 @@ export function CommunityFace({
 			{/* Tour progress — one dash per PLACE when the film's structure came
 			    down with it, one continuous bar when it did not, and draggable
 			    either way. Only for a card that actually plays something. */}
-			{/* A city film's parts: a band across the card's foot, edge to edge,
-			    and a timeline. The line along its top edge is the film's
-			    progress, a dot marks where one part hands over to the next, and
-			    each part's name sits under its own stretch (owner 2026-11-18:
-			    "把字放到对应的区间下面"). The playing word is lit; nothing moves
-			    inside a word. A touch on a word starts that part.
+			{/* A city film's parts: a rail down the card's right edge, and a
+			    timeline read top to bottom. The line is the film's progress, a
+			    dot marks where one part hands over to the next, and each part's
+			    name sits level beside its own stretch (the owner's pick of
+			    `/demos/city-card-right-rail-v1/`, 2026-11-20). The playing word
+			    is lit; nothing moves inside a word. A touch on a word starts
+			    that part; a drag along the rail scrubs — up and down, which the
+			    deck's sideways swipe does not contend for.
 
-			    A stretch too short for its name shrinks the name a little — the
-			    planner keeps every section to 15% of the film so that it need
-			    not (`MIN_SECTION_SHARE`); films cut before that rule may. */}
+			    The planner keeps every section to 15% of the film
+			    (`MIN_SECTION_SHARE`), which is about 56pt of this rail: room for
+			    a word's line and a gap either side. */}
 			{!!card.videoUrl && byChapter && (
-				<GestureDetector gesture={scrub}>
-					<View style={styles.band} onLayout={onBarLayout}>
-						{chapters.map((c, i) => (
-							<View
-								key={`${c.name}-${c.endFraction}`}
-								style={[
-									styles.bandCell,
-									{
-										flexGrow:
-											c.endFraction - (chapters[i - 1]?.endFraction ?? 0),
-									},
-								]}
-							>
-								<Text
+				<>
+					<LinearGradient
+						colors={["rgba(0,0,0,0.5)", "rgba(0,0,0,0.22)", "transparent"]}
+						locations={[0, 0.2, 0.38]}
+						start={{ x: 1, y: 0 }}
+						end={{ x: 0, y: 0 }}
+						style={styles.scrim}
+						pointerEvents="none"
+					/>
+					<GestureDetector gesture={scrub}>
+						<View style={styles.rail} onLayout={onBarLayout}>
+							{chapters.map((c, i) => (
+								<View
+									key={`${c.name}-${c.endFraction}`}
 									style={[
-										styles.bandWord,
-										i === chapterIndex && styles.bandWordOn,
+										styles.railCell,
+										{
+											flexGrow:
+												c.endFraction - (chapters[i - 1]?.endFraction ?? 0),
+										},
 									]}
-									numberOfLines={1}
-									adjustsFontSizeToFit
-									minimumFontScale={0.8}
 								>
-									{c.name}
-								</Text>
+									<Text
+										style={[
+											styles.railWord,
+											i === chapterIndex && styles.railWordOn,
+										]}
+										numberOfLines={1}
+									>
+										{c.name}
+									</Text>
+								</View>
+							))}
+							<View style={styles.railTrack}>
+								<Animated.View style={[styles.railFill, railFill]} />
 							</View>
-						))}
-						<View style={styles.bandTrack}>
-							<Animated.View style={[styles.bandFill, fill]} />
+							{chapters.slice(0, -1).map((c) => (
+								<RailDot
+									key={`dot-${c.endFraction}`}
+									progress={progress}
+									at={c.endFraction}
+								/>
+							))}
 						</View>
-						{chapters.slice(0, -1).map((c) => (
-							<BandDot
-								key={`dot-${c.endFraction}`}
-								progress={progress}
-								at={c.endFraction}
-							/>
-						))}
-					</View>
-				</GestureDetector>
+					</GestureDetector>
+				</>
 			)}
 			{!!card.videoUrl && !byChapter && (
 				<GestureDetector gesture={scrub}>
@@ -934,11 +959,11 @@ export function CommunityFace({
 }
 
 /**
- * A dot on the band's progress line, where one part of a city film hands over
+ * A dot on the rail's progress line, where one part of a city film hands over
  * to the next. White once the film has passed it. Its own component for the
  * reason `ProgressDash` is: one `useAnimatedStyle` each.
  */
-function BandDot({
+function RailDot({
 	progress,
 	at,
 }: {
@@ -950,10 +975,10 @@ function BandDot({
 	}));
 	return (
 		<View
-			style={[styles.bandDotRing, { left: `${at * 100}%` }]}
+			style={[styles.railDotRing, { top: `${at * 100}%` }]}
 			pointerEvents="none"
 		>
-			<Animated.View style={[styles.bandDot, style]} />
+			<Animated.View style={[styles.railDot, style]} />
 		</View>
 	);
 }
@@ -1158,64 +1183,66 @@ const styles = StyleSheet.create({
 		marginBottom: 9,
 		overflow: "hidden",
 	},
-	/** Above the band of parts, by the gap the name keeps from the card's foot. */
-	infoOverBand: { bottom: BAND_H + 14 },
 	/**
-	 * The band of parts — from one edge of the card to the other, clipped by
-	 * the card's own bottom corners. A dark veil rather than a blur: there is
-	 * no blur module in this build, and the scrim under it is already near
-	 * black here.
+	 * The rail of parts — down the card's right edge, between the top-right
+	 * capsule and the name row. Its cells stack top to bottom, each as tall as
+	 * its part's share of the film (`flexGrow`, inline). Wide enough for the
+	 * longest word and the line; the whole of it takes the touch.
 	 */
-	band: {
+	rail: {
 		position: "absolute",
-		left: 0,
 		right: 0,
-		bottom: 0,
-		height: BAND_H,
+		top: RAIL_TOP,
+		bottom: RAIL_BOTTOM,
+		width: 112,
 		zIndex: 3,
-		flexDirection: "row",
-		backgroundColor: "rgba(18,20,18,0.42)",
 	},
-	/** The film's progress, along the band's top edge — not the card's. */
-	bandTrack: {
+	/** The film's progress: a 2pt line, 15pt in from the card's edge. */
+	railTrack: {
 		position: "absolute",
-		left: 0,
-		right: 0,
+		right: 15,
 		top: 0,
-		height: 2,
-		backgroundColor: "rgba(255,255,255,0.2)",
+		bottom: 0,
+		width: 2,
+		borderRadius: 1,
+		backgroundColor: "rgba(255,255,255,0.26)",
 	},
-	bandFill: { height: 2, backgroundColor: "#FFFFFF" },
-	/** A part's cell: as wide as its share of the film (`flexGrow`, inline). */
-	bandCell: {
+	railFill: { width: 2, borderRadius: 1, backgroundColor: "#FFFFFF" },
+	/** A part's cell: its word level with the middle of its stretch. */
+	railCell: {
 		flexBasis: 0,
-		minWidth: 0,
-		alignItems: "center",
+		minHeight: 0,
+		alignItems: "flex-end",
 		justifyContent: "center",
-		paddingHorizontal: 3,
+		paddingRight: 28,
+		paddingLeft: 8,
 	},
 	/**
 	 * The dot's dark ring, centred on the line: 10pt across, so its centre is
-	 * 5pt left of `left` and 4pt above the 2pt line's top.
+	 * 5pt above `top` and on the line's own centre (15 + 1 from the edge).
 	 */
-	bandDotRing: {
+	railDotRing: {
 		position: "absolute",
-		top: -4,
-		marginLeft: -5,
+		right: 11,
+		marginTop: -5,
 		width: 10,
 		height: 10,
 		borderRadius: 5,
-		backgroundColor: "rgba(18,20,18,0.55)",
+		backgroundColor: "rgba(18,20,18,0.45)",
 		alignItems: "center",
 		justifyContent: "center",
 	},
-	bandDot: { width: 6, height: 6, borderRadius: 3 },
-	bandWord: {
+	railDot: { width: 6, height: 6, borderRadius: 3 },
+	/** On the photograph, not on a veil — hence the shadow. */
+	railWord: {
 		...redlineText.listingCard.address,
 		fontWeight: "500",
-		color: "rgba(255,255,255,0.62)",
+		color: "rgba(255,255,255,0.66)",
+		textShadowColor: "rgba(0,0,0,0.55)",
+		textShadowOffset: { width: 0, height: 1 },
+		textShadowRadius: 3,
 	},
-	bandWordOn: { color: "#FFFFFF", fontWeight: "700" },
+	railWordOn: { color: "#FFFFFF", fontWeight: "700" },
 	/** The name + glyphs + Explore line — what `info` used to be. */
 	infoRow: {
 		flexDirection: "row",

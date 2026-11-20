@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-20
+- **A city card's parts moved to the right.** Overview, Schools, Homes, Commute and Life now run down the card's right edge beside a thin line that fills as the film plays, instead of across its foot. Tap a name to jump to that part, or slide along the line.
 - **Sugar Hill's film opens differently.** The picture of the old mine entrance is gone; the film now opens on City Hall across its plaza and tells only the story of the spilled sugar.
 - **Buford has a city film.** It is about the schools first: Buford is the
   one city in Gwinnett County that runs its own school district, and the
