@@ -15,6 +15,8 @@
  * provably attributable to a gesture that began under the card now showing it.
  */
 
+import { SWIPE_THRESHOLD_RATIO } from "./decide-swipe";
+
 /**
  * Offsets under this are "at rest". Not zero: a spring settling toward 0 and a
  * finger held almost still both leave sub-pixel residue on the shared value, and
@@ -65,10 +67,10 @@ export function labelOpacity({
  * Where the verdict mark starts and finishes appearing, as a share of the way
  * to the commit threshold.
  *
- * The start is not zero because the swipe-hint nudges the card 16pt (~13% of
- * the way on a phone): a mark that tracked the drag from the first point would
- * flicker a faint "PASS" through every hint. It is fully there by 45% so the
- * buyer reads the verdict long before the release that commits it.
+ * The start is not zero so that a thumb resting on the card, or the first
+ * points of a drag that turns out to be vertical, does not flicker a faint
+ * mark. It is fully there by 45% so the buyer reads the verdict long before
+ * the release that commits it.
  */
 export const VERDICT_MARK_FROM = 0.15;
 export const VERDICT_MARK_FULL = 0.45;
@@ -106,4 +108,17 @@ export function verdictVisual(progress: number): VerdictVisual {
 		markScale: VERDICT_MARK_MIN_SCALE + (1 - VERDICT_MARK_MIN_SCALE) * p,
 		locked: p >= 1,
 	};
+}
+
+/**
+ * How far the swipe-hint carries the card each way, as a share of the way to
+ * the commit threshold. Far enough that the mark is fully drawn and nearly full
+ * size; short of 1 on purpose — the lock means "letting go now decides", and a
+ * demonstration decides nothing.
+ */
+export const HINT_REACH = 0.8;
+
+/** The swipe-hint's offset in points for a card `cardWidth` wide. */
+export function hintReach(cardWidth: number): number {
+	return Math.max(0, cardWidth) * SWIPE_THRESHOLD_RATIO * HINT_REACH;
 }
