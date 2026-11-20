@@ -1,0 +1,636 @@
+{
+  "tagline": "The Leather City that kept its own schools: a district of five schools, a $62 million stadium, and Lake Lanier's dam at the edge of town.",
+  "summary": "Buford began in 1872 as a stop on the railroad to Charlotte and grew around the Bona Allen tannery, which made saddles, collars and shoes until 1981. It is the one city in Gwinnett County with its own school district, and it spends on it: an $85 million high school in 2019, a $62 million stadium in 2025. Most of the city is in Gwinnett; a northern sliver is in Hall. Buford Dam and Lake Lanier are a quarter-hour away, the Mall of Georgia closer.",
+  "locationNote": "39 mi northeast of downtown Atlanta",
+  "rankings": [
+    {
+      "rank": "#18",
+      "scope": "in Georgia",
+      "title": "Buford High School",
+      "detail": "U.S. News Best High Schools, 2026–27 — #666 in the U.S.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2026–27",
+        "url": "https://www.usnews.com/education/best-high-schools/georgia/districts/buford-city/buford-high-school-5733"
+      }
+    },
+    {
+      "rank": "#23",
+      "scope": "in Georgia",
+      "title": "Buford Middle School",
+      "detail": "U.S. News Best Middle Schools, as listed on usnews.com in November 2026.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "url": "https://www.usnews.com/education/k12/georgia/buford-middle-school-260896"
+      }
+    },
+    {
+      "rank": "#50",
+      "scope": "in Georgia",
+      "title": "Buford Academy",
+      "detail": "U.S. News Best Elementary Schools, 2027.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2027",
+        "url": "https://www.usnews.com/education/k12/georgia/buford-academy-278908"
+      }
+    },
+    {
+      "rank": "15",
+      "scope": "state titles",
+      "title": "Buford High football",
+      "detail": "GHSA championships from 1978 to 2025; more than 60 state titles across ten sports, by the city's count.",
+      "source": {
+        "name": "Georgia High School Association",
+        "year": "2025",
+        "url": "https://en.wikipedia.org/wiki/Buford_High_School_(Georgia)"
+      }
+    }
+  ],
+  "stats": [
+    {
+      "label": "Population",
+      "value": "17,997",
+      "note": "ACS 2020–24 · 17,144 in 2020"
+    },
+    {
+      "label": "Homes owner-occupied",
+      "value": "68%",
+      "note": "the rest rented"
+    },
+    {
+      "label": "Median rent",
+      "value": "$1,357",
+      "note": "a month · ACS 2020–24"
+    },
+    {
+      "label": "Students in the city's schools",
+      "value": "~6,000",
+      "note": "five schools · Buford City Schools"
+    }
+  ],
+  "compare": {
+    "against": "Georgia",
+    "rows": [
+      {
+        "label": "Median household income",
+        "city": {
+          "value": 69471,
+          "display": "$69,471"
+        },
+        "state": {
+          "value": 77353,
+          "display": "$77,353"
+        },
+        "takeaway": "0.9× the state"
+      },
+      {
+        "label": "Adults with a bachelor's or higher",
+        "city": {
+          "value": 29.3,
+          "display": "29.3%"
+        },
+        "state": {
+          "value": 34.9,
+          "display": "34.9%"
+        },
+        "takeaway": "0.8× the state"
+      },
+      {
+        "label": "Median home value",
+        "city": {
+          "value": 368700,
+          "display": "$368,700"
+        },
+        "state": {
+          "value": 303300,
+          "display": "$303,300"
+        },
+        "takeaway": "1.2× the state"
+      }
+    ],
+    "source": {
+      "name": "U.S. Census Bureau, ACS 2020–2024",
+      "year": "2024",
+      "url": "https://mmcganalytics.com/georgia/gwinnett-county/buford/"
+    }
+  },
+  "history": [
+    {
+      "year": "1872",
+      "short": "Incorporated",
+      "text": "Buford is incorporated on the new railroad between Atlanta and Charlotte, and named for the railway's president, Algernon Sidney Buford."
+    },
+    {
+      "year": "1873",
+      "short": "Bona Allen",
+      "text": "Bonaparte Allen opens a tannery; it becomes the country's largest maker of hand-tooled saddles and horse collars."
+    },
+    {
+      "year": "1919",
+      "short": "Tannery Row",
+      "text": "The company builds a shoe factory downtown; today it houses artists' studios."
+    },
+    {
+      "year": "1932",
+      "short": "2,200 workers",
+      "text": "Bona Allen reaches its peak employment. Its saddles are ridden by Roy Rogers and Gene Autry."
+    },
+    {
+      "year": "1957",
+      "short": "Buford Dam",
+      "text": "The dam on the Chattahoochee is completed and Lake Lanier fills behind it."
+    },
+    {
+      "year": "1981",
+      "short": "Tannery closes",
+      "text": "A fire ends leather-making in Buford; the owner does not rebuild."
+    },
+    {
+      "year": "1999",
+      "short": "Mall of Georgia",
+      "text": "The state's largest mall opens just outside the city."
+    },
+    {
+      "year": "2019",
+      "short": "New high school",
+      "text": "Buford High moves to an $85 million campus on Buford Highway."
+    },
+    {
+      "year": "2025",
+      "short": "The stadium",
+      "text": "Phillip Beard Stadium opens: 10,000 seats, $62 million, paid for and owned by the city."
+    }
+  ],
+  "growth": {
+    "series": [
+      {
+        "label": "1980",
+        "value": 6578
+      },
+      {
+        "label": "1990",
+        "value": 8771
+      },
+      {
+        "label": "2000",
+        "value": 10668
+      },
+      {
+        "label": "2010",
+        "value": 12225
+      },
+      {
+        "label": "2020",
+        "value": 17144
+      }
+    ],
+    "takeaway": "2.6× since 1980",
+    "source": {
+      "name": "U.S. Census Bureau, decennial census",
+      "url": "https://en.wikipedia.org/wiki/Buford,_Georgia"
+    }
+  },
+  "education": {
+    "schools": [
+      {
+        "level": "elementary",
+        "name": "Buford Academy",
+        "rank": "#50",
+        "scope": "in Georgia",
+        "detail": "Buford City Schools. U.S. News Best Elementary Schools, 2027. Not in the film: no usable photograph of it exists.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2027",
+          "url": "https://www.usnews.com/education/k12/georgia/buford-academy-278908"
+        }
+      },
+      {
+        "level": "elementary",
+        "name": "Buford Elementary",
+        "detail": "Buford City Schools; the youngest grades, not ranked by U.S. News.",
+        "source": {
+          "name": "Buford City Schools",
+          "url": "https://www.bufordcityschools.org"
+        }
+      },
+      {
+        "level": "middle",
+        "name": "Buford Middle",
+        "rank": "#23",
+        "scope": "in Georgia",
+        "detail": "Buford City Schools. U.S. News Best Middle Schools, as listed on usnews.com in November 2026.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "url": "https://www.usnews.com/education/k12/georgia/buford-middle-school-260896"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Buford High",
+        "rank": "#18",
+        "scope": "in Georgia",
+        "detail": "Buford City Schools; on an $85 million campus since 2019. U.S. News Best High Schools, 2026–27.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026–27",
+          "url": "https://www.usnews.com/education/best-high-schools/georgia/districts/buford-city/buford-high-school-5733"
+        }
+      }
+    ],
+    "measure": "Graduate in 4 years",
+    "rows": [
+      {
+        "label": "Buford HS",
+        "pct": 95,
+        "display": "95%"
+      },
+      {
+        "label": "Georgia",
+        "pct": 87.2,
+        "display": "87.2%",
+        "baseline": true
+      }
+    ],
+    "note": "Buford City Schools serves only homes inside the city limits; a Buford address outside them is in Gwinnett or Hall County schools. Buford High's rate is as listed by U.S. News in its 2026–27 edition, which does not name the class; Georgia's is the class of 2025."
+  },
+  "gettingAround": [
+    {
+      "label": "Downtown Atlanta · 39 mi",
+      "value": "~55 min · 83 at rush",
+      "minutes": {
+        "min": 55,
+        "max": 83
+      }
+    },
+    {
+      "label": "Hartsfield-Jackson · 46 mi",
+      "value": "60–87 min",
+      "minutes": {
+        "min": 60,
+        "max": 87
+      }
+    },
+    {
+      "label": "Buckhead · 35 mi",
+      "value": "49–77 min",
+      "minutes": {
+        "min": 49,
+        "max": 77
+      }
+    },
+    {
+      "label": "Perimeter Center · 32 mi",
+      "value": "43–76 min",
+      "minutes": {
+        "min": 43,
+        "max": 76
+      }
+    },
+    {
+      "label": "MARTA Doraville · 26 mi",
+      "value": "37–62 min · no rail in Gwinnett",
+      "minutes": {
+        "min": 37,
+        "max": 62
+      }
+    },
+    {
+      "label": "Gainesville · 19 mi",
+      "value": "28–32 min",
+      "minutes": {
+        "min": 28,
+        "max": 32
+      }
+    },
+    {
+      "label": "Interstates 985 and 85",
+      "value": "the city's roads out"
+    }
+  ],
+  "planning": [
+    {
+      "title": "New Street · downtown",
+      "text": "The Downtown Development Authority put 13.7 acres on New Street up for sale in 2026 for homes near Main Street; a first bid for eleven houses was recommended for rejection."
+    },
+    {
+      "title": "Apartments by the Mall of Georgia",
+      "text": "A 289-unit apartment community on Financial Center Way closed its financing in June 2026."
+    }
+  ],
+  "sources": [
+    {
+      "name": "U.S. Census Bureau ACS 2020–2024 — Buford (MMCG Analytics)",
+      "url": "https://mmcganalytics.com/georgia/gwinnett-county/buford/"
+    },
+    {
+      "name": "Data USA — Buford, GA",
+      "url": "https://datausa.io/profile/geo/buford-ga"
+    },
+    {
+      "name": "Wikipedia — Buford, Georgia",
+      "url": "https://en.wikipedia.org/wiki/Buford,_Georgia"
+    },
+    {
+      "name": "Wikipedia — Bona Allen Company",
+      "url": "https://en.wikipedia.org/wiki/Bona_Allen_Company"
+    },
+    {
+      "name": "Wikipedia — Buford Dam",
+      "url": "https://en.wikipedia.org/wiki/Buford_Dam"
+    },
+    {
+      "name": "Wikipedia — Mall of Georgia",
+      "url": "https://en.wikipedia.org/wiki/Mall_of_Georgia"
+    },
+    {
+      "name": "City of Buford — Phillip Beard Stadium",
+      "url": "https://www.cityofbuford.com/node/365"
+    },
+    {
+      "name": "GPB — Buford opens $62 million stadium",
+      "url": "https://www.gpb.org/news/2025/07/31/buford-holds-grand-opening-for-62-million-high-school-football-stadium"
+    },
+    {
+      "name": "AJC — Buford makes final payment on new high school",
+      "url": "https://www.ajc.com/news/local-education/buford-makes-final-payment-new-high-school/g7C9iqFhrueuL4k54GsQaI"
+    },
+    {
+      "name": "Drive times: Google Routes, from Main Street, typical traffic on a Thursday",
+      "url": "https://maps.google.com"
+    }
+  ],
+  "film": {
+    "lines": [
+      {
+        "say": "Buford, Georgia, is a city of eighteen thousand that runs its own schools, and built its high school a sixty-two million dollar stadium.",
+        "chapter": "overview",
+        "shots": [
+          {
+            "photo": "858ca727",
+            "weight": 8,
+            "callout": {
+              "type": "stat",
+              "big": "$62M",
+              "label": "Phillip Beard Stadium · 10,000 seats · 2025",
+              "source": "City of Buford"
+            }
+          },
+          {
+            "photo": "b2513074",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "Buford grew up as the Leather City: Bona Allen's tannery made saddles for Hollywood's cowboys and once employed twenty-two hundred people.",
+        "chapter": "history",
+        "shots": [
+          {
+            "photo": "d76cf45d",
+            "weight": 6
+          },
+          {
+            "photo": "a0e1a596",
+            "label": "Museum of Buford",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "2,200",
+              "label": "worked for Bona Allen at its peak, in 1932"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Buford City Schools is the only city school district in Gwinnett County: five schools and about six thousand students.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "6371cab7",
+            "label": "Buford High",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "5 schools",
+              "label": "about 6,000 students · one city district",
+              "source": "Buford City Schools"
+            }
+          },
+          {
+            "photo": "85e86ef7",
+            "label": "Buford Elementary",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "Buford High ranks eighteenth in Georgia; its campus, opened in 2019, cost eighty-five million dollars. Buford Middle ranks twenty-third.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "1722a2c0",
+            "label": "Buford High",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "#18",
+              "label": "in Georgia · high school",
+              "source": "U.S. News, 2026–27"
+            }
+          },
+          {
+            "photo": "26878d6d",
+            "label": "Buford Middle",
+            "weight": 5,
+            "callout": {
+              "type": "stat",
+              "big": "#23",
+              "label": "in Georgia · middle school",
+              "source": "U.S. News, as listed Nov 2026"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Buford High's Wolves have won fifteen state football championships, the latest in 2025.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "cf7ca542",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "15",
+              "label": "state football titles · 1978 to 2025",
+              "source": "Georgia High School Association"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Buford's Main Street keeps its brick storefronts, and the old shoe factory, Tannery Row, now holds artists' studios.",
+        "chapter": "downtown",
+        "shots": [
+          {
+            "photo": "f4ca14af",
+            "label": "Main Street",
+            "weight": 6
+          },
+          {
+            "photo": "34a77721",
+            "label": "Tannery Row",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "1919",
+              "label": "built as a shoe factory · artists' studios today"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Buford Dam, finished in 1957, holds back Lake Lanier a quarter-hour from Main Street.",
+        "chapter": "outdoor",
+        "shots": [
+          {
+            "photo": "494f14b4",
+            "label": "Lake Lanier",
+            "weight": 6,
+            "seedance": true
+          },
+          {
+            "photo": "cc8ec177",
+            "label": "Buford Dam",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "1957",
+              "label": "Buford Dam completed · 192 ft high"
+            }
+          }
+        ]
+      },
+      {
+        "say": "The Mall of Georgia, the largest in the state, opened beside Buford in 1999.",
+        "chapter": "daily",
+        "shots": [
+          {
+            "photo": "60d0576c",
+            "label": "Mall of Georgia",
+            "weight": 5,
+            "callout": {
+              "type": "stat",
+              "big": "225 stores",
+              "label": "Georgia's largest mall · opened 1999"
+            }
+          },
+          {
+            "photo": "4fa528bf",
+            "label": "Mall of Georgia",
+            "weight": 4
+          }
+        ]
+      },
+      {
+        "say": "The median Buford home is worth three hundred sixty-nine thousand dollars, a fifth above Georgia's, and two in three are owner-occupied.",
+        "chapter": "homes",
+        "shots": [
+          {
+            "photo": "d5b93d6a",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "$368,700",
+              "label": "median home value · 1.2× Georgia",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          },
+          {
+            "photo": "c491393d",
+            "weight": 5,
+            "callout": {
+              "type": "stat",
+              "big": "+6%",
+              "label": "on the previous Census estimate",
+              "source": "ACS 2019–23 → 2020–24 · Data USA"
+            }
+          }
+        ]
+      },
+      {
+        "say": "A third of Buford's homes are rented, at a median near fourteen hundred dollars a month; household income is a tenth below the state's.",
+        "chapter": "homes",
+        "shots": [
+          {
+            "photo": "213769b3",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "$1,357",
+              "label": "median rent a month · 32% of homes are rented",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          },
+          {
+            "photo": "315fa830",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "$69,471",
+              "label": "median household income · 0.9× Georgia",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          }
+        ]
+      },
+      {
+        "say": "From Buford, downtown Atlanta is thirty-nine miles down Interstates 985 and 85: fifty-five minutes, eighty-three at rush hour.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "18beacd7",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "~55 min",
+              "label": "to downtown Atlanta · 83 at rush hour",
+              "source": "39 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "cb893950",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "say": "Buckhead is forty-nine minutes from Buford and the airport an hour; add half an hour at rush hour.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "60fe9129",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "49 min",
+              "label": "to Buckhead · 77 at rush hour",
+              "source": "35 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "383114bf",
+            "label": "Hartsfield-Jackson",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "60 min",
+              "label": "to the airport · 87 at rush hour",
+              "source": "46 mi · Google Maps, typical traffic"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

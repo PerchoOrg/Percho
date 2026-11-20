@@ -1,6 +1,6 @@
 # City film & city card — playbook
 
-**Status**: in use · **Last updated**: 2026-11-19 · **Built on**: Suwanee, GA (phase318–333), Johns Creek, GA (phase344), Alpharetta, GA (phase346); all three recut as chapter films (phase354–355); Cumming, GA (phase356), Sugar Hill, GA (phase357)
+**Status**: in use · **Last updated**: 2026-11-20 · **Built on**: Suwanee, GA (phase318–333), Johns Creek, GA (phase344), Alpharetta, GA (phase346); all three recut as chapter films (phase354–355); Cumming, GA (phase356), Sugar Hill, GA (phase357), Buford, GA (phase358)
 **Read this before making the next city** (Johns Creek → Alpharetta → Milton → Cumming → Sugar Hill/Buford).
 
 Suwanee took fifteen phases, two rejected finished films and a dozen assemblies.
@@ -75,6 +75,7 @@ No two consecutive cities share a spine or an opening. Record each film here:
 | Alpharetta | A day → sections in a buyer's order, ending at night (first city built as chapters, §2.2) | Lake Windward from the air (Seedance) + "a suburb people commute to" | none in the film since the 15% rule — on the page | Tech: 700 companies, 122,000 people by day | ~1:55 |
 | Cumming | One city, one county (phase356) | City Hall with Sawnee Mountain behind it: "Forsyth County, Georgia, has one city" + fastest-growing city in the metro | none in the film — on the page | Lake Lanier (`signature`); the film is about the county that carries the city's address, and says so | ~1:59 |
 | Sugar Hill | A hero subject: what the city runs (phase357); sections reordered — Overview → Life → Homes → Commute → Schools | the rotunda with the city's name + the story of the name (a spilled bag of sugar, or gold-mine quartz); no ranking | the name story is the opening; dates on the page | City-run (`signature`): theatre, amphitheater, gym, golf course, gas utility | ~1:58 |
+| Buford | A hero subject that is a required chapter: Schools, a quarter of the film (phase358); Overview → Schools → Life → Homes → Commute | Phillip Beard Stadium from the air: "runs its own schools, and built its high school a sixty-two million dollar stadium" | one line IN the film — the Leather City, Bona Allen's saddles | the city school district: #18 high school, $85M campus, 15 football titles; no `signature` chapter | ~1:56 |
 
 ### 2.2 The chapters (owner 2026-11-16/17: "模块化内容 可以让人自主选择 … 每一个章节可以做得独立一些可以单独拉出来看 … 每个city尽量覆盖")
 
@@ -305,6 +306,8 @@ seedance 比如第一个 总体不要超过三个就好".
 - Drive times asked for a Friday: Google Routes returns a Friday 7:45 departure within minutes of mid-morning. Ask for a Tuesday–Thursday (Sugar Hill: 56 min on a Friday, 83 on a Thursday).
 - Planning to 1:59: the assembly adds about 2.5 s (the end card less the crossfades). Plan to 1:56 or under.
 - One wrong file name in a `commons` call adds nothing at all — check the count it prints.
+- Check the schools' photos before choosing the spine (phase358): run `city:photos place` for every school first. Buford's had them, so schools could be the hero; Cumming's and Sugar Hill's best schools had none.
+- Downloading the film the moment the assembly says `ready`: the stream can 404 for a minute. Retry.
 - Writing a line before knowing a photo exists for it: Medley (Johns Creek's new
   district) had only a restaurant front with people in it, so it is on the page,
   not in the film. Look at the contact sheet first, then write.
