@@ -23,6 +23,22 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-21 04:10 UTC — phase366.1: more of the community in its film, no frame in two films, one Explore pill
+
+**Objective**: Owner on Wild Timber's first cut, before the next community: "小区内的内容可以多一点 / 有一个喷泉的素材感觉用了很多次了 / explore button和city card保持一致". Plan approved ("好").
+**Findings**:
+- Few community shots was a SUPPLY problem, not the budget (`COMMUNITY_ACT_CLIP_BUDGET` = 8; the HOA site gave 4 usable photos). Google has "Wild Timber Hoa Cabin Club" with 8 full-size photos; research looks outward and never proposes the community's own places.
+- The fountain was Sims Lake Park's Seedance clip `b825542f`, live in Aberdeen, Suwanee's city film and Wild Timber; Autrey Mill's `3cbaba75` was likewise in three. A fresh-frames ranking alone did not remove it: the owner approved `b825542f` / `0da5e28d` by hand while reviewing Aberdeen (2026-08-20), and `ownerApproved` photos bypass ranking and the per-place cap — so a global approval from one scope forced the frame into every film near it, against the per-scope rule of 2026-11-15.
+- Explore: `CommunityFace` drew the white pill only when the film had chapters (`byChapter`), i.e. only for city films.
+**Actions**:
+- `lib/poi/own-places.ts` (+ tests): three Text Searches — name, "name clubhouse", "name pool" (the bare name returned only Wild Timber Road) — keep results that carry the community's distinctive words, lie within 2 km, have photos, and are not a business borrowing the name (route/premise, shops, restaurants, schools, real-estate offices…). Probed live on six communities: Aberdeen Community Pool, Windermere Pool + Golf Club, TPC Sugarloaf + its swim & tennis centre, Edinburgh HOA, Hedgerows, Bellmoore Park Clubhouse. `resolve` (community scope only) adds them as `amenities`; `photos` fetches up to 10 for an amenity place (3 elsewhere). ~$0.10 of Places per community.
+- `tour-steps/film-reuse.ts` (+ tests): photo ids in each OTHER community's / city's newest ready assembly. `computeFinalShots` ranks them behind fresh frames, only promotes a fresh establishing frame, drops them with "already in another live film", and an owner approval no longer forces a frame that another live film already shows. Amenity labels take the planned community's own name (a real Google amenity place can be linked to neighbours too).
+- `CommunityFace`: Explore is the white pill on every card.
+- Wild Timber re-cut on run `7a534981`: resolve → photos → tag → plan with the new code. Rejected (global, with reasons): `b2b8354d` near-duplicate sunset of `559605e1`; `506aca4d` box turtle behind a chain-link fence. On the stored run: Seedance 4 → 2 (the lake at 624 px and the E Center went to DepthFlow; no people in either), labels Green Space → Lake and Amenities → Walking Trails, eight narration lines rewritten from the HOA's figures with the parks named in clip order. Assembly `eee8d944`, `cf_stream_uid 98b059d02310dbcf9357a4b53f360804`, 77.0 s, 32 clips, the community's own act ~16 s (clubhouse ×4, pool, lake ×2, trail). **Spend: 2 new Seedance clips, $0.2817** ($0.1421 + $0.1396 — Seedance now costs ~$0.14 a clip, not the ~$0.08 average I quoted); ~20 Places calls for the re-resolve; 10 TTS lines.
+**Verified**: web typecheck 0, web vitest 1352/1352, mobile typecheck 0, mobile vitest 879/879, biome 0 errors. Frames of the re-cut checked every 2 s. Production feed and `/api/mobile/community/wild-timber` serve `98b059d0…`. The Explore pill is **not seen on a device** — the owner checks it on dev client 11.
+**Risks**: a re-cut of Aberdeen will no longer be forced to keep its two hand-approved Sims Lake frames, since other live films show them; they stay candidates. Owner approvals in `poi_photos` are still global — the cleaner fix is per-scope approval rows, which is a backfill and needs the owner's go-ahead, not done.
+**Next steps**: pitch #2 (Towne Village at Suwanee Dam vs Park Ridge) — awaiting the owner's choice from the previous message.
+
 ## 2026-11-21 02:39 UTC — phase366: community films 6 → 20, one at a time; Wild Timber (Sugar Hill) is the first
 
 **Objective**: Owner, 2026-11-20: "小区数量太少了 先扩充到20个 找这些city里最popular 大的 有出售的 最好有builder manage的 尽量每个city都找几个". Agreed rules: per city one flagship (big, established) + one or two builder communities now selling; scope = the seven cities with a city film; Seedance ≤ 2 per film. Then "一个一个来吧 先告诉我为什么入选前20 我批准后再开始build" — each community is pitched (why it made the list) and built only after his go-ahead.
