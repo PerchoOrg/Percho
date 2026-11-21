@@ -181,6 +181,24 @@ export function homesLast<T extends { photo_id: string; sort_order?: number }>(
   );
 }
 
+/**
+ * A frame another live film already shows is used only when the place has no
+ * fresh frame at all (phase366.1). It used to fill any slot the fresh frames
+ * left empty, so St Marlo's plan took Aberdeen's Chattahoochee Pointe river
+ * shot as the park's second clip beside its one fresh photo (phase366.12).
+ * PURE: `ranked` minus the reused frames whenever a fresh one exists.
+ */
+export function withoutReusedWhenFresh<
+  T extends { id: string; status: string | null; ai_tags?: unknown },
+>(ranked: T[], elsewhere: ReadonlySet<string>): T[] {
+  const fresh = (r: T) =>
+    r.status !== 'rejected' &&
+    ((r.ai_tags ?? {}) as { usable?: boolean }).usable !== false &&
+    !elsewhere.has(r.id);
+  if (!ranked.some(fresh)) return ranked;
+  return ranked.filter((r) => !elsewhere.has(r.id));
+}
+
 /** Shared: build the final shot list for a set of POIs. Photos step computes
  *  and persists this; assemble consumes it. Clips per POI vary by kind of
  *  place — see CLIPS_BY_BUCKET. */
@@ -329,7 +347,12 @@ export async function computeFinalShots(
       const amenity = amenityOf(tags);
       amenityByPhoto.set(p.id, amenity);
       photoPoi.set(p.id, p.poi_id);
-      key = `${p.poi_id}${GROUP_SEP}${amenity}`;
+      // One group per AMENITY, across the community's places. Keyed per place,
+      // the groups took the shared slots in whatever order they were met:
+      // St Marlo's site page took both Golf Course slots with an entrance sign
+      // and a fairway, and its Google place — the stone clubhouse — got none
+      // (phase366.12). Ranked together, the best of them win.
+      key = `amenities${GROUP_SEP}${amenity}`;
     }
     const arr = byPoi.get(key) ?? [];
     arr.push(p);
@@ -428,12 +451,13 @@ export async function computeFinalShots(
     // Only a fresh frame is promoted: promoting one another film already shows
     // would put it back ahead of the fresh frames the ranking just preferred.
     const lead = ranked.find((r) => establishing(r) && !handPicked(r) && !elsewhere.has(r.id));
-    const places = ranked.filter((r) => !handPicked(r) && r !== lead);
+    const pool = withoutReusedWhenFresh(ranked, elsewhere);
+    const places = pool.filter((r) => !handPicked(r) && r !== lead);
     // The owner's own approvals are not subject to `allowed`. The cap exists to
     // stop a POI monopolising the film with interchangeable Places photos; it
     // has no business overruling someone who looked at the frame and said yes.
     const mine = ranked.filter(ownerApproved);
-    const rest = [...ranked.filter((r) => handPicked(r) && !ownerApproved(r))];
+    const rest = [...pool.filter((r) => handPicked(r) && !ownerApproved(r))];
     const kept = [
       ...mine,
       ...[...rest, ...(lead ? [lead] : []), ...places].slice(0, Math.max(0, allowed - mine.length)),

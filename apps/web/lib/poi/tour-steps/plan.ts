@@ -447,18 +447,20 @@ async function writeNarration(sb: TourDb, run: RunRow, shots: unknown[]) {
     const { data: links } = await sb
       .from(poisTableOf(run.scope))
       .select(
-        'poi_id, distance_m, intent_bucket, poi:pois(display_name, rating, user_ratings_total)',
+        'poi_id, distance_m, intent_bucket, poi:pois(display_name, primary_type, rating, user_ratings_total)',
       )
       .eq(idColumnOf(run.scope), run.entity_id)
       .in('poi_id', poiIds);
     for (const l of links ?? []) {
       const poi = l.poi as unknown as {
         display_name?: string;
+        primary_type?: string | null;
         rating?: number | null;
         user_ratings_total?: number | null;
       } | null;
       facts[l.poi_id as string] = {
         name: poi?.display_name ?? '',
+        kind: poi?.primary_type ?? null,
         bucket: (l.intent_bucket as string) ?? 'other',
         miles: l.distance_m == null ? null : (l.distance_m as number) / 1609,
         rating: poi?.rating ?? null,
