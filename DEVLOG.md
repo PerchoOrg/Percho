@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-21 21:11 UTC — phase366.13: films choose their frames independently again
+
+**Objective**: owner 2026-11-21, after St Marlo: "我看你说的用过的就不优先用 这个我想了想不对 每个小区的素材都应该以实际情况为准 该放什么就放什么 互相独立".
+**Actions**: removed the cross-film reuse rule from `tour-steps/shots.ts` — the "already in another live film" ranking (phase366.1), its exclusion from owner approvals and from the establishing lead, and `withoutReusedWhenFresh` (phase366.12). Deleted `tour-steps/film-reuse.ts` and its test, and `reuse-when-fresh.test.ts`. A place's frames are ranked on their own merits again; the phase366.12 per-amenity ranking stays.
+**Decisions**: no film is re-cut on my own. Films planned under the rule (Wild Timber, Towne Village, Hedgerows, Arbors, Sugarloaf, St Marlo) skipped frames other films show — e.g. Sims Lake's fountain left Wild Timber, Aberdeen's Chattahoochee Pointe river shot left St Marlo. Re-cutting them is the owner's call.
+**Learnings**: an owner approval (`reviewed_by`) is still global for community photos and outranks the per-place cap in every film that links the place — the reason phase366.1 had touched it. Rare now that the editorial pass rejects rather than approves.
+**Verified**: web vitest 436 in lib/poi, typecheck 0.
+
 ## 2026-11-21 20:49 UTC — phase366.12: St Marlo Country Club (Duluth #2); three plan fixes it surfaced
 
 **Objective**: #6 of the batch. Owner: "开始做吧".

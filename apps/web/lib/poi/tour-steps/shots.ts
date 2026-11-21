@@ -181,24 +181,6 @@ export function homesLast<T extends { photo_id: string; sort_order?: number }>(
   );
 }
 
-/**
- * A frame another live film already shows is used only when the place has no
- * fresh frame at all (phase366.1). It used to fill any slot the fresh frames
- * left empty, so St Marlo's plan took Aberdeen's Chattahoochee Pointe river
- * shot as the park's second clip beside its one fresh photo (phase366.12).
- * PURE: `ranked` minus the reused frames whenever a fresh one exists.
- */
-export function withoutReusedWhenFresh<
-  T extends { id: string; status: string | null; ai_tags?: unknown },
->(ranked: T[], elsewhere: ReadonlySet<string>): T[] {
-  const fresh = (r: T) =>
-    r.status !== 'rejected' &&
-    ((r.ai_tags ?? {}) as { usable?: boolean }).usable !== false &&
-    !elsewhere.has(r.id);
-  if (!ranked.some(fresh)) return ranked;
-  return ranked.filter((r) => !elsewhere.has(r.id));
-}
-
 /** Shared: build the final shot list for a set of POIs. Photos step computes
  *  and persists this; assemble consumes it. Clips per POI vary by kind of
  *  place — see CLIPS_BY_BUCKET. */
@@ -268,10 +250,6 @@ export async function computeFinalShots(
   ]);
   const photos: NonNullable<typeof photosRaw> = [];
   const dropped: Array<{ photo_id: string; poi_id: string; reason: string }> = [];
-  // Frames another live film already shows rank below a place's fresh ones
-  // (phase366, see film-reuse.ts).
-  const { loadPhotosInOtherFilms } = await import('./film-reuse');
-  const elsewhere = await loadPhotosInOtherFilms(sb, owner);
 
   // Resolution gate, BEFORE the per-POI cap so a POI with a sharper alternate
   // uses it instead of spending its slot on a soft frame. Owner 2026-08-17, on
@@ -391,10 +369,6 @@ export async function computeFinalShots(
       const aUsable = aTags.usable === false ? 0 : 1;
       const bUsable = bTags.usable === false ? 0 : 1;
       if (aUsable !== bUsable) return bUsable - aUsable;
-      // A frame another live film already shows goes behind every fresh one.
-      const aFresh = elsewhere.has(a.id) ? 0 : 1;
-      const bFresh = elsewhere.has(b.id) ? 0 : 1;
-      if (aFresh !== bFresh) return bFresh - aFresh;
       // A hand-picked photo of this community outranks a generic Places photo
       // of the same POI, whatever the tagger scored them.
       const aSite = a.source === 'community_site' ? 1 : 0;
@@ -421,14 +395,11 @@ export async function computeFinalShots(
     // cap below — a verdict he gave by hand is not a candidate to be ranked
     // (owner 2026-08-20: "the photos i manually approved are not in the plan").
     //
-    // Not when another live film already shows the frame. `poi_photos.status`
-    // is global, so an approval he gave reviewing one community forced the
-    // photo into every film near it — Sims Lake's fountain, approved for
-    // Aberdeen on 2026-08-20, reached Suwanee's city film and Wild Timber
-    // (phase366). Approval belongs to a scope (owner 2026-11-15); elsewhere it
-    // is a candidate like any other, ranked behind the fresh frames.
+    // What other films show plays no part (owner 2026-11-21: "每个小区的素材都
+    // 应该以实际情况为准 该放什么就放什么 互相独立"). phase366.1 ranked frames
+    // already in another live film behind fresh ones; that is withdrawn.
     const ownerApproved = (r: (typeof ranked)[number]) =>
-      !!r.reviewed_by && r.status === 'approved' && !elsewhere.has(r.id);
+      !!r.reviewed_by && r.status === 'approved';
     const handPicked = (r: (typeof ranked)[number]) =>
       ownerApproved(r) || (r.source === 'community_site' && r.status !== 'rejected');
     const groupAmenity = amenityOfKey(groupKey);
@@ -448,16 +419,13 @@ export async function computeFinalShots(
       ESTABLISHING_CATEGORIES.has(
         ((r.ai_tags ?? {}) as { primary_category?: string }).primary_category ?? '',
       );
-    // Only a fresh frame is promoted: promoting one another film already shows
-    // would put it back ahead of the fresh frames the ranking just preferred.
-    const lead = ranked.find((r) => establishing(r) && !handPicked(r) && !elsewhere.has(r.id));
-    const pool = withoutReusedWhenFresh(ranked, elsewhere);
-    const places = pool.filter((r) => !handPicked(r) && r !== lead);
+    const lead = ranked.find((r) => establishing(r) && !handPicked(r));
+    const places = ranked.filter((r) => !handPicked(r) && r !== lead);
     // The owner's own approvals are not subject to `allowed`. The cap exists to
     // stop a POI monopolising the film with interchangeable Places photos; it
     // has no business overruling someone who looked at the frame and said yes.
     const mine = ranked.filter(ownerApproved);
-    const rest = [...pool.filter((r) => handPicked(r) && !ownerApproved(r))];
+    const rest = [...ranked.filter((r) => handPicked(r) && !ownerApproved(r))];
     const kept = [
       ...mine,
       ...[...rest, ...(lead ? [lead] : []), ...places].slice(0, Math.max(0, allowed - mine.length)),
@@ -478,13 +446,11 @@ export async function computeFinalShots(
           ? 'rejected in Review'
           : tags.usable === false
             ? 'tagger-unusable'
-            : elsewhere.has(row.id)
-              ? 'already in another live film'
-              : groupAmenity
-                ? allowed === 0
-                  ? `${AMENITY_LABEL[groupAmenity]} got no slot in the community act's ${COMMUNITY_ACT_CLIP_BUDGET} clips`
-                  : `not in the top ${allowed} for ${AMENITY_LABEL[groupAmenity]}`
-                : `not in the top ${clipsAllowedFor(buckets?.get(row.poi_id))} for this place`;
+            : groupAmenity
+              ? allowed === 0
+                ? `${AMENITY_LABEL[groupAmenity]} got no slot in the community act's ${COMMUNITY_ACT_CLIP_BUDGET} clips`
+                : `not in the top ${allowed} for ${AMENITY_LABEL[groupAmenity]}`
+              : `not in the top ${clipsAllowedFor(buckets?.get(row.poi_id))} for this place`;
       dropped.push({ photo_id: row.id, poi_id: row.poi_id, reason });
     }
   }
