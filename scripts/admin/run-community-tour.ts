@@ -332,7 +332,12 @@ function summarise(step: Step, result: unknown): string {
       }${r.failed ? `, ${r.failed} failed` : ''}`;
     case 'plan': {
       // A city plan's warnings name the lines that will not fit their clips.
-      const warnings = (r.plan as { warnings?: string[] } | undefined)?.warnings ?? [];
+      const warnings = ((r.plan as { warnings?: unknown[] } | undefined)?.warnings ?? []).map(
+        (w) =>
+          typeof w === 'string'
+            ? w
+            : `${(w as { code?: string }).code ?? ''}: ${(w as { detail?: string }).detail ?? ''}`,
+      );
       return `${r.shots} shots, ${r.approved} approved, ${r.unapproved} unapproved${warnings
         .map((w) => `\n  WARNING ${w}`)
         .join('')}`;
