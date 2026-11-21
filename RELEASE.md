@@ -17,6 +17,10 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-21
+- **More places to go from a neighbourhood's page.** Alongside Nextdoor, a neighbourhood's page now links to its own website (or its builder's), Reddit, Google Maps, its homes on Zillow, and its three nearby schools on GreatSchools. Live on the seven neighbourhoods with films first; the rest follow.
+- **A quieter foot on the neighbourhood page.** Sources and photo credits now sit behind one "Sources & photo credits" line; tap it to see them.
+- **Smoother charts.** The home-value lines on neighbourhood pages, and the growth chart in the Suwanee and Cumming city films, are drawn as smooth curves instead of joined straight pieces.
+- **A simpler neighbourhood card.** The small icons beside the name are gone, and Explore is a plain white button without an arrow.
 - **Neighbourhood films show more of the neighbourhood itself.** Percho now finds a neighbourhood's own clubhouse, pool or club on Google and puts those photos at the start of its film. Wild Timber's film was re-made this way and now opens on about fifteen seconds of its log-cabin clubhouse, pool and lake.
 - **The same shot no longer turns up in film after film.** A photo already playing in another neighbourhood's or city's film is used only when a place has nothing else; the Sims Lake fountain that appeared in three films is gone from Wild Timber's.
 - **Explore looks the same on every card.** Neighbourhood cards now have the same white Explore button as city cards.
