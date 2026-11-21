@@ -234,7 +234,7 @@ describe('buildProfile', () => {
     );
     const links = named?.links ?? [];
     expect(links.map((l) => l.label)).toEqual([
-      'The Providence Gr…',
+      'Providence Group',
       'Nextdoor',
       'Reddit',
       'Google Maps',

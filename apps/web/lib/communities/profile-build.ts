@@ -590,7 +590,12 @@ function profileLinks(
 ): NonNullable<Profile['links']> {
   const links: NonNullable<Profile['links']> = [];
   if (c.website?.startsWith('https://'))
-    links.push({ label: linkLabel(c.builder?.trim() || 'Website'), url: c.website });
+    links.push({
+      // "The Providence Group" → "Providence Group": the article is what
+      // pushed it past the pill's 18 characters.
+      label: linkLabel(c.builder?.trim().replace(/^the\s+/i, '') || 'Website'),
+      url: c.website,
+    });
   if (c.nextdoor_url?.startsWith('https://'))
     links.push({ label: 'Nextdoor', url: c.nextdoor_url });
   const name = c.name?.trim();

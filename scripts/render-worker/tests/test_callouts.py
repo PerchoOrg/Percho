@@ -15,7 +15,9 @@ from callouts import (  # noqa: E402
     anim_seconds,
     count_progress,
     count_seconds,
+    curve_prefix,
     draw_callout,
+    monotone_curve,
 )
 
 W, H = 1080, 1576
@@ -97,3 +99,28 @@ def test_a_counter_starts_at_from_and_ends_at_to_within_its_clip():
 def test_a_figure_has_arrived_well_inside_the_shortest_clip():
     for name in ("stat",):
         assert anim_seconds(CALLOUTS[name], 2.5) <= 1.6
+
+
+def test_the_count_line_is_a_curve_that_never_overshoots_its_points():
+    # Rising, then flat: a plain cubic would bulge above the flat stretch.
+    pts = [(0.0, 100.0), (100.0, 0.0), (200.0, 0.0), (300.0, 0.0)]
+    curve = monotone_curve(pts)
+    assert curve[0] == pts[0] and curve[-1] == pts[-1]
+    assert all(0.0 - 1e-9 <= y <= 100.0 + 1e-9 for _, y in curve)
+    assert all(abs(y) < 1e-9 for x, y in curve if x >= 100.0)
+    # Drawn so far: nothing at 0, all of it at the last point, half-way in between.
+    assert curve_prefix(curve, 0) == curve[:1]
+    assert curve_prefix(curve, len(pts) - 1) == curve
+    half = curve_prefix(curve, 1.5)
+    assert half[-1][0] == pytest.approx(150.0)
+
+
+def test_the_count_line_is_antialiased():
+    # The line sits on the panel's dark wash. Drawn hard-edged, every line
+    # pixel is pure amber; antialiased, its edge blends amber into the wash.
+    img = draw_callout(CALLOUTS["count"], W, H, 7.0, 7.5)
+    pixels = list(img.convert("RGB").getdata())
+    solid = [p for p in pixels if p[0] > 225 and 150 < p[1] < 190 and p[2] < 100]
+    blended = [p for p in pixels if 70 < p[0] < 200 and p[0] - p[2] > 40 and p[1] - p[2] > 15]
+    assert solid, "no amber line drawn"
+    assert len(blended) > len(solid) * 0.05, "the line's edge is hard: no antialiasing"
