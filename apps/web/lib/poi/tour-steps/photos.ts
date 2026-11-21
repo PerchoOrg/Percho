@@ -338,7 +338,9 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
       }
     }
     const r = await fetchPhotosForPoi(run.scope.poiScope, run.entity_id, poiId!, {
-      max: 3,
+      // The community's own clubhouse or pool is the film's subject, and the
+      // amenity act picks per amenity from everything it is given (phase366).
+      max: poi.bucket === 'amenities' ? 10 : 3,
       actor,
     });
     results[poi.place_id] = r;

@@ -17,6 +17,9 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-21
+- **Neighbourhood films show more of the neighbourhood itself.** Percho now finds a neighbourhood's own clubhouse, pool or club on Google and puts those photos at the start of its film. Wild Timber's film was re-made this way and now opens on about fifteen seconds of its log-cabin clubhouse, pool and lake.
+- **The same shot no longer turns up in film after film.** A photo already playing in another neighbourhood's or city's film is used only when a place has nothing else; the Sims Lake fountain that appeared in three films is gone from Wild Timber's.
+- **Explore looks the same on every card.** Neighbourhood cards now have the same white Explore button as city cards.
 - **Wild Timber in Sugar Hill has a neighbourhood film.** It is the first of fourteen new neighbourhood films, which will bring the app to twenty. It opens on the neighbourhood's own clubhouse, pools, lake and trails, then the parks, river, restaurants, schools and shops around it.
 
 ### 2026-11-20
