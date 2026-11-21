@@ -23,6 +23,24 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-21 08:10 UTC — phase366.6: the community-film workflow follows the admin pipeline
+
+**Objective**: Owner asked whether my process follows the photo admin's workflow and the code at every step ("你先讲讲现在的流程有没有照片admin里的workflow来？每一个步骤 代码里的逻辑有没有遵守"). Audit given; owner: "改 不重跑 直接做下一个" — fix items 1, 2, 3 and 5 of the audit, leave Wild Timber and Towne Village as cut, move on. Item 4 (per-community photo review, as cities have since phase343) was not approved and is not done.
+**Audit findings**:
+- Fetch Sites: I never ran the pipeline's `ingest` step (`run-community-tour.ts` had no such step); site photos came through `ingest-community-photos.ts`, which wrote them `approved`. The filter only judges `pending`, so the single-home / interior rule never saw them — the root of Towne Village's house photos.
+- Review: my rejections were raw REST writes with no mark; the admin could not tell them from the pipeline filter.
+- Plan: after every plan I hand-edited `step_results` (shots, order, engines, durations, labels, narration). The admin's narration panel is read-only by design and has no shot editing, so none of that was visible, and one click on Plan would have erased it.
+- Rules held only by hand: Seedance ≤ 2 per community film (code cap was 4); review counts in narration (the prompt asked for them — "how many people rate it", "three thousand reviews deep"; the `standing` angle was always on); unverified researcher claims ("EarthCraft"); lake/trail photos labelled "Green Space"; a homes-only act opening the film.
+**Actions**:
+- `ingest-community-photos.ts` writes photos `pending` (the place link stays approved); header points to the pipeline step. `run-community-tour.ts` gains `ingest` (default chain is now research → resolve → photos → ingest).
+- `scheduler.ts`: `SeedanceOptions {max, ready}`; `COMMUNITY_SEEDANCE_MAX_CLIPS = 2`; among eligible frames, ones with a ready Seedance clip go first. `buildTourPlan` / `scheduleClips` take it; `computeFinalShots` reads ready clips from `photo_clips` and passes the community cap.
+- Narration: `standing` removed from `INSIGHT_ANGLES`; `renderFacts`/`filmFacts` carry distance only (`describeStanding` deleted, unused); prompt: no ratings or review counts, the researcher's sentence is unverified (mood, not specifics), the review-count example replaced.
+- `amenity.ts`: `lake` and `trails` amenities ("Lake", "Walking Trails") ahead of `green_space`.
+- `shots.ts` `homesLast`: an act with no named amenity (only streetscape/other) plays after the surroundings.
+- `reject-photos.ts`: editorial rejections written as `editorial: <reason>`; this session's 13 earlier rejections re-marked the same way.
+**Verified**: web vitest 1358 (new: Seedance cap + ready-first, lake/trails labels, homes-last, no ratings in facts), typecheck 0, biome 0 errors.
+**Not done**: per-community review verdicts (needs the owner); a narration/shot editor in the admin (none asked for — the aim is plans that need no hand edits).
+
 ## 2026-11-21 07:46 UTC — phase366.5: Towne Village and Wild Timber re-cut — no house opener, no dogs, a school you can recognise
 
 **Objective**: Owner on Towne Village's cut: "不要开始下一个 有很多问题 / 不要用这么多房子照片在community card 之前都说过的规则 最多是一张俯瞰一群房子的图 / community名字很奇怪 太长了 / sushi照片质量不好 换掉 / 两张狗照片 不好 / high school和照片没对应上".

@@ -301,6 +301,8 @@ RULES
   silence over moving pictures; over the cap runs into the next section.
 - A long section is several shots of several places. Say something about more
   than one of them.
+- When a line names several places, name them in the order they appear in the
+  section — the viewer sees the first one first.
 - Open from what makes this ${noun} specific — but do not quote the
   researcher's sentence back, it is a note to you. Never "<Name> sits in
   <City>": it fits every ${noun}, which is why it is wrong for this one.
