@@ -183,3 +183,10 @@ describe('lakes and trails (phase366.6)', () => {
     expect(amenityOf({ tags: ['pool', 'lake-view'] })).toBe('pool');
   });
 });
+
+describe('golf (phase366.10)', () => {
+  it('names a course for what it is', () => {
+    expect(amenityOf({ tags: ['golf-course', 'fairway', 'pond'] })).toBe('golf');
+    expect(amenityOf({ tags: ['putting green', 'trees'] })).toBe('golf');
+  });
+});

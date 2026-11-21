@@ -64,6 +64,9 @@ const GENERIC_WORDS = new Set([
  * Types that mean a business using the name, not the community's own place.
  * Real-estate offices are here because "<name> Realty" is a common shopfront.
  */
+/** Not a place at all, whatever else the result says. */
+const NOT_A_PLACE_TYPES = new Set(['route', 'street_address', 'premise']);
+
 const BORROWED_NAME_TYPES = new Set([
   'route',
   'street_address',
@@ -123,7 +126,11 @@ export function isOwnPlace(
   if (!p.photos?.length || !p.location) return false;
   if (!carriesCommunityName(communityName, p.displayName?.text ?? '')) return false;
   const types = [p.primaryType, ...(p.types ?? [])].filter((t): t is string => !!t);
-  if (types.some((t) => ADMINISTRATIVE_TYPES.has(t) || BORROWED_NAME_TYPES.has(t))) return false;
+  if (types.some((t) => ADMINISTRATIVE_TYPES.has(t) || NOT_A_PLACE_TYPES.has(t))) return false;
+  // What the place IS is its primary type. A club with a restaurant lists
+  // `restaurant` among its secondary types — TPC Sugarloaf did, and was
+  // turned away as a business borrowing the name (phase366.10).
+  if (p.primaryType && BORROWED_NAME_TYPES.has(p.primaryType)) return false;
   if (p.businessStatus && p.businessStatus !== 'OPERATIONAL') return false;
   if (
     isReligiousPlace({

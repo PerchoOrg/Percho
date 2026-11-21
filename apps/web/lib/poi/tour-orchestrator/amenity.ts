@@ -28,6 +28,7 @@ export const AMENITIES = [
   'clubhouse',
   'pool',
   'courts',
+  'golf',
   'playground',
   'lake',
   'trails',
@@ -50,6 +51,7 @@ export const AMENITY_LABEL: Record<Amenity, string> = {
   clubhouse: 'Clubhouse',
   pool: 'Pool',
   courts: 'Courts',
+  golf: 'Golf Course',
   playground: 'Playground',
   lake: 'Lake',
   trails: 'Walking Trails',
@@ -71,6 +73,12 @@ export const AMENITY_LABEL: Record<Amenity, string> = {
 const AMENITY_RULES: Array<[Amenity, RegExp]> = [
   ['pool', /\b(pool|pools|swim|swimming|aquatic|splash|splash-pad|waterslide)\b/i],
   ['courts', /\b(tennis|pickleball|court|courts|basketball|volleyball)\b/i],
+  // A country club's course is its signature; it came out "Green Space" on
+  // Sugarloaf Country Club's first plan (phase366.10).
+  [
+    'golf',
+    /\b(golf|golf-course|golf course|fairway|fairways|putting-green|putting green|tee-box)\b/i,
+  ],
   ['playground', /\b(playground|play-area|play area|tot-lot|tot lot|jungle gym|swing set)\b/i],
   ['fitness', /\b(gym|fitness|fitness-room|weight-room|workout|exercise|yoga)\b/i],
   ['entrance', /\b(entrance|entry|gate|gatehouse|monument|signage|sign)\b/i],
