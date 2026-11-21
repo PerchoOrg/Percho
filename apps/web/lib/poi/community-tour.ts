@@ -83,7 +83,7 @@ export const ADMINISTRATIVE_TYPES = new Set([
 ]);
 
 /** Map a raw Places result to a tour bucket via its primary type. */
-function bucketFromPlace(p: { primaryType?: string; types?: string[] }): string {
+export function bucketFromPlace(p: { primaryType?: string; types?: string[] }): string {
   const t = p.primaryType ?? p.types?.[0];
   if (!t) return 'other';
   return PLACES_TYPE_TO_BUCKET[t] ?? 'other';

@@ -89,6 +89,14 @@ export async function runResolve(sb: TourDb, run: RunRow) {
     result.resolved = [...own, ...result.resolved.filter((r) => !ownIds.has(r.place_id))];
   }
 
+  // Enough surrounding candidates that the editorial pass still leaves the
+  // plan its budget (phase366.8 — short research made 36s and 52s films).
+  if (run.scope.kind === 'community') {
+    const { fillSurroundings } = await import('@/lib/poi/fill-places');
+    const fill = await fillSurroundings(result.resolved, center);
+    result.resolved = [...result.resolved, ...fill].sort((a, b) => b.score - a.score);
+  }
+
   // Mark which of these the community ALREADY has, and which already earn
   // their place in the film.
   //

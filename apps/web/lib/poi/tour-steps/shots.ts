@@ -18,6 +18,11 @@ import type { PhotoAnnotation } from '@/lib/poi/tour-orchestrator/types';
 import { type TourScope, idColumnOf, poisTableOf } from './scope';
 import { type RunRow, type TourDb, mustWrite } from './shared';
 
+/** The render worker's crossfade between clips (worker.py `xfade = 0.5`). */
+const TOUR_CROSSFADE_S = 0.5;
+/** A community film shorter than this, as played, gets a `film_short` warning. */
+export const FILM_SHORT_S = 55;
+
 /** One planned clip as the photos step persisted it. */
 export interface PlannedShot {
   photo_id: string;
@@ -688,12 +693,29 @@ export async function computeFinalShots(
       detail: `${poiName.get(id) ?? id} was selected but produced no usable shot`,
     }));
 
+  // What the viewer gets, not the clip sum: each join overlaps two clips by a
+  // crossfade. Towne Village's plan met the 45s clip-sum floor on paper and
+  // Hedgerows' 59s of clips played as 52s (owner 2026-11-21).
+  const filmSeconds =
+    labelled.reduce((t, s) => t + Number(s.duration_s ?? 0), 0) -
+    TOUR_CROSSFADE_S * Math.max(0, labelled.length - 1);
+  const lengthWarnings =
+    filmSeconds < FILM_SHORT_S
+      ? [
+          {
+            code: 'film_short' as const,
+            photo_id: '',
+            detail: `the film plays about ${filmSeconds.toFixed(0)}s (under ${FILM_SHORT_S}s) — ${shotPois.size} places; add places or photos before rendering`,
+          },
+        ]
+      : [];
+
   return {
     shots: homesLast(labelled, (photoId) => amenityByPhoto.get(photoId)),
     dropped,
     // Everything review needs to judge the plan, persisted next to it.
     plan: {
-      warnings: [...plan.warnings, ...schoolWarnings],
+      warnings: [...plan.warnings, ...schoolWarnings, ...lengthWarnings],
       violations: plan.violations,
       narration: plan.narration,
       curator: plan.curator,

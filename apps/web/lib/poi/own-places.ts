@@ -9,7 +9,8 @@
  *
  * Three Text Searches per community — the bare name, "<name> clubhouse",
  * "<name> pool" — because the bare name alone often returns only the street
- * named after it (Wild Timber Road). A result counts as the community's own
+ * named after it (Wild Timber Road). When those find nothing, three more:
+ * "<name> HOA", "<name> swim tennis", "<name> amenity center". A result counts as the community's own
  * when it carries the community's name, sits near it, has photos, and is not a
  * business that merely borrows the name (a "Windermere Publix").
  */
@@ -144,7 +145,11 @@ export async function findOwnPlaces(
   center: { lat: number; lng: number },
 ): Promise<ResolvedPoi[]> {
   const found = new Map<string, PlaceResult>();
-  for (const suffix of ['', 'clubhouse', 'pool']) {
+  // The second set runs only when the first found nothing: Hedgerows' HOA
+  // place showed up for the bare name, but a community listed only as its
+  // association ("<name> HOA") or its swim-and-tennis club would not.
+  for (const suffix of ['', 'clubhouse', 'pool', 'HOA', 'swim tennis', 'amenity center']) {
+    if (['HOA', 'swim tennis', 'amenity center'].includes(suffix) && found.size > 0) break;
     const query = [[communityName, suffix].filter(Boolean).join(' '), locality]
       .filter(Boolean)
       .join(', ');

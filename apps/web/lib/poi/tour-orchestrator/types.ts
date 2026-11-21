@@ -130,7 +130,13 @@ export interface PlanWarning {
      * said so; the film simply had no high school in it (owner 2026-08-19:
      * "schools are #1 important to have").
      */
-    | 'school_tier_missing';
+    | 'school_tier_missing'
+    /**
+     * The finished film, crossfades taken off, runs under FILM_SHORT_S
+     * (phase366.8). The clip-sum target can be met by a film that plays
+     * seconds shorter, and an editorial pass can leave too few places.
+     */
+    | 'film_short';
   photo_id: string;
   detail: string;
 }
