@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-21 21:40 UTC — phase366.14: St Marlo re-cut — no clubhouse interiors, no low-resolution frames
+
+**Objective**: owner on St Marlo's film: "去掉 前面几个室内的照片 还有一个像素很低的体育场馆内的椅子".
+**Actions**: photos rejected ("editorial:"): the cabana lounge and dining interiors and the pro shop (owner: no clubhouse interiors), the Lambert gym bleachers (owner: low resolution). The re-plan was the first under phase366.13, so frames other films show came back (Aberdeen's Chattahoochee Pointe boardwalk, Lambert's entrance, Cauley Creek's bridge) — three of those were soft or wrong and were rejected too: Lambert's aerial (650x440 original), H Mart's storefront (581x457, a dated "Grand Opening" banner), Lambert's 512x384 facade; and a Lambert courtyard with students in it. Narration prompt: never say two places are near each other or that one "leads to" another — distances are from the community, not between places ("Johns Creek Elementary sits near Lambert High" was a guess).
+- Assembly `da66da63`, `cf_stream_uid 58d3da8a79b30fe76ffa91764650b53d`, 77.6 s, 31 clips. Seedance: the two existing clips reused, no new spend (generate leaves paid clips alone; it only bumps `updated_at`).
+**Issues**: the low-resolution gate passes a photo on its Real-ESRGAN x2 size (`enhanced_meta.width`), so a 581 px original counts as 1162 px. That is the owner's 2026-08-20 rule ("decide based on content first, quality can be improved with rendering", `initialVerdict`), and its example was the 512 px Lambert facade rejected here. Not changed — raised with the owner.
+**Verified**: production feed serves the new uid.
+
 ## 2026-11-21 21:11 UTC — phase366.13: films choose their frames independently again
 
 **Objective**: owner 2026-11-21, after St Marlo: "我看你说的用过的就不优先用 这个我想了想不对 每个小区的素材都应该以实际情况为准 该放什么就放什么 互相独立".

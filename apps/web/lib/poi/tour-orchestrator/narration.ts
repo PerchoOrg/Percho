@@ -352,6 +352,9 @@ RULES
 - Never place the ${noun} "by", "near", "beside" or "next to" a place more than
   half a mile away — "Arbors at Richland Creek starts by The Bowl" put a 2-mile drive
   next door.
+- Never say two places are near, beside or next to EACH OTHER, or that one
+  "leads to" another: the distances given are from the ${noun}, not between
+  places. "Johns Creek Elementary sits near Lambert High" was a guess.
 - Concrete nouns, real detail. "The courts stay busy past dusk" beats "tennis
   courts are available".
 - USE THE FACTS — what the place is, what it looks like, what it is known
