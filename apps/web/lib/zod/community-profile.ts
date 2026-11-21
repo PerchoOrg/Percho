@@ -136,9 +136,11 @@ export const communityProfileSchema = z.object({
     )
     .max(8)
     .optional(),
+  // Up to 10 since phase366: own site, Nextdoor, Reddit, Maps, Zillow and three
+  // schools. The row scrolls sideways, so the count costs no height.
   links: z
     .array(z.object({ label: z.string().min(1).max(18), url: link }))
-    .max(5)
+    .max(10)
     .optional(),
   sources: z.array(z.object({ name: z.string().min(1).max(80), url: link.optional() })).min(1),
 });

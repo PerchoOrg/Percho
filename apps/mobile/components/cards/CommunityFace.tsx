@@ -1,4 +1,3 @@
-import type { CardIconName } from "@percho/shared/icons";
 /**
  * CommunityFace (§1.4) — the community (subdivision) front face.
  *
@@ -134,16 +133,22 @@ import type { CardIconName } from "@percho/shared/icons";
  *
  * The facts are not lost — `app/community/[slug]` renders every reason with
  * its evidence, and that screen is where the CTA goes.
+ *
+ * ── 2026-11-21: no glyphs, no arrow ─────────────────────────────────────────
+ *
+ * Owner: "去掉community name旁边的小label 没啥用" — the signal glyphs beside
+ * the name are gone, and with them the name-width measuring that kept them
+ * snug to a wrapped name. `Explore` is the city card's white pill without the
+ * arrow ("保留explore 不要箭头"). The notes above that describe the glyphs are
+ * history.
  */
 import { LinearGradient } from "expo-linear-gradient";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
 	type LayoutChangeEvent,
-	type NativeSyntheticEvent,
 	Pressable,
 	StyleSheet,
 	Text,
-	type TextLayoutEventData,
 	View,
 } from "react-native";
 import {
@@ -175,18 +180,6 @@ import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import { CardCorner } from "./CardCorner";
 import { EXPLORE_TAP_TARGET, SAVE_TAP_TARGET } from "./ListingFace";
-import { RedlineIcon } from "./redline/RedlineChrome";
-
-/**
- * How many glyphs sit right of the name. TWO, inherited from the pill row that
- * preceded them (owner 2026-08-17, was 3) and now also a width constraint: the
- * icons, the name and `Explore` share ONE line, and every icon is width the
- * name does not get.
- */
-const MAX_COMMUNITY_ICONS = 2;
-
-/** Glyph art size in the row left of the name. */
-const SIGNAL_ICON_SIZE = 15;
 
 /**
  * Tour progress. 3pt and inset, up from a 2pt hairline flush with the card's
@@ -211,37 +204,6 @@ const DASH_GAP = 3;
 const BREATH_MS = 900;
 const BREATH_DIM = 0.5;
 const BREATH_CYCLES = 6;
-
-/**
- * The glyphs shown to the RIGHT of the community name (owner 2026-08-22: "lets
- * add icons to the left of community name for now", revised to the right side
- * later the same day and held there on 2026-08-23).
- *
- * Same descending-confidence order the pill row used, minus the two sources
- * that cannot produce a glyph: `dims` and `pills` are bare strings, and the
- * card would have to invent the mapping. Those communities simply show no
- * icons — the name still reads.
- *
- * A signal whose phrase has no honest glyph in the 14-glyph subset font is
- * SKIPPED, not substituted (see `signalIcon` on the server), so this can return
- * fewer icons than there are signals, or none at all.
- *
- * Deduped: two signals mapping to the same glyph would read as a rendering bug
- * rather than as two claims — the reason tiles dedupe for the same reason.
- */
-function signalIcons(card: CommunityCardV3): CardIconName[] {
-	const out: CardIconName[] = [];
-	const seen = new Set<CardIconName>();
-	const push = (icon: CardIconName | undefined) => {
-		if (!icon || seen.has(icon) || out.length >= MAX_COMMUNITY_ICONS) return;
-		seen.add(icon);
-		out.push(icon);
-	};
-	for (const s of card.signals ?? []) push(s.icon);
-	if (out.length > 0) return out;
-	for (const r of card.reasons ?? []) push(r.icon);
-	return out;
-}
 
 /**
  * Armed into `tapSlot` by a touch on the progress bar. Handled by nobody: it
@@ -311,61 +273,10 @@ export function CommunityFace({
 	saveKind = "community",
 	onShare,
 }: CommunityFaceProps) {
-	const icons = signalIcons(card);
-
 	const saved = useSavedStore((s) => s.isSaved(card.id));
 	const toggleSaved = useSavedStore((s) => s.toggle);
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const toggleSound = useSoundStore((s) => s.toggle);
-
-	/* ── The name's true width ────────────────────────────────────────────── */
-
-	/**
-	 * A wrapped name's BOX is wider than the text inside it, and the glyphs are
-	 * laid out against the box.
-	 *
-	 * Flexbox shrinks the name to `row - glyphs - Explore` and the text then
-	 * wraps inside that width — so line 1 ends at the box edge only when it
-	 * happens to fill it. "Apremont - Highcroft" breaks after the dash at about
-	 * two thirds of the box, and the glyphs were drawn at the far edge with the
-	 * remaining third of empty space between them and the name, reading as
-	 * `Explore`'s neighbours rather than the name's (owner 2026-08-23, on that
-	 * community and on Ashley Crossing).
-	 *
-	 * `onTextLayout` reports each rendered LINE's width, so the fix is to hand
-	 * the box back its content's width and let the glyphs follow that instead.
-	 * Shrinking a greedily-wrapped paragraph to its widest line re-wraps it the
-	 * same way, so this settles in one pass rather than oscillating — and the
-	 * `< prev` guard makes that structural: the width only ever comes down.
-	 */
-	// Stored WITH the name it belongs to, and read back only for that name. A
-	// card face is reused across cards at the same deck index, so a bare number
-	// here would clamp the next community's name to this one's width for a
-	// frame — the state survives the prop change, and an effect that clears it
-	// runs after the paint that used it.
-	const [measured, setMeasured] = useState<{
-		name: string;
-		width: number;
-	} | null>(null);
-	const nameWidth = measured?.name === card.name ? measured.width : null;
-	const onNameLayout = useCallback(
-		(e: NativeSyntheticEvent<TextLayoutEventData>) => {
-			const lines = e.nativeEvent.lines;
-			// One line is already snug — its box IS its text. Only a wrap opens
-			// the gap this measures away.
-			if (lines.length < 2) return;
-			const widest = Math.ceil(
-				lines.reduce((max, l) => (l.width > max ? l.width : max), 0),
-			);
-			if (widest <= 0) return;
-			setMeasured((prev) =>
-				prev !== null && prev.name === card.name && prev.width <= widest
-					? prev
-					: { name: card.name, width: widest },
-			);
-		},
-		[card.name],
-	);
 
 	/** 0..1 playback position, written by `CardVideo` off the UI thread. */
 	const progress = useSharedValue(0);
@@ -775,26 +686,19 @@ export function CommunityFace({
 				pointerEvents="none"
 			/>
 
-			{/* Bottom info — ONE line: the community name, its signal glyphs,
-			    and `Explore` on the right, all on a shared centre line (owner
-			    2026-08-22: "community and explore should be aligned"; the glyphs
-			    moved to the name's right the same day). The pill row is gone;
-			    the glyphs are what is left of it.
+			{/* Bottom info — ONE line: the community name and `Explore` on the
+			    right, on a shared centre line (owner 2026-08-22: "community and
+			    explore should be aligned"). The signal glyphs that sat beside the
+			    name are gone (owner 2026-11-21).
 
 			    The name is the only thing that gives when space runs out —
-			    `flexShrink: 0` on both the glyphs and the link, `minWidth: 0` on
-			    the name. It gives by WRAPPING to a second line, not by pushing
-			    the glyphs off its own line: owner 2026-08-23, "dont put icons
-			    below the community name... if overlaps with explore, then use
-			    two line for community name, but still put icons to the right
-			    side" (see `infoLeft`).
+			    `flexShrink: 0` on the link, `minWidth: 0` on the name. It gives
+			    by WRAPPING to a second line (owner 2026-08-22: no truncation).
 
 			    ABOVE that row sits the COMMUNITY tag (owner 2026-09-05: "put
 			    community label on top of the community name"). It came down from
 			    the top-left corner, which the place pill now owns. As an eyebrow
-			    it takes no width from the row, so the name keeps all of it and
-			    the glyphs keep their place — beside the name, the tag cost the
-			    glyphs on a short name and the name itself on a long one. */}
+			    it takes no width from the row, so the name keeps all of it. */}
 			<View style={styles.info}>
 				<View style={styles.tagRow}>
 					<Text style={styles.badgeLabel}>{tag}</Text>
@@ -807,25 +711,9 @@ export function CommunityFace({
 					    2026-08-22: "if community name is long, it can be truncated,
 					    fix that"). Wrapping spends card height, which this card has;
 					    truncation spent the name, which it does not. */}
-						<Text
-							style={[styles.name, nameWidth !== null && { width: nameWidth }]}
-							numberOfLines={2}
-							onTextLayout={onNameLayout}
-						>
+						<Text style={styles.name} numberOfLines={2}>
 							{card.name}
 						</Text>
-						{icons.length > 0 && (
-							<View style={styles.icons}>
-								{icons.map((name) => (
-									<RedlineIcon
-										key={name}
-										name={name}
-										size={SIGNAL_ICON_SIZE}
-										color="rgba(255,255,255,0.85)"
-									/>
-								))}
-							</View>
-						)}
 					</View>
 					{!!onExplore && (
 						<Animated.View style={[styles.ctaRow, breathing]}>
@@ -847,7 +735,6 @@ export function CommunityFace({
 								>
 									Explore
 								</Text>
-								<ArrowRightIcon dark />
 							</Pressable>
 						</Animated.View>
 					)}
@@ -1015,33 +902,8 @@ function ProgressDash({
 	);
 }
 
-/**
- * The arrow after the CTA label — `ListingFace`'s art, at the same size and
- * colour, so the two cards' links are the same link.
- *
- * Copied rather than imported: `ListingFace` does not export it and this pass
- * may not edit that file. It cannot come from the icon font (the Phosphor
- * subset ships FILL weights only, which is what made the old arrow a thick
- * wedge) and `react-native-svg` red-screens in Expo Go on this project (DEVLOG
- * 2026-07-30 04:55), so it is composed from bordered `View`s on Lucide's own
- * 24-grid geometry: shaft (5,12)→(19,12), head corners (12,5)-(19,12)-(12,19),
- * i.e. a 45°-rotated square wearing only its top and right borders.
- */
+/** Line weight of the outline art (the bookmark). */
 const OUTLINE_STROKE = 1.75;
-const ARROW_SIZE = 16;
-const ARROW_K = ARROW_SIZE / 24;
-/** Side of the rotated square whose top+right borders draw the arrowhead. */
-const ARROW_HEAD = 7 * ARROW_K * Math.SQRT2;
-
-function ArrowRightIcon({ dark = false }: { dark?: boolean }) {
-	return (
-		<View style={styles.arrowBox}>
-			<View style={[styles.arrowShaft, dark && styles.arrowShaftDark]} />
-			<View style={[styles.arrowHead, dark && styles.arrowHeadDark]} />
-		</View>
-	);
-}
-
 /**
  * The map pin in the place pill.
  *
@@ -1243,7 +1105,7 @@ const styles = StyleSheet.create({
 		textShadowRadius: 3,
 	},
 	railWordOn: { color: "#FFFFFF", fontWeight: "700" },
-	/** The name + glyphs + Explore line — what `info` used to be. */
+	/** The name + Explore line — what `info` used to be. */
 	infoRow: {
 		flexDirection: "row",
 		// `center`, not `flex-end`: this is what puts the name and the link on
@@ -1252,39 +1114,13 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		gap: 12,
 	},
-	/** Name + glyphs, on ONE line, always in that order.
-	 *
-	 *  NOT wrapping (owner 2026-08-23: "dont put icons below the community
-	 *  name, put them on the right side, if overlaps with explore, then use two
-	 *  line for community name, but still put icons to the right side"). A
-	 *  `flexWrap: "wrap"` row dropped the glyphs onto their own line under the
-	 *  name whenever the two could not both fit, which is the layout that ask
-	 *  rules out. The width now comes out of the NAME instead: `minWidth: 0` +
-	 *  `flexShrink: 1` on the text let it shrink to whatever the glyphs leave
-	 *  and wrap to its two lines inside that, so the glyphs keep their place at
-	 *  the name's right on every name length.
-	 *
-	 *  The gap that would otherwise open between a wrapped name and its glyphs
-	 *  — the box being wider than the lines inside it — is measured away by
-	 *  `onNameLayout`; see its doc. */
+	/** The name's column: it takes what `Explore` leaves and wraps inside it. */
 	infoLeft: {
 		flex: 1,
 		minWidth: 0,
 		flexDirection: "row",
 		alignItems: "center",
 		gap: 7,
-	},
-	/**
-	 * The glyph run, RIGHT of the name — always, on any name length (owner
-	 * 2026-08-23). Never squeezed: see the row's doc; the name is what gives.
-	 * Centred against the name block, so on a wrapped two-line name they sit
-	 * level with its middle.
-	 */
-	icons: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 5,
-		flexShrink: 0,
 	},
 	/**
 	 * Community name — serif 27/600 white, the CITY name's family. Up from 24
@@ -1443,31 +1279,6 @@ const styles = StyleSheet.create({
 		backgroundColor: "#FFFFFF",
 	},
 
-	// ─── Arrow art (see the block above) ──────────────────────────────────
-	arrowBox: { width: ARROW_SIZE, height: ARROW_SIZE },
-	arrowShaft: {
-		position: "absolute",
-		left: 5 * ARROW_K,
-		width: 14 * ARROW_K,
-		top: (ARROW_SIZE - OUTLINE_STROKE) / 2,
-		height: OUTLINE_STROKE,
-		borderRadius: OUTLINE_STROKE / 2,
-		backgroundColor: "#FFFFFF",
-	},
-	arrowHead: {
-		position: "absolute",
-		left: (ARROW_SIZE - ARROW_HEAD) / 2,
-		top: (ARROW_SIZE - ARROW_HEAD) / 2,
-		width: ARROW_HEAD,
-		height: ARROW_HEAD,
-		borderTopWidth: OUTLINE_STROKE,
-		borderRightWidth: OUTLINE_STROKE,
-		borderColor: "#FFFFFF",
-		borderTopRightRadius: OUTLINE_STROKE,
-		transform: [{ rotate: "45deg" }],
-	},
-	arrowShaftDark: { backgroundColor: "#181B18" },
-	arrowHeadDark: { borderColor: "#181B18" },
 	bookmarkBox: { width: BOOKMARK_SIZE, height: BOOKMARK_SIZE },
 	bookmarkFill: {
 		position: "absolute",

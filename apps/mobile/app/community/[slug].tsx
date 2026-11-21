@@ -128,6 +128,8 @@ export default function CommunityWhyScreen() {
 	// rows, so this is skipped without a session.
 	const uid = useAuthStore((s) => s.session?.user.id);
 	const [myStatus, setMyStatus] = useState<ReviewStatus | null>(null);
+	/** The folded foot: sources and photo credits, shown on a tap. */
+	const [notesOpen, setNotesOpen] = useState(false);
 	useEffect(() => {
 		if (!uid || !data) return;
 		let alive = true;
@@ -441,24 +443,36 @@ export default function CommunityWhyScreen() {
 					)}
 
 					{/*
-					 * Source line, per §3.4's rule that every evidence block names where
-					 * it came from. One source today, stated plainly rather than dressed
-					 * up as several.
+					 * Sources (§3.4: every evidence block names where it came from) and
+					 * the film's photo credits (Google's Places policy: every displayed
+					 * photo credits its author). Folded behind one line since
+					 * 2026-11-21 — a film of Google photos credits twenty-odd people,
+					 * and the owner found the foot "太多了" — and shown in full on a tap.
 					 */}
-					<Text style={styles.source}>
-						{profile
-							? profile.sources.map((src) => src.name).join(" · ")
-							: "Resident-stated attributes and interests from Nextdoor neighbourhood profiles."}
-					</Text>
-					{/*
-					 * Google's Places policy: every displayed photo credits its author.
-					 * The film shows Places photos and the feed card has no room, so
-					 * this — the larger view the card leads to — carries the credit.
-					 */}
-					{data.photoCredits && data.photoCredits.length > 0 && (
-						<Text style={styles.credit}>
-							Film photos by {data.photoCredits.join(", ")}, via Google Maps.
+					<Pressable
+						onPress={() => setNotesOpen((open) => !open)}
+						accessibilityRole="button"
+						accessibilityState={{ expanded: notesOpen }}
+						hitSlop={8}
+					>
+						<Text style={styles.source}>
+							Sources & photo credits {notesOpen ? "⌃" : "›"}
 						</Text>
+					</Pressable>
+					{notesOpen && (
+						<>
+							<Text style={styles.credit}>
+								{profile
+									? profile.sources.map((src) => src.name).join(" · ")
+									: "Resident-stated attributes and interests from Nextdoor neighbourhood profiles."}
+							</Text>
+							{data.photoCredits && data.photoCredits.length > 0 && (
+								<Text style={styles.credit}>
+									Film photos by {data.photoCredits.join(", ")}, via Google
+									Maps.
+								</Text>
+							)}
+						</>
 					)}
 				</View>
 			</ScrollView>

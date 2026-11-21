@@ -224,11 +224,49 @@ export function pointAt(
 	return { x, y };
 }
 
+/** Pieces per gap between two points — short enough that the turns don't show. */
+export const CURVE_STEPS = 10;
+
 /**
- * A series as the straight pieces between its points.
+ * Tangents for a monotone cubic through evenly spaced values (Fritsch–Carlson).
+ * Monotone so the curve never swings above a peak or below a dip between two
+ * points: a home value that only rose must not be drawn dipping.
+ */
+export function monotoneSlopes(ys: readonly number[]): number[] {
+	const n = ys.length;
+	const d = ys.slice(1).map((y, i) => y - (ys[i] ?? 0));
+	const m = ys.map((_, i) => {
+		if (i === 0) return d[0] ?? 0;
+		if (i === n - 1) return d[n - 2] ?? 0;
+		const a = d[i - 1] ?? 0;
+		const b = d[i] ?? 0;
+		return a * b <= 0 ? 0 : (a + b) / 2;
+	});
+	for (let i = 0; i < n - 1; i++) {
+		const di = d[i] ?? 0;
+		if (di === 0) {
+			m[i] = 0;
+			m[i + 1] = 0;
+			continue;
+		}
+		const a = (m[i] ?? 0) / di;
+		const b = (m[i + 1] ?? 0) / di;
+		const s = a * a + b * b;
+		if (s > 9) {
+			const t = 3 / Math.sqrt(s);
+			m[i] = t * a * di;
+			m[i + 1] = t * b * di;
+		}
+	}
+	return m;
+}
+
+/**
+ * A series as short pieces along a smooth curve through its points.
  *
  * The app ships no SVG library, so a line is drawn as thin Views, each rotated
- * to join two points.
+ * to join two samples. Straight pieces point to point drew visible corners
+ * (owner 2026-11-21: "画的线不平滑 不好看"); CURVE_STEPS pieces per gap do not.
  */
 export function strokes(
 	values: readonly number[],
@@ -236,10 +274,30 @@ export function strokes(
 	height: number,
 	max: number,
 ): Stroke[] {
+	if (values.length < 2) return [];
+	const pts = values.map((_, i) => pointAt(values, i, width, height, max));
+	const ys = pts.map((p) => p.y);
+	const m = monotoneSlopes(ys);
+	const samples: Array<{ x: number; y: number }> = [];
+	for (let i = 0; i < pts.length - 1; i++) {
+		const a = pts[i] as { x: number; y: number };
+		const b = pts[i + 1] as { x: number; y: number };
+		for (let k = i === 0 ? 0 : 1; k <= CURVE_STEPS; k++) {
+			const t = k / CURVE_STEPS;
+			const h00 = 2 * t ** 3 - 3 * t ** 2 + 1;
+			const h10 = t ** 3 - 2 * t ** 2 + t;
+			const h01 = -2 * t ** 3 + 3 * t ** 2;
+			const h11 = t ** 3 - t ** 2;
+			samples.push({
+				x: a.x + (b.x - a.x) * t,
+				y: h00 * a.y + h10 * (m[i] ?? 0) + h01 * b.y + h11 * (m[i + 1] ?? 0),
+			});
+		}
+	}
 	const out: Stroke[] = [];
-	for (let i = 0; i < values.length - 1; i++) {
-		const a = pointAt(values, i, width, height, max);
-		const b = pointAt(values, i + 1, width, height, max);
+	for (let i = 0; i < samples.length - 1; i++) {
+		const a = samples[i] as { x: number; y: number };
+		const b = samples[i + 1] as { x: number; y: number };
 		out.push({
 			cx: (a.x + b.x) / 2,
 			cy: (a.y + b.y) / 2,

@@ -115,51 +115,20 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		expect(guard).not.toMatch(/top\.kind === "/);
 	});
 
-	it("caps the signal glyphs at TWO", () => {
-		// Owner 2026-08-17 capped the lifestyle row at 2 (was 3). The row became
-		// GLYPHS on 2026-08-22 — "lets add icons to the left of community name
-		// for now" — and the cap survived the change of medium, now for a second
-		// reason: the glyphs, the name and `Explore` share one line, so every
-		// icon is width the name does not get.
-		expect(SRC).toContain("const MAX_COMMUNITY_ICONS = 2");
-		expect(SRC).not.toContain("MAX_TAGS");
-		// The cap is enforced in ONE place — the `push` helper both sources feed
-		// — rather than at each call site, which is what a `slice` per source
-		// used to require.
-		expect(SRC).toContain("out.length >= MAX_COMMUNITY_ICONS");
-	});
-
-	it("keeps the glyphs on the name's right, never under it", () => {
-		// Owner 2026-08-23: "dont put icons below the community name, put them
-		// on the right side, if overlaps with explore, then use two line for
-		// community name, but still put icons to the right side". The row that
-		// holds the name and the glyphs must therefore NOT wrap — a wrapping
-		// row is exactly what dropped the glyphs onto a line of their own on
-		// long names. The name absorbs the squeeze instead, wrapping to its two
-		// lines inside a narrower box.
-		const infoLeft = SRC.slice(
-			SRC.indexOf("\tinfoLeft: {"),
-			SRC.indexOf("\t},", SRC.indexOf("\tinfoLeft: {")),
-		);
-		expect(infoLeft).toContain("flexDirection");
-		expect(infoLeft).not.toContain("flexWrap");
+	it("draws nothing beside the name, and keeps a long name whole", () => {
+		// Owner 2026-11-21: "去掉community name旁边的小label 没啥用". The signal
+		// glyphs that sat right of the name since 2026-08-22 are gone, and so is
+		// the measuring that kept them snug to a wrapped name.
+		expect(SRC).not.toContain("signalIcons");
+		expect(SRC).not.toContain("RedlineIcon key");
+		expect(SRC).not.toContain("onNameLayout");
+		// The name still wraps to two lines rather than truncating (2026-08-22),
+		// and `Explore` sits outside the name's column.
 		expect(SRC).toContain("numberOfLines={2}");
-		// And the glyphs follow the name's TEXT, not the flex box the text was
-		// shrunk into: a wrapped name leaves the box wider than its longest
-		// line, which is what put a third of a card-width of air between
-		// "Apremont -" and its glyphs. The box is handed back its measured
-		// width before the glyphs are laid out beside it.
-		expect(SRC).toContain("onTextLayout={onNameLayout}");
-		expect(SRC).toContain("e.nativeEvent.lines");
-		// And they must still be the name's neighbours in the tree, not the
-		// link's: one container holds the name and the glyphs, `Explore` is
-		// outside it.
 		const left = SRC.indexOf("styles.infoLeft");
-		const glyphs = SRC.indexOf("styles.icons");
 		const cta = SRC.indexOf("styles.ctaRow");
 		expect(left).toBeGreaterThan(-1);
-		expect(glyphs).toBeGreaterThan(left);
-		expect(cta).toBeGreaterThan(glyphs);
+		expect(cta).toBeGreaterThan(left);
 	});
 
 	it("has no pill row left", () => {
@@ -170,22 +139,12 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		expect(SRC).not.toContain("chipLabel");
 	});
 
-	it("never substitutes a glyph it does not have", () => {
-		// The shipped font is a 14-glyph subset and several real signals
-		// ("Lake nearby", "Golf nearby") have no honest match. The card must
-		// skip those, never fall back — a wrong glyph is a claim the community
-		// was never measured on. The server returns `icon` as optional and this
-		// face only ever pushes a defined one.
-		expect(SRC).toContain("if (!icon || seen.has(icon)");
-	});
-
 	it("renders no statistic line on the card", () => {
 		// The glass tile carried a `fact` sub-line and the pill that replaced it
 		// could not; the glyph that replaced the pill certainly cannot. The
 		// facts live on the community explore screen, which is where the CTA
 		// goes.
 		expect(SRC).not.toContain("r.fact");
-		expect(SRC).toContain("card.signals");
 	});
 
 	it("does NOT render the authored blurb/description row", () => {

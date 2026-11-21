@@ -1,10 +1,12 @@
 import type { CommunityProfile } from "@percho/shared/community-profile";
 import { describe, expect, it } from "vitest";
 import {
+	CURVE_STEPS,
 	axisTop,
 	dotAt,
 	localDay,
 	milesOf,
+	monotoneSlopes,
 	nearbyStops,
 	pointAt,
 	rankGroups,
@@ -152,15 +154,27 @@ describe("lines", () => {
 		expect(pointAt([0, 50, 100], 1, 200, 100, 100)).toEqual({ x: 100, y: 50 });
 	});
 
-	it("joins the points with rotated pieces", () => {
-		const [up, flat] = strokes([0, 100, 100], 200, 100, 100);
-		expect(up?.cx).toBe(50);
-		expect(up?.cy).toBe(50);
-		expect(up?.length).toBeCloseTo(Math.hypot(100, 100));
-		// Rising on screen is a negative (anticlockwise) turn.
-		expect(up?.angle).toBeCloseTo(-Math.PI / 4);
-		expect(flat?.angle).toBeCloseTo(0);
+	it("joins the points with a smooth run of short pieces", () => {
+		const pieces = strokes([0, 100, 100], 200, 100, 100);
+		expect(pieces).toHaveLength(2 * CURVE_STEPS);
+		// Rising on screen is a negative (anticlockwise) turn; the flat end is level.
+		expect(pieces[0]?.angle).toBeLessThan(0);
+		expect(pieces.at(-1)?.angle).toBeCloseTo(0);
+		// No corner: neighbouring pieces turn by a few degrees at most.
+		for (let i = 1; i < pieces.length; i++) {
+			const turn = Math.abs(
+				(pieces[i]?.angle ?? 0) - (pieces[i - 1]?.angle ?? 0),
+			);
+			expect(turn).toBeLessThan(0.35);
+		}
 		expect(strokes([5], 200, 100, 100)).toEqual([]);
+	});
+
+	it("never swings past the data between two points", () => {
+		// Rising then flat: the curve must not overshoot the top (y = 0).
+		const pieces = strokes([0, 100, 100, 100], 300, 100, 100);
+		for (const p of pieces) expect(p.cy).toBeGreaterThanOrEqual(-1e-9);
+		expect(monotoneSlopes([0, 10, 10])).toEqual([10, 0, 0]);
 	});
 
 	it("rounds a money axis up, and prints money short", () => {
