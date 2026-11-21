@@ -23,6 +23,20 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-21 06:20 UTC — phase366.2–366.3: explore page links and folded credits, smooth lines, a plainer card
+
+**Objective**: Owner on Wild Timber's explore page and card: "去掉community name旁边的小label 没啥用 / explore 这个名字有咩有别的选择？/ 多加一些link 类似Nextdoor的 可以让人去explore / 底部的声明部分太多了 可以去掉吗 / 画的线不平滑 不好看 之前city card里也存在这个问题 都变平滑". Answers to the options put to him: "保留explore 不要箭头 / 都加 / a".
+**Actions**:
+- Card (`CommunityFace`): the signal glyphs beside the name are gone, with the name-width measuring that kept them snug; `Explore` stays, as the white pill, without the arrow. `theme/community-panel-fit.test.ts` now asserts the opposite of the glyph rules it held.
+- Links (`profile-build.ts`): own site — labelled with `communities.builder` when set, minus a leading "The" — Nextdoor, Reddit search, Google Maps search, "Homes on Zillow" (`/homes/<name-city-GA>_rb/`), and the three nearby schools as GreatSchools searches ("Riverside ES"). Search URLs throughout: each resolves whatever the site holds for the name. Not Redfin: no free-text URL, its pages need an id from a private API. Not the stored school websites: NCES data, all http, many dead (forsyth.k12.ga.us). `mergeProfile` now ADDS researched links to computed ones (researched first, deduped by url and label, ≤ 10) instead of replacing them; Windward's "Community site" label became "Website" so it is not shown twice. Stored schema: links `.max(5)` → `.max(10)`. `upsert-community-profile.ts` reads `name, builder`.
+- Data: `wild-timber.website` http://wildtimber.org (apex does not resolve) → https://www.wildtimber.org/; `builder` = Toll Brothers (Northbrooke), The Providence Group (Bellmoore Park) — their stored websites are those builders' pages.
+- Community page foot: sources and film photo credits fold behind "Sources & photo credits ›" (Google's attribution stays one tap away — option A).
+- Lines: app charts (`strokes` in `lib/community/explore.ts`) are a monotone cubic (Fritsch–Carlson, never overshoots a point) cut into 10 pieces a gap; the city film's `count` chart (`callouts.py`) is the same curve drawn on a 4× patch and scaled down (antialiased), dots included. Only Suwanee's and Cumming's films carry a count chart; both re-assembled after the worker restart — Suwanee `e84a1645` (`cf 90c959cd…`), Cumming `3128d343` (`cf b64dc08e…`), clips reused, 23 TTS lines, no paid calls; frames show the curve.
+**Incident**: I wrote the seven filmed communities' new profiles (`--apply` per slug) BEFORE deploying the `.max(10)` schema. Production's reader rejected the 8–9-link profiles whole, so those seven explore pages fell back to the old sections for ~10 minutes until `bea81863` deployed. Order for next time: deploy the schema, then write data it allows.
+**Not done — needs the owner**: the full rebuild of all 22,730 profiles (`community:profile --all --apply`) was refused by the session's permission classifier as a bulk production write. Only the 7 filmed communities have the new links.
+**Verified**: web vitest 1353, mobile vitest 878, render-worker pytest 153; typecheck 0 / biome 0 errors on both apps. The new antialiasing test fails on the old `callouts.py` (0 blended edge pixels vs 741). Production serves all seven profiles with links. Zillow returns 403 to scripted requests and a headless-browser check was refused, so the Zillow link is **unverified** beyond being Zillow's own search URL form. Card and page changes **not seen on a device**. Render workers restarted 2026-11-21 06:12 UTC after the merge.
+**Next steps**: owner — confirm the Zillow link and the card on device; approve the all-communities rebuild. Then pitch #2 for Sugar Hill (Towne Village vs Park Ridge).
+
 ## 2026-11-21 04:10 UTC — phase366.1: more of the community in its film, no frame in two films, one Explore pill
 
 **Objective**: Owner on Wild Timber's first cut, before the next community: "小区内的内容可以多一点 / 有一个喷泉的素材感觉用了很多次了 / explore button和city card保持一致". Plan approved ("好").
