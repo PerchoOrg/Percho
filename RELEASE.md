@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-21
+- **Arbors at Richland Creek in Buford has a neighbourhood film.** New homes by Ashton Woods between Lake Lanier and downtown Sugar Hill: the film follows the water below Buford Dam, the parks and greenway, Buford's old main street and the schools nearby. Narration in all new films now describes only what is on screen.
 - **Hedgerows in Buford has a neighbourhood film.** It opens on the neighbourhood pool, then Bogan Park's aquatic centre, the Mill Creek boardwalks, Topgolf and the karting track, the nearby schools and the Mall of Georgia.
 - **Towne Village and Wild Timber films re-made.** Neighbourhood films no longer open on houses or show the inside of a single home — at most one shot of the homes as a group, at the end. Dog-walk photos and blurry food close-ups are gone, and North Gwinnett High is now shown by its stadium with the school's name on the field. Towne Village at Suwanee Dam is now just "Towne Village".
 - **Towne Village at Suwanee Dam in Sugar Hill has a neighbourhood film.** New three-story townhomes by Beazer Homes: the film walks through the homes, kitchen to back patio, then the park, golf club and shops a few minutes away.

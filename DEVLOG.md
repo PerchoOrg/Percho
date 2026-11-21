@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-21 09:34 UTC — phase366.9: Arbors at Richland Creek (Buford builder slot) — and the narration grounded in the shots
+
+**Objective**: #4 of the batch, Ashton Woods' Arbors at Richland Creek (5 homes available, $524,900–$658,760 on the builder page) over Beazer's Paddocks at Doc Hughes (4 left, no amenities). Owner: "改好后请直接下一个".
+**Actions**:
+- `communities`: builder Ashton Woods, website the Ashton Woods community page.
+- Run `eb42c505`: research → resolve (25: the phase366.8 fill added 7) → photos → ingest (107 photos from 8 Ashton Woods pages, all `pending`) → tag ×2. Tag & Filter rejected 111 of the 112 site/own-place photos as "listing photo — one home" — the rule working as intended; the builder publishes no photo of the trail or pavilion, so this film has **no community act** (and, by rule, no house shot).
+- Editorial, film-only: USPS, S&S Ace, Planet Fitness, a yoga studio; Sims Lake, E.E. Robinson, Rreal Tacos, Rushing, E Center (in the Sugar Hill films). The Bowl and the Greenway were first dropped, then restored when the plan warned `film_short` (49s) — Sugar Hill's downtown is two miles off and the reuse rule picked fresh frames. Photo rejected: Lanier High "an empty field".
+- Schools: Sycamore Elementary's four Google photos are all children at events (filtered) and Lanier Middle has none on Google — neither appears; Lanier High does (two shots).
+- Narration problems found on this plan and fixed in code, not by hand: a grouped distance smaller than its farthest place ("four parks within two miles" with one at 2.2); the community placed "by/near" The Bowl, 2 miles off; and invented details once ratings were gone ("views along Richland Creek" over the Chattahoochee below Buford Dam, "craft beers on tap"). The plan now hands each place's shot descriptions to the narration ("on screen") and the prompt forbids anything that is neither a fact nor on screen.
+- Assembly `5ea1b3a1`, `cf_stream_uid 395a3f82d91735b8023b51213f173f0c`, 59.0 s, 21 clips, 8 TTS lines. **Spend: 2 Seedance $0.2792** (Lower Pool West, Buford Dam fishing pier). Cover: the fishing pier photo (no community photo exists) at `community-covers/8827a428…/7949b680….jpg`. Profile written (Ashton Woods, Reddit, Maps, Zillow, Sycamore ES, Lanier MS, Lanier HS).
+**Verified**: frames every 2 s; production feed serves the uid.
+
 ## 2026-11-21 09:07 UTC — phase366.8: why the new films got shorter, and the fix
 
 **Objective**: Owner: "好像时长有变少？ 看看现在几个community的时长对比", then "改好后请直接下一个" (no re-cuts of Hedgerows / Towne Village).
