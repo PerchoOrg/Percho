@@ -29,6 +29,8 @@ export const AMENITIES = [
   'pool',
   'courts',
   'playground',
+  'lake',
+  'trails',
   'green_space',
   'fitness',
   'other',
@@ -49,6 +51,8 @@ export const AMENITY_LABEL: Record<Amenity, string> = {
   pool: 'Pool',
   courts: 'Courts',
   playground: 'Playground',
+  lake: 'Lake',
+  trails: 'Walking Trails',
   green_space: 'Green Space',
   fitness: 'Fitness Center',
   other: 'Amenities',
@@ -74,10 +78,12 @@ const AMENITY_RULES: Array<[Amenity, RegExp]> = [
     'clubhouse',
     /\b(clubhouse|club-house|club house|community-center|community center|amenity-center|amenity center|amenity centre|lodge)\b/i,
   ],
-  [
-    'green_space',
-    /\b(trail|greenway|green-space|greenspace|lake|pond|lawn|pavilion|dog-park|dog park|garden|courtyard)\b/i,
-  ],
+  // A lake and a trail are named for what they are (phase366.6): Wild Timber's
+  // stocked lake and its lakeside path both came out "Green Space" — and a
+  // lake photo labelled green space reads as a mistake.
+  ['lake', /\b(lake|lakes|pond|ponds|lakeside|lakefront|dock|fishing)\b/i],
+  ['trails', /\b(trail|trails|greenway|walking-path|walking path|nature-trail|boardwalk)\b/i],
+  ['green_space', /\b(green-space|greenspace|lawn|pavilion|dog-park|dog park|garden|courtyard)\b/i],
 ];
 
 /**

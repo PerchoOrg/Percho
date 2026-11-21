@@ -9,7 +9,7 @@
 import { normalizeAnnotations } from './annotations';
 import { type CuratorPhoto, curateBatch } from './curator';
 import { type GuardViolation, type GuardedClip, guardClips } from './guard';
-import { scheduleClips } from './scheduler';
+import { type SeedanceOptions, scheduleClips } from './scheduler';
 import type { PhotoAnnotation, PhotoMeta, PlanWarning } from './types';
 import {
   type NarrationStats,
@@ -112,6 +112,8 @@ export async function buildTourPlan(
    * change cheap (owner 2026-08-17).
    */
   cached?: Map<string, PhotoAnnotation>,
+  /** The paid engine's cap and the clips already paid for (phase366.6). */
+  seedance: SeedanceOptions = {},
 ): Promise<TourPlan> {
   const needsCurating = photos.filter((p) => !cached?.has(p.photo_id));
   const curatorPhotos: CuratorPhoto[] = needsCurating.map((p) => ({
@@ -155,7 +157,7 @@ export async function buildTourPlan(
     return false;
   });
 
-  const scheduled = scheduleClips(usable, meta);
+  const scheduled = scheduleClips(usable, meta, seedance);
   const guarded = guardClips(scheduled.clips, usable, meta);
   const vo = await runVoPass(guarded.clips);
 

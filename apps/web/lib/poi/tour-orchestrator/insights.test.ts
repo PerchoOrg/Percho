@@ -4,7 +4,6 @@ import {
   type PlaceFact,
   anglesForCommunity,
   describeDistance,
-  describeStanding,
   filmFacts,
   renderFacts,
 } from './insights';
@@ -18,9 +17,10 @@ const f = (
 ): PlaceFact => ({ name, bucket, miles, rating, reviews });
 
 describe('anglesForCommunity', () => {
-  it('always includes standing — the angle with data behind every place', () => {
+  it('never leans on ratings or review counts (phase366.6)', () => {
+    expect(INSIGHT_ANGLES as readonly string[]).not.toContain('standing');
     for (const seed of ['a', 'b', 'c', 'd', 'e']) {
-      expect(anglesForCommunity(seed)).toContain('standing');
+      expect(anglesForCommunity(seed)).not.toContain('standing');
     }
   });
 
@@ -43,22 +43,6 @@ describe('anglesForCommunity', () => {
 
   it('cannot ask for more angles than exist', () => {
     expect(anglesForCommunity('x', 99).length).toBe(INSIGHT_ANGLES.length);
-  });
-});
-
-describe('describeStanding', () => {
-  it('needs both a rating and a count to say anything', () => {
-    expect(describeStanding(f('X', 'dining', 1, 4.8, null))).toBeNull();
-    expect(describeStanding(f('X', 'dining', 1, null, 900))).toBeNull();
-  });
-
-  it('carries the review count, which is what separates the two 4.8s', () => {
-    // Sims Lake and Caney Creek both score 4.8; one is the area's favourite
-    // and the other is a local secret, and only the count says which.
-    expect(describeStanding(f('Sims Lake', 'outdoor', 4, 4.8, 1988))).toBe(
-      '4.8 from 1,988 reviews',
-    );
-    expect(describeStanding(f('Caney Creek', 'pets', 2.3, 4.8, 65))).toBe('4.8 from 65 reviews');
   });
 });
 
@@ -91,10 +75,8 @@ describe('filmFacts', () => {
     expect(filmFacts(set).join(' | ')).toContain('3 parks');
   });
 
-  it('picks the most-reviewed well-rated place, not the highest-scoring one', () => {
-    // Sims Lake at 4.8/1988 beats Halcyon at 4.6/1492 on both, but the point
-    // is that weight decides, not score alone.
-    expect(filmFacts(set).join(' | ')).toContain('Sims Lake');
+  it('says nothing about ratings or reviews', () => {
+    expect(filmFacts(set).join(' | ')).not.toMatch(/review|rated|1,988/);
   });
 
   it('says nothing rather than something thin', () => {
@@ -109,5 +91,11 @@ describe('renderFacts', () => {
     const out = renderFacts([f('Sharon Elementary', 'schools', 0.9)]);
     expect(out).toContain('0.9 mi');
     expect(out).not.toMatch(/null|undefined|reviews/);
+  });
+
+  it('never hands the narration a rating or a review count', () => {
+    const out = renderFacts([f('Sims Lake', 'outdoor', 4, 4.8, 1988)]);
+    expect(out).toContain('4.0 mi');
+    expect(out).not.toMatch(/4\.8|1,988|review/);
   });
 });

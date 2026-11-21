@@ -153,6 +153,29 @@ export function initialVerdict(p: {
   return { ok: true };
 }
 
+/**
+ * A film never opens on houses (owner 2026-08-23: "starting with some houses,
+ * which i already mentioned to avoid"). The community act plays first, so when
+ * it holds no real amenity — only the one group-of-homes shot a new townhome
+ * community has — that act moves to the end and the film opens on its
+ * surroundings (owner 2026-11-21, on Towne Village). PURE.
+ */
+export function homesLast<T extends { photo_id: string; sort_order?: number }>(
+  shots: T[],
+  amenityOfPhoto: (photoId: string) => Amenity | undefined,
+): T[] {
+  const act = shots.filter((s) => amenityOfPhoto(s.photo_id) !== undefined);
+  const named = act.some((s) => {
+    const a = amenityOfPhoto(s.photo_id);
+    return a !== 'streetscape' && a !== 'other';
+  });
+  if (act.length === 0 || named || act.length === shots.length) return shots;
+  const rest = shots.filter((s) => amenityOfPhoto(s.photo_id) === undefined);
+  return [...rest, ...act].map((s, i) =>
+    s.sort_order === undefined ? s : { ...s, sort_order: i },
+  );
+}
+
 /** Shared: build the final shot list for a set of POIs. Photos step computes
  *  and persists this; assemble consumes it. Clips per POI vary by kind of
  *  place — see CLIPS_BY_BUCKET. */
@@ -573,7 +596,26 @@ export async function computeFinalShots(
 
   if (planPhotos.length === 0) return { shots: [], dropped, plan: null };
 
-  const plan = await buildTourPlan(planPhotos, cached);
+  // Seedance already rendered for these photos — reusing one is free — and the
+  // community film's cap of two (phase366.6; was enforced by hand per plan).
+  const readySeedance = new Set<string>();
+  const planIds = planPhotos.map((p) => p.photo_id);
+  for (let i = 0; i < planIds.length; i += 100) {
+    const { data: clips } = (await sb
+      .from('photo_clips')
+      .select('photo_id')
+      .eq('engine', 'seedance')
+      .eq('status', 'ready')
+      .in('photo_id', planIds.slice(i, i + 100))) as { data: Array<{ photo_id: string }> | null };
+    for (const c of clips ?? []) readySeedance.add(c.photo_id);
+  }
+  const { COMMUNITY_SEEDANCE_MAX_CLIPS, SEEDANCE_MAX_CLIPS } = await import(
+    '@/lib/poi/tour-orchestrator/scheduler'
+  );
+  const plan = await buildTourPlan(planPhotos, cached, {
+    max: owner?.scope.kind === 'community' ? COMMUNITY_SEEDANCE_MAX_CLIPS : SEEDANCE_MAX_CLIPS,
+    ready: readySeedance,
+  });
 
   // Persist what was freshly annotated, so the next run of this step reuses it
   // instead of paying again (owner 2026-08-17: "every time rerun would make llm
@@ -647,7 +689,7 @@ export async function computeFinalShots(
     }));
 
   return {
-    shots: labelled,
+    shots: homesLast(labelled, (photoId) => amenityByPhoto.get(photoId)),
     dropped,
     // Everything review needs to judge the plan, persisted next to it.
     plan: {

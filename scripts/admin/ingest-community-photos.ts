@@ -9,8 +9,12 @@
  * files to the same storage bucket and path convention Google photos use,
  * writes poi_photos rows with source='community_site', links them to the
  * community with intent_bucket='amenities', and queues them for the
- * render-worker's enhance pass. Tagging is left to the tour pipeline's `tag`
- * step, which is where every other photo gets tagged.
+ * render-worker's enhance pass. Photos land `pending`: the tour pipeline's
+ * `tag` step tags AND filters them, exactly as it does every other photo.
+ *
+ * Prefer the pipeline's own `ingest` step (`pnpm tour <slug> --steps ingest`),
+ * which reads the community's site pages. This script is for files you already
+ * have on disk — a gallery the page reader cannot reach.
  *
  * Usage:
  *   pnpm tsx scripts/admin/ingest-community-photos.ts <community-slug> <dir>
@@ -155,12 +159,10 @@ async function main() {
       }
       const ext = extname(file).toLowerCase();
       const storagePath = `poi/${poi.id}/${contentHash.slice(0, 32)}${ext}`;
-      const { error: upErr } = await sb.storage
-        .from(PHOTO_BUCKET)
-        .upload(storagePath, bytes, {
-          contentType: CONTENT_TYPES[ext] ?? 'image/jpeg',
-          upsert: true,
-        });
+      const { error: upErr } = await sb.storage.from(PHOTO_BUCKET).upload(storagePath, bytes, {
+        contentType: CONTENT_TYPES[ext] ?? 'image/jpeg',
+        upsert: true,
+      });
       if (upErr) throw new Error(`Upload failed for ${file}: ${upErr.message}`);
 
       const { data: row, error: rowErr } = await sb
@@ -177,12 +179,19 @@ async function main() {
             source_note: sourceNote ?? `${community.name} community website`,
             file: basename(file),
           },
-          status: 'approved',
+          // `pending`, like every other way a photo enters (phase366.6). This
+          // wrote `approved`, and the filter step only judges pending photos —
+          // so a builder's model-home kitchen and bedroom skipped the
+          // single-home / interior rule and opened Towne Village's film.
+          // The place link above stays approved: that is what puts the
+          // amenity in the film; each photo still has to pass Tag & Filter.
+          status: 'pending',
           enhanced_status: 'queued',
         })
         .select('id')
         .single();
-      if (rowErr || !row) throw new Error(`poi_photos insert failed for ${file}: ${rowErr?.message}`);
+      if (rowErr || !row)
+        throw new Error(`poi_photos insert failed for ${file}: ${rowErr?.message}`);
 
       queuedPhotoIds.push(row.id);
       added += 1;

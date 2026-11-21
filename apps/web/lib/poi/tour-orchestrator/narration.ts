@@ -304,13 +304,19 @@ RULES
 - Open from what makes this ${noun} specific — but do not quote the
   researcher's sentence back, it is a note to you. Never "<Name> sits in
   <City>": it fits every ${noun}, which is why it is wrong for this one.
+- The researcher's sentence is UNVERIFIED. Take its mood, never its specifics:
+  no builder, material, certification, award or count unless the facts above
+  say it.
 - Name the ${noun} once, early. After that, say "here".
 - Concrete nouns, real detail. "The courts stay busy past dusk" beats "tennis
   courts are available".
-- USE THE FACTS, all of them — what the place is, what it looks like, what it
-  is known for, how many people rate it and how highly. Don't recite them, but
-  let at least half the lines rest on something real. Only the facts given
-  above: never invent a rating, a distance, a count or an amenity.
+- USE THE FACTS — what the place is, what it looks like, what it is known
+  for. Don't recite them, but let at least half the lines rest on something
+  real. Only the facts given above: never invent a distance, a count or an
+  amenity.
+- NO RATINGS, NO REVIEW COUNTS. How many people reviewed a place says nothing
+  a buyer can see; "Nearly seven hundred reviews praise The Bowl" is a wasted
+  line.
 - DISTANCE EARNS ITS PLACE — how far the school is, whether you can walk out
   for coffee. But it is the easiest fact to reach for, because every place has
   one, and it crowds the others out. Ration it:
@@ -321,8 +327,8 @@ RULES
     · Say it the way a person would, not the way a map would.
     · Under about ten words there is no room for both, and a distance is what
       fits when nothing else will — which is why those sections keep coming
-      back as "Life Time fitness is under a mile". Say what the place IS:
-      "Crunch Fitness, three thousand reviews deep".
+      back as "Life Time fitness is under a mile". Say what the place IS —
+      a gym, a pond with a boardwalk, a taco counter — from the facts.
       YES — "Bell-Boles Park is a mile of shaded trail, close enough to walk."
       NO  — "Life Time sits under a mile from home."
       NO  — "Drive six miles to Newtown Dog Park."
