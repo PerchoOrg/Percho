@@ -59,6 +59,7 @@ from depthflow_modes import pick_engines, plan_moves  # type: ignore  # noqa: E4
 from hero_prompt import choose_hero_prompt, fallback_hero, looks_aerial  # type: ignore  # noqa: E402
 from storage_retry import with_retry  # type: ignore  # noqa: E402
 from callouts import burn_callout  # type: ignore  # noqa: E402
+from film_timeline import played_timeline  # type: ignore  # noqa: E402
 
 
 def _now_iso() -> str:
@@ -2392,6 +2393,7 @@ def process_assembly(row: dict[str, Any]) -> None:
         # only photo_id/engine), so resolve storage paths here: photo_clips ready rows
         # keyed by photo_id — seedance → ai-videos, depthflow/kenburns → clip-renders.
         clip_paths: list[Path] = []
+        played_idx: list[int] = []  # index into `ordered` of each clip_paths entry
         skipped: list[str] = []
         by_photo = {}
         # Ask for the clips of THESE photos, not the first page of every ready
@@ -2465,6 +2467,7 @@ def process_assembly(row: dict[str, Any]) -> None:
                     print(f"[assembly {assembly_id}] callout failed, clip plays plain: {exc}", flush=True)
                     plain.rename(dest)
             clip_paths.append(dest)
+            played_idx.append(i - 1)
             print(f"[assembly {assembly_id}] downloaded {bucket}/{path}", flush=True)
 
         if len(clip_paths) < 2:
@@ -2522,6 +2525,7 @@ def process_assembly(row: dict[str, Any]) -> None:
             )
             prev = f"[{name}]"
         total = crossfade_total(durs, xfade)
+        end_card_s = 0.0
 
         # No place labels are drawn into the film any more (phase174) — the
         # phone draws them over the video instead. See the note above
@@ -2555,7 +2559,8 @@ def process_assembly(row: dict[str, Any]) -> None:
                 f"offset={total - END_CARD_FADE:.3f}[withcard]"
             )
             prev = "[withcard]"
-            total = total + END_CARD_S - END_CARD_FADE
+            end_card_s = END_CARD_S - END_CARD_FADE
+            total = total + end_card_s
             print(f"[assembly {assembly_id}] end card for {community_name}", flush=True)
 
         vf = ";".join(filters) + f";{prev}format=yuv420p"
@@ -2634,6 +2639,10 @@ def process_assembly(row: dict[str, Any]) -> None:
                 "video_url": streamIframeUrl(cf_uid),
                 "error": None,
                 "updated_at": _now_iso(),
+                # The card names the place on screen from these (see film_timeline.py).
+                "ordered_clips": played_timeline(
+                    ordered, dict(zip(played_idx, durs)), end_card_s
+                ),
             },
         )
         print(f"[assembly {assembly_id}] ready", flush=True)

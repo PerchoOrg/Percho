@@ -23,6 +23,20 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-21 17:26 UTC — phase366.11: the card's place label lagged the picture
+
+**Objective**: owner 2026-11-21: "照片和location有延迟" — the place name on a film card changes after the picture does.
+**Issues**: `tourSegments` laid places out from `ordered_clips[].duration_s`, which is the PLAN's length. Two errors, both making every boundary land early as a fraction and the label late on screen:
+- The worker's 3 s end card (2.4 s net of its fade) was not in the total — every film, growing to 2.4 s late at the end (Sugarloaf measured: 0.1 s at the start, 2.0 s near the end).
+- The assembler cuts from whatever clip is ready for each photo: a Seedance clip wins over the planned engine (always ~4–5 s), and a Ken Burns clip rendered for an earlier plan keeps its own length. Aberdeen's film is 91.2 s against a 71.0 s plan — the label ran ~16 s behind by the end. Apremont +4.7, Ashley +5.1, Bellmoore +3.1 s.
+**Actions**:
+- `scripts/render-worker/film_timeline.py` (new, pure, `tests/test_film_timeline.py`): `played_timeline` writes each played clip's probed `duration_s`, `skipped: true` on a clip the worker had no ready file for, and `end_card_s` on the last played clip. `worker.py` `process_assembly` records it in the same patch that marks the assembly ready.
+- `apps/web/lib/feed/tour-segments.ts`: skips `skipped` clips and adds `end_card_s` (default `TOUR_END_CARD_S` = 2.4 — every film so far has one) to the total; the end card stays inside the last place's dash, so the bar still completes at the film's end. Server-side, no app build.
+- `scripts/render-worker/backfill_film_timeline.py`: for films already live, picks each photo's clip as the assembler does (`pick_clip`), probes it, and writes only when the timeline adds up to the Stream video's duration (±0.25 s). Thirteen of eighteen live films did, to within 0.05 s (8 of 11 community, 5 of 7 city). Five did not — a clip re-rendered in place since the cut (Wild Timber, Towne Village, Windward, city Suwanee, city Sugar Hill); `--fit-plan` scales their plan durations to the real length, which is exact for four (plan + card within 0.2 s of the video) and spreads Suwanee's 3.9 s evenly.
+**Decisions**: write the truth from the worker rather than add another TS-side guess — the plan cannot know which file the AI-first pick will use. No schema change: the facts ride on the clips already stored. Scene detection on Suwanee's film to place its cuts exactly was tried and gave nothing (0.5 s crossfades score below any usable scene threshold); not worth more for one film.
+**Learnings**: `ordered_clips[].duration_s` now means "what played" after an assembly; `reassemble-community-tours.ts` copies it verbatim, which is fine — the worker rewrites it on every run.
+**Next steps**: restart render workers (worker.py changed). St Marlo pitch still awaiting the owner.
+
 ## 2026-11-21 10:36 UTC — phase366.10: Sugarloaf Country Club (Duluth flagship); three pipeline fixes it surfaced
 
 **Objective**: #5 of the batch. Owner: "接着做吧".

@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-21
+- **The place name on a film now changes with the picture.** It used to fall behind as a film went on — by a couple of seconds on every film and by much more on a few older ones such as Aberdeen's. Fixed for all neighbourhood and city films already in the app.
 - **Sugarloaf Country Club in Duluth has a neighbourhood film.** It opens on the club's pools, tennis courts and TPC Sugarloaf golf course, then the parks, cafés, the ice rink and railway museum, Gas South Arena and the schools nearby.
 - **Arbors at Richland Creek in Buford has a neighbourhood film.** New homes by Ashton Woods between Lake Lanier and downtown Sugar Hill: the film follows the water below Buford Dam, the parks and greenway, Buford's old main street and the schools nearby. Narration in all new films now describes only what is on screen.
 - **Hedgerows in Buford has a neighbourhood film.** It opens on the neighbourhood pool, then Bogan Park's aquatic centre, the Mill Creek boardwalks, Topgolf and the karting track, the nearby schools and the Mall of Georgia.
