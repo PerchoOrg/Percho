@@ -139,12 +139,16 @@ class _Canvas:
         self.w, self.h = w, h
         self.img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
 
-    def stamp(self, draw_fn, a: float, rise: int = 22) -> None:
-        """Draw one element; it fades in and rises `rise` px as `a` goes 0→1."""
+    def stamp(self, draw_fn, a: float, rise: int = 22, on_layer: bool = False) -> None:
+        """Draw one element; it fades in and rises `rise` px as `a` goes 0→1.
+
+        `on_layer` hands `draw_fn` the layer itself rather than a draw on it,
+        for an element composited from its own supersampled patch.
+        """
         if a <= 0:
             return
         layer = Image.new("RGBA", (self.w, self.h), (0, 0, 0, 0))
-        draw_fn(ImageDraw.Draw(layer))
+        draw_fn(layer if on_layer else ImageDraw.Draw(layer))
         if a < 1:
             layer.putalpha(layer.getchannel("A").point(lambda v: round(v * a)))
             shifted = Image.new("RGBA", (self.w, self.h), (0, 0, 0, 0))
@@ -162,6 +166,56 @@ def _tracked(d: ImageDraw.ImageDraw, xy, text: str, font, fill, track: float) ->
 
 def _tracked_width(text: str, font, track: float) -> float:
     return sum(_PROBE.textlength(ch, font=font) + track for ch in text) - track
+
+
+# The count chart's line is a monotone cubic through its points, drawn at
+# SUPERSAMPLE x and scaled down so its edge is antialiased. PIL draws a polyline
+# with no antialiasing and a visible corner at every point, which the owner
+# called out (2026-11-21: "画的线不平滑 不好看"). Monotone (Fritsch–Carlson) so
+# a series that only rose is never drawn dipping between two censuses.
+SUPERSAMPLE = 4
+CURVE_STEPS = 16
+
+
+def monotone_curve(pts: list[tuple[float, float]], steps: int = CURVE_STEPS) -> list[tuple[float, float]]:
+    """Samples along a monotone cubic through `pts`, evenly spaced in x; `steps` per gap."""
+    n = len(pts)
+    if n < 2:
+        return list(pts)
+    ys = [p[1] for p in pts]
+    d = [ys[i + 1] - ys[i] for i in range(n - 1)]
+    m = [d[0]] + [0.0 if d[i - 1] * d[i] <= 0 else (d[i - 1] + d[i]) / 2 for i in range(1, n - 1)] + [d[-1]]
+    for i in range(n - 1):
+        if d[i] == 0:
+            m[i] = m[i + 1] = 0.0
+            continue
+        a, b = m[i] / d[i], m[i + 1] / d[i]
+        if a * a + b * b > 9:
+            t = 3 / math.sqrt(a * a + b * b)
+            m[i], m[i + 1] = t * a * d[i], t * b * d[i]
+    out = [pts[0]]
+    for i in range(n - 1):
+        (x0, y0), (x1, y1) = pts[i], pts[i + 1]
+        for k in range(1, steps + 1):
+            t = k / steps
+            h00, h10 = 2 * t**3 - 3 * t**2 + 1, t**3 - 2 * t**2 + t
+            h01, h11 = -2 * t**3 + 3 * t**2, t**3 - t**2
+            out.append((x0 + (x1 - x0) * t, h00 * y0 + h10 * m[i] + h01 * y1 + h11 * m[i + 1]))
+    return out
+
+
+def curve_prefix(curve: list[tuple[float, float]], reach: float, steps: int = CURVE_STEPS) -> list[tuple[float, float]]:
+    """The part of `curve` drawn so far, `reach` measured in gaps between points (0..n-1)."""
+    if reach <= 0 or len(curve) < 2:
+        return curve[:1]
+    pos = min(reach * steps, len(curve) - 1)
+    whole = int(pos)
+    drawn = curve[: whole + 1]
+    f = pos - whole
+    if f > 0 and whole + 1 < len(curve):
+        (ax, ay), (bx, by) = curve[whole], curve[whole + 1]
+        drawn.append((ax + (bx - ax) * f, ay + (by - ay) * f))
+    return drawn
 
 
 def count_seconds(clip_seconds: float) -> float:
@@ -288,26 +342,45 @@ def _count_block(c: _Canvas, callout: dict[str, Any], t: float, clip_seconds: fl
         for i, p in enumerate(series)
     ]
 
-    def chart_fn(d):
-        reach = q * (n - 1)
-        drawn = [pts[0]]
-        for i in range(1, n):
-            if reach >= i:
-                drawn.append(pts[i])
-            elif reach > i - 1:
-                f = reach - (i - 1)
-                drawn.append((pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f,
-                              pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f))
-        if len(drawn) > 1:
-            d.line(drawn, fill=AMBER + (255,), width=max(4, round(w * 0.007)), joint="curve")
+    reach = q * (n - 1)
+    curve = monotone_curve(pts)
+
+    def line_fn(layer):
+        # Line and dots on a patch SUPERSAMPLE x the chart's box, scaled down
+        # onto the layer: the scale-down is the antialiasing.
+        S = SUPERSAMPLE
+        lw = max(4, round(w * 0.007))
         r = round(w * 0.011)
+        edge = r + lw
+        top_y = min([cy1 - chart_h] + [py for _, py in curve])
+        bx0, by0 = int(cx0 - edge), int(top_y - edge)
+        bx1, by1 = int(cx1 + edge) + 1, int(cy1 + edge) + 1
+        patch = Image.new("RGBA", ((bx1 - bx0) * S, (by1 - by0) * S), (0, 0, 0, 0))
+        pd = ImageDraw.Draw(patch)
+
+        def at(x, y):
+            return ((x - bx0) * S, (y - by0) * S)
+
+        drawn = [at(x, y) for x, y in curve_prefix(curve, reach)]
+        if len(drawn) > 1:
+            pd.line(drawn, fill=AMBER + (255,), width=lw * S, joint="curve")
+            # Round ends; PIL draws butt caps.
+            for ex, ey in (drawn[0], drawn[-1]):
+                pd.ellipse((ex - lw * S / 2, ey - lw * S / 2, ex + lw * S / 2, ey + lw * S / 2),
+                           fill=AMBER + (255,))
         for i, (px, py) in enumerate(pts):
             if reach >= i - 0.02:
-                d.ellipse((px - r, py - r, px + r, py + r), fill=AMBER + (255,))
+                cx, cy = at(px, py)
+                pd.ellipse((cx - r * S, cy - r * S, cx + r * S, cy + r * S), fill=AMBER + (255,))
+        layer.alpha_composite(patch.resize((bx1 - bx0, by1 - by0), Image.LANCZOS), (bx0, by0))
+
+    def years_fn(d):
+        for i, (px, _) in enumerate(pts):
             d.text((px, cy1 + yfont.size * 0.5), str(series[i].get("label", "")), font=yfont,
                    fill=WHITE + (200,), anchor="ma")
 
-    c.stamp(chart_fn, arrive, rise=0)
+    c.stamp(line_fn, arrive, rise=0, on_layer=True)
+    c.stamp(years_fn, arrive, rise=0)
 
     y = cy1 + years_h
     value = f"{round(lo + (hi - lo) * q):,}"
