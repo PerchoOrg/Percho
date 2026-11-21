@@ -23,6 +23,17 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-21 08:30 UTC — phase366.7: Hedgerows (Buford), the first film on the fixed workflow
+
+**Objective**: #3 of the batch, pitched as Buford's flagship (Nextdoor 5,945, #3 in Buford; clubhouse, pool, four tennis courts; resale only, 2002–2017). Owner: "直接做下一个".
+**Actions**:
+- `pnpm tour hedgerows --steps research,resolve,photos,ingest,tag` (run `bf251ba7`): 18 places; the own-place lookup linked Google's "Hedgerows" place as amenities; research found no community site, so ingest added 0 (one Places photo hit the storage size limit — 413 — and was skipped by the photos step).
+- Editorial, film-only: The Home Depot, Dave's Hot Chicken, Costco, Sprouts, D1 Training. Photos via `reject-photos.ts` ("editorial: …"): three clubhouse photos with a bridal-shower welcome sign naming the guest, the pool under its winter cover, renderings of Seckinger High and Andretti, a bakery case filed under Mall of Georgia.
+- Plan output needed **no hand edits**: Seedance capped at two by the plan, labels Pool/Clubhouse/Entrance, no ratings or review counts in the narration. One prompt fix found here and made in code (`narration.ts`): name places in on-screen order — the first script said Mill Creek, then Bogan Park, over Bogan Park, then Mill Creek.
+- First assembly `0734ae24` still opened on the clubhouse door with the bridal-shower sign readable; rejected that photo too and re-planned. Final assembly `45b09f94`, `cf_stream_uid 19e37eba083a5af362ec2de5ec37277c`, 52.0 s, 20 clips. **Spend: 2 Seedance $0.2817** (Bogan Park lake, Mill Creek boardwalk); 14 TTS lines over the two assemblies. Profile rebuilt (Nextdoor, Reddit, Maps, Zillow, Patrick ES, Jones MS, Seckinger HS).
+**Verified**: frames every 2 s — pool → Bogan Park → Mill Creek → Oy! → Topgolf → Andretti → three schools → Mall of Georgia → Publix; production feed serves the uid.
+**Note**: the schools are Gwinnett County's (Seckinger cluster), not Buford City Schools; the narration calls them nearby, not assigned.
+
 ## 2026-11-21 08:10 UTC — phase366.6: the community-film workflow follows the admin pipeline
 
 **Objective**: Owner asked whether my process follows the photo admin's workflow and the code at every step ("你先讲讲现在的流程有没有照片admin里的workflow来？每一个步骤 代码里的逻辑有没有遵守"). Audit given; owner: "改 不重跑 直接做下一个" — fix items 1, 2, 3 and 5 of the audit, leave Wild Timber and Towne Village as cut, move on. Item 4 (per-community photo review, as cities have since phase343) was not approved and is not done.
