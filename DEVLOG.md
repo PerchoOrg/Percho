@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-21 10:36 UTC — phase366.10: Sugarloaf Country Club (Duluth flagship); three pipeline fixes it surfaced
+
+**Objective**: #5 of the batch. Owner: "接着做吧".
+**Pipeline fixes**:
+- The first `photos` step died with "no JSON array in reply": the phase366.8 top-up (27 places) sent the Curator ~60 photos in one call; at ~230 output tokens each the 8192-token reply was cut off. `curateBatch` now calls in chunks of 30 (`CURATOR_CHUNK`, `curatorChunks`) and merges before `buildTourPlan` normalises the batch.
+- TPC Sugarloaf (the course) was not linked: the bare name ranked it out of the top five, and its types include `restaurant`/`food` (the club restaurant), which the own-place filter read as a business borrowing the name. Now: a "<name> golf" search for country-club/golf communities, and borrowed-name types judged on `primaryType` only (`route`/`street_address`/`premise` still excluded anywhere).
+- The course photos were labelled "Green Space": new `golf` amenity ("Golf Course").
+- (CLI) a storage 413 on one oversized Places photo prints a multi-line error; my output filter hid it and the step looked like it had stopped. It had not.
+**Actions**: run `1036be5f`; own places: TPC Sugarloaf, Lifestyle/Sports Center, Swim & Tennis, Gate House. Site ingest created three empty page POIs ("Home", "Ios App", "Android App") — rejected for this film. Editorial, film-only: hardware store, Crunch, Gohan Buffet, Dave & Buster's, McDaniel Farm's duplicate entrance. Photos rejected ("editorial:"): two night events under a tent at the clubhouse, two "Infinite Energy Arena" (the arena's name before 2021), Medieval Times' castle filed under Sugarloaf Mills, Peachtree Ridge's shop classroom, computer lab and library, a fairway with the photographer's shadow.
+- Assembly `58aa6de5`, `cf_stream_uid 9f820d812f4f4f1391225b6abdfdd901`, 77.0 s, 32 clips; community act ~24 s (pool, courts, course, fitness). **Spend: 2 Seedance $0.2754** (fairway, Peachtree Ridge stadium at sunset). Profile written (Website, Nextdoor, Reddit, Maps, Zillow, Mason ES, Hull MS, Peachtree Ridge HS).
+**Verified**: web vitest 435 in lib/poi, typecheck 0; frames every 2 s; production feed serves the uid.
+
 ## 2026-11-21 09:34 UTC — phase366.9: Arbors at Richland Creek (Buford builder slot) — and the narration grounded in the shots
 
 **Objective**: #4 of the batch, Ashton Woods' Arbors at Richland Creek (5 homes available, $524,900–$658,760 on the builder page) over Beazer's Paddocks at Doc Hughes (4 left, no amenities). Owner: "改好后请直接下一个".

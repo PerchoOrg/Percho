@@ -79,3 +79,31 @@ describe('isOwnPlace', () => {
     ).toBe(false);
   });
 });
+
+describe('isOwnPlace — a club with a restaurant (phase366.10)', () => {
+  it('keeps a golf club whose secondary types include a restaurant', () => {
+    const tpc = place({
+      displayName: { text: 'TPC Sugarloaf' },
+      primaryType: 'golf_course',
+      types: ['golf_course', 'sports_club', 'restaurant', 'food', 'establishment'],
+      location: { latitude: 34.1135, longitude: -84.0921 },
+    });
+    expect(
+      isOwnPlace('Wild Timber', WILD_TIMBER, { ...tpc, displayName: { text: 'Wild Timber Golf' } }),
+    ).toBe(true);
+  });
+
+  it('still turns away a restaurant that borrows the name', () => {
+    expect(
+      isOwnPlace(
+        'Wild Timber',
+        WILD_TIMBER,
+        place({
+          displayName: { text: 'Wild Timber Grill' },
+          primaryType: 'restaurant',
+          types: ['restaurant'],
+        }),
+      ),
+    ).toBe(false);
+  });
+});
