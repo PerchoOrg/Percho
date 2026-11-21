@@ -23,6 +23,16 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-21 09:07 UTC — phase366.8: why the new films got shorter, and the fix
+
+**Objective**: Owner: "好像时长有变少？ 看看现在几个community的时长对比", then "改好后请直接下一个" (no re-cuts of Hedgerows / Towne Village).
+**Finding** (played length, from each latest assembly): Aberdeen 91s, Bellmoore 78s, Windward 76s, Northbrooke 76s, Wild Timber 74.5s, Ashley Crossing 71s, Apremont 63s — Hedgerows 52s (20 clips, 10 places, community act 7.5s), Towne Village 36s (10 clips, 8 places, act 5.5s). Causes: (1) research resolves ~17 surrounding places and my editorial pass removed 5–7 with nothing put back, against a budget of 15; (2) small community acts (Hedgerows' clubhouse photos all carried a private-event sign; Towne Village has one homes shot by rule); (3) each rejected photo cost its place a clip. The 45s floor is on the CLIP SUM — crossfades (0.5s each) take 5–10s off the film — and Towne Village's 36s came from hand edits after plan, which no floor checks.
+**Actions**:
+- `lib/poi/fill-places.ts` (+ tests): `resolve` tops a community up to 24 surrounding candidates from three Google nearby searches (parks/playgrounds/libraries/museums; restaurants/cafes/bakeries; malls/gyms/cinemas/bowling), ≥4.3★ from ≥50 reviews, ≤5 mi, ≤3 per kind, no places of worship; source `google_fill`. The plan's budget still decides what is filmed. ~3 nearby calls plus photos for the added places.
+- `own-places.ts`: when name/clubhouse/pool find nothing, also try "HOA", "swim tennis", "amenity center".
+- `shots.ts`: `film_short` plan warning when the played film (clips minus crossfades) is under 55s (`FILM_SHORT_S`); `PlanWarning` gains the code; the CLI prints warnings as text (they printed as `[object Object]`).
+**Verified**: web vitest 1362, typecheck 0. Hedgerows and Towne Village are left as cut, per the owner.
+
 ## 2026-11-21 08:30 UTC — phase366.7: Hedgerows (Buford), the first film on the fixed workflow
 
 **Objective**: #3 of the batch, pitched as Buford's flagship (Nextdoor 5,945, #3 in Buford; clubhouse, pool, four tennis courts; resale only, 2002–2017). Owner: "直接做下一个".

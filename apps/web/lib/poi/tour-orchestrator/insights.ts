@@ -35,6 +35,12 @@ export interface PlaceFact {
   miles: number | null;
   rating: number | null;
   reviews: number | null;
+  /**
+   * What this place's shots show, in the tagger's words (phase366.8). Without
+   * ratings the model had a name and a distance and filled the gap itself —
+   * "views along Richland Creek" over the Chattahoochee below Buford Dam.
+   */
+  seen?: string[];
 }
 
 /**
@@ -131,7 +137,8 @@ export function renderFacts(facts: PlaceFact[]): string {
     .map((f) => {
       // Distance only: ratings and review counts are not narration (phase366.6).
       const bits = [describeDistance(f)].filter(Boolean);
-      return `    ${f.name}${bits.length ? ` — ${bits.join(', ')}` : ''}`;
+      const seen = (f.seen ?? []).map((d) => `\n      on screen: ${d}`).join('');
+      return `    ${f.name}${bits.length ? ` — ${bits.join(', ')}` : ''}${seen}`;
     })
     .join('\n');
 }
