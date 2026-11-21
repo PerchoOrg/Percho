@@ -16,6 +16,9 @@ picture in the preview. If they have the Percho app, the link opens straight
 into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
+### 2026-11-21
+- **Wild Timber in Sugar Hill has a neighbourhood film.** It is the first of fourteen new neighbourhood films, which will bring the app to twenty. It opens on the neighbourhood's own clubhouse, pools, lake and trails, then the parks, river, restaurants, schools and shops around it.
+
 ### 2026-11-20
 - **New buyers are shown how to swipe.** The first time someone opens the feed, the first card slides right to show a like, comes back, slides left to show a pass, and comes back. It stops for good once they have swiped a card themselves.
 - **Duluth has a city film.** It travels the city from north to south — the old Rogers Bridge over the Chattahoochee, the railroad that gave Duluth its name, the Town Green and its fall festival, the arena — then covers the commute, schools and homes.
