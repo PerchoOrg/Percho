@@ -166,7 +166,7 @@ async function main() {
       sb
         .from('communities')
         .select(
-          'id, slug, city, county, lat, lng, residents_count, attributes, nextdoor_url, website, profile',
+          'id, slug, name, builder, city, county, lat, lng, residents_count, attributes, nextdoor_url, website, profile',
         )
         .eq('status', 'active')
         .order('id')

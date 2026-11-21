@@ -219,11 +219,36 @@ describe('buildProfile', () => {
   });
 
   it("links the community's own pages, https only, and carries its city's events", () => {
-    expect(profile?.links).toEqual([
+    expect(profile?.links?.slice(0, 2)).toEqual([
       { label: 'Website', url: 'https://example.org/' },
       { label: 'Nextdoor', url: 'https://nextdoor.com/neighborhood/c0/' },
     ]);
-    expect(buildProfile({ ...subject, website: 'http://example.org' }, ctx)?.links).toHaveLength(1);
+    const http = buildProfile({ ...subject, website: 'http://example.org' }, ctx)?.links ?? [];
+    expect(http.map((l) => l.label)).not.toContain('Website');
+  });
+
+  it('adds search links for a named community, and its nearby schools on GreatSchools', () => {
+    const named = buildProfile(
+      { ...subject, name: 'Wild Timber', city: 'Sugar Hill', builder: 'The Providence Group' },
+      ctx,
+    );
+    const links = named?.links ?? [];
+    expect(links.map((l) => l.label)).toEqual([
+      'The Providence Gr…',
+      'Nextdoor',
+      'Reddit',
+      'Google Maps',
+      'Homes on Zillow',
+      'Near ES',
+      'Near MS',
+      'Near HS',
+    ]);
+    expect(links[3]?.url).toBe(
+      'https://www.google.com/maps/search/?api=1&query=Wild%20Timber%2C%20Sugar%20Hill%2C%20GA',
+    );
+    expect(links[4]?.url).toBe('https://www.zillow.com/homes/Wild-Timber-Sugar-Hill-GA_rb/');
+    expect(links[5]?.url).toContain('greatschools.org/search/search.page?q=Near%20Elementary');
+    expect(communityProfileSchema.safeParse(named).success).toBe(true);
     expect(profile?.events).toHaveLength(1);
     expect(profile?.sources.map((s) => s.name)).toEqual([
       'Georgia Milestones',
@@ -261,6 +286,21 @@ describe('mergeProfile', () => {
       'Zillow Home Value Index',
       'Percho county estimates',
       'Awesome Alpharetta',
+    ]);
+    const withLinks = mergeProfile(profile, {
+      links: [
+        { label: 'Rules & dues', url: 'https://example.org/rules' },
+        { label: 'Nextdoor', url: 'https://nextdoor.com/neighborhood/elsewhere/' },
+      ],
+    });
+    // Researched first, then the computed ones it does not repeat by label.
+    expect(withLinks?.links?.map((l) => l.label)).toEqual([
+      'Rules & dues',
+      'Nextdoor',
+      'Website',
+      'Near ES',
+      'Near MS',
+      'Near HS',
     ]);
     expect(mergeProfile(profile, null)).toBe(profile);
     expect(mergeProfile(null, { links: [] })).toBeNull();

@@ -12,7 +12,8 @@
  *   homeValue  the city's typical home value, year by year, against the metro
  *   words      what residents call the place, by how rare each word is nearby
  *   verdict    the few of those findings strong enough to lead the page
- *   links      its Nextdoor page and its own site
+ *   links      its own site (or its builder's), Nextdoor, Reddit, Google Maps,
+ *              Zillow, and its nearby schools on GreatSchools (phase366)
  *
  * What only research finds — what the dues cover, a ZIP's own price line —
  * stays in `scripts/admin/community-profiles/<slug>.json` and is laid over the
@@ -44,6 +45,10 @@ import type { StoredCommunityProfile } from '../zod/community-profile';
 
 export interface BuildCommunity {
   slug: string;
+  /** For the search links (Maps, Zillow, Reddit); without it they are left out. */
+  name?: string;
+  /** A builder selling here: its name labels the website link. */
+  builder?: string | null;
   city: string | null;
   county: string | null;
   lat: number | null;
@@ -351,10 +356,14 @@ const schoolKey = (name: string) =>
     .replace(/\s+school$/, '')
     .trim();
 
-function schoolRows(c: BuildCommunity, ctx: BuildContext): RankRow[] {
+/** The school the page names at each level, nearest first. */
+function nearestSchools(
+  c: BuildCommunity,
+  ctx: BuildContext,
+): Array<{ level: SchoolLevel; school: BuildSchool }> {
   if (c.lat === null || c.lng === null) return [];
   const named = new Set((c.schoolNames ?? []).map(schoolKey));
-  const rows: RankRow[] = [];
+  const out: Array<{ level: SchoolLevel; school: BuildSchool }> = [];
   for (const level of LEVELS) {
     // The nearest of the schools the community's own list names, else the
     // nearest of all.
@@ -369,7 +378,14 @@ function schoolRows(c: BuildCommunity, ctx: BuildContext): RankRow[] {
         nearMiles = miles;
       }
     }
-    if (!near) continue;
+    if (near) out.push({ level, school: near });
+  }
+  return out;
+}
+
+function schoolRows(c: BuildCommunity, ctx: BuildContext): RankRow[] {
+  const rows: RankRow[] = [];
+  for (const { level, school: near } of nearestSchools(c, ctx)) {
     const at = standing(ctx.schools[level].scores, near.pct);
     rows.push({
       group: 'Schools',
@@ -553,6 +569,58 @@ function verdict(
 }
 
 /** The computed profile, or null when there is nothing to draw. */
+/** The links pill row's labels stop at 18 characters (`lib/zod/community-profile.ts`). */
+const linkLabel = (text: string) => (text.length > 18 ? `${text.slice(0, 17).trimEnd()}…` : text);
+const LEVEL_ABBR: Record<SchoolLevel, string> = { elementary: 'ES', middle: 'MS', high: 'HS' };
+
+/**
+ * Places a buyer can go on from the page (owner 2026-11-21: "多加一些link
+ * 类似Nextdoor的 可以让人去explore"; Zillow included on his "都加").
+ *
+ * Search links, not guessed pages: Maps, Zillow, Reddit and GreatSchools each
+ * take a free-text query, so a link resolves to whatever that site holds for
+ * the name rather than to a URL that may not exist. Redfin is absent because
+ * it has no such URL — its pages need an id only its private API returns.
+ * School links go to GreatSchools because the stored school websites (NCES)
+ * are http and often dead.
+ */
+function profileLinks(
+  c: BuildCommunity,
+  schools: ReadonlyArray<{ level: SchoolLevel; school: BuildSchool }>,
+): NonNullable<Profile['links']> {
+  const links: NonNullable<Profile['links']> = [];
+  if (c.website?.startsWith('https://'))
+    links.push({ label: linkLabel(c.builder?.trim() || 'Website'), url: c.website });
+  if (c.nextdoor_url?.startsWith('https://'))
+    links.push({ label: 'Nextdoor', url: c.nextdoor_url });
+  const name = c.name?.trim();
+  if (name) {
+    const where = [name, c.city, 'GA'].filter(Boolean).join(', ');
+    const q = encodeURIComponent;
+    links.push({
+      label: 'Reddit',
+      url: `https://www.reddit.com/search/?q=${q(`"${name}" ${c.city ?? 'Georgia'}`)}`,
+    });
+    links.push({
+      label: 'Google Maps',
+      url: `https://www.google.com/maps/search/?api=1&query=${q(where)}`,
+    });
+    const zillowSlug = `${name} ${c.city ?? ''} GA`
+      .replace(/[^A-Za-z0-9 ]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, '-');
+    links.push({ label: 'Homes on Zillow', url: `https://www.zillow.com/homes/${zillowSlug}_rb/` });
+  }
+  for (const { level, school } of schools) {
+    const short = school.name.replace(/\s+(Elementary|Middle|High)?\s*School$/i, '').trim();
+    links.push({
+      label: linkLabel(`${short} ${LEVEL_ABBR[level]}`),
+      url: `https://www.greatschools.org/search/search.page?q=${encodeURIComponent(school.name)}&state=GA`,
+    });
+  }
+  return links;
+}
+
 export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | null {
   const schools = schoolRows(c, ctx);
   const homes = homeRows(c, ctx);
@@ -562,10 +630,7 @@ export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | nu
   if (rankRows.length === 0 && !value && !said) return null;
 
   const cityEvents = ctx.inputs.events.get(key(c.city));
-  const links: NonNullable<Profile['links']> = [];
-  if (c.website?.startsWith('https://')) links.push({ label: 'Website', url: c.website });
-  if (c.nextdoor_url?.startsWith('https://'))
-    links.push({ label: 'Nextdoor', url: c.nextdoor_url });
+  const links = profileLinks(c, nearestSchools(c, ctx));
 
   const sources: Profile['sources'] = [];
   if (schools.length > 0) sources.push({ name: 'Georgia Milestones' });
@@ -616,7 +681,20 @@ export function mergeProfile(
     names.add(s.name);
     return true;
   });
-  const merged = { ...base, ...researched, sources };
+  // Links are the one block that adds up rather than replaces: a researched
+  // page (Windward's dues rules) sits beside the computed search links, not
+  // instead of them (phase366). Researched first; a repeat by url or label,
+  // and anything past the row's ten, is left out.
+  const seen = new Set<string>();
+  const links = [...(researched.links ?? []), ...(base.links ?? [])]
+    .filter((l) => {
+      if (seen.has(l.url) || seen.has(l.label)) return false;
+      seen.add(l.url);
+      seen.add(l.label);
+      return true;
+    })
+    .slice(0, 10);
+  const merged = { ...base, ...researched, sources, ...(links.length > 0 ? { links } : {}) };
   if (!merged.asOf || !merged.verdict || sources.length === 0) return null;
   return { ...merged, asOf: merged.asOf, verdict: merged.verdict, sources };
 }
