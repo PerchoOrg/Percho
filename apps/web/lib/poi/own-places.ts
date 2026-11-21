@@ -148,7 +148,10 @@ export async function findOwnPlaces(
   // The second set runs only when the first found nothing: Hedgerows' HOA
   // place showed up for the bare name, but a community listed only as its
   // association ("<name> HOA") or its swim-and-tennis club would not.
-  for (const suffix of ['', 'clubhouse', 'pool', 'HOA', 'swim tennis', 'amenity center']) {
+  // A country-club community's course is its identity, and the bare name can
+  // rank it out of the top five (Sugarloaf Country Club lost "TPC Sugarloaf").
+  const golf = /country club|golf/i.test(communityName) ? ['golf'] : [];
+  for (const suffix of ['', 'clubhouse', 'pool', ...golf, 'HOA', 'swim tennis', 'amenity center']) {
     if (['HOA', 'swim tennis', 'amenity center'].includes(suffix) && found.size > 0) break;
     const query = [[communityName, suffix].filter(Boolean).join(' '), locality]
       .filter(Boolean)

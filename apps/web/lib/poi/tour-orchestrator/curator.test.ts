@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CURATOR_CHUNK,
   CURATOR_PROMPT,
   CuratorParseError,
   buildCuratorPrompt,
+  curatorChunks,
   extractJsonArray,
   parseCuratorResponse,
   renderPhotoBatch,
@@ -94,5 +96,14 @@ describe('parseCuratorResponse', () => {
     expect(() => parseCuratorResponse('sorry, no', ids)).toThrow(CuratorParseError);
     expect(() => parseCuratorResponse('[{"photo_id": ', ids)).toThrow(CuratorParseError);
     expect(() => parseCuratorResponse('{"photo_id":"x"}', ids)).toThrow(CuratorParseError);
+  });
+});
+
+describe('curatorChunks (phase366.9)', () => {
+  it('keeps every call inside what one reply can answer', () => {
+    const photos = Array.from({ length: 61 }, (_, i) => i);
+    const chunks = curatorChunks(photos);
+    expect(chunks.map((c) => c.length)).toEqual([CURATOR_CHUNK, CURATOR_CHUNK, 1]);
+    expect(chunks.flat()).toEqual(photos);
   });
 });

@@ -43,6 +43,15 @@ const GENERATE_URL = (model: string) =>
 
 /** ~230 output tokens per photo, plus headroom for a long batch. */
 const MAX_OUTPUT_TOKENS = 8192;
+/** Photos per Curator call — well inside what MAX_OUTPUT_TOKENS can answer. */
+export const CURATOR_CHUNK = 30;
+
+/** Split a batch into Curator-sized calls. PURE. */
+export function curatorChunks<T>(photos: T[], size = CURATOR_CHUNK): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < photos.length; i += size) out.push(photos.slice(i, i + size));
+  return out;
+}
 
 export interface CuratorPhoto {
   photo_id: string;
@@ -346,6 +355,24 @@ async function callCurator(
  * and a retry loop just spends money on it.
  */
 export async function curateBatch(photos: CuratorPhoto[]): Promise<CuratorResult> {
+  // One reply holds ~35 annotations (MAX_OUTPUT_TOKENS / ~230 each). Past that
+  // the reply is cut off mid-array and fails to parse twice — Sugarloaf's
+  // first plan after the phase366.8 top-up sent ~60 photos and died with "no
+  // JSON array in reply". Larger sets go in chunks; `buildTourPlan`
+  // re-normalises the merged batch, so batch-level rules still hold.
+  if (photos.length > CURATOR_CHUNK) {
+    const parts: CuratorResult[] = [];
+    for (const chunk of curatorChunks(photos)) parts.push(await curateBatch(chunk));
+    return {
+      annotations: parts.flatMap((r) => r.annotations),
+      warnings: parts.flatMap((r) => r.warnings),
+      missing: parts.flatMap((r) => r.missing),
+      unknown: parts.flatMap((r) => r.unknown),
+      attempts: Math.max(...parts.map((r) => r.attempts)),
+      model: CURATOR_MODEL,
+      raw: parts.map((r) => r.raw).join('\n'),
+    };
+  }
   // Nothing to annotate is the common case once the cache is warm, and it must
   // not need a key, a network round trip, or a thought.
   if (photos.length === 0) {
