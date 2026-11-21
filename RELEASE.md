@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-21
+- **Towne Village and Wild Timber films re-made.** Neighbourhood films no longer open on houses or show the inside of a single home — at most one shot of the homes as a group, at the end. Dog-walk photos and blurry food close-ups are gone, and North Gwinnett High is now shown by its stadium with the school's name on the field. Towne Village at Suwanee Dam is now just "Towne Village".
 - **Towne Village at Suwanee Dam in Sugar Hill has a neighbourhood film.** New three-story townhomes by Beazer Homes: the film walks through the homes, kitchen to back patio, then the park, golf club and shops a few minutes away.
 - **More places to go from a neighbourhood's page.** Alongside Nextdoor, a neighbourhood's page now links to its own website (or its builder's), Reddit, Google Maps, its homes on Zillow, and its three nearby schools on GreatSchools. Live on the seven neighbourhoods with films first; the rest follow.
 - **A quieter foot on the neighbourhood page.** Sources and photo credits now sit behind one "Sources & photo credits" line; tap it to see them.

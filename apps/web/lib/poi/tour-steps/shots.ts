@@ -287,6 +287,17 @@ export async function computeFinalShots(
     }
     let key = p.poi_id;
     if (buckets?.get(p.poi_id) === 'amenities') {
+      // One home — its facade, its rooms — is never the community, whatever
+      // brought the photo in. The filter step drops these for Places photos;
+      // a site ingest arrives approved and skipped it, which is how a builder's
+      // model-home kitchen, bedroom and bath opened Towne Village's film (owner
+      // 2026-11-21: "不要用这么多房子照片 … 最多是一张俯瞰一群房子的图").
+      // Only the owner's own approval overrides.
+      const ownerPick = !!p.reviewed_by && p.status === 'approved';
+      if (!ownerPick && LISTING_SCOPES.has(String(tags.residential_scope ?? 'none'))) {
+        dropped.push({ photo_id: p.id, poi_id: p.poi_id, reason: LISTING_PHOTO_DROP_REASON });
+        continue;
+      }
       const amenity = amenityOf(tags);
       amenityByPhoto.set(p.id, amenity);
       photoPoi.set(p.id, p.poi_id);
@@ -306,12 +317,17 @@ export async function computeFinalShots(
     const amenity = amenityOfKey(key);
     if (!amenity) continue;
     const live = arr.filter((r) => r.status !== 'rejected').length;
-    if (live > 0) availableByAmenity.set(amenity, live);
+    if (live > 0) availableByAmenity.set(amenity, (availableByAmenity.get(amenity) ?? 0) + live);
   }
   const amenitySlots = communityActSlots(availableByAmenity, {
     budget: COMMUNITY_ACT_CLIP_BUDGET,
     ceiling: clipsAllowedFor('amenities'),
   });
+  // The slots are the AMENITY's, shared by every group that shows it. A
+  // community can carry several amenity places (its site ingest and, since
+  // phase366, its own Google places); handing each group the amenity's full
+  // allowance put two streetscapes in Towne Village's film past a cap of one.
+  const slotsLeft = new Map(amenitySlots);
 
   for (const [groupKey, arr] of byPoi) {
     const ranked = [...arr].sort((a, b) => {
@@ -366,7 +382,7 @@ export async function computeFinalShots(
       ownerApproved(r) || (r.source === 'community_site' && r.status !== 'rejected');
     const groupAmenity = amenityOfKey(groupKey);
     const allowed = groupAmenity
-      ? (amenitySlots.get(groupAmenity) ?? 0)
+      ? (slotsLeft.get(groupAmenity) ?? 0)
       : clipsAllowedFor(buckets?.get(arr[0]!.poi_id));
     // One ESTABLISHING frame is promoted ahead of the score order.
     //
@@ -394,6 +410,10 @@ export async function computeFinalShots(
       ...mine,
       ...[...rest, ...(lead ? [lead] : []), ...places].slice(0, Math.max(0, allowed - mine.length)),
     ];
+    if (groupAmenity) {
+      const spent = kept.filter((r) => r.status !== 'rejected' && !ownerApproved(r)).length;
+      slotsLeft.set(groupAmenity, Math.max(0, allowed - spent));
+    }
     const keptIds = new Set(kept.map((r) => r.id));
     photos.push(...kept);
     // Owner 2026-08-17: "另外一张放到drop table里并说明原因" — every photo

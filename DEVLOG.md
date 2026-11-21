@@ -23,6 +23,22 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-21 07:46 UTC — phase366.5: Towne Village and Wild Timber re-cut — no house opener, no dogs, a school you can recognise
+
+**Objective**: Owner on Towne Village's cut: "不要开始下一个 有很多问题 / 不要用这么多房子照片在community card 之前都说过的规则 最多是一张俯瞰一群房子的图 / community名字很奇怪 太长了 / sushi照片质量不好 换掉 / 两张狗照片 不好 / high school和照片没对应上".
+**Findings**:
+- The houses were mine: I hand-ingested Beazer's model-home kitchen, bedroom, bath, a single-unit facade and a private patio, then ordered them first — the opener the owner ruled out on 2026-08-23. The tagger had them right (`home_interior`, `single_home`), but a site ingest arrives approved, so the filter step that drops those scopes never judged them, and `handPicked` carried them into the act.
+- Two "Neighborhood" shots past a cap of one: `communityActSlots` allots per AMENITY, but each amenity GROUP (keyed by place + amenity) was handed the full allowance; the Beazer site POI and the Beazer Google place each took the streetscape slot.
+- North Gwinnett High's only usable photo was an auditorium concert (`e5632242`, also in Suwanee's city film). Its ten Google photos are gyms, a parade, a classroom; Commons has none. Its stadium is a separate Google place, "North Gwinnett Bulldog Stadium", whose photos include an aerial with "NORTH" / "BULLDOGS" end zones and the school behind.
+**Actions**:
+- `shots.ts`: amenity photos scoped `single_home`/`home_interior` are dropped whatever their source (owner approval still overrides); amenity slots are spent across every group showing that amenity (`slotsLeft`).
+- Data: `communities.name` "Towne Village at Suwanee Dam" → "Towne Village" (slug unchanged; profile links rebuilt). Two stadium photos stored as North Gwinnett High `poi_photos` (`8a320bec` aerial, `9be38413` dusk; Google author attribution kept; PNG converted to JPEG). Rejected with reasons: private patio `a65c95e6`, sushi close-ups `b8e6ec38`, `9befeb30`, dog photos `1e9ba79d`, `dec73cad`, `dbd79cb8`, `958320d9`. Gary Pirkle Park rejected for Wild Timber's film (Towne Village keeps it).
+- Stored-run edits (helper re-anchors each narration line to its clip after removals/moves — the worker places a line by `startClip` only): both films drop the auditorium; the two new school photos are split (aerial → Towne Village, dusk → Wild Timber); Towne Village drops the Publix frame Wild Timber also shows, opens on Ridge Lake Park and closes on its one group-of-homes shot (5.5 s, labelled "Towne Village"); Gary Pirkle's soccer shot is Ken Burns (players in frame). Wild Timber's narration, labels and free-engine swaps re-applied after its re-plan.
+- Assemblies: Towne Village `9661310e` (`cf c915f7d7…`, 35.9 s, 10 clips), Wild Timber `33a3b5ba` (`cf 61122ebd…`, 74.5 s, 29 clips). Every Seedance clip reused — **no new paid calls**; Stadium photos: 10 Places photo reads. 17 TTS lines.
+**Verified**: frames every 2 s of both films; the aerial reads "BULLDOGS"; production feed serves both uids and the name "Towne Village". web vitest 1353, typecheck 0.
+**Left as is**: Riverside Elementary's one usable photo appears in both films. Sims Lake's fountain still shows small in the background of two other Sims Lake photos (the repeated clip is gone). Towne Village is short (36 s): one community shot by the rule, and it has no amenities of its own.
+**Next**: owner reviews both; the batch waits ("不要开始下一个").
+
 ## 2026-11-21 07:18 UTC — phase366.4: Towne Village at Suwanee Dam, the second new community film (Sugar Hill's builder slot)
 
 **Objective**: #2 of the batch (phase366). Pitched with Beazer's page of the day — 46 three-story townhomes, 8 homes "Available Now" $449,990–$549,990, one plan (Brayton, 3–4 bd, 2,421 sq ft), North Gwinnett district, Beazer now part of Dream Finders Homes — against Park Ridge (Ryan Homes, one home left). Owner: "开始做吧".
