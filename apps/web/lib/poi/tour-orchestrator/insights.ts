@@ -41,6 +41,26 @@ export interface PlaceFact {
    * "views along Richland Creek" over the Chattahoochee below Buford Dam.
    */
   seen?: string[];
+  /**
+   * What the place IS — Google's primary type, "asian_grocery_store",
+   * "hospital" (phase366.12). With only a name and a picture of its front, the
+   * model described the building: "Patel Brothers fronts glass."
+   */
+  kind?: string | null;
+}
+
+/** Types that say nothing about the place: our own and Google's catch-alls. */
+const UNINFORMATIVE_KINDS = new Set([
+  'community_amenity',
+  'association_or_organization',
+  'point_of_interest',
+  'establishment',
+]);
+
+/** `primary_type` as words, or null when it says nothing. PURE. */
+export function describeKind(kind: string | null | undefined): string | null {
+  if (!kind || UNINFORMATIVE_KINDS.has(kind)) return null;
+  return kind.replace(/_/g, ' ');
 }
 
 /**
@@ -136,7 +156,7 @@ export function renderFacts(facts: PlaceFact[]): string {
   return facts
     .map((f) => {
       // Distance only: ratings and review counts are not narration (phase366.6).
-      const bits = [describeDistance(f)].filter(Boolean);
+      const bits = [describeKind(f.kind), describeDistance(f)].filter(Boolean);
       const seen = (f.seen ?? []).map((d) => `\n      on screen: ${d}`).join('');
       return `    ${f.name}${bits.length ? ` — ${bits.join(', ')}` : ''}${seen}`;
     })

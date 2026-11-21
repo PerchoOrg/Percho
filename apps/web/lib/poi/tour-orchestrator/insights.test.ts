@@ -100,6 +100,22 @@ describe('renderFacts', () => {
   });
 });
 
+describe('renderFacts — what the place is (phase366.12)', () => {
+  it('says what kind of place it is, in words', () => {
+    const out = renderFacts([
+      { ...f('Patel Brothers', 'other', 1.7), kind: 'asian_grocery_store' },
+    ]);
+    expect(out).toContain('Patel Brothers — asian grocery store, 1.7 mi');
+  });
+
+  it('leaves out a type that says nothing', () => {
+    const out = renderFacts([
+      { ...f('St Marlo Cabana', 'amenities', 0), kind: 'association_or_organization' },
+    ]);
+    expect(out).not.toContain('association');
+  });
+});
+
 describe('renderFacts — what is on screen (phase366.8)', () => {
   it('lists each shot description under its place', () => {
     const out = renderFacts([

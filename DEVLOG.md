@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-21 20:49 UTC — phase366.12: St Marlo Country Club (Duluth #2); three plan fixes it surfaced
+
+**Objective**: #6 of the batch. Owner: "开始做吧".
+**Pipeline fixes**:
+- **Reused frames only when nothing is fresh.** The phase366.1 rule said a frame another live film shows is used "only when a place has nothing else"; the code filled any slot the fresh frames left empty, so Chattahoochee Pointe's second slot took Aberdeen's river shot beside its one fresh photo. `withoutReusedWhenFresh` (pure, `reuse-when-fresh.test.ts`).
+- **Amenity photos ranked per amenity, across places.** The community act groups by (place, amenity) and shared one slot count per amenity, so whichever group came first took the slots: the site's Golf Course page took both with an entrance sign and a fairway with a house, and the Google place — the stone clubhouse — got none. The group key is now the amenity alone.
+- **Narration: short sections merge, places say what they are.** The tail was four 3-second single-place sections (Publix, H Mart, Patel Brothers, hospital) of 3–6 words each: "Patel Brothers shows glass.", "Emory Johns Creek Hospital blends brick." `mergeShortSections` (sections under 6 s, consecutive) speaks such a run as one line; `PlaceFact.kind` carries Google's `primary_type` ("asian grocery store", "hospital") into the facts; a prompt rule bans building materials as a line. Result: "Publix bakes fresh cakes, while H Mart and Patel Brothers stock specialty produce. Emory Johns Creek Hospital anchors local healthcare nearby."
+**Actions**: run `e8fc8c8f`; own places: St Marlo Country Club (golf course) and St Marlo Cabana; site ingest 4 photos. Editorial, film-only (`community_pois` rejected): Crunch Fitness, Publix at McGinnis Crossing (second Publix), Kimchi Red, The Home Depot, The UPS Store. Photos rejected ("editorial:"): three private homes filed under the club (one tagged "clubhouse"), a lake filed under Johns Creek Elementary, Lambert High barely visible across a lot at dusk, Aji-Katsu's 2023 "coming soon" banner, a path with the photographer's shadow, a lounge shot through glass, a near-duplicate of the cabana lounge, a second entrance sign.
+- Assembly `ffbbf7be`, `cf_stream_uid c4c0de5c31c283eb9d66fe5f765be808`, 76.97 s, 29 clips, 7 narration lines; community act ~23 s (gatehouse, cabana lounge, pool and courts, course, clubhouse, lake). The worker's new timeline write-back recorded 76.98 s. **Spend: 2 Seedance ≈ $0.28** (course pond, lake). Profile written (Website, Nextdoor, Reddit, Maps, Zillow, Johns Creek ES, Riverwatch MS, Lambert HS).
+**Verified**: web vitest 442 in lib/poi, typecheck 0; frames every 2 s; production `/api/mobile/feed?stage=4&videosOnly=1` serves the uid (12 community films).
+**Next steps**: pitch #7 (Cumming — Windermere).
+
 ## 2026-11-21 17:26 UTC — phase366.11: the card's place label lagged the picture
 
 **Objective**: owner 2026-11-21: "照片和location有延迟" — the place name on a film card changes after the picture does.

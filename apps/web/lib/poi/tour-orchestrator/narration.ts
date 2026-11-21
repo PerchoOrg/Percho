@@ -209,6 +209,45 @@ export function buildSections(
   return sections;
 }
 
+/**
+ * Below this, a section is one place for a few seconds — room for a handful of
+ * words and nothing to say in them. St Marlo's cut closed on four of them
+ * (Publix, H Mart, Patel Brothers, the hospital), and the script came back
+ * "Patel Brothers shows glass." and "Emory Johns Creek Hospital blends brick."
+ * (phase366.12).
+ */
+export const SHORT_SECTION_SECONDS = 6;
+
+/**
+ * Runs of short sections spoken as one: a line that can name the groceries and
+ * the hospital together instead of four fragments. A short section between two
+ * long ones stays as it is. PURE.
+ */
+export function mergeShortSections(sections: NarrationSection[]): NarrationSection[] {
+  const short = (s: NarrationSection) => s.endS - s.startS < SHORT_SECTION_SECONDS;
+  const out: NarrationSection[] = [];
+  for (const s of sections) {
+    const last = out.at(-1);
+    const lastRun = last && last.endClip + 1 === s.startClip ? last : undefined;
+    if (lastRun && short(s) && (short(lastRun) || lastRun.bucket.includes(' + '))) {
+      const merged = lastRun.bucket.split(' + ');
+      if (!merged.includes(s.bucket)) merged.push(s.bucket);
+      lastRun.bucket = merged.join(' + ');
+      lastRun.endClip = s.endClip;
+      lastRun.endS = s.endS;
+      for (const p of s.places) if (!lastRun.places.includes(p)) lastRun.places.push(p);
+      for (const id of s.poiIds) if (!lastRun.poiIds.includes(id)) lastRun.poiIds.push(id);
+      lastRun.wordBudget = Math.max(
+        0,
+        Math.floor((lastRun.endS - lastRun.startS) * SECTION_FILL * NARRATION_WORDS_PER_SECOND),
+      );
+      continue;
+    }
+    out.push({ ...s, places: [...s.places], poiIds: [...s.poiIds], index: out.length });
+  }
+  return out;
+}
+
 export interface NarrationContext {
   communityName: string;
   /** What the film is of — a city film (phase318) is told as a city. */
@@ -323,6 +362,9 @@ RULES
   A detail that is neither in the facts nor on screen — a creek's name, a menu
   item, a drink on tap, a lawn the picture does not show — is invented. Leave
   it out.
+- A building's brick, glass or stone is not a line. Say what the place is —
+  each place's kind is given after its name — and what it is for.
+      NO  — "Patel Brothers fronts glass." "The hospital stands in brick."
 - NO RATINGS, NO REVIEW COUNTS. How many people reviewed a place says nothing
   a buyer can see; "Nearly seven hundred reviews praise The Bowl" is a wasted
   line.
@@ -624,7 +666,7 @@ export async function runNarration(
   clips: NarrationClip[],
   ctx: Omit<NarrationContext, 'sections'>,
 ): Promise<NarrationResult> {
-  const sections = buildSections(clips);
+  const sections = mergeShortSections(buildSections(clips));
   // Seeded on the community's id where we have one — a rename must not change
   // the narrator. Falls back to the name for callers that pass no seed.
   const voice = voiceForCommunity(

@@ -4,7 +4,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { MIN_SECTION_SECONDS, buildSections, parseNarration } from './narration';
+import {
+  MIN_SECTION_SECONDS,
+  buildSections,
+  mergeShortSections,
+  parseNarration,
+} from './narration';
 import { findSchoolAssignment } from './school-language';
 
 const clip = (bucket: string, poi_name: string, duration_s: number) => ({
@@ -100,6 +105,40 @@ describe('buildSections', () => {
     expect(short?.wordBudget).toBe(12);
     expect(long?.wordBudget).toBe(53);
     expect(long?.wordBudget).toBeGreaterThan((short?.wordBudget ?? 0) * 3);
+  });
+});
+
+describe('mergeShortSections', () => {
+  it("speaks a run of short sections as one line (St Marlo's tail)", () => {
+    const sections = mergeShortSections(
+      buildSections([
+        clip('dining', 'Aji-Katsu', 8),
+        clip('shopping', 'Publix', 2.5),
+        clip('shopping', 'Publix', 2.5),
+        clip('asian_community', 'H Mart', 2.5),
+        clip('other', 'Patel Brothers', 2.5),
+        clip('healthcare', 'Emory Johns Creek Hospital', 3.5),
+      ]),
+    );
+    expect(sections.map((s) => s.places)).toEqual([
+      ['Aji-Katsu'],
+      ['Publix', 'H Mart', 'Patel Brothers', 'Emory Johns Creek Hospital'],
+    ]);
+    expect(sections[1]?.bucket).toBe('shopping + asian_community + other + healthcare');
+    expect(sections[1]?.startClip).toBe(1);
+    expect(sections[1]?.endClip).toBe(5);
+    expect(sections.map((s) => s.index)).toEqual([0, 1]);
+    // ~11s of footage: a sentence, not four fragments.
+    expect(sections[1]?.wordBudget).toBeGreaterThan(20);
+  });
+
+  it('leaves a short section between two long ones alone', () => {
+    const before = buildSections([
+      clip('outdoor', 'Cauley Creek Park', 8),
+      clip('fitness', 'Life Time', 3.5),
+      clip('kids', 'Railway Museum', 8),
+    ]);
+    expect(mergeShortSections(before).map((s) => s.places)).toEqual(before.map((s) => s.places));
   });
 });
 
