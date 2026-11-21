@@ -17,6 +17,8 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-21
+- **Windermere in Cumming has a neighbourhood film.** It opens at the Lodge, the pools with their slide and fountain, and the Davis Love III golf course, then the river parks, Lake Lanier's Mary Alice beach at sunset, the schools, cafés and shops nearby.
+- **St Marlo Country Club's film re-made** without the clubhouse interiors and the low-resolution shots.
 - **St Marlo Country Club in Duluth has a neighbourhood film.** It opens at the stone gatehouse, then the cabana, the pool and tennis courts, the golf course and the lake, before the river parks, the railway museum, the cafés and the grocers nearby. Narration over quick runs of shops now speaks in one sentence instead of fragments.
 - **The place name on a film now changes with the picture.** It used to fall behind as a film went on — by a couple of seconds on every film and by much more on a few older ones such as Aberdeen's. Fixed for all neighbourhood and city films already in the app.
 - **Sugarloaf Country Club in Duluth has a neighbourhood film.** It opens on the club's pools, tennis courts and TPC Sugarloaf golf course, then the parks, cafés, the ice rink and railway museum, Gas South Arena and the schools nearby.

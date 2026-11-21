@@ -23,6 +23,15 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-21 22:10 UTC — phase366.15: Windermere (Cumming flagship)
+
+**Objective**: #7 of the batch. Owner: "windermere". Also his ruling on photos, 2026-11-21: "主要是照片本身传递的信息 一张低像素的椅子没有加的意义" — the editorial pass judges a frame by what it tells a buyer; the resolution gate stays (content first).
+**Actions**: run `2910e3f0`; own places: Windermere (the Lodge), Windermere Community Associates, Windermere Golf Club, Windermere Pool. The HOA site (windermerecommunity.net) answers a browser but returns 502 to `PerchoBot/1.0` — a refusal of our fetcher, not retried under another identity; the film uses Google photos only. Editorial, film-only: Chick-fil-A, Rreal Tacos, the second Publix, Orangetheory. Photos rejected ("editorial:"), all by what they tell a buyer: three clubhouse interiors, three porch/chair shots, diners' faces at close range (two), children at the playground, a casino-night table, fireworks at night, a duplicate fairway, a dark colour-cast fairway, grey overcast water, a school that is mostly parking lot, a roundabout instead of a school, a generic store aisle, a cafe corner, a picnic-table top, a coffee cup, a bakery case and eight store interiors filed under The Collection, low-resolution frames (728, 707, 1024 px).
+- Narration: schools are never merged into neighbouring short sections — merged with a gym and a library they came back "Onelife Fitness and Sharon Forks Library anchor brick Haw Creek Elementary and South Forsyth High".
+- Assembly `0da27e81`, `cf_stream_uid f49d1a31b412b28c0a2cc2ad517124f3`, 78.0 s, 28 clips; community act ~16 s (the Lodge, both pools, the course, the club sign). **Spend: 1 Seedance ≈ $0.14** (Mary Alice beach sunset); the course clip reused from 2026-08-20. Profile written.
+**Verified**: vitest 205 in tour-orchestrator; frames every 2 s; production feed serves the uid (13 community films).
+**Next steps**: pitch #8 (Cumming — Settingdown Farms).
+
 ## 2026-11-21 21:40 UTC — phase366.14: St Marlo re-cut — no clubhouse interiors, no low-resolution frames
 
 **Objective**: owner on St Marlo's film: "去掉 前面几个室内的照片 还有一个像素很低的体育场馆内的椅子".

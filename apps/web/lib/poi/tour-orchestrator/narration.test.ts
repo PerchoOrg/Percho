@@ -132,6 +132,18 @@ describe('mergeShortSections', () => {
     expect(sections[1]?.wordBudget).toBeGreaterThan(20);
   });
 
+  it('never folds a school into its neighbours', () => {
+    const sections = mergeShortSections(
+      buildSections([
+        clip('kids', 'Sharon Forks Library', 3),
+        clip('schools', 'Haw Creek Elementary', 2.5),
+        clip('schools', 'South Forsyth High', 2.5),
+        clip('shopping', 'Sagar Fresh Market', 3),
+      ]),
+    );
+    expect(sections.map((s) => s.bucket)).toEqual(['kids', 'schools', 'shopping']);
+  });
+
   it('leaves a short section between two long ones alone', () => {
     const before = buildSections([
       clip('outdoor', 'Cauley Creek Park', 8),
