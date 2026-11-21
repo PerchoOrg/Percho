@@ -837,17 +837,17 @@ export function CommunityFace({
 								hitSlop={12}
 								style={({ pressed }) => [
 									styles.ctaLink,
-									byChapter && styles.ctaPill,
+									styles.ctaPill,
 									pressed && styles.ctaPressed,
 								]}
 							>
 								<Text
-									style={[styles.ctaLabel, byChapter && styles.ctaPillLabel]}
+									style={[styles.ctaLabel, styles.ctaPillLabel]}
 									numberOfLines={1}
 								>
 									Explore
 								</Text>
-								<ArrowRightIcon dark={byChapter} />
+								<ArrowRightIcon dark />
 							</Pressable>
 						</Animated.View>
 					)}
@@ -1319,7 +1319,11 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 2,
 	},
 	ctaPressed: { opacity: 0.7 },
-	/** Explore on a city card: a solid pill, the one white thing at the foot. */
+	/**
+	 * Explore: a solid pill, the one white thing at the foot. City cards had it
+	 * since phase352; community cards too since phase366 (owner 2026-11-21:
+	 * "explore button和city card保持一致").
+	 */
 	ctaPill: {
 		height: 34,
 		minHeight: 34,

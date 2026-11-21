@@ -222,6 +222,10 @@ export async function computeFinalShots(
   ]);
   const photos: NonNullable<typeof photosRaw> = [];
   const dropped: Array<{ photo_id: string; poi_id: string; reason: string }> = [];
+  // Frames another live film already shows rank below a place's fresh ones
+  // (phase366, see film-reuse.ts).
+  const { loadPhotosInOtherFilms } = await import('./film-reuse');
+  const elsewhere = await loadPhotosInOtherFilms(sb, owner);
 
   // Resolution gate, BEFORE the per-POI cap so a POI with a sharper alternate
   // uses it instead of spending its slot on a soft frame. Owner 2026-08-17, on
@@ -320,6 +324,10 @@ export async function computeFinalShots(
       const aUsable = aTags.usable === false ? 0 : 1;
       const bUsable = bTags.usable === false ? 0 : 1;
       if (aUsable !== bUsable) return bUsable - aUsable;
+      // A frame another live film already shows goes behind every fresh one.
+      const aFresh = elsewhere.has(a.id) ? 0 : 1;
+      const bFresh = elsewhere.has(b.id) ? 0 : 1;
+      if (aFresh !== bFresh) return bFresh - aFresh;
       // A hand-picked photo of this community outranks a generic Places photo
       // of the same POI, whatever the tagger scored them.
       const aSite = a.source === 'community_site' ? 1 : 0;
@@ -345,8 +353,15 @@ export async function computeFinalShots(
     // community's own site. His explicit approval also survives the per-POI
     // cap below — a verdict he gave by hand is not a candidate to be ranked
     // (owner 2026-08-20: "the photos i manually approved are not in the plan").
+    //
+    // Not when another live film already shows the frame. `poi_photos.status`
+    // is global, so an approval he gave reviewing one community forced the
+    // photo into every film near it — Sims Lake's fountain, approved for
+    // Aberdeen on 2026-08-20, reached Suwanee's city film and Wild Timber
+    // (phase366). Approval belongs to a scope (owner 2026-11-15); elsewhere it
+    // is a candidate like any other, ranked behind the fresh frames.
     const ownerApproved = (r: (typeof ranked)[number]) =>
-      !!r.reviewed_by && r.status === 'approved';
+      !!r.reviewed_by && r.status === 'approved' && !elsewhere.has(r.id);
     const handPicked = (r: (typeof ranked)[number]) =>
       ownerApproved(r) || (r.source === 'community_site' && r.status !== 'rejected');
     const groupAmenity = amenityOfKey(groupKey);
@@ -366,7 +381,9 @@ export async function computeFinalShots(
       ESTABLISHING_CATEGORIES.has(
         ((r.ai_tags ?? {}) as { primary_category?: string }).primary_category ?? '',
       );
-    const lead = ranked.find((r) => establishing(r) && !handPicked(r));
+    // Only a fresh frame is promoted: promoting one another film already shows
+    // would put it back ahead of the fresh frames the ranking just preferred.
+    const lead = ranked.find((r) => establishing(r) && !handPicked(r) && !elsewhere.has(r.id));
     const places = ranked.filter((r) => !handPicked(r) && r !== lead);
     // The owner's own approvals are not subject to `allowed`. The cap exists to
     // stop a POI monopolising the film with interchangeable Places photos; it
@@ -389,11 +406,13 @@ export async function computeFinalShots(
           ? 'rejected in Review'
           : tags.usable === false
             ? 'tagger-unusable'
-            : groupAmenity
-              ? allowed === 0
-                ? `${AMENITY_LABEL[groupAmenity]} got no slot in the community act's ${COMMUNITY_ACT_CLIP_BUDGET} clips`
-                : `not in the top ${allowed} for ${AMENITY_LABEL[groupAmenity]}`
-              : `not in the top ${clipsAllowedFor(buckets?.get(row.poi_id))} for this place`;
+            : elsewhere.has(row.id)
+              ? 'already in another live film'
+              : groupAmenity
+                ? allowed === 0
+                  ? `${AMENITY_LABEL[groupAmenity]} got no slot in the community act's ${COMMUNITY_ACT_CLIP_BUDGET} clips`
+                  : `not in the top ${allowed} for ${AMENITY_LABEL[groupAmenity]}`
+                : `not in the top ${clipsAllowedFor(buckets?.get(row.poi_id))} for this place`;
       dropped.push({ photo_id: row.id, poi_id: row.poi_id, reason });
     }
   }
@@ -420,11 +439,22 @@ export async function computeFinalShots(
   // "Apremont - Highcroft Entrance" (2026-08-23). The synthetic amenity POIs
   // carry the community id inside their `google_place_id`, so they are linked
   // to exactly one community and cannot answer for another.
+  //
+  // Since phase366 an amenity POI can also be a real Google place (the HOA's
+  // clubhouse), which a neighbouring subdivision may link too — so when the
+  // caller names the community, its own name is used and nothing is looked up.
   let communityName = '';
   const amenityPoiIds = [
     ...new Set([...amenityByPhoto.keys()].map((id) => photoPoi.get(id) ?? '')),
   ].filter(Boolean);
-  if (amenityPoiIds.length > 0) {
+  if (amenityPoiIds.length > 0 && owner?.scope.kind === 'community') {
+    const { data: own } = (await sb
+      .from('communities')
+      .select('name')
+      .eq('id', owner.id)
+      .maybeSingle()) as { data: { name: string | null } | null };
+    communityName = own?.name ?? '';
+  } else if (amenityPoiIds.length > 0) {
     const { data: communityRow } = (await sb
       .from('community_pois')
       .select('communities(name)')

@@ -70,7 +70,7 @@ export interface ResolveResult {
  * Google types that mean "an area", not "a place you can film". A search that
  * cannot find the POI happily returns the surrounding city or ZIP instead.
  */
-const ADMINISTRATIVE_TYPES = new Set([
+export const ADMINISTRATIVE_TYPES = new Set([
   'locality',
   'sublocality',
   'political',

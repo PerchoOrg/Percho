@@ -14,6 +14,7 @@ export async function runResolve(sb: TourDb, run: RunRow) {
           gemini_b?: { ok?: boolean; parsed?: { pois?: unknown[] } | null };
         };
         community?: {
+          name?: string | null;
           lat?: number | null;
           lng?: number | null;
           city?: string | null;
@@ -76,6 +77,17 @@ export async function runResolve(sb: TourDb, run: RunRow) {
   // The community's real city/state, not the agent's guess at a street address.
   const locality = [research.community?.city, research.community?.state].filter(Boolean).join(', ');
   const result = await resolveCandidates(candidates, center, radiusMeters, locality);
+
+  // The community's own clubhouse / pool / HOA on Google feeds its amenity act
+  // (phase366). Research looks outward and never proposes these. If it did
+  // resolve one, the own-place copy wins so the place lands in `amenities`.
+  const communityName = research.community?.name;
+  if (run.scope.kind === 'community' && communityName) {
+    const { findOwnPlaces } = await import('@/lib/poi/own-places');
+    const own = await findOwnPlaces(communityName, locality, center);
+    const ownIds = new Set(own.map((p) => p.place_id));
+    result.resolved = [...own, ...result.resolved.filter((r) => !ownIds.has(r.place_id))];
+  }
 
   // Mark which of these the community ALREADY has, and which already earn
   // their place in the film.
