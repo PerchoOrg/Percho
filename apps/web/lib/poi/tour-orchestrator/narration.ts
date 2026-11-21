@@ -224,7 +224,11 @@ export const SHORT_SECTION_SECONDS = 6;
  * long ones stays as it is. PURE.
  */
 export function mergeShortSections(sections: NarrationSection[]): NarrationSection[] {
-  const short = (s: NarrationSection) => s.endS - s.startS < SHORT_SECTION_SECONDS;
+  // Schools are never folded in: they carry their own rules, and merged with a
+  // gym and a library they came back "Onelife Fitness and Sharon Forks Library
+  // anchor brick Haw Creek Elementary and South Forsyth High" (Windermere).
+  const short = (s: NarrationSection) =>
+    s.endS - s.startS < SHORT_SECTION_SECONDS && s.bucket !== 'schools';
   const out: NarrationSection[] = [];
   for (const s of sections) {
     const last = out.at(-1);
