@@ -30,15 +30,31 @@
  * so `tour-segments.test.ts` pins these numbers against the Python module's own
  * worked example. If the render worker's xfade changes, that test should fail.
  *
- * What this CANNOT see: the 3s end card (`END_CARD_S`, minus a 0.6s fade) that
- * `worker.py` appends when it manages to render one. Nothing on the row records
- * whether it did, so the last place's dash absorbs it — the bar still completes
- * exactly at the end of the film, and the last ~5% of it belongs to a title
- * card rather than to that place. Not worth a schema column.
+ * ── What actually played (phase366.11) ───────────────────────────────────────
+ *
+ * The durations used to be the PLAN's, and the film is cut from whatever clip
+ * is ready for each photo — Seedance wins over the planned engine, and a Ken
+ * Burns clip rendered for an earlier plan keeps its length. The 3s end card
+ * (`END_CARD_S`, less its 0.6s fade) was not counted at all. Every boundary
+ * came out early as a fraction, so the label changed seconds after the picture
+ * (owner 2026-11-21: "照片和location有延迟" — 2.4s late at the end of every
+ * film, ~16s on Aberdeen's).
+ *
+ * The worker now writes back what it probed (`film_timeline.py`): each played
+ * clip's real `duration_s`, `skipped: true` on a clip it left out, and
+ * `end_card_s` on the last played clip. The end card stays inside the last
+ * place's dash, so the bar still completes exactly at the end of the film.
  */
 
 /** Must match `xfade` in `worker.py`'s tour-assembly step. See above. */
 export const TOUR_XFADE_S = 0.5;
+
+/**
+ * The end card's share of the film when the row does not record it:
+ * `END_CARD_S - END_CARD_FADE` in `worker.py`. Every assembly before
+ * phase366.11 had one.
+ */
+export const TOUR_END_CARD_S = 2.4;
 
 export interface TourSegment {
   /** The place this stretch of the film is about. */
@@ -85,16 +101,21 @@ interface ParsedClip {
   bucketLabel: string;
 }
 
-function parseClips(orderedClips: unknown): ParsedClip[] {
-  if (!Array.isArray(orderedClips)) return [];
+function parseClips(orderedClips: unknown): { clips: ParsedClip[]; endCard: number } {
+  const none = { clips: [], endCard: 0 };
+  if (!Array.isArray(orderedClips)) return none;
   const out: ParsedClip[] = [];
+  let endCard = TOUR_END_CARD_S;
   for (const raw of orderedClips) {
-    if (typeof raw !== 'object' || raw === null) return [];
+    if (typeof raw !== 'object' || raw === null) return none;
     const c = raw as Record<string, unknown>;
+    // Not in the film: the worker had no ready clip for it.
+    if (c.skipped === true) continue;
+    if (typeof c.end_card_s === 'number' && c.end_card_s >= 0) endCard = c.end_card_s;
     const seconds = typeof c.duration_s === 'number' ? c.duration_s : Number.NaN;
     // One unusable clip makes every boundary after it wrong, so the whole
     // film falls back to a plain bar rather than to a misleading dashed one.
-    if (!Number.isFinite(seconds) || seconds <= 0) return [];
+    if (!Number.isFinite(seconds) || seconds <= 0) return none;
     const name = typeof c.poi_name === 'string' ? c.poi_name : '';
     const id = typeof c.poi_id === 'string' ? c.poi_id : '';
     const distance = typeof c.label_distance === 'string' ? c.label_distance : '';
@@ -119,7 +140,7 @@ function parseClips(orderedClips: unknown): ParsedClip[] {
       bucketLabel: typeof c.bucket_label === 'string' ? c.bucket_label : '',
     });
   }
-  return out;
+  return { clips: out, endCard };
 }
 
 /**
@@ -129,13 +150,14 @@ function parseClips(orderedClips: unknown): ParsedClip[] {
  * continuous bar, which is always correct because it needs no structure.
  */
 export function tourSegments(orderedClips: unknown, xfade = TOUR_XFADE_S): TourSegment[] {
-  const clips = parseClips(orderedClips);
+  const { clips, endCard } = parseClips(orderedClips);
   if (clips.length === 0) return [];
 
-  const total = clips.reduce((a, c) => a + c.seconds, 0) - xfade * (clips.length - 1);
+  const cut = clips.reduce((a, c) => a + c.seconds, 0) - xfade * (clips.length - 1);
   // A tour of clips shorter than the transitions between them is not a
   // timeline this can describe.
-  if (total <= 0) return [];
+  if (cut <= 0) return [];
+  const total = cut + endCard;
 
   /** `starts[k]` — when clip k begins on the finished timeline. */
   const starts: number[] = [];

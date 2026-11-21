@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { TOUR_XFADE_S, tourSegments } from './tour-segments';
+import { TOUR_END_CARD_S, TOUR_XFADE_S, tourSegments } from './tour-segments';
 
 const clip = (poi: string, duration_s: number, name = poi) => ({
   poi_id: poi,
   poi_name: name,
   duration_s,
 });
+
+/** The last clip of a film the worker recorded with no end card. */
+const lastClip = (poi: string, duration_s: number) => ({ ...clip(poi, duration_s), end_card_s: 0 });
 
 describe('tourSegments', () => {
   /**
@@ -18,7 +21,7 @@ describe('tourSegments', () => {
    * red — see the module header.
    */
   it('places boundaries where the render worker starts each clip', () => {
-    const segments = tourSegments([clip('a', 3), clip('b', 3), clip('c', 3)]);
+    const segments = tourSegments([clip('a', 3), clip('b', 3), lastClip('c', 3)]);
     expect(segments.map((s) => s.name)).toEqual(['a', 'b', 'c']);
     expect(segments.map((s) => s.endFraction)).toEqual([3.0 / 8, 5.5 / 8, 1]);
   });
@@ -31,14 +34,18 @@ describe('tourSegments', () => {
    * "visibly out of step" the first draft claimed.
    */
   it('corrects boundaries by a few percent, not by a few tenths', () => {
-    const three = tourSegments([clip('a', 3), clip('b', 3), clip('c', 3)]);
+    const three = tourSegments([clip('a', 3), clip('b', 3), lastClip('c', 3)]);
     const drift3 = Math.max(
       ...three.map((s, i) => Math.abs(s.endFraction - (i + 1) / three.length)),
     );
     expect(drift3).toBeGreaterThan(0.02);
     expect(drift3).toBeLessThan(0.05);
 
-    const many = tourSegments(Array.from({ length: 14 }, (_, i) => clip(`p${i}`, 3.25)));
+    const many = tourSegments(
+      Array.from({ length: 14 }, (_, i) =>
+        i === 13 ? lastClip(`p${i}`, 3.25) : clip(`p${i}`, 3.25),
+      ),
+    );
     const drift14 = Math.max(
       ...many.map((s, i) => Math.abs(s.endFraction - (i + 1) / many.length)),
     );
@@ -138,7 +145,35 @@ describe('tourSegments', () => {
     expect(segment && 'distance' in segment).toBe(false);
   });
 
-  it('matches the worker constant', () => {
+  it('matches the worker constants', () => {
     expect(TOUR_XFADE_S).toBe(0.5);
+    // END_CARD_S 3.0 less END_CARD_FADE 0.6.
+    expect(TOUR_END_CARD_S).toBe(2.4);
+  });
+
+  /**
+   * Owner 2026-11-21: "照片和location有延迟". The end card was left out of the
+   * total, so every boundary landed early as a fraction of the real film and
+   * the label changed late — by 2.4s at the end of every film.
+   */
+  it('counts the end card in the film, inside the last place', () => {
+    // 3 + 3 + 3 - 2 x 0.5 = 8s of clips, then 2.4s of card: 10.4s.
+    const segments = tourSegments([clip('a', 3), clip('b', 3), clip('c', 3)]);
+    expect(segments.map((s) => s.endFraction)).toEqual([3.0 / 10.4, 5.5 / 10.4, 1]);
+  });
+
+  it('uses the end card the worker recorded', () => {
+    const segments = tourSegments([clip('a', 3), clip('b', 3), { ...clip('c', 3), end_card_s: 1 }]);
+    expect(segments[0]?.endFraction).toBe(3.0 / 9);
+  });
+
+  it('leaves out a clip the worker skipped', () => {
+    const segments = tourSegments([
+      clip('a', 3),
+      { ...clip('b', 3), skipped: true },
+      lastClip('c', 3),
+    ]);
+    expect(segments.map((s) => s.name)).toEqual(['a', 'c']);
+    expect(segments[0]?.endFraction).toBe(3.0 / 5.5);
   });
 });
