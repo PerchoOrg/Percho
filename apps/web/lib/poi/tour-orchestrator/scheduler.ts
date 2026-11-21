@@ -55,6 +55,22 @@ const DEPTHFLOW_MIN_CLIPS = 2;
 
 /** Cost gate: Seedance is ~$0.05/clip and the only paid engine here. */
 export const SEEDANCE_MAX_CLIPS = 4;
+/**
+ * A community film's cap: two (owner 2026-11-20, for the 6 → 20 batch). Was
+ * enforced by hand-editing each plan; now the plan says it.
+ */
+export const COMMUNITY_SEEDANCE_MAX_CLIPS = 2;
+
+/** How the caller bounds the paid engine. */
+export interface SeedanceOptions {
+  /** At most this many Seedance clips. Defaults to SEEDANCE_MAX_CLIPS. */
+  max?: number;
+  /**
+   * Photos that already have a ready Seedance clip. Among eligible frames these
+   * go first: reusing one costs nothing, a new one costs ~$0.14.
+   */
+  ready?: ReadonlySet<string>;
+}
 /** Provider floor — the seedance worker clamps anything shorter up to 4s. */
 export const SEEDANCE_MIN_DURATION = 4.0;
 
@@ -702,6 +718,7 @@ function assignEngines(
   warnings: PlanWarning[],
   /** Exactly these photos are Seedance, and no others — see `scheduleInOrder`. */
   seedanceIds?: ReadonlySet<string>,
+  seedance: SeedanceOptions = {},
 ): Engine[] {
   const n = ordered.length;
   const engines: Engine[] = new Array(n).fill('kenburns');
@@ -711,16 +728,19 @@ function assignEngines(
       if (seedanceIds.has(e.annotation.photo_id)) engines[i] = 'seedance';
     });
   } else {
-    // Seedance: strongest eligible frames, hard-capped by cost.
+    // Seedance: strongest eligible frames, hard-capped by cost — and a frame
+    // whose clip already exists before any that would be paid for.
+    const ready = (id: string) => (seedance.ready?.has(id) ? 1 : 0);
     const eligible = ordered
       .map((e, i) => ({ e, i }))
       .filter(({ e }) => seedanceEligible(e))
       .sort(
         (a, b) =>
+          ready(b.e.annotation.photo_id) - ready(a.e.annotation.photo_id) ||
           b.e.annotation.emotional_weight - a.e.annotation.emotional_weight ||
           a.e.annotation.photo_id.localeCompare(b.e.annotation.photo_id),
       )
-      .slice(0, SEEDANCE_MAX_CLIPS);
+      .slice(0, seedance.max ?? SEEDANCE_MAX_CLIPS);
     for (const { i } of eligible) engines[i] = 'seedance';
   }
 
@@ -875,7 +895,11 @@ export interface SchedulePlan {
  * Build the shot list. Photos without an annotation (or without pixel
  * dimensions) are skipped — the Curator is the gate on what enters a tour.
  */
-export function scheduleClips(annotations: PhotoAnnotation[], photos: PhotoMeta[]): SchedulePlan {
+export function scheduleClips(
+  annotations: PhotoAnnotation[],
+  photos: PhotoMeta[],
+  seedance: SeedanceOptions = {},
+): SchedulePlan {
   const warnings: PlanWarning[] = [];
   const metaById = new Map(photos.map((p) => [p.photo_id, p]));
 
@@ -892,7 +916,7 @@ export function scheduleClips(annotations: PhotoAnnotation[], photos: PhotoMeta[
   }
 
   const ordered = orderUnits(buildUnits(entries)).flatMap((u) => u.entries);
-  const engines = assignEngines(ordered, warnings);
+  const engines = assignEngines(ordered, warnings, undefined, seedance);
 
   const clips: ScheduledClip[] = [];
   let previousMove: string | null = null;

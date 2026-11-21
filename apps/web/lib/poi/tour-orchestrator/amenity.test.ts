@@ -171,3 +171,15 @@ describe('communityActSlots', () => {
     expect([...communityActSlots(new Map(), { ceiling: 3 })]).toEqual([]);
   });
 });
+
+describe('lakes and trails (phase366.6)', () => {
+  it('names a lake and a trail for what they are, not "green space"', () => {
+    expect(amenityOf({ tags: ['lake', 'autumn', 'reflection'] })).toBe('lake');
+    expect(amenityOf({ tags: ['walking-path', 'trees', 'trail'] })).toBe('trails');
+    expect(amenityOf({ tags: ['lawn', 'pavilion'] })).toBe('green_space');
+  });
+
+  it('still lets a specific facility win over the water beside it', () => {
+    expect(amenityOf({ tags: ['pool', 'lake-view'] })).toBe('pool');
+  });
+});

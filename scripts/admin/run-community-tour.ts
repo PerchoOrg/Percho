@@ -24,6 +24,10 @@ const ALL_STEPS = [
   'research',
   'resolve',
   'photos',
+  // The community's own website (`tour-steps/ingest.ts`) — the admin's "Fetch
+  // Sites" chip. Missing here until phase366.6, which is how site photos came
+  // in through a side script that skipped Tag & Filter.
+  'ingest',
   // `tag` was reachable only from the admin chip until 2026-09-03, which
   // made it unrunnable for photos that arrive outside the pipeline —
   // `ingest-community-photos.ts` creates amenity POIs after `photos` has
@@ -42,7 +46,7 @@ type Step = (typeof ALL_STEPS)[number];
  * reviews the approved AND rejected photos by hand between `photos` and `plan`
  * (2026-08-19); resume with `--steps plan,generate,assemble`.
  */
-const DEFAULT_STEPS: readonly Step[] = ['research', 'resolve', 'photos'];
+const DEFAULT_STEPS: readonly Step[] = ['research', 'resolve', 'photos', 'ingest'];
 
 function requireEnv(name: string): string {
   const v = process.env[name];
@@ -127,6 +131,7 @@ async function main() {
   const { runResearch } = await import('../../apps/web/lib/poi/tour-steps/research.js');
   const { runResolve } = await import('../../apps/web/lib/poi/tour-steps/resolve.js');
   const { runPhotos } = await import('../../apps/web/lib/poi/tour-steps/photos.js');
+  const { runIngest } = await import('../../apps/web/lib/poi/tour-steps/ingest.js');
   const { runPlan } = await import('../../apps/web/lib/poi/tour-steps/plan.js');
   const { runTag } = await import('../../apps/web/lib/poi/tour-steps/tag.js');
   const { runGenerate } = await import('../../apps/web/lib/poi/tour-steps/generate.js');
@@ -158,6 +163,10 @@ async function main() {
         // The photo table auto-approves 'ready' rows when an admin opens it,
         // so this is the same policy, not a new one.
         result = await settleEnhancements(sb, scope, community.id, runId as string, result);
+        break;
+      case 'ingest':
+        // Community only; a city film's photos all come from Places.
+        result = await runIngest(sb, run);
         break;
       case 'tag':
         // Tags every untagged photo the tour can see and then filters them,
@@ -313,6 +322,10 @@ function summarise(step: Step, result: unknown): string {
       return `${r.resolved} resolved, ${r.dropped} dropped`;
     case 'photos':
       return `${(r.shots as unknown[] | undefined)?.length ?? 0} shots, ${(r.dropped as unknown[] | undefined)?.length ?? 0} dropped`;
+    case 'ingest':
+      return `${r.added ?? 0} site photo(s) from ${r.pagesDone ?? 0} page(s)${
+        r.pagesLeft ? `, ${r.pagesLeft} page(s) left — run ingest again` : ''
+      }`;
     case 'tag':
       return `${r.tagged}/${r.total} tagged${
         r.unreached ? `, ${r.unreached} not reached — run tag again` : ''

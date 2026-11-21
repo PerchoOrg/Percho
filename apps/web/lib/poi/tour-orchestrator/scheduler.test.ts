@@ -323,6 +323,23 @@ describe('scheduleClips — golden fixture', () => {
     }
   });
 
+  it('takes a lower cap from the caller, and spends it on clips already paid for first', () => {
+    const free = plan().clips.filter((c) => c.engine === 'seedance');
+    expect(free.length).toBeGreaterThan(1);
+    // The film's own choice, capped at one: the strongest frame.
+    const one = scheduleClips(GOLDEN_ANNOTATIONS, GOLDEN_PHOTOS, { max: 1 }).clips.filter(
+      (c) => c.engine === 'seedance',
+    );
+    expect(one).toHaveLength(1);
+    // With a weaker frame's clip already rendered, that one is reused instead.
+    const cached = free.at(-1)!.photo_id;
+    const reused = scheduleClips(GOLDEN_ANNOTATIONS, GOLDEN_PHOTOS, {
+      max: 1,
+      ready: new Set([cached]),
+    }).clips.filter((c) => c.engine === 'seedance');
+    expect(reused.map((c) => c.photo_id)).toEqual([cached]);
+  });
+
   it('holds DepthFlow to [1/3, 1/2] of the non-Seedance pool, never adjacent', () => {
     const { clips } = plan();
     const pool = clips.filter((c) => c.engine !== 'seedance');

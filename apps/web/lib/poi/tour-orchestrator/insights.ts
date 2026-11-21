@@ -45,14 +45,17 @@ export interface PlaceFact {
  * two neighbourhoods get different emphases and one neighbourhood keeps its
  * own across re-renders.
  */
-export const INSIGHT_ANGLES = ['standing', 'reach', 'tradeoff', 'density'] as const;
+/**
+ * `standing` (a place's rating and how many people left one) is gone since
+ * phase366.6. Lines built on it kept coming back as review counts — "Nearly
+ * seven hundred reviews praise The Bowl" — which tell a buyer nothing they can
+ * see, and the owner approved dropping them (2026-11-21). The narration no
+ * longer receives ratings or review counts at all.
+ */
+export const INSIGHT_ANGLES = ['reach', 'tradeoff', 'density'] as const;
 export type InsightAngle = (typeof INSIGHT_ANGLES)[number];
 
 export const ANGLE_BRIEF: Record<InsightAngle, string> = {
-  standing: `STANDING — how well regarded a place actually is, from its rating AND how
-many people left one. 4.8 from two thousand people is the area's favourite; 4.8
-from sixty is a local secret. Say which, in words, when the numbers support it.
-Never quote a rating for a school.`,
   reach: `REACH — how far things really are, and what that means. Under a mile is a walk
 or a two-minute drive; four miles is a trip you plan. Use the actual figure once
 or twice rather than "nearby", which says nothing.`,
@@ -79,23 +82,15 @@ function hash(seed: string): number {
  *
  * Seeded on the community id, like the narrator's voice and the music: two
  * communities sound different from each other, one community sounds like
- * itself every time. `standing` is always in — it is the angle with real data
- * behind it for every commercial place — and the rest rotate.
+ * itself every time. The order rotates; the first is leaned on hardest.
  */
-export function anglesForCommunity(seed: string, count = 3): InsightAngle[] {
-  const rest = INSIGHT_ANGLES.filter((a) => a !== 'standing');
-  const start = hash(seed) % rest.length;
-  const picked: InsightAngle[] = ['standing'];
+export function anglesForCommunity(seed: string, count = 2): InsightAngle[] {
+  const start = hash(seed) % INSIGHT_ANGLES.length;
+  const picked: InsightAngle[] = [];
   for (let i = 0; picked.length < Math.min(count, INSIGHT_ANGLES.length); i++) {
-    picked.push(rest[(start + i) % rest.length] as InsightAngle);
+    picked.push(INSIGHT_ANGLES[(start + i) % INSIGHT_ANGLES.length] as InsightAngle);
   }
   return picked;
-}
-
-/** "4.8 from 1,988 reviews", or null when there is nothing to say. */
-export function describeStanding(f: PlaceFact): string | null {
-  if (f.rating == null || !f.reviews) return null;
-  return `${f.rating.toFixed(1)} from ${f.reviews.toLocaleString('en-US')} reviews`;
 }
 
 /** "0.8 mi" / "in the community". */
@@ -127,12 +122,6 @@ export function filmFacts(facts: PlaceFact[]): string[] {
   if (walk.length > 0) {
     out.push(`${walk.length} of them under a mile: ${walk.map((f) => f.name).join(', ')}`);
   }
-  const best = away
-    .filter((f) => (f.reviews ?? 0) >= 200 && (f.rating ?? 0) >= 4.5)
-    .sort((a, b) => (b.reviews ?? 0) - (a.reviews ?? 0))[0];
-  if (best) {
-    out.push(`the most reviewed well-rated place is ${best.name} (${describeStanding(best)})`);
-  }
   return out;
 }
 
@@ -140,7 +129,8 @@ export function filmFacts(facts: PlaceFact[]): string[] {
 export function renderFacts(facts: PlaceFact[]): string {
   return facts
     .map((f) => {
-      const bits = [describeDistance(f), describeStanding(f)].filter(Boolean);
+      // Distance only: ratings and review counts are not narration (phase366.6).
+      const bits = [describeDistance(f)].filter(Boolean);
       return `    ${f.name}${bits.length ? ` — ${bits.join(', ')}` : ''}`;
     })
     .join('\n');
