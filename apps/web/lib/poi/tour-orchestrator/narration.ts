@@ -310,12 +310,19 @@ RULES
   no builder, material, certification, award or count unless the facts above
   say it.
 - Name the ${noun} once, early. After that, say "here".
+- Never place the ${noun} "by", "near", "beside" or "next to" a place more than
+  half a mile away — "Arbors at Richland Creek starts by The Bowl" put a 2-mile drive
+  next door.
 - Concrete nouns, real detail. "The courts stay busy past dusk" beats "tennis
   courts are available".
 - USE THE FACTS — what the place is, what it looks like, what it is known
   for. Don't recite them, but let at least half the lines rest on something
   real. Only the facts given above: never invent a distance, a count or an
   amenity.
+- SAY ONLY WHAT IS GIVEN. Each place lists what its shots show ("on screen").
+  A detail that is neither in the facts nor on screen — a creek's name, a menu
+  item, a drink on tap, a lawn the picture does not show — is invented. Leave
+  it out.
 - NO RATINGS, NO REVIEW COUNTS. How many people reviewed a place says nothing
   a buyer can see; "Nearly seven hundred reviews praise The Bowl" is a wasted
   line.
@@ -327,6 +334,9 @@ RULES
     · Never as the whole of a line — it qualifies something you have already
       said about the place.
     · Say it the way a person would, not the way a map would.
+    · A distance that covers several places ("four parks within two miles")
+      must be at least the FARTHEST of them, rounded up — 2.2 miles is not
+      "within two miles".
     · Under about ten words there is no room for both, and a distance is what
       fits when nothing else will — which is why those sections keep coming
       back as "Life Time fitness is under a mile". Say what the place IS —

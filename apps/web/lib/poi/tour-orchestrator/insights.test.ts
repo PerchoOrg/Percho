@@ -99,3 +99,13 @@ describe('renderFacts', () => {
     expect(out).not.toMatch(/4\.8|1,988|review/);
   });
 });
+
+describe('renderFacts — what is on screen (phase366.8)', () => {
+  it('lists each shot description under its place', () => {
+    const out = renderFacts([
+      { ...f('Lower Pool West', 'outdoor', 2.2), seen: ['A river below a dam with rocky banks.'] },
+    ]);
+    expect(out).toContain('2.2 mi');
+    expect(out).toContain('on screen: A river below a dam with rocky banks.');
+  });
+});

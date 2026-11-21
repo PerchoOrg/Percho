@@ -465,6 +465,22 @@ async function writeNarration(sb: TourDb, run: RunRow, shots: unknown[]) {
         reviews: poi?.user_ratings_total ?? null,
       };
     }
+    // What each place's shots actually show — the tagger's one-line
+    // description — so a line can be about the picture instead of invented.
+    const shotList = shots as Array<{ poi_id?: string; photo_id?: string }>;
+    const photoIds = shotList.map((sh) => sh.photo_id).filter(Boolean) as string[];
+    const { data: described } = (await sb
+      .from('poi_photos')
+      .select('id, ai_tags')
+      .in('id', photoIds)) as {
+      data: Array<{ id: string; ai_tags: { description?: string } | null }> | null;
+    };
+    const descById = new Map((described ?? []).map((p) => [p.id, p.ai_tags?.description ?? '']));
+    for (const sh of shotList) {
+      const fact = sh.poi_id ? facts[sh.poi_id] : undefined;
+      const desc = sh.photo_id ? descById.get(sh.photo_id)?.trim() : '';
+      if (fact && desc) fact.seen = [...(fact.seen ?? []), desc.slice(0, 160)];
+    }
   }
 
   const fresh = await runNarration(
