@@ -23,6 +23,20 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-21 08:05 UTC — phase366.4: Towne Village at Suwanee Dam, the second new community film (Sugar Hill's builder slot)
+
+**Objective**: #2 of the batch (phase366). Pitched with Beazer's page of the day — 46 three-story townhomes, 8 homes "Available Now" $449,990–$549,990, one plan (Brayton, 3–4 bd, 2,421 sq ft), North Gwinnett district, Beazer now part of Dream Finders Homes — against Park Ridge (Ryan Homes, one home left). Owner: "开始做吧".
+**Actions**:
+- `communities`: `builder` Beazer Homes, `website` the Beazer community page (the explore link reads "Beazer Homes").
+- Run `2f9bbfef`: research → resolve (17 places; the new own-place lookup found "Beazer Homes Towne Village at Suwanee Dam", the sales office) → photos → tag. Ingested 10 Beazer photos (`ingest-community-photos.ts`, source note naming the page): 3 exteriors, 5 model-home rooms, 2 patio/deck. Not taken: a family in the kitchen (faces), the living/dining shots with a Beazer logo on the TV, empty rooms, the Sugar Hill amphitheater (not in the community). Photos over 3000 px were shrunk first — storage refused a 5472 px file.
+- Editorial: `community_pois` rejected for this film — UPS Store, Home Depot (low value) and Sims Lake Park, E.E. Robinson, Rreal Tacos, Rushing Trading, E Center (all in Wild Timber's film, 0.9 mi away). `poi_photos` rejected: `9595d8ec` Beazer logo on white (from the Google place), `db277135` phone-camera watermark. Kept: Ridge Lake Park (Beazer names it), Sugar Hill Golf Club (city-run), Mika French Sushi, Publix (0.3 mi), Gary Pirkle Park, The Bowl, three schools.
+- Stored-run edits after plan: community act reordered exteriors → kitchen → bedroom → bath → deck → patio; labels Townhomes / Model Home / Patio (were Amenities / Neighborhood / Entrance); all eight narration lines rewritten (the generated ones recited review counts — "Nearly seven hundred reviews praise The Bowl"); no prices in the voice, they change.
+- Assembly `8d2b7c51`, `cf_stream_uid ab0774f69f87051c96ded39ae1c2e47a`, 57.5 s, 20 clips, 8 TTS lines. **Spend: 2 new Seedance $0.2792** (deck view, Ridge Lake playground).
+- The feed only serves communities with `cover_storage_path` (as with Northbrooke, phase311): uploaded the film's first exterior (Beazer elevation, converted from WebP to a real JPEG) to `community-covers/5d804909…/a43b190e….jpg`. Profile written for this slug (links: Beazer Homes, Reddit, Maps, Zillow, three schools; no Nextdoor page exists).
+**Verified**: frames every 2 s in the planned order; production feed and `/api/mobile/community/towne-village-at-suwanee-dam` serve the film, cover and links.
+**Repeats left in**: Riverside Elementary's and North Gwinnett High's only usable photos, and one Publix photo, also play in Wild Timber's film — the reuse rule falls back to them because those places have nothing else.
+**Next**: pitch #3, Hedgerows (Buford).
+
 ## 2026-11-21 06:20 UTC — phase366.2–366.3: explore page links and folded credits, smooth lines, a plainer card
 
 **Objective**: Owner on Wild Timber's explore page and card: "去掉community name旁边的小label 没啥用 / explore 这个名字有咩有别的选择？/ 多加一些link 类似Nextdoor的 可以让人去explore / 底部的声明部分太多了 可以去掉吗 / 画的线不平滑 不好看 之前city card里也存在这个问题 都变平滑". Answers to the options put to him: "保留explore 不要箭头 / 都加 / a".
