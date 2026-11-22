@@ -4,6 +4,7 @@ import {
 	CURVE_STEPS,
 	againstBaseline,
 	axisTop,
+	closeBy,
 	homeRanks,
 	localDay,
 	milesOf,
@@ -12,6 +13,7 @@ import {
 	otherRanks,
 	pointAt,
 	rankGroups,
+	schoolName,
 	schoolRanks,
 	strokes,
 	topShare,
@@ -55,7 +57,6 @@ describe("nearbyStops", () => {
 			"Avalon",
 			"Halcyon",
 		]);
-		expect(view?.near).toBe(5);
 		expect(view?.axisMiles).toBe(5);
 	});
 
@@ -69,9 +70,69 @@ describe("nearbyStops", () => {
 		]);
 	});
 
+	it("names one place of each kind for the tile, the closest filmed", () => {
+		const view = nearbyStops([
+			...film,
+			seg("Publix", "0.6 mi", "shopping"),
+			seg("Big Creek Greenway", "2.4 mi", "outdoor"),
+		]);
+		expect(view && closeBy(view)).toEqual([
+			{ group: "Errands", name: "Publix", miles: 0.6 },
+			{ group: "Food & drink", name: "Vinny's", miles: 2.1 },
+			{ group: "Outdoors", name: "Lake Windward Drive", miles: 0.9 },
+		]);
+	});
+
+	it("falls back to whatever was filmed when no everyday kind was", () => {
+		const view = nearbyStops([
+			seg("Alpharetta High School", "1.9 mi", "schools"),
+			seg("Webb Bridge Middle School", "2.2 mi", "schools"),
+			seg("Avalon", "2.9 mi", "kids"),
+			seg("City Hall", "3.1 mi", "civic"),
+		]);
+		expect(view && closeBy(view).map((s) => s.group)).toEqual([
+			"Schools",
+			"More",
+		]);
+	});
+
 	it("says nothing about a film that names too few places", () => {
 		expect(nearbyStops(film.slice(0, 4))).toBeNull();
 		expect(nearbyStops(undefined)).toBeNull();
+	});
+});
+
+describe("schoolName", () => {
+	it("puts back the ending the stored row leaves off", () => {
+		expect(schoolName({ label: "Elementary", note: "Cumming" })).toBe(
+			"Cumming Elementary School",
+		);
+		expect(schoolName({ label: "High", note: "Forsyth Central" })).toBe(
+			"Forsyth Central High School",
+		);
+	});
+
+	it("leaves a name alone when it already says its kind", () => {
+		expect(schoolName({ label: "Elementary", note: "Matt Elementary" })).toBe(
+			"Matt Elementary",
+		);
+		expect(schoolName({ label: "High", note: "Alpharetta HS" })).toBe(
+			"Alpharetta HS",
+		);
+		expect(schoolName({ label: "High", note: "Alliance Academy" })).toBe(
+			"Alliance Academy",
+		);
+		// "High" inside a word is not the level.
+		expect(schoolName({ label: "Middle", note: "Highland" })).toBe(
+			"Highland Middle School",
+		);
+	});
+
+	it("does not dress a remark as a name", () => {
+		expect(schoolName({ label: "Elementary", note: "two serve it" })).toBe(
+			"Elementary · two serve it",
+		);
+		expect(schoolName({ label: "Middle" })).toBe("Middle");
 	});
 });
 

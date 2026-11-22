@@ -92,33 +92,6 @@ export function Lines({
 const along = (miles: number, axisMiles: number) =>
 	`${Math.min(100, (miles / axisMiles) * 100)}%` as const;
 
-/** Every stop on one line — the tile's version. */
-export function StopStripMini({ view }: { view: NearbyView }) {
-	return (
-		<View>
-			<View style={styles.miniStrip}>
-				<View
-					style={[
-						styles.nearBand,
-						{ width: along(NEAR_MILES, view.axisMiles) },
-					]}
-				/>
-				<View style={styles.miniRail} />
-				{view.stops.map((s) => (
-					<View
-						key={s.name}
-						style={[styles.miniStop, { left: along(s.miles, view.axisMiles) }]}
-					/>
-				))}
-			</View>
-			<View style={styles.miniAxis}>
-				<Text style={styles.tiny}>home</Text>
-				<Text style={styles.tiny}>{view.axisMiles} mi</Text>
-			</View>
-		</View>
-	);
-}
-
 /** One row per kind of stop; tap a dot to read which place it is. */
 export function StopStrip({
 	view,
@@ -185,8 +158,6 @@ export function StopStrip({
 	);
 }
 
-const MINI_H = 18;
-const MINI_STOP = 7;
 const STOP_ROW_H = 32;
 const STOP = 14;
 const GROUP_W = 92;
@@ -209,28 +180,6 @@ const styles = StyleSheet.create({
 		borderRadius: 4,
 		backgroundColor: colors.accent,
 		opacity: 0.08,
-	},
-	miniStrip: { height: MINI_H, justifyContent: "center" },
-	miniRail: { height: 1, backgroundColor: colors.border },
-	miniStop: {
-		position: "absolute",
-		top: (MINI_H - MINI_STOP) / 2,
-		width: MINI_STOP,
-		height: MINI_STOP,
-		marginLeft: -MINI_STOP / 2,
-		borderRadius: MINI_STOP / 2,
-		backgroundColor: colors.accent,
-		opacity: 0.75,
-	},
-	miniAxis: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		marginTop: 1,
-	},
-	tiny: {
-		...textStyles.footnote,
-		fontSize: 10,
-		color: colors.ink2,
 	},
 
 	stopRow: { flexDirection: "row", alignItems: "center" },

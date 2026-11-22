@@ -24,11 +24,12 @@ import {
 	useWindowDimensions,
 } from "react-native";
 import {
-	NEAR_MILES,
 	againstBaseline,
 	axisTop,
+	closeBy,
 	localDay,
 	nearbyStops,
+	schoolName,
 	schoolRanks,
 	topShare,
 	upcomingEvents,
@@ -36,7 +37,7 @@ import {
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 import { BottomSheet } from "../BottomSheet";
-import { Lines, StopStripMini } from "./ExploreCharts";
+import { Lines } from "./ExploreCharts";
 import { ExploreSheet, type ExploreSheetKey } from "./ExploreSheets";
 
 /** The page's side padding and the gap between two tiles — a half tile's width follows from both. */
@@ -111,11 +112,10 @@ export function ExploreBody({
 		: 1;
 	// Half tiles sit two to a row; when their number is odd the last one takes
 	// the row, so the grid never ends on a hole. A computed profile often has
-	// only one or three (no dues without research, no nearby without a film).
+	// only one (no dues without research, no words without Nextdoor).
 	const halves = [
 		homeValue && "homeValue",
 		dues && "dues",
-		nearby && "nearby",
 		words && "words",
 	].filter(Boolean);
 	const lone = halves.length % 2 === 1 ? halves[halves.length - 1] : null;
@@ -160,7 +160,10 @@ export function ExploreBody({
 				    分开吧". A cell now says the school's name and its standing as a
 				    share; the price's standing sits with the price. No dot on a
 				    line beside it, and no count of schools: "百分比排名好 点线意图图
-				    没有必要 总学校数可以留在details页面里". */}
+				    没有必要 总学校数可以留在details页面里". One line a school since
+				    phase369, the name in full, and no caption — "太多行了 学校名字用
+				    全称在一行里 去掉底下的说明": what the share is of, and that these
+				    are nearby rather than assigned, is said in the sheet. */}
 				{schools.length > 0 && (
 					<Tile
 						label="Schools nearby"
@@ -168,27 +171,16 @@ export function ExploreBody({
 						width={half}
 						onPress={() => setSheet("schools")}
 					>
-						<View style={styles.rankCells}>
+						<View style={styles.rows}>
 							{schools.map((r) => (
-								<View key={r.label} style={styles.rankCell}>
-									<Text style={styles.rankFigure}>{topShare(r)}</Text>
-									<Text style={styles.rankLabel} numberOfLines={1}>
-										{r.note ?? r.label}
+								<View key={r.label} style={styles.row}>
+									<Text style={styles.rowName} numberOfLines={1}>
+										{schoolName(r)}
 									</Text>
-									{!!r.note && (
-										<Text style={styles.tiny} numberOfLines={1}>
-											{r.label}
-										</Text>
-									)}
+									<Text style={styles.rowFigure}>{topShare(r)}</Text>
 								</View>
 							))}
 						</View>
-						{/* What the share is a share of, and whose schools these are —
-						    nearby, not assigned — beside the figures, not behind a tap. */}
-						<Text style={styles.tileNote} numberOfLines={3}>
-							Among Georgia schools, by state test results.
-							{profile.ranks?.note ? ` ${profile.ranks.note}` : ""}
-						</Text>
 					</Tile>
 				)}
 
@@ -257,20 +249,28 @@ export function ExploreBody({
 					</Tile>
 				)}
 
+				{/* A place of each kind and how far it is (phase369) — it was
+				    "15 of 15" over a strip of dots, a count of the film's stops. */}
 				{nearby && (
 					<Tile
 						label="Nearby"
-						wide={lone === "nearby"}
+						wide
 						width={half}
 						onPress={() => setSheet("nearby")}
 					>
-						<Text style={styles.figure}>
-							{nearby.near} of {nearby.stops.length}
-						</Text>
-						<View style={styles.strip}>
-							<StopStripMini view={nearby} />
+						<View style={styles.rows}>
+							{closeBy(nearby).map((s) => (
+								<View key={s.group} style={styles.row}>
+									<Text style={styles.rowKind} numberOfLines={1}>
+										{s.group}
+									</Text>
+									<Text style={styles.rowName} numberOfLines={1}>
+										{s.name}
+									</Text>
+									<Text style={styles.rowMiles}>{s.miles} mi</Text>
+								</View>
+							))}
 						</View>
-						<Text style={styles.foot}>stops within {NEAR_MILES} miles</Text>
 					</Tile>
 				)}
 
@@ -436,28 +436,38 @@ const styles = StyleSheet.create({
 		color: colors.ink2,
 		marginTop: 1,
 	},
-	tiny: { ...textStyles.footnote, fontSize: 10.5, color: colors.ink2 },
-	tileNote: {
-		...textStyles.footnote,
-		fontSize: 10.5,
-		lineHeight: 14,
-		color: colors.ink2,
-		marginTop: 6,
-	},
 
-	rankCells: { flexDirection: "row", gap: GAP, marginTop: 6 },
-	rankCell: { flex: 1, minWidth: 0 },
-	rankFigure: { ...textStyles.title2, fontSize: 20, color: colors.accent },
-	rankLabel: {
+	/** A wide tile's rows: a name on one line, its figure at the right edge. */
+	rows: { marginTop: 4 },
+	row: {
+		flexDirection: "row",
+		alignItems: "baseline",
+		gap: 10,
+		paddingVertical: 4,
+	},
+	rowKind: {
 		...textStyles.footnote,
-		fontSize: 11.5,
+		fontSize: 12,
+		color: colors.ink2,
+		width: 84,
+	},
+	rowName: {
+		...textStyles.footnote,
+		fontSize: 14,
 		fontWeight: "600",
 		color: colors.ink,
-		marginTop: 1,
+		flex: 1,
+		minWidth: 0,
+	},
+	rowFigure: { ...textStyles.title2, fontSize: 18, color: colors.accent },
+	rowMiles: {
+		...textStyles.footnote,
+		fontSize: 13,
+		color: colors.ink2,
+		fontVariant: ["tabular-nums"],
 	},
 
 	spark: { marginTop: 6 },
-	strip: { marginTop: 6 },
 	covers: { marginTop: 7, gap: 3 },
 	cover: {
 		...textStyles.footnote,

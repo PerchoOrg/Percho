@@ -20,7 +20,6 @@ import {
 } from "react-native";
 import {
 	type EventView,
-	NEAR_MILES,
 	type NearbyStop,
 	type NearbyView,
 	axisTop,
@@ -295,10 +294,7 @@ function Nearby({ view }: { view: NearbyView }) {
 	const [stop, setStop] = useState<NearbyStop | null>(null);
 	return (
 		<>
-			<Text style={styles.title}>
-				{view.near} of {view.stops.length} stops in the film are within{" "}
-				{NEAR_MILES} miles
-			</Text>
+			<Text style={styles.title}>Places in the film, by distance</Text>
 			<View style={styles.block}>
 				<StopStrip view={view} selected={stop} onSelect={setStop} />
 				<Text style={styles.caption}>
