@@ -23,6 +23,13 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-22 09:35 UTC — phase366.21: Settingdown Farms' film pulled
+
+**Objective**: owner 2026-11-22: "下线这个 换一个" — Settingdown Farms has no footage from inside the community and none can be found; take it down and replace it with another Cumming builder community.
+**Actions**: assembly `8313e658` set to `failed` with `error = "pulled by owner 2026-11-22 (phase366.21): no footage from inside the community — not a render failure"` (the table has no archived status; the Stream video and the photos are untouched). The feed's video pool is 16 communities and no longer lists it; `/watch/c/settingdown-farms` no longer carries the film.
+- Replacement candidates checked for community footage BEFORE pitching: Promenade at Sawnee Village (The Providence Group) — ten active builder listings, each ending with the clubhouse, pool, pickleball courts, fire pit, covered patio and fitness room; `communities` has "Sawnee Village" (county_gis). Hemingway (Meritage / Davidson) has listings too, not yet looked through. Stratford Hills is Ball Ground by post; Westover has one photo.
+**Next steps**: owner's go-ahead on Sawnee Village.
+
 ## 2026-11-22 09:27 UTC — phase366.20: community acts from listing galleries — Harvest Park published, Edinburgh and Arbors re-cut, Medlock Bridge (Johns Creek flagship) built; Settingdown Farms has none
 
 **Objective**: owner 2026-11-22, on the three questions of phase366.19: "上线 / 补 / 做" — publish Harvest Park's held cut, give the films without community footage a community act from listing galleries, build Medlock Bridge.

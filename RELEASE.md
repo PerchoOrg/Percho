@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-22
+- **Settingdown Farms' film taken down.** It had no pictures from inside the neighbourhood itself; another Cumming neighbourhood will take its place.
 - **Medlock Bridge in Johns Creek has a neighbourhood film.** It opens on the clubhouse, the pool and tennis courts from the air, the playground, the lake boardwalk and the neighbourhood from above, then Autrey Mill, the Chattahoochee, three river parks, the schools, shops and the cinema nearby.
 - **Films now open inside the neighbourhood.** Harvest Park, Edinburgh and Arbors at Richland Creek were re-made to start with their own pool, clubhouse, courts, playground, pavilion and entrance before the places around them.
 - **Harvest Park in Suwanee has a neighbourhood film.** It opens on Harvest Farm's garden beds and red barn at White Street Park next door, then Sims Lake, Suwanee's Town Center, cafés, the brewery, the library, North Gwinnett High's stadium and the shops nearby.
