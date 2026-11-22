@@ -16,6 +16,10 @@ picture in the preview. If they have the Percho app, the link opens straight
 into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
+### 2026-11-22
+- **Harvest Park in Suwanee has a neighbourhood film.** It opens on Harvest Farm's garden beds and red barn at White Street Park next door, then Sims Lake, Suwanee's Town Center, cafés, the brewery, the library, North Gwinnett High's stadium and the shops nearby.
+- **Edinburgh's film re-made** so North Gwinnett High is shown by its stadium rather than the inside of its auditorium.
+
 ### 2026-11-21
 - **Edinburgh in Suwanee has a neighbourhood film.** It opens on the community pool and slide, then the Chattahoochee river parks, Suwanee's Town Center, Sims Lake, the Bear's Best golf course next door, cafés, schools and shops nearby.
 - **Settingdown Farms in Cumming has a neighbourhood film.** New homes by David Weekley in north Forsyth: Lake Lanier's Charleston Park at sunrise, the Sawnee Mountain summit, four parks within four miles, the schools, shops and places to eat nearby.

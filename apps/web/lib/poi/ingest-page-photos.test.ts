@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractImageUrls, filenameWidth, isFurniture } from './ingest-page-photos';
+import { extractImageUrls, filenameWidth, isFurniture, redirectedAway } from './ingest-page-photos';
 
 const PAGE = 'https://www.aberdeencommunity.org/photo-album/';
 
@@ -183,5 +183,36 @@ describe('extractImageUrls, filename widths', () => {
       'https://cdn.tollbrothers.com/c/GA_Pool_7_1920.jpg',
       'https://cdn.tollbrothers.com/c/GA_Clubhouse_2_920.jpg',
     ]);
+  });
+});
+
+describe('redirectedAway', () => {
+  it("catches a retired community page sent to the builder's home page", () => {
+    // Harvest Park: 26 photos of other subdivisions were filed as its own.
+    expect(
+      redirectedAway(
+        'https://theprovidencegroup.com/harvest-park',
+        'https://theprovidencegroup.com/',
+      ),
+    ).toBe(true);
+  });
+
+  it('accepts the same page at another scheme, host, slash or longer path', () => {
+    const asked = 'http://example.com/communities/harvest-park';
+    expect(redirectedAway(asked, 'https://www.example.com/communities/harvest-park/')).toBe(false);
+    expect(redirectedAway(asked, 'https://example.com/ga/suwanee/Harvest-Park/overview')).toBe(
+      false,
+    );
+    expect(redirectedAway(asked, '')).toBe(false);
+  });
+
+  it('never calls a request for the site root redirected away', () => {
+    // An HOA domain that forwards to its portal is still the HOA's site.
+    expect(
+      redirectedAway(
+        'http://www.edinburghhoa.org',
+        'https://community.dwellinglive.com/edinburghhoa.aspx',
+      ),
+    ).toBe(false);
   });
 });
