@@ -33,7 +33,7 @@ import {
 } from "../../lib/community/explore";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
-import { Lines, RankTrack, StopStrip } from "./ExploreCharts";
+import { Lines, StopStrip } from "./ExploreCharts";
 
 export type ExploreSheetKey =
 	| "schools"
@@ -47,8 +47,9 @@ const open = (url: string) => void Linking.openURL(url).catch(() => {});
 const LINK_MARK = " ↗";
 
 /**
- * Rows of standing: what is ranked, a dot on the line of everyone ranked, and
- * the rank as a share ("Top 38%") over what it is a share of.
+ * Rows of standing: what is ranked, and the rank as a share ("Top 38%") over
+ * what it is a share of ("of 1,220 in GA" — the count lives here, not on the
+ * tile). No dot on a line: the share already says it (owner 2026-11-22).
  *
  * `named` rows are schools — their `note` is the school's name and leads, with
  * the level beneath; any other row leads with its label.
@@ -69,33 +70,15 @@ function RankRows({
 							? !!r.note && <Text style={styles.rowNote}>{r.label}</Text>
 							: !!r.note && <Text style={styles.rowNote}>{r.note}</Text>}
 					</View>
-					<View style={styles.rankTrack}>
-						<RankTrack
-							percentile={r.percentile}
-							{...(r.percentile2 !== undefined
-								? { percentile2: r.percentile2 }
-								: {})}
-						/>
-					</View>
 					<View style={styles.rankRight}>
 						<Text style={styles.rankValue}>{topShare(r)}</Text>
 						<Text style={styles.rowNote}>{r.of}</Text>
 					</View>
 				</View>
 			))}
-			<View style={styles.rankRow}>
-				<View style={styles.rankLeft} />
-				<View style={[styles.rankTrack, styles.ends]}>
-					<Text style={styles.rowNote}>lowest</Text>
-					<Text style={styles.rowNote}>highest</Text>
-				</View>
-				<View style={styles.rankRight} />
-			</View>
 		</>
 	);
 }
-
-const TRACK_KEY = "The dot is where it stands; the tick is the median.";
 
 function Schools({ ranks }: { ranks: NonNullable<CommunityProfile["ranks"]> }) {
 	const schools = schoolRanks(ranks);
@@ -107,8 +90,7 @@ function Schools({ ranks }: { ranks: NonNullable<CommunityProfile["ranks"]> }) {
 				<View style={styles.block}>
 					<RankRows rows={schools} named />
 					<Text style={styles.caption}>
-						Among Georgia schools at that level, by state test results.{" "}
-						{TRACK_KEY}
+						Among Georgia schools at that level, by state test results.
 					</Text>
 				</View>
 			)}
@@ -224,7 +206,6 @@ function HomeValue({
 			{standing.length > 0 && (
 				<View style={styles.block}>
 					<RankRows rows={standing} />
-					<Text style={styles.caption}>{TRACK_KEY}</Text>
 				</View>
 			)}
 			{holding && (
@@ -504,15 +485,13 @@ const styles = StyleSheet.create({
 		gap: 10,
 		paddingVertical: 7,
 	},
-	rankLeft: { width: 104 },
-	rankTrack: { flex: 1 },
-	rankRight: { width: 86, alignItems: "flex-end" },
+	rankLeft: { flex: 1, minWidth: 0 },
+	rankRight: { alignItems: "flex-end" },
 	rankValue: {
 		...textStyles.headline,
 		color: colors.ink,
 		fontVariant: ["tabular-nums"],
 	},
-	ends: { flexDirection: "row", justifyContent: "space-between" },
 
 	chart: { height: CHART_H, marginTop: 6 },
 	plot: {

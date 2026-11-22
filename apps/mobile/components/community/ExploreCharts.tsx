@@ -1,6 +1,6 @@
 /**
- * The small charts the community explore page is made of (phase339): a rank
- * on its track, a line, a strip of stops by distance. Each is drawn twice —
+ * The small charts the community explore page is made of (phase339): a line,
+ * a strip of stops by distance. Each is drawn twice —
  * small on a tile, full in a sheet — so they live here, apart from both.
  *
  * Plain Views, like `components/city/CityCharts.tsx`: the app ships no chart or
@@ -12,36 +12,11 @@ import {
 	NEAR_MILES,
 	type NearbyStop,
 	type NearbyView,
-	dotAt,
 	pointAt,
 	strokes,
 } from "../../lib/community/explore";
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
-
-// ─── rank track ─────────────────────────────────────────────────────────────
-
-/**
- * Everyone ranked, as a line from lowest to highest; the tick is the median,
- * the dot is this community. Position, not a number.
- */
-export function RankTrack({
-	percentile,
-	percentile2,
-	small,
-}: { percentile: number; percentile2?: number; small?: boolean }) {
-	const dot = small ? styles.dotSmall : styles.dot;
-	return (
-		<View style={small ? styles.trackSmall : styles.track}>
-			<View style={styles.rail} />
-			<View style={styles.median} />
-			{percentile2 !== undefined && (
-				<View style={[dot, styles.dotSecond, { left: dotAt(percentile2) }]} />
-			)}
-			<View style={[dot, { left: dotAt(percentile) }]} />
-		</View>
-	);
-}
 
 // ─── lines ──────────────────────────────────────────────────────────────────
 
@@ -210,10 +185,6 @@ export function StopStrip({
 	);
 }
 
-const TRACK_H = 18;
-const TRACK_SMALL_H = 12;
-const DOT = 12;
-const DOT_SMALL = 8;
 const MINI_H = 18;
 const MINI_STOP = 7;
 const STOP_ROW_H = 32;
@@ -221,42 +192,6 @@ const STOP = 14;
 const GROUP_W = 92;
 
 const styles = StyleSheet.create({
-	track: { height: TRACK_H, justifyContent: "center" },
-	trackSmall: { height: TRACK_SMALL_H, justifyContent: "center" },
-	rail: { height: 2, borderRadius: 1, backgroundColor: colors.border },
-	median: {
-		position: "absolute",
-		left: "50%",
-		width: 2,
-		marginLeft: -1,
-		top: 2,
-		bottom: 2,
-		backgroundColor: colors.ink2,
-	},
-	// Tops are spelled out: an absolute child with no inset is placed by the
-	// parent's alignment, which is one more rule than a chart should lean on.
-	dot: {
-		position: "absolute",
-		top: (TRACK_H - DOT) / 2,
-		width: DOT,
-		height: DOT,
-		marginLeft: -DOT / 2,
-		borderRadius: DOT / 2,
-		backgroundColor: colors.accent,
-		borderWidth: 2,
-		borderColor: colors.surface,
-	},
-	dotSmall: {
-		position: "absolute",
-		top: (TRACK_SMALL_H - DOT_SMALL) / 2,
-		width: DOT_SMALL,
-		height: DOT_SMALL,
-		marginLeft: -DOT_SMALL / 2,
-		borderRadius: DOT_SMALL / 2,
-		backgroundColor: colors.accent,
-	},
-	dotSecond: { opacity: 0.55 },
-
 	endDot: {
 		position: "absolute",
 		width: 10,

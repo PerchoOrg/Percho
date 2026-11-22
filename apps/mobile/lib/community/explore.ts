@@ -182,11 +182,6 @@ export function rankGroups(
 	return groups;
 }
 
-/** A dot's place on its track, kept off the ends so it is drawn whole. */
-export function dotAt(percentile: number): `${number}%` {
-	return `${Math.min(97, Math.max(3, percentile))}%`;
-}
-
 // ─── events ─────────────────────────────────────────────────────────────────
 
 const MONTHS = [

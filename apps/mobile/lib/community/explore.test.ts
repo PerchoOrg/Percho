@@ -4,7 +4,6 @@ import {
 	CURVE_STEPS,
 	againstBaseline,
 	axisTop,
-	dotAt,
 	homeRanks,
 	localDay,
 	milesOf,
@@ -126,12 +125,6 @@ describe("ranks", () => {
 			["Homes", 2],
 			["People", 2],
 		]);
-	});
-
-	it("keeps a dot off the ends of its track", () => {
-		expect(dotAt(99.8)).toBe("97%");
-		expect(dotAt(0)).toBe("3%");
-		expect(dotAt(42)).toBe("42%");
 	});
 });
 

@@ -23,6 +23,13 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-22 19:00 UTC — phase368.1: Explore — the dot lines go; the count of schools stays in the sheet
+
+**Objective**: owner on phase368's demo: "百分比排名好 点线意图图没有必要 总学校数可以留在details页面里 给我看新的demo".
+**Actions**: the rank track (a dot on a line with a median tick) is removed everywhere it was drawn — the schools tile, the schools sheet, the home value sheet — with its "lowest / highest" ends and its "the dot is where it stands" caption. `RankTrack`, its styles and `dotAt` are deleted (nothing else used them). A tile cell is now three lines: "Top 38%", the school's name, its level; a row with no name shows no second line rather than the count. A sheet row is the name and level on the left, "Top 38%" over "of 1,220 in GA" on the right — the count lives only there. With the track gone the right column sizes to its text, so "of 146 metro cities" no longer wraps.
+- Demo: `apps/web/public/demos/explore-schools-price-v2/` (v1 kept for comparison).
+**Verified**: mobile typecheck 0, vitest 880, lint clean; the demo page rendered and looked at. Not seen on a device.
+
 ## 2026-11-22 10:43 UTC — phase368: Explore — schools and price apart, ranks said as a share
 
 **Objective**: owner 2026-11-22, on Sawnee Village's Explore page: "ranks这部分看了数字跟没看一样 重新设计 并且school和price分开吧". The "Where it ranks" tile printed four ranks in a row — "#452 / Elementary / of 1,220 in GA", … "#11 / Home value / of 146 metro c…" — a division left to the reader, with no school named and the price's rank beside the schools'.

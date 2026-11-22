@@ -36,7 +36,7 @@ import {
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 import { BottomSheet } from "../BottomSheet";
-import { Lines, RankTrack, StopStripMini } from "./ExploreCharts";
+import { Lines, StopStripMini } from "./ExploreCharts";
 import { ExploreSheet, type ExploreSheetKey } from "./ExploreSheets";
 
 /** The page's side padding and the gap between two tiles — a half tile's width follows from both. */
@@ -158,7 +158,9 @@ export function ExploreBody({
 				    ranks and the home value's in one row, each a "#452" over "of
 				    1,220 in GA" — owner 2026-11-22: "看了数字跟没看一样 … school和price
 				    分开吧". A cell now says the school's name and its standing as a
-				    share; the price's standing sits with the price. */}
+				    share; the price's standing sits with the price. No dot on a
+				    line beside it, and no count of schools: "百分比排名好 点线意图图
+				    没有必要 总学校数可以留在details页面里". */}
 				{schools.length > 0 && (
 					<Tile
 						label="Schools nearby"
@@ -173,10 +175,11 @@ export function ExploreBody({
 									<Text style={styles.rankLabel} numberOfLines={1}>
 										{r.note ?? r.label}
 									</Text>
-									<Text style={styles.tiny} numberOfLines={1}>
-										{r.note ? r.label : r.of}
-									</Text>
-									<RankTrack percentile={r.percentile} small />
+									{!!r.note && (
+										<Text style={styles.tiny} numberOfLines={1}>
+											{r.label}
+										</Text>
+									)}
 								</View>
 							))}
 						</View>
