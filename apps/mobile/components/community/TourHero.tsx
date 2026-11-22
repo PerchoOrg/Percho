@@ -22,7 +22,7 @@ import { type TourSegment, buildTourGroups } from "@percho/shared/tour-buckets";
  * video, or no tour at all) — no empty chrome.
  *
  * Chrome is the listing hero's: ← / ↑ / bookmark glass discs, the global sound
- * toggle, a top cap and a foot wash. The page's cream/amber body palette
+ * toggle, a top cap and a foot wash. The page's paper body palette
  * stays out of here — this is media, and `explore.*` is what the listing hero
  * already draws over media.
  */

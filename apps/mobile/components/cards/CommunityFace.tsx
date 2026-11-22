@@ -109,6 +109,11 @@
  *   · Top-RIGHT is `CardCorner` with BOTH controls at 12/12, the listing card's
  *     capsule verbatim. The bookmark comes back after 2026-08-20 removed it;
  *     the reason it was removed (the burned pill under it) is gone.
+ *   · Since phase367.2 the pill and the capsule are DARK glass and the
+ *     COMMUNITY tag is plain capitals: four things wore the same white pill
+ *     (place, capsule, tag, Explore) and only Explore is the next thing to
+ *     press. It is the one white object on the card now (owner, off
+ *     `/demos/ui-accent-v1`: 「都做」).
  *   · COMMUNITY moves to an EYEBROW above the name. Beside the name it would
  *     have cost the two signal glyphs, and on a long name the name itself —
  *     "Apremont – Highcroft" ellipsized at the ~125pt the tag left it, which
@@ -919,8 +924,8 @@ const PIN_SIZE = 11;
 const PIN_HEAD = PIN_SIZE * 0.82;
 /** The tail: a square rotated 45°, half-buried in the head. */
 const PIN_TAIL = PIN_SIZE * 0.44;
-/** `redline.accent` — the one accent on these faces, same as the burned pin. */
-const PIN_INK = "#0E6B57";
+/** White, on the place pill's dark glass. */
+const PIN_INK = redline.onPhoto;
 
 function PinIcon() {
 	return (
@@ -975,7 +980,7 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		gap: 5,
-		backgroundColor: "rgba(255,255,255,0.92)",
+		backgroundColor: redline.photoPill,
 		borderRadius: redlineRadii.badge,
 		paddingVertical: 7,
 		paddingHorizontal: 10,
@@ -989,7 +994,7 @@ const styles = StyleSheet.create({
 	 */
 	placeName: {
 		...redlineText.listingCard.tag,
-		color: "#181B18",
+		color: redline.onPhoto,
 		flexShrink: 1,
 		minWidth: 0,
 	},
@@ -997,16 +1002,19 @@ const styles = StyleSheet.create({
 	placeRule: {
 		width: 1,
 		height: 12,
-		backgroundColor: "rgba(111,107,101,0.45)",
+		backgroundColor: "rgba(255,255,255,0.35)",
 	},
 	/** The distance, one step quieter than the name it qualifies. */
 	placeDistance: {
 		...redlineText.listingCard.tag,
 		fontWeight: "400",
-		color: redline.ink2,
+		color: redline.onPhotoDim,
 	},
-	/** Neutral ink, not green — green is reserved for interactive state. */
-	badgeLabel: { ...redlineText.listingCard.badge, color: "#181B18" },
+	/** Plain capitals on the scrim — a label, so it wears no pill. */
+	badgeLabel: {
+		...redlineText.listingCard.badge,
+		color: redline.onPhotoDim,
+	},
 	/**
 	 * Bottom scrim — `overflow: hidden` on `face` clips it to the card's
 	 * rounded corner. Same as the CITY card's.
@@ -1028,22 +1036,14 @@ const styles = StyleSheet.create({
 		zIndex: 2,
 	},
 	/**
-	 * The COMMUNITY tag, above the name (owner 2026-09-05). `flex-start` so the
-	 * pill hugs the word instead of stretching the block's full width.
-	 *
-	 * Same fill and ink as the badge it replaces, one size down (9px/20 tall
-	 * against the badge's 9.5/25): up here it is a label on the card's own
-	 * information, not a chip floating on the photograph, and the serif name
-	 * directly under it is what the eye should land on first.
+	 * The COMMUNITY tag, above the name (owner 2026-09-05). Plain capitals
+	 * since phase367.2: up here it is a label on the card's own information,
+	 * and the serif name directly under it is what the eye should land on
+	 * first. It was a white pill, one size down from the badge it replaced.
 	 */
 	tagRow: {
 		alignSelf: "flex-start",
-		backgroundColor: "rgba(255,255,255,0.92)",
-		borderRadius: redlineRadii.badge,
-		paddingVertical: 4,
-		paddingHorizontal: 8,
-		marginBottom: 9,
-		overflow: "hidden",
+		marginBottom: 6,
 	},
 	/**
 	 * The rail of parts — down the card's right edge, between the top-right
@@ -1268,7 +1268,7 @@ const styles = StyleSheet.create({
 		backgroundColor: PIN_INK,
 		transform: [{ rotate: "45deg" }],
 	},
-	/** The hole. Opaque white, not transparent: the pill behind it is 0.92. */
+	/** The hole. Opaque ink, not transparent: the pill behind it is glass. */
 	pinHole: {
 		position: "absolute",
 		left: (PIN_SIZE - PIN_HEAD * 0.36) / 2,
@@ -1276,7 +1276,7 @@ const styles = StyleSheet.create({
 		width: PIN_HEAD * 0.36,
 		height: PIN_HEAD * 0.36,
 		borderRadius: (PIN_HEAD * 0.36) / 2,
-		backgroundColor: "#FFFFFF",
+		backgroundColor: redline.ink,
 	},
 
 	bookmarkBox: { width: BOOKMARK_SIZE, height: BOOKMARK_SIZE },

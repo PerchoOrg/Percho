@@ -23,6 +23,24 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-22 19:05 UTC — phase367.2: one accent (green), grey section heads, and Explore as the swipe card's only white pill
+
+**Objective**: owner, on the three choices of `/demos/ui-accent-v1` (phase367.1) after I restated them plainly: "都做" — (1) section headings grey, (2) the orange becomes the feed's green, (3) on the swipe card only Explore stays a white pill.
+**Actions** (`apps/mobile`):
+- **One accent.** `colors.accent` #B45309 → #0E6B57 (the value `redline.accent`, the tab bar and the Map pill already wore), `accentDeep` → #0A5343. Every link, rank, lead chart series, selected state and outlined button on the paper pages follows from the token; nothing was recoloured by hand. Green on the paper is 5.9:1 (amber was 4.6).
+- **`colors.watch`** = the old amber, for the two places amber meant caution rather than emphasis: the "!" beside a verdict line (`ExploreBody.markWatch`) and "Separate, optional" over the dues sheet's second column. `pos` / `neg` untouched.
+- **Section heads `ink2`**: You, city page, community page (`sectionHead`), "Percho's take" (`TakeCard`), the feed sheet's eyebrow, the review form's eyebrow. Two passive labels that were accent-coloured follow the same rule: the event sheet's month, the city page's COLLEGE tag.
+- **City drive bars**: the rush-hour tint was the amber lightened (#F3D9BF); now the green lightened to the same lightness and the same contrast against its track (#C9E2D9, L* 88, 1.17:1).
+- **Swipe card** (`CommunityFace`, `CardCorner`, `AreaFace`): the place pill, the sound / share / save capsule and the CITY badge are dark glass (`redline.photoPill`) with white type and glyphs; the COMMUNITY / CITY tag above the name is plain capitals with no pill. Explore is the one white pill left. The pin in the place pill is white. A saved bookmark is filled white — it used to fill AND turn green, and green does not carry on dark glass; outline → fill is what `SaveGlyph` signals with everywhere else.
+- `theme/listing-layout.test.ts` now asserts the shared material is the dark glass on all three (capsule, place pill, CITY badge) and that the white is on `ctaPill`; `card-surfaces.test.ts` compares the on-card amber with `watch`. spec-v3 §0.3 updated.
+**Decisions**:
+- **Tab bar NOT touched.** The demo's middle frame also drew idle tabs in `ink3`. `TabBar.tsx` records "Inactive — neutral gray (owner: NOT the warm beige ink)", and my plain-language restatement — the thing he said yes to — did not mention tabs. Idle labels stay #9B9B94 (2.57:1 on the paper). A darker NEUTRAL grey would fix the contrast without crossing his ruling; asked, not done.
+- `CardCorner` is one component for every face, so the listing card's capsule is dark too (listings are not in the v1 build). The listing face draws nothing in its top-left since phase174, so nothing there is left mismatched. `TradeoffFace`'s own badge is unchanged (no capsule beside it, not in the build).
+- Rating stars follow the accent (green). No review exists yet to show them.
+- `accentOnCard` (amber for dark media-less faces) is referenced by no component; left as is.
+**Open, raised with the owner**: `pos` (#1B7A4D, meters / ✓ / the switch) and the accent (#0E6B57) are two different greens that now meet on the You tab and the community page. Rank figures in green read as praise whatever the rank.
+**Verified**: `pnpm typecheck`, `pnpm lint`, `pnpm test` (74 files, 881 tests) on the merge result. A composite of the three screens was rendered from the demo's CSS in headless Chrome. NOT verified on a phone — no simulator here; the dark glass over a bright sky is the thing to look at on device.
+**Next steps**: owner looks on dev client 1.0.1 (11). Pending his word: idle tab grey; one green or two; the name shown twice on the swipe page (header + card).
 ## 2026-11-22 19:00 UTC — phase368.1: Explore — the dot lines go; the count of schools stays in the sheet
 
 **Objective**: owner on phase368's demo: "百分比排名好 点线意图图没有必要 总学校数可以留在details页面里 给我看新的demo".

@@ -26,8 +26,8 @@ import {
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
-/** The amber, lightened: the rush-hour share of a drive bar (the city-card demo's `--accentSoft`). */
-const RUSH_TINT = "#F3D9BF";
+/** The accent, lightened: the rush-hour share of a drive bar (the city-card demo's `--accentSoft`). */
+const RUSH_TINT = "#C9E2D9";
 
 /** "Fortune · 2024" */
 const cite = (s: CitySource) => (s.year ? `${s.name} · ${s.year}` : s.name);
@@ -628,9 +628,9 @@ const styles = StyleSheet.create({
 	collegeTag: {
 		...textStyles.caption,
 		fontSize: 10,
-		color: colors.accent,
+		color: colors.ink2,
 		borderWidth: 1,
-		borderColor: colors.accent,
+		borderColor: colors.ink2,
 		borderRadius: radii.pill,
 		paddingHorizontal: 7,
 		paddingVertical: 2,

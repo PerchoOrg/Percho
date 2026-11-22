@@ -52,13 +52,22 @@
  * buyer straight from the deck. It is a third cell in the SAME pill, after the
  * bookmark, not a second disc beside it: two objects in this corner is exactly
  * what phase175 removed.
+ *
+ * ── Dark glass (phase367.2) ─────────────────────────────────────────────────
+ *
+ * The capsule was the badge's white twin, and with the place pill, the
+ * COMMUNITY tag and Explore that made four white pills on one card, of which
+ * one is the next thing to press. Owner, off `/demos/ui-accent-v1`: 「都做」 —
+ * the controls and the labels step back to dark glass and white glyphs, and
+ * Explore keeps the white. The capsule still matches its neighbour in the
+ * other corner: same fill, same height.
  */
 import { Pressable, StyleSheet, View } from "react-native";
 import { redline } from "../../theme/tokens";
 import { RedlineIcon } from "./redline/RedlineChrome";
 
-/** Ink shared with the badge's label — the CITY pill's label colour. */
-const INK = "#181B18";
+/** Glyph colour, shared with the label in the other corner. */
+const INK = redline.onPhoto;
 
 /**
  * The LISTING badge's height: 9.5pt label (≈11.4pt line box) + 7pt padding top
@@ -146,13 +155,14 @@ export function CardCorner({ sound, save, share }: CardCornerProps) {
 			hitSlop={slop(firstKey === "save", lastKey === "save")}
 			style={({ pressed }) => [styles.cell, pressed && styles.pressed]}
 		>
-			{/* Saved fills the bookmark and turns it green — the redline's one
-			    interactive colour, so the state reads as "yours" rather than as a
-			    heavier icon. */}
+			{/* Saved fills the bookmark. It turned green as well while the
+			    capsule was white; on dark glass the green does not carry, and
+			    outline → fill is the bit `SaveGlyph` signals with everywhere
+			    else. */}
 			<RedlineIcon
 				name="bookmark"
 				size={GLYPH}
-				color={save.saved ? redline.accent : INK}
+				color={INK}
 				weight={save.saved ? "fill" : "outline"}
 			/>
 		</Pressable>
@@ -190,12 +200,12 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		/**
-		 * The LISTING badge's own fill, not the capsule's old 0.85 — the two sit
-		 * on one row and any difference in the white reads as a mistake. Plain
+		 * The fill of the label in the other corner — the two sit on one row
+		 * and any difference between them reads as a mistake. Plain
 		 * translucency, no blur — expo-blur red-screens Expo Go (DEVLOG
 		 * 2026-07-30; f7680a62).
 		 */
-		backgroundColor: "rgba(255,255,255,0.92)",
+		backgroundColor: redline.photoPill,
 		height: CORNER_HEIGHT,
 		borderRadius: CORNER_HEIGHT / 2,
 		overflow: "hidden",

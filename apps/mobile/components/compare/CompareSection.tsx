@@ -6,7 +6,7 @@ import type { CompareTableRow } from "@percho/shared/compare-table";
  *
  * Lives in a component so `/compare` and `/compare-communities` render the
  * owner's four aspects identically; the screens keep only their own
- * headers, fetch, and footers. A bounded figure draws a small amber meter
+ * headers, fetch, and footers. A bounded figure draws a small accent meter
  * under its number (`CompareTableRow.meter`) — that is what replaces the
  * prose the owner cut ("a lot of text"): the bar is read, not explained.
  *
