@@ -1,0 +1,260 @@
+{
+  "asOf": "2026-11-22",
+  "communities": {
+    "aberdeen-2": {
+      "hospital": {
+        "name": "Emory Johns Creek Hospital",
+        "miles": 2.6
+      },
+      "fire": {
+        "name": "Forsyth County Fire Station #10",
+        "miles": 0.7
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "apremont-highcroft": {
+      "hospital": {
+        "name": "Northside Hospital Duluth",
+        "miles": 2.9
+      },
+      "fire": {
+        "name": "Gwinnett County Station 4",
+        "miles": 1.3
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "arbors-at-richland-creek": {
+      "hospital": {
+        "name": "Northside Hospital Forsyth",
+        "miles": 5.9
+      },
+      "fire": {
+        "name": "Gwinnett Fire Station #26",
+        "miles": 1.5
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "ashley-crossing": {
+      "hospital": {
+        "name": "WellStar North Fulton Hospital",
+        "miles": 5.3
+      },
+      "fire": {
+        "name": "Roswell Fire Station #7",
+        "miles": 1.4
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "bellmoore-park": {
+      "hospital": {
+        "name": "Emory Johns Creek Hospital",
+        "miles": 1.5
+      },
+      "fire": {
+        "name": "Fire Station #62",
+        "miles": 1.5
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "edinburgh": {
+      "hospital": {
+        "name": "Emory Johns Creek Hospital",
+        "miles": 4.3
+      },
+      "fire": {
+        "name": "Forsyth County Fire Station #10",
+        "miles": 2.2
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "harvest-park": {
+      "hospital": {
+        "name": "Northside Hospital Duluth",
+        "miles": 5.7
+      },
+      "fire": {
+        "name": "Gwinnett County Station 13 Fire Station",
+        "miles": 1.2
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "hedgerows": {
+      "hospital": {
+        "name": "Northeast Georgia Medical Center Braselton",
+        "miles": 7.4
+      },
+      "fire": {
+        "name": "Gwinnett County Station 18 Fire Station",
+        "miles": 2.9
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "medlock-bridge": {
+      "hospital": {
+        "name": "Emory Johns Creek Hospital",
+        "miles": 2.7
+      },
+      "fire": {
+        "name": "Fire Station #61",
+        "miles": 0.3
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "northbrooke-cumming": {
+      "hospital": {
+        "name": "Northside Hospital Forsyth",
+        "miles": 9
+      },
+      "fire": {
+        "name": "Forsyth County Fire Station #3",
+        "miles": 2.2
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "sawnee-village": {
+      "hospital": {
+        "name": "Northside Hospital Forsyth",
+        "miles": 2.8
+      },
+      "fire": {
+        "name": "Forsyth County Fire Station #1",
+        "miles": 1.7
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "st-marlo": {
+      "hospital": {
+        "name": "Emory Johns Creek Hospital",
+        "miles": 2.1
+      },
+      "fire": {
+        "name": "Fire Station #62",
+        "miles": 1.6
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "sugarloaf-country-club": {
+      "hospital": {
+        "name": "Northside Hospital Duluth",
+        "miles": 3.1
+      },
+      "fire": {
+        "name": "Gwinnett Fire Station 07",
+        "miles": 1
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "towne-village-at-suwanee-dam": {
+      "hospital": {
+        "name": "Northside Hospital Forsyth",
+        "miles": 5.5
+      },
+      "fire": {
+        "name": "Gwinnett Fire Station #26",
+        "miles": 0.7
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "wild-timber": {
+      "hospital": {
+        "name": "Northside Hospital Forsyth",
+        "miles": 5.3
+      },
+      "fire": {
+        "name": "Gwinnett Fire Station #26",
+        "miles": 1.4
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    },
+    "windermere": {
+      "hospital": {
+        "name": "Northside Hospital Forsyth",
+        "miles": 3
+      },
+      "fire": {
+        "name": "Forsyth County Fire Station #15",
+        "miles": 1.6
+      },
+      "flood": {
+        "zone": "AE",
+        "subtype": "",
+        "sfha": true
+      }
+    },
+    "windward": {
+      "hospital": {
+        "name": "Emory Johns Creek Hospital",
+        "miles": 4.2
+      },
+      "fire": {
+        "name": "Alpharetta Fire Station 82",
+        "miles": 0.4
+      },
+      "flood": {
+        "zone": "X",
+        "subtype": "AREA OF MINIMAL FLOOD HAZARD",
+        "sfha": false
+      }
+    }
+  }
+}

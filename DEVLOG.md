@@ -23,6 +23,26 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-22 22:51 UTC — phase370: Explore — Safety · Schools · Convenience · Potential · Cost, resources with logos, a review field
+
+**Objective**: owner 2026-11-22 on `/demos/explore-four-pillars-v1` (phase369): "a / cost和链接都要" — safety as facts about the place (option A), the cost tile and the extra links — then: tile titles "safety，schools，Convinence, potential, cost"; "school不要绿色的大字 正常就行 加上距离"; "resource地下的链接最好用logo和文字 更醒目"; "comment可以加一个空白填文字的部分".
+**The safety ruling, as it now stands**: `community-profile.ts` said "no income, safety or crime field — do not add one without the owner". He has added one, with a boundary: facts about the PLACE (how far a hospital and a fire station are, FEMA's flood zone), and crime figures only as a link out. The header of that file records it; no crime count, rate or grade goes in the document. `city.ts` and `lenses.ts` are unchanged.
+**Actions**:
+- **Data** — `scripts/admin/import-community-safety.ts` (`pnpm --filter @percho/web community:safety <slug…>`) → `scripts/admin/data/community-safety.json`. One OpenStreetMap (Overpass) request for the whole batch — every hospital and fire station in the box around the communities — and one FEMA NFHL point query per community. Both free and keyless. Run for the 17 communities that have a film: 30 hospitals and 214 fire stations in reach; 16 points in Zone X (minimal), Windermere's in Zone AE.
+- **Hospitals**: OSM's `emergency=yes` is not on every hospital that has an emergency room (Northside Hospital Duluth has no such tag), so an untagged general hospital counts and a rehabilitation, psychiatric or day-surgery place does not (`takesEmergencies`). With `emergency=yes` alone, Suwanee's communities were sent 5.8 mi to Emory Johns Creek past Northside Duluth at 2.9.
+- **Builder** (`profile-build.ts`): `safety` block from those facts (FEMA + OpenStreetMap join the sources); school rows carry `distance` ("0.4 mi", straight-line); links carry a `group` and gain Property records (county assessor), School district, Crime map (communitycrimemap.com by city — where Georgia agencies publish), FEMA flood map (FEMA's NFHL viewer centred on the community's point) and the city's own site. The official URLs are a table, `local-links.ts` — three counties, eight cities, each opened and answered on 2026-11-22; a place not in it gets no link. Schema: `safety`, `distance`, `group`; links 10 → 16.
+- **Flood wording**: read at ONE point, so inside the 1% floodplain is "Part is in a flood zone", never a statement about the whole community; the sheet says a lot's own zone can differ and links FEMA's map.
+- `upsert-community-profile.ts` takes several slugs.
+- **Mobile** (`ExploreBody`, `ExploreSheets`, `community/[slug]`): tiles in the order Safety · Schools · Convenience · Potential · Cost (then Dues, Residents say, Coming up where they exist). Schools rows are name · distance · "Top 38%" in the row's own type — no serif green figure. Cost is `homeValue.holding` as a tile with its own sheet (it was the last block of the home value sheet). Safety has a sheet: the rows, how they were measured, "Percho does not show crime figures", and the two links. Resources: links under headings (`linkGroups`), each pill with its site's icon (`logoFor` — Google's favicon service by host, FEMA's mark for FEMA's map; nothing bundled). With no review yet, the reviews row is a heading and a blank field that opens the review form.
+**Decisions**:
+- Profiles rebuilt for the **17 filmed communities only** — the batch the safety data exists for and the only communities the app shows. The other ~22,700 stored profiles keep their old links (no headings; the page files those under Community) until a full rebuild, which is the owner's to ask for.
+- The DB write waited for the web deploy: the deployed schema capped links at 10, and a 13-link profile would have parsed to null and dropped the page to its legacy sections.
+- **Not added**: a utilities link (the provider depends on the address — one link per community would be wrong for some homes); qPublic parcel search (it sits behind a bot check I could not get past to confirm the per-county URL, so the county assessor's own page is linked instead).
+- The review field is a door, not an input: a review needs its four scores and a signed-in resident and is read by a person before it shows.
+- A hospital / place row never says "nearest": it is the closest one OpenStreetMap or the film knows of.
+**Verified**: mobile typecheck 0, lint clean, vitest 887; web tsc 0, lint (warnings only), vitest 1377 (builder: 2 new, 3 updated). Dry run of `sawnee-village` read. NOT seen on a device; favicons not seen rendered in the app.
+**Next steps**: owner looks on the dev client. Open: Windward's researched rows have no school distance and its first school row is a remark, not a name; a full rebuild for the other communities; whether the tab bar's idle grey gets darker (phase367.2).
+
 ## 2026-11-22 21:45 UTC — phase369: Explore — schools one line each, Nearby names places; four directions proposed
 
 **Objective**: owner 2026-11-22, on the community Explore page after phase368.1: "schools 太多行了 学校名字用全称在一行里 去掉底下的说明 among…… / nearby 15 of 15是啥意思 太confuse了 / 怎么只剩这么点内容了 你再去回忆一下 至少要安学便潜四个方向 再加一些资源链接".

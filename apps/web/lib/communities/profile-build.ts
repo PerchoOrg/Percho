@@ -40,6 +40,7 @@
  */
 
 import type { StoredCommunityProfile } from '../zod/community-profile';
+import { CITY_DISTRICTS, CITY_SITES, COUNTY_LINKS } from './local-links';
 
 // ─── inputs ─────────────────────────────────────────────────────────────────
 
@@ -98,6 +99,19 @@ export interface CountyCosts {
 
 type Events = NonNullable<StoredCommunityProfile['events']>;
 
+/**
+ * What `scripts/admin/import-community-safety.ts` looked up for one community:
+ * facts about the place, from FEMA and OpenStreetMap. No crime figure — see
+ * `packages/shared/src/community-profile.ts`.
+ */
+export interface SafetyFacts {
+  /** The closest hospital that takes emergencies, straight-line. */
+  hospital?: { name: string; miles: number };
+  fire?: { name: string; miles: number };
+  /** FEMA's flood zone at the community's map point. */
+  flood?: { zone: string; subtype: string; sfha: boolean };
+}
+
 export interface BuildInputs {
   communities: readonly BuildCommunity[];
   schools: readonly BuildSchool[];
@@ -106,6 +120,8 @@ export interface BuildInputs {
   costs: ReadonlyMap<string, CountyCosts>;
   /** Keyed by lower-case city name. */
   events: ReadonlyMap<string, { source: string; events: Events }>;
+  /** Keyed by slug. Only the communities someone ran the import for. */
+  safety?: ReadonlyMap<string, SafetyFacts>;
   /** The day the figures were gathered, YYYY-MM-DD. */
   asOf: string;
 }
@@ -391,6 +407,10 @@ function schoolRows(c: BuildCommunity, ctx: BuildContext): RankRow[] {
       group: 'Schools',
       label: LEVEL_LABEL[level],
       note: shortSchool(near.name),
+      // `nearestSchools` only returns a school for a community with a point.
+      ...(c.lat !== null && c.lng !== null
+        ? { distance: `${round1(milesBetween(c.lat, c.lng, near.lat, near.lng))} mi` }
+        : {}),
       rank: `#${count(at.rank)}`,
       of: `of ${count(at.of)} in GA`,
       percentile: round1(at.percentile),
@@ -589,24 +609,28 @@ function profileLinks(
   schools: ReadonlyArray<{ level: SchoolLevel; school: BuildSchool }>,
 ): NonNullable<Profile['links']> {
   const links: NonNullable<Profile['links']> = [];
+  const county = COUNTY_LINKS[key(c.county)];
   if (c.website?.startsWith('https://'))
     links.push({
+      group: 'Community',
       // "The Providence Group" → "Providence Group": the article is what
       // pushed it past the pill's 18 characters.
       label: linkLabel(c.builder?.trim().replace(/^the\s+/i, '') || 'Website'),
       url: c.website,
     });
   if (c.nextdoor_url?.startsWith('https://'))
-    links.push({ label: 'Nextdoor', url: c.nextdoor_url });
+    links.push({ group: 'Community', label: 'Nextdoor', url: c.nextdoor_url });
   const name = c.name?.trim();
   if (name) {
     const where = [name, c.city, 'GA'].filter(Boolean).join(', ');
     const q = encodeURIComponent;
     links.push({
+      group: 'Community',
       label: 'Reddit',
       url: `https://www.reddit.com/search/?q=${q(`"${name}" ${c.city ?? 'Georgia'}`)}`,
     });
     links.push({
+      group: 'Community',
       label: 'Google Maps',
       url: `https://www.google.com/maps/search/?api=1&query=${q(where)}`,
     });
@@ -614,16 +638,87 @@ function profileLinks(
       .replace(/[^A-Za-z0-9 ]+/g, ' ')
       .trim()
       .replace(/\s+/g, '-');
-    links.push({ label: 'Homes on Zillow', url: `https://www.zillow.com/homes/${zillowSlug}_rb/` });
+    links.push({
+      group: 'Homes',
+      label: 'Homes on Zillow',
+      url: `https://www.zillow.com/homes/${zillowSlug}_rb/`,
+    });
   }
+  if (county) links.push({ group: 'Homes', label: 'Property records', url: county.assessor });
   for (const { level, school } of schools) {
     const short = school.name.replace(/\s+(Elementary|Middle|High)?\s*School$/i, '').trim();
     links.push({
+      group: 'Schools',
       label: linkLabel(`${short} ${LEVEL_ABBR[level]}`),
       url: `https://www.greatschools.org/search/search.page?q=${encodeURIComponent(school.name)}&state=GA`,
     });
   }
+  const district = CITY_DISTRICTS[key(c.city)] ?? county?.district;
+  if (district) links.push({ group: 'Schools', label: 'School district', url: district });
+  // Crime figures are not on the page; the agencies' own map is one tap away
+  // (owner 2026-11-22). LexisNexis' Community Crime Map is where Georgia's
+  // police departments and sheriffs publish theirs, searched by place.
+  if (c.city)
+    links.push({
+      group: 'Safety',
+      label: 'Crime map',
+      url: `https://communitycrimemap.com/?address=${encodeURIComponent(`${c.city}, GA`)}`,
+    });
+  // FEMA's own viewer, opened on the community's point: the zone the safety
+  // block names is this map's, and a lot's own zone is read off it.
+  if (c.lat !== null && c.lng !== null)
+    links.push({
+      group: 'Safety',
+      label: 'FEMA flood map',
+      url: `https://hazards-fema.maps.arcgis.com/apps/webappviewer/index.html?id=8b0adb51996444d4879338b5529aa9cd&center=${c.lng},${c.lat}&level=15`,
+    });
+  const site = CITY_SITES[key(c.city)];
+  if (site && c.city) {
+    // "City of Peachtree Corners" is past the pill's 18 characters.
+    const full = `City of ${c.city}`;
+    links.push({ group: 'City', label: full.length <= 18 ? full : linkLabel(c.city), url: site });
+  }
   return links;
+}
+
+const FLOOD_NOTE = (zone: string) => `Zone ${zone}`.slice(0, 12);
+
+/**
+ * The safety block: how far help is, and FEMA's flood zone at the community's
+ * point. Facts about the place; nothing here is a crime figure.
+ */
+function safety(c: BuildCommunity, ctx: BuildContext): Profile['safety'] | undefined {
+  const facts = ctx.inputs.safety?.get(c.slug);
+  if (!facts) return undefined;
+  const rows: NonNullable<Profile['safety']>['rows'] = [];
+  if (facts.hospital)
+    rows.push({
+      label: 'Hospital',
+      name: facts.hospital.name.slice(0, 48),
+      note: `${round1(facts.hospital.miles)} mi`,
+    });
+  if (facts.fire)
+    rows.push({
+      label: 'Fire station',
+      name: facts.fire.name.slice(0, 48),
+      note: `${round1(facts.fire.miles)} mi`,
+    });
+  if (facts.flood) {
+    // FEMA's own three readings: inside the 1%-a-year floodplain (insurance is
+    // required on a federally backed loan), the 0.2% band, or neither. It is
+    // read at ONE point, so inside the floodplain is said of a part, never of
+    // the whole: Windermere's point sits by a creek in Zone AE and most of its
+    // lots do not.
+    const name = facts.flood.sfha
+      ? 'Part is in a flood zone'
+      : /0\.2 PCT/i.test(facts.flood.subtype)
+        ? 'Moderate flood hazard'
+        : /MINIMAL/i.test(facts.flood.subtype)
+          ? 'Minimal flood hazard'
+          : 'Flood hazard not mapped';
+    rows.push({ label: 'Flood zone', name, note: FLOOD_NOTE(facts.flood.zone) });
+  }
+  return rows.length > 0 ? { rows } : undefined;
 }
 
 export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | null {
@@ -636,6 +731,7 @@ export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | nu
 
   const cityEvents = ctx.inputs.events.get(key(c.city));
   const links = profileLinks(c, nearestSchools(c, ctx));
+  const safe = safety(c, ctx);
 
   const sources: Profile['sources'] = [];
   if (schools.length > 0) sources.push({ name: 'Georgia Milestones' });
@@ -644,6 +740,10 @@ export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | nu
   if (value || homes.length > 0) sources.push({ name: 'Zillow Home Value Index' });
   if (value?.holding) sources.push({ name: 'Percho county estimates' });
   if (cityEvents) sources.push({ name: cityEvents.source });
+  if (safe) {
+    sources.push({ name: 'FEMA National Flood Hazard Layer' });
+    sources.push({ name: 'OpenStreetMap' });
+  }
 
   return {
     asOf: ctx.inputs.asOf,
@@ -661,6 +761,7 @@ export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | nu
     ...(value ? { homeValue: value } : {}),
     ...(said ? { words: said } : {}),
     ...(cityEvents ? { events: cityEvents.events } : {}),
+    ...(safe ? { safety: safe } : {}),
     ...(links.length > 0 ? { links } : {}),
     sources,
   };
@@ -689,7 +790,7 @@ export function mergeProfile(
   // Links are the one block that adds up rather than replaces: a researched
   // page (Windward's dues rules) sits beside the computed search links, not
   // instead of them (phase366). Researched first; a repeat by url or label,
-  // and anything past the row's ten, is left out.
+  // and anything past the schema's sixteen, is left out.
   const seen = new Set<string>();
   const links = [...(researched.links ?? []), ...(base.links ?? [])]
     .filter((l) => {
@@ -698,7 +799,7 @@ export function mergeProfile(
       seen.add(l.label);
       return true;
     })
-    .slice(0, 10);
+    .slice(0, 16);
   const merged = { ...base, ...researched, sources, ...(links.length > 0 ? { links } : {}) };
   if (!merged.asOf || !merged.verdict || sources.length === 0) return null;
   return { ...merged, asOf: merged.asOf, verdict: merged.verdict, sources };

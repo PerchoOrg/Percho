@@ -116,6 +116,50 @@ export function closeBy(
 	});
 }
 
+// ─── resources ──────────────────────────────────────────────────────────────
+
+type ProfileLink = NonNullable<CommunityProfile["links"]>[number];
+
+const LINK_GROUPS = ["Community", "Homes", "Schools", "Safety", "City"];
+
+/**
+ * The page's links under their headings, in a fixed order. A link stored
+ * before the builder wrote headings (phase370), or a researched one, has none
+ * and sits with the community's own pages.
+ */
+export function linkGroups(
+	links: readonly ProfileLink[] | undefined,
+): { group: string; links: ProfileLink[] }[] {
+	const of = (l: ProfileLink) => l.group ?? "Community";
+	const named = new Set(LINK_GROUPS);
+	const extra = [...new Set((links ?? []).map(of))].filter(
+		(g) => !named.has(g),
+	);
+	return [...LINK_GROUPS, ...extra]
+		.map((group) => ({
+			group,
+			links: (links ?? []).filter((l) => of(l) === group),
+		}))
+		.filter((g) => g.links.length > 0);
+}
+
+/** A link whose page lives on someone else's host wears its owner's mark. */
+const LOGO_HOST: Record<string, string> = {
+	"hazards-fema.maps.arcgis.com": "fema.gov",
+};
+
+/**
+ * The site's own icon for a link, so a row of links reads by logo before it
+ * reads by word (owner 2026-11-22: "链接最好用logo和文字 更醒目"). Google's
+ * favicon service, by host — no logo is bundled with the app.
+ */
+export function logoFor(url: string): string | null {
+	const host = url.match(/^https:\/\/([^/?#]+)/)?.[1];
+	if (!host) return null;
+	const domain = (LOGO_HOST[host] ?? host).replace(/^www\./, "");
+	return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+}
+
 // ─── ranks ──────────────────────────────────────────────────────────────────
 
 /** The groups a profile files its school rows and its price rows under. */

@@ -356,20 +356,31 @@ export default function CommunityWhyScreen() {
 					 * the door to write one is always visible — an empty section beats
 					 * a generated one.
 					 */}
+					{/* With no review yet the section is a heading and a blank field
+					    (owner 2026-11-22: "comment可以加一个空白填文字的部分"). The
+					    field is the door to the review form, not an input of its own:
+					    a review needs its four scores and a signed-in resident, and
+					    is read by a person before it appears. */}
 					{reviewsRow && (
-						<View style={styles.reviewRow}>
-							<Text style={styles.reviewRowTxt}>
-								{myStatus === "pending"
-									? "Your review is waiting to be read."
-									: "No resident reviews yet."}
-							</Text>
+						<View style={styles.reviewBlock}>
+							<Text style={styles.reviewBlockHead}>Reviews</Text>
 							<Pressable
-								hitSlop={8}
+								style={({ pressed }) => [
+									styles.reviewField,
+									pressed && styles.reviewFieldPressed,
+								]}
 								accessibilityRole="button"
+								accessibilityLabel={
+									myStatus ? "Edit your review" : "Write a review"
+								}
 								onPress={writeReview}
 							>
-								<Text style={styles.reviewRowCta}>
-									{myStatus ? "Edit yours ›" : "Write the first ›"}
+								<Text style={styles.reviewFieldText}>
+									{myStatus === "pending"
+										? "Your review is waiting to be read. Tap to edit it."
+										: myStatus
+											? "Edit your review…"
+											: "Live here? Tell buyers what it's like…"}
 								</Text>
 							</Pressable>
 						</View>
@@ -631,25 +642,22 @@ const styles = StyleSheet.create({
 		borderColor: colors.accent,
 	},
 	reviewCtaTxt: { ...textStyles.footnote, fontSize: 15, color: colors.accent },
-	reviewRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		gap: 10,
-		marginTop: 16,
-	},
-	reviewRowTxt: {
-		...textStyles.footnote,
-		fontSize: 13,
+	reviewBlock: { marginTop: 20, gap: 8 },
+	reviewBlockHead: {
+		...textStyles.caption,
+		fontSize: 10.5,
 		color: colors.ink2,
-		flexShrink: 1,
 	},
-	reviewRowCta: {
-		...textStyles.footnote,
-		fontSize: 14,
-		fontWeight: "500",
-		color: colors.accent,
+	/** Looks like the review form's own text box, which is where it leads. */
+	reviewField: {
+		minHeight: 76,
+		backgroundColor: colors.surface2,
+		borderRadius: radii.btn,
+		paddingHorizontal: 14,
+		paddingVertical: 12,
 	},
+	reviewFieldPressed: { opacity: 0.7 },
+	reviewFieldText: { ...textStyles.body, color: colors.ink3 },
 
 	source: {
 		...textStyles.caption,

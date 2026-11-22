@@ -6,7 +6,9 @@ import {
 	axisTop,
 	closeBy,
 	homeRanks,
+	linkGroups,
 	localDay,
+	logoFor,
 	milesOf,
 	monotoneSlopes,
 	nearbyStops,
@@ -99,6 +101,46 @@ describe("nearbyStops", () => {
 	it("says nothing about a film that names too few places", () => {
 		expect(nearbyStops(film.slice(0, 4))).toBeNull();
 		expect(nearbyStops(undefined)).toBeNull();
+	});
+});
+
+describe("resources", () => {
+	const links = [
+		{ group: "Community", label: "Website", url: "https://example.org/" },
+		{
+			group: "Safety",
+			label: "Crime map",
+			url: "https://communitycrimemap.com/?address=Cumming%2C%20GA",
+		},
+		{
+			group: "Homes",
+			label: "Homes on Zillow",
+			url: "https://www.zillow.com/homes/x_rb/",
+		},
+		{ label: "Rules & dues", url: "https://example.org/rules" },
+	];
+
+	it("puts links under their headings in a fixed order", () => {
+		expect(
+			linkGroups(links).map((g) => [g.group, g.links.map((l) => l.label)]),
+		).toEqual([
+			["Community", ["Website", "Rules & dues"]],
+			["Homes", ["Homes on Zillow"]],
+			["Safety", ["Crime map"]],
+		]);
+		expect(linkGroups(undefined)).toEqual([]);
+	});
+
+	it("finds a link's logo by its host, and FEMA's for FEMA's map", () => {
+		expect(logoFor("https://www.zillow.com/homes/x_rb/")).toBe(
+			"https://www.google.com/s2/favicons?domain=zillow.com&sz=64",
+		);
+		expect(
+			logoFor(
+				"https://hazards-fema.maps.arcgis.com/apps/webappviewer/index.html?id=1",
+			),
+		).toBe("https://www.google.com/s2/favicons?domain=fema.gov&sz=64");
+		expect(logoFor("not a url")).toBeNull();
 	});
 });
 
