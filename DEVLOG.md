@@ -39,7 +39,7 @@ rotation, not on the way in.
 - Rating stars follow the accent (green). No review exists yet to show them.
 - `accentOnCard` (amber for dark media-less faces) is referenced by no component; left as is.
 **Open, raised with the owner**: `pos` (#1B7A4D, meters / ✓ / the switch) and the accent (#0E6B57) are two different greens that now meet on the You tab and the community page. Rank figures in green read as praise whatever the rank.
-**Verified**: `pnpm typecheck`, `pnpm lint`, `pnpm test` (74 files, 881 tests) on the merge result. A composite of the three screens was rendered from the demo's CSS in headless Chrome. NOT verified on a phone — no simulator here; the dark glass over a bright sky is the thing to look at on device.
+**Verified**: `pnpm typecheck`, `pnpm lint`, `pnpm test` (74 files, 880 tests — phase368.1 removed one while this was in flight) on the rebased branch. A composite of the three screens was rendered from the demo's CSS in headless Chrome. NOT verified on a phone — no simulator here; the dark glass over a bright sky is the thing to look at on device.
 **Next steps**: owner looks on dev client 1.0.1 (11). Pending his word: idle tab grey; one green or two; the name shown twice on the swipe page (header + card).
 ## 2026-11-22 19:00 UTC — phase368.1: Explore — the dot lines go; the count of schools stays in the sheet
 
