@@ -134,7 +134,7 @@ function HomeValue({
 							series={[
 								{
 									values: baseline,
-									color: colors.ink3,
+									color: colors.seriesMuted,
 									weight: 2,
 									endDot: true,
 								},
@@ -171,7 +171,7 @@ function HomeValue({
 						style={[
 							styles.keyDot,
 							styles.keyGap,
-							{ backgroundColor: colors.ink3 },
+							{ backgroundColor: colors.seriesMuted },
 						]}
 					/>
 					<Text style={styles.rowNote}>{homeValue.baseline}</Text>
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
 		marginTop: 12,
 		marginBottom: 8,
 	},
-	costPart: { backgroundColor: colors.ink3, borderRadius: 3 },
+	costPart: { backgroundColor: colors.seriesMuted, borderRadius: 3 },
 	costLead: { backgroundColor: colors.accent },
 	costRow: {
 		flexDirection: "row",
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
 		width: 10,
 		height: 10,
 		borderRadius: 3,
-		backgroundColor: colors.ink3,
+		backgroundColor: colors.seriesMuted,
 	},
 	costLabel: {
 		...textStyles.footnote,
@@ -585,7 +585,11 @@ const styles = StyleSheet.create({
 		borderRadius: 4,
 		backgroundColor: colors.surface2,
 	},
-	wordBar: { height: 8, borderRadius: 4, backgroundColor: colors.ink3 },
+	wordBar: {
+		height: 8,
+		borderRadius: 4,
+		backgroundColor: colors.seriesMuted,
+	},
 	wordBarLead: { backgroundColor: colors.accent },
 	wordPct: {
 		...textStyles.footnote,

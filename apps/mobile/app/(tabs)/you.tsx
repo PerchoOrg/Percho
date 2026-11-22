@@ -537,9 +537,12 @@ const styles = StyleSheet.create({
 		marginTop: 22,
 		marginBottom: 8,
 	},
+	/** White on paper is 1.09:1 — the hairline is what makes this a card. */
 	card: {
 		backgroundColor: colors.surface,
 		borderRadius: radii.tile,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.border,
 		paddingHorizontal: 14,
 		paddingVertical: 6,
 	},
@@ -579,21 +582,21 @@ const styles = StyleSheet.create({
 	/** A link, not a button: undoing is a quiet correction, not a CTA. */
 	bringBack: { paddingVertical: 6, minHeight: 32, justifyContent: "center" },
 	bringBackPressed: { opacity: 0.6 },
-	bringBackTxt: {
-		...textStyles.footnote,
-		fontWeight: "600",
-		color: colors.accent,
-	},
+	/** Regular weight: one under every card, it must not outweigh the names. */
+	bringBackTxt: { ...textStyles.footnote, color: colors.accent },
 	areaChip: {
 		backgroundColor: colors.surface,
 		borderRadius: radii.btn,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.border,
 		paddingHorizontal: 14,
 		paddingVertical: 10,
 		gap: 6,
 		minWidth: 120,
 	},
 	areaName: { ...textStyles.headline, color: colors.ink },
-	areaScore: { ...textStyles.footnote, color: colors.accent },
+	/** A figure, so not amber: on this tab amber is what can be tapped. */
+	areaScore: { ...textStyles.footnote, color: colors.ink2 },
 	areaMore: { justifyContent: "center", paddingHorizontal: 4 },
 	areaMoreTxt: {
 		...textStyles.footnote,

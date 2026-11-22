@@ -584,7 +584,11 @@ const styles = StyleSheet.create({
 		marginTop: 2,
 	},
 	pairCity: { height: 7, borderRadius: 4, backgroundColor: colors.accent },
-	pairState: { height: 7, borderRadius: 4, backgroundColor: colors.ink3 },
+	pairState: {
+		height: 7,
+		borderRadius: 4,
+		backgroundColor: colors.seriesMuted,
+	},
 	splitTrack: {
 		height: 10,
 		borderRadius: 5,
@@ -662,7 +666,11 @@ const styles = StyleSheet.create({
 		overflow: "hidden",
 	},
 	gradFill: { height: 8, borderRadius: 4, backgroundColor: colors.accent },
-	gradOther: { height: 8, borderRadius: 4, backgroundColor: colors.ink3 },
+	gradOther: {
+		height: 8,
+		borderRadius: 4,
+		backgroundColor: colors.seriesMuted,
+	},
 	gradValue: {
 		...textStyles.footnote,
 		fontSize: 12,

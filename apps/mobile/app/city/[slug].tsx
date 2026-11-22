@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
 	location: {
 		...textStyles.footnote,
 		fontSize: 13,
-		color: colors.ink3,
+		color: colors.ink2,
 		marginTop: 4,
 	},
 	badges: { marginTop: 18, marginHorizontal: -18, paddingLeft: 18 },

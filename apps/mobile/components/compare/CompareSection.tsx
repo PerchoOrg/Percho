@@ -194,9 +194,10 @@ const styles = StyleSheet.create({
 	labelCol: { width: LABEL_COL_W, paddingRight: 8 },
 	/** Same inline treatment as the section head — see `blockHead`. */
 	labelRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
+	/** `ink2`: the label says what the figures are; its note stays `ink3`. */
 	label: {
 		...textStyles.caption,
-		color: colors.ink3,
+		color: colors.ink2,
 		textTransform: "uppercase",
 		letterSpacing: 0.6,
 	},

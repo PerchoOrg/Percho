@@ -173,11 +173,11 @@ const styles = StyleSheet.create({
 	rowBlock: { marginTop: 14 },
 	rowLabel: {
 		...textStyles.caption,
-		color: colors.ink3,
+		color: colors.ink2,
 		textTransform: "uppercase",
 		letterSpacing: 0.6,
 	},
-	rowNote: { ...textStyles.caption, color: colors.ink3, marginTop: 1 },
+	rowNote: { ...textStyles.note, color: colors.ink3, marginTop: 1 },
 	cells: { flexDirection: "row", gap: 8, marginTop: 6 },
 	cell: {
 		flex: 1,
@@ -195,10 +195,5 @@ const styles = StyleSheet.create({
 	cellBestTxt: { color: explore.posInk },
 	more: { minHeight: 44, justifyContent: "center", marginTop: 16 },
 	moreTxt: { ...textStyles.footnote, fontWeight: "600", color: colors.accent },
-	foot: {
-		...textStyles.caption,
-		color: colors.ink3,
-		marginTop: 20,
-		lineHeight: 15,
-	},
+	foot: { ...textStyles.note, color: colors.ink3, marginTop: 20 },
 });

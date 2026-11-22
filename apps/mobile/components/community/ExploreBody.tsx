@@ -197,7 +197,7 @@ export function ExploreBody({
 								series={[
 									{
 										values: homeValue.series.map((p) => p.baseline),
-										color: colors.ink3,
+										color: colors.seriesMuted,
 										weight: 1.5,
 									},
 									{
@@ -385,7 +385,12 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "space-between",
 	},
-	tileLabel: { ...textStyles.caption, fontSize: 10.5, color: colors.accent },
+	/**
+	 * `ink2`, not amber (phase367). Six amber labels were the loudest thing in
+	 * the grid, ahead of the figures they name. Amber on this page is now the
+	 * finding itself — a rank, the community's line on a chart.
+	 */
+	tileLabel: { ...textStyles.caption, fontSize: 10.5, color: colors.ink2 },
 	chevron: {
 		...textStyles.footnote,
 		fontSize: 18,
@@ -451,7 +456,7 @@ const styles = StyleSheet.create({
 		...textStyles.caption,
 		fontSize: 9.5,
 		letterSpacing: 0.8,
-		color: colors.accent,
+		color: colors.ink2,
 	},
 	eventTitle: {
 		...textStyles.footnote,

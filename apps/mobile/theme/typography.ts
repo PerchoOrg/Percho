@@ -78,6 +78,21 @@ export const textStyles = {
 		textTransform: "uppercase",
 	},
 	/**
+	 * Fine print — a source line, a footnote, a disclosure. SF Pro 12 / regular,
+	 * sentence case (phase367).
+	 *
+	 * `caption` is the LABEL voice: uppercase, tracked, semibold. Fine print
+	 * used to borrow it for want of a 12pt step, which set whole sentences —
+	 * "Green marks the better figure in a row…" — in tracked capitals. A
+	 * sentence takes this style; `caption` is for two or three words.
+	 */
+	note: {
+		fontFamily: fonts.ui,
+		fontSize: 12,
+		fontWeight: "400",
+		lineHeight: 16,
+	},
+	/**
 	 * The guided tour's WHY block — `02-listing.md` §2.3 #3 specifies serif 17.5
 	 * for it by name. Serif because §0.4 reserves the display face for "worth
 	 * reading slowly", and the WHY paragraph is the one piece of prose in the app
