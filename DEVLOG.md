@@ -23,6 +23,20 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-22 09:27 UTC — phase366.20: community acts from listing galleries — Harvest Park published, Edinburgh and Arbors re-cut, Medlock Bridge (Johns Creek flagship) built; Settingdown Farms has none
+
+**Objective**: owner 2026-11-22, on the three questions of phase366.19: "上线 / 补 / 做" — publish Harvest Park's held cut, give the films without community footage a community act from listing galleries, build Medlock Bridge.
+**Actions**:
+- **Harvest Park**: assembly `371814a7` set back to `ready` (`cf 748e5dfc…`); the feed serves it.
+- Source for all four: `southmark-properties.realgeeks.com/listings/subdivision/<Name>/` (answers a plain client; other listing sites refuse one and were left alone). Each active listing's page gives its gallery (FMLS feed images, 1024 px), the subdivision, and "Listing courtesy of …". Photos ingested with `ingest-community-photos.ts`, each run's `--source-note` naming the listing address, broker and page; enhanced (Real-ESRGAN x2) before planning. No Seedance on any of them.
+- **Edinburgh** (re-cut): 7 photos from 960 Chivencester Court (NorthGroup Realty) and 5318 Binghurst Court (Elite Progress Realty) — gatehouse, entrance sign, clubhouse and pool with its slide, pool from the air, tennis from the air, basketball court, playground. Community act 8 clips (was 1). Assembly `2b280648`, `cf bbcc652c5781ea1227d705a6661fbe68`, 77.1 s, 32 clips. No new spend.
+- **Arbors at Richland Creek** (re-cut): 3 photos from 6244 Kismet Road (Ashton Woods Realty) — the entrance monument, the pavilion and lawn, the pavilion's patio. First community act for this film. The re-plan is also the first without the cross-film reuse rule, so The Bowl and the Greenway are back; one near-duplicate path photo rejected. Assembly `2d14d154`, `cf 06bb18d584112a38291afb354049198c`, 69.5 s, 24 clips. No new spend.
+- **Medlock Bridge** (#11 of the batch, Johns Creek flagship): run `ac97f43e`. The HOA site (medlockbridgehoa.com) gave the clubhouse and the lake boardwalk; Google's "Medlock Bridge Park" (the HOA's amenity area) the playground, pavilion and courts; listings 10295 Groomsbridge Road (Chapman Hall Realtors) and 850 Lake Medlock Drive (Keller Williams Realty Chattahoochee North) the clubhouse-pool-tennis aerial, the tennis aerial and the neighbourhood from the air. Editorial, film-only: Ace Hardware, Chick-fil-A, Crunch, Iron Tribe, Newtown Dream Dog Park (its only photos have dogs or an empty field). Photos rejected by what they tell a buyer — about thirty: bare field, sky, tree trunk, stump, a logo, swim-meet crowd, store interiors and aisles, display cases filed under The Forum, a cinema lobby and hallway, an empty gym, low-resolution frames, a crowd at an event, hikers. A first cut went live for ~10 minutes with the pool under its winter cover (I missed it on the thumbnail; the watch-out is in my own notes) — rejected and re-cut. Assembly `a19d967a`, `cf 0436a569bc50fcba010e51551324d35b`, 78.0 s, 31 clips; community act 8 clips. **Spend: 1 Seedance ≈ $0.14** (Autrey Mill's stream; Cauley Creek reused). Profile written.
+- **Settingdown Farms**: all eight active listings are the builder's own (Weekley Homes Realty) — plans, exteriors, empty rooms; no pool, playground or entrance photo anywhere I can read. The film stays as it is, without a community act, until the owner decides.
+**Open with the owner**: the FMLS points of phase366.19 (iOS outside the Vendor System; AI on listing data) now apply to four films.
+**Verified**: frames every 2 s on all three new assemblies; production feed serves all four uids (17 community films); `/watch/c/medlock-bridge` 200.
+**Next steps**: owner's call on Settingdown Farms; pitch #12 (Johns Creek builder slot — Ward's Crossing needs a `communities` row).
+
 ## 2026-11-22 08:13 UTC — phase366.19: Harvest Park with a community act from a listing gallery — HELD for the owner's look
 
 **Objective**: owner on Harvest Park's film (no community act): "mls也没关系 先让我看看 没有小区内部的素材不行" — a film without footage from inside the community is not acceptable; MLS listing photos may supply it; he wants to see it first.
