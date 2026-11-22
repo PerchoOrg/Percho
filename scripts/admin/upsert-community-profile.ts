@@ -38,6 +38,7 @@ import {
   type BuildCommunity,
   type BuildSchool,
   type CountyCosts,
+  type SafetyFacts,
   type ZhviExtract,
   buildContext,
   buildProfile,
@@ -53,7 +54,7 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 const APPLY = process.argv.includes('--apply');
 const ALL = process.argv.includes('--all');
-const SLUG = process.argv.slice(2).find((a) => !a.startsWith('--'));
+const SLUGS = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 
 /** PostgREST caps a read at 1000 rows whatever the range asks for; page everything. */
 const PAGE = 1000;
@@ -138,8 +139,8 @@ async function readCosts(sb: SupabaseClient): Promise<Map<string, CountyCosts>> 
 }
 
 async function main() {
-  if (!ALL && !SLUG) {
-    console.error('Usage: community:profile <slug> | --all  [--apply]');
+  if (!ALL && SLUGS.length === 0) {
+    console.error('Usage: community:profile <slug> [<slug> …] | --all  [--apply]');
     process.exit(1);
   }
 
@@ -225,20 +226,33 @@ async function main() {
       ),
     ).map(([city, v]) => [city, { source: v.source, events: v.events ?? [] }]),
   );
+  // Looked up per community by `import-community-safety.ts`; absent until
+  // someone has run it.
+  const safety = existsSync(join(here, 'data/community-safety.json'))
+    ? new Map(
+        Object.entries(
+          json<{ communities: Record<string, SafetyFacts> }>('data/community-safety.json')
+            .communities,
+        ),
+      )
+    : undefined;
   const ctx = buildContext({
     communities,
     schools,
     zhvi,
     costs,
     events,
+    ...(safety ? { safety } : {}),
     asOf: new Date().toISOString().slice(0, 10),
   });
   console.log(
     `${communities.length} communities, ${schools.length} scored schools, ${zhvi.cities.length} cities (Zillow ${zhvi.asOf}), ${costs.size} counties`,
   );
 
-  const targets = ALL ? communities : communities.filter((c) => c.slug === SLUG);
-  if (targets.length === 0) throw new Error(`No active community with slug "${SLUG}"`);
+  const targets = ALL ? communities : communities.filter((c) => SLUGS.includes(c.slug));
+  const missing = ALL ? [] : SLUGS.filter((s) => !targets.some((c) => c.slug === s));
+  if (missing.length > 0)
+    throw new Error(`No active community with slug "${missing.join('", "')}"`);
 
   const writes: { id: string; slug: string; profile: StoredCommunityProfile | null }[] = [];
   const tally = new Map<string, number>();

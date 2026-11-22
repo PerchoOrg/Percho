@@ -31,6 +31,7 @@ const rank = z.object({
   percentile: z.number().min(0).max(100),
   percentile2: z.number().min(0).max(100).optional(),
   tile: z.string().min(2).max(6).optional(),
+  distance: z.string().min(3).max(8).optional(),
 });
 
 export const communityProfileSchema = z.object({
@@ -136,11 +137,33 @@ export const communityProfileSchema = z.object({
     )
     .max(8)
     .optional(),
-  // Up to 10 since phase366: own site, Nextdoor, Reddit, Maps, Zillow and three
-  // schools. The row scrolls sideways, so the count costs no height.
+  // Facts about the place only — no crime figure fits this shape on purpose.
+  safety: z
+    .object({
+      rows: z
+        .array(
+          z.object({
+            label: z.string().min(1).max(16),
+            name: z.string().min(1).max(48),
+            note: z.string().max(12).optional(),
+          }),
+        )
+        .min(1)
+        .max(4),
+    })
+    .optional(),
+  // Up to 16 since phase370, under headings: own site, Nextdoor, Reddit, Maps,
+  // Zillow, property records, three schools, the district, the crime map, the
+  // flood map, the city.
   links: z
-    .array(z.object({ label: z.string().min(1).max(18), url: link }))
-    .max(10)
+    .array(
+      z.object({
+        label: z.string().min(1).max(18),
+        url: link,
+        group: z.string().min(1).max(12).optional(),
+      }),
+    )
+    .max(16)
     .optional(),
   sources: z.array(z.object({ name: z.string().min(1).max(80), url: link.optional() })).min(1),
 });

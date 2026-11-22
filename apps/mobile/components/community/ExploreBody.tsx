@@ -15,6 +15,7 @@ import type { CommunityProfile } from "@percho/shared/community-profile";
 import type { TourSegment } from "@percho/shared/tour-buckets";
 import { useMemo, useState } from "react";
 import {
+	Image,
 	Linking,
 	Pressable,
 	ScrollView,
@@ -27,7 +28,9 @@ import {
 	againstBaseline,
 	axisTop,
 	closeBy,
+	linkGroups,
 	localDay,
+	logoFor,
 	nearbyStops,
 	schoolName,
 	schoolRanks,
@@ -46,6 +49,7 @@ const GAP = 10;
 
 /** Sheets tall enough to need most of the screen; the rest open half-way. */
 const TALL: ReadonlySet<ExploreSheetKey> = new Set([
+	"cost",
 	"schools",
 	"homeValue",
 	"dues",
@@ -105,16 +109,19 @@ export function ExploreBody({
 		[profile.events],
 	);
 	const schools = schoolRanks(profile.ranks);
-	const { homeValue, dues, words, verdict } = profile;
+	const { homeValue, dues, words, verdict, safety } = profile;
+	const holding = homeValue?.holding;
+	const resources = useMemo(() => linkGroups(profile.links), [profile.links]);
 	const againstMetro = homeValue ? againstBaseline(homeValue) : null;
 	const sparkMax = homeValue
 		? axisTop(homeValue.series.flatMap((p) => [p.value, p.baseline]))
 		: 1;
 	// Half tiles sit two to a row; when their number is odd the last one takes
 	// the row, so the grid never ends on a hole. A computed profile often has
-	// only one (no dues without research, no words without Nextdoor).
+	// only two (no dues without research, no words without Nextdoor).
 	const halves = [
 		homeValue && "homeValue",
+		holding && "cost",
 		dues && "dues",
 		words && "words",
 	].filter(Boolean);
@@ -154,19 +161,43 @@ export function ExploreBody({
 			)}
 
 			<View style={styles.grid}>
-				{/* Schools only (phase368). This was "Where it ranks": three school
-				    ranks and the home value's in one row, each a "#452" over "of
-				    1,220 in GA" — owner 2026-11-22: "看了数字跟没看一样 … school和price
-				    分开吧". A cell now says the school's name and its standing as a
-				    share; the price's standing sits with the price. No dot on a
-				    line beside it, and no count of schools: "百分比排名好 点线意图图
-				    没有必要 总学校数可以留在details页面里". One line a school since
-				    phase369, the name in full, and no caption — "太多行了 学校名字用
-				    全称在一行里 去掉底下的说明": what the share is of, and that these
-				    are nearby rather than assigned, is said in the sheet. */}
+				{/* The page's four directions, in the order the owner names them
+				    (安 学 便 潜 — spec-v3 03 §3.3), then what it costs. Titles are
+				    his, 2026-11-22: "safety, schools, convenience, potential,
+				    cost". */}
+				{safety && (
+					<Tile
+						label="Safety"
+						wide
+						width={half}
+						onPress={() => setSheet("safety")}
+					>
+						<View style={styles.rows}>
+							{safety.rows.map((r) => (
+								<View key={r.label} style={styles.row}>
+									<Text style={styles.rowKind} numberOfLines={1}>
+										{r.label}
+									</Text>
+									<Text style={styles.rowName} numberOfLines={1}>
+										{r.name}
+									</Text>
+									{!!r.note && <Text style={styles.rowAside}>{r.note}</Text>}
+								</View>
+							))}
+						</View>
+					</Tile>
+				)}
+
+				{/* One line a school: its name in full, how far it is, and its
+				    standing as a share — in the row's own type, not a headline
+				    figure (owner 2026-11-22: "太多行了 学校名字用全称在一行里 去掉底下
+				    的说明", then "school不要绿色的大字 正常就行 加上距离"). What the
+				    share is of, and that these are nearby rather than assigned, is
+				    said in the sheet. Before phase368 this was "Where it ranks":
+				    "#452 / of 1,220 in GA", which he read as noise. */}
 				{schools.length > 0 && (
 					<Tile
-						label="Schools nearby"
+						label="Schools"
 						wide
 						width={half}
 						onPress={() => setSheet("schools")}
@@ -174,10 +205,43 @@ export function ExploreBody({
 						<View style={styles.rows}>
 							{schools.map((r) => (
 								<View key={r.label} style={styles.row}>
-									<Text style={styles.rowName} numberOfLines={1}>
+									<Text
+										style={styles.rowName}
+										numberOfLines={1}
+										adjustsFontSizeToFit
+										minimumFontScale={0.85}
+									>
 										{schoolName(r)}
 									</Text>
-									<Text style={styles.rowFigure}>{topShare(r)}</Text>
+									{!!r.distance && (
+										<Text style={styles.rowAside}>{r.distance}</Text>
+									)}
+									<Text style={styles.rowShare}>{topShare(r)}</Text>
+								</View>
+							))}
+						</View>
+					</Tile>
+				)}
+
+				{/* A place of each kind and how far it is (phase369) — it was
+				    "15 of 15" over a strip of dots, a count of the film's stops. */}
+				{nearby && (
+					<Tile
+						label="Convenience"
+						wide
+						width={half}
+						onPress={() => setSheet("nearby")}
+					>
+						<View style={styles.rows}>
+							{closeBy(nearby).map((s) => (
+								<View key={s.group} style={styles.row}>
+									<Text style={styles.rowKind} numberOfLines={1}>
+										{s.group}
+									</Text>
+									<Text style={styles.rowName} numberOfLines={1}>
+										{s.name}
+									</Text>
+									<Text style={styles.rowAside}>{s.miles} mi</Text>
 								</View>
 							))}
 						</View>
@@ -186,7 +250,7 @@ export function ExploreBody({
 
 				{homeValue && (
 					<Tile
-						label="Home value"
+						label="Potential"
 						wide={lone === "homeValue"}
 						width={half}
 						onPress={() => setSheet("homeValue")}
@@ -225,6 +289,33 @@ export function ExploreBody({
 					</Tile>
 				)}
 
+				{/* A month of owning before the mortgage. On every computed
+				    profile since phase340, and until phase370 only inside the
+				    home value sheet. */}
+				{holding && (
+					<Tile
+						label="Cost"
+						wide={lone === "cost"}
+						width={half}
+						onPress={() => setSheet("cost")}
+					>
+						<Text style={styles.figure}>
+							{holding.display}
+							<Text style={styles.figureUnit}>{"  a month"}</Text>
+						</Text>
+						<View style={styles.costRows}>
+							{holding.rows.slice(0, 4).map((r) => (
+								<View key={r.label} style={styles.costRow}>
+									<Text style={styles.costLabel} numberOfLines={1}>
+										{r.label}
+									</Text>
+									<Text style={styles.costValue}>${r.usd}</Text>
+								</View>
+							))}
+						</View>
+					</Tile>
+				)}
+
 				{dues && (
 					<Tile
 						label="Dues"
@@ -245,31 +336,6 @@ export function ExploreBody({
 								<Text style={styles.coverNo}>✕ </Text>
 								{dues.tile.separate}
 							</Text>
-						</View>
-					</Tile>
-				)}
-
-				{/* A place of each kind and how far it is (phase369) — it was
-				    "15 of 15" over a strip of dots, a count of the film's stops. */}
-				{nearby && (
-					<Tile
-						label="Nearby"
-						wide
-						width={half}
-						onPress={() => setSheet("nearby")}
-					>
-						<View style={styles.rows}>
-							{closeBy(nearby).map((s) => (
-								<View key={s.group} style={styles.row}>
-									<Text style={styles.rowKind} numberOfLines={1}>
-										{s.group}
-									</Text>
-									<Text style={styles.rowName} numberOfLines={1}>
-										{s.name}
-									</Text>
-									<Text style={styles.rowMiles}>{s.miles} mi</Text>
-								</View>
-							))}
 						</View>
 					</Tile>
 				)}
@@ -316,27 +382,49 @@ export function ExploreBody({
 				)}
 			</View>
 
-			{(profile.links?.length ?? 0) > 0 && (
-				<ScrollView
-					horizontal
-					showsHorizontalScrollIndicator={false}
-					style={styles.pillsBleed}
-					contentContainerStyle={styles.pills}
-				>
-					{profile.links?.map((l) => (
-						<Pressable
-							key={l.url}
-							style={({ pressed }) => [styles.pill, pressed && styles.pressed]}
-							onPress={() => void Linking.openURL(l.url).catch(() => {})}
-							accessibilityRole="link"
-						>
-							<Text style={styles.pillText}>
-								{l.label}
-								<Text style={styles.pillMark}> ↗</Text>
+			{/* Resources: the links under their headings, each with its site's
+			    own mark before the word (owner 2026-11-22: "链接最好用logo和文字
+			    更醒目"). A row scrolls sideways, so a heading costs one line
+			    however many links it holds. */}
+			{resources.length > 0 && (
+				<View style={styles.resources}>
+					<Text style={styles.tileLabel}>Resources</Text>
+					{resources.map((g) => (
+						<View key={g.group} style={styles.resourceRow}>
+							<Text style={styles.resourceGroup} numberOfLines={1}>
+								{g.group}
 							</Text>
-						</Pressable>
+							<ScrollView
+								horizontal
+								showsHorizontalScrollIndicator={false}
+								style={styles.resourceScroll}
+								contentContainerStyle={styles.pills}
+							>
+								{g.links.map((l) => {
+									const logo = logoFor(l.url);
+									return (
+										<Pressable
+											key={l.url}
+											style={({ pressed }) => [
+												styles.pill,
+												pressed && styles.pressed,
+											]}
+											onPress={() =>
+												void Linking.openURL(l.url).catch(() => {})
+											}
+											accessibilityRole="link"
+										>
+											{!!logo && (
+												<Image source={{ uri: logo }} style={styles.pillLogo} />
+											)}
+											<Text style={styles.pillText}>{l.label}</Text>
+										</Pressable>
+									);
+								})}
+							</ScrollView>
+						</View>
 					))}
-				</ScrollView>
+				</View>
 			)}
 
 			<BottomSheet
@@ -459,11 +547,36 @@ const styles = StyleSheet.create({
 		flex: 1,
 		minWidth: 0,
 	},
-	rowFigure: { ...textStyles.title2, fontSize: 18, color: colors.accent },
-	rowMiles: {
+	/** A distance, a zone: the row's quieter second fact. */
+	rowAside: {
 		...textStyles.footnote,
 		fontSize: 13,
 		color: colors.ink2,
+		fontVariant: ["tabular-nums"],
+	},
+	/** A school's standing, in the row's own type. Wide enough for "Top 100%". */
+	rowShare: {
+		...textStyles.footnote,
+		fontSize: 13,
+		fontWeight: "600",
+		color: colors.ink,
+		width: 62,
+		textAlign: "right",
+		fontVariant: ["tabular-nums"],
+	},
+	costRows: { marginTop: 6, gap: 2 },
+	costRow: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
+	costLabel: {
+		...textStyles.footnote,
+		fontSize: 11.5,
+		color: colors.ink2,
+		flexShrink: 1,
+	},
+	costValue: {
+		...textStyles.footnote,
+		fontSize: 11.5,
+		fontWeight: "600",
+		color: colors.ink,
 		fontVariant: ["tabular-nums"],
 	},
 
@@ -504,11 +617,24 @@ const styles = StyleSheet.create({
 	},
 
 	// The pill row runs to the screen's edges; its content keeps the page's inset.
-	pillsBleed: { marginHorizontal: -PAGE_PAD, marginTop: 14 },
-	pills: { paddingHorizontal: PAGE_PAD, gap: 7 },
+	resources: { marginTop: 18, gap: 8 },
+	resourceRow: { flexDirection: "row", alignItems: "center" },
+	resourceGroup: {
+		...textStyles.footnote,
+		fontSize: 12,
+		color: colors.ink2,
+		width: 76,
+	},
+	// A row of links runs to the screen's right edge; the heading keeps the
+	// page's inset.
+	resourceScroll: { marginRight: -PAGE_PAD },
+	pills: { paddingRight: PAGE_PAD, gap: 7 },
 	pill: {
-		paddingHorizontal: 12,
-		paddingVertical: 8,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 6,
+		paddingHorizontal: 11,
+		paddingVertical: 7,
 		borderRadius: radii.pill,
 		backgroundColor: colors.surface,
 		borderWidth: StyleSheet.hairlineWidth,
@@ -520,5 +646,5 @@ const styles = StyleSheet.create({
 		fontWeight: "500",
 		color: colors.ink,
 	},
-	pillMark: { color: colors.accent, fontWeight: "600" },
+	pillLogo: { width: 16, height: 16, borderRadius: 4 },
 });

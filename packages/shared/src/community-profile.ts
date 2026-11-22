@@ -16,8 +16,15 @@
  * Every block is optional but the verdict: a community is researched one block
  * at a time, and a tile with nothing behind it is not drawn.
  *
- * NO INCOME, SAFETY OR CRIME FIELD — the rule `communities.avg_income` and
- * `city.ts` already follow. Do not add one without the owner.
+ * NO INCOME OR CRIME FIELD — the rule `communities.avg_income` and `city.ts`
+ * already follow. Do not add one without the owner.
+ *
+ * `safety` (phase370) is not an exception to that. Owner 2026-11-22, asked
+ * what the page's safety direction should carry: facts about the PLACE — how
+ * far the nearest emergency room and fire station are, the FEMA flood zone —
+ * and crime figures only as a link out to the agencies' own map. A crime
+ * count, rate or grade still does not go in this document (`lenses.ts`
+ * records why).
  */
 
 export interface CommunityProfileSource {
@@ -43,6 +50,8 @@ export interface CommunityRank {
   percentile2?: number;
   /** Set on the rows the page's tile shows (it takes the first four): the rank as the tile prints it, "#3–6". */
   tile?: string;
+  /** A school row: how far the school is, straight-line, "0.4 mi". */
+  distance?: string;
 }
 
 export interface CommunityProfile {
@@ -113,7 +122,22 @@ export interface CommunityProfile {
     where: string;
     url?: string;
   }>;
-  /** The community's own pages, as pills. */
-  links?: Array<{ label: string; url: string }>;
+  /** Facts about the place, never about crime (see the header). */
+  safety?: {
+    rows: Array<{
+      /** "Hospital", "Fire station", "Flood zone" */
+      label: string;
+      /** "Northside Hospital Forsyth", "Minimal flood hazard" */
+      name: string;
+      /** "2.4 mi", "Zone X" */
+      note?: string;
+    }>;
+  };
+  /**
+   * Places to go on from the page. `group` is the heading a link sits under
+   * ("Community", "Homes", "Schools", "Safety", "City"); a profile stored
+   * before phase370 has none.
+   */
+  links?: Array<{ label: string; url: string; group?: string }>;
   sources: CommunityProfileSource[];
 }

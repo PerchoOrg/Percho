@@ -35,8 +35,10 @@ import { textStyles } from "../../theme/typography";
 import { Lines, StopStrip } from "./ExploreCharts";
 
 export type ExploreSheetKey =
+	| "safety"
 	| "schools"
 	| "homeValue"
+	| "cost"
 	| "dues"
 	| "nearby"
 	| "words"
@@ -66,7 +68,12 @@ function RankRows({
 							{named ? (r.note ?? r.label) : r.label}
 						</Text>
 						{named
-							? !!r.note && <Text style={styles.rowNote}>{r.label}</Text>
+							? !!r.note && (
+									<Text style={styles.rowNote}>
+										{r.label}
+										{r.distance ? ` · ${r.distance}` : ""}
+									</Text>
+								)
 							: !!r.note && <Text style={styles.rowNote}>{r.note}</Text>}
 					</View>
 					<View style={styles.rankRight}>
@@ -131,14 +138,13 @@ function HomeValue({
 	/** Where the value and its growth stand among their peers. */
 	standing: readonly CommunityRank[];
 }) {
-	const { series, holding } = homeValue;
+	const { series } = homeValue;
 	const values = series.map((p) => p.value);
 	const baseline = series.map((p) => p.baseline);
 	const max = axisTop([...values, ...baseline]);
 	const first = series[0];
 	const last = series[series.length - 1];
 	const mid = series[Math.floor((series.length - 1) / 2)];
-	const total = holding?.rows.reduce((a, r) => a + r.usd, 0) ?? 0;
 	// Where a line ends, as a share of the chart's height from the top.
 	const endAt = (v: number) => `${(1 - v / max) * 100}%` as const;
 	return (
@@ -207,36 +213,102 @@ function HomeValue({
 					<RankRows rows={standing} />
 				</View>
 			)}
-			{holding && (
-				<View style={styles.block}>
-					<Text style={styles.big}>{holding.display}</Text>
-					<Text style={styles.caption}>{holding.basis}</Text>
-					<View style={styles.costBar}>
-						{holding.rows.map((r, i) => (
-							<View
-								key={r.label}
-								style={[
-									styles.costPart,
-									{ flex: r.usd / (total || 1) },
-									i === 0 && styles.costLead,
-								]}
-							/>
-						))}
-					</View>
+		</>
+	);
+}
+
+/**
+ * What a month of owning costs before the mortgage (phase370). It was the
+ * last block of the home value sheet; the page gives it its own tile, so it
+ * has its own sheet.
+ */
+function Cost({
+	holding,
+}: {
+	holding: NonNullable<NonNullable<CommunityProfile["homeValue"]>["holding"]>;
+}) {
+	const total = holding.rows.reduce((a, r) => a + r.usd, 0);
+	return (
+		<>
+			<Text style={styles.title}>What it costs to hold</Text>
+			<View style={styles.block}>
+				<Text style={styles.big}>{holding.display}</Text>
+				<Text style={styles.caption}>{holding.basis}</Text>
+				<View style={styles.costBar}>
 					{holding.rows.map((r, i) => (
-						<View key={r.label} style={styles.costRow}>
-							<View style={[styles.costSwatch, i === 0 && styles.costLead]} />
-							<Text style={styles.costLabel}>
-								{r.label}
-								{!!r.note && (
-									<Text style={styles.rowNote}>{`  ${r.note}`}</Text>
-								)}
-							</Text>
-							<Text style={styles.costValue}>${r.usd}</Text>
-						</View>
+						<View
+							key={r.label}
+							style={[
+								styles.costPart,
+								{ flex: r.usd / (total || 1) },
+								i === 0 && styles.costLead,
+							]}
+						/>
 					))}
 				</View>
-			)}
+				{holding.rows.map((r, i) => (
+					<View key={r.label} style={styles.costRow}>
+						<View style={[styles.costSwatch, i === 0 && styles.costLead]} />
+						<Text style={styles.costLabel}>
+							{r.label}
+							{!!r.note && <Text style={styles.rowNote}>{`  ${r.note}`}</Text>}
+						</Text>
+						<Text style={styles.costValue}>${r.usd}</Text>
+					</View>
+				))}
+			</View>
+		</>
+	);
+}
+
+/**
+ * Facts about the place: how far help is, and FEMA's flood zone. Crime
+ * figures are not here and not on the page; the agencies' own map is a link
+ * (owner 2026-11-22 — `packages/shared/src/community-profile.ts`).
+ */
+function Safety({
+	safety,
+	links,
+}: {
+	safety: NonNullable<CommunityProfile["safety"]>;
+	links: NonNullable<CommunityProfile["links"]>;
+}) {
+	return (
+		<>
+			<Text style={styles.title}>Safety</Text>
+			<View style={styles.block}>
+				{safety.rows.map((r) => (
+					<View key={r.label} style={styles.rankRow}>
+						<View style={styles.safetyLeft}>
+							<Text style={styles.rowNote}>{r.label}</Text>
+							<Text style={styles.rowTitle}>{r.name}</Text>
+						</View>
+						{!!r.note && <Text style={styles.rankValue}>{r.note}</Text>}
+					</View>
+				))}
+				<Text style={styles.caption}>
+					Distances are straight-line from the community. The flood zone is
+					FEMA's at the community's point on the map; one lot's can differ.
+				</Text>
+			</View>
+			<Text style={styles.caption}>
+				Percho does not show crime figures. The agencies publish their own:
+			</Text>
+			<View style={styles.links}>
+				{links.map((l) => (
+					<Pressable
+						key={l.url}
+						onPress={() => open(l.url)}
+						accessibilityRole="link"
+						hitSlop={6}
+					>
+						<Text style={styles.link}>
+							{l.label}
+							{LINK_MARK}
+						</Text>
+					</Pressable>
+				))}
+			</View>
 		</>
 	);
 }
@@ -415,6 +487,15 @@ export function ExploreSheet({
 					standing={homeRanks(profile.ranks)}
 				/>
 			)}
+			{which === "safety" && profile.safety && (
+				<Safety
+					safety={profile.safety}
+					links={(profile.links ?? []).filter((l) => l.group === "Safety")}
+				/>
+			)}
+			{which === "cost" && profile.homeValue?.holding && (
+				<Cost holding={profile.homeValue.holding} />
+			)}
 			{which === "dues" && profile.dues && <Dues dues={profile.dues} />}
 			{which === "nearby" && nearby && <Nearby view={nearby} />}
 			{which === "words" && profile.words && (
@@ -481,6 +562,7 @@ const styles = StyleSheet.create({
 		gap: 10,
 		paddingVertical: 7,
 	},
+	safetyLeft: { flex: 1, minWidth: 0, gap: 1 },
 	rankLeft: { flex: 1, minWidth: 0 },
 	rankRight: { alignItems: "flex-end" },
 	rankValue: {

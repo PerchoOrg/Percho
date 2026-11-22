@@ -218,10 +218,58 @@ describe('buildProfile', () => {
     expect(JSON.stringify(plain?.verdict)).not.toMatch(/Values|bottom|low/i);
   });
 
+  it('says how far each school is', () => {
+    const rows = profile?.ranks?.rows.filter((r) => r.group === 'Schools') ?? [];
+    expect(rows).toHaveLength(3);
+    for (const r of rows) expect(r.distance).toMatch(/^\d+(\.\d)? mi$/);
+    // A value or a size is not a place, so it has no distance.
+    expect(profile?.ranks?.rows.find((r) => r.group === 'Homes')?.distance).toBeUndefined();
+  });
+
+  it('states safety as facts about the place, and only where they were looked up', () => {
+    expect(profile?.safety).toBeUndefined();
+    const looked = buildProfile(
+      subject,
+      buildContext({
+        ...inputs,
+        safety: new Map([
+          [
+            'windward',
+            {
+              hospital: { name: 'Northside Hospital Forsyth', miles: 2.44 },
+              fire: { name: 'Fire Station #1', miles: 0.9 },
+              flood: { zone: 'X', subtype: 'AREA OF MINIMAL FLOOD HAZARD', sfha: false },
+            },
+          ],
+        ]),
+      }),
+    );
+    expect(looked?.safety?.rows).toEqual([
+      { label: 'Hospital', name: 'Northside Hospital Forsyth', note: '2.4 mi' },
+      { label: 'Fire station', name: 'Fire Station #1', note: '0.9 mi' },
+      { label: 'Flood zone', name: 'Minimal flood hazard', note: 'Zone X' },
+    ]);
+    expect(looked?.sources.map((s) => s.name)).toEqual(
+      expect.arrayContaining(['FEMA National Flood Hazard Layer', 'OpenStreetMap']),
+    );
+    expect(communityProfileSchema.safeParse(looked).success).toBe(true);
+    // FEMA's 1%-a-year floodplain at the one point read is said of a part.
+    const wet = buildProfile(
+      subject,
+      buildContext({
+        ...inputs,
+        safety: new Map([['windward', { flood: { zone: 'AE', subtype: '', sfha: true } }]]),
+      }),
+    );
+    expect(wet?.safety?.rows).toEqual([
+      { label: 'Flood zone', name: 'Part is in a flood zone', note: 'Zone AE' },
+    ]);
+  });
+
   it("links the community's own pages, https only, and carries its city's events", () => {
     expect(profile?.links?.slice(0, 2)).toEqual([
-      { label: 'Website', url: 'https://example.org/' },
-      { label: 'Nextdoor', url: 'https://nextdoor.com/neighborhood/c0/' },
+      { group: 'Community', label: 'Website', url: 'https://example.org/' },
+      { group: 'Community', label: 'Nextdoor', url: 'https://nextdoor.com/neighborhood/c0/' },
     ]);
     const http = buildProfile({ ...subject, website: 'http://example.org' }, ctx)?.links ?? [];
     expect(http.map((l) => l.label)).not.toContain('Website');
@@ -239,15 +287,33 @@ describe('buildProfile', () => {
       'Reddit',
       'Google Maps',
       'Homes on Zillow',
+      'Property records',
       'Near ES',
       'Near MS',
       'Near HS',
+      'School district',
+      'Crime map',
+      'FEMA flood map',
+      'City of Sugar Hill',
     ]);
+    // Every link sits under a heading the page draws.
+    expect([...new Set(links.map((l) => l.group))]).toEqual([
+      'Community',
+      'Homes',
+      'Schools',
+      'Safety',
+      'City',
+    ]);
+    // Crime is a link out to the agencies' own map, never a figure here; the
+    // flood map opens on the community's own point.
+    expect(links[10]?.url).toBe('https://communitycrimemap.com/?address=Sugar%20Hill%2C%20GA');
+    expect(links[11]?.url).toContain('center=-84.25,34.07&level=15');
+    expect(links[12]?.url).toBe('https://cityofsugarhill.com/');
     expect(links[3]?.url).toBe(
       'https://www.google.com/maps/search/?api=1&query=Wild%20Timber%2C%20Sugar%20Hill%2C%20GA',
     );
     expect(links[4]?.url).toBe('https://www.zillow.com/homes/Wild-Timber-Sugar-Hill-GA_rb/');
-    expect(links[5]?.url).toContain('greatschools.org/search/search.page?q=Near%20Elementary');
+    expect(links[6]?.url).toContain('greatschools.org/search/search.page?q=Near%20Elementary');
     expect(communityProfileSchema.safeParse(named).success).toBe(true);
     expect(profile?.events).toHaveLength(1);
     expect(profile?.sources.map((s) => s.name)).toEqual([
@@ -298,9 +364,14 @@ describe('mergeProfile', () => {
       'Rules & dues',
       'Nextdoor',
       'Website',
+      'Property records',
       'Near ES',
       'Near MS',
       'Near HS',
+      'School district',
+      'Crime map',
+      'FEMA flood map',
+      'City of Alpharetta',
     ]);
     expect(mergeProfile(profile, null)).toBe(profile);
     expect(mergeProfile(null, { links: [] })).toBeNull();
