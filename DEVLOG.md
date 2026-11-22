@@ -23,6 +23,16 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-22 10:43 UTC — phase368: Explore — schools and price apart, ranks said as a share
+
+**Objective**: owner 2026-11-22, on Sawnee Village's Explore page: "ranks这部分看了数字跟没看一样 重新设计 并且school和price分开吧". The "Where it ranks" tile printed four ranks in a row — "#452 / Elementary / of 1,220 in GA", … "#11 / Home value / of 146 metro c…" — a division left to the reader, with no school named and the price's rank beside the schools'.
+**Actions** (mobile only, no data or schema change — every stored profile works as it is):
+- `lib/community/explore.ts`: `topShare(row)` says a rank as "Top 38%" — from the rank and the count when both read as numbers (the worse of two for a two-school row), rounded UP so the claim is never better than the rank, else from the percentile; `schoolRanks` / `homeRanks` / `otherRanks` split the rows by group; `againstBaseline(homeValue)` gives "56% above Metro Atlanta" from the newest year of the series. `tileRanks` removed (nothing calls it).
+- `ExploreBody.tsx`: the wide tile is now **Schools nearby** — three cells, each "Top 38%" over the school's name ("Cumming") and its level, with the same small track; its caption says what the share is of ("Among Georgia schools, by state test results.") before the stored not-an-attendance-zone note. The **Home value** tile gains a second foot line, the price against its baseline.
+- `ExploreSheets.tsx`: the ranks sheet is the **Schools nearby** sheet (school name, level, track, "Top 38% / of 1,220 in GA", GreatSchools links, the note); the home value's rank and its five-year growth's moved to the **Home value** sheet, under the chart, in the same row form. Any other group (a community's size on Nextdoor) keeps a block under its own heading in the schools sheet. Sheet key `ranks` → `schools`.
+**Decisions**: a share, not the test score itself — the percentile is already on every one of the 22,730 profiles, the proficiency figure is not, and the bulk rebuild is the owner's to run. "Top N%" for every row, never "bottom": the page states standing neutrally and does not tell a buyer to think twice about a school (the rule in `profile-build.ts`). `CommunityRank.tile` stays in the schema — build 12's frozen JS still reads it.
+**Verified**: mobile typecheck 0, vitest 881 (explore 20, 3 new), lint clean. NOT seen on a device; an HTML recreation with Sawnee Village's real figures was rendered and sent to the owner.
+**Next steps**: owner looks on the dev client. Open: the schools sheet's "of 146 metro cities" wraps to two lines in its 86 px column, as it did before.
 ## 2026-11-22 10:40 UTC — phase367.1: one accent, and the swipe page — a demo of three choices (nothing built)
 
 **Objective**: owner sent a Rednote post on site palettes ("两个颜色和平相处,一个唱反调,唱反调的那个只放在按钮上") and asked what to borrow, then: "给demo看看 对上面两个改进方向主swipe页面有空间吗". Follows phase367 (entry below).

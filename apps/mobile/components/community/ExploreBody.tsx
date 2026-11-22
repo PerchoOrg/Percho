@@ -25,10 +25,12 @@ import {
 } from "react-native";
 import {
 	NEAR_MILES,
+	againstBaseline,
 	axisTop,
 	localDay,
 	nearbyStops,
-	tileRanks,
+	schoolRanks,
+	topShare,
 	upcomingEvents,
 } from "../../lib/community/explore";
 import { colors, radii } from "../../theme/tokens";
@@ -43,7 +45,7 @@ const GAP = 10;
 
 /** Sheets tall enough to need most of the screen; the rest open half-way. */
 const TALL: ReadonlySet<ExploreSheetKey> = new Set([
-	"ranks",
+	"schools",
 	"homeValue",
 	"dues",
 	"words",
@@ -101,8 +103,9 @@ export function ExploreBody({
 		() => upcomingEvents(profile.events, localDay(new Date())),
 		[profile.events],
 	);
-	const ranks = tileRanks(profile.ranks);
+	const schools = schoolRanks(profile.ranks);
 	const { homeValue, dues, words, verdict } = profile;
+	const againstMetro = homeValue ? againstBaseline(homeValue) : null;
 	const sparkMax = homeValue
 		? axisTop(homeValue.series.flatMap((p) => [p.value, p.baseline]))
 		: 1;
@@ -151,34 +154,38 @@ export function ExploreBody({
 			)}
 
 			<View style={styles.grid}>
-				{ranks.length > 0 && (
+				{/* Schools only (phase368). This was "Where it ranks": three school
+				    ranks and the home value's in one row, each a "#452" over "of
+				    1,220 in GA" — owner 2026-11-22: "看了数字跟没看一样 … school和price
+				    分开吧". A cell now says the school's name and its standing as a
+				    share; the price's standing sits with the price. */}
+				{schools.length > 0 && (
 					<Tile
-						label="Where it ranks"
+						label="Schools nearby"
 						wide
 						width={half}
-						onPress={() => setSheet("ranks")}
+						onPress={() => setSheet("schools")}
 					>
 						<View style={styles.rankCells}>
-							{ranks.map((r) => (
+							{schools.map((r) => (
 								<View key={r.label} style={styles.rankCell}>
-									<Text style={styles.rankFigure}>{r.tile}</Text>
+									<Text style={styles.rankFigure}>{topShare(r)}</Text>
 									<Text style={styles.rankLabel} numberOfLines={1}>
-										{r.label}
+										{r.note ?? r.label}
 									</Text>
 									<Text style={styles.tiny} numberOfLines={1}>
-										{r.of}
+										{r.note ? r.label : r.of}
 									</Text>
 									<RankTrack percentile={r.percentile} small />
 								</View>
 							))}
 						</View>
-						{/* Whose schools these are — nearby, not assigned — belongs
-						    beside the ranks, not behind a tap. */}
-						{!!profile.ranks?.note && (
-							<Text style={styles.tileNote} numberOfLines={2}>
-								{profile.ranks.note}
-							</Text>
-						)}
+						{/* What the share is a share of, and whose schools these are —
+						    nearby, not assigned — beside the figures, not behind a tap. */}
+						<Text style={styles.tileNote} numberOfLines={3}>
+							Among Georgia schools, by state test results.
+							{profile.ranks?.note ? ` ${profile.ranks.note}` : ""}
+						</Text>
 					</Tile>
 				)}
 
@@ -210,6 +217,16 @@ export function ExploreBody({
 							/>
 						</View>
 						<Text style={styles.foot}>{homeValue.change}</Text>
+						{againstMetro && (
+							<Text
+								style={styles.footSecond}
+								numberOfLines={1}
+								adjustsFontSizeToFit
+								minimumFontScale={0.85}
+							>
+								{againstMetro}
+							</Text>
+						)}
 					</Tile>
 				)}
 
@@ -409,6 +426,12 @@ const styles = StyleSheet.create({
 		fontSize: 11.5,
 		color: colors.ink2,
 		marginTop: 5,
+	},
+	footSecond: {
+		...textStyles.footnote,
+		fontSize: 11.5,
+		color: colors.ink2,
+		marginTop: 1,
 	},
 	tiny: { ...textStyles.footnote, fontSize: 10.5, color: colors.ink2 },
 	tileNote: {
