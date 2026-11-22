@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-22
+- **Sawnee Village in Cumming has a neighbourhood film.** It opens on the clubhouse, pool, pickleball courts and fire pit, then the Indian Seats overlook on Sawnee Mountain, Lake Lanier's marina and beach, Cumming City Center's amphitheatre, the aquatic centre, schools and shops nearby.
 - **Easier-to-read pages in the iPhone app.** On a neighbourhood's page the figures now stand out ahead of their labels, and the orange is kept for the findings and for things you can tap. Grey text across the app — captions, sources, small print — is darker and easier to read. The fine print under a side-by-side comparison is ordinary sentences instead of small capitals, and the cards on the You tab have a clearer outline. Arrives with the next app update.
 - **Settingdown Farms' film taken down.** It had no pictures from inside the neighbourhood itself; another Cumming neighbourhood will take its place.
 - **Medlock Bridge in Johns Creek has a neighbourhood film.** It opens on the clubhouse, the pool and tennis courts from the air, the playground, the lake boardwalk and the neighbourhood from above, then Autrey Mill, the Chattahoochee, three river parks, the schools, shops and the cinema nearby.

@@ -23,6 +23,15 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-22 10:23 UTC — phase366.22: Sawnee Village (Cumming builder slot, replacing Settingdown Farms)
+
+**Objective**: owner 2026-11-22 "go" on Sawnee Village, pitched with its community footage already confirmed.
+**Actions**: run `ad7fae03`. The research step's site URL was a 404 (`/community/promenade-at-sawnee-village/`); the builder's live page (`/new-homes/ga/cumming/promenade-at-sawnee-village/14634/`, found on its home page) is now `communities.website`. `ingest` read it and nine home pages (388 photos) before I disabled the remaining 21 home-page sources; 352 were dropped as single homes and the 35 others rejected as duplicates of the amenity photos, fitness-room and living-room interiors, and Cumming City Hall. The builder's own copies are no larger than the listings' (640–1024 px).
+- Community act from two FMLS listing galleries (599 Gavitt Drive and 555 Pearl Street, both listed by The Providence Group Realty; provenance in each photo's attribution): amenity centre from the air, clubhouse front, pool, pickleball courts with the "Sawnee Village" windscreen, fire pit; plus one row of townhomes from Google's "Sawnee Village by The Providence Group".
+- Editorial, film-only: USPS. Photos rejected by what they tell a buyer: a third pool aerial, a flagpole, a distorted 360° panorama, a car park at night, a graduation crowd, a rotisserie case, a school library, warehouse aisles, a second school facade.
+- Assembly `63b4b672`, `cf_stream_uid a3cbfd977470fb1c9d6ed635adc598cf`, 78.5 s, 29 clips; community act 6 clips. **Spend: none** — both Seedance clips (Mary Alice beach, Sawnee summit) already existed. Cover uploaded (`community-covers/cbcdb3ac…/cd59756a….jpg`, the clubhouse). Profile written.
+**Verified**: frames every 2 s; production feed serves the uid (17 community films, Settingdown Farms absent); `/watch/c/sawnee-village` 200.
+**Next steps**: pitch the Johns Creek builder slot, footage confirmed first.
 ## 2026-11-22 10:10 UTC — phase367: iOS visual hierarchy — three readable text tiers, amber for findings and taps, fine print out of the label style
 
 **Objective**: owner 2026-11-22: "Percho iOS app 优化UI视觉层级". No screen named, so I read every screen the communities-only build shows (You, Saved, community page, city page, side-by-side, area page, search sheet) and looked for places where the order things read in is not the order they matter in. Before/after, side by side: `https://www.percho.co/demos/ui-hierarchy-v1`.
