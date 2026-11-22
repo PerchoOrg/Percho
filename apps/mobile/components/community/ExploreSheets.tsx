@@ -5,7 +5,10 @@
  * The page is one screen because nobody reads eight sections (owner
  * 2026-11-15); the charts that prove each finding live here, on demand.
  */
-import type { CommunityProfile } from "@percho/shared/community-profile";
+import type {
+	CommunityProfile,
+	CommunityRank,
+} from "@percho/shared/community-profile";
 import { useState } from "react";
 import {
 	Linking,
@@ -21,7 +24,11 @@ import {
 	type NearbyStop,
 	type NearbyView,
 	axisTop,
+	homeRanks,
+	otherRanks,
 	rankGroups,
+	schoolRanks,
+	topShare,
 	usdShort,
 } from "../../lib/community/explore";
 import { colors, radii } from "../../theme/tokens";
@@ -29,7 +36,7 @@ import { textStyles } from "../../theme/typography";
 import { Lines, RankTrack, StopStrip } from "./ExploreCharts";
 
 export type ExploreSheetKey =
-	| "ranks"
+	| "schools"
 	| "homeValue"
 	| "dues"
 	| "nearby"
@@ -39,48 +46,72 @@ export type ExploreSheetKey =
 const open = (url: string) => void Linking.openURL(url).catch(() => {});
 const LINK_MARK = " ↗";
 
-function Ranks({ ranks }: { ranks: NonNullable<CommunityProfile["ranks"]> }) {
+/**
+ * Rows of standing: what is ranked, a dot on the line of everyone ranked, and
+ * the rank as a share ("Top 38%") over what it is a share of.
+ *
+ * `named` rows are schools — their `note` is the school's name and leads, with
+ * the level beneath; any other row leads with its label.
+ */
+function RankRows({
+	rows,
+	named,
+}: { rows: readonly CommunityRank[]; named?: boolean }) {
 	return (
 		<>
-			<Text style={styles.title}>Where it ranks</Text>
-			<View style={styles.block}>
-				{rankGroups(ranks.rows).map((g) => (
-					<View key={g.group}>
-						<Text style={styles.group}>{g.group}</Text>
-						{g.rows.map((r) => (
-							<View key={r.label} style={styles.rankRow}>
-								<View style={styles.rankLeft}>
-									<Text style={styles.rowTitle}>{r.label}</Text>
-									{!!r.note && <Text style={styles.rowNote}>{r.note}</Text>}
-								</View>
-								<View style={styles.rankTrack}>
-									<RankTrack
-										percentile={r.percentile}
-										{...(r.percentile2 !== undefined
-											? { percentile2: r.percentile2 }
-											: {})}
-									/>
-								</View>
-								<View style={styles.rankRight}>
-									<Text style={styles.rankValue}>{r.rank}</Text>
-									<Text style={styles.rowNote}>{r.of}</Text>
-								</View>
-							</View>
-						))}
+			{rows.map((r) => (
+				<View key={`${r.group}-${r.label}`} style={styles.rankRow}>
+					<View style={styles.rankLeft}>
+						<Text style={styles.rowTitle}>
+							{named ? (r.note ?? r.label) : r.label}
+						</Text>
+						{named
+							? !!r.note && <Text style={styles.rowNote}>{r.label}</Text>
+							: !!r.note && <Text style={styles.rowNote}>{r.note}</Text>}
 					</View>
-				))}
-				<View style={styles.rankRow}>
-					<View style={styles.rankLeft} />
-					<View style={[styles.rankTrack, styles.ends]}>
-						<Text style={styles.rowNote}>lowest</Text>
-						<Text style={styles.rowNote}>highest</Text>
+					<View style={styles.rankTrack}>
+						<RankTrack
+							percentile={r.percentile}
+							{...(r.percentile2 !== undefined
+								? { percentile2: r.percentile2 }
+								: {})}
+						/>
 					</View>
-					<View style={styles.rankRight} />
+					<View style={styles.rankRight}>
+						<Text style={styles.rankValue}>{topShare(r)}</Text>
+						<Text style={styles.rowNote}>{r.of}</Text>
+					</View>
 				</View>
-				<Text style={styles.caption}>
-					The dot is where it stands; the tick is the median.
-				</Text>
+			))}
+			<View style={styles.rankRow}>
+				<View style={styles.rankLeft} />
+				<View style={[styles.rankTrack, styles.ends]}>
+					<Text style={styles.rowNote}>lowest</Text>
+					<Text style={styles.rowNote}>highest</Text>
+				</View>
+				<View style={styles.rankRight} />
 			</View>
+		</>
+	);
+}
+
+const TRACK_KEY = "The dot is where it stands; the tick is the median.";
+
+function Schools({ ranks }: { ranks: NonNullable<CommunityProfile["ranks"]> }) {
+	const schools = schoolRanks(ranks);
+	const rest = rankGroups(otherRanks(ranks));
+	return (
+		<>
+			<Text style={styles.title}>Schools nearby</Text>
+			{schools.length > 0 && (
+				<View style={styles.block}>
+					<RankRows rows={schools} named />
+					<Text style={styles.caption}>
+						Among Georgia schools at that level, by state test results.{" "}
+						{TRACK_KEY}
+					</Text>
+				</View>
+			)}
 			{(ranks.schools?.length ?? 0) > 0 && (
 				<View style={styles.links}>
 					{ranks.schools?.map((s) => (
@@ -99,13 +130,26 @@ function Ranks({ ranks }: { ranks: NonNullable<CommunityProfile["ranks"]> }) {
 				</View>
 			)}
 			{!!ranks.note && <Text style={styles.caption}>{ranks.note}</Text>}
+			{/* What else a profile ranks — a community's size among its city's —
+			    keeps a place under its own heading. */}
+			{rest.map((g) => (
+				<View key={g.group} style={[styles.block, styles.blockAfter]}>
+					<Text style={styles.group}>{g.group}</Text>
+					<RankRows rows={g.rows} />
+				</View>
+			))}
 		</>
 	);
 }
 
 function HomeValue({
 	homeValue,
-}: { homeValue: NonNullable<CommunityProfile["homeValue"]> }) {
+	standing,
+}: {
+	homeValue: NonNullable<CommunityProfile["homeValue"]>;
+	/** Where the value and its growth stand among their peers. */
+	standing: readonly CommunityRank[];
+}) {
 	const { series, holding } = homeValue;
 	const values = series.map((p) => p.value);
 	const baseline = series.map((p) => p.baseline);
@@ -177,6 +221,12 @@ function HomeValue({
 					<Text style={styles.rowNote}>{homeValue.baseline}</Text>
 				</View>
 			</View>
+			{standing.length > 0 && (
+				<View style={styles.block}>
+					<RankRows rows={standing} />
+					<Text style={styles.caption}>{TRACK_KEY}</Text>
+				</View>
+			)}
 			{holding && (
 				<View style={styles.block}>
 					<Text style={styles.big}>{holding.display}</Text>
@@ -379,9 +429,14 @@ export function ExploreSheet({
 			contentContainerStyle={styles.body}
 			showsVerticalScrollIndicator={false}
 		>
-			{which === "ranks" && profile.ranks && <Ranks ranks={profile.ranks} />}
+			{which === "schools" && profile.ranks && (
+				<Schools ranks={profile.ranks} />
+			)}
 			{which === "homeValue" && profile.homeValue && (
-				<HomeValue homeValue={profile.homeValue} />
+				<HomeValue
+					homeValue={profile.homeValue}
+					standing={homeRanks(profile.ranks)}
+				/>
 			)}
 			{which === "dues" && profile.dues && <Dues dues={profile.dues} />}
 			{which === "nearby" && nearby && <Nearby view={nearby} />}
@@ -406,6 +461,8 @@ const styles = StyleSheet.create({
 		padding: 14,
 		marginBottom: 10,
 	},
+	// A block that follows loose text (a caption, a row of links), not another block.
+	blockAfter: { marginTop: 12 },
 	group: {
 		...textStyles.caption,
 		fontSize: 10.5,
@@ -447,7 +504,7 @@ const styles = StyleSheet.create({
 		gap: 10,
 		paddingVertical: 7,
 	},
-	rankLeft: { width: 96 },
+	rankLeft: { width: 104 },
 	rankTrack: { flex: 1 },
 	rankRight: { width: 86, alignItems: "flex-end" },
 	rankValue: {

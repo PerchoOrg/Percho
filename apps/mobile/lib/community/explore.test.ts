@@ -2,16 +2,20 @@ import type { CommunityProfile } from "@percho/shared/community-profile";
 import { describe, expect, it } from "vitest";
 import {
 	CURVE_STEPS,
+	againstBaseline,
 	axisTop,
 	dotAt,
+	homeRanks,
 	localDay,
 	milesOf,
 	monotoneSlopes,
 	nearbyStops,
+	otherRanks,
 	pointAt,
 	rankGroups,
+	schoolRanks,
 	strokes,
-	tileRanks,
+	topShare,
 	upcomingEvents,
 	usdShort,
 } from "./explore";
@@ -82,14 +86,38 @@ describe("ranks", () => {
 		{ group: "People", label: "Extra", tile: "#9" },
 	].map((r) => ({ rank: "#1", of: "of 2", percentile: 50, ...r }));
 
-	it("puts the first four tile ranks on the tile", () => {
-		expect(tileRanks({ rows }).map((r) => r.label)).toEqual([
+	it("keeps schools, prices and the rest apart", () => {
+		// Owner 2026-11-22: "school和price分开吧".
+		expect(schoolRanks({ rows }).map((r) => r.label)).toEqual([
 			"Elementary",
 			"Middle",
-			"Home value",
-			"Size",
 		]);
-		expect(tileRanks(undefined)).toEqual([]);
+		expect(homeRanks({ rows }).map((r) => r.label)).toEqual([
+			"Home value",
+			"5-year growth",
+		]);
+		expect(otherRanks({ rows }).map((r) => r.label)).toEqual(["Size", "Extra"]);
+		expect(schoolRanks(undefined)).toEqual([]);
+		expect(homeRanks(undefined)).toEqual([]);
+	});
+
+	it("says a rank as a share someone can read", () => {
+		// Sawnee Village's tile read "#452 / of 1,220 in GA" — owner 2026-11-22:
+		// "看了数字跟没看一样".
+		const row = (rank: string, of: string, percentile = 50) => ({
+			rank,
+			of,
+			percentile,
+		});
+		expect(topShare(row("#452", "of 1,220 in GA"))).toBe("Top 38%");
+		expect(topShare(row("#11", "of 146 metro cities"))).toBe("Top 8%");
+		// Never better than the rank: #3 of 1,220 is 0.25%, not "Top 0%".
+		expect(topShare(row("#3", "of 1,220 in GA"))).toBe("Top 1%");
+		// Two schools in one row: the worse of the two.
+		expect(topShare(row("#3 · #6", "of 1,220 in GA"))).toBe("Top 1%");
+		expect(topShare(row("#1,100", "of 1,220 in GA"))).toBe("Top 91%");
+		// A rank that is not a number falls back to the share ranked below.
+		expect(topShare(row("top tier", "statewide", 93.2))).toBe("Top 7%");
 	});
 
 	it("groups rows under their headings in profile order", () => {
@@ -104,6 +132,38 @@ describe("ranks", () => {
 		expect(dotAt(99.8)).toBe("97%");
 		expect(dotAt(0)).toBe("3%");
 		expect(dotAt(42)).toBe("42%");
+	});
+});
+
+describe("againstBaseline", () => {
+	const value = (v: number, baseline: number) =>
+		({
+			area: "Cumming",
+			display: "$586K",
+			change: "+58% since 2020",
+			headline: "Up 58% since 2020.",
+			baseline: "Metro Atlanta",
+			series: [
+				{ year: 2025, value: 600_000, baseline: 380_000 },
+				{ year: 2026, value: v, baseline },
+			],
+		}) satisfies NonNullable<CommunityProfile["homeValue"]>;
+
+	it("says how far the newest value sits from its baseline", () => {
+		expect(againstBaseline(value(586_393, 375_898))).toBe(
+			"56% above Metro Atlanta",
+		);
+		expect(againstBaseline(value(300_000, 375_000))).toBe(
+			"20% below Metro Atlanta",
+		);
+		expect(againstBaseline(value(380_000, 375_000))).toBe(
+			"In line with Metro Atlanta",
+		);
+	});
+
+	it("says nothing without a baseline to compare", () => {
+		expect(againstBaseline(value(586_393, 0))).toBeNull();
+		expect(againstBaseline({ ...value(1, 1), series: [] })).toBeNull();
 	});
 });
 
