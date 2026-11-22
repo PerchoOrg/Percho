@@ -226,6 +226,35 @@ async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Respon
 }
 
 /**
+ * True when a request for one page was answered with a different one.
+ *
+ * A builder retires a community's page and redirects it to the site's home
+ * page; the home page shows every community the builder sells. Harvest Park's
+ * `/harvest-park` did exactly that, and 26 photos of other subdivisions —
+ * one with "Ward's Crossing" on its entrance sign — were filed as Harvest
+ * Park's own (phase366.18).
+ *
+ * The test is the page's own name: the last segment of the path we asked for
+ * must still be in the path we got. A move to https, to `www`, to a trailing
+ * slash or to a longer path that keeps the name is the same page; a request
+ * for a site's root names no page and is never "away". PURE.
+ */
+export function redirectedAway(requestedUrl: string, finalUrl: string): boolean {
+  let slug: string;
+  let finalPath: string;
+  try {
+    slug = new URL(requestedUrl).pathname.split('/').filter(Boolean).at(-1) ?? '';
+    finalPath = new URL(finalUrl || requestedUrl).pathname;
+  } catch {
+    return false;
+  }
+  if (!slug) return false;
+  return !decodeURIComponent(finalPath)
+    .toLowerCase()
+    .includes(decodeURIComponent(slug).toLowerCase());
+}
+
+/**
  * A page's HTML, fetched the way this module fetches everything else.
  *
  * Exported for the ingest step's link harvest (`tour-steps/ingest.ts`), which
@@ -237,7 +266,7 @@ async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Respon
 export async function fetchPageHtml(pageUrl: string): Promise<string | null> {
   try {
     const res = await fetchWithTimeout(pageUrl);
-    if (!res.ok) return null;
+    if (!res.ok || redirectedAway(pageUrl, res.url)) return null;
     return await res.text();
   } catch {
     return null;
@@ -287,6 +316,12 @@ export async function collectPagePhotos(
     const res = await fetchWithTimeout(pageUrl);
     if (!res.ok) {
       return { error: 'fetch_failed', message: `${pageUrl} returned HTTP ${res.status}.` };
+    }
+    if (redirectedAway(pageUrl, res.url)) {
+      return {
+        error: 'fetch_failed',
+        message: `${pageUrl} now redirects to ${res.url} — not this community's page.`,
+      };
     }
     html = await res.text();
   } catch (err) {

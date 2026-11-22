@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-22 07:02 UTC — phase366.18: Harvest Park (Suwanee); a retired builder page is not the community's; Edinburgh re-cut for my own mistake
+
+**Objective**: #10 of the batch. Owner picked the Providence Group's Harvest Park over Laurel View ("第一个") after I corrected the shortlist: D.R. Horton's Harvest Park is in Decatur, not Suwanee.
+**Issues**:
+- The research step's site URL, `theprovidencegroup.com/harvest-park`, is retired and redirects to the builder's home page. `ingest` followed the redirect and filed 26 home-page photos — every community the builder sells, one with "Ward's Crossing" on its entrance sign, one a rendering — as Harvest Park's own. Caught on the contact sheet. **Fix**: `redirectedAway(requested, final)` in `ingest-page-photos.ts` — a page whose own name (last path segment) is gone from the final URL is not ingested or expanded; a root URL that forwards (an HOA domain to its portal) is unaffected. All 31 photos under that POI rejected; `communities.website` cleared.
+- **My mistake on Edinburgh (phase366.17)**: I rejected North Gwinnett High's two stadium photos (`8a320bec` "low resolution", `9be38413` "players in the frame") — the very photos added in phase366.5 after the owner's "high school和照片没对应上" — and shipped the auditorium interior (`e5632242`) he had objected to. Restored both to `approved`, rejected the auditorium ("editorial:"), re-cut Edinburgh. No other live community film shows the auditorium (16 checked). Lesson: before rejecting a photo of a place another film uses, read why it is there.
+**Actions**: run `3463cfcc`. No HOA site exists; the clubhouse and pool appear only in MLS listing galleries (not ours to use), so there is no community act. The matched "own place", White Street Park / Harvest Farm, is the City of Suwanee's park the neighbourhood was built beside — its link moved from `amenities` to `outdoor` so it plays under its own name. Editorial, film-only: The Home Depot, USPS, Crunch Fitness. Photos rejected: bare ground (2), an empty barn interior, a duplicate park sign, sun flare, two 800x800 Raik frames.
+- Harvest Park: assembly `15e714d1`, `cf_stream_uid 94c802fe31a69050fae363e0798141e4`, 58.5 s, 20 clips. **Spend: 1 Seedance ≈ $0.14** (PlayTown at night; Sims Lake reused). Cover uploaded (`community-covers/7a649128…/d3a47cbe….jpg`, the Harvest Farm frame). Profile written.
+- Edinburgh re-cut: assembly `ef0da480`, `cf_stream_uid c3801402f91de202eeb5627615ec5fe6`, 77.1 s, 25 clips; the stadium aerial and dusk frames replace the auditorium; no new spend.
+**Verified**: vitest 23 in `ingest-page-photos.test.ts` (3 new), typecheck 0; frames every 2 s on both; production feed serves both uids (16 community films).
+**Next steps**: pitch #11 (Johns Creek — Medlock Bridge).
+
 ## 2026-11-22 05:28 UTC — phase366.17: Edinburgh (Suwanee flagship)
 
 **Objective**: #9 of the batch. Owner: "下一个".
