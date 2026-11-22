@@ -280,11 +280,10 @@ const styles = StyleSheet.create({
 		textAlign: "right",
 	},
 	rowNote: {
-		...textStyles.caption,
+		...textStyles.note,
 		color: colors.ink3,
 		marginTop: -3,
 		marginBottom: 3,
-		lineHeight: 14,
 	},
 	chips: { flexDirection: "row", gap: 6, marginTop: 10 },
 	chip: {
@@ -295,17 +294,12 @@ const styles = StyleSheet.create({
 	},
 	chipText: { ...textStyles.caption, color: colors.ink2 },
 	chipValue: { color: colors.ink, fontWeight: "700" },
-	source: {
-		...textStyles.caption,
-		color: colors.ink3,
-		marginTop: 12,
-		lineHeight: 15,
-	},
+	source: { ...textStyles.note, color: colors.ink3, marginTop: 12 },
 
 	// ── Ranking ───────────────────────────────────────────────────────────────
 	rankTitle: {
 		...textStyles.caption,
-		color: colors.ink3,
+		color: colors.ink2,
 		textTransform: "uppercase",
 		letterSpacing: 0.6,
 		paddingTop: 26,
@@ -332,7 +326,7 @@ const styles = StyleSheet.create({
 	rankNameHere: { fontWeight: "700" },
 	rankValue: { ...textStyles.headline, color: colors.ink2 },
 	estimateNote: {
-		...textStyles.caption,
+		...textStyles.note,
 		color: colors.ink3,
 		paddingHorizontal: 8,
 		paddingTop: 10,

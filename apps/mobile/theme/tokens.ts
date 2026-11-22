@@ -20,8 +20,27 @@ export const colors = {
 	surface2: "#F3EDE4", // Recessed wells, inputs
 	border: "#EADFD0", // Hairline dividers
 	ink: "#2B2116", // Primary text
-	ink2: "#8A7358", // Secondary text
-	ink3: "#B9A88F", // Placeholder text
+	/**
+	 * Secondary and tertiary text (phase367). Three tiers a reader can tell
+	 * apart AND read: 14.5 / 5.3 / 3.2 against `bg`.
+	 *
+	 * The spec's #8A7358 / #B9A88F were AA-checked against the first paper
+	 * (#FAF6F0). After the page was neutralised to #F7F5F0 they measured 4.1
+	 * and 2.1 — and #B9A88F, named for placeholders, had come to carry real
+	 * text: sources, footnotes, the compare table's notes. Same hues, lowered.
+	 * `ink2` is AA (≥ 4.5) on `bg`, `surface` and `surface2`; `ink3` is ≥ 3 on
+	 * all three, so anything a buyer must read to understand a figure is
+	 * `ink2`, never `ink3`.
+	 */
+	ink2: "#76634B",
+	ink3: "#9D8562",
+	/**
+	 * A chart's context series — the state beside the city, the metro beside
+	 * the ZIP, the cost lines that are not the largest. The value `ink3` had
+	 * before phase367: a context bar that darkened with the text would close on
+	 * the amber series it sits behind.
+	 */
+	seriesMuted: "#B9A88F",
 	accent: "#B45309", // Brand amber — section head, active, links
 	accentDeep: "#7C3A05", // Pressed amber
 	pos: "#1B7A4D", // match · yes

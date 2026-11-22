@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho iOS — visual hierarchy, before and after</title>
+<style>
+@font-face { font-family: "DM Serif Display"; src: url("/demos/feed-chrome-v1/DMSerifDisplay-Regular.ttf"); }
+:root{
+  --bg:#F7F5F0; --surface:#FFFFFF; --surface2:#F3EDE4; --border:#EADFD0;
+  --ink:#2B2116; --accent:#B45309; --pos:#1B7A4D; --neg:#B3402A; --cta:#2B2116;
+  --green:#0E6B57; --posBg:#E2EDE7; --posInk:#0E5C48;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --ui: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+}
+/* The two states. Everything below reads these, so one markup draws both. */
+.before{ --ink2:#8A7358; --ink3:#B9A88F; --label:var(--accent); --score:var(--accent); --rowlabel:var(--ink3); --place:var(--ink3); --edge:transparent; --undo:600 }
+.after { --ink2:#76634B; --ink3:#9D8562; --label:var(--ink2);   --score:var(--ink2);   --rowlabel:var(--ink2); --place:var(--ink2); --edge:var(--border); --undo:400 }
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px 16px 60px}
+.nav{max-width:1240px;margin:0 auto 20px;font:400 14px/1.6 var(--ui)}
+.nav h1{font:400 26px "DM Serif Display",serif;color:var(--green);margin-bottom:4px}
+.nav p{max-width:860px;color:#4A4038}
+.rules{max-width:1240px;margin:0 auto 26px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.rule{background:#fff;border-radius:16px;padding:14px 16px;font:400 13px/1.5 var(--ui);color:#4A4038}
+.rule b{display:block;font:600 14px var(--ui);color:#2B2116;margin-bottom:4px}
+.ladder{display:flex;gap:6px;margin-top:10px}
+.ladder div{flex:1;border-radius:8px;background:#F7F5F0;padding:6px 8px;font:600 12px var(--ui)}
+.ladder small{display:block;font:400 10.5px var(--ui);color:#4A4038}
+.row{max-width:1240px;margin:0 auto 34px;display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.col{width:390px}
+.col h3{font:600 15px var(--ui);color:#2B2116;text-align:center;margin-bottom:10px}
+.col h3 small{font:400 13px var(--ui);color:#5C5046;margin-left:6px}
+.notes{flex:1;min-width:280px;background:#fff;border-radius:16px;padding:16px 18px;font:400 13px/1.55 var(--ui);color:#4A4038;margin-top:28px}
+.notes h4{font:600 11px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:#8A7358;margin-bottom:6px}
+.notes ul{margin:0 0 0 16px}
+.notes li{margin-bottom:6px}
+.notes b{color:#2B2116}
+.phone{width:390px;background:var(--bg);border-radius:44px;box-shadow:0 12px 40px rgba(0,0,0,.18),0 0 0 8px #1C1A17;position:relative;overflow:hidden}
+
+/* ── community page ─────────────────────────────────────────────── */
+.hero{height:250px;position:relative;background:#2E2118 center/cover}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,16,13,.30),transparent 30%,transparent 62%,rgba(8,16,13,.62))}
+.hero .top{position:absolute;z-index:2;top:50px;left:16px;right:16px;display:flex;justify-content:space-between}
+.hero .top div{display:flex;gap:8px}
+.disc{width:36px;height:36px;border-radius:18px;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center}
+.disc svg{width:18px;height:18px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.strip{position:absolute;z-index:2;left:0;right:0;bottom:12px;display:flex;gap:6px;padding:0 16px;overflow:hidden}
+.strip span{flex:none;font:600 12px var(--ui);color:#fff;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.30);border-radius:999px;padding:5px 10px}
+.strip span.on{background:rgba(255,255,255,.92);color:var(--ink);border-color:transparent}
+.body{padding:20px 18px 28px}
+.headline{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.name{font:700 28px var(--serif);color:var(--ink)}
+.place{font:400 14px var(--ui);color:var(--ink2)}
+.verdict{display:flex;gap:10px;margin-top:14px}
+.verdict>div{flex:1;display:flex;flex-direction:column;gap:7px}
+.vl{display:flex;gap:7px;align-items:flex-start;font:600 13px/17px var(--ui);color:var(--ink)}
+.vl i{flex:none;width:16px;height:16px;border-radius:8px;margin-top:1px;font:700 10.5px/16px var(--ui);color:#fff;text-align:center;font-style:normal}
+.vl i.g{background:var(--pos)} .vl i.w{background:var(--accent)}
+.grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.tile{background:var(--surface);border:.5px solid var(--border);border-radius:16px;padding:10px 12px 12px;width:172px}
+.tile.wide{width:354px}
+.thead{display:flex;justify-content:space-between;align-items:center}
+.tlabel{font:600 10.5px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:var(--label)}
+.chev{font:400 18px/18px var(--ui);color:var(--ink3)}
+.figure{font:700 24px var(--serif);color:var(--ink);margin-top:4px}
+.figure small{font:400 12px var(--ui);color:var(--ink2)}
+.foot{font:400 11.5px var(--ui);color:var(--ink2);margin-top:5px}
+.ranks{display:flex;gap:10px;margin-top:6px}
+.ranks>div{flex:1;min-width:0}
+.ranks b{display:block;font:700 20px var(--serif);color:var(--accent)}
+.ranks span{display:block;font:600 11.5px var(--ui);color:var(--ink);margin-top:1px;white-space:nowrap}
+.ranks small{display:block;font:400 10.5px var(--ui);color:var(--ink2);white-space:nowrap}
+.rt{position:relative;height:12px;margin-top:2px}
+.rt::before{content:"";position:absolute;left:0;right:0;top:5px;height:2px;border-radius:1px;background:var(--border)}
+.rt::after{content:"";position:absolute;left:50%;top:2px;bottom:2px;width:2px;margin-left:-1px;background:var(--ink2)}
+.rt i{position:absolute;top:2px;width:8px;height:8px;border-radius:4px;margin-left:-4px;background:var(--accent)}
+.tnote{font:400 10.5px/14px var(--ui);color:var(--ink2);margin-top:6px}
+.covers{margin-top:7px;display:flex;flex-direction:column;gap:3px;font:500 12px var(--ui);color:var(--ink)}
+.covers .off{color:var(--ink2)}
+.covers b.y{color:var(--pos)} .covers b.n{color:var(--neg)}
+.mini{position:relative;height:14px;margin-top:6px}
+.mini::before{content:"";position:absolute;left:0;right:0;top:6.5px;height:1px;background:var(--border)}
+.mini .band{position:absolute;left:0;top:0;bottom:0;width:60%;border-radius:4px;background:var(--accent);opacity:.08}
+.mini i{position:absolute;top:4px;width:6px;height:6px;border-radius:3px;margin-left:-3px;background:var(--accent);opacity:.75}
+.miniaxis{display:flex;justify-content:space-between;font:400 10px var(--ui);color:var(--ink2);margin-top:1px}
+.evs{display:flex;gap:8px;margin-top:7px}
+.evs>div{flex:1;min-width:0;background:var(--surface2);border-radius:10px;padding:7px 8px}
+.evs small{display:block;font:600 9.5px var(--ui);letter-spacing:.8px;text-transform:uppercase;color:var(--label)}
+.evs b{display:block;font:600 12px/15px var(--ui);color:var(--ink);margin-top:1px}
+.pills{display:flex;gap:7px;margin:14px -18px 0;padding:0 18px;overflow:hidden}
+.pills span{flex:none;font:500 13px var(--ui);color:var(--ink);background:var(--surface);border:.5px solid var(--border);border-radius:999px;padding:8px 12px}
+.pills span b{color:var(--accent);font-weight:600}
+/* The metro's line: a chart's context series keeps its tone in both. */
+.base{stroke:#B9A88F}
+.rev{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:16px;font:400 13px var(--ui);color:var(--ink2)}
+.rev b{font:500 14px var(--ui);color:var(--accent)}
+.src{font:400 12px/18px var(--ui);color:var(--ink3);margin-top:22px}
+
+/* ── You tab ────────────────────────────────────────────────────── */
+.you{padding:62px 20px 28px}
+.ptitle{font:700 28px var(--serif);color:var(--ink);margin-bottom:12px}
+.persona{background:var(--cta);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.persona small{font:600 11px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.72)}
+.persona b{font:700 22px var(--serif);color:#fff}
+.sec{font:600 11px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:var(--accent);margin:22px 0 8px}
+.hstrip{display:flex;gap:10px;margin:0 -20px;padding:0 20px;overflow:hidden}
+.recent{flex:none;width:124px}
+.recent .th{height:96px;border-radius:14px;background:var(--surface2) center/cover;position:relative;margin-bottom:6px}
+.recent .th em{position:absolute;top:8px;left:8px;font:600 10px var(--ui);letter-spacing:1.2px;font-style:normal;background:rgba(250,246,240,.92);border-radius:999px;padding:3px 7px}
+.recent .th em.y{color:var(--pos)} .recent .th em.n{color:var(--neg)}
+.recent b{display:block;font:600 13px var(--ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent small{display:block;font:400 12px var(--ui);color:var(--ink2);margin-top:4px}
+.recent a{display:block;font:400 13px var(--ui);font-weight:var(--undo);color:var(--accent);padding:10px 0 6px}
+.achip{flex:none;background:var(--surface);border:.5px solid var(--edge);border-radius:16px;padding:10px 14px;min-width:120px}
+.achip b{font:600 15px var(--ui);color:var(--ink)}
+.achip b span{font:400 13px var(--ui);color:var(--score)}
+.meter{height:4px;border-radius:2px;background:var(--surface2);margin-top:6px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--pos)}
+.amore{flex:none;align-self:center;font:600 13px var(--ui);color:var(--accent);padding:0 4px}
+.ycard{background:var(--surface);border:.5px solid var(--edge);border-radius:14px;padding:6px 14px}
+.ghead{font:600 13px var(--ui);color:var(--ink2);padding:10px 0 2px}
+.prio{display:flex;justify-content:space-between;align-items:center;padding:10px 0;font:600 15px var(--ui);color:var(--ink)}
+.dots{display:flex;gap:7px}
+.dots i{width:14px;height:14px;border-radius:7px;background:var(--surface2);border:1px solid var(--border)}
+.dots i.on{background:var(--accent);border-color:var(--accent)}
+.dots i.here{border-color:var(--ink)}
+.yrow{display:flex;justify-content:space-between;align-items:center;min-height:44px;padding:10px 0;border-top:.5px solid var(--border);font:400 15px var(--ui);color:var(--ink)}
+.yrow.first{border-top:0}
+.yrow.danger{color:var(--neg)}
+.yrow small{display:block;font:400 13px var(--ui);color:var(--ink2);margin-top:2px}
+.yrow .ch{font:400 22px/24px var(--ui);color:var(--ink3)}
+.switch{width:51px;height:31px;border-radius:16px;background:var(--pos);position:relative}
+.switch::after{content:"";position:absolute;right:2px;top:2px;width:27px;height:27px;border-radius:14px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.yfoot{margin-top:26px;text-align:center;font:400 12px/1.35 var(--ui);color:var(--ink3);display:flex;flex-direction:column;gap:4px}
+.yfoot a{color:var(--ink2)}
+
+/* ── Side by side (areas) ───────────────────────────────────────── */
+.cmp{padding:58px 20px 30px}
+.back{font:600 15px var(--ui);color:var(--accent);padding:10px 0 12px}
+.csub{font:400 13px var(--ui);color:var(--ink2);margin-top:4px}
+.take{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin:16px 0 20px;display:flex;flex-direction:column;gap:8px}
+.take small{font:600 11px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:var(--accent)}
+.take p{font:400 17.5px/25px var(--serif);color:var(--ink)}
+.take li{font:400 13px/18px var(--ui);color:var(--ink2);margin-left:14px}
+.chead{display:flex;gap:8px;margin-bottom:8px;text-align:center}
+.chead div{flex:1}
+.chead b{display:block;font:600 15px var(--ui);color:var(--ink)}
+.chead small{font:600 11px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:var(--ink3)}
+.crow{margin-top:14px}
+.clabel{font:600 11px var(--ui);letter-spacing:.6px;text-transform:uppercase;color:var(--rowlabel)}
+.before .fine{font:600 11px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:var(--ink3)}
+.after  .fine{font:400 12px/16px var(--ui);color:var(--ink3)}
+.cnote{margin-top:1px}
+.cells{display:flex;gap:8px;margin-top:6px}
+.cells div{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px 0;text-align:center;font:600 15px var(--ui);color:var(--ink)}
+.cells div.best{background:var(--posBg);border-color:var(--posBg);color:var(--posInk)}
+.before .cfoot{line-height:15px}
+.cfoot{margin-top:20px}
+
+/* ── city page head ─────────────────────────────────────────────── */
+.tagline{font:400 16px/23px var(--ui);color:var(--ink);margin-top:10px}
+.loc{font:400 13px var(--ui);color:var(--place);margin-top:4px}
+@media (max-width:900px){ .rules{grid-template-columns:1fr 1fr} }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>iOS visual hierarchy — before and after</h1>
+  <p>Same screens, same content, same layout. What changed is which things read first: the three tiers of text, what amber is allowed to mean, and how fine print is set. The feed card, the feed header and the tab bar are untouched.</p>
+</div>
+
+<div class="rules">
+  <div class="rule"><b>1 · Three tiers you can read</b>Secondary and tertiary text were set against the first paper colour; on today's they measured 4.1 and 2.1 to 1. Now 5.3 and 3.2.
+    <div class="ladder before"><div style="color:#2B2116">Aa<small>14.5</small></div><div style="color:var(--ink2)">Aa<small>4.1</small></div><div style="color:var(--ink3)">Aa<small>2.1</small></div></div>
+    <div class="ladder after"><div style="color:#2B2116">Aa<small>14.5</small></div><div style="color:var(--ink2)">Aa<small>5.3</small></div><div style="color:var(--ink3)">Aa<small>3.2</small></div></div>
+  </div>
+  <div class="rule"><b>2 · Amber is a finding or a tap</b>Tile labels, event dates and the area percentage were amber too, so the figures they name came second. Labels are quiet now; amber is a rank, the community's own line, or something to press.</div>
+  <div class="rule"><b>3 · A sentence is not a label</b>Footnotes and disclosures borrowed the section-label style: tracked capitals, in the faintest colour. They are 12pt sentence case now. What a figure needs to be understood moved up a tier.</div>
+  <div class="rule"><b>4 · A card has an edge</b>White on the paper is 1.09 to 1. The You tab's cards were the only ones without the hairline every other card carries.</div>
+</div>
+
+<!-- ───────────── templates ───────────── -->
+<template id="t-community">
+  <div class="hero" style="background-image:url('https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/windward.jpg')">
+    <div class="top">
+      <div class="disc"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></div>
+      <div>
+        <div class="disc"><svg viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 13v6h14v-6"/></svg></div>
+        <div class="disc"><svg viewBox="0 0 24 24"><path d="M7 4h10v16l-5-4-5 4z"/></svg></div>
+      </div>
+    </div>
+    <div class="strip"><span class="on">Amenities</span><span>Lake</span><span>Schools</span><span>Dining</span><span>Shopping</span><span>Parks</span></div>
+  </div>
+  <div class="body">
+    <div class="headline"><div class="name">Windward</div><div class="place">Alpharetta, GA</div></div>
+    <div class="verdict">
+      <div>
+        <div class="vl"><i class="g">✓</i>Top-6 elementaries</div>
+        <div class="vl"><i class="g">✓</i>Private 200-acre lake</div>
+        <div class="vl"><i class="g">✓</i>Errands under 2 mi</div>
+      </div>
+      <div>
+        <div class="vl"><i class="w">!</i>Pool is a private club</div>
+        <div class="vl"><i class="w">!</i>4,589 neighbours</div>
+        <div class="vl"><i class="w">!</i>HOA approves remodels</div>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="tile wide">
+        <div class="thead"><span class="tlabel">Where it ranks</span><span class="chev">›</span></div>
+        <div class="ranks">
+          <div><b>#3–6</b><span>Elementary</span><small>of 1,220 in GA</small><div class="rt"><i style="left:99%"></i></div></div>
+          <div><b>#7</b><span>Middle</span><small>of 472 in GA</small><div class="rt"><i style="left:98%"></i></div></div>
+          <div><b>#31</b><span>High</span><small>of 443 in GA</small><div class="rt"><i style="left:93%"></i></div></div>
+          <div><b>#7</b><span>Home value</span><small>of 203 metro ZIPs</small><div class="rt"><i style="left:97%"></i></div></div>
+        </div>
+        <div class="tnote">Two elementaries serve Windward; the address decides. Ask the district.</div>
+      </div>
+      <div class="tile">
+        <div class="thead"><span class="tlabel">Home value</span><span class="chev">›</span></div>
+        <div class="figure">$747K</div>
+        <svg viewBox="0 0 148 34" width="148" height="34" style="margin-top:6px;display:block;overflow:visible">
+          <polyline class="base" fill="none" stroke-width="1.5" points="0,25.7 14.8,25 29.6,24.1 44.4,23.5 59.2,22.8 74,20.3 88.8,17.5 103.6,17.5 118.4,17.1 133.2,17.6 148,17.9"/>
+          <polyline fill="none" stroke="#B45309" stroke-width="2" points="0,16.2 14.8,15.4 29.6,14.8 44.4,14.5 59.2,13.9 74,9.9 88.8,4.4 103.6,3.2 118.4,1.2 133.2,1.3 148,1.7"/>
+          <circle cx="148" cy="1.7" r="4" fill="#B45309" stroke="#fff" stroke-width="2"/>
+        </svg>
+        <div class="foot">+60% since 2020</div>
+      </div>
+      <div class="tile">
+        <div class="thead"><span class="tlabel">Dues</span><span class="chev">›</span></div>
+        <div class="figure">$824<small>&nbsp; a year</small></div>
+        <div class="covers"><span><b class="y">✓ </b>Lake, parks, launch</span><span class="off"><b class="n">✕ </b>Pool, tennis, golf</span></div>
+      </div>
+      <div class="tile">
+        <div class="thead"><span class="tlabel">Nearby</span><span class="chev">›</span></div>
+        <div class="figure">12 of 15</div>
+        <div class="mini"><div class="band"></div><i style="left:4%"></i><i style="left:9%"></i><i style="left:22%"></i><i style="left:27%"></i><i style="left:31%"></i><i style="left:38%"></i><i style="left:44%"></i><i style="left:52%"></i><i style="left:57%"></i><i style="left:74%"></i><i style="left:96%"></i></div>
+        <div class="miniaxis"><span>home</span><span>3 mi</span><span>5</span></div>
+        <div class="foot">stops within 3 miles</div>
+      </div>
+      <div class="tile">
+        <div class="thead"><span class="tlabel">Residents say</span><span class="chev">›</span></div>
+        <div class="figure">“Convenient”</div>
+        <div class="foot">1 in 6 communities say it</div>
+      </div>
+      <div class="tile wide">
+        <div class="thead"><span class="tlabel">Coming up</span><span class="chev">›</span></div>
+        <div class="evs">
+          <div><small>Sat, Nov 22</small><b>Lighting of Avalon</b></div>
+          <div><small>Nov 22 – Jan 18</small><b>Avalon on Ice</b></div>
+          <div><small>Dec 4 – Jan 4</small><b>Lights on the Loop</b></div>
+        </div>
+      </div>
+    </div>
+    <div class="pills"><span>Website<b> ↗</b></span><span>Rules &amp; dues<b> ↗</b></span><span>Nextdoor<b> ↗</b></span><span>Reddit<b> ↗</b></span><span>Google Maps<b> ↗</b></span></div>
+    <div class="rev"><span>No resident reviews yet.</span><b>Write the first ›</b></div>
+    <div class="src">Sources &amp; photo credits ›</div>
+  </div>
+</template>
+
+<template id="t-you">
+  <div class="you">
+    <div class="ptitle">You</div>
+    <div class="persona"><small>Your Percho type</small><b>Lake-Life Trail Walker</b></div>
+    <div class="sec">Recent</div>
+    <div class="hstrip">
+      <div class="recent"><div class="th" style="background-image:url('https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/windward.jpg')"><em class="y">LIKED</em></div><b>Windward</b><small>Alpharetta</small><a>Change my mind</a></div>
+      <div class="recent"><div class="th" style="background:#7C8E7A"><em class="n">PASSED</em></div><b>Medlock Bridge</b><small>Johns Creek</small><a>Change my mind</a></div>
+      <div class="recent"><div class="th" style="background:#A58C6C"><em class="y">LIKED</em></div><b>Harvest Park</b><small>Suwanee</small><a>Change my mind</a></div>
+      <div class="recent"><div class="th" style="background:#6E7F92"><em class="y">LIKED</em></div><b>Edinburgh</b><small>Suwanee</small><a>Change my mind</a></div>
+    </div>
+    <div class="sec">Your areas</div>
+    <div class="hstrip">
+      <div class="achip"><b>Alpharetta <span>82%</span></b><div class="meter"><i style="width:82%"></i></div></div>
+      <div class="achip"><b>Suwanee <span>40%</span></b><div class="meter"><i style="width:40%"></i></div></div>
+      <div class="achip"><b>Johns Creek <span>12%</span></b><div class="meter"><i style="width:12%"></i></div></div>
+    </div>
+    <div class="sec">Your preferences</div>
+    <div class="ycard">
+      <div class="ghead">You set</div>
+      <div class="prio">Schools<div class="dots"><i class="here"></i><i class="on"></i><i class="on"></i><i class="on here"></i></div></div>
+      <div class="prio">What it really costs<div class="dots"><i></i><i class="on here"></i><i></i><i></i></div></div>
+      <div class="prio">Getting around<div class="dots"><i class="here"></i><i></i><i></i><i></i></div></div>
+      <div class="prio">The community itself<div class="dots"><i></i><i class="on"></i><i class="on here"></i><i></i></div></div>
+      <div class="yrow danger">Reset preferences</div>
+    </div>
+    <div class="sec">Settings</div>
+    <div class="ycard"><div class="yrow first">Sound autoplay<div class="switch"></div></div></div>
+    <div class="sec">Account</div>
+    <div class="ycard">
+      <div class="yrow first"><div>buyer@example.com<small>Signed in with email</small></div></div>
+      <div class="yrow">Change password<span class="ch">›</span></div>
+      <div class="yrow">Sign out</div>
+    </div>
+    <div class="yfoot">
+      <div><a>Privacy</a> · <a>Terms</a> · <a>Contact &amp; support</a> · <a>Delete account</a></div>
+      <div>Music: “Carefree”, “Cheery Monday”, “Wallpaper” … by Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License</div>
+      <div>Film photos credited on each neighbourhood page.</div>
+      <div>Percho 1.0.1 (build 11)</div>
+    </div>
+  </div>
+</template>
+
+<template id="t-compare">
+  <div class="cmp">
+    <div class="back">‹ Back</div>
+    <div class="ptitle" style="margin-bottom:0">Side by side</div>
+    <div class="csub">The same $500k home, in each of your areas.</div>
+    <div class="take"><small>Percho's take</small><p>Forsyth costs the least to carry and tests highest.</p><ul><li>Cherokee is within $40 a month of it.</li><li>Fulton's schools figure is a county average of very different districts.</li></ul></div>
+    <div class="chead"><div><b>Forsyth</b><small>County</small></div><div><b>Cherokee</b><small>County</small></div><div><b>Fulton</b><small>County</small></div></div>
+    <div class="crow"><div class="clabel">True cost / month</div><div class="fine cnote">tax + utilities + trash + insurance, same $500k home</div><div class="cells"><div class="best">$652*</div><div>$691*</div><div>$804*</div></div></div>
+    <div class="crow"><div class="clabel">Schools</div><div class="fine cnote">district average, % proficient</div><div class="cells"><div class="best">71%</div><div>58%</div><div>49%</div></div></div>
+    <div class="crow"><div class="clabel">Property tax / year</div><div class="fine cnote">on a $500k home, homestead exemption applied</div><div class="cells"><div class="best">$4,310</div><div>$4,480</div><div>$5,690</div></div></div>
+    <div class="fine cfoot">Green marks the better figure in a row. The take at the top is our read of these rows and nothing else — how much schools weigh against cost is still your call, and no row below marks an overall winner. * true cost is still our estimate.</div>
+  </div>
+</template>
+
+<template id="t-city">
+  <div class="body" style="padding-top:26px">
+    <div class="headline"><div class="name">Suwanee</div><div class="place">Gwinnett County, GA</div></div>
+    <div class="tagline">A railroad stop that built itself a town centre, and a park in front of it.</div>
+    <div class="loc">31 miles north-east of downtown Atlanta, on I-85.</div>
+    <div class="sec" style="font-size:12px;margin:26px 0 10px">At a glance</div>
+    <div class="grid" style="margin-top:0;gap:8px">
+      <div class="tile" style="border-radius:14px;padding:12px;width:173px"><div style="font:400 12px/15px var(--ui);color:var(--ink2)">Median home value</div><div class="figure" style="font-size:22px;line-height:27px;margin-top:4px">$528K</div><div style="font:400 11px var(--ui);color:var(--ink3);margin-top:4px">Georgia $323K · ACS 2023</div></div>
+      <div class="tile" style="border-radius:14px;padding:12px;width:173px"><div style="font:400 12px/15px var(--ui);color:var(--ink2)">Median household income</div><div class="figure" style="font-size:22px;line-height:27px;margin-top:4px">$110K</div><div style="font:400 11px var(--ui);color:var(--ink3);margin-top:4px">Georgia $75K · ACS 2023</div></div>
+    </div>
+  </div>
+</template>
+
+<!-- ───────────── rows ───────────── -->
+<div class="row">
+  <div class="col"><h3>Before</h3><div class="phone before" data-t="t-community"></div></div>
+  <div class="col"><h3>After</h3><div class="phone after" data-t="t-community"></div></div>
+  <div class="notes">
+    <h4>Community page</h4>
+    <ul>
+      <li><b>Tile labels are grey.</b> Six amber labels led the grid; now the figure in each tile does, and the amber left is the ranks and the community's line on the chart.</li>
+      <li><b>Dates in “Coming up”</b> follow the labels.</li>
+      <li><b>“Alpharetta, GA”, the tile captions, “No resident reviews yet”</b> — secondary text, one step darker.</li>
+      <li><b>“Sources &amp; photo credits”, the chevrons</b> — tertiary, now legible.</li>
+      <li>Charts are as they were: the metro's line and the grey bars keep their tone, so the community's amber still leads.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col"><h3>Before</h3><div class="phone before" data-t="t-you"></div></div>
+  <div class="col"><h3>After</h3><div class="phone after" data-t="t-you"></div></div>
+  <div class="notes">
+    <h4>You tab</h4>
+    <ul>
+      <li><b>Cards and area chips have a hairline edge</b>, like every other card in the app.</li>
+      <li><b>The area percentage is grey.</b> On this tab amber is what can be tapped: “Change my mind”, the dots.</li>
+      <li><b>“Change my mind” is regular weight.</b> One sits under every card; in bold the row of them outweighed the names above.</li>
+      <li><b>The credits at the foot</b> were 2.1 to 1 — a licence line nobody could read.</li>
+    </ul>
+    <p style="margin-top:8px;font-size:12px;color:#8A7358">Names, percentages and the account are placeholders.</p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col"><h3>Before</h3><div class="phone before" data-t="t-compare"></div></div>
+  <div class="col"><h3>After</h3><div class="phone after" data-t="t-compare"></div></div>
+  <div class="notes">
+    <h4>Side by side · area page · Saved</h4>
+    <ul>
+      <li><b>Row notes and the closing disclosure</b> were set in the label style — tracked capitals, four lines of them. Sentence case, 12pt.</li>
+      <li><b>Row labels</b> say what the figures are, so they are secondary, not tertiary.</li>
+      <li>The same fix on the area page's source line and estimate note, and on Saved's “* water and trash are still our estimate”.</li>
+    </ul>
+    <p style="margin-top:8px;font-size:12px;color:#8A7358">Figures here are placeholders for layout.</p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col"><h3>Before</h3><div class="phone before" data-t="t-city"></div></div>
+  <div class="col"><h3>After</h3><div class="phone after" data-t="t-city"></div></div>
+  <div class="notes">
+    <h4>City page</h4>
+    <ul>
+      <li><b>Where the city is</b> — the line under the tagline — is content, not a footnote: secondary.</li>
+      <li>Tile labels here were already grey; the community page now matches.</li>
+    </ul>
+    <p style="margin-top:8px;font-size:12px;color:#8A7358">Copy and figures are placeholders for layout.</p>
+  </div>
+</div>
+
+<script>
+for (const phone of document.querySelectorAll(".phone")) {
+  phone.appendChild(document.getElementById(phone.dataset.t).content.cloneNode(true));
+}
+</script>
+</body>
+</html>

@@ -915,11 +915,10 @@ const styles = StyleSheet.create({
 	looseTxt: { ...textStyles.footnote, color: colors.ink2, flex: 1 },
 	rowAction: { ...textStyles.footnote, color: colors.accent },
 	note: {
-		...textStyles.caption,
-		color: colors.ink3,
+		...textStyles.note,
+		color: colors.ink2,
 		paddingHorizontal: 20,
 		paddingTop: 12,
-		lineHeight: 15,
 	},
 
 	backdrop: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },

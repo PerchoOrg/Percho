@@ -55,7 +55,8 @@ Owner 定案:前期不上 listing feed,先充分了解 buyer,地理上从大到�
 | `--surface` | #FFFFFF | 卡片、sheet、stat tile |
 | `--surface-2` | #F3EDE4 | 凹陷底、输入框、次级 well |
 | `--border` | #EADFD0 | hairline 分隔 |
-| `--ink` / `--ink-2` / `--ink-3` | #2B2116 / #8A7358 / #B9A88F | 主文 / 次文 / 占位 |
+| `--ink` / `--ink-2` / `--ink-3` | #2B2116 / #76634B / #9D8562 | 主文 / 次文 / 三级(来源、脚注、占位)— phase367 起:对当前纸色 14.5 / 5.3 / 3.2,原值 #8A7358 / #B9A88F 实测只有 4.1 / 2.1 |
+| `--series-muted` | #B9A88F | 图表里的对照系列(州、都会区、非最大项)— 只用于图形,不用于文字(phase367) |
 | `--accent` / `--accent-deep` | #B45309 / #7C3A05 | 品牌琥珀 — section head、active、链接 / pressed |
 | `--pos` / `--neg` | #1B7A4D / #B3402A | match·yes / no·destructive |
 | `--cta` | #2B2116 | 主 CTA 填充 = 墨块(不是琥珀 — 琥珀只做点缀) |
@@ -76,7 +77,8 @@ Owner 定案:前期不上 listing feed,先充分了解 buyer,地理上从大到�
 | Headline | SF Pro 15 / semibold | 行标题、按钮 |
 | Body | SF Pro 15 / regular | 正文 |
 | Footnote | SF Pro 13 / regular | 地址、说明 |
-| Caption | SF Pro 11 / semibold, tracking +1.2, uppercase | SECTION HEAD、kind chip、tag |
+| Caption | SF Pro 11 / semibold, tracking +1.2, uppercase | SECTION HEAD、kind chip、tag — 只用于两三个词的标签 |
+| Note | SF Pro 12 / regular, line 16, sentence case | 来源、脚注、披露等整句小字(phase367;整句不得用 Caption) |
 
 > **注:Serif 只用于"值得慢慢看"的内容:**价格、ask 问题、页面/sheet 标题。规格数据(bd/ba/sqft)、按钮、导航一律 SF Pro。这是 Warm Editorial 的核心手法 — serif 是重点照明,不是墙面漆。
 

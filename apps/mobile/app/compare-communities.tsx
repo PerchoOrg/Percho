@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
 		paddingVertical: 12,
 	},
 	btnTxt: { ...textStyles.headline, color: colors.surface },
-	factsHead: { ...textStyles.caption, color: colors.ink3, marginBottom: 10 },
+	factsHead: { ...textStyles.caption, color: colors.ink2, marginBottom: 10 },
 	headerRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
 	// Row/section geometry lives in `components/compare/CompareSection.tsx`
 	// since phase281 — one renderer for homes and communities.
@@ -268,10 +268,5 @@ const styles = StyleSheet.create({
 		color: colors.ink2,
 		textAlign: "center",
 	},
-	foot: {
-		...textStyles.caption,
-		color: colors.ink3,
-		marginTop: 18,
-		lineHeight: 15,
-	},
+	foot: { ...textStyles.note, color: colors.ink3, marginTop: 18 },
 });
