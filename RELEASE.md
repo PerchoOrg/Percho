@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-22
+- **Schools and nearby places are easier to read on a neighbourhood's page.** Each nearby school is one line — its full name and where it stands ("Top 38%"). Nearby now names a place of each kind and how far it is ("Costco Wholesale · 0.8 mi") instead of a count. Arrives with the next app update.
 - **One colour for what matters in the iPhone app.** The orange on neighbourhood, city and You pages is now the same green as the tab bar, so the app no longer changes colour when you open a neighbourhood. Green marks what you can tap and the key figures; section headings are grey. On a film card, Explore is now the only white button — the place name, the sound / share / save controls and the label above the name sit back on dark glass. Arrives with the next app update.
 - **Schools and prices read at a glance.** A neighbourhood's page used to show ranks like "#452 of 1,220". It now names each nearby school and says where it stands — "Top 38%" among Georgia schools — and the home value says how it compares with metro Atlanta ("56% above"). Schools and prices each have their own card.
 - **Sawnee Village in Cumming has a neighbourhood film.** It opens on the clubhouse, pool, pickleball courts and fire pit, then the Indian Seats overlook on Sawnee Mountain, Lake Lanier's marina and beach, Cumming City Center's amphitheatre, the aquatic centre, schools and shops nearby.

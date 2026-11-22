@@ -44,8 +44,6 @@ export interface NearbyStop {
 
 export interface NearbyView {
 	stops: NearbyStop[];
-	/** How many of `stops` are within `NEAR_MILES`. */
-	near: number;
 	/** The strip's rows, in a fixed order, empty rows dropped. */
 	rows: { group: string; stops: NearbyStop[] }[];
 	/** Where the axis ends, in whole miles. */
@@ -85,13 +83,37 @@ export function nearbyStops(
 	stops.sort((a, b) => a.miles - b.miles);
 	return {
 		stops,
-		near: stops.filter((s) => s.miles <= NEAR_MILES).length,
 		rows: GROUP_ORDER.map((group) => ({
 			group,
 			stops: stops.filter((s) => s.group === group),
 		})).filter((r) => r.stops.length > 0),
 		axisMiles: Math.max(5, Math.ceil(stops[stops.length - 1]?.miles ?? 0)),
 	};
+}
+
+/**
+ * The Nearby tile's rows: one place of each kind with its distance, the
+ * closest the film visits — "Errands · Costco Wholesale · 0.8 mi".
+ *
+ * The tile used to print "15 of 15" over "stops within 3 miles", a count of
+ * the film's own stops that told the owner nothing (2026-11-22: "nearby 15 of
+ * 15是啥意思 太confuse了"). A named place and how far it is reads on its own.
+ * Schools have their own tile and "More" is not a kind, so both are left to
+ * the sheet unless nothing else was filmed.
+ */
+export function closeBy(
+	view: NearbyView,
+): { group: string; name: string; miles: number }[] {
+	const kinds = view.rows.filter(
+		(r) => r.group !== "Schools" && r.group !== "More",
+	);
+	return (kinds.length > 0 ? kinds : view.rows).flatMap((r) => {
+		// `stops` is sorted by distance, and a row keeps that order.
+		const first = r.stops[0];
+		return first
+			? [{ group: r.group, name: first.name, miles: first.miles }]
+			: [];
+	});
 }
 
 // ─── ranks ──────────────────────────────────────────────────────────────────
@@ -123,6 +145,30 @@ export function otherRanks(ranks: CommunityProfile["ranks"]): CommunityRank[] {
 	return (ranks?.rows ?? []).filter(
 		(r) => r.group !== SCHOOLS_GROUP && r.group !== HOMES_GROUP,
 	);
+}
+
+const LEVELS = new Set(["Elementary", "Middle", "High"]);
+/** A note that already says what kind of school it is. */
+const NAMES_ITS_KIND =
+	/\b(school|academy|elementary|middle|high|primary|charter|magnet|institute|ES|MS|HS)\b/i;
+
+/**
+ * A school row's full name on one line: "Cumming Elementary School".
+ *
+ * The stored row keeps the name short and the level apart ("Cumming" /
+ * "Elementary" — `shortSchool` in `profile-build.ts` strips the ending), which
+ * the tile printed on two lines per school. Owner 2026-11-22: "schools 太多行了
+ * 学校名字用全称在一行里". This puts the ending back, and only that ending: a
+ * name that already says its kind ("Matt Elementary", "Alpharetta HS",
+ * "Alliance Academy") is left alone, and a note that is a remark rather than
+ * a name ("two serve it") follows the level instead of being dressed as one.
+ */
+export function schoolName(row: Pick<CommunityRank, "label" | "note">): string {
+	const note = row.note?.trim();
+	if (!note) return row.label;
+	if (/^[a-z]/.test(note)) return `${row.label} · ${note}`;
+	if (NAMES_ITS_KIND.test(note) || !LEVELS.has(row.label)) return note;
+	return `${note} ${row.label} School`;
 }
 
 const firstCount = (text: string): number | null => {
