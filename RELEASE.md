@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-21
+- **Edinburgh in Suwanee has a neighbourhood film.** It opens on the community pool and slide, then the Chattahoochee river parks, Suwanee's Town Center, Sims Lake, the Bear's Best golf course next door, cafés, schools and shops nearby.
 - **Settingdown Farms in Cumming has a neighbourhood film.** New homes by David Weekley in north Forsyth: Lake Lanier's Charleston Park at sunrise, the Sawnee Mountain summit, four parks within four miles, the schools, shops and places to eat nearby.
 - **Windermere in Cumming has a neighbourhood film.** It opens at the Lodge, the pools with their slide and fountain, and the Davis Love III golf course, then the river parks, Lake Lanier's Mary Alice beach at sunset, the schools, cafés and shops nearby.
 - **St Marlo Country Club's film re-made** without the clubhouse interiors and the low-resolution shots.
