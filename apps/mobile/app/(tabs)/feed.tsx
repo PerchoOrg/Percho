@@ -1036,7 +1036,7 @@ const styles = StyleSheet.create({
 		borderLeftColor: colors.ink,
 	},
 	sheet: { paddingHorizontal: 20, paddingTop: 8, gap: 8 },
-	sheetEyebrow: { ...textStyles.caption, color: colors.accent },
+	sheetEyebrow: { ...textStyles.caption, color: colors.ink2 },
 	sheetTitle: { ...textStyles.title2, color: colors.ink },
 	sheetPrice: { ...textStyles.display, color: colors.ink },
 	sheetBody: { ...textStyles.body, color: colors.ink2 },

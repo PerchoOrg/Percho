@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
 	sectionHead: {
 		...textStyles.caption,
 		fontSize: 12,
-		color: colors.accent,
+		color: colors.ink2,
 		marginTop: 26,
 		marginBottom: 10,
 	},

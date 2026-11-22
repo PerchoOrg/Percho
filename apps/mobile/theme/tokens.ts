@@ -38,14 +38,27 @@ export const colors = {
 	 * A chart's context series — the state beside the city, the metro beside
 	 * the ZIP, the cost lines that are not the largest. The value `ink3` had
 	 * before phase367: a context bar that darkened with the text would close on
-	 * the amber series it sits behind.
+	 * the lead series it sits behind.
 	 */
 	seriesMuted: "#B9A88F",
-	accent: "#B45309", // Brand amber — section head, active, links
-	accentDeep: "#7C3A05", // Pressed amber
+	/**
+	 * The one accent (phase367.2, owner: 「都做」): something to press, or the
+	 * finding itself — a rank, the community's own line on a chart. Forest
+	 * green, the value `redline.accent` and the tab bar already wore; the
+	 * paper pages were amber (#B45309, spec-v3) until then, so a tap on Explore
+	 * changed the app's colour. Section heads are `ink2`, not this.
+	 */
+	accent: "#0E6B57",
+	accentDeep: "#0A5343", // Pressed accent
+	/**
+	 * "Watch" — the ! beside a verdict line, what the dues do NOT cover. A
+	 * meaning of its own, like `pos` and `neg`, and never the accent: it is the
+	 * amber the accent used to be, kept for the one place amber meant caution.
+	 */
+	watch: "#B45309",
 	pos: "#1B7A4D", // match · yes
 	neg: "#B3402A", // no · destructive
-	cta: "#2B2116", // Primary CTA fill = ink block (amber is accent only)
+	cta: "#2B2116", // Primary CTA fill = ink block (the accent is never a fill)
 	/** Light chip/badge/button laid over a photo (§0.3). */
 	glass: "rgba(250,246,240,0.92)",
 	/**
@@ -67,10 +80,10 @@ export const colors = {
 	/** Hairline arcs in the `CardSurface` motif — see `cardSurfaces`. */
 	cardPlainRing: "rgba(255,255,255,0.05)",
 	/**
-	 * `accent` lightened for use ON a dark card. The amber (#B45309) is AA against
-	 * the light `bg`, but on a media-less card's own warm ramp it drops to a
-	 * barely-legible smudge (caught reviewing the milestone eyebrow). Same hue,
-	 * raised luminance.
+	 * Amber for use ON a dark card. #B45309 — the chrome accent until
+	 * phase367.2, `watch` now — is AA against the light `bg`, but on a
+	 * media-less card's own warm ramp it drops to a barely-legible smudge
+	 * (caught reviewing the milestone eyebrow). Same hue, raised luminance.
 	 */
 	accentOnCard: "#F0A94B",
 	/** Dimming backdrop behind a bottom sheet / modal. */
@@ -101,6 +114,10 @@ export const colors = {
  * forbids ("Forest green is the only accent", "Do not add orange or blue
  * accents"). So the green never leaves these tokens, and the amber never enters
  * a redline face.
+ *
+ * (phase367.2: the chrome's accent is this same green now — `colors.accent` —
+ * and the amber survives only as `colors.watch`. The palettes stay separate
+ * for the reason below: each is transcribed from its own sheet.)
  *
  * Values transcribed from the redline's `--*` block, unchanged.
  */

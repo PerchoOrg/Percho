@@ -16,7 +16,7 @@
  * Explore CTA — same position, size, colour, style. The parity assertions
  * read all three faces and compare the shared numbers:
  *
- *   · badge        top 12 / left 12, padding 7/10, rgba(255,255,255,0.92)
+ *   · badge        top 12 / left 12, padding 7/10, dark glass (phase367.2)
  *   · save disc    top 12 / right 12, 40px, rgba(255,255,255,0.75)
  *   · explore      white 15/500 "Explore →", right-aligned
  */
@@ -145,11 +145,17 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 		expect(AREA).not.toContain(disc);
 		expect(AREA).toContain("<CardCorner");
 		// The shared corner wears the BADGE's fill since phase175 — the two sit
-		// on one row, so any difference in the white reads as a mistake. Since
-		// phase174 the LISTING face draws no white at all up there, so the
-		// community card's place pill is the one that has to match.
-		expect(CORNER).toContain('backgroundColor: "rgba(255,255,255,0.92)"');
-		expect(COMMUNITY).toContain('backgroundColor: "rgba(255,255,255,0.92)"');
+		// on one row, so any difference between them reads as a mistake. Since
+		// phase174 the LISTING face draws nothing up there, so the community
+		// card's place pill and the CITY badge are the ones that have to match.
+		// Dark glass since phase367.2: the white is Explore's alone.
+		const glass = "backgroundColor: redline.photoPill";
+		expect(CORNER).toContain(glass);
+		expect(COMMUNITY).toContain(glass);
+		expect(AREA).toContain(glass);
+		expect(COMMUNITY).toMatch(
+			/ctaPill: \{[^}]*backgroundColor: "rgba\(255,255,255,0\.92\)"/,
+		);
 		expect(COMMUNITY).not.toContain(disc);
 
 		// Same explore CTA — label copy, size, weight, colour.

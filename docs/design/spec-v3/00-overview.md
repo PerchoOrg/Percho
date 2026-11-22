@@ -57,7 +57,8 @@ Owner 定案:前期不上 listing feed,先充分了解 buyer,地理上从大到�
 | `--border` | #EADFD0 | hairline 分隔 |
 | `--ink` / `--ink-2` / `--ink-3` | #2B2116 / #76634B / #9D8562 | 主文 / 次文 / 三级(来源、脚注、占位)— phase367 起:对当前纸色 14.5 / 5.3 / 3.2,原值 #8A7358 / #B9A88F 实测只有 4.1 / 2.1 |
 | `--series-muted` | #B9A88F | 图表里的对照系列(州、都会区、非最大项)— 只用于图形,不用于文字(phase367) |
-| `--accent` / `--accent-deep` | #B45309 / #7C3A05 | 品牌琥珀 — section head、active、链接 / pressed |
+| `--accent` / `--accent-deep` | #0E6B57 / #0A5343 | 唯一强调色(森林绿,与 tab bar / 卡片 redline 同值)— 可点的东西、结论本身(排名、图表主线)/ pressed。phase367.2 前是琥珀 #B45309;section head 改用 `--ink-2` |
+| `--watch` | #B45309 | 语义色"留意"(结论行的 !、物业费不含的项)— 不是强调色 |
 | `--pos` / `--neg` | #1B7A4D / #B3402A | match·yes / no·destructive |
 | `--cta` | #2B2116 | 主 CTA 填充 = 墨块(不是琥珀 — 琥珀只做点缀) |
 | `--glass` | rgba(250,246,240,0.92) | 叠在照片上的浅色 chip/badge/按钮 |

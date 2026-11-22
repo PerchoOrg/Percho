@@ -140,11 +140,12 @@ describe("cardSurfaces", () => {
 		expect(ratio).toBeGreaterThanOrEqual(4.5);
 	});
 
-	it("the on-card accent is lighter than the chrome accent", () => {
-		// `accent` (#B45309) is AA on the light `bg` but nearly illegible on the
-		// milestone's copper ramp. `accentOnCard` is the same hue, raised.
+	it("the on-card amber is lighter than the paper's", () => {
+		// #B45309 — the chrome accent until phase367.2, `watch` since — is AA on
+		// the light `bg` but nearly illegible on the milestone's copper ramp.
+		// `accentOnCard` is the same hue, raised.
 		expect(luma(rgb(colors.accentOnCard))).toBeGreaterThan(
-			luma(rgb(colors.accent)) + 30,
+			luma(rgb(colors.watch)) + 30,
 		);
 		// Still amber, not washed out to cream.
 		expect(chroma(rgb(colors.accentOnCard))).toBeGreaterThanOrEqual(60);

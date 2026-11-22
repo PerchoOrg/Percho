@@ -261,7 +261,7 @@ function Dues({ dues }: { dues: NonNullable<CommunityProfile["dues"]> }) {
 					))}
 				</View>
 				<View style={[styles.block, styles.column]}>
-					<Text style={[styles.columnHead, styles.accent]}>
+					<Text style={[styles.columnHead, styles.watch]}>
 						Separate, optional
 					</Text>
 					<Text style={styles.amount}>
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
 	column: { flex: 1, padding: 12 },
 	columnHead: { ...textStyles.caption, fontSize: 10.5 },
 	pos: { color: colors.pos },
-	accent: { color: colors.accent },
+	watch: { color: colors.watch },
 	amount: {
 		...textStyles.title2,
 		fontSize: 20,
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
 		...textStyles.caption,
 		fontSize: 9.5,
 		letterSpacing: 0.8,
-		color: colors.accent,
+		color: colors.ink2,
 	},
 	dateDay: { ...textStyles.title2, fontSize: 19, color: colors.ink },
 });

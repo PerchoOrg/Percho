@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
 	line: { ...textStyles.footnote, color: colors.onCardDim },
 	sectionHead: {
 		...textStyles.caption,
-		color: colors.accent,
+		color: colors.ink2,
 		marginTop: 22,
 		marginBottom: 8,
 	},
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
 		minWidth: 120,
 	},
 	areaName: { ...textStyles.headline, color: colors.ink },
-	/** A figure, so not amber: on this tab amber is what can be tapped. */
+	/** A figure, so not the accent: on this tab the accent is what can be tapped. */
 	areaScore: { ...textStyles.footnote, color: colors.ink2 },
 	areaMore: { justifyContent: "center", paddingHorizontal: 4 },
 	areaMoreTxt: {

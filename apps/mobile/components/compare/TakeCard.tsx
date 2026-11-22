@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
 		gap: 8,
 		marginBottom: 20,
 	},
-	head: { ...textStyles.caption, color: colors.accent },
+	head: { ...textStyles.caption, color: colors.ink2 },
 	lead: { ...textStyles.serifBody, color: colors.ink, lineHeight: 25 },
 	pointRow: { flexDirection: "row", gap: 8, paddingRight: 8 },
 	bullet: { ...textStyles.footnote, color: colors.ink3 },

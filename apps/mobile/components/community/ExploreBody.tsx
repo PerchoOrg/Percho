@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
 		marginTop: 1,
 	},
 	markGood: { backgroundColor: colors.pos },
-	markWatch: { backgroundColor: colors.accent },
+	markWatch: { backgroundColor: colors.watch },
 	markText: {
 		...textStyles.footnote,
 		fontSize: 10.5,
@@ -406,9 +406,9 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 	},
 	/**
-	 * `ink2`, not amber (phase367). Six amber labels were the loudest thing in
-	 * the grid, ahead of the figures they name. Amber on this page is now the
-	 * finding itself — a rank, the community's line on a chart.
+	 * `ink2`, not the accent (phase367). Six coloured labels were the loudest
+	 * thing in the grid, ahead of the figures they name. The accent on this
+	 * page is the finding itself — a rank, the community's line on a chart.
 	 */
 	tileLabel: { ...textStyles.caption, fontSize: 10.5, color: colors.ink2 },
 	chevron: {

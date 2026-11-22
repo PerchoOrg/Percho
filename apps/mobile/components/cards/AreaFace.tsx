@@ -194,17 +194,19 @@ function ArrowRightIcon() {
 const styles = StyleSheet.create({
 	face: { flex: 1, backgroundColor: redline.card, overflow: "hidden" },
 	badgeSlot: { position: "absolute", top: 12, left: 12, zIndex: 2 },
-	/** Frosted CITY badge — the listing card's badge, relabelled. */
+	/** CITY badge — dark glass, the corner capsule's fill (phase367.2). */
 	badge: {
 		alignSelf: "flex-start",
-		backgroundColor: "rgba(255,255,255,0.92)",
+		backgroundColor: redline.photoPill,
 		borderRadius: redlineRadii.badge,
 		paddingVertical: 7,
 		paddingHorizontal: 10,
 		overflow: "hidden",
 	},
-	/** Neutral ink, not green — same rule as the LISTING badge. */
-	badgeLabel: { ...redlineText.listingCard.badge, color: "#181B18" },
+	badgeLabel: {
+		...redlineText.listingCard.badge,
+		color: redline.onPhoto,
+	},
 	/**
 	 * Bottom scrim — `overflow: hidden` on `face` clips it to the card's
 	 * rounded corner. Over a `CardSurface` (no media) it reads as a deeper

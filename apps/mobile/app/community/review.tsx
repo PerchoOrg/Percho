@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
 	body: { paddingHorizontal: 20 },
 	cancel: { alignSelf: "flex-end", padding: 6 },
 	cancelTxt: { ...textStyles.body, color: colors.accent },
-	eyebrow: { ...textStyles.caption, color: colors.accent, marginTop: 8 },
+	eyebrow: { ...textStyles.caption, color: colors.ink2, marginTop: 8 },
 	title: { ...textStyles.title1, color: colors.ink, marginTop: 6 },
 	sub: {
 		...textStyles.footnote,
