@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-22 08:13 UTC — phase366.19: Harvest Park with a community act from a listing gallery — HELD for the owner's look
+
+**Objective**: owner on Harvest Park's film (no community act): "mls也没关系 先让我看看 没有小区内部的素材不行" — a film without footage from inside the community is not acceptable; MLS listing photos may supply it; he wants to see it first.
+**Actions**:
+- Public listing pages: most refuse an automated client (403 / bot challenge — not worked around); one retired listing URL now serves a list of other listings. `southmark-properties.realgeeks.com/listings/subdivision/Harvest-Park/` lists both Harvest Parks; two listings are Suwanee's. The gallery of 3383 Acorn Harvest Lane (listing courtesy of Atlanta Communities; images on the FMLS feed path `gafmls1`, 1024 px) ends with the community: pool from the air, pool from the deck, the central green with a row of homes. Its Town Center photos are the city's, not used.
+- Ingested those three with `ingest-community-photos.ts` ("Harvest Park Pool", "Harvest Park Green"), attribution naming the listing, the broker and the page. Tagged, enhanced (Real-ESRGAN x2 → 2048 px), planned. No Seedance on them (the film's two Seedance clips already existed).
+- **Fix**: the plan measured clip length on the pre-enhance size while the gate and the render use the enhanced file — the three photos got the 2-second floor and the act ran 4.5 s. `shots.ts` now hands the plan the enhanced size when the enhancement is approved; the act is 9.5 s.
+- Assembly `371814a7`, `cf_stream_uid 748e5dfc8c83f5caf3a8719d7b7aaf5a`, 68.5 s, 23 clips. **Held**: its status is set to `failed` with `error = "held for owner preview …"` so the feed keeps serving `15e714d1` (`94c802fe…`); `tour_assemblies.status` has no draft value. To publish: set it back to `ready`.
+**Risks to put to the owner**: these are FMLS listing photos. The signed FMLS agreement (memory: effective 2026-10-12) limits the Vendor System to percho.co — iOS needs an amendment — and §4.11/§4.4 forbid AI on listing data; this path runs the Gemini tagger and an AI upscaler on them. Copyright in the photos is the listing broker's/photographer's. Windward's amenity photos (2026-09-03) came the same way.
+**Also unresolved**: Arbors at Richland Creek and Settingdown Farms have no community act either; Edinburgh has one pool shot.
+**Verified**: vitest 440 in lib/poi, typecheck 0; frames of the act viewed; production feed still serves the old uid and not the preview.
+
 ## 2026-11-22 07:02 UTC — phase366.18: Harvest Park (Suwanee); a retired builder page is not the community's; Edinburgh re-cut for my own mistake
 
 **Objective**: #10 of the batch. Owner picked the Providence Group's Harvest Park over Laurel View ("第一个") after I corrected the shortlist: D.R. Horton's Harvest Park is in Decatur, not Suwanee.

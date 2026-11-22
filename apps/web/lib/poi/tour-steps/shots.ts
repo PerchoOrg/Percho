@@ -545,8 +545,14 @@ export async function computeFinalShots(
   // photo_id → annotation already stored at the current CURATOR_VERSION.
   const cached = new Map<string, PhotoAnnotation>();
   for (const p of usable) {
-    const widthPx = p.width_px ?? 0;
-    const heightPx = p.height_px ?? 0;
+    // The size the render will read, as at the resolution gate above. The plan
+    // shortens a low-resolution clip to hide it, and was still measuring the
+    // pre-enhance file: three 1024px photos of Harvest Park's pool and green,
+    // rendered from their 2048px enhanced copies, got the 2-second floor each
+    // and the community act ran 4.5 seconds (phase366.19).
+    const enhancedSize = p.enhanced_status === 'approved' ? p.enhanced_meta : null;
+    const widthPx = enhancedSize?.width ?? p.width_px ?? 0;
+    const heightPx = enhancedSize?.height ?? p.height_px ?? 0;
     if (!p.storage_path || widthPx <= 0 || heightPx <= 0) {
       dropped.push({
         photo_id: p.id,
