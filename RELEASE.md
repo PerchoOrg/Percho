@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-21
+- **Settingdown Farms in Cumming has a neighbourhood film.** New homes by David Weekley in north Forsyth: Lake Lanier's Charleston Park at sunrise, the Sawnee Mountain summit, four parks within four miles, the schools, shops and places to eat nearby.
 - **Windermere in Cumming has a neighbourhood film.** It opens at the Lodge, the pools with their slide and fountain, and the Davis Love III golf course, then the river parks, Lake Lanier's Mary Alice beach at sunset, the schools, cafés and shops nearby.
 - **St Marlo Country Club's film re-made** without the clubhouse interiors and the low-resolution shots.
 - **St Marlo Country Club in Duluth has a neighbourhood film.** It opens at the stone gatehouse, then the cabana, the pool and tennis courts, the golf course and the lake, before the river parks, the railway museum, the cafés and the grocers nearby. Narration over quick runs of shops now speaks in one sentence instead of fragments.

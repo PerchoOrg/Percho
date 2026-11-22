@@ -359,6 +359,12 @@ RULES
 - Never say two places are near, beside or next to EACH OTHER, or that one
   "leads to" another: the distances given are from the ${noun}, not between
   places. "Johns Creek Elementary sits near Lambert High" was a guess.
+- No compass directions — north, south, east, west, uphill, downstream. You
+  are not given bearings; "Farther south, Lanierland Park" was east.
+- When the first section is a place OUTSIDE the ${noun}, do not open as if
+  it were inside it. "At Settingdown Farms, morning mist drifts over
+  Charleston Park" put a park 3.7 miles away in the neighbourhood. Name the
+  place and how far it is, or name the ${noun} in its own sentence.
 - Concrete nouns, real detail. "The courts stay busy past dusk" beats "tennis
   courts are available".
 - USE THE FACTS — what the place is, what it looks like, what it is known

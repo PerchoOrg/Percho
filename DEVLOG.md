@@ -23,6 +23,15 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-22 01:49 UTC — phase366.16: Settingdown Farms (Cumming builder slot)
+
+**Objective**: #8 of the batch. Owner: "下一个".
+**Actions**: run `679664b4`; the builder page (David Weekley) gave 275 photos over 13 pages — plans and spec homes, which the filter dropped as single homes, plus 12 tagged `none`: three empty spec-home interiors, two spec-home back yards, and seven of Cumming City Center, the North Georgia outlets and a shopping strip filed under the community. All rejected ("editorial:"). No amenity photos exist online (pool, playground), so the film has no community act — as with Arbors. Editorial, film-only: Helpful Hardware, Workout Anytime, Publix at Matt Town (the nearer Publix stays), Starbucks. Photos rejected by what they tell a buyer: a restroom building, an empty field, bare ground with a passer-by, a second sushi close-up, a packaged-sushi case, a furniture display, two store aisles and a produce section, a corporate promo image, a duplicate Publix front; dogs at the dog park and children practising (people rules); low resolution (955, 1067, 1000 px).
+- Narration prompt: no compass directions ("Farther south, Lanierland Park" was east), and a film that opens outside the community must not open as if inside it ("At Settingdown Farms, morning mist drifts over Charleston Park", 3.7 mi away). Took three takes to get a clean script; still model-dependent, no code check.
+- Assembly `8313e658`, `cf_stream_uid 6b7d48b632a27e6c4781294c73f7ad32`, 57.5 s, 20 clips. **Spend: 2 Seedance ≈ $0.28** (Charleston Park sunrise, Sawnee summit). Cover uploaded to `community-covers/cce05494…/50d95d71….jpg` (a real JPEG of the Charleston Park frame) — a county_gis row has none and the feed drops it. Profile written.
+**Verified**: production feed serves the uid (14 community films); `/watch/c/settingdown-farms` 200.
+**Next steps**: pitch #9 (Suwanee — Edinburgh).
+
 ## 2026-11-21 22:10 UTC — phase366.15: Windermere (Cumming flagship)
 
 **Objective**: #7 of the batch. Owner: "windermere". Also his ruling on photos, 2026-11-21: "主要是照片本身传递的信息 一张低像素的椅子没有加的意义" — the editorial pass judges a frame by what it tells a buyer; the resolution gate stays (content first).
