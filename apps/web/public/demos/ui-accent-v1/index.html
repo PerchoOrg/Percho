@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho iOS — one accent, and the swipe page</title>
+<style>
+@font-face { font-family: "DM Serif Display"; src: url("/demos/feed-chrome-v1/DMSerifDisplay-Regular.ttf"); }
+@font-face { font-family: "TabBarIcons"; src: url("/demos/ui-accent-v1/TabBarIcons.ttf"); }
+@font-face { font-family: "TabBarIconsFill"; src: url("/demos/ui-accent-v1/TabBarIconsFill.ttf"); }
+:root{
+  --bg:#F7F5F0; --surface:#FFFFFF; --surface2:#F3EDE4; --border:#EADFD0;
+  --ink:#2B2116; --ink2:#76634B; --ink3:#9D8562; --muted:#B9A88F;
+  --amber:#B45309; --green:#0E6B57; --pos:#1B7A4D; --neg:#B3402A; --cta:#2B2116;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --ui: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+}
+/* One phone, four knobs: the accent on paper pages, the feed's own accent,
+   the section-head colour, and how the card's labels are dressed. */
+.phone{ --acc:var(--amber); --nav:var(--green); --navpill:rgba(14,107,87,.10);
+        --mapfill:#E0E9E3; --mapink:#08685D; --pin:#0E6B57; --head:var(--amber);
+        --tabidle:#9B9B94; --watch:var(--amber) }
+.phone.amber{ --nav:var(--amber); --navpill:rgba(180,83,9,.10); --mapfill:#F6E7D6; --mapink:#7C3A05; --pin:var(--amber) }
+.phone.green{ --acc:var(--green); --head:var(--green) }
+.phone.heads{ --head:var(--ink2) }
+.phone.idle { --tabidle:var(--ink3) }
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px 16px 60px}
+.nav{max-width:1240px;margin:0 auto 22px;font:400 14px/1.6 var(--ui)}
+.nav h1{font:400 26px "DM Serif Display",serif;color:var(--green);margin-bottom:4px}
+.nav p{max-width:880px;color:#4A4038;margin-bottom:6px}
+h2{max-width:1240px;margin:34px auto 4px;font:600 19px var(--ui);color:#2B2116}
+.lede{max-width:1240px;margin:0 auto 16px;padding-right:360px;font:400 14px/1.55 var(--ui);color:#4A4038}
+.row{max-width:1240px;margin:0 auto 30px;display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.col{width:390px}
+.col h3{font:600 15px var(--ui);color:#2B2116;margin:0 4px 10px;min-height:62px}
+.col h3 small{display:block;font:400 12.5px/1.4 var(--ui);color:#5C5046;margin-top:3px}
+.notes{flex:1;min-width:280px;background:#fff;border-radius:16px;padding:16px 18px;font:400 13px/1.55 var(--ui);color:#4A4038;margin-top:64px}
+.notes h4{font:600 11px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:#76634B;margin-bottom:6px}
+.notes ul{margin:0 0 0 16px}.notes li{margin-bottom:6px}.notes b{color:#2B2116}
+.pick{display:inline-block;font:700 10px var(--ui);letter-spacing:.8px;text-transform:uppercase;color:#0E5C48;background:#DFF0EA;border-radius:4px;padding:2px 6px;margin-left:6px;vertical-align:middle}
+.phone{width:390px;background:var(--bg);border-radius:44px;box-shadow:0 12px 40px rgba(0,0,0,.18),0 0 0 8px #1C1A17;position:relative;overflow:hidden}
+
+/* ── feed ───────────────────────────────────────────────────────── */
+.feed{height:844px;display:flex;flex-direction:column}
+.status{height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 8px 34px;font:600 15px var(--ui);color:#181D1A}
+.fh{padding:20px 24px 0}
+.fh .ctx{height:18px;font:400 13px/18px var(--ui);color:#6B726D}
+.fh .main{display:flex;align-items:center;min-height:44px;margin-top:4px}
+.fh .ttl{font:400 36px "DM Serif Display",serif;color:#181D1A;white-space:nowrap}
+.fh .chv{width:9px;height:9px;border-top:1.5px solid #6B726D;border-right:1.5px solid #6B726D;transform:rotate(45deg);margin:0 2px 0 8px}
+.fh .map{margin-left:12px;min-width:84px;height:44px;border-radius:22px;background:var(--mapfill);display:flex;align-items:center;justify-content:center;gap:6px;font:600 14px var(--ui);color:var(--mapink)}
+.fh .map svg{width:14px;height:18px;stroke:var(--mapink);fill:none;stroke-width:1.7}
+.stage{flex:1;padding:12px 16px 16px;position:relative}
+.card{position:relative;width:358px;height:522px;margin-top:19px;border-radius:28px;overflow:hidden;background:#2E2118 center/cover;box-shadow:0 3px 10px rgba(32,28,22,.05),0 16px 38px rgba(32,28,22,.085)}
+.card::before{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,transparent 55%,rgba(0,0,0,.5) 78%,rgba(0,0,0,.92) 100%)}
+.card::after{content:"";position:absolute;inset:0;background:linear-gradient(to left,rgba(0,0,0,.5),rgba(0,0,0,.22) 20%,transparent 38%)}
+.card>*{position:absolute;z-index:2}
+.ppill{top:12px;left:12px;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.92);border-radius:20px;padding:7px 10px;font:600 10.5px var(--ui);color:#181B18}
+.ppill i{width:1px;height:12px;background:rgba(111,107,101,.45)}
+.ppill em{font-style:normal;font-weight:400;color:#6F6B65}
+.ppill svg{width:9px;height:11px;fill:var(--pin)}
+.corner{top:12px;right:12px;height:26px;border-radius:13px;background:rgba(255,255,255,.92);display:flex;align-items:center;gap:12px;padding:0 9px}
+.corner svg{width:15px;height:15px;stroke:#181B18;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.rail{right:0;top:58px;bottom:92px;width:112px;display:flex;flex-direction:column}
+.rail div{display:flex;align-items:center;justify-content:flex-end;padding:0 28px 0 8px;font:500 14px var(--ui);letter-spacing:-.2px;color:rgba(255,255,255,.66);text-shadow:0 1px 3px rgba(0,0,0,.55)}
+.rail div.on{color:#fff;font-weight:700}
+.rail::before{content:"";position:absolute;right:15px;top:0;bottom:0;width:2px;border-radius:1px;background:rgba(255,255,255,.26)}
+.rail::after{content:"";position:absolute;right:15px;top:0;height:14%;width:2px;border-radius:1px;background:#fff}
+.info{left:24px;right:24px;bottom:24px}
+.tag{display:inline-block;background:rgba(255,255,255,.92);border-radius:20px;padding:4px 8px;margin-bottom:9px;font:700 9.5px var(--ui);letter-spacing:1px;color:#181B18}
+.irow{display:flex;align-items:center;gap:12px}
+.cname{flex:1;font:600 27px/30px var(--serif);letter-spacing:-.9px;color:#fff}
+.explore{height:34px;padding:0 14px;border-radius:17px;background:rgba(255,255,255,.92);display:flex;align-items:center;font:600 13.5px var(--ui);color:#181B18}
+/* the card with one button: labels step back, Explore is the only solid thing */
+.quiet .ppill,.quiet .corner{background:rgba(14,13,11,.46);color:#fff}
+.quiet .ppill em{color:rgba(255,255,255,.72)} .quiet .ppill i{background:rgba(255,255,255,.35)}
+.quiet .ppill svg{fill:#fff} .quiet .corner svg{stroke:#fff}
+.quiet .tag{background:none;padding:0;color:rgba(255,255,255,.78);margin-bottom:6px}
+.fill .explore{background:var(--nav);color:#fff}
+.tabbar{height:96px;padding-bottom:34px;display:flex;border-top:.5px solid rgba(23,23,21,.05)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font:500 12px var(--ui);color:var(--tabidle)}
+.tab .pl{width:48px;height:33px;border-radius:17px;display:flex;align-items:center;justify-content:center;position:relative}
+.tab .g{font-family:"TabBarIcons";font-size:27px;line-height:27px}
+.tab .gf{font-family:"TabBarIconsFill";font-size:27px;line-height:27px;position:absolute;opacity:.22;display:none}
+.tab.on{color:var(--nav);font-weight:600}.tab.on .pl{background:var(--navpill)}.tab.on .gf{display:block}
+.homebar{position:absolute;bottom:8px;left:50%;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:#2B2116;opacity:.9}
+
+/* ── community page ─────────────────────────────────────────────── */
+.hero{height:250px;position:relative;background:#2E2118 center/cover}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,16,13,.30),transparent 30%,transparent 62%,rgba(8,16,13,.62))}
+.hero .top{position:absolute;z-index:2;top:50px;left:16px;right:16px;display:flex;justify-content:space-between}
+.hero .top div{display:flex;gap:8px}
+.disc{width:36px;height:36px;border-radius:18px;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center}
+.disc svg{width:18px;height:18px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.strip{position:absolute;z-index:2;left:0;right:0;bottom:12px;display:flex;gap:6px;padding:0 16px;overflow:hidden}
+.strip span{flex:none;font:600 12px var(--ui);color:#fff;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.30);border-radius:999px;padding:5px 10px}
+.strip span.on{background:rgba(255,255,255,.92);color:var(--ink);border-color:transparent}
+.body{padding:20px 18px 28px}
+.headline{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.name{font:700 28px var(--serif);color:var(--ink)}
+.place{font:400 14px var(--ui);color:var(--ink2)}
+.verdict{display:flex;gap:10px;margin-top:14px}
+.verdict>div{flex:1;display:flex;flex-direction:column;gap:7px}
+.vl{display:flex;gap:7px;align-items:flex-start;font:600 13px/17px var(--ui);color:var(--ink)}
+.vl i{flex:none;width:16px;height:16px;border-radius:8px;margin-top:1px;font:700 10.5px/16px var(--ui);color:#fff;text-align:center;font-style:normal}
+.vl i.g{background:var(--pos)} .vl i.w{background:var(--watch)}
+.grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.tile{background:var(--surface);border:.5px solid var(--border);border-radius:16px;padding:10px 12px 12px;width:172px}
+.tile.wide{width:354px}
+.thead{display:flex;justify-content:space-between;align-items:center}
+.tlabel{font:600 10.5px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:var(--ink2)}
+.chev{font:400 18px/18px var(--ui);color:var(--ink3)}
+.figure{font:700 24px var(--serif);color:var(--ink);margin-top:4px}
+.figure small{font:400 12px var(--ui);color:var(--ink2)}
+.foot{font:400 11.5px var(--ui);color:var(--ink2);margin-top:5px}
+.ranks{display:flex;gap:10px;margin-top:6px}
+.ranks>div{flex:1;min-width:0}
+.ranks b{display:block;font:700 20px var(--serif);color:var(--acc)}
+.ranks span{display:block;font:600 11.5px var(--ui);color:var(--ink);margin-top:1px;white-space:nowrap}
+.ranks small{display:block;font:400 10.5px var(--ui);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt{position:relative;height:12px;margin-top:2px}
+.rt::before{content:"";position:absolute;left:0;right:0;top:5px;height:2px;border-radius:1px;background:var(--border)}
+.rt::after{content:"";position:absolute;left:50%;top:2px;bottom:2px;width:2px;margin-left:-1px;background:var(--ink2)}
+.rt i{position:absolute;top:2px;width:8px;height:8px;border-radius:4px;margin-left:-4px;background:var(--acc)}
+.tnote{font:400 10.5px/14px var(--ui);color:var(--ink2);margin-top:6px}
+.covers{margin-top:7px;display:flex;flex-direction:column;gap:3px;font:500 12px var(--ui);color:var(--ink)}
+.covers .off{color:var(--ink2)} .covers b.y{color:var(--pos)} .covers b.n{color:var(--neg)}
+.mini{position:relative;height:14px;margin-top:6px}
+.mini::before{content:"";position:absolute;left:0;right:0;top:6.5px;height:1px;background:var(--border)}
+.mini .band{position:absolute;left:0;top:0;bottom:0;width:60%;border-radius:4px;background:var(--acc);opacity:.08}
+.mini i{position:absolute;top:4px;width:6px;height:6px;border-radius:3px;margin-left:-3px;background:var(--acc);opacity:.75}
+.miniaxis{display:flex;justify-content:space-between;font:400 10px var(--ui);color:var(--ink2);margin-top:1px}
+.spark .l{stroke:var(--acc)} .spark .d{fill:var(--acc)} .spark .b{stroke:var(--muted)}
+.evs{display:flex;gap:8px;margin-top:7px}
+.evs>div{flex:1;min-width:0;background:var(--surface2);border-radius:10px;padding:7px 8px}
+.evs small{display:block;font:600 9.5px var(--ui);letter-spacing:.8px;text-transform:uppercase;color:var(--ink2)}
+.evs b{display:block;font:600 12px/15px var(--ui);color:var(--ink);margin-top:1px}
+.pills{display:flex;gap:7px;margin:14px -18px 0;padding:0 18px;overflow:hidden}
+.pills span{flex:none;font:500 13px var(--ui);color:var(--ink);background:var(--surface);border:.5px solid var(--border);border-radius:999px;padding:8px 12px}
+.pills span b{color:var(--acc);font-weight:600}
+.rev{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:16px;font:400 13px var(--ui);color:var(--ink2)}
+.rev b{font:500 14px var(--ui);color:var(--acc)}
+.src{font:400 12px/18px var(--ui);color:var(--ink3);margin-top:22px}
+
+/* ── You tab ────────────────────────────────────────────────────── */
+.you{padding:62px 20px 28px}
+.ptitle{font:700 28px var(--serif);color:var(--ink);margin-bottom:12px}
+.persona{background:var(--cta);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.persona small{font:600 11px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.72)}
+.persona b{font:700 22px var(--serif);color:#fff}
+.sec{font:600 11px var(--ui);letter-spacing:1.2px;text-transform:uppercase;color:var(--head);margin:22px 0 8px}
+.hstrip{display:flex;gap:10px;margin:0 -20px;padding:0 20px;overflow:hidden}
+.recent{flex:none;width:124px}
+.recent .th{height:96px;border-radius:14px;background:var(--surface2) center/cover;position:relative;margin-bottom:6px}
+.recent .th em{position:absolute;top:8px;left:8px;font:600 10px var(--ui);letter-spacing:1.2px;font-style:normal;background:rgba(250,246,240,.92);border-radius:999px;padding:3px 7px}
+.recent .th em.y{color:var(--pos)} .recent .th em.n{color:var(--neg)}
+.recent b{display:block;font:600 13px var(--ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent small{display:block;font:400 12px var(--ui);color:var(--ink2);margin-top:4px}
+.recent a{display:block;font:400 13px var(--ui);color:var(--acc);padding:10px 0 6px}
+.achip{flex:none;background:var(--surface);border:.5px solid var(--border);border-radius:16px;padding:10px 14px;min-width:120px}
+.achip b{font:600 15px var(--ui);color:var(--ink)}
+.achip b span{font:400 13px var(--ui);color:var(--ink2)}
+.meter{height:4px;border-radius:2px;background:var(--surface2);margin-top:6px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--pos)}
+.ycard{background:var(--surface);border:.5px solid var(--border);border-radius:14px;padding:6px 14px}
+.ghead{font:600 13px var(--ui);color:var(--ink2);padding:10px 0 2px}
+.prio{display:flex;justify-content:space-between;align-items:center;padding:10px 0;font:600 15px var(--ui);color:var(--ink)}
+.dots{display:flex;gap:7px}
+.dots i{width:14px;height:14px;border-radius:7px;background:var(--surface2);border:1px solid var(--border)}
+.dots i.on{background:var(--acc);border-color:var(--acc)} .dots i.here{border-color:var(--ink)}
+.yrow{display:flex;justify-content:space-between;align-items:center;min-height:44px;padding:10px 0;border-top:.5px solid var(--border);font:400 15px var(--ui);color:var(--ink)}
+.yrow.first{border-top:0} .yrow.danger{color:var(--neg)}
+.switch{width:51px;height:31px;border-radius:16px;background:var(--pos);position:relative}
+.switch::after{content:"";position:absolute;right:2px;top:2px;width:27px;height:27px;border-radius:14px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>One accent — and what it means for the swipe page</h1>
+  <p>The rule in the post you sent: two colours that get along, one that argues, and the one that argues goes only on what you press. Percho's paper pages already wear its first palette (cream, near-black, burnt orange). What differs is the discipline: the orange is on headings, links, ranks and charts, and the app has a second arguing colour — the forest green of the tab bar, the Map button and the cards.</p>
+  <p>Three questions below, each one a choice. Nothing here is built. Marks that carry a meaning of their own — ✓ good, ! watch, ✕ not included, the green meters — keep their colour in every option.</p>
+</div>
+
+<h2>1 · Section headings: amber or grey</h2>
+<p class="lede">Amber then means two things on these pages instead of three: something to press, or the finding itself.</p>
+<div class="row">
+  <div class="col"><h3>Now<small>Headings, links and dots all amber.</small></h3><div class="phone" data-s="you"></div></div>
+  <div class="col"><h3>Grey headings <span class="pick">suggested</span><small>The amber left is “Change my mind” and the dots — both pressable.</small></h3><div class="phone heads" data-s="you"></div></div>
+  <div class="notes">
+    <h4>What changes</h4>
+    <ul>
+      <li>The uppercase section headings on You, the city page and the community page, and the small headings over the take on side by side and on the review form.</li>
+      <li>Small: a colour on a handful of headings, nothing moves.</li>
+      <li>Cost: amber capital headings are part of the look these pages have had since the first design. This is the quieter version of it.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>2 · One arguing colour, not two</h2>
+<p class="lede">Today the feed is green and every page behind it is amber. Each row is the swipe page and the page its Explore button opens.</p>
+
+<div class="row">
+  <div class="col"><h3>A · Now<small>Green on the feed: Map, the active tab, the pin. Amber on the page.</small></h3><div class="phone" data-s="feed"></div></div>
+  <div class="col"><h3>&nbsp;<small>&nbsp;</small></h3><div class="phone" data-s="community"></div></div>
+  <div class="notes">
+    <h4>A · two accents</h4>
+    <ul>
+      <li>Swipe, tap Explore, and the app's colour changes from green to orange.</li>
+      <li>Nothing to build.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col"><h3>B · All amber<small>The tab bar, Map and the pin take the pages' orange.</small></h3><div class="phone amber" data-s="feed"></div></div>
+  <div class="col"><h3>&nbsp;<small>The page is unchanged.</small></h3><div class="phone amber" data-s="community"></div></div>
+  <div class="notes">
+    <h4>B · amber everywhere</h4>
+    <ul>
+      <li>Closest to the post's first palette: cream, near-black, burnt orange.</li>
+      <li>Touches the tab bar and the feed header, both drawn to your green handoff, and the cards' green would have to follow.</li>
+      <li>Orange also means “watch” on the community page (the ! marks), so the accent and the warning are one colour.</li>
+      <li>Orange on its own pale tint is 4.1 to 1, so the Map label uses the deeper orange.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col"><h3>C · All green <span class="pick">suggested</span><small>The feed is unchanged.</small></h3><div class="phone green" data-s="feed"></div></div>
+  <div class="col"><h3>&nbsp;<small>Ranks, the community's line, links and dots take the feed's green.</small></h3><div class="phone green" data-s="community"></div></div>
+  <div class="notes">
+    <h4>C · green everywhere</h4>
+    <ul>
+      <li>The direction your own later designs took: the card redline (“forest green is the only accent”), the feed header and the home detail page are all green. Amber is what is left of the first spec on pages not redrawn since.</li>
+      <li>The feed, tab bar and cards do not change. The pages behind them do.</li>
+      <li>✓ good / ! watch reads as a clean pair again, because orange is no longer also the accent.</li>
+      <li>Cost: green says “good”. A rank drawn in green reads as praise even when it is #400 of 443. Orange was neutral about that.</li>
+      <li>Green on the paper is 5.9 to 1 (orange 4.6), so small green links read better.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>3 · The swipe card: one button</h2>
+<p class="lede">On the card four things wear the same white pill: the place caption, the sound / share / save capsule, the COMMUNITY tag and Explore. Only Explore is the thing to press next. Shown in today's colours.</p>
+<div class="row">
+  <div class="col"><h3>Now<small>Four white pills of equal weight. Idle tabs are 2.6 to 1.</small></h3><div class="phone" data-s="feed"></div></div>
+  <div class="col"><h3>Labels step back <span class="pick">suggested</span><small>Caption and capsule on dark glass, the tag as plain capitals. Explore is the only white. Idle tabs at 3.2 to 1.</small></h3><div class="phone idle" data-s="feed" data-c="quiet"></div></div>
+  <div class="col"><h3>…and Explore takes the accent<small>The post's rule to the letter. But the dark green sits on the film's dark foot and reads weaker than the white.</small></h3><div class="phone idle" data-s="feed" data-c="quiet fill"></div></div>
+</div>
+<div class="row" style="margin-top:-8px">
+  <div class="notes" style="margin-top:0">
+    <h4>Also on this page, not drawn</h4>
+    <ul>
+      <li><b>The name is on the screen twice</b> — 36pt in the header and 27pt on the card. The two largest lines of text say the same word. Each was decided on its own; together one of them could carry something else, or step down.</li>
+      <li><b>Map is the only coloured control</b> above the card, and it is the secondary action. With the labels stepped back, Explore and Map stop competing; with Explore in the accent, Explore clearly leads.</li>
+      <li>The white capsule in the card's corner was your call (“keep the sound and saved button on the top right to be consistent with listing”), and so was the COMMUNITY tag over the name. The middle option changes how both are dressed, not where they are.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const IMG = "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/windward.jpg";
+const G = {feed:"",search:"",saved:"",you:""};
+const icon = {
+  back:'<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+  share:'<svg viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 13v6h14v-6"/></svg>',
+  save:'<svg viewBox="0 0 24 24"><path d="M7 4h10v16l-5-4-5 4z"/></svg>',
+  sound:'<svg viewBox="0 0 24 24"><path d="M4 10v4h3l4 4V6L7 10zM15 9a4 4 0 010 6M17.5 6.5a8 8 0 010 11"/></svg>',
+  pin:'<svg viewBox="0 0 9 11"><path d="M4.5 0a4.1 4.1 0 00-4.1 4.1C.4 7 4.5 11 4.5 11s4.1-4 4.1-6.9A4.1 4.1 0 004.5 0zm0 5.6a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/></svg>',
+  map:'<svg viewBox="0 0 14 18"><path d="M7 1.2a5.6 5.6 0 00-5.6 5.6C1.4 10.9 7 16.6 7 16.6s5.6-5.7 5.6-9.8A5.6 5.6 0 007 1.2z"/><circle cx="7" cy="6.8" r="1.6"/></svg>',
+};
+const tabbar = on => `<div class="tabbar">${["feed","search","saved","you"].map(k =>
+  `<div class="tab ${k===on?"on":""}"><div class="pl"><span class="gf">${G[k]}</span><span class="g">${G[k]}</span></div>${k[0].toUpperCase()+k.slice(1)}</div>`).join("")}</div><div class="homebar"></div>`;
+
+const screens = {
+  feed: c => `<div class="feed ${c}">
+    <div class="status"><span>9:41</span><span></span></div>
+    <div class="fh"><div class="ctx">Atlanta metro › Alpharetta</div>
+      <div class="main"><span class="ttl">Windward</span><span class="chv"></span><span class="map">${icon.map}Map</span></div></div>
+    <div class="stage"><div class="card" style="background-image:url('${IMG}')">
+      <div class="ppill">${icon.pin}Windward Pool<i></i><em>0 mi</em></div>
+      <div class="corner">${icon.sound}${icon.share}${icon.save}</div>
+      <div class="rail"><div class="on" style="flex:14">Amenities</div><div style="flex:22">Parks</div><div style="flex:18">Schools</div><div style="flex:26">Dining</div><div style="flex:20">Shopping</div></div>
+      <div class="info"><div class="tag">COMMUNITY</div><div class="irow"><div class="cname">Windward</div><div class="explore">Explore</div></div></div>
+    </div></div>
+    ${tabbar("feed")}</div>`,
+
+  community: () => `<div class="hero" style="background-image:url('${IMG}')">
+    <div class="top"><div class="disc">${icon.back}</div><div><div class="disc">${icon.share}</div><div class="disc">${icon.save}</div></div></div>
+    <div class="strip"><span class="on">Amenities</span><span>Parks</span><span>Schools</span><span>Dining</span><span>Shopping</span></div></div>
+  <div class="body">
+    <div class="headline"><div class="name">Windward</div><div class="place">Alpharetta, GA</div></div>
+    <div class="verdict">
+      <div><div class="vl"><i class="g">✓</i>Top-6 elementaries</div><div class="vl"><i class="g">✓</i>Private 200-acre lake</div><div class="vl"><i class="g">✓</i>Errands under 2 mi</div></div>
+      <div><div class="vl"><i class="w">!</i>Pool is a private club</div><div class="vl"><i class="w">!</i>4,589 neighbours</div><div class="vl"><i class="w">!</i>HOA approves remodels</div></div>
+    </div>
+    <div class="grid">
+      <div class="tile wide"><div class="thead"><span class="tlabel">Where it ranks</span><span class="chev">›</span></div>
+        <div class="ranks">
+          <div><b>#3–6</b><span>Elementary</span><small>of 1,220 in GA</small><div class="rt"><i style="left:99%"></i></div></div>
+          <div><b>#7</b><span>Middle</span><small>of 472 in GA</small><div class="rt"><i style="left:98%"></i></div></div>
+          <div><b>#31</b><span>High</span><small>of 443 in GA</small><div class="rt"><i style="left:93%"></i></div></div>
+          <div><b>#7</b><span>Home value</span><small>of 203 metro ZIPs</small><div class="rt"><i style="left:97%"></i></div></div>
+        </div>
+        <div class="tnote">Two elementaries serve Windward; the address decides. Ask the district.</div></div>
+      <div class="tile"><div class="thead"><span class="tlabel">Home value</span><span class="chev">›</span></div>
+        <div class="figure">$747K</div>
+        <svg class="spark" viewBox="0 0 148 34" width="148" height="34" style="margin-top:6px;display:block;overflow:visible">
+          <polyline class="b" fill="none" stroke-width="1.5" points="0,25.7 14.8,25 29.6,24.1 44.4,23.5 59.2,22.8 74,20.3 88.8,17.5 103.6,17.5 118.4,17.1 133.2,17.6 148,17.9"/>
+          <polyline class="l" fill="none" stroke-width="2" points="0,16.2 14.8,15.4 29.6,14.8 44.4,14.5 59.2,13.9 74,9.9 88.8,4.4 103.6,3.2 118.4,1.2 133.2,1.3 148,1.7"/>
+          <circle class="d" cx="148" cy="1.7" r="4" stroke="#fff" stroke-width="2"/></svg>
+        <div class="foot">+60% since 2020</div></div>
+      <div class="tile"><div class="thead"><span class="tlabel">Dues</span><span class="chev">›</span></div>
+        <div class="figure">$824<small>&nbsp; a year</small></div>
+        <div class="covers"><span><b class="y">✓ </b>Lake, parks, launch</span><span class="off"><b class="n">✕ </b>Pool, tennis, golf</span></div></div>
+      <div class="tile"><div class="thead"><span class="tlabel">Nearby</span><span class="chev">›</span></div>
+        <div class="figure">12 of 15</div>
+        <div class="mini"><div class="band"></div>${[4,9,22,27,31,38,44,52,57,74,96].map(x=>`<i style="left:${x}%"></i>`).join("")}</div>
+        <div class="miniaxis"><span>home</span><span>3 mi</span><span>5</span></div>
+        <div class="foot">stops within 3 miles</div></div>
+      <div class="tile"><div class="thead"><span class="tlabel">Residents say</span><span class="chev">›</span></div>
+        <div class="figure">“Convenient”</div><div class="foot">1 in 6 communities say it</div></div>
+    </div>
+    <div class="pills"><span>Website<b> ↗</b></span><span>Rules &amp; dues<b> ↗</b></span><span>Nextdoor<b> ↗</b></span><span>Reddit<b> ↗</b></span><span>Google Maps<b> ↗</b></span></div>
+    <div class="rev"><span>No resident reviews yet.</span><b>Write the first ›</b></div>
+    <div class="src">Sources &amp; photo credits ›</div>
+  </div>`,
+
+  you: () => `<div class="you">
+    <div class="ptitle">You</div>
+    <div class="persona"><small>Your Percho type</small><b>Lake-Life Trail Walker</b></div>
+    <div class="sec">Recent</div>
+    <div class="hstrip">
+      <div class="recent"><div class="th" style="background-image:url('${IMG}')"><em class="y">LIKED</em></div><b>Windward</b><small>Alpharetta</small><a>Change my mind</a></div>
+      <div class="recent"><div class="th" style="background:#7C8E7A"><em class="n">PASSED</em></div><b>Medlock Bridge</b><small>Johns Creek</small><a>Change my mind</a></div>
+      <div class="recent"><div class="th" style="background:#A58C6C"><em class="y">LIKED</em></div><b>Harvest Park</b><small>Suwanee</small><a>Change my mind</a></div>
+      <div class="recent"><div class="th" style="background:#6E7F92"><em class="y">LIKED</em></div><b>Edinburgh</b><small>Suwanee</small><a>Change my mind</a></div>
+    </div>
+    <div class="sec">Your areas</div>
+    <div class="hstrip">
+      <div class="achip"><b>Alpharetta <span>82%</span></b><div class="meter"><i style="width:82%"></i></div></div>
+      <div class="achip"><b>Suwanee <span>40%</span></b><div class="meter"><i style="width:40%"></i></div></div>
+      <div class="achip"><b>Johns Creek <span>12%</span></b><div class="meter"><i style="width:12%"></i></div></div>
+    </div>
+    <div class="sec">Your preferences</div>
+    <div class="ycard"><div class="ghead">You set</div>
+      <div class="prio">Schools<div class="dots"><i class="here"></i><i class="on"></i><i class="on"></i><i class="on here"></i></div></div>
+      <div class="prio">What it really costs<div class="dots"><i></i><i class="on here"></i><i></i><i></i></div></div>
+      <div class="prio">Getting around<div class="dots"><i class="here"></i><i></i><i></i><i></i></div></div>
+      <div class="prio">The community itself<div class="dots"><i></i><i class="on"></i><i class="on here"></i><i></i></div></div>
+      <div class="yrow danger">Reset preferences</div></div>
+    <div class="sec">Settings</div>
+    <div class="ycard"><div class="yrow first">Sound autoplay<div class="switch"></div></div></div>
+  </div>`,
+};
+for (const phone of document.querySelectorAll(".phone")) {
+  phone.innerHTML = screens[phone.dataset.s](phone.dataset.c || "");
+}
+</script>
+</body>
+</html>

@@ -23,6 +23,21 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-22 10:40 UTC — phase367.1: one accent, and the swipe page — a demo of three choices (nothing built)
+
+**Objective**: owner sent a Rednote post on site palettes ("两个颜色和平相处,一个唱反调,唱反调的那个只放在按钮上") and asked what to borrow, then: "给demo看看 对上面两个改进方向主swipe页面有空间吗". Follows phase367 (entry below).
+**Actions**: `https://www.percho.co/demos/ui-accent-v1` — static, drawn from the RN styles (`FeedHeader`, `CommunityFace`, `CardCorner`, `TabBar`, `ExploreBody`) with Windward's cover. Three questions, each a choice:
+1. Section headings amber vs `ink2` (You tab, now / grey).
+2. One accent: A now (green feed, amber pages) · B all amber (tab bar, Map, pin follow) · C all green (ranks, the community's series, links, dots follow) — each as the swipe page beside the community page.
+3. The swipe card: now · passive labels on dark glass / plain capitals so Explore is the only white pill, idle tabs `ink3` · the same with Explore in the accent fill.
+**Findings**:
+- The post's first palette (F3EEE3 / 111111 / D9541E) is Percho's paper palette already; its orange is 3.7:1 as text on our paper against our 4.6, so no value is worth taking. The rule is: we have TWO arguing colours and neither is on the primary button (12 ink-block CTAs; 68 `colors.accent` uses on the v1 screens).
+- Three of the four palettes in `theme/tokens.ts` are green by the owner's own later handoffs (`redline`: "Forest green is the only accent"; `feedHeader`; `explore`). Amber is spec-v3's, on the pages not redrawn since — which is why C is the suggestion.
+- On the swipe page: four elements share `rgba(255,255,255,0.92)` (place pill, corner capsule, COMMUNITY tag, Explore) and only one is the next action; idle tab labels (#9B9B94) are 2.57:1 on the paper; the community's name is on screen twice (36 pt header, 27 pt card); Map — the secondary action — is the only tinted control above the card.
+**Decisions**: suggestions marked on the page are grey headings, C, and "labels step back" without the accent fill (dark green on the film's dark foot is weaker than the white pill). Each of the three touches something the owner signed off, so none is built until he picks.
+**Verified**: rendered in headless Chrome locally and from production.
+**Next steps**: owner's pick on 1 / 2 / 3; the name-twice and Map points are raised, not drawn.
+
 ## 2026-11-22 10:23 UTC — phase366.22: Sawnee Village (Cumming builder slot, replacing Settingdown Farms)
 
 **Objective**: owner 2026-11-22 "go" on Sawnee Village, pitched with its community footage already confirmed.
