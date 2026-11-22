@@ -23,6 +23,15 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-22 05:28 UTC — phase366.17: Edinburgh (Suwanee flagship)
+
+**Objective**: #9 of the batch. Owner: "下一个".
+**Actions**: run `ce36f4bb`. The HOA site (edinburghhoa.org) redirects to a DwellingLive login portal; its public page shows only "no photo" placeholders. Google's "Edinburgh Homeowners Association" carried ten photos: nine rejected by the tagger for identifiable children (correctly), one pool with a date stamp, which the plan drops (`has_overlay_text`). Cropped the stamp off (bottom 7%) and ingested the copy with `ingest-community-photos.ts` as "Edinburgh Pool", attribution kept (Google Maps contributor, "date stamp cropped off"); the original rejected. The tennis complex and clubhouse have no usable public photo, so the community act is the pool alone. Bear's Best (the adjacent public course, 0.1 mi) stays a surrounding place, not the community's amenity.
+- Editorial, film-only: Chick-fil-A, Rreal Tacos, USPS, The Home Depot. Photos rejected by what they tell a buyer: low resolution (728, 940, 680 px), high-school players at a game, display cases and a product table, produce sections, a bakery window, painted pavement, bare swings.
+- Assembly `b5882287`, `cf_stream_uid 38368355bccb5afa7e322f3c6fb03b2e`, 73.0 s, 24 clips. **Spend: none** — both Seedance clips (Chattahoochee Pointe, Sims Lake) already existed. Profile written.
+**Verified**: production feed serves the uid (15 community films); `/watch/c/edinburgh` 200.
+**Next steps**: pitch #10 (Suwanee — Harvest Park, D.R. Horton).
+
 ## 2026-11-22 01:49 UTC — phase366.16: Settingdown Farms (Cumming builder slot)
 
 **Objective**: #8 of the batch. Owner: "下一个".
