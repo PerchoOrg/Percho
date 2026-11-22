@@ -23,7 +23,7 @@ rotation, not on the way in.
 
 ---
 
-## 2026-11-22 19:50 UTC — phase369: Explore — schools one line each, Nearby names places; four directions proposed
+## 2026-11-22 21:45 UTC — phase369: Explore — schools one line each, Nearby names places; four directions proposed
 
 **Objective**: owner 2026-11-22, on the community Explore page after phase368.1: "schools 太多行了 学校名字用全称在一行里 去掉底下的说明 among…… / nearby 15 of 15是啥意思 太confuse了 / 怎么只剩这么点内容了 你再去回忆一下 至少要安学便潜四个方向 再加一些资源链接".
 **Actions** (mobile only; no data or schema change):
