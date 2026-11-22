@@ -208,14 +208,16 @@ describe('buildProfile', () => {
     expect(peopleWords?.words).toBeUndefined();
   });
 
-  it('leads with what is specific to the community, and never with a low score', () => {
+  it('leads with what is specific to the community, and says nothing of its schools', () => {
+    // The schools tile under the verdict names each school and its standing;
+    // a line above it saying "Top-5% elementary nearby" said it twice.
     expect(profile?.verdict).toEqual({
-      good: ['Top-5% elementary nearby', 'Residents say “Convenient”'],
+      good: ['Residents say “Convenient”'],
       watch: ['Big: 4,589 neighbours'],
     });
     const plain = buildProfile(community(7), ctx);
     expect(plain?.verdict.watch).toEqual([]);
-    expect(JSON.stringify(plain?.verdict)).not.toMatch(/Values|bottom|low/i);
+    expect(JSON.stringify(plain?.verdict)).not.toMatch(/Values|bottom|low|school|elementary/i);
   });
 
   it('says how far each school is', () => {
@@ -286,7 +288,11 @@ describe('buildProfile', () => {
       'Nextdoor',
       'Reddit',
       'Google Maps',
+      'YouTube',
       'Homes on Zillow',
+      'Redfin',
+      'Trulia',
+      'Homes.com',
       'Property records',
       'Near ES',
       'Near MS',
@@ -295,7 +301,18 @@ describe('buildProfile', () => {
       'Crime map',
       'FEMA flood map',
       'City of Sugar Hill',
+      'Fulton County',
+      'Walk Score',
     ]);
+    const at = (label: string) => links.find((l) => l.label === label)?.url;
+    // Redfin by its own city id; Trulia and Homes.com by the city's name.
+    expect(at('Redfin')).toBe('https://www.redfin.com/city/18846/GA/Sugar-Hill');
+    expect(at('Trulia')).toBe('https://www.trulia.com/GA/Sugar_Hill/');
+    expect(at('Homes.com')).toBe('https://www.homes.com/sugar-hill-ga/');
+    expect(at('YouTube')).toBe(
+      'https://www.youtube.com/results?search_query=Wild%20Timber%20Sugar%20Hill%20GA',
+    );
+    expect(at('Walk Score')).toBe('https://www.walkscore.com/score/loc/lat=34.07/lng=-84.25');
     // Every link sits under a heading the page draws.
     expect([...new Set(links.map((l) => l.group))]).toEqual([
       'Community',
@@ -306,14 +323,16 @@ describe('buildProfile', () => {
     ]);
     // Crime is a link out to the agencies' own map, never a figure here; the
     // flood map opens on the community's own point.
-    expect(links[10]?.url).toBe('https://communitycrimemap.com/?address=Sugar%20Hill%2C%20GA');
-    expect(links[11]?.url).toContain('center=-84.25,34.07&level=15');
-    expect(links[12]?.url).toBe('https://cityofsugarhill.com/');
+    expect(at('Crime map')).toBe('https://communitycrimemap.com/?address=Sugar%20Hill%2C%20GA');
+    expect(at('FEMA flood map')).toContain('center=-84.25,34.07&level=15');
+    expect(at('City of Sugar Hill')).toBe('https://cityofsugarhill.com/');
     expect(links[3]?.url).toBe(
       'https://www.google.com/maps/search/?api=1&query=Wild%20Timber%2C%20Sugar%20Hill%2C%20GA',
     );
-    expect(links[4]?.url).toBe('https://www.zillow.com/homes/Wild-Timber-Sugar-Hill-GA_rb/');
-    expect(links[6]?.url).toContain('greatschools.org/search/search.page?q=Near%20Elementary');
+    expect(at('Homes on Zillow')).toBe(
+      'https://www.zillow.com/homes/Wild-Timber-Sugar-Hill-GA_rb/',
+    );
+    expect(at('Near ES')).toContain('greatschools.org/search/search.page?q=Near%20Elementary');
     expect(communityProfileSchema.safeParse(named).success).toBe(true);
     expect(profile?.events).toHaveLength(1);
     expect(profile?.sources.map((s) => s.name)).toEqual([
@@ -364,6 +383,9 @@ describe('mergeProfile', () => {
       'Rules & dues',
       'Nextdoor',
       'Website',
+      'Redfin',
+      'Trulia',
+      'Homes.com',
       'Property records',
       'Near ES',
       'Near MS',
@@ -372,6 +394,8 @@ describe('mergeProfile', () => {
       'Crime map',
       'FEMA flood map',
       'City of Alpharetta',
+      'Fulton County',
+      'Walk Score',
     ]);
     expect(mergeProfile(profile, null)).toBe(profile);
     expect(mergeProfile(null, { links: [] })).toBeNull();

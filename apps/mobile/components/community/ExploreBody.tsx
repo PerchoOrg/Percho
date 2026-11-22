@@ -118,13 +118,8 @@ export function ExploreBody({
 		: 1;
 	// Half tiles sit two to a row; when their number is odd the last one takes
 	// the row, so the grid never ends on a hole. A computed profile often has
-	// only two (no dues without research, no words without Nextdoor).
-	const halves = [
-		homeValue && "homeValue",
-		holding && "cost",
-		dues && "dues",
-		words && "words",
-	].filter(Boolean);
+	// one or none (no dues without research, no words without Nextdoor).
+	const halves = [dues && "dues", words && "words"].filter(Boolean);
 	const lone = halves.length % 2 === 1 ? halves[halves.length - 1] : null;
 
 	return (
@@ -251,7 +246,7 @@ export function ExploreBody({
 				{homeValue && (
 					<Tile
 						label="Potential"
-						wide={lone === "homeValue"}
+						wide
 						width={half}
 						onPress={() => setSheet("homeValue")}
 					>
@@ -291,27 +286,25 @@ export function ExploreBody({
 
 				{/* A month of owning before the mortgage. On every computed
 				    profile since phase340, and until phase370 only inside the
-				    home value sheet. */}
+				    home value sheet. Potential has a row to itself and this sits
+				    under it (owner 2026-11-22: "Potential 单独一行 Cost 放下面"). */}
 				{holding && (
-					<Tile
-						label="Cost"
-						wide={lone === "cost"}
-						width={half}
-						onPress={() => setSheet("cost")}
-					>
-						<Text style={styles.figure}>
-							{holding.display}
-							<Text style={styles.figureUnit}>{"  a month"}</Text>
-						</Text>
-						<View style={styles.costRows}>
-							{holding.rows.slice(0, 4).map((r) => (
-								<View key={r.label} style={styles.costRow}>
-									<Text style={styles.costLabel} numberOfLines={1}>
-										{r.label}
-									</Text>
-									<Text style={styles.costValue}>${r.usd}</Text>
-								</View>
-							))}
+					<Tile label="Cost" wide width={half} onPress={() => setSheet("cost")}>
+						<View style={styles.costSplit}>
+							<Text style={styles.figure}>
+								{holding.display}
+								<Text style={styles.figureUnit}>{"  a month"}</Text>
+							</Text>
+							<View style={styles.costRows}>
+								{holding.rows.slice(0, 4).map((r) => (
+									<View key={r.label} style={styles.costRow}>
+										<Text style={styles.costLabel} numberOfLines={1}>
+											{r.label}
+										</Text>
+										<Text style={styles.costValue}>${r.usd}</Text>
+									</View>
+								))}
+							</View>
 						</View>
 					</Tile>
 				)}
@@ -564,7 +557,9 @@ const styles = StyleSheet.create({
 		textAlign: "right",
 		fontVariant: ["tabular-nums"],
 	},
-	costRows: { marginTop: 6, gap: 2 },
+	/** The figure on the left, what it is made of on the right. */
+	costSplit: { flexDirection: "row", alignItems: "flex-start", gap: 20 },
+	costRows: { flex: 1, marginTop: 8, gap: 2 },
 	costRow: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
 	costLabel: {
 		...textStyles.footnote,

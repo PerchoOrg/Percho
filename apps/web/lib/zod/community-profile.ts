@@ -152,9 +152,10 @@ export const communityProfileSchema = z.object({
         .max(4),
     })
     .optional(),
-  // Up to 16 since phase370, under headings: own site, Nextdoor, Reddit, Maps,
-  // Zillow, property records, three schools, the district, the crime map, the
-  // flood map, the city.
+  // Up to 24 since phase370, under headings: own site, Nextdoor, Reddit, Maps,
+  // YouTube; Zillow, Redfin, Trulia, Homes.com, property records; three
+  // schools and the district; the crime map and the flood map; the city, the
+  // county and Walk Score — and a researched page or two.
   links: z
     .array(
       z.object({
@@ -163,7 +164,7 @@ export const communityProfileSchema = z.object({
         group: z.string().min(1).max(12).optional(),
       }),
     )
-    .max(16)
+    .max(24)
     .optional(),
   sources: z.array(z.object({ name: z.string().min(1).max(80), url: link.optional() })).min(1),
 });

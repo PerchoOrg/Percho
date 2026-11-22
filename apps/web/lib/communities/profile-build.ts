@@ -28,7 +28,7 @@
  * · A school here is a NEARBY one, never the assigned one. `attendance_zones`
  *   has no polygons (`lib/schools/map-pins.ts`), and the tour narration is
  *   already forbidden attendance phrasing (`school-language.ts`). The ranks
- *   block carries that sentence in its `note`, and the verdict says "nearby".
+ *   block carries that sentence in its `note`.
  * · No verdict line is ever a low school score. A neighbourhood's page telling
  *   a buyer to think twice because of its schools is steering; the rank is
  *   drawn, neutrally, on the track, and that is all.
@@ -40,7 +40,7 @@
  */
 
 import type { StoredCommunityProfile } from '../zod/community-profile';
-import { CITY_DISTRICTS, CITY_SITES, COUNTY_LINKS } from './local-links';
+import { CITY_DISTRICTS, CITY_SITES, COUNTY_LINKS, REDFIN_CITIES } from './local-links';
 
 // ─── inputs ─────────────────────────────────────────────────────────────────
 
@@ -194,12 +194,6 @@ const LEVEL_LABEL: Record<SchoolLevel, string> = {
   middle: 'Middle',
   high: 'High',
 };
-const LEVEL_NOUN: Record<SchoolLevel, string> = {
-  elementary: 'elementary',
-  middle: 'middle school',
-  high: 'high school',
-};
-
 /** Place words too slight to open a page with. They are charted; they do not lead. */
 const SLIGHT_WORDS: ReadonlySet<string> = new Set([
   'Architecture',
@@ -558,19 +552,15 @@ function words(c: BuildCommunity, ctx: BuildContext): Profile['words'] {
 function verdict(
   c: BuildCommunity,
   ctx: BuildContext,
-  parts: { schools: RankRow[]; words: Profile['words'] },
+  parts: { words: Profile['words'] },
 ): Profile['verdict'] {
   const good: string[] = [];
   const watch: string[] = [];
 
-  // The best of the nearest schools, when it is in the state's top tenth.
-  const best = parts.schools
-    .map((row, i) => ({ row, level: LEVELS.find((l) => LEVEL_LABEL[l] === row.label), i }))
-    .sort((a, b) => b.row.percentile - a.row.percentile || a.i - b.i)[0];
-  if (best?.level && best.row.percentile >= 90) {
-    const tier = best.row.percentile >= 99 ? 1 : best.row.percentile >= 95 ? 5 : 10;
-    good.push(`Top-${tier}% ${LEVEL_NOUN[best.level]} nearby`);
-  }
+  // No line about schools. It used to lead with the best nearby school when
+  // that was in the state's top tenth ("Top-5% middle school nearby"); the
+  // schools tile directly under it says the same thing with the school's name
+  // (owner 2026-11-22: "去掉 … top school绿色标记文字 和下面的内容重复了").
 
   // A word few of the city's communities use.
   const lead = parts.words?.rows[0];
@@ -599,8 +589,10 @@ const LEVEL_ABBR: Record<SchoolLevel, string> = { elementary: 'ES', middle: 'MS'
  *
  * Search links, not guessed pages: Maps, Zillow, Reddit and GreatSchools each
  * take a free-text query, so a link resolves to whatever that site holds for
- * the name rather than to a URL that may not exist. Redfin is absent because
- * it has no such URL — its pages need an id only its private API returns.
+ * the name rather than to a URL that may not exist. Redfin has no such URL —
+ * its pages need an id — so it is linked by city, from the ids in
+ * `local-links.ts` (owner 2026-11-22: "链接里没看到redfin啥的 … 尽量全"), as are
+ * Trulia and Homes.com, whose city pages follow the city's name.
  * School links go to GreatSchools because the stored school websites (NCES)
  * are http and often dead.
  */
@@ -634,6 +626,11 @@ function profileLinks(
       label: 'Google Maps',
       url: `https://www.google.com/maps/search/?api=1&query=${q(where)}`,
     });
+    links.push({
+      group: 'Community',
+      label: 'YouTube',
+      url: `https://www.youtube.com/results?search_query=${q(`${name} ${c.city ?? ''} GA`.replace(/\s+/g, ' '))}`,
+    });
     const zillowSlug = `${name} ${c.city ?? ''} GA`
       .replace(/[^A-Za-z0-9 ]+/g, ' ')
       .trim()
@@ -642,6 +639,22 @@ function profileLinks(
       group: 'Homes',
       label: 'Homes on Zillow',
       url: `https://www.zillow.com/homes/${zillowSlug}_rb/`,
+    });
+  }
+  // By city, and only for a city whose pages were looked at: these three are
+  // addressed by the city's name or id, not by a search.
+  const redfin = REDFIN_CITIES[key(c.city)];
+  if (redfin && c.city) {
+    links.push({ group: 'Homes', label: 'Redfin', url: redfin });
+    links.push({
+      group: 'Homes',
+      label: 'Trulia',
+      url: `https://www.trulia.com/GA/${c.city.trim().replace(/\s+/g, '_')}/`,
+    });
+    links.push({
+      group: 'Homes',
+      label: 'Homes.com',
+      url: `https://www.homes.com/${c.city.trim().toLowerCase().replace(/\s+/g, '-')}-ga/`,
     });
   }
   if (county) links.push({ group: 'Homes', label: 'Property records', url: county.assessor });
@@ -678,6 +691,15 @@ function profileLinks(
     const full = `City of ${c.city}`;
     links.push({ group: 'City', label: full.length <= 18 ? full : linkLabel(c.city), url: site });
   }
+  if (county && c.county)
+    links.push({ group: 'City', label: linkLabel(`${c.county} County`), url: county.site });
+  // Walk Score reads a point, so it scores this community rather than its city.
+  if (c.lat !== null && c.lng !== null)
+    links.push({
+      group: 'City',
+      label: 'Walk Score',
+      url: `https://www.walkscore.com/score/loc/lat=${c.lat}/lng=${c.lng}`,
+    });
   return links;
 }
 
@@ -747,7 +769,7 @@ export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | nu
 
   return {
     asOf: ctx.inputs.asOf,
-    verdict: verdict(c, ctx, { schools, words: said }),
+    verdict: verdict(c, ctx, { words: said }),
     ...(rankRows.length > 0
       ? {
           ranks: {
@@ -790,7 +812,7 @@ export function mergeProfile(
   // Links are the one block that adds up rather than replaces: a researched
   // page (Windward's dues rules) sits beside the computed search links, not
   // instead of them (phase366). Researched first; a repeat by url or label,
-  // and anything past the schema's sixteen, is left out.
+  // and anything past the schema's twenty-four, is left out.
   const seen = new Set<string>();
   const links = [...(researched.links ?? []), ...(base.links ?? [])]
     .filter((l) => {
@@ -799,7 +821,7 @@ export function mergeProfile(
       seen.add(l.label);
       return true;
     })
-    .slice(0, 16);
+    .slice(0, 24);
   const merged = { ...base, ...researched, sources, ...(links.length > 0 ? { links } : {}) };
   if (!merged.asOf || !merged.verdict || sources.length === 0) return null;
   return { ...merged, asOf: merged.asOf, verdict: merged.verdict, sources };

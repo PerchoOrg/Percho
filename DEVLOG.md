@@ -23,6 +23,16 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-22 23:36 UTC — phase370.1: Explore — Potential and Cost each a row, no school line in the verdict, Redfin and five more links
+
+**Objective**: owner on phase370: "Potential 单独一行 Cost 放下面 / 去掉explore page 下面的top school绿色标记文字 和下面的内容重复了 / 链接里没看到redfin啥的 你再看看缺啥 尽量全".
+**Actions**:
+- **Tiles**: Potential is full width; Cost is full width under it, the figure on the left and its four lines on the right. Only Dues and Residents say are half tiles now.
+- **Verdict**: the builder no longer writes "Top-N% <level> nearby" — the Schools tile directly under it names the school and its standing. Windward's researched "Top-6 elementaries" removed from its file for the same reason. What a computed verdict can still say: a rare resident word, a very large community.
+- **Links** (`profile-build.ts`, `local-links.ts`), six more: **Redfin** (by city — `REDFIN_CITIES`, the ids read off Redfin's own indexed city pages for the eight cities with films), **Trulia** and **Homes.com** (city pages addressed by the city's name; the shape confirmed on Johns Creek), **YouTube** (a search for the community), the **county's site**, **Walk Score** (by the community's point, so it scores the community, not the city). Links 16 → 24 in the schema.
+**Not added, and why**: Realtor.com (could not open or search it from here to confirm its city path); Yelp and Facebook (bot wall / login, unconfirmed); Georgia's school-grades site (did not answer); utilities (provider depends on the address). Redfin's own lookup endpoint was not used — the request was refused as unauthorised access, correctly; the ids came from public search results instead.
+**Verified**: mobile typecheck 0, lint clean, vitest 887; web tsc 0, vitest 1377. The 17 filmed profiles rebuilt after the web deploy (the deployed schema capped links at 16). Not seen on a device.
+
 ## 2026-11-22 22:51 UTC — phase370: Explore — Safety · Schools · Convenience · Potential · Cost, resources with logos, a review field
 
 **Objective**: owner 2026-11-22 on `/demos/explore-four-pillars-v1` (phase369): "a / cost和链接都要" — safety as facts about the place (option A), the cost tile and the extra links — then: tile titles "safety，schools，Convinence, potential, cost"; "school不要绿色的大字 正常就行 加上距离"; "resource地下的链接最好用logo和文字 更醒目"; "comment可以加一个空白填文字的部分".
