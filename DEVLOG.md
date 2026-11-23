@@ -23,6 +23,34 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-23 23:48 UTC — phase378: the feed card starts at the top; the place, Map and three figures sit under it
+
+**Objective**: owner on `/demos/feed-above-card-v1` (phase376): "方案2", then "数字还有别的选项吗". Built with the three figures the demo drew; which figures a card carries is the server's to change (below), so his answer needs no app release.
+**What the phone shows**: no header. The card starts 8 under the status bar and is 16pt wider (8 of paper each side; 412×601 on his 428×926, the film whole). Under it: `Alpharetta · Fulton County` with the Map pill (control B, unchanged), then three figures — `$747K` ZIP 30005 homes · `Top 1–7%` schools nearby · `25 mi` north of Atlanta. A city card: `Forsyth County · north of Atlanta`, then `$550K` median home · county · `97.5%` graduate in 4 years · `52–83 min` 39 mi to downtown. A tap on a figure opens the place's Explore page with that tile's sheet open. The card itself is not redrawn; the name is on the page once.
+**Actions**:
+- **Wire**: `packages/shared/src/glance.ts` — `PlaceGlance` (a place line, up to three `{ value, label, topic }` cells; `topic` is one of the Explore tiles' five names). `/api/mobile/feed` sends one per community and per filmed city.
+- **Server**: `apps/web/lib/feed/glance.ts` (pure, 11 tests). `communityGlance` reads the stored profile — `homeValue.display` labelled with its area, the best-to-worst `rankShare` of the nearby schools, straight-line miles and compass side from Five Points. `cityGlance` reads the city's own page data — its first "Median home value" row, the graduation figure of its own schools (several schools print lowest to highest; district and state rows are left out), the downtown drive off-peak to rush, and the side of Atlanta its `locationNote` gives. `community-pool.ts` now selects `profile` for the projection (it does not leave the server); `fetchCityFilms` selects `name, county, lat, lng, profile`.
+- **`topShare` moved** to `packages/shared/src/rank-share.ts` (with `rankShare`, the number): the feed's figure is worded on the server and the Explore tile on the phone, and the two must round alike.
+- **Phone**: `theme/feed-page.ts` — `feedPage(width, contentHeight)`: the card at the film's shape, then which of the block's rows fit. `components/feed/PlaceBlock.tsx` draws; `lib/feed/place-block.ts` (22 tests) decides. `feed.tsx` measures its own height, gives the stage exactly the card's height and mounts the block under it. `FeedHeader.tsx`, `lib/feed/feed-header.ts` and their two test files are deleted.
+- **Explore**: `/community/[slug]?open=<topic>` and `/city/[slug]?open=<topic>` open that tile's sheet — only a tile the page draws, so a figure cannot open an empty sheet.
+- Demo page: option 2 redrawn at the app's sizes and the live figures, marked chosen.
+**Decisions**:
+1. **Laid out by sum, not flex.** The stage is `CARD_TOP + cardHeight`, so `SwipeStack` finds no slack and rests the card at its top — the stack is not edited. The block gives way before the film: both rows on every phone from the 13 mini up (22–48pt of paper left under it), the place row only on a 375×667 — whose film is now whole; it lost 5.2% of its width to the old header.
+2. **The card is 16pt wider.** On a 3x screen that is 1.04x the 1080px source at 390, 1.14x on his phone and 1.18x on a 440 (was 1.00 / 1.10 / 1.13). `card-aspect.test.ts`'s ceiling moved from 1.15 to 1.18 and says why. A canvas wider than 1080 is the real fix if it ever shows.
+3. **A city's home figure is its own page's**, the Census median its Cost tile lists — not the Zillow typical value its communities' cards carry. I first took the communities' figure (one number per city across the feed) and dropped it: the city's page does not show that number, and a card's figure has to be on the page it opens. See Issues.
+4. **The stage out-ranks the block** (`zIndex: 1`), so a dragged card passes over the lines under it. That lifts the stack's paper band over anything above the stage, so `OfflineBar` — the one thing still drawn there — is ranked above both.
+5. **Sizes measured, not guessed**: all 24 real rows laid out in Chrome with the system fonts at six widths. At 23pt figures / 12pt labels / 8 + 12 between cells, 15 rows needed shrinking at 390; at 22 / 12 / 6 + 10 and a 14pt place line one does ("Peachtree Corners homes", to 87%).
+6. **A city's drive prints off-peak to rush** ("52–83 min"), as its Convenience tile does. The off-peak figure alone was in the demo; it is the flattering half.
+7. A trade-off's answer echo moved from the stage's foot to the page's (the stage has no slack now). It cannot show in v1: no listings, so nothing moves.
+**Issues**:
+- **Two home values per city, both already in the app.** A city's page prints the Census median (ACS 2020–24: Suwanee $480,600, Alpharetta $649,000); its communities' pages print Zillow's typical value (Suwanee $589K, Alpharetta $711K). In the feed the two now sit in the same slot on neighbouring cards, labelled "median home value" and "Suwanee homes". Each card matches its own page; the pages disagree. Owner's ruling needed — the obvious one is Zillow on the city page too.
+- Home value is the city's or ZIP's, not the subdivision's (Sugarloaf Country Club reads "$434K Duluth homes").
+- A community's side of Atlanta is measured to eight points; a city's is its researched note. Cumming is 24° east of north: its card says "north", Sawnee Village's "northeast".
+- DM Serif Display has no user left (the header's title was the last); still bundled and loaded in `_layout.tsx`. Removing a bundled font is a native change — left, noted.
+- **Not seen on a device.** No simulator here. JS only: dev client 1.0.1 (11) shows it after a pull, build 12 keeps the old header and ignores the new field.
+**Verified**: mobile typecheck 0, lint 0 errors / 5 warnings (as main), vitest 896, `expo export --platform ios` bundles. Web tsc 0, biome 0 errors / 180 warnings (as main), vitest 1397. Shared tsc 0. The glance builders run over today's live data for all 17 communities and 7 cities: three cells each, none missing. Selects checked against `database.types.ts` (`communities.profile`; `cities.name / county / lat / lng / profile`). Live API after deploy — below.
+**Next steps**: his pick of figures (a server-only change in `glance.ts`); the ruling on the city home value.
+
 ## 2026-11-23 09:22 UTC — phase377: the Schools chip colours the school dots, not the counties
 
 **Objective**: owner, after phase375: "每个地区关注的点不太一样 县级涂色去掉".
