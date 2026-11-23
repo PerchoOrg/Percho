@@ -37,6 +37,7 @@
 
 import { publicCoverImageUrl } from '@/lib/communities/cover';
 import { createAnonClient } from '@/lib/supabase/server';
+import type { PlaceGlance } from '@percho/shared/glance';
 import { unstable_cache } from 'next/cache';
 
 const GEO_UNITS_TAG = 'geo-units';
@@ -66,6 +67,8 @@ export interface GeoUnitDTO {
   tourSegments?: Array<{ name: string; endFraction: number }>;
   /** The film's chapters, for the card's progress bar: `name` is the chapter's label (phase345). */
   tourChapters?: Array<{ name: string; endFraction: number }>;
+  /** The place line and figures the phone prints under a filmed city's card (phase378). */
+  glance?: PlaceGlance;
   communityCount: number;
   sampleCommunityNames: string[];
   stats: GeoStatsDTO;

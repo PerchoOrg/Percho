@@ -24,6 +24,7 @@
  * link out for crime, as on the community page — `packages/shared/src/city.ts`.
  */
 import type { CityDetailDTO } from "@percho/shared/city";
+import { GLANCE_TOPICS } from "@percho/shared/glance";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -88,7 +89,10 @@ function Section({
 }
 
 export default function CityScreen() {
-	const { slug } = useLocalSearchParams<{ slug: string }>();
+	const { slug, open } = useLocalSearchParams<{
+		slug: string;
+		open?: string;
+	}>();
 	const insets = useSafeAreaInsets();
 	const { width, height: screenH } = useWindowDimensions();
 	const [data, setData] = useState<CityDetailDTO | null>(null);
@@ -142,6 +146,14 @@ export default function CityScreen() {
 			alive = false;
 		};
 	}, [slug]);
+
+	// Reached from a figure under the feed card (phase378): open the sheet of
+	// the tile it names, once the city is in — and only a tile the page draws.
+	useEffect(() => {
+		if (!data) return;
+		const key = GLANCE_TOPICS.find((t) => t === open);
+		if (key && drawnTiles(data)[key]) setSheet(key);
+	}, [data, open]);
 
 	if (error) {
 		return (
@@ -543,6 +555,17 @@ export default function CityScreen() {
 }
 
 type SheetKey = "safety" | "schools" | "convenience" | "potential" | "cost";
+
+/** Which tiles this city's page draws — the conditions on the tiles above. */
+function drawnTiles(data: CityDetailDTO): Record<SheetKey, boolean> {
+	return {
+		safety: !!data.safety,
+		schools: schoolRows(data).length > 0,
+		convenience: driveRows(data).length > 0,
+		potential: data.growth.series.length > 0,
+		cost: costRows(data).length > 0 || !!data.holding,
+	};
+}
 
 /** A city's own pages lead its links; where people talk about it comes last. */
 const CITY_LINK_ORDER = [

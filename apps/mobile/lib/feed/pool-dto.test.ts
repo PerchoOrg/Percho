@@ -70,6 +70,17 @@ describe("parseGeoUnit", () => {
 		expect(plain && "citySlug" in plain).toBe(false);
 	});
 
+	it("carries a filmed city's glance", () => {
+		const glance = {
+			place: { lead: "DeKalb County", rest: "east of Atlanta" },
+			cells: [
+				{ value: "~18 min", label: "6 mi to downtown", topic: "convenience" },
+			],
+		};
+		expect(parseGeoUnit({ ...UNIT, glance })?.glance).toEqual(glance);
+		expect(parseGeoUnit(UNIT)?.glance).toBeUndefined();
+	});
+
 	it("drops a unit with no centroid rather than placing it at (0,0)", () => {
 		expect(parseGeoUnit({ ...UNIT, centroid: null })).toBeNull();
 		expect(parseGeoUnit({ ...UNIT, centroid: { lat: 33.7 } })).toBeNull();
@@ -222,6 +233,57 @@ describe("parseCommunity", () => {
 
 	it("omits an empty pill list rather than carrying []", () => {
 		expect(parseCommunity(COMMUNITY)?.pills).toBeUndefined();
+	});
+
+	/**
+	 * The place line and figures under the card (phase378). The server words
+	 * them and the block draws them as sent, so the parser only checks that
+	 * each piece is something to print.
+	 */
+	it("keeps the glance the server worded", () => {
+		const glance = {
+			place: { lead: "Decatur", rest: "DeKalb County" },
+			cells: [
+				{ value: "$512K", label: "Decatur homes", topic: "potential" },
+				{ value: "Top 9–21%", label: "schools nearby", topic: "schools" },
+				{ value: "6 mi", label: "east of Atlanta", topic: "convenience" },
+			],
+		};
+		expect(parseCommunity({ ...COMMUNITY, glance })?.glance).toEqual(glance);
+		expect(parseCommunity(COMMUNITY)?.glance).toBeUndefined();
+	});
+
+	it("drops a figure it cannot print, and keeps the rest", () => {
+		const parsed = parseCommunity({
+			...COMMUNITY,
+			glance: {
+				place: { lead: "Decatur", rest: "" },
+				cells: [
+					{ value: "$512K", label: "" },
+					{ value: 512, label: "Decatur homes" },
+					// A newer server's topic: the figure stays, the way in goes.
+					{ value: "6 mi", label: "east of Atlanta", topic: "transit" },
+					"nonsense",
+				],
+			},
+		})?.glance;
+		expect(parsed).toEqual({
+			place: { lead: "Decatur" },
+			cells: [{ value: "6 mi", label: "east of Atlanta" }],
+		});
+	});
+
+	it("draws three figures at most, and no glance without a place", () => {
+		const cell = (n: number) => ({ value: `${n}`, label: `figure ${n}` });
+		expect(
+			parseCommunity({
+				...COMMUNITY,
+				glance: { place: { lead: "Decatur" }, cells: [1, 2, 3, 4].map(cell) },
+			})?.glance?.cells,
+		).toHaveLength(3);
+		expect(
+			parseCommunity({ ...COMMUNITY, glance: { cells: [cell(1)] } })?.glance,
+		).toBeUndefined();
 	});
 
 	/** The Map button's landing point (owner, 2026-09-14). Off the wire like a

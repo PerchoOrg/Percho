@@ -217,34 +217,6 @@ export function schoolName(row: Pick<CommunityRank, "label" | "note">): string {
 	return `${note} ${row.label} School`;
 }
 
-const firstCount = (text: string): number | null => {
-	const m = text.match(/\d[\d,]*/);
-	return m ? Number(m[0].replace(/,/g, "")) : null;
-};
-
-/**
- * A rank someone can read: "Top 38%".
- *
- * The tile used to print "#452" over "of 1,220 in GA", which leaves the
- * division to the reader (owner 2026-11-22: "看了数字跟没看一样"). This does it.
- * From the rank and the count when both read as numbers — the worse of two
- * when a row is two schools ("#3 · #6") — rounded UP, so the claim is never
- * better than the rank; otherwise from the share ranked below.
- */
-export function topShare(
-	row: Pick<CommunityRank, "rank" | "of" | "percentile">,
-): string {
-	const places = (row.rank.match(/\d[\d,]*/g) ?? []).map((n) =>
-		Number(n.replace(/,/g, "")),
-	);
-	const of = firstCount(row.of);
-	const share =
-		places.length > 0 && of && of > 0
-			? Math.ceil((Math.max(...places) / of) * 100)
-			: Math.round(100 - row.percentile);
-	return `Top ${Math.min(100, Math.max(1, share))}%`;
-}
-
 /**
  * The newest home value against its baseline's: "56% above Metro Atlanta".
  *

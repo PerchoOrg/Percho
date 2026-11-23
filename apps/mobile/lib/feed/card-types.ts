@@ -14,6 +14,7 @@
  * `generateDiscoveryFeed` lands. Type-only imports of the shared dim vocabulary
  * are erased at compile time and cost nothing at runtime.
  */
+import type { PlaceGlance } from "@percho/shared/glance";
 import type { CardIconName } from "@percho/shared/icons";
 import type { DimKey } from "@percho/shared/types";
 import type { GeoUnit } from "./geo-unit";
@@ -267,6 +268,12 @@ export interface CommunityCardV3 {
 	 * follows `tourSegments`. Never set for a community.
 	 */
 	tourChapters?: readonly { name: string; endFraction: number }[];
+	/**
+	 * The place line and figures printed under the card (phase378) — worded
+	 * by the server, drawn as sent. Absent from an older server; the block
+	 * then names the place from `city` / `county` and prints no figures.
+	 */
+	glance?: PlaceGlance;
 }
 
 // ─── Trade-off (§1.6) ───────────────────────────────────────────────

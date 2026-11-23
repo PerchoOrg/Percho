@@ -13,6 +13,8 @@
  * block at a time, and the nearby tile comes from the film, not the profile.
  */
 import type { CommunityProfile } from "@percho/shared/community-profile";
+import { GLANCE_TOPICS, type GlanceTopic } from "@percho/shared/glance";
+import { topShare } from "@percho/shared/rank-share";
 import type { TourSegment } from "@percho/shared/tour-buckets";
 import { useMemo, useState } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
@@ -25,7 +27,6 @@ import {
 	nearbyStops,
 	schoolName,
 	schoolRanks,
-	topShare,
 	upcomingEvents,
 } from "../../lib/community/explore";
 import { colors } from "../../theme/tokens";
@@ -43,17 +44,53 @@ const TALL: ReadonlySet<ExploreSheetKey> = new Set([
 	"dues",
 ]);
 
+/** The tile each topic of a feed figure names (`@percho/shared/glance`). */
+const TILE_FOR_TOPIC: Record<GlanceTopic, ExploreSheetKey> = {
+	safety: "safety",
+	schools: "schools",
+	convenience: "nearby",
+	potential: "homeValue",
+	cost: "cost",
+};
+
+/**
+ * The sheet the page opens on, when it was reached from a figure under the
+ * feed card (phase378) — and only for a tile this profile draws, so a figure
+ * can never open an empty sheet.
+ */
+function tileToOpen(
+	open: string | undefined,
+	profile: CommunityProfile,
+	segments: readonly TourSegment[] | undefined,
+): ExploreSheetKey | null {
+	const topic = GLANCE_TOPICS.find((t) => t === open);
+	if (!topic) return null;
+	const drawn: Record<GlanceTopic, boolean> = {
+		safety: !!profile.safety,
+		schools: schoolRanks(profile.ranks).length > 0,
+		convenience: nearbyStops(segments) !== null,
+		potential: !!profile.homeValue,
+		cost: !!profile.homeValue?.holding,
+	};
+	return drawn[topic] ? TILE_FOR_TOPIC[topic] : null;
+}
+
 export function ExploreBody({
 	profile,
 	segments,
+	open,
 }: {
 	profile: CommunityProfile;
 	segments: readonly TourSegment[] | undefined;
+	/** A feed figure's topic: the page opens on that tile's sheet. */
+	open?: string | undefined;
 }) {
 	const { width: screenW } = useWindowDimensions();
 	// Floored, so two halves and their gap never round up past the row.
 	const half = Math.floor((screenW - PAGE_PAD * 2 - GAP) / 2);
-	const [sheet, setSheet] = useState<ExploreSheetKey | null>(null);
+	const [sheet, setSheet] = useState<ExploreSheetKey | null>(() =>
+		tileToOpen(open, profile, segments),
+	);
 
 	const nearby = useMemo(() => nearbyStops(segments), [segments]);
 	const events = useMemo(

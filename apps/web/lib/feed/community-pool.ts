@@ -21,11 +21,14 @@
 import { publicCoverImageUrl } from '@/lib/communities/cover';
 import type { TourSegment } from '@/lib/feed/tour-segments';
 import { createUncachedAnonClient } from '@/lib/supabase/server';
+import { parseCommunityProfile } from '@/lib/zod/community-profile';
+import type { PlaceGlance } from '@percho/shared/glance';
 import type { CardIconName } from '@percho/shared/icons';
 import type { DimKey } from '@percho/shared/types';
 import { communityHighlightDims } from './community-highlights';
 import { type CommunityReason, communityReasons } from './community-reasons';
 import { communityLifestyleSignals, signalIcon } from './community-signals';
+import { communityGlance } from './glance';
 
 /**
  * One lifestyle signal, and the glyph it wears.
@@ -119,6 +122,8 @@ export interface PoolCommunityDTO {
    * not come from an assembly, or came from one whose shot list is unreadable.
    */
   tourSegments?: TourSegment[];
+  /** The place line and figures the phone prints under the card (phase378). */
+  glance?: PlaceGlance;
 }
 
 type CommunityPoolRow = {
@@ -148,6 +153,8 @@ type CommunityPoolRow = {
    * reason: fixtures predating the column must keep compiling. */
   lat?: number | null;
   lng?: number | null;
+  /** `communities.profile`, unparsed. Read for the card's glance only; it never leaves. */
+  profile?: unknown;
 };
 
 /**
@@ -178,7 +185,7 @@ export async function fetchCommunityPool(args: {
     // two figures that qualify as evidence for a resident-stated reason (see
     // `community-reasons.ts`). Still no `boundary` — that is the timeout trap.
     .select(
-      'id, slug, name, city, state, county, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age, lat, lng',
+      'id, slug, name, city, state, county, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age, lat, lng, profile',
     )
     .eq('status', 'active')
     // A card with no photo is not a card (§1.4 is photo-first).
@@ -224,7 +231,7 @@ export async function fetchCommunityPoolByIds(ids: string[]): Promise<PoolCommun
     .from('communities')
     // Same column list as the paged read, minus `boundary` — see the header.
     .select(
-      'id, slug, name, city, state, county, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age, lat, lng',
+      'id, slug, name, city, state, county, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age, lat, lng, profile',
     )
     .eq('status', 'active')
     .not('cover_storage_path', 'is', null)
@@ -322,6 +329,13 @@ export function projectCommunityPool(
       const icon = signalIcon(label);
       return icon ? { label, icon } : { label };
     });
+    const glance = communityGlance({
+      city: r.city ?? '',
+      county: r.county,
+      lat: r.lat,
+      lng: r.lng,
+      profile: parseCommunityProfile(r.profile),
+    });
     out.push({
       id: r.id,
       slug: r.slug,
@@ -337,6 +351,7 @@ export function projectCommunityPool(
       ...(dims.length > 0 ? { dims } : {}),
       ...(reasons.length > 0 ? { reasons } : {}),
       ...(signals.length > 0 ? { signals } : {}),
+      ...(glance ? { glance } : {}),
     });
   }
   return out;

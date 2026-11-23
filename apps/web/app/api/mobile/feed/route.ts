@@ -47,6 +47,7 @@ import {
 } from '@/lib/feed/dim-photos';
 import { fetchNeighborhoodScores } from '@/lib/feed/fetch-neighborhood-scores';
 import { type GeoUnitDTO, fetchCityGeoUnits } from '@/lib/feed/geo-units';
+import { cityGlance } from '@/lib/feed/glance';
 import { type LikedCommunityRef, type PoolListingDTO, gateListings } from '@/lib/feed/listing-gate';
 import { listingHighlightDims } from '@/lib/feed/listing-highlights';
 import type { NeighborhoodScores } from '@/lib/feed/neighborhood-score';
@@ -277,23 +278,6 @@ export async function GET(request: Request) {
     fetchCityFilms(filmsClient),
   ]);
 
-  // A city with a film plays it on its card and opens its page (phase327). Its
-  // poster is the film's own first frame: the view's `hero_storage_path` is the
-  // cover of whichever community sorts first, which is not a picture of the city.
-  const geoUnits = cityUnits.map((unit) => {
-    const film = cityFilms.get(unit.id);
-    return film
-      ? {
-          ...unit,
-          videoUrl: film.videoUrl,
-          citySlug: film.slug,
-          ...(film.segments.length > 0 ? { tourSegments: film.segments } : {}),
-          ...(film.chapters.length > 0 ? { tourChapters: film.chapters } : {}),
-          heroUrl: film.posterUrl,
-        }
-      : unit;
-  });
-
   /**
    * `videoFirst` has to FETCH the video-bearing listings, not just sort the page.
    *
@@ -517,6 +501,24 @@ export async function GET(request: Request) {
     : // `videoBearing`, not `communitiesWithVideo` — the un-sorted branch has to
       // honour the filter too, or `videosOnly` would only work with `videoFirst`.
       videoBearing;
+
+  // A city with a film plays it on its card and opens its page (phase327). Its
+  // poster is the film's own first frame: the view's `hero_storage_path` is the
+  // cover of whichever community sorts first, which is not a picture of the city.
+  const geoUnits = cityUnits.map((unit) => {
+    const film = cityFilms.get(unit.id);
+    if (!film) return unit;
+    const glance = cityGlance(film.place);
+    return {
+      ...unit,
+      videoUrl: film.videoUrl,
+      citySlug: film.slug,
+      ...(film.segments.length > 0 ? { tourSegments: film.segments } : {}),
+      ...(film.chapters.length > 0 ? { tourChapters: film.chapters } : {}),
+      heroUrl: film.posterUrl,
+      ...(glance ? { glance } : {}),
+    };
+  });
 
   const body: FeedPoolResponse = {
     stage,

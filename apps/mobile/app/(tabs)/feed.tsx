@@ -45,8 +45,8 @@ import { SwipeLabels } from "../../components/cards/SwipeLabels";
 import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
-import { FeedHeader } from "../../components/feed/FeedHeader";
 import { OfflineBar } from "../../components/feed/OfflineBar";
+import { PlaceBlock } from "../../components/feed/PlaceBlock";
 import { useCfScores } from "../../hooks/use-cf-scores";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
@@ -55,13 +55,13 @@ import { cityFilmCard } from "../../lib/feed/city-film-card";
 import { deckKey } from "../../lib/feed/deck-key";
 import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
-import { feedHeaderModel } from "../../lib/feed/feed-header";
 import {
 	RERANK_HOLD,
 	generateFeed,
 	movedUpCount,
 	rerankTail,
 } from "../../lib/feed/generate-feed";
+import { placeBlockModel } from "../../lib/feed/place-block";
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
 import { preferScope } from "../../lib/feed/scope";
 import {
@@ -84,67 +84,27 @@ import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
 import { useSwipeHintStore } from "../../state/swipe-hint";
+import { CARD_TOP, GUTTER, feedPage } from "../../theme/feed-page";
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
 /**
- * CardContainer insets (2026-08-13 redesign). The card now fills ALL of the
- * feed's available height (`flex: 1` inside the stack), so this padding is the
- * card's only margin — the old centered box with ~50pt of dead space top and
- * bottom is gone.
+ * The card's margins are `theme/feed-page.ts`'s (phase378): `GUTTER` of paper
+ * each side, `CARD_TOP` under the status bar, and nothing below — the place
+ * block starts there.
  *
- * 2026-08-13 owner revision: the media should read as an embedded WHITE card,
- * so the container's horizontal padding grows to 16 (was 12) — the paper
- * background shows around the card and the media box (which has its own
- * margin from the white text block) reads inset.
+ * What the numbers were, for the record. The card's side inset went 12 → 16 →
+ * 24 → 30 → 46 → 37 between 2026-08-13 and 08-16 while it was meant to read
+ * narrow enough for the next card to peek beside it; `PEEK_PT` went to 0 on
+ * 08-19, and on 08-23 the inset came back to 16 (owner — buyers said the
+ * cards read small). It is 8 now: the header that sat above the card is gone
+ * (owner, 2026-11-23: "感觉还是以填充为主"), and the room it held went to the
+ * film. The top inset was 24, then 16 (phase182), then 12 under the header
+ * (2026-09-07); with nothing above the card it is the gap to the status bar.
  *
- * 2026-08-14 owner revision: the card should not read as full-bleed at all —
- * horizontal 24 (was 16) so a clear band of paper shows down BOTH sides, and
- * top 12 (was 8) to seat it under the header row. This is the card
- * FRAME's inset — the frame, not the media; since 2026-08-18 every face is
- * full-bleed inside it.
- *
- * 2026-08-14 polish pass: horizontal 24 → 30 — the owner wanted the card ~6%
- * narrower with more paper on each side. `stackWrap` is `alignItems: center`,
- * so widening its padding narrows the card symmetrically; top/bottom are
- * unchanged.
- *
- * 2026-08-16 (Tia): 30 → 46 — the cards were too wide to read as swipeable,
- * so the next card's edge never showed. The wider band makes the card
- * visibly narrower than the screen and the next card peeks beside it (the
- * constant itself is defined above the doc block; `GUTTER` above matches).
- *
- * 2026-08-23: 37 → 16 (owner — buyers reported the cards read small with too
- * much spare paper around them). The card was 44% of the screen's area; it is
- * now 56–59% on every iPhone from the 13 mini up.
- *
- * The 2026-08-16 rationale above is retained for history but no longer
- * describes the stack: `PEEK_PT` went to 0 on 2026-08-19 and the behind card
- * rests at `STACK_RESTING` scale 0.94 — SMALLER than the top card — so nothing
- * peeks beside it at any gutter width. What the band still buys is the
- * swipeable read (a card that touches both screen edges is a page, not a
- * card), and 16 keeps a visible band for that.
- *
- * The ceiling on this is the VIDEO, not the layout: both tour canvases are
- * 1080x1576, so on a 3x screen a card wider than 360pt is upsampling its own
- * source. 16 puts the common phones at exactly 1.00 and the Max phones at
- * ~1.13, which their 2.7-4.5 Mbps top rendition absorbs without a visible
- * change. Going wider than this needs a bigger canvas first.
- *
- * 2026-09-06 (phase182): `top` 24 → 16, equal to `bottom`. The community strip
- * is gone (owner: it made the page 「not well organized and immersive」), so
- * these are FLOORS on either side of the card, and the card is drawn at the
- * tour's aspect (「Don't cut film」) with whatever the page has spare shared
- * out by `SwipeStack`'s `restTop`.
- *
- * 2026-09-07: `top` 16 → 12 (owner: 「the empty space between card and header
- * is too big」). The 16 came from the handoff, where it sat under an uppercase
- * type row; that row is gone, so the title's own line is what the card now
- * hangs from and it wants to be closer. The floors are no longer symmetric on
- * purpose — see `restTop`, which pairs with this.
+ * What the band of paper still buys is the swipeable read: a card that
+ * touches both screen edges is a page, not a card.
  */
-const CARD_INSET = { horizontal: 16, top: 12, bottom: 16 };
-const GUTTER = 16;
 
 /**
  * The card frame height is NOT decided here any more (owner, 2026-08-17: one
@@ -309,7 +269,18 @@ export default function FeedScreen() {
 		return cfScores === undefined ? scoped : { ...scoped, cfScores };
 	}, [pool, scope?.unitId, cfScores]);
 
-	const cardWidth = width - GUTTER * 2;
+	/**
+	 * What fits on this screen (`theme/feed-page.ts`): the card at the film's
+	 * shape under the status bar, then as much of the place block as there is
+	 * room for. From the screen's own measured height, so the offline bar and
+	 * any tab bar are already paid for.
+	 */
+	const [contentHeight, setContentHeight] = useState(0);
+	const page = useMemo(
+		() => feedPage(width, contentHeight),
+		[width, contentHeight],
+	);
+	const cardWidth = page.cardWidth;
 
 	const poolRef = useRef(scopedPool);
 	poolRef.current = scopedPool;
@@ -480,18 +451,17 @@ export default function FeedScreen() {
 	}, [remaining, deck.length, exhausted, fetchMore, appendPage]);
 
 	/**
-	 * The above-card header's one read of the ACTIVE card (phase183).
+	 * The under-card block's one read of the ACTIVE card (phase378).
 	 *
-	 * `activeIndex` only moves on a COMMITTED swipe, so context, title, type
-	 * label and both destinations change together and a cancelled swipe
-	 * changes none of them — the handoff's §7 rule, satisfied by where the
-	 * model comes from rather than by a transition. There is no frame in which
-	 * the incoming card's map target sits under the outgoing card's place.
+	 * `activeIndex` only moves on a COMMITTED swipe, so the place, the figures
+	 * and every destination change together and a cancelled swipe changes none
+	 * of them. There is no frame in which the incoming card's map target sits
+	 * under the outgoing card's place.
 	 */
 	const topCard = deck[activeIndex];
-	const header = useMemo(
+	const block = useMemo(
 		() =>
-			feedHeaderModel({
+			placeBlockModel({
 				card: topCard,
 				geoUnits: pool.geoUnits,
 				communities: pool.communities,
@@ -869,7 +839,7 @@ export default function FeedScreen() {
 
 	// Destructured so the two handlers below narrow: TypeScript drops a
 	// property's narrowing inside a closure, but keeps a `const`'s.
-	const { titleSlug, mapUnitId, mapPoint } = header;
+	const { placeSlug, explore, mapUnitId, mapPoint } = block;
 
 	const atEnd = activeIndex >= deck.length;
 	// §1.9's terminal card is for a genuinely dry pool, not for a momentary gap:
@@ -884,80 +854,117 @@ export default function FeedScreen() {
 	return (
 		<SafeAreaView style={styles.screen} edges={["top"]}>
 			{offline && <OfflineBar />}
-			{/*
-			 * The above-card header (phase183, the owner's handoff + map control
-			 * B). Three rows over the card: the place trail, the card's own place
-			 * as a navigable serif title beside the Map pill, and the card type.
-			 *
-			 * Both destinations are the ones the app already has — the community
-			 * overview a card's `Explore →` opens, and the Search tab's map
-			 * focused on the card's city — and each affordance appears only when
-			 * its target is real: no slug, no chevron; no unit, no Map button.
-			 *
-			 * The card below is CENTRED in the stage (owner, phase182: 「balance
-			 * the empty space above and under card」), so this row's height does
-			 * not decide where the page's slack lands — it splits evenly around
-			 * the card.
-			 */}
-			<FeedHeader
-				model={header}
-				onOpenTitle={
-					titleSlug !== null
-						? () => router.push(`/community/${titleSlug}`)
-						: undefined
-				}
-				onOpenMap={
-					// The card's own point first (owner, 2026-09-14: "redirected to
-					// that community or home on map, not just the county area") —
-					// the city unit only for a card that carries no coordinates.
-					mapPoint !== null
-						? () =>
-								router.navigate({
-									pathname: "/(tabs)/search",
-									params: {
-										focusLat: String(mapPoint.lat),
-										focusLng: String(mapPoint.lng),
-										focusKind: mapPoint.kind,
-									},
-								})
-						: mapUnitId !== null
-							? () =>
-									router.navigate({
-										pathname: "/(tabs)/search",
-										params: { focus: mapUnitId },
-									})
-							: undefined
-				}
-			/>
-			<View style={styles.stackWrap}>
-				{deck.length === 0 && (loading || composing) ? (
-					<View style={styles.cardContainer}>
-						<CardSkeleton />
-					</View>
-				) : showExhausted ? (
-					<View style={styles.cardContainer}>
-						<ExhaustedCard
-							/*
-							 * One exit now, not two. "Adjust my scope" opened the
-							 * scope sheet, and the sheet left the feed on
-							 * 2026-09-09 — so widening happens where it now lives,
-							 * which is the tab this button already went to.
-							 */
-							onBrowseMap={() => router.navigate("/(tabs)/search")}
+			<View
+				style={styles.page}
+				onLayout={(e) => setContentHeight(e.nativeEvent.layout.height)}
+			>
+				<View
+					style={[styles.stackWrap, { height: CARD_TOP + page.cardHeight }]}
+				>
+					{deck.length === 0 && (loading || composing) ? (
+						<View style={styles.cardContainer}>
+							<CardSkeleton />
+						</View>
+					) : showExhausted ? (
+						<View style={styles.cardContainer}>
+							<ExhaustedCard
+								/*
+								 * One exit now, not two. "Adjust my scope" opened the
+								 * scope sheet, and the sheet left the feed on
+								 * 2026-09-09 — so widening happens where it now lives,
+								 * which is the tab this button already went to.
+								 */
+								onBrowseMap={() => router.navigate("/(tabs)/search")}
+							/>
+						</View>
+					) : (
+						<SwipeStack
+							items={deck}
+							activeIndex={activeIndex}
+							onDecision={onDecision}
+							onTapTarget={onTapTarget}
+							onHintReady={onHintReady}
+							renderCard={renderCard}
+							renderOverlay={renderOverlay}
+							keyExtractor={deckKey}
+							cardWidth={cardWidth}
+							capability={capability}
 						/>
-					</View>
-				) : (
-					<SwipeStack
-						items={deck}
-						activeIndex={activeIndex}
-						onDecision={onDecision}
-						onTapTarget={onTapTarget}
-						onHintReady={onHintReady}
-						renderCard={renderCard}
-						renderOverlay={renderOverlay}
-						keyExtractor={deckKey}
-						cardWidth={cardWidth}
-						capability={capability}
+					)}
+					{/*
+					 * Paused glyph, centred on the card. Drawn here rather than in the
+					 * faces: `suspended` also covers "an explore page is over us",
+					 * where nobody can see the card, and a glyph that appears for the
+					 * pop-back animation's duration would flash. Only a TAP pause
+					 * shows it. `pointerEvents="none"` so the next tap reaches the deck.
+					 */}
+					{paused && (
+						<View style={styles.pausedWrap} pointerEvents="none">
+							<View style={styles.pausedDisc}>
+								<View style={styles.pausedTriangle} />
+							</View>
+						</View>
+					)}
+				</View>
+				{/*
+				 * Under the card (phase378, the owner's "方案2"): where the place
+				 * is, Map, and three figures the film cannot show. It replaced the
+				 * header ABOVE the card, which repeated the card's name.
+				 *
+				 * Each affordance appears only when its target is real: no map
+				 * target, no Map button; no page, and a figure is text. The place
+				 * line opens a community only for a HOME — on a community's own
+				 * card Explore already goes there.
+				 */}
+				{page.rows !== "none" && (
+					<PlaceBlock
+						model={block}
+						facts={page.rows === "both"}
+						gap={page.blockGap}
+						onOpenPlace={
+							placeSlug !== null
+								? () => router.push(`/community/${placeSlug}`)
+								: undefined
+						}
+						onOpenMap={
+							// The card's own point first (owner, 2026-09-14: "redirected
+							// to that community or home on map, not just the county
+							// area") — the city unit only for a card without coordinates.
+							mapPoint !== null
+								? () =>
+										router.navigate({
+											pathname: "/(tabs)/search",
+											params: {
+												focusLat: String(mapPoint.lat),
+												focusLng: String(mapPoint.lng),
+												focusKind: mapPoint.kind,
+											},
+										})
+								: mapUnitId !== null
+									? () =>
+											router.navigate({
+												pathname: "/(tabs)/search",
+												params: { focus: mapUnitId },
+											})
+									: undefined
+						}
+						onOpenCell={
+							explore !== null
+								? (cell) => {
+										if (topCard) emitGesture("datapoint_tap", topCard);
+										// The page opens on the part the figure belongs to.
+										const params = {
+											slug: explore.slug,
+											...(cell.topic ? { open: cell.topic } : {}),
+										};
+										router.push(
+											explore.kind === "community"
+												? { pathname: "/community/[slug]", params }
+												: { pathname: "/city/[slug]", params },
+										);
+									}
+								: undefined
+						}
 					/>
 				)}
 				{echo !== null && (
@@ -965,20 +972,6 @@ export default function FeedScreen() {
 						<Text style={styles.echoText} numberOfLines={2}>
 							{echo}
 						</Text>
-					</View>
-				)}
-				{/*
-				 * Paused glyph, centred on the card. Drawn here rather than in the
-				 * faces: `suspended` also covers "an explore page is over us",
-				 * where nobody can see the card, and a glyph that appears for the
-				 * pop-back animation's duration would flash. Only a TAP pause
-				 * shows it. `pointerEvents="none"` so the next tap reaches the deck.
-				 */}
-				{paused && (
-					<View style={styles.pausedWrap} pointerEvents="none">
-						<View style={styles.pausedDisc}>
-							<View style={styles.pausedTriangle} />
-						</View>
 					</View>
 				)}
 			</View>
@@ -994,9 +987,9 @@ const styles = StyleSheet.create({
 	 * stack vertically centred and the card stretching edge to edge.
 	 */
 	/**
-	 * The answer echo. Absolutely positioned at the FOOT of the stage, in the
-	 * paper the card floats on — the card is `CARD_FRAME_RATIO` of the stage and
-	 * the slack below it is where this fits without covering anything.
+	 * The answer echo. Absolutely positioned at the FOOT of the page, in the
+	 * paper under the place block — the stage is exactly the card since
+	 * phase378, so there is no slack inside it to sit in.
 	 */
 	echo: {
 		position: "absolute",
@@ -1011,13 +1004,24 @@ const styles = StyleSheet.create({
 		color: colors.ink2,
 		textAlign: "center",
 	},
+	/** Everything between the status bar (and the offline bar) and the tab
+	 * bar. Measured, and `feedPage` decides what fits in it. */
+	page: { flex: 1 },
+	/**
+	 * The stage: the card's own box and nothing more, so `SwipeStack` finds
+	 * no slack and the card rests at its top.
+	 *
+	 * Ranked above the place block that follows it, so a card being dragged
+	 * passes OVER those lines. That rank also lifts the stack's paper band
+	 * (`stageClip`, 120pt above the stage) over anything drawn up there — the
+	 * offline bar out-ranks it in turn.
+	 */
 	stackWrap: {
-		flex: 1,
+		zIndex: 1,
 		alignItems: "center",
 		justifyContent: "center",
-		paddingHorizontal: CARD_INSET.horizontal,
-		paddingTop: CARD_INSET.top,
-		paddingBottom: CARD_INSET.bottom,
+		paddingHorizontal: GUTTER,
+		paddingTop: CARD_TOP,
 	},
 	/**
 	 * Placeholder frame for skeleton / exhausted states — fills the same box

@@ -47,6 +47,17 @@ export interface CityFilm {
   segments: TourSegment[];
   /** The film's chapters — the card's progress bar, when the film has them (phase345). */
   chapters: Array<{ name: string; endFraction: number }>;
+  /** What the card's glance is built from (`lib/feed/glance.ts`, phase378). */
+  place: {
+    name: string;
+    county: string | null;
+    lat: number | null;
+    lng: number | null;
+    profile: Pick<
+      CityFundamentals,
+      'compare' | 'education' | 'gettingAround' | 'locationNote'
+    > | null;
+  };
 }
 
 interface PhotoRow {
@@ -103,7 +114,7 @@ export async function fetchCityFilms(
   const [cities, assemblies] = await Promise.all([
     supabase
       .from('cities')
-      .select('id, slug, geo_unit_id')
+      .select('id, slug, geo_unit_id, name, county, lat, lng, profile')
       .eq('status', 'active')
       .not('geo_unit_id', 'is', null),
     supabase
@@ -140,6 +151,13 @@ export async function fetchCityFilms(
         name: c.label,
         endFraction: c.endFraction,
       })),
+      place: {
+        name: city.name,
+        county: city.county,
+        lat: city.lat,
+        lng: city.lng,
+        profile: parseCityProfile(city.profile),
+      },
     });
   }
   return films;
