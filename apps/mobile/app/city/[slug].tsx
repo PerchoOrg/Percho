@@ -416,9 +416,8 @@ export default function CityScreen() {
 								</View>
 							))}
 							<Text style={styles.sheetCaption}>
-								Each is the closest to the city's centre, straight-line.
-								Percho does not show crime figures. The agencies publish their
-								own:
+								Each is the closest to the city's centre, straight-line. Percho
+								does not show crime figures. The agencies publish their own:
 							</Text>
 							<View style={styles.sheetLinks}>
 								{safetyLinks.map((l) => (

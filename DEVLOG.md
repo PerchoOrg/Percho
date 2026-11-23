@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-23 07:37 UTC — phase373.1: the foot reads "Sources"; a city's fire station is named, not counted
+
+**Objective**: owner on phase373: "改成sources就好" (the foot's label), and "safety firestation 说8 within 5 miles 怎么能和别的格式统一".
+**Actions**: `CreditsFoot` reads "Sources ›" on both pages (what it opens into is unchanged — sources, then the film's photo credits). The city Safety tile's second row was "Fire stations · 8 within 5 miles", a count where every other row on these tiles is a name and a distance; `community:safety --cities` now stores the closest station and the row is "Fire station · Forsyth County Fire Station #1 · 0.8 mi", the community page's form. The count is no longer kept. Re-run for the seven cities.
+**Noted**: Johns Creek's closest station to its centre point is a Forsyth County one (#6, 2.4 mi) — the `cities` row's point sits near the county line. True as measured; a point nearer the city's middle would name a Johns Creek station.
+**Issue, mine**: the merge `011903a5` went out with one mis-wrapped line in `app/city/[slug].tsx` (`pnpm lint` failing on format) and without this entry. The command that ran the mobile checks and wrote the entry was chained after `grep -c ' error'`, which exits 1 when it counts zero — so everything after it was skipped, silently, and the commit and merge on the next line ran anyway. Fixed in the follow-up commit; checks are now run on their own line and read before a merge.
+**Verified**: web tsc 0, cities vitest green; mobile typecheck 0, lint clean, vitest 891 — run again after the fix; the live API after deploy.
+
 ## 2026-11-23 07:15 UTC — phase373: Explore pages — no intro, no "Residents say"; a forecast and holding cost on the city page; one credits foot
 
 **Objective**: owner 2026-11-22: "去掉city community explore下面的简介 / community resident say没啥价值去掉 / city potential 能加一个对未来的预测吗 / city cost里加其他方面的cost of living / photos credit 格式和community里的一致".
