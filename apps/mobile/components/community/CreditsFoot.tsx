@@ -1,7 +1,7 @@
 /**
  * The foot of a community's page and a city's (phase373): one quiet line,
- * "Sources & photo credits ›", that opens into the sources and the film's
- * photo credits.
+ * "Sources ›", that opens into the sources and the film's photo credits. (It
+ * read "Sources & photo credits" until the owner shortened it, 2026-11-22.)
  *
  * Sources because every evidence block names where it came from (§3.4); photo
  * credits because Google's Places policy and a CC BY licence both ask for the
@@ -37,9 +37,7 @@ export function CreditsFoot({
 				accessibilityState={{ expanded: open }}
 				hitSlop={8}
 			>
-				<Text style={styles.head}>
-					Sources & photo credits {open ? "⌃" : "›"}
-				</Text>
+				<Text style={styles.head}>Sources {open ? "⌃" : "›"}</Text>
 			</Pressable>
 			{open && (
 				<>

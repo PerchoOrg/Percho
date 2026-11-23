@@ -17,7 +17,7 @@
  *
  * `safety` on the page (phase371) follows the community page's ruling of
  * 2026-11-22 (`community-profile.ts`): facts about the PLACE — the hospital
- * nearest the city's centre, the fire stations around it — and crime figures
+ * and the fire station nearest the city's centre — and crime figures
  * only as a link out. It is not part of the stored, researched profile.
  */
 

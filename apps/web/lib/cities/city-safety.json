@@ -1,55 +1,75 @@
 {
   "asOf": "2026-11-23",
-  "fireWithinMiles": 5,
   "cities": {
     "alpharetta-ga": {
       "hospital": {
         "name": "WellStar North Fulton Hospital",
         "miles": 1.8
       },
-      "fireStations": 15
+      "fire": {
+        "name": "Alpharetta Fire Station 81",
+        "miles": 1.1
+      }
     },
     "buford-ga": {
       "hospital": {
         "name": "Northside Hospital Forsyth",
         "miles": 8.8
       },
-      "fireStations": 3
+      "fire": {
+        "name": "Gwinnett County Station 14 Fire Station",
+        "miles": 1.6
+      }
     },
     "cumming-ga": {
       "hospital": {
         "name": "Northside Hospital Forsyth",
         "miles": 2
       },
-      "fireStations": 5
+      "fire": {
+        "name": "Forsyth County Fire Station #1",
+        "miles": 0.8
+      }
     },
     "duluth-ga": {
       "hospital": {
         "name": "Northside Hospital Duluth",
         "miles": 1.1
       },
-      "fireStations": 6
+      "fire": {
+        "name": "Gwinnett Fire Station 07",
+        "miles": 1.2
+      }
     },
     "johns-creek-ga": {
       "hospital": {
         "name": "Emory Johns Creek Hospital",
         "miles": 0.6
       },
-      "fireStations": 8
+      "fire": {
+        "name": "Forsyth County Fire Station #6",
+        "miles": 2.4
+      }
     },
     "sugar-hill-ga": {
       "hospital": {
         "name": "Northside Hospital Forsyth",
         "miles": 7.9
       },
-      "fireStations": 3
+      "fire": {
+        "name": "Gwinnett County Station 14 Fire Station",
+        "miles": 1.4
+      }
     },
     "suwanee-ga": {
       "hospital": {
         "name": "Emory Johns Creek Hospital",
         "miles": 6.4
       },
-      "fireStations": 6
+      "fire": {
+        "name": "Gwinnett County Station 13 Fire Station",
+        "miles": 0.4
+      }
     }
   }
 }
