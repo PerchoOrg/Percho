@@ -34,7 +34,9 @@ import { parseCityProfile } from '@/lib/zod/city-profile';
 import type { CityDetailDTO, CityFilmCredits, CityFundamentals } from '@percho/shared/city';
 import { buildTourChapters } from '@percho/shared/tour-buckets';
 import { fetchCityReviews } from '../communities/reviews';
+import { parseCommunityProfile } from '../zod/community-profile';
 import { bySection } from './chapters';
+import { cityForecast } from './forecasts';
 import { articleLinks, cityLinks, citySafety, citySchools } from './links';
 
 export interface CityFilm {
@@ -151,6 +153,36 @@ export async function fetchCityFilms(
  * a field the stale copy no longer parsed — the page answered 404 for a city
  * whose row was fine (2026-11-15).
  */
+/**
+ * A month of holding the typical home in the city, read off one of the city's
+ * own community profiles rather than computed a second time.
+ *
+ * `profile-build.ts` prices it from the city's Zillow value and the county's
+ * tax and utility figures, so every computed profile in a city carries the
+ * same block, named for the city ("a month to hold the typical Cumming
+ * home"). A researched profile may be drawn for a ZIP instead; those are
+ * passed over by checking the block is the city's.
+ */
+async function cityHolding(
+  anon: ReturnType<typeof createUncachedAnonClient>,
+  cityName: string,
+): Promise<CityDetailDTO['holding'] | undefined> {
+  const { data, error } = await anon
+    .from('communities')
+    .select('profile')
+    .eq('city', cityName)
+    .eq('status', 'active')
+    .not('profile', 'is', null)
+    .order('id')
+    .limit(8);
+  if (error) throw new Error(`holding read failed: ${error.message}`);
+  for (const row of data ?? []) {
+    const value = parseCommunityProfile(row.profile)?.homeValue;
+    if (value?.holding && value.area === cityName) return value.holding;
+  }
+  return undefined;
+}
+
 export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | null> {
   const anon = createUncachedAnonClient();
   const { data: city, error } = await anon
@@ -215,6 +247,11 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
     console.warn('[city] reviews unavailable', err);
     return null;
   });
+  const holding = await cityHolding(anon, city.name).catch((err) => {
+    console.warn('[city] holding cost unavailable', err);
+    return undefined;
+  });
+  const forecast = cityForecast(city.county);
   const safety = citySafety(city.slug);
   const allSchools = citySchools(city.slug);
   return {
@@ -230,6 +267,8 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
     credits,
     ...(safety ? { safety } : {}),
     ...(reviews ? { reviews } : {}),
+    ...(forecast ? { forecast } : {}),
+    ...(holding ? { holding } : {}),
     ...(allSchools ? { allSchools } : {}),
     links: [
       ...cityLinks({

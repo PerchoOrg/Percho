@@ -59,6 +59,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RedlineIcon } from "../../components/cards/redline/RedlineChrome";
+import { CreditsFoot } from "../../components/community/CreditsFoot";
 import { ExploreBody } from "../../components/community/ExploreBody";
 import { NearbyChart } from "../../components/community/NearbyChart";
 import { ReviewsSection } from "../../components/community/ReviewsSection";
@@ -123,8 +124,6 @@ export default function CommunityWhyScreen() {
 	// rows, so this is skipped without a session.
 	const uid = useAuthStore((s) => s.session?.user.id);
 	const [myStatus, setMyStatus] = useState<ReviewStatus | null>(null);
-	/** The folded foot: sources and photo credits, shown on a tap. */
-	const [notesOpen, setNotesOpen] = useState(false);
 	useEffect(() => {
 		if (!uid || !data) return;
 		let alive = true;
@@ -262,11 +261,7 @@ export default function CommunityWhyScreen() {
 					</View>
 
 					{profile && (
-						<ExploreBody
-							profile={profile}
-							segments={data.tourSegments}
-							interests={interests}
-						/>
+						<ExploreBody profile={profile} segments={data.tourSegments} />
 					)}
 
 					{/* Three figures as numerals — the old label/value rows charted. */}
@@ -351,38 +346,14 @@ export default function CommunityWhyScreen() {
 						onWrite={writeReview}
 					/>
 
-					{/*
-					 * Sources (§3.4: every evidence block names where it came from) and
-					 * the film's photo credits (Google's Places policy: every displayed
-					 * photo credits its author). Folded behind one line since
-					 * 2026-11-21 — a film of Google photos credits twenty-odd people,
-					 * and the owner found the foot "太多了" — and shown in full on a tap.
-					 */}
-					<Pressable
-						onPress={() => setNotesOpen((open) => !open)}
-						accessibilityRole="button"
-						accessibilityState={{ expanded: notesOpen }}
-						hitSlop={8}
-					>
-						<Text style={styles.source}>
-							Sources & photo credits {notesOpen ? "⌃" : "›"}
-						</Text>
-					</Pressable>
-					{notesOpen && (
-						<>
-							<Text style={styles.credit}>
-								{profile
-									? profile.sources.map((src) => src.name).join(" · ")
-									: "Resident-stated attributes and interests from Nextdoor neighbourhood profiles."}
-							</Text>
-							{data.photoCredits && data.photoCredits.length > 0 && (
-								<Text style={styles.credit}>
-									Film photos by {data.photoCredits.join(", ")}, via Google
-									Maps.
-								</Text>
-							)}
-						</>
-					)}
+					<CreditsFoot
+						sources={
+							profile
+								? profile.sources.map((src) => src.name).join(" · ")
+								: "Resident-stated attributes and interests from Nextdoor neighbourhood profiles."
+						}
+						google={data.photoCredits ?? []}
+					/>
 				</View>
 			</ScrollView>
 		</View>
@@ -475,23 +446,4 @@ const styles = StyleSheet.create({
 		borderColor: colors.border,
 	},
 	chipTxt: { ...textStyles.footnote, fontSize: 14, color: colors.ink },
-
-	source: {
-		...textStyles.caption,
-		fontSize: 12,
-		color: colors.ink3,
-		textTransform: "none",
-		letterSpacing: 0,
-		marginTop: 22,
-		lineHeight: 18,
-	},
-	credit: {
-		...textStyles.caption,
-		fontSize: 12,
-		color: colors.ink3,
-		textTransform: "none",
-		letterSpacing: 0,
-		marginTop: 8,
-		lineHeight: 18,
-	},
 });

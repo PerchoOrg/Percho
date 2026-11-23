@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-23 07:15 UTC — phase373: Explore pages — no intro, no "Residents say"; a forecast and holding cost on the city page; one credits foot
+
+**Objective**: owner 2026-11-22: "去掉city community explore下面的简介 / community resident say没啥价值去掉 / city potential 能加一个对未来的预测吗 / city cost里加其他方面的cost of living / photos credit 格式和community里的一致".
+**Actions**:
+- **Intro removed.** City page: the tagline and the location line under the name are not drawn (the distance to Atlanta is the Convenience tile's first row). Community page: the verdict lines under the name are not drawn. Read as the same ask on both pages — on the community page the verdict block is the only thing between the name and the tiles.
+- **"Residents say" removed**: the tile and its sheet (`Words`, the interests chips) are gone from `ExploreBody` / `ExploreSheets`. `profile.verdict` and `profile.words` are still built and stored — build 12's frozen JS reads them — just not drawn. Dues is the one tile left that is not always present; it is full width.
+- **City forecast** (`apps/web/lib/cities/forecasts.ts`): the county's 2050 population from the Atlanta Regional Commission's Series 17 forecasts (February 2024) — Forsyth 251,283 → 450,124 (+79%), Fulton 1,066,710 → 1,321,079 (+24%), Gwinnett 957,062 → 1,200,534 (+25%). A published forecast, not an extrapolation of ours, and for the county: both said on the page. The Potential tile gets one line; its sheet a block with the figure, the base and the source link.
+- **City cost of living**: the DTO gains `holding` — the month of owning the typical home in the city before the mortgage (property tax, electricity, water, trash), read off one of the city's own computed community profiles (`cityHolding` in `detail.ts`), so a city's page and its communities' pages cannot disagree. The Cost tile gets a row ("To hold a home … ≈ $610/mo"); the sheet opens on the same breakdown the community Cost sheet draws (`HoldingCost`, exported from `ExploreSheets`).
+- **Credits**: `components/community/CreditsFoot.tsx` — the community page's "Sources & photo credits ›" line — now on both pages. The city page drew a bordered "Photo credits" card (`PhotoCredits`, removed); its foot now also names its sources, and Wikimedia Commons authors keep their licence and link.
+**Decisions**: no groceries / fuel / sales-tax figures on the city Cost tile — none is in our data with a source, and an unsourced cost figure is the thing the buyer study warned about. Sales tax by county is the obvious next one to source.
+**Verified**: mobile typecheck 0, lint clean, vitest 891; web tsc 0, vitest (cities: 1 new). The live city API checked after deploy. Not seen on a device.
+
 ## 2026-11-23 06:18 UTC — phase372: city page — every school, articles under Resources, reviews at the foot
 
 **Objective**: owner on phase371's city page: "city explore 学校应该有很多吧 只看到三个 / resources可以加一些评论文章 / 最底下还是要有review 部分".

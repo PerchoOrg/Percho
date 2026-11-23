@@ -455,46 +455,6 @@ export function PlanList({
 	);
 }
 
-/**
- * Who took the film's photographs. Required, not optional: Google's Places
- * terms ask for the author's name wherever a photo is shown, and a CC BY file
- * on Commons asks for author, licence and a link. Folded shut, at the foot.
- * The figures' own sources are on the figures (each links out), so there is no
- * second list of them here.
- */
-export function PhotoCredits({
-	credits,
-}: { credits: CityDetailDTO["credits"] }) {
-	if (credits.google.length === 0 && credits.commons.length === 0) return null;
-	return (
-		<View style={[styles.card, styles.sourcesCard]}>
-			<Fold title="Photo credits">
-				{credits.google.length > 0 && (
-					<Text style={styles.foldText}>
-						Google Maps contributors: {credits.google.join(", ")}
-					</Text>
-				)}
-				{credits.commons.length > 0 && (
-					<Text style={styles.foldText}>
-						Wikimedia Commons:{" "}
-						{credits.commons.map((c, i) => (
-							<Text
-								key={c.url}
-								style={styles.link}
-								onPress={() => openSource(c.url)}
-							>
-								{i > 0 ? ", " : ""}
-								{c.author}
-								{c.licence ? ` (${c.licence})` : ""}
-							</Text>
-						))}
-					</Text>
-				)}
-			</Fold>
-		</View>
-	);
-}
-
 // ─── styles ─────────────────────────────────────────────────────────────────
 
 const tiny = {
@@ -835,7 +795,5 @@ const styles = StyleSheet.create({
 		lineHeight: 19,
 		color: colors.ink2,
 	},
-	sourcesCard: { paddingVertical: 4 },
-	link: { textDecorationLine: "underline" },
 	pressed: { opacity: 0.6 },
 });
