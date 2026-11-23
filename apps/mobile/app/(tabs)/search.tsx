@@ -99,6 +99,12 @@ import { fmlsNumberLabel } from "@percho/shared/fmls";
  * `@percho/shared/lenses`, which also records why there is deliberately no
  * crime or safety lens.
  *
+ * The row offers Schools only (`MAP_LENSES`). Cost of living came off it by
+ * owner decision (2026-11-23): the three counties with films sit $95 a month
+ * apart, inside the fire/EMS levies the figure leaves out, so the fill ranked
+ * noise. The lens itself stays in `@percho/shared/lenses` — the county page's
+ * line-by-line breakdown, saved areas and area compare still price with it.
+ *
  * While results are on the map — a text search, or a city drilled into — the
  * fills drop to a whisper so those pins stay readable: the buyer asked a
  * question, and the lens is context.
@@ -161,6 +167,10 @@ import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
+
+/** The lenses the chip row offers — see "Lenses" in the header for why the
+ *  cost lens is not one of them. */
+const MAP_LENSES = LENSES.filter((l) => l.id !== "true_cost");
 
 /** Fill opacity for a lens polygon: readable at rest, a whisper while the
  *  buyer is reading search pins over it. */
@@ -985,7 +995,7 @@ export default function SearchTab() {
 							contentContainerStyle={styles.lensChips}
 							keyboardShouldPersistTaps="handled"
 						>
-							{LENSES.map((l) => {
+							{MAP_LENSES.map((l) => {
 								const on = l.id === lensId;
 								return (
 									<Pressable

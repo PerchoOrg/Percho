@@ -23,6 +23,15 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-23 08:31 UTC — phase375: Cost of living comes off the Search map's chip row
+
+**Objective**: owner asked whether the Search tab's Schools and Cost of living chips are worth having or are noise, then ruled: "删掉col".
+**Evidence (live `/api/mobile/areas` + `/api/mobile/schools`, 2026-11-23)**: the cost lens runs $639–$987 a month across the 29 counties, but the three with films are Forsyth $749, Fulton $791, Gwinnett $844 — $95 apart, while Gwinnett's unsummed fire/EMS districts alone are $17–$118 a month. Of the five lines only tax and electric are sourced and vary; insurance ($146) and trash ($30) are one assumption everywhere, water is estimated, and all 29 figures carry the estimate flag. So the county fill ranked noise.
+**Actions**: `apps/mobile/app/(tabs)/search.tsx` — the chip row maps `MAP_LENSES` (`LENSES` without `true_cost`); header comment records the ruling. Nothing else can switch the cost lens on in this screen (`lensId` starts null and only a chip sets it).
+**Decisions**: the lens stays in `@percho/shared/lenses`. `/area/[key]` (its default lens and the line-by-line breakdown, where the sourced tax line is useful), saved areas, `take.ts` and area compare still price with it, and the `true_cost` id is in deep links. Removing the chip is the whole change.
+**Not done, raised with the owner**: the Schools chip's COUNTY fill has the same grain problem — county averages are Forsyth 67 / Fulton 54 / Gwinnett 48, while schools inside Fulton run 1–87 and inside Gwinnett 5–99, so Johns Creek, Suwanee and Duluth are shaded "middling" under schools that score in the 80s. Proposed: the chip colours the school dots only. He has not ruled; the fill is unchanged.
+**Verify**: mobile `tsc --noEmit` 0 errors, `biome check .` no errors (5 pre-existing warnings), vitest 891/891. JS-only — reaches the phone through Metro / the next build, not the store binary on its own.
+
 ## 2026-11-23 08:24 UTC — phase374: the feed no longer flashes "You've seen everything" on open
 
 **Objective**: owner: "打开app会闪现一个 you have seen everything blabla 然后再显示实际的卡片 fix it".
