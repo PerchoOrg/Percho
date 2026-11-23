@@ -149,3 +149,103 @@ export function stopLabel(e: Fundamentals["history"][number]): string {
 	const words = e.text.split(/\s+/).slice(0, 3).join(" ");
 	return words.replace(/[,;:—.]+$/, "");
 }
+
+// ─── the five tiles (phase371) ──────────────────────────────────────────────
+
+type City = Pick<
+	CityDetailDTO,
+	| "rankings"
+	| "stats"
+	| "compare"
+	| "growth"
+	| "education"
+	| "gettingAround"
+	| "planning"
+>;
+
+/** "South Forsyth Middle" → "South Forsyth Middle School"; any other name as it is. */
+export function fullSchoolName(name: string): string {
+	return /\b(Elementary|Middle|High)$/.test(name.trim())
+		? `${name.trim()} School`
+		: name.trim();
+}
+
+/**
+ * The rankings that are not a school's. The badges under the city's name used
+ * to carry "#6 in Georgia · Daves Creek Elementary School" beside the Schools
+ * section that says the same thing — the repeat the owner had removed from the
+ * community page (2026-11-22: "和下面的内容重复了").
+ */
+export function otherRankings(d: City): City["rankings"] {
+	const schools = new Set(
+		d.education.schools.flatMap((s) => [
+			s.name.toLowerCase(),
+			fullSchoolName(s.name).toLowerCase(),
+		]),
+	);
+	return d.rankings.filter((r) => !schools.has(r.title.trim().toLowerCase()));
+}
+
+/**
+ * The Schools tile: the best-ranked school at each level, then a college —
+ * the name in full and its published rank in the row's own type.
+ */
+export function schoolRows(d: City): { name: string; rank?: string }[] {
+	const { columns, colleges } = schoolColumns(d.education.schools);
+	const tops = columns.flatMap((c) => (c.schools[0] ? [c.schools[0]] : []));
+	return [...tops, ...colleges.slice(0, 1)].map((s) => ({
+		name: fullSchoolName(s.name),
+		...(s.rank ? { rank: [s.rank, s.scope].filter(Boolean).join(" ") } : {}),
+	}));
+}
+
+/** The Convenience tile: the first three drives, off-peak to rush. */
+export function driveRows(d: City): { place: string; time: string }[] {
+	return d.gettingAround
+		.flatMap((r) =>
+			r.minutes
+				? [
+						{
+							place: r.label,
+							time:
+								r.minutes.min === r.minutes.max
+									? `${r.minutes.min} min`
+									: `${r.minutes.min}–${r.minutes.max} min`,
+						},
+					]
+				: [],
+		)
+		.slice(0, 3);
+}
+
+const isHomeValue = (label: string) => /median home value/i.test(label);
+const isRent = (label: string) => /^median rent$/i.test(label.trim());
+
+/** The Cost tile: what a home is worth here, and what one rents for. */
+export function costRows(
+	d: City,
+): { label: string; value: string; note?: string }[] {
+	const rows = d.compare.rows
+		.filter((r) => isHomeValue(r.label))
+		.map((r) => ({
+			label: r.label,
+			value: r.city.display,
+			note: r.takeaway,
+		}));
+	const rent = d.stats.find((s) => isRent(s.label));
+	return rent
+		? [...rows, { label: rent.label, value: rent.value, note: "a month" }]
+		: rows;
+}
+
+/**
+ * Which glance tile belongs to which part of the page: growth is Potential's,
+ * home value and rent are Cost's, and the rest — people, income, schooling —
+ * stays under At a glance. One figure, one place.
+ */
+export function glancePart(t: GlanceTile): "potential" | "cost" | "glance" {
+	if (t.kind === "growth") return "potential";
+	if (t.kind === "compare" && isHomeValue(t.label)) return "cost";
+	if (t.kind === "stat" && isRent(t.label)) return "cost";
+	return "glance";
+}

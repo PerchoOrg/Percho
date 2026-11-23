@@ -12,8 +12,13 @@
  * fast it grew, its schools, getting around, what is planned — and every figure
  * names its source.
  *
- * NO SAFETY OR CRIME FIELD, on purpose (owner 2026-11-15: "安全数据先不放";
- * `lenses.ts` records the fair-housing reason). Do not add one without him.
+ * NO CRIME FIELD, on purpose (owner 2026-11-15: "安全数据先不放"; `lenses.ts`
+ * records the fair-housing reason). Do not add one without him.
+ *
+ * `safety` on the page (phase371) follows the community page's ruling of
+ * 2026-11-22 (`community-profile.ts`): facts about the PLACE — the hospital
+ * nearest the city's centre, the fire stations around it — and crime figures
+ * only as a link out. It is not part of the stored, researched profile.
  */
 
 export interface CitySource {
@@ -112,4 +117,8 @@ export interface CityDetailDTO extends CityFundamentals {
     bucketLabel?: string;
   }>;
   credits: CityFilmCredits;
+  /** Facts about the place, never about crime (see the header). */
+  safety?: { rows: Array<{ label: string; name: string; note?: string }> };
+  /** Places to go on from the page, each under a heading. */
+  links?: Array<{ label: string; url: string; group?: string }>;
 }

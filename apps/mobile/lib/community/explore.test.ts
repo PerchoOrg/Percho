@@ -129,6 +129,12 @@ describe("resources", () => {
 			["Safety", ["Crime map"]],
 		]);
 		expect(linkGroups(undefined)).toEqual([]);
+		// The city page leads with the city's own pages.
+		expect(linkGroups(links, ["Safety", "Homes"]).map((g) => g.group)).toEqual([
+			"Safety",
+			"Homes",
+			"Community",
+		]);
 	});
 
 	it("finds a link's logo by its host, and FEMA's for FEMA's map", () => {

@@ -21,6 +21,13 @@
  *
  * Re-running a slug replaces its entry. Then rebuild those profiles:
  *   pnpm --filter @percho/web community:profile sawnee-village windward --apply
+ *
+ * `--cities` does the same for every active city (phase371) and writes
+ * `apps/web/lib/cities/city-safety.json`, which the city page reads directly:
+ * the hospital closest to the city's centre, and how many fire stations stand
+ * within five miles of it. No flood zone — FEMA's is read at a point, and one
+ * point says nothing about a city.
+ *   pnpm --filter @percho/web community:safety --cities
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -30,6 +37,10 @@ import { type SafetyFacts, milesBetween } from '../../apps/web/lib/communities/p
 
 const here = dirname(fileURLToPath(import.meta.url));
 const FILE = join(here, 'data/community-safety.json');
+const CITY_FILE = join(here, '../../apps/web/lib/cities/city-safety.json');
+const CITIES = process.argv.includes('--cities');
+/** Miles from a city's centre within which a fire station is counted. */
+const CITY_FIRE_MILES = 5;
 const SLUGS = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const AGENT = 'percho-admin/1.0 (hello@percho.co)';
 /** Metres. A hospital further than this is not this community's hospital. */
@@ -177,8 +188,8 @@ function save(stored: Stored) {
 }
 
 async function main() {
-  if (SLUGS.length === 0) {
-    console.error('Usage: community:safety <slug> [<slug> …]');
+  if (SLUGS.length === 0 && !CITIES) {
+    console.error('Usage: community:safety <slug> [<slug> …] | --cities');
     process.exit(1);
   }
   const envPath = new URL('../../.env.local', import.meta.url);
@@ -196,10 +207,41 @@ async function main() {
     console.error('NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY required.');
     process.exit(1);
   }
-  const { data, error } = await createClient(url, serviceKey)
-    .from('communities')
-    .select('slug, lat, lng')
-    .in('slug', SLUGS);
+  const sb = createClient(url, serviceKey);
+  if (CITIES) {
+    const { data: rows, error: cityError } = await sb
+      .from('cities')
+      .select('slug, lat, lng')
+      .eq('status', 'active');
+    if (cityError) throw new Error(`read failed: ${JSON.stringify(cityError)}`);
+    const cities = (rows ?? []).flatMap((c) =>
+      typeof c.lat === 'number' && typeof c.lng === 'number'
+        ? [{ slug: c.slug as string, lat: c.lat, lng: c.lng }]
+        : [],
+    );
+    const around = await places(cities);
+    const out: Record<
+      string,
+      { hospital?: { name: string; miles: number }; fireStations: number }
+    > = {};
+    for (const c of cities.sort((a, b) => a.slug.localeCompare(b.slug))) {
+      const hospital = closest(c.lat, c.lng, around.hospitals, HOSPITAL_M);
+      const fireStations = around.fire.filter(
+        (p) => milesBetween(c.lat, c.lng, p.lat, p.lng) <= CITY_FIRE_MILES,
+      ).length;
+      out[c.slug] = { ...(hospital ? { hospital } : {}), fireStations };
+      console.log(
+        `  ${c.slug}: ${hospital ? `${hospital.name} ${hospital.miles} mi` : 'no hospital'} · ${fireStations} fire stations within ${CITY_FIRE_MILES} mi`,
+      );
+    }
+    writeFileSync(
+      CITY_FILE,
+      `${JSON.stringify({ asOf: new Date().toISOString().slice(0, 10), fireWithinMiles: CITY_FIRE_MILES, cities: out }, null, 2)}\n`,
+    );
+    console.log(`Wrote ${Object.keys(out).length} cities to ${CITY_FILE}`);
+    return;
+  }
+  const { data, error } = await sb.from('communities').select('slug, lat, lng').in('slug', SLUGS);
   if (error) throw new Error(`read failed: ${JSON.stringify(error)}`);
 
   const stored: Stored = existsSync(FILE)
