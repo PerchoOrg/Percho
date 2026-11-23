@@ -23,6 +23,15 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-23 09:22 UTC — phase377: the Schools chip colours the school dots, not the counties
+
+**Objective**: owner, after phase375: "每个地区关注的点不太一样 县级涂色去掉".
+**Actions**: `apps/mobile/app/(tabs)/search.tsx` — county polygons are never filled (outline only, lens on or off); the legend is one row (the school dots' own absolute scale) instead of Counties + Schools; `classBreaks` / `colorFor` / `legendRange` / `FILL_ALPHA*` and the `breaks` + `legend` memos went with the fill. `lib/schools/school-pins.ts` — one comment that pointed at the fill.
+**Decisions**: (1) Pinched out past Δlat 0.6 no school dots are drawn, and the fill used to be the answer at that range. With it gone the chip would light up and change nothing, so the legend slot reads "Zoom in to see schools" there. The app opens at 0.55, so the default view does show high-school dots. (2) The county pill still prints the county's average while the chip is on ("67%") — a labelled figure on a tap, not a colour over 500 square miles; left alone, flagged to the owner. (3) `rankedBy` / `valueByKey` stay for that pill.
+**Correction**: I told the owner the fill mis-shaded "Suwanee and Duluth". Checked against live `/api/mobile/schools`: Johns Creek 15 schools 72–84% (median 78) under Fulton's 54; Suwanee 7 schools 48–85% (median 77) under Gwinnett's 48; **Duluth 9 schools 33–65% (median 44)** — at the county figure. The case for removing the fill stands on the first two; the Duluth claim was wrong and the phase375 entry is amended.
+**Owner's remark, not built**: "每个地区关注的点不太一样" — what a buyer wants off the map differs by area. No per-area layer logic exists; recorded for when layers come back (price waits for FMLS).
+**Verify**: mobile `tsc --noEmit` 0 errors, `biome check .` no errors (5 pre-existing warnings), vitest 891/891. Not looked at on a device.
+
 ## 2026-11-23 08:45 UTC — phase376: the space above the feed card — two proposals (demo only)
 
 **Objective**: owner: "feed页面卡片上方的部分当时想了很多方案 但是感觉还是以填充为主 信息本身也和卡片有重合 … 你再看看有没有别的设计方案". No app change — he picks first.
@@ -46,7 +55,7 @@ rotation, not on the way in.
 **Evidence (live `/api/mobile/areas` + `/api/mobile/schools`, 2026-11-23)**: the cost lens runs $639–$987 a month across the 29 counties, but the three with films are Forsyth $749, Fulton $791, Gwinnett $844 — $95 apart, while Gwinnett's unsummed fire/EMS districts alone are $17–$118 a month. Of the five lines only tax and electric are sourced and vary; insurance ($146) and trash ($30) are one assumption everywhere, water is estimated, and all 29 figures carry the estimate flag. So the county fill ranked noise.
 **Actions**: `apps/mobile/app/(tabs)/search.tsx` — the chip row maps `MAP_LENSES` (`LENSES` without `true_cost`); header comment records the ruling. Nothing else can switch the cost lens on in this screen (`lensId` starts null and only a chip sets it).
 **Decisions**: the lens stays in `@percho/shared/lenses`. `/area/[key]` (its default lens and the line-by-line breakdown, where the sourced tax line is useful), saved areas, `take.ts` and area compare still price with it, and the `true_cost` id is in deep links. Removing the chip is the whole change.
-**Not done, raised with the owner**: the Schools chip's COUNTY fill has the same grain problem — county averages are Forsyth 67 / Fulton 54 / Gwinnett 48, while schools inside Fulton run 1–87 and inside Gwinnett 5–99, so Johns Creek, Suwanee and Duluth are shaded "middling" under schools that score in the 80s. Proposed: the chip colours the school dots only. He has not ruled; the fill is unchanged.
+**Not done, raised with the owner**: the Schools chip's COUNTY fill has the same grain problem — county averages are Forsyth 67 / Fulton 54 / Gwinnett 48, while schools inside Fulton run 1–87 and inside Gwinnett 5–99, so Johns Creek and Suwanee are shaded "middling" under schools with a median near 78 (corrected in phase377: this line first named Duluth too, whose schools run 33–65 — at the county figure, not above it). Proposed: the chip colours the school dots only. He has not ruled; the fill is unchanged.
 **Verify**: mobile `tsc --noEmit` 0 errors, `biome check .` no errors (5 pre-existing warnings), vitest 891/891. JS-only — reaches the phone through Metro / the next build, not the store binary on its own.
 
 ## 2026-11-23 08:24 UTC — phase374: the feed no longer flashes "You've seen everything" on open

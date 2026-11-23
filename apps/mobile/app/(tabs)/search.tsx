@@ -22,7 +22,7 @@ import { fmlsNumberLabel } from "@percho/shared/fmls";
  * and schools… all based on zoomin scale"). The map is now a plain map: the
  * BUYER moves it, and what it shows depends only on how close they are.
  *
- *   metro  (Δlat > 0.30)  county lines + names, lens fills. County tap →
+ *   metro  (Δlat > 0.30)  county lines + names. County tap →
  *                         info pill (no re-frame). Nothing else drawn.
  *   city   (≤ 0.30)       + city name labels, community photo dots. Content comes
  *                         from `/api/mobile/map` — the viewport query,
@@ -88,34 +88,30 @@ import { fmlsNumberLabel } from "@percho/shared/fmls";
  * (§4.1 铁律). There is no price/bed/bath picker on this screen.
  *
  * ── Lenses (phase196) ───────────────────────────────────────────────────────
- * The chip row under the search pill picks a LENS: the map fills each county
- * with that one dimension's value. This is inside the no-filter rule rather
- * than an exception to it — a lens recolours, it never removes an area, and
- * there is no threshold that hides one. Selecting a lens changes what the map
- * SHOWS, not what exists.
+ * The chip row under the search pill picks a LENS: the map colours its marks
+ * by that one dimension. This is inside the no-filter rule rather than an
+ * exception to it — a lens recolours, it never removes anything, and there is
+ * no threshold that hides one. Selecting a lens changes what the map SHOWS,
+ * not what exists. See `@percho/shared/lenses`, which also records why there
+ * is deliberately no crime or safety lens.
  *
- * Each lens draws on the geography its dimension is actually defined on, so a
- * value never gradients across a border where the real number steps. See
- * `@percho/shared/lenses`, which also records why there is deliberately no
- * crime or safety lens.
+ * A lens does NOT fill the counties any more (owner, 2026-11-23: "县级涂色
+ * 去掉"). The Schools fill was a district average laid over places it did not
+ * describe: Fulton averages 54% and its schools run 1–87%, Gwinnett 48% and
+ * 5–99%, so Johns Creek (schools 72–84%) and Suwanee (median 77%) were
+ * shaded middling. The school dots carry the answer; the counties are
+ * outlines whether or not a lens is on.
  *
  * The row offers Schools only (`MAP_LENSES`). Cost of living came off it by
  * owner decision (2026-11-23): the three counties with films sit $95 a month
- * apart, inside the fire/EMS levies the figure leaves out, so the fill ranked
+ * apart, inside the fire/EMS levies the figure leaves out, so its fill ranked
  * noise. The lens itself stays in `@percho/shared/lenses` — the county page's
  * line-by-line breakdown, saved areas and area compare still price with it.
- *
- * While results are on the map — a text search, or a city drilled into — the
- * fills drop to a whisper so those pins stay readable: the buyer asked a
- * question, and the lens is context.
  */
 import {
 	type Area,
 	LENSES,
 	type LensId,
-	classBreaks,
-	colorFor,
-	legendRange,
 	lensById,
 	rankedBy,
 } from "@percho/shared/lenses";
@@ -171,11 +167,6 @@ import { textStyles } from "../../theme/typography";
 /** The lenses the chip row offers — see "Lenses" in the header for why the
  *  cost lens is not one of them. */
 const MAP_LENSES = LENSES.filter((l) => l.id !== "true_cost");
-
-/** Fill opacity for a lens polygon: readable at rest, a whisper while the
- *  buyer is reading search pins over it. */
-const FILL_ALPHA = 0.62;
-const FILL_ALPHA_SEARCHING = 0.16;
 
 /** How close (screen points) a tap must land to a mark for `claimTap` to
  *  open it. Generous on purpose: it has to cover the whole 26pt photo dot
@@ -316,10 +307,6 @@ export default function SearchTab() {
 		() => areasByKey(areaData.areas),
 		[areaData.areas],
 	);
-	const breaks = useMemo(
-		() => (lens ? classBreaks(lens, areaData.areas) : []),
-		[lens, areaData.areas],
-	);
 	// Which of the buyer's saved CITIES sit in each county. The map ranks
 	// counties and a buyer saves cities, so a county is never marked "saved" —
 	// the row names the city instead. On 29 otherwise identical outlines this
@@ -342,7 +329,7 @@ export default function SearchTab() {
 		() => (lens ? rankedBy(lens, areaData.areas) : []),
 		[lens, areaData.areas],
 	);
-	/** Value per county key, so a polygon's fill is one map lookup. */
+	/** Value per county key, for the county pill's figure. */
 	const valueByKey = useMemo(
 		() => new Map(ranked.map((v) => [v.area.key, v])),
 		[ranked],
@@ -353,7 +340,7 @@ export default function SearchTab() {
 	const lensReady = areaData.areas.length > 0;
 
 	// ── The school layer ──────────────────────────────────────────────────────
-	// Icons for the schools themselves, on top of the county colours (owner,
+	// Icons for the schools themselves (owner,
 	// 2026-09-10: "School should be the top one, show school icons on map and
 	// their coverage area"). Their COVERAGE AREAS are not drawn: the
 	// `attendance_zones` table has never been seeded, and a district outline is
@@ -370,22 +357,15 @@ export default function SearchTab() {
 		() => (schoolsOn ? visibleSchools(schoolData.schools, region) : []),
 		[schoolsOn, schoolData.schools, region],
 	);
-	/** The schools lens's own ramp. The pins share the ramp with the county
-	 *  fill but NOT its scale — see `PROFICIENCY_BANDS`, which is why the
-	 *  legend prints two rows rather than one. */
+	/** The schools lens's own ramp, on the pins' own scale — see
+	 *  `PROFICIENCY_BANDS`. */
 	const schoolRamp = lensById("schools")?.ramp;
 	/** Names go on the pins only when they fit. See `shouldLabel`. */
 	const schoolsLabelled = shouldLabel(schoolPins.length);
-	/** The second legend row earns its space only when pins are actually on the
+	/** The legend's ramp earns its space only when pins are actually on the
 	 *  map — under the schools lens zoomed out past 0.6 there are none, and a
-	 *  key for absent ink is just more ink. */
+	 *  key for absent ink is just more ink. It says to zoom in instead. */
 	const showSchoolLegend = lensId === "schools" && schoolPins.length > 0;
-	/** The two ends of the county fill, in the lens's own units — the thing the
-	 *  owner could not read off the map (2026-09-11). */
-	const legend = useMemo(
-		() => (lens ? legendRange(lens, areaData.areas) : undefined),
-		[lens, areaData.areas],
-	);
 
 	const openedArea: Area | undefined = openArea
 		? metricsByKey.get(openArea)
@@ -712,9 +692,8 @@ export default function SearchTab() {
 		});
 	}, [hits]);
 
-	/** The county's figure under the ACTIVE lens — the one the map is painted
-	 *  with, so the pill and the colour under it agree. Absent with no lens on,
-	 *  and then the pill is just a name and a way in. */
+	/** The county's figure under the ACTIVE lens. Absent with no lens on, and
+	 *  then the pill is just a name and a way in. */
 	const previewHit = openArea ? valueByKey.get(openArea) : undefined;
 	const previewValue =
 		previewHit && lens
@@ -766,9 +745,8 @@ export default function SearchTab() {
 					>
 						{/* County OUTLINES, always — the areas are a boundary, not a pin,
 					    and they are the map's structure whether or not a lens is on.
-					    A lens fills them in; without one they are just lines. */}
+					    Never filled: see "Lenses" in the header. */}
 						{areaData.shapes.map((shape) => {
-							const hit = lens ? valueByKey.get(shape.key) : undefined;
 							const open = openArea === shape.key;
 							return shape.rings.map((ring, i) => (
 								<Polygon
@@ -779,26 +757,8 @@ export default function SearchTab() {
 										latitude: lat,
 										longitude: lng,
 									}))}
-									fillColor={
-										lens && hit
-											? withAlpha(
-													colorFor(lens, hit.value, breaks),
-													// A whisper once marks are on the map — typed hits
-													// or any zoom past the city band — so they stay
-													// readable over the colour.
-													searching || cityBand
-														? FILL_ALPHA_SEARCHING
-														: FILL_ALPHA,
-												)
-											: withAlpha(colors.ink2, 0)
-									}
-									strokeColor={
-										open
-											? colors.ink
-											: lens && hit
-												? colors.surface
-												: withAlpha(colors.ink2, 0.45)
-									}
+									fillColor={withAlpha(colors.ink2, 0)}
+									strokeColor={open ? colors.ink : withAlpha(colors.ink2, 0.45)}
 									strokeWidth={open ? 2.5 : 1}
 									// A county takes taps ONLY at metro zoom with no search up —
 									// past the city band the marks own the surface. On iOS
@@ -1027,19 +987,12 @@ export default function SearchTab() {
 				    the two read as one control (owner, 2026-09-11: "I don't know
 				    the lens color meaning here, it is not very useful").
 
-				    Two rows under the Schools lens, because there really are two
-				    scales: the county fill is a quantile rank across the metro and
-				    a pin is an absolute score. One ramp quietly meaning two things
-				    is the confusion this is here to end, so it says so. */}
-				{lens && legend && (
+				    One row: the school dots are the only thing a lens colours.
+				    Pinched out past where dots are drawn, the chip would light up
+				    and change nothing, so the slot says how to get an answer. */}
+				{lens && schoolRamp && (
 					<View style={[styles.legend, { top: insets.top + 100 }]}>
-						<LegendRow
-							label={showSchoolLegend ? "Counties" : lens.label}
-							ramp={lens.ramp}
-							low={legend.low}
-							high={legend.high}
-						/>
-						{showSchoolLegend && schoolRamp ? (
+						{showSchoolLegend ? (
 							<LegendRow
 								label="Schools"
 								ramp={schoolRamp}
@@ -1048,10 +1001,9 @@ export default function SearchTab() {
 							/>
 						) : null}
 						<Text style={styles.legendUnit}>
-							{/* The lens's own unit names the COUNTY figure ("district
-							    average"), which stops being the whole truth the moment
-							    the school row is under it. */}
-							{showSchoolLegend ? "% proficient on state tests" : lens.unit}
+							{showSchoolLegend
+								? "% proficient on state tests"
+								: "Zoom in to see schools"}
 						</Text>
 					</View>
 				)}
