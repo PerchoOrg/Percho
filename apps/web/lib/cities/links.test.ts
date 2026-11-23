@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cityLinks, citySafety } from './links';
+import { articleLinks, cityLinks, citySafety, citySchools } from './links';
 
 describe('cityLinks', () => {
   const links = cityLinks({
@@ -48,6 +48,65 @@ describe('cityLinks', () => {
       'Reddit',
       'YouTube',
     ]);
+  });
+
+  it('links what residents wrote on Niche, by city and county', () => {
+    expect(at('Niche reviews')).toBe('https://www.niche.com/places-to-live/johns-creek-fulton-ga/');
+  });
+});
+
+describe('articleLinks', () => {
+  const src = (name: string, url?: string) => ({ name, ...(url ? { url } : {}) });
+  it('takes the pieces the profile cites, and no figures, official pages or school rankings', () => {
+    const links = articleLinks({
+      rankings: [
+        {
+          rank: '#1',
+          scope: '',
+          title: 'Best Places to Live',
+          detail: '',
+          source: src('Fortune', 'https://fortune.com/a'),
+        },
+        {
+          rank: '#6',
+          scope: '',
+          title: 'Daves Creek Elementary School',
+          detail: '',
+          source: src('U.S. News', 'https://usnews.com/b'),
+        },
+      ],
+      education: {
+        schools: [
+          { level: 'elementary', name: 'Daves Creek Elementary', detail: '', source: src('x') },
+        ],
+        measure: '',
+        rows: [],
+        note: '',
+      },
+      sources: [
+        src('Wikipedia — Cumming, Georgia', 'https://en.wikipedia.org/wiki/Cumming'),
+        src('U.S. Census Bureau ACS — Cumming', 'https://census.gov/x'),
+        src('AJC — Inside the Alpha Loop', 'https://ajc.com/c'),
+        src('Forsyth County News — Overlook groundbreaking', 'http://insecure.example/d'),
+        src('Fortune — Best Places to Live for Families 2024', 'https://fortune.com/a'),
+        src('Drive times: Google Routes'),
+      ],
+    });
+    expect(links).toEqual([
+      { group: 'Articles', label: 'Fortune: Best Places to Live', url: 'https://fortune.com/a' },
+      { group: 'Articles', label: 'AJC — Inside the Alpha Loop', url: 'https://ajc.com/c' },
+    ]);
+  });
+});
+
+describe('citySchools', () => {
+  it('lists a city’s schools best first within each level', () => {
+    const list = citySchools('cumming-ga') ?? [];
+    expect(list.length).toBeGreaterThan(10);
+    const elementary = list.filter((s) => s.level === 'elementary').map((s) => s.share);
+    expect(elementary).toEqual([...elementary].sort((a, b) => a - b));
+    expect(list.every((s) => s.share >= 1 && s.share <= 100)).toBe(true);
+    expect(citySchools('nowhere-ga')).toBeUndefined();
   });
 });
 

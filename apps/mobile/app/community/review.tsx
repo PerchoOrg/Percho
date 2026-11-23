@@ -13,7 +13,7 @@ import {
  * out tap to `/auth` first.
  */
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
 	KeyboardAvoidingView,
@@ -28,6 +28,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
 	REVIEW_BODY_MAX,
+	type ReviewPlace,
 	draftProblem,
 	fetchMyReview,
 	submitReview,
@@ -75,7 +76,17 @@ function ScoreRow({
 
 export default function ReviewScreen() {
 	const insets = useSafeAreaInsets();
-	const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
+	const { id, name, kind } = useLocalSearchParams<{
+		id: string;
+		name?: string;
+		/** "city" for a city's review; a community's when absent. */
+		kind?: string;
+	}>();
+	const place = useMemo(
+		(): ReviewPlace => ({ kind: kind === "city" ? "city" : "community", id }),
+		[kind, id],
+	);
+	const noun = place.kind === "city" ? "city" : "neighbourhood";
 	const uid = useAuthStore((s) => s.session?.user.id);
 
 	const [rating, setRating] = useState<number | undefined>(undefined);
@@ -96,7 +107,7 @@ export default function ReviewScreen() {
 			return;
 		}
 		let alive = true;
-		fetchMyReview(uid, id)
+		fetchMyReview(uid, place)
 			.then((mine) => {
 				if (!alive || !mine) return;
 				setRating(mine.rating);
@@ -109,7 +120,7 @@ export default function ReviewScreen() {
 		return () => {
 			alive = false;
 		};
-	}, [uid, id]);
+	}, [uid, id, place]);
 
 	const problem = draftProblem({ rating: rating ?? 0, dimensions: dims, body });
 
@@ -118,7 +129,7 @@ export default function ReviewScreen() {
 		setSaving(true);
 		setError(null);
 		try {
-			await submitReview(uid, id, {
+			await submitReview(uid, place, {
 				rating: rating ?? 0,
 				dimensions: dims,
 				body,
@@ -153,7 +164,7 @@ export default function ReviewScreen() {
 				</Pressable>
 
 				<Text style={styles.eyebrow}>RESIDENT REVIEW</Text>
-				<Text style={styles.title}>{name ?? "This neighbourhood"}</Text>
+				<Text style={styles.title}>{name ?? `This ${noun}`}</Text>
 
 				{done ? (
 					<View style={styles.doneBox}>
@@ -171,7 +182,7 @@ export default function ReviewScreen() {
 					<>
 						<Text style={styles.sub}>
 							{existing
-								? "You’ve reviewed this neighbourhood before. Saving sends the new version back for approval."
+								? `You’ve reviewed this ${noun} before. Saving sends the new version back for approval.`
 								: "Only people who live or have lived here, please. Reviews are shown without your name."}
 						</Text>
 

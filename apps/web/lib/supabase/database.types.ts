@@ -1040,7 +1040,8 @@ export type Database = {
       community_reviews: {
         Row: {
           body: string
-          community_id: string
+          city_id: string | null
+          community_id: string | null
           created_at: string
           dimensions: Json
           id: string
@@ -1052,7 +1053,8 @@ export type Database = {
         }
         Insert: {
           body: string
-          community_id: string
+          city_id?: string | null
+          community_id?: string | null
           created_at?: string
           dimensions?: Json
           id?: string
@@ -1064,7 +1066,8 @@ export type Database = {
         }
         Update: {
           body?: string
-          community_id?: string
+          city_id?: string | null
+          community_id?: string | null
           created_at?: string
           dimensions?: Json
           id?: string
@@ -1075,6 +1078,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "community_reviews_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "community_reviews_community_id_fkey"
             columns: ["community_id"]

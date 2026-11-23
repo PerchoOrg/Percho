@@ -111,6 +111,21 @@ export function projectCommunityReviews(rows: ReviewRow[]): CommunityReviewsDTO 
 }
 
 /** Approved reviews for one community, newest edit first. */
+/** A city's approved reviews — the same rows, about a city (phase372). */
+export async function fetchCityReviews(
+  supabase: SupabaseClient<Database>,
+  cityId: string,
+): Promise<CommunityReviewsDTO | null> {
+  const { data, error } = await supabase
+    .from('community_reviews')
+    .select('id, rating, dimensions, body, status, updated_at')
+    .eq('city_id', cityId)
+    .eq('status', 'approved')
+    .order('updated_at', { ascending: false });
+  if (error) throw new Error(`city reviews fetch failed: ${error.message}`);
+  return projectCommunityReviews((data ?? []) as ReviewRow[]);
+}
+
 export async function fetchCommunityReviews(
   supabase: SupabaseClient<Database>,
   communityId: string,

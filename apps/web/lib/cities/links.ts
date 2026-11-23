@@ -14,6 +14,7 @@ import {
   REDFIN_CITIES,
 } from '../communities/local-links';
 import safetyFile from './city-safety.json';
+import schoolsFile from './city-schools.json';
 
 type Links = NonNullable<CityDetailDTO['links']>;
 
@@ -99,6 +100,14 @@ export function cityLinks(c: CityPlace): Links {
       url: `https://hazards-fema.maps.arcgis.com/apps/webappviewer/index.html?id=8b0adb51996444d4879338b5529aa9cd&center=${c.lng},${c.lat}&level=13`,
     });
 
+  // What residents wrote about living there (owner 2026-11-22: "resources可以
+  // 加一些评论文章"). Niche addresses a place as <city>-<county>-<state>.
+  if (c.county)
+    links.push({
+      group: 'Community',
+      label: 'Niche reviews',
+      url: `https://www.niche.com/places-to-live/${`${c.name} ${c.county}`.trim().toLowerCase().replace(/\s+/g, '-')}-ga/`,
+    });
   links.push({
     group: 'Community',
     label: 'Reddit',
@@ -133,4 +142,50 @@ export function citySafety(slug: string): CityDetailDTO['safety'] | undefined {
       name: `${facts.fireStations} within ${SAFETY.fireWithinMiles} miles`,
     });
   return rows.length > 0 ? { rows } : undefined;
+}
+
+/** Publishers of figures and official pages — sources, but not something to read about the city. */
+const NOT_AN_ARTICLE = /^(U\.S\. Census|Data USA|Wikipedia|City of |Drive times|U\.S\. News)/i;
+
+/**
+ * Articles about the city, from what its researched profile already cites:
+ * the pieces behind its non-school rankings, then the news and features among
+ * its sources. Nothing is searched for at read time and nothing is invented —
+ * a city whose profile cites no article gets none.
+ */
+export function articleLinks(
+  profile: Pick<CityDetailDTO, 'rankings' | 'sources' | 'education'>,
+): Links {
+  const schools = new Set(
+    profile.education.schools.flatMap((s) => [
+      s.name.toLowerCase(),
+      `${s.name.toLowerCase()} school`,
+    ]),
+  );
+  const out: Links = [];
+  const seen = new Set<string>();
+  const add = (label: string, url: string | undefined) => {
+    if (!url?.startsWith('https://') || seen.has(url)) return;
+    seen.add(url);
+    out.push({ group: 'Articles', label, url });
+  };
+  for (const r of profile.rankings) {
+    if (schools.has(r.title.trim().toLowerCase())) continue;
+    add(`${r.source.name}: ${r.title}`, r.source.url);
+  }
+  for (const s of profile.sources) {
+    if (!s.name.includes(' — ') || NOT_AN_ARTICLE.test(s.name)) continue;
+    add(s.name, s.url);
+  }
+  return out.slice(0, 8);
+}
+
+const SCHOOLS = schoolsFile as {
+  cities: Record<string, NonNullable<CityDetailDTO['allSchools']>>;
+};
+
+/** Every scored school in and around the city (`build-city-schools.ts`). */
+export function citySchools(slug: string): CityDetailDTO['allSchools'] | undefined {
+  const list = SCHOOLS.cities[slug];
+  return list && list.length > 0 ? list : undefined;
 }
