@@ -115,8 +115,8 @@ export function parseSchoolPins(json: unknown): SchoolPinsPayload {
  *
  * Above 0.6 — further out than the app ever puts you deliberately, i.e. the
  * buyer has pinched out to see the state — nothing is drawn. At that range the
- * pins are a smear over the county colours, which are the answer the lens is
- * already giving.
+ * pins are a smear, and the legend slot says to zoom in (the county fill that
+ * used to answer at this range was removed in phase377).
  */
 export function levelsForZoom(latitudeDelta: number): SchoolPinLevel[] {
 	if (!Number.isFinite(latitudeDelta) || latitudeDelta > 0.6) return [];

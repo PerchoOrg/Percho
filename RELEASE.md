@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-23
+- **Schools on the Search map are about schools.** Turning on Schools no longer tints whole counties — a county average hid how different its schools are. Each school's dot shows its own result instead; zoom in to see more of them. Arrives with the next app update.
 - **A simpler Search map.** The Cost of living button is gone from the top of the map — the differences it coloured between counties were smaller than the estimates behind them. Schools stays. A county's page still shows the month-by-month cost breakdown. Arrives with the next app update.
 - **No more "You've seen everything" flash.** Opening the app briefly showed the end-of-feed message before the first card appeared. It now goes straight from loading to the first card.
 
