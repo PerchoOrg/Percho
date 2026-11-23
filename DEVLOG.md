@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-23 08:24 UTC — phase374: the feed no longer flashes "You've seen everything" on open
+
+**Objective**: owner: "打开app会闪现一个 you have seen everything blabla 然后再显示实际的卡片 fix it".
+**Cause**: the feed composes its first deck in an effect when the stores hydrate — before the pool is in — so that deck is empty and the engine marks it `exhausted`. The skeleton covers it while `loading` is true. But the first pool response and `loading: false` arrive in one render, and the recompose (`poolReady` false → true) is an effect that runs after that render: for one painted frame the screen had no deck, was not loading, and held an exhausted flag from the empty compose (and usually the server's `done` too, the videos-only pool being one page) — every condition of the §1.9 terminal card.
+**Actions**: `app/(tabs)/feed.tsx` records the `poolReady` each deck was composed from (`composedPoolReady`). While it differs from the current `poolReady` the screen is still "composing": the skeleton stays up and `ExhaustedCard` is held back. A pool that really is empty composes with `poolReady` false on both sides, so the terminal card still shows for it.
+**Decisions**: not `useLayoutEffect` on the compose effect — it would hide the frame only as long as the layout pass stays synchronous, and says nothing about why. Not clearing `engineExhausted` for an empty pool — the server's own `exhausted` raises the same card in the same frame.
+**Verified**: mobile typecheck 0, lint clean (exit 0), vitest 891. By reading the render sequence; NOT seen on a device — it is JS only, so the dev client shows it after a pull, build 12 does not.
+
 ## 2026-11-23 07:37 UTC — phase373.1: the foot reads "Sources"; a city's fire station is named, not counted
 
 **Objective**: owner on phase373: "改成sources就好" (the foot's label), and "safety firestation 说8 within 5 miles 怎么能和别的格式统一".
