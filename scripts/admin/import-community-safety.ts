@@ -24,8 +24,10 @@
  *
  * `--cities` does the same for every active city (phase371) and writes
  * `apps/web/lib/cities/city-safety.json`, which the city page reads directly:
- * the hospital closest to the city's centre, and how many fire stations stand
- * within five miles of it. No flood zone — FEMA's is read at a point, and one
+ * the hospital and the fire station closest to the city's centre, each named
+ * with its distance, as a community's are (it counted the stations within
+ * five miles until the owner asked for the row to read like the others,
+ * 2026-11-22). No flood zone — FEMA's is read at a point, and one
  * point says nothing about a city.
  *   pnpm --filter @percho/web community:safety --cities
  */
@@ -39,8 +41,6 @@ const here = dirname(fileURLToPath(import.meta.url));
 const FILE = join(here, 'data/community-safety.json');
 const CITY_FILE = join(here, '../../apps/web/lib/cities/city-safety.json');
 const CITIES = process.argv.includes('--cities');
-/** Miles from a city's centre within which a fire station is counted. */
-const CITY_FIRE_MILES = 5;
 const SLUGS = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const AGENT = 'percho-admin/1.0 (hello@percho.co)';
 /** Metres. A hospital further than this is not this community's hospital. */
@@ -222,21 +222,19 @@ async function main() {
     const around = await places(cities);
     const out: Record<
       string,
-      { hospital?: { name: string; miles: number }; fireStations: number }
+      { hospital?: { name: string; miles: number }; fire?: { name: string; miles: number } }
     > = {};
     for (const c of cities.sort((a, b) => a.slug.localeCompare(b.slug))) {
       const hospital = closest(c.lat, c.lng, around.hospitals, HOSPITAL_M);
-      const fireStations = around.fire.filter(
-        (p) => milesBetween(c.lat, c.lng, p.lat, p.lng) <= CITY_FIRE_MILES,
-      ).length;
-      out[c.slug] = { ...(hospital ? { hospital } : {}), fireStations };
+      const fire = closest(c.lat, c.lng, around.fire, FIRE_M);
+      out[c.slug] = { ...(hospital ? { hospital } : {}), ...(fire ? { fire } : {}) };
       console.log(
-        `  ${c.slug}: ${hospital ? `${hospital.name} ${hospital.miles} mi` : 'no hospital'} · ${fireStations} fire stations within ${CITY_FIRE_MILES} mi`,
+        `  ${c.slug}: ${hospital ? `${hospital.name} ${hospital.miles} mi` : 'no hospital'} · ${fire ? `${fire.name} ${fire.miles} mi` : 'no fire station'}`,
       );
     }
     writeFileSync(
       CITY_FILE,
-      `${JSON.stringify({ asOf: new Date().toISOString().slice(0, 10), fireWithinMiles: CITY_FIRE_MILES, cities: out }, null, 2)}\n`,
+      `${JSON.stringify({ asOf: new Date().toISOString().slice(0, 10), cities: out }, null, 2)}\n`,
     );
     console.log(`Wrote ${Object.keys(out).length} cities to ${CITY_FILE}`);
     return;

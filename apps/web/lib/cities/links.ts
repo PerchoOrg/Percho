@@ -122,13 +122,16 @@ export function cityLinks(c: CityPlace): Links {
 }
 
 const SAFETY = safetyFile as {
-  fireWithinMiles: number;
-  cities: Record<string, { hospital?: { name: string; miles: number }; fireStations: number }>;
+  cities: Record<
+    string,
+    { hospital?: { name: string; miles: number }; fire?: { name: string; miles: number } }
+  >;
 };
 
 /**
  * Facts about the place, never about crime (`packages/shared/src/city.ts`):
- * the hospital closest to the city's centre and the fire stations around it.
+ * the hospital and the fire station closest to the city's centre, each a
+ * name and a distance — the community page's rows.
  */
 export function citySafety(slug: string): CityDetailDTO['safety'] | undefined {
   const facts = SAFETY.cities[slug];
@@ -136,11 +139,8 @@ export function citySafety(slug: string): CityDetailDTO['safety'] | undefined {
   const rows: NonNullable<CityDetailDTO['safety']>['rows'] = [];
   if (facts.hospital)
     rows.push({ label: 'Hospital', name: facts.hospital.name, note: `${facts.hospital.miles} mi` });
-  if (facts.fireStations > 0)
-    rows.push({
-      label: 'Fire stations',
-      name: `${facts.fireStations} within ${SAFETY.fireWithinMiles} miles`,
-    });
+  if (facts.fire)
+    rows.push({ label: 'Fire station', name: facts.fire.name, note: `${facts.fire.miles} mi` });
   return rows.length > 0 ? { rows } : undefined;
 }
 

@@ -112,11 +112,13 @@ describe('citySchools', () => {
 });
 
 describe('citySafety', () => {
-  it('states the hospital and the fire stations, and nothing about crime', () => {
+  it('names the hospital and the fire station with their distances, and nothing about crime', () => {
     const rows = citySafety('cumming-ga')?.rows ?? [];
-    expect(rows.map((r) => r.label)).toEqual(['Hospital', 'Fire stations']);
-    expect(rows[0]?.note).toMatch(/ mi$/);
-    expect(rows[1]?.name).toMatch(/^\d+ within 5 miles$/);
+    expect(rows.map((r) => r.label)).toEqual(['Hospital', 'Fire station']);
+    for (const r of rows) {
+      expect(r.name).not.toMatch(/within/);
+      expect(r.note).toMatch(/^\d+(\.\d)? mi$/);
+    }
     expect(JSON.stringify(rows)).not.toMatch(/crime/i);
     expect(citySafety('nowhere-ga')).toBeUndefined();
   });
