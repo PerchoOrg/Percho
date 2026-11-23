@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { cityForecast } from './forecasts';
 import { articleLinks, cityLinks, citySafety, citySchools } from './links';
 
 describe('cityLinks', () => {
@@ -118,5 +119,21 @@ describe('citySafety', () => {
     expect(rows[1]?.name).toMatch(/^\d+ within 5 miles$/);
     expect(JSON.stringify(rows)).not.toMatch(/crime/i);
     expect(citySafety('nowhere-ga')).toBeUndefined();
+  });
+});
+
+describe('cityForecast', () => {
+  it("gives the county's published 2050 forecast, named as the county's", () => {
+    expect(cityForecast('Forsyth')).toMatchObject({
+      area: 'Forsyth County',
+      year: 2050,
+      value: 450124,
+      baseValue: 251283,
+      takeaway: '+79% from 2020',
+    });
+    expect(cityForecast('Gwinnett')?.takeaway).toBe('+25% from 2020');
+    expect(cityForecast('Fulton')?.takeaway).toBe('+24% from 2020');
+    expect(cityForecast('Hall')).toBeUndefined();
+    expect(cityForecast(null)).toBeUndefined();
   });
 });

@@ -42,11 +42,11 @@ import {
 	DriveTimes,
 	GlanceTiles,
 	HistoryTimeline,
-	PhotoCredits,
 	PlanList,
 	RankingBadges,
 	SchoolLadder,
 } from "../../components/city/CityCharts";
+import { CreditsFoot } from "../../components/community/CreditsFoot";
 import {
 	GAP,
 	PAGE_PAD,
@@ -54,6 +54,7 @@ import {
 	Tile,
 	parts,
 } from "../../components/community/ExploreParts";
+import { HoldingCost } from "../../components/community/ExploreSheets";
 import { ReviewsSection } from "../../components/community/ReviewsSection";
 import { TourHero } from "../../components/community/TourHero";
 import { apiBase } from "../../lib/api/base";
@@ -207,8 +208,6 @@ export default function CityScreen() {
 						<Text style={styles.name}>{data.name}</Text>
 						{!!where && <Text style={styles.place}>{where}</Text>}
 					</View>
-					<Text style={styles.tagline}>{data.tagline}</Text>
-					<Text style={styles.location}>{data.locationNote}</Text>
 
 					{rankings.length > 0 && (
 						<View style={styles.badges}>
@@ -304,6 +303,13 @@ export default function CityScreen() {
 									>{`  residents, ${latest.label}`}</Text>
 								</Text>
 								<Text style={parts.foot}>{data.growth.takeaway}</Text>
+								{data.forecast && (
+									<Text style={parts.footSecond}>
+										Forecast: {data.forecast.value.toLocaleString("en-US")} in{" "}
+										{data.forecast.area} by {data.forecast.year} (
+										{data.forecast.takeaway})
+									</Text>
+								)}
 								{data.planning.length > 0 && (
 									<Text style={parts.footSecond}>
 										{data.planning.length === 1
@@ -314,7 +320,7 @@ export default function CityScreen() {
 							</Tile>
 						)}
 
-						{costs.length > 0 && (
+						{(costs.length > 0 || data.holding) && (
 							<Tile
 								label="Cost"
 								wide
@@ -331,6 +337,19 @@ export default function CityScreen() {
 											<Text style={styles.costValue}>{r.value}</Text>
 										</View>
 									))}
+									{data.holding && (
+										<View style={parts.row}>
+											<Text style={styles.costLabel} numberOfLines={1}>
+												To hold a home
+											</Text>
+											<Text style={parts.rowAside}>
+												tax, power, water, trash
+											</Text>
+											<Text style={styles.costValue}>
+												{data.holding.display}/mo
+											</Text>
+										</View>
+									)}
 								</View>
 							</Tile>
 						)}
@@ -365,9 +384,11 @@ export default function CityScreen() {
 						}}
 					/>
 
-					<View style={styles.sources}>
-						<PhotoCredits credits={data.credits} />
-					</View>
+					<CreditsFoot
+						sources={data.sources.map((src) => src.name).join(" · ")}
+						google={data.credits.google}
+						commons={data.credits.commons}
+					/>
 				</View>
 			</ScrollView>
 
@@ -462,6 +483,39 @@ export default function CityScreen() {
 								city={data}
 								only={(t) => glancePart(t) === "potential"}
 							/>
+							{data.forecast && (
+								<>
+									<Text style={styles.sheetHead}>
+										Forecast for {data.forecast.year}
+									</Text>
+									<Text style={styles.sheetFigure}>
+										{data.forecast.value.toLocaleString("en-US")}
+									</Text>
+									<Text style={styles.sheetCaption}>
+										{data.forecast.area} residents by {data.forecast.year} —{" "}
+										{data.forecast.takeaway} (
+										{data.forecast.baseValue.toLocaleString("en-US")} in{" "}
+										{data.forecast.baseYear}). A published forecast, for the
+										county rather than the city.
+									</Text>
+									{!!data.forecast.source.url && (
+										<Pressable
+											onPress={() =>
+												void Linking.openURL(
+													data.forecast?.source.url ?? "",
+												).catch(() => {})
+											}
+											accessibilityRole="link"
+											hitSlop={6}
+											style={styles.sheetLinks}
+										>
+											<Text style={styles.sheetLink}>
+												{data.forecast.source.name} ↗
+											</Text>
+										</Pressable>
+									)}
+								</>
+							)}
 							{data.planning.length > 0 && (
 								<View style={styles.sheetGap}>
 									<PlanList planning={data.planning} />
@@ -471,7 +525,15 @@ export default function CityScreen() {
 					)}
 					{sheet === "cost" && (
 						<>
-							<Text style={styles.sheetTitle}>What homes cost</Text>
+							{data.holding ? (
+								<>
+									<HoldingCost holding={data.holding} />
+									<Text style={styles.sheetHead}>Home value and rent</Text>
+									<View style={styles.sheetGap} />
+								</>
+							) : (
+								<Text style={styles.sheetTitle}>What homes cost</Text>
+							)}
 							<GlanceTiles city={data} only={(t) => glancePart(t) === "cost"} />
 						</>
 					)}
@@ -520,19 +582,6 @@ const styles = StyleSheet.create({
 	},
 	name: { ...textStyles.title1, color: colors.ink, flexShrink: 1 },
 	place: { ...textStyles.footnote, fontSize: 14, color: colors.ink2 },
-	tagline: {
-		...textStyles.footnote,
-		fontSize: 16,
-		lineHeight: 23,
-		color: colors.ink,
-		marginTop: 10,
-	},
-	location: {
-		...textStyles.footnote,
-		fontSize: 13,
-		color: colors.ink2,
-		marginTop: 4,
-	},
 	badges: { marginTop: 18, marginHorizontal: -18, paddingLeft: 18 },
 	sectionHead: {
 		...textStyles.caption,
@@ -541,7 +590,6 @@ const styles = StyleSheet.create({
 		marginTop: 26,
 		marginBottom: 10,
 	},
-	sources: { marginTop: 26 },
 
 	/** A school's published rank, in the row's own type. */
 	rowRank: {
@@ -569,6 +617,7 @@ const styles = StyleSheet.create({
 	sheet: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: 36 },
 	sheetTitle: { ...textStyles.title2, color: colors.ink, marginBottom: 12 },
 	sheetGap: { marginTop: 12 },
+	sheetFigure: { ...textStyles.title1, color: colors.ink, marginTop: 6 },
 	sheetHead: { ...textStyles.headline, color: colors.ink, marginTop: 22 },
 	sheetRow: {
 		flexDirection: "row",

@@ -1,6 +1,7 @@
 /**
  * The community explore page for a community that has a profile (phase339):
- * six verdict lines, then tiles.
+ * tiles. (It opened on up to six verdict lines until phase373, when the owner
+ * had the intro under the name removed.)
  *
  * Owner 2026-11-15 asked for "信息量 … real insights … 不要太多文字 多一点图表",
  * then said of the eight-section answer "太长了 没人会看这么多". So the page is
@@ -40,17 +41,14 @@ const TALL: ReadonlySet<ExploreSheetKey> = new Set([
 	"schools",
 	"homeValue",
 	"dues",
-	"words",
 ]);
 
 export function ExploreBody({
 	profile,
 	segments,
-	interests,
 }: {
 	profile: CommunityProfile;
 	segments: readonly TourSegment[] | undefined;
-	interests: readonly string[];
 }) {
 	const { width: screenW } = useWindowDimensions();
 	// Floored, so two halves and their gap never round up past the row.
@@ -63,52 +61,20 @@ export function ExploreBody({
 		[profile.events],
 	);
 	const schools = schoolRanks(profile.ranks);
-	const { homeValue, dues, words, verdict, safety } = profile;
+	// The verdict lines under the name and the "Residents say" tile are not
+	// drawn (owner 2026-11-22: "去掉 … explore下面的简介", "resident say没啥价值
+	// 去掉"). `profile.verdict` and `profile.words` are still stored: build 12
+	// reads them.
+	const { homeValue, dues, safety } = profile;
 	const holding = homeValue?.holding;
 	const resources = useMemo(() => linkGroups(profile.links), [profile.links]);
 	const againstMetro = homeValue ? againstBaseline(homeValue) : null;
 	const sparkMax = homeValue
 		? axisTop(homeValue.series.flatMap((p) => [p.value, p.baseline]))
 		: 1;
-	// Half tiles sit two to a row; when their number is odd the last one takes
-	// the row, so the grid never ends on a hole. A computed profile often has
-	// one or none (no dues without research, no words without Nextdoor).
-	const halves = [dues && "dues", words && "words"].filter(Boolean);
-	const lone = halves.length % 2 === 1 ? halves[halves.length - 1] : null;
 
 	return (
 		<>
-			{/* A computed profile leads with a finding only when one is strong
-			    enough; with none, the page opens on its tiles. */}
-			{verdict.good.length + verdict.watch.length > 0 && (
-				<View style={styles.verdict}>
-					{verdict.good.length > 0 && (
-						<View style={styles.verdictCol}>
-							{verdict.good.map((line) => (
-								<View key={line} style={styles.verdictLine}>
-									<View style={[styles.mark, styles.markGood]}>
-										<Text style={styles.markText}>✓</Text>
-									</View>
-									<Text style={styles.verdictText}>{line}</Text>
-								</View>
-							))}
-						</View>
-					)}
-					{verdict.watch.length > 0 && (
-						<View style={styles.verdictCol}>
-							{verdict.watch.map((line) => (
-								<View key={line} style={styles.verdictLine}>
-									<View style={[styles.mark, styles.markWatch]}>
-										<Text style={styles.markText}>!</Text>
-									</View>
-									<Text style={styles.verdictText}>{line}</Text>
-								</View>
-							))}
-						</View>
-					)}
-				</View>
-			)}
-
 			<View style={parts.grid}>
 				{/* The page's four directions, in the order the owner names them
 				    (安 学 便 潜 — spec-v3 03 §3.3), then what it costs. Titles are
@@ -264,12 +230,7 @@ export function ExploreBody({
 				)}
 
 				{dues && (
-					<Tile
-						label="Dues"
-						wide={lone === "dues"}
-						width={half}
-						onPress={() => setSheet("dues")}
-					>
+					<Tile label="Dues" wide width={half} onPress={() => setSheet("dues")}>
 						<Text style={parts.figure}>
 							{dues.display}
 							<Text style={parts.figureUnit}>{`  ${dues.period}`}</Text>
@@ -284,25 +245,6 @@ export function ExploreBody({
 								{dues.tile.separate}
 							</Text>
 						</View>
-					</Tile>
-				)}
-
-				{words && (
-					<Tile
-						label="Residents say"
-						wide={lone === "words"}
-						width={half}
-						onPress={() => setSheet("words")}
-					>
-						<Text
-							style={parts.figure}
-							numberOfLines={1}
-							adjustsFontSizeToFit
-							minimumFontScale={0.7}
-						>
-							“{words.lead}”
-						</Text>
-						<Text style={parts.foot}>{words.leadNote}</Text>
 					</Tile>
 				)}
 
@@ -342,7 +284,6 @@ export function ExploreBody({
 						profile={profile}
 						nearby={nearby}
 						events={events}
-						interests={interests}
 					/>
 				)}
 			</BottomSheet>
@@ -351,35 +292,6 @@ export function ExploreBody({
 }
 
 const styles = StyleSheet.create({
-	verdict: { flexDirection: "row", gap: GAP, marginTop: 14 },
-	verdictCol: { flex: 1, gap: 7 },
-	verdictLine: { flexDirection: "row", alignItems: "flex-start", gap: 7 },
-	mark: {
-		width: 16,
-		height: 16,
-		borderRadius: 8,
-		alignItems: "center",
-		justifyContent: "center",
-		marginTop: 1,
-	},
-	markGood: { backgroundColor: colors.pos },
-	markWatch: { backgroundColor: colors.watch },
-	markText: {
-		...textStyles.footnote,
-		fontSize: 10.5,
-		fontWeight: "700",
-		lineHeight: 14,
-		color: colors.surface,
-	},
-	verdictText: {
-		...textStyles.footnote,
-		fontSize: 13,
-		fontWeight: "600",
-		lineHeight: 17,
-		color: colors.ink,
-		flex: 1,
-	},
-
 	/** The figure on the left, what it is made of on the right. */
 	costSplit: { flexDirection: "row", alignItems: "flex-start", gap: 20 },
 	costRows: { flex: 1, marginTop: 8, gap: 2 },

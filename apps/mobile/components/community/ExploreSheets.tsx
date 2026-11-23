@@ -41,7 +41,6 @@ export type ExploreSheetKey =
 	| "cost"
 	| "dues"
 	| "nearby"
-	| "words"
 	| "events";
 
 const open = (url: string) => void Linking.openURL(url).catch(() => {});
@@ -222,7 +221,7 @@ function HomeValue({
  * last block of the home value sheet; the page gives it its own tile, so it
  * has its own sheet.
  */
-function Cost({
+export function HoldingCost({
 	holding,
 }: {
 	holding: NonNullable<NonNullable<CommunityProfile["homeValue"]>["holding"]>;
@@ -377,57 +376,6 @@ function Nearby({ view }: { view: NearbyView }) {
 	);
 }
 
-function Words({
-	words,
-	interests,
-}: {
-	words: NonNullable<CommunityProfile["words"]>;
-	interests: readonly string[];
-}) {
-	return (
-		<>
-			<Text style={styles.title}>What residents say</Text>
-			<View style={styles.block}>
-				{words.rows.map((w, i) => (
-					<View key={w.word} style={styles.wordRow}>
-						<Text style={[styles.word, i < 3 && styles.wordLead]}>
-							{w.word}
-						</Text>
-						<View style={styles.wordTrack}>
-							<View
-								style={[
-									styles.wordBar,
-									{ width: `${Math.max(3, w.pct)}%` },
-									i < 3 && styles.wordBarLead,
-								]}
-							/>
-						</View>
-						<Text style={[styles.wordPct, i < 3 && styles.wordLead]}>
-							{w.pct}%
-						</Text>
-					</View>
-				))}
-				<Text style={styles.caption}>
-					Share of {words.scope} whose residents use the same word. Shorter is
-					more theirs.
-				</Text>
-			</View>
-			{interests.length > 0 && (
-				<>
-					<Text style={styles.group}>What they are into</Text>
-					<View style={styles.chips}>
-						{interests.map((it) => (
-							<View key={it} style={styles.chip}>
-								<Text style={styles.chipText}>{it}</Text>
-							</View>
-						))}
-					</View>
-				</>
-			)}
-		</>
-	);
-}
-
 function Events({ events }: { events: readonly EventView[] }) {
 	return (
 		<>
@@ -465,13 +413,11 @@ export function ExploreSheet({
 	profile,
 	nearby,
 	events,
-	interests,
 }: {
 	which: ExploreSheetKey;
 	profile: CommunityProfile;
 	nearby: NearbyView | null;
 	events: readonly EventView[];
-	interests: readonly string[];
 }) {
 	return (
 		<ScrollView
@@ -494,13 +440,10 @@ export function ExploreSheet({
 				/>
 			)}
 			{which === "cost" && profile.homeValue?.holding && (
-				<Cost holding={profile.homeValue.holding} />
+				<HoldingCost holding={profile.homeValue.holding} />
 			)}
 			{which === "dues" && profile.dues && <Dues dues={profile.dues} />}
 			{which === "nearby" && nearby && <Nearby view={nearby} />}
-			{which === "words" && profile.words && (
-				<Words words={profile.words} interests={interests} />
-			)}
 			{which === "events" && <Events events={events} />}
 		</ScrollView>
 	);
@@ -678,49 +621,6 @@ const styles = StyleSheet.create({
 		gap: 1,
 	},
 	itemLink: { fontSize: 12, marginTop: 2 },
-
-	wordRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 10,
-		paddingVertical: 5,
-	},
-	word: {
-		...textStyles.footnote,
-		fontSize: 13,
-		fontWeight: "500",
-		color: colors.ink,
-		width: 100,
-	},
-	wordLead: { fontWeight: "700", color: colors.ink },
-	wordTrack: {
-		flex: 1,
-		height: 8,
-		borderRadius: 4,
-		backgroundColor: colors.surface2,
-	},
-	wordBar: {
-		height: 8,
-		borderRadius: 4,
-		backgroundColor: colors.seriesMuted,
-	},
-	wordBarLead: { backgroundColor: colors.accent },
-	wordPct: {
-		...textStyles.footnote,
-		fontSize: 12,
-		color: colors.ink2,
-		width: 34,
-		textAlign: "right",
-		fontVariant: ["tabular-nums"],
-	},
-	chips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 },
-	chip: {
-		paddingHorizontal: 11,
-		paddingVertical: 7,
-		borderRadius: radii.pill,
-		backgroundColor: colors.bg,
-	},
-	chipText: { ...textStyles.footnote, fontSize: 14, color: colors.ink },
 
 	event: {
 		flexDirection: "row",

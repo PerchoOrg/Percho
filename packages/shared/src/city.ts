@@ -136,6 +136,28 @@ export interface CityDetailDTO extends CityFundamentals {
       date: string;
     }>;
   };
+  /** A published forecast for the city's county (phase373). */
+  forecast?: {
+    /** "Forsyth County" */
+    area: string;
+    year: number;
+    value: number;
+    baseYear: number;
+    baseValue: number;
+    /** "+79% from 2020" */
+    takeaway: string;
+    source: CitySource;
+  };
+  /**
+   * What a month of owning the typical home in the city costs before the
+   * mortgage — the block the city's community pages carry
+   * (`CommunityProfile.homeValue.holding`), so the two always agree.
+   */
+  holding?: {
+    display: string;
+    basis: string;
+    rows: Array<{ label: string; usd: number; note?: string }>;
+  };
   /** Places to go on from the page, each under a heading. */
   links?: Array<{ label: string; url: string; group?: string }>;
   /**
