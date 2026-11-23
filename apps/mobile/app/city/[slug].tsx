@@ -24,7 +24,7 @@
  * link out for crime, as on the community page — `packages/shared/src/city.ts`.
  */
 import type { CityDetailDTO } from "@percho/shared/city";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
@@ -54,6 +54,7 @@ import {
 	Tile,
 	parts,
 } from "../../components/community/ExploreParts";
+import { ReviewsSection } from "../../components/community/ReviewsSection";
 import { TourHero } from "../../components/community/TourHero";
 import { apiBase } from "../../lib/api/base";
 import {
@@ -62,10 +63,13 @@ import {
 	glancePart,
 	otherRankings,
 	schoolRows,
+	schoolsByLevel,
 } from "../../lib/city/page";
 import { linkGroups } from "../../lib/community/explore";
+import { type ReviewStatus, fetchMyReview } from "../../lib/reviews/reviews";
 import { backOrFeed } from "../../lib/share/back-or-feed";
 import { openShareSheet } from "../../lib/share/share-sheet";
+import { useAuthStore } from "../../state/auth";
 import { useSavedStore } from "../../state/saved";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
@@ -89,6 +93,21 @@ export default function CityScreen() {
 	const [data, setData] = useState<CityDetailDTO | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [sheet, setSheet] = useState<SheetKey | null>(null);
+	// The signed-in person's own review of the city, in any status — as on the
+	// community page, so the field can say "waiting to be read".
+	const uid = useAuthStore((st) => st.session?.user.id);
+	const [myStatus, setMyStatus] = useState<ReviewStatus | null>(null);
+	const cityId = data?.id;
+	useEffect(() => {
+		if (!uid || !cityId) return;
+		let alive = true;
+		fetchMyReview(uid, { kind: "city", id: cityId })
+			.then((mine) => alive && setMyStatus(mine?.status ?? null))
+			.catch(() => {});
+		return () => {
+			alive = false;
+		};
+	}, [uid, cityId]);
 	const resources = useMemo(
 		() => linkGroups(data?.links, CITY_LINK_ORDER),
 		[data?.links],
@@ -153,6 +172,7 @@ export default function CityScreen() {
 	const costs = costRows(data);
 	const latest = data.growth.series[data.growth.series.length - 1];
 	const safetyLinks = (data.links ?? []).filter((l) => l.group === "Safety");
+	const allSchools = data.allSchools ?? [];
 
 	return (
 		<View style={styles.root}>
@@ -242,6 +262,11 @@ export default function CityScreen() {
 										</View>
 									))}
 								</View>
+								{allSchools.length > 0 && (
+									<Text style={parts.foot}>
+										All {allSchools.length} schools in and around {data.name} ›
+									</Text>
+								)}
 							</Tile>
 						)}
 
@@ -323,6 +348,23 @@ export default function CityScreen() {
 
 					<Resources groups={resources} />
 
+					{/* Reviews at the foot, as on a community's page (owner
+					    2026-11-22: "最底下还是要有review 部分"). */}
+					<ReviewsSection
+						reviews={data.reviews}
+						myStatus={myStatus}
+						onWrite={() => {
+							if (!uid) {
+								router.push("/auth");
+								return;
+							}
+							router.push({
+								pathname: "/community/review",
+								params: { id: data.id, name: data.name, kind: "city" },
+							});
+						}}
+					/>
+
 					<View style={styles.sources}>
 						<PhotoCredits credits={data.credits} />
 					</View>
@@ -375,6 +417,36 @@ export default function CityScreen() {
 						<>
 							<Text style={styles.sheetTitle}>Schools</Text>
 							<SchoolLadder education={data.education} />
+							{/* Every school, not only the ones a publisher ranked. A
+							    different measure from the ranks above, and it says so. */}
+							{allSchools.length > 0 && (
+								<>
+									<Text style={styles.sheetHead}>
+										All {allSchools.length} in and around {data.name}
+									</Text>
+									<Text style={styles.sheetCaption}>
+										Where each stands among Georgia's schools at its level, by
+										state test results. Miles are from the city's centre. Nearby
+										schools — not an attendance zone.
+									</Text>
+									{schoolsByLevel(allSchools).map((g) => (
+										<View key={g.heading} style={styles.sheetGap}>
+											<Text style={styles.sheetRowKind}>{g.heading}</Text>
+											{g.schools.map((sc) => (
+												<View key={sc.name} style={parts.row}>
+													<Text style={parts.rowName} numberOfLines={1}>
+														{sc.name}
+													</Text>
+													{sc.miles !== undefined && (
+														<Text style={parts.rowAside}>{sc.miles} mi</Text>
+													)}
+													<Text style={parts.rowShare}>Top {sc.share}%</Text>
+												</View>
+											))}
+										</View>
+									))}
+								</>
+							)}
 						</>
 					)}
 					{sheet === "convenience" && (
@@ -412,7 +484,14 @@ export default function CityScreen() {
 type SheetKey = "safety" | "schools" | "convenience" | "potential" | "cost";
 
 /** A city's own pages lead its links; where people talk about it comes last. */
-const CITY_LINK_ORDER = ["City", "Homes", "Schools", "Safety", "Community"];
+const CITY_LINK_ORDER = [
+	"City",
+	"Homes",
+	"Schools",
+	"Safety",
+	"Articles",
+	"Community",
+];
 
 const styles = StyleSheet.create({
 	root: { flex: 1, backgroundColor: colors.bg },
@@ -490,6 +569,7 @@ const styles = StyleSheet.create({
 	sheet: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: 36 },
 	sheetTitle: { ...textStyles.title2, color: colors.ink, marginBottom: 12 },
 	sheetGap: { marginTop: 12 },
+	sheetHead: { ...textStyles.headline, color: colors.ink, marginTop: 22 },
 	sheetRow: {
 		flexDirection: "row",
 		alignItems: "center",

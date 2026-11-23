@@ -186,17 +186,42 @@ export function otherRankings(d: City): City["rankings"] {
 	return d.rankings.filter((r) => !schools.has(r.title.trim().toLowerCase()));
 }
 
+/** How many schools the Schools tile names before it points at the sheet. */
+export const TILE_SCHOOLS = 6;
+
 /**
- * The Schools tile: the best-ranked school at each level, then a college —
- * the name in full and its published rank in the row's own type.
+ * The Schools tile: the schools a publisher ranked, by level and then by
+ * rank, a college last — the name in full and its published rank in the row's
+ * own type. It named only the best at each level until the owner asked where
+ * the rest were (2026-11-22: "学校应该有很多吧 只看到三个"); every other school
+ * is in the sheet.
  */
 export function schoolRows(d: City): { name: string; rank?: string }[] {
 	const { columns, colleges } = schoolColumns(d.education.schools);
-	const tops = columns.flatMap((c) => (c.schools[0] ? [c.schools[0]] : []));
-	return [...tops, ...colleges.slice(0, 1)].map((s) => ({
-		name: fullSchoolName(s.name),
-		...(s.rank ? { rank: [s.rank, s.scope].filter(Boolean).join(" ") } : {}),
-	}));
+	return [...columns.flatMap((c) => c.schools), ...colleges]
+		.slice(0, TILE_SCHOOLS)
+		.map((s) => ({
+			name: fullSchoolName(s.name),
+			...(s.rank ? { rank: [s.rank, s.scope].filter(Boolean).join(" ") } : {}),
+		}));
+}
+
+const LEVEL_HEADING = {
+	elementary: "Elementary",
+	middle: "Middle",
+	high: "High",
+} as const;
+
+/** The sheet's full list: every school in and around the city, under its level. */
+export function schoolsByLevel(
+	all: CityDetailDTO["allSchools"],
+): { heading: string; schools: NonNullable<CityDetailDTO["allSchools"]> }[] {
+	return (["elementary", "middle", "high"] as const)
+		.map((level) => ({
+			heading: LEVEL_HEADING[level],
+			schools: (all ?? []).filter((s) => s.level === level),
+		}))
+		.filter((g) => g.schools.length > 0);
 }
 
 /** The Convenience tile: the first three drives, off-peak to rush. */

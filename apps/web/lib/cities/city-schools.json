@@ -1,0 +1,949 @@
+{
+  "asOf": "2026-11-23",
+  "measure": "Georgia Milestones",
+  "of": {
+    "elementary": 1220,
+    "middle": 472,
+    "high": 443
+  },
+  "cities": {
+    "alpharetta-ga": [
+      {
+        "name": "Barnwell Elementary School",
+        "level": "elementary",
+        "share": 1,
+        "miles": 5
+      },
+      {
+        "name": "Creek View Elementary School",
+        "level": "elementary",
+        "share": 1,
+        "miles": 2.9
+      },
+      {
+        "name": "Lake Windward Elementary School",
+        "level": "elementary",
+        "share": 1,
+        "miles": 4.6
+      },
+      {
+        "name": "Crabapple Crossing Elementary School",
+        "level": "elementary",
+        "share": 3,
+        "miles": 2.9
+      },
+      {
+        "name": "Dolvin Elementary School",
+        "level": "elementary",
+        "share": 3,
+        "miles": 4.3
+      },
+      {
+        "name": "State Bridge Crossing Elementary School",
+        "level": "elementary",
+        "share": 3,
+        "miles": 6.5
+      },
+      {
+        "name": "Alpharetta Elementary School",
+        "level": "elementary",
+        "share": 4,
+        "miles": 0.7
+      },
+      {
+        "name": "Summit Hill Elementary",
+        "level": "elementary",
+        "share": 4,
+        "miles": 3.6
+      },
+      {
+        "name": "Cogburn Woods Elementary School",
+        "level": "elementary",
+        "share": 5,
+        "miles": 2.1
+      },
+      {
+        "name": "Medlock Bridge Elementary School",
+        "level": "elementary",
+        "share": 5,
+        "miles": 6.6
+      },
+      {
+        "name": "New Prospect Elementary School",
+        "level": "elementary",
+        "share": 5,
+        "miles": 1.9
+      },
+      {
+        "name": "Northwood Elementary School",
+        "level": "elementary",
+        "share": 6,
+        "miles": 3.2
+      },
+      {
+        "name": "Ocee Elementary School",
+        "level": "elementary",
+        "share": 6,
+        "miles": 3.8
+      },
+      {
+        "name": "Midway Elementary School",
+        "level": "elementary",
+        "share": 7,
+        "miles": 6.7
+      },
+      {
+        "name": "International Charter School of Atlanta",
+        "level": "elementary",
+        "share": 9,
+        "miles": 1.7
+      },
+      {
+        "name": "Amana Academy School",
+        "level": "elementary",
+        "share": 11,
+        "miles": 0.7
+      },
+      {
+        "name": "Brandywine Elementary School",
+        "level": "elementary",
+        "share": 16,
+        "miles": 4.8
+      },
+      {
+        "name": "Hembree Springs Elementary School",
+        "level": "elementary",
+        "share": 18,
+        "miles": 2.7
+      },
+      {
+        "name": "Manning Oaks Elementary School",
+        "level": "elementary",
+        "share": 18,
+        "miles": 1.1
+      },
+      {
+        "name": "Mimosa Elementary School",
+        "level": "elementary",
+        "share": 79,
+        "miles": 3.5
+      },
+      {
+        "name": "Webb Bridge Middle School",
+        "level": "middle",
+        "share": 2,
+        "miles": 3.5
+      },
+      {
+        "name": "Autrey Mill Middle School",
+        "level": "middle",
+        "share": 3,
+        "miles": 4.9
+      },
+      {
+        "name": "Taylor Road Middle School",
+        "level": "middle",
+        "share": 3,
+        "miles": 5
+      },
+      {
+        "name": "Northwestern Middle School",
+        "level": "middle",
+        "share": 4,
+        "miles": 3
+      },
+      {
+        "name": "Hopewell Middle School",
+        "level": "middle",
+        "share": 5,
+        "miles": 1.9
+      },
+      {
+        "name": "DeSana Middle School",
+        "level": "middle",
+        "share": 9,
+        "miles": 4.9
+      },
+      {
+        "name": "Haynes Bridge Middle School",
+        "level": "middle",
+        "share": 16,
+        "miles": 2.4
+      },
+      {
+        "name": "Elkins Pointe Middle School",
+        "level": "middle",
+        "share": 18,
+        "miles": 2.8
+      },
+      {
+        "name": "Holcomb Bridge Middle School",
+        "level": "middle",
+        "share": 48,
+        "miles": 5.6
+      },
+      {
+        "name": "Innovation Academy",
+        "level": "high",
+        "share": 2,
+        "miles": 0.4
+      },
+      {
+        "name": "Chattahoochee High School",
+        "level": "high",
+        "share": 4,
+        "miles": 5.1
+      },
+      {
+        "name": "Denmark High School",
+        "level": "high",
+        "share": 6,
+        "miles": 6.2
+      },
+      {
+        "name": "Alpharetta High School",
+        "level": "high",
+        "share": 7,
+        "miles": 2.1
+      },
+      {
+        "name": "Milton High School",
+        "level": "high",
+        "share": 7,
+        "miles": 3.1
+      },
+      {
+        "name": "Cambridge High School",
+        "level": "high",
+        "share": 10,
+        "miles": 3.2
+      }
+    ],
+    "buford-ga": [
+      {
+        "name": "Ivy Creek Elementary School",
+        "level": "elementary",
+        "share": 7,
+        "miles": 4.2
+      },
+      {
+        "name": "Buford Senior Academy",
+        "level": "elementary",
+        "share": 10,
+        "miles": 0.9
+      },
+      {
+        "name": "Sugar Hill Elementary School",
+        "level": "elementary",
+        "share": 16,
+        "miles": 2.5
+      },
+      {
+        "name": "Harmony Elementary School",
+        "level": "elementary",
+        "share": 18,
+        "miles": 2.2
+      },
+      {
+        "name": "Patrick Elementary School",
+        "level": "elementary",
+        "share": 29,
+        "miles": 3.5
+      },
+      {
+        "name": "Sycamore Elementary School",
+        "level": "elementary",
+        "share": 32,
+        "miles": 2.3
+      },
+      {
+        "name": "Friendship Elementary School",
+        "level": "elementary",
+        "share": 47,
+        "miles": 3.7
+      },
+      {
+        "name": "Buford Middle School",
+        "level": "middle",
+        "share": 7,
+        "miles": 1.3
+      },
+      {
+        "name": "Jones Middle School",
+        "level": "middle",
+        "share": 10,
+        "miles": 4
+      },
+      {
+        "name": "Twin Rivers Middle School",
+        "level": "middle",
+        "share": 12,
+        "miles": 6.1
+      },
+      {
+        "name": "Buford High School",
+        "level": "high",
+        "share": 6,
+        "miles": 0.8
+      },
+      {
+        "name": "Seckinger High School",
+        "level": "high",
+        "share": 14,
+        "miles": 6
+      },
+      {
+        "name": "Lanier High School",
+        "level": "high",
+        "share": 25,
+        "miles": 2.9
+      }
+    ],
+    "cumming-ga": [
+      {
+        "name": "Daves Creek Elementary School",
+        "level": "elementary",
+        "share": 1,
+        "miles": 4.9
+      },
+      {
+        "name": "Big Creek Elementary School",
+        "level": "elementary",
+        "share": 5,
+        "miles": 6.9
+      },
+      {
+        "name": "Brookwood Elementary",
+        "level": "elementary",
+        "share": 5,
+        "miles": 8.3
+      },
+      {
+        "name": "New Hope Elementary School",
+        "level": "elementary",
+        "share": 5,
+        "miles": 2.9
+      },
+      {
+        "name": "Haw Creek Elementary",
+        "level": "elementary",
+        "share": 7,
+        "miles": 3.8
+      },
+      {
+        "name": "Shiloh Point Elementary",
+        "level": "elementary",
+        "share": 7,
+        "miles": 4.9
+      },
+      {
+        "name": "Vickery Creek Elementary School",
+        "level": "elementary",
+        "share": 8,
+        "miles": 5.3
+      },
+      {
+        "name": "Kelly Mill Elementary",
+        "level": "elementary",
+        "share": 10,
+        "miles": 1.5
+      },
+      {
+        "name": "Mashburn Elementary School",
+        "level": "elementary",
+        "share": 10,
+        "miles": 3.3
+      },
+      {
+        "name": "George W. Whitlow Elementary",
+        "level": "elementary",
+        "share": 11,
+        "miles": 1.9
+      },
+      {
+        "name": "Matt Elementary School",
+        "level": "elementary",
+        "share": 13,
+        "miles": 6.8
+      },
+      {
+        "name": "Sawnee Elementary School",
+        "level": "elementary",
+        "share": 14,
+        "miles": 3.1
+      },
+      {
+        "name": "Poole's Mill Elementary",
+        "level": "elementary",
+        "share": 20,
+        "miles": 7.3
+      },
+      {
+        "name": "Coal Mountain Elementary School",
+        "level": "elementary",
+        "share": 22,
+        "miles": 5
+      },
+      {
+        "name": "Silver City Elementary School",
+        "level": "elementary",
+        "share": 22,
+        "miles": 8.6
+      },
+      {
+        "name": "Chattahoochee Elementary School",
+        "level": "elementary",
+        "share": 32,
+        "miles": 3.7
+      },
+      {
+        "name": "Cumming Elementary School",
+        "level": "elementary",
+        "share": 38,
+        "miles": 1
+      },
+      {
+        "name": "South Forsyth Middle School",
+        "level": "middle",
+        "share": 1,
+        "miles": 6.4
+      },
+      {
+        "name": "Piney Grove Middle School",
+        "level": "middle",
+        "share": 2,
+        "miles": 4.8
+      },
+      {
+        "name": "Lakeside Middle School",
+        "level": "middle",
+        "share": 5,
+        "miles": 3.8
+      },
+      {
+        "name": "Vickery Creek Middle School",
+        "level": "middle",
+        "share": 7,
+        "miles": 5.1
+      },
+      {
+        "name": "Hendricks Middle School",
+        "level": "middle",
+        "share": 9,
+        "miles": 5.9
+      },
+      {
+        "name": "Liberty Middle School",
+        "level": "middle",
+        "share": 19,
+        "miles": 6.7
+      },
+      {
+        "name": "North Forsyth Middle School",
+        "level": "middle",
+        "share": 23,
+        "miles": 5.3
+      },
+      {
+        "name": "Otwell Middle School",
+        "level": "middle",
+        "share": 28,
+        "miles": 0.8
+      },
+      {
+        "name": "Little Mill Middle School",
+        "level": "middle",
+        "share": 41,
+        "miles": 7.4
+      },
+      {
+        "name": "Alliance Academy for Innovation",
+        "level": "high",
+        "share": 1,
+        "miles": 1.6
+      },
+      {
+        "name": "South Forsyth High School",
+        "level": "high",
+        "share": 3,
+        "miles": 4.4
+      },
+      {
+        "name": "West Forsyth High School",
+        "level": "high",
+        "share": 14,
+        "miles": 4.2
+      },
+      {
+        "name": "North Forsyth High School",
+        "level": "high",
+        "share": 15,
+        "miles": 5.2
+      },
+      {
+        "name": "Forsyth Central High School",
+        "level": "high",
+        "share": 25,
+        "miles": 0.6
+      }
+    ],
+    "duluth-ga": [
+      {
+        "name": "Shakerag Elementary School",
+        "level": "elementary",
+        "share": 1,
+        "miles": 3.1
+      },
+      {
+        "name": "Wilson Creek Elementary School",
+        "level": "elementary",
+        "share": 1,
+        "miles": 3.2
+      },
+      {
+        "name": "State Bridge Crossing Elementary School",
+        "level": "elementary",
+        "share": 3,
+        "miles": 3.3
+      },
+      {
+        "name": "Abbotts Hill Elementary School",
+        "level": "elementary",
+        "share": 5,
+        "miles": 4.7
+      },
+      {
+        "name": "Findley Oaks Elementary School",
+        "level": "elementary",
+        "share": 5,
+        "miles": 4.7
+      },
+      {
+        "name": "Medlock Bridge Elementary School",
+        "level": "elementary",
+        "share": 5,
+        "miles": 3.2
+      },
+      {
+        "name": "Yi Hwang Academy of Language Excellence",
+        "level": "elementary",
+        "share": 6,
+        "miles": 1.9
+      },
+      {
+        "name": "Parsons Elementary School",
+        "level": "elementary",
+        "share": 9,
+        "miles": 3.2
+      },
+      {
+        "name": "Chattahoochee Elementary School",
+        "level": "elementary",
+        "share": 22,
+        "miles": 1.1
+      },
+      {
+        "name": "Mason Elementary School",
+        "level": "elementary",
+        "share": 26,
+        "miles": 1.5
+      },
+      {
+        "name": "Berkeley Lake Elementary School",
+        "level": "elementary",
+        "share": 38,
+        "miles": 3
+      },
+      {
+        "name": "Harris Elementary School",
+        "level": "elementary",
+        "share": 38,
+        "miles": 1.2
+      },
+      {
+        "name": "New Life Academy of Excellence",
+        "level": "elementary",
+        "share": 41,
+        "miles": 1.7
+      },
+      {
+        "name": "Chesney Elementary School",
+        "level": "elementary",
+        "share": 64,
+        "miles": 3
+      },
+      {
+        "name": "Ferguson Elementary School",
+        "level": "elementary",
+        "share": 68,
+        "miles": 3.8
+      },
+      {
+        "name": "River Trail Middle School",
+        "level": "middle",
+        "share": 2,
+        "miles": 3
+      },
+      {
+        "name": "Coleman Middle School",
+        "level": "middle",
+        "share": 10,
+        "miles": 0.1
+      },
+      {
+        "name": "Hull Middle School",
+        "level": "middle",
+        "share": 10,
+        "miles": 2.5
+      },
+      {
+        "name": "Duluth Middle School",
+        "level": "middle",
+        "share": 49,
+        "miles": 1.4
+      },
+      {
+        "name": "Radloff Middle School",
+        "level": "middle",
+        "share": 83,
+        "miles": 3.9
+      },
+      {
+        "name": "Northview High School",
+        "level": "high",
+        "share": 4,
+        "miles": 3.1
+      },
+      {
+        "name": "Johns Creek High School",
+        "level": "high",
+        "share": 5,
+        "miles": 3.2
+      },
+      {
+        "name": "Peachtree Ridge High School",
+        "level": "high",
+        "share": 27,
+        "miles": 3.4
+      },
+      {
+        "name": "McClure Health Science High School",
+        "level": "high",
+        "share": 39,
+        "miles": 4.1
+      },
+      {
+        "name": "Duluth High School",
+        "level": "high",
+        "share": 56,
+        "miles": 0.5
+      }
+    ],
+    "johns-creek-ga": [
+      {
+        "name": "Lake Windward Elementary School",
+        "level": "elementary",
+        "share": 1,
+        "miles": 2.6
+      },
+      {
+        "name": "Shakerag Elementary School",
+        "level": "elementary",
+        "share": 1,
+        "miles": 2.5
+      },
+      {
+        "name": "Wilson Creek Elementary School",
+        "level": "elementary",
+        "share": 1,
+        "miles": 1.9
+      },
+      {
+        "name": "Johns Creek Elementary",
+        "level": "elementary",
+        "share": 3,
+        "miles": 2.4
+      },
+      {
+        "name": "State Bridge Crossing Elementary School",
+        "level": "elementary",
+        "share": 3,
+        "miles": 3.2
+      },
+      {
+        "name": "Abbotts Hill Elementary School",
+        "level": "elementary",
+        "share": 5,
+        "miles": 1.6
+      },
+      {
+        "name": "Brookwood Elementary",
+        "level": "elementary",
+        "share": 5,
+        "miles": 2.3
+      },
+      {
+        "name": "Findley Oaks Elementary School",
+        "level": "elementary",
+        "share": 5,
+        "miles": 1
+      },
+      {
+        "name": "Medlock Bridge Elementary School",
+        "level": "elementary",
+        "share": 5,
+        "miles": 2.5
+      },
+      {
+        "name": "Yi Hwang Academy of Language Excellence",
+        "level": "elementary",
+        "share": 6,
+        "miles": 2.9
+      },
+      {
+        "name": "Chattahoochee Elementary School",
+        "level": "elementary",
+        "share": 22,
+        "miles": 3.2
+      },
+      {
+        "name": "New Life Academy of Excellence",
+        "level": "elementary",
+        "share": 41,
+        "miles": 3.3
+      },
+      {
+        "name": "River Trail Middle School",
+        "level": "middle",
+        "share": 2,
+        "miles": 2.8
+      },
+      {
+        "name": "Taylor Road Middle School",
+        "level": "middle",
+        "share": 3,
+        "miles": 2.4
+      },
+      {
+        "name": "Chattahoochee High School",
+        "level": "high",
+        "share": 4,
+        "miles": 2.4
+      },
+      {
+        "name": "Northview High School",
+        "level": "high",
+        "share": 4,
+        "miles": 1.6
+      },
+      {
+        "name": "Johns Creek High School",
+        "level": "high",
+        "share": 5,
+        "miles": 3
+      }
+    ],
+    "sugar-hill-ga": [
+      {
+        "name": "Level Creek Elementary School",
+        "level": "elementary",
+        "share": 1,
+        "miles": 3.3
+      },
+      {
+        "name": "Roberts Elementary School",
+        "level": "elementary",
+        "share": 3,
+        "miles": 2.5
+      },
+      {
+        "name": "Buford Senior Academy",
+        "level": "elementary",
+        "share": 10,
+        "miles": 2.8
+      },
+      {
+        "name": "White Oak Elementary School",
+        "level": "elementary",
+        "share": 10,
+        "miles": 3.3
+      },
+      {
+        "name": "Sugar Hill Elementary School",
+        "level": "elementary",
+        "share": 16,
+        "miles": 0.6
+      },
+      {
+        "name": "Harmony Elementary School",
+        "level": "elementary",
+        "share": 18,
+        "miles": 3.1
+      },
+      {
+        "name": "Sycamore Elementary School",
+        "level": "elementary",
+        "share": 32,
+        "miles": 1.5
+      },
+      {
+        "name": "North Gwinnett Middle School",
+        "level": "middle",
+        "share": 2,
+        "miles": 2.5
+      },
+      {
+        "name": "Buford Middle School",
+        "level": "middle",
+        "share": 7,
+        "miles": 3.2
+      },
+      {
+        "name": "Lanier Middle School",
+        "level": "middle",
+        "share": 12,
+        "miles": 3.4
+      },
+      {
+        "name": "Buford High School",
+        "level": "high",
+        "share": 6,
+        "miles": 2.6
+      },
+      {
+        "name": "North Gwinnett High School",
+        "level": "high",
+        "share": 7,
+        "miles": 2.6
+      },
+      {
+        "name": "Lanier High School",
+        "level": "high",
+        "share": 25,
+        "miles": 1.4
+      }
+    ],
+    "suwanee-ga": [
+      {
+        "name": "Level Creek Elementary School",
+        "level": "elementary",
+        "share": 1,
+        "miles": 1
+      },
+      {
+        "name": "Riverside Elementary School",
+        "level": "elementary",
+        "share": 1,
+        "miles": 3.1
+      },
+      {
+        "name": "Johns Creek Elementary",
+        "level": "elementary",
+        "share": 3,
+        "miles": 3.6
+      },
+      {
+        "name": "Roberts Elementary School",
+        "level": "elementary",
+        "share": 3,
+        "miles": 1.3
+      },
+      {
+        "name": "Settles Bridge Elementary School",
+        "level": "elementary",
+        "share": 3,
+        "miles": 5.2
+      },
+      {
+        "name": "Sharon Elementary School",
+        "level": "elementary",
+        "share": 4,
+        "miles": 5.2
+      },
+      {
+        "name": "Suwanee Elementary School",
+        "level": "elementary",
+        "share": 4,
+        "miles": 0.8
+      },
+      {
+        "name": "Parsons Elementary School",
+        "level": "elementary",
+        "share": 9,
+        "miles": 3.3
+      },
+      {
+        "name": "Burnette Elementary School",
+        "level": "elementary",
+        "share": 12,
+        "miles": 1.7
+      },
+      {
+        "name": "Sugar Hill Elementary School",
+        "level": "elementary",
+        "share": 16,
+        "miles": 3.3
+      },
+      {
+        "name": "Walnut Grove Elementary School",
+        "level": "elementary",
+        "share": 16,
+        "miles": 3.6
+      },
+      {
+        "name": "Rock Springs Elementary School",
+        "level": "elementary",
+        "share": 43,
+        "miles": 3.3
+      },
+      {
+        "name": "Riverwatch Middle School",
+        "level": "middle",
+        "share": 1,
+        "miles": 5.3
+      },
+      {
+        "name": "North Gwinnett Middle School",
+        "level": "middle",
+        "share": 2,
+        "miles": 1.5
+      },
+      {
+        "name": "Northbrook Middle School",
+        "level": "middle",
+        "share": 16,
+        "miles": 3.5
+      },
+      {
+        "name": "Lambert High School",
+        "level": "high",
+        "share": 3,
+        "miles": 5.4
+      },
+      {
+        "name": "North Gwinnett High School",
+        "level": "high",
+        "share": 7,
+        "miles": 2
+      },
+      {
+        "name": "Lanier High School",
+        "level": "high",
+        "share": 25,
+        "miles": 2.7
+      },
+      {
+        "name": "Peachtree Ridge High School",
+        "level": "high",
+        "share": 27,
+        "miles": 3.3
+      },
+      {
+        "name": "Collins Hill High School",
+        "level": "high",
+        "share": 31,
+        "miles": 3.8
+      }
+    ]
+  }
+}

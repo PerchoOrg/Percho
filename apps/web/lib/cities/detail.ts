@@ -33,8 +33,9 @@ import {
 import { parseCityProfile } from '@/lib/zod/city-profile';
 import type { CityDetailDTO, CityFilmCredits, CityFundamentals } from '@percho/shared/city';
 import { buildTourChapters } from '@percho/shared/tour-buckets';
+import { fetchCityReviews } from '../communities/reviews';
 import { bySection } from './chapters';
-import { cityLinks, citySafety } from './links';
+import { articleLinks, cityLinks, citySafety, citySchools } from './links';
 
 export interface CityFilm {
   slug: string;
@@ -209,8 +210,15 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
     console.warn('[city] film unavailable', err);
   }
 
+  // Read with the anon client on purpose: RLS hands it approved rows only.
+  const reviews = await fetchCityReviews(anon, city.id).catch((err) => {
+    console.warn('[city] reviews unavailable', err);
+    return null;
+  });
   const safety = citySafety(city.slug);
+  const allSchools = citySchools(city.slug);
   return {
+    id: city.id,
     slug: city.slug,
     name: city.name,
     state: city.state,
@@ -221,12 +229,17 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
     ...shared,
     credits,
     ...(safety ? { safety } : {}),
-    links: cityLinks({
-      name: city.name,
-      county: city.county,
-      lat: city.lat,
-      lng: city.lng,
-      website: city.website,
-    }),
+    ...(reviews ? { reviews } : {}),
+    ...(allSchools ? { allSchools } : {}),
+    links: [
+      ...cityLinks({
+        name: city.name,
+        county: city.county,
+        lat: city.lat,
+        lng: city.lng,
+        website: city.website,
+      }),
+      ...articleLinks(shared),
+    ],
   };
 }

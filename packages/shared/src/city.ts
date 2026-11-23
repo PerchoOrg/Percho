@@ -21,6 +21,8 @@
  * only as a link out. It is not part of the stored, researched profile.
  */
 
+import type { ReviewDimension } from './review-dimensions';
+
 export interface CitySource {
   name: string;
   year?: string;
@@ -96,6 +98,8 @@ export interface CityFilmCredits {
 }
 
 export interface CityDetailDTO extends CityFundamentals {
+  /** The `cities` row — what a review of the city is filed under. */
+  id: string;
   slug: string;
   name: string;
   state: string;
@@ -119,6 +123,31 @@ export interface CityDetailDTO extends CityFundamentals {
   credits: CityFilmCredits;
   /** Facts about the place, never about crime (see the header). */
   safety?: { rows: Array<{ label: string; name: string; note?: string }> };
+  /** Approved reviews of the city (phase372). Absent until one is approved. */
+  reviews?: {
+    count: number;
+    avgRating: number;
+    dimensionAvgs: Partial<Record<ReviewDimension, number>>;
+    items: Array<{
+      id: string;
+      rating: number;
+      dimensions: Partial<Record<ReviewDimension, number>>;
+      body: string;
+      date: string;
+    }>;
+  };
   /** Places to go on from the page, each under a heading. */
   links?: Array<{ label: string; url: string; group?: string }>;
+  /**
+   * Every scored public school in and around the city, best standing first
+   * within each level (phase372). `share` is the community page's "Top N%"
+   * among Georgia's schools at that level; `miles` is from the city's centre.
+   * The researched `education.schools` are the few a publisher ranked.
+   */
+  allSchools?: Array<{
+    name: string;
+    level: 'elementary' | 'middle' | 'high';
+    share: number;
+    miles?: number;
+  }>;
 }

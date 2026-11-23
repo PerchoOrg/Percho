@@ -50,7 +50,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
-	Linking,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -62,7 +61,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RedlineIcon } from "../../components/cards/redline/RedlineChrome";
 import { ExploreBody } from "../../components/community/ExploreBody";
 import { NearbyChart } from "../../components/community/NearbyChart";
-import { RatingBars } from "../../components/community/RatingBars";
+import { ReviewsSection } from "../../components/community/ReviewsSection";
 import { StatBand } from "../../components/community/StatBand";
 import { TourHero } from "../../components/community/TourHero";
 import { apiBase } from "../../lib/api/base";
@@ -70,11 +69,7 @@ import type {
 	CommunityDetailDTO,
 	CommunityReasonDTO,
 } from "../../lib/community/detail-dto";
-import {
-	type ReviewStatus,
-	fetchMyReview,
-	reviewMonth,
-} from "../../lib/reviews/reviews";
+import { type ReviewStatus, fetchMyReview } from "../../lib/reviews/reviews";
 import { backOrFeed } from "../../lib/share/back-or-feed";
 import { openShareSheet } from "../../lib/share/share-sheet";
 import { useAuthStore } from "../../state/auth";
@@ -133,7 +128,7 @@ export default function CommunityWhyScreen() {
 	useEffect(() => {
 		if (!uid || !data) return;
 		let alive = true;
-		fetchMyReview(uid, data.id)
+		fetchMyReview(uid, { kind: "community", id: data.id })
 			.then((mine) => alive && setMyStatus(mine?.status ?? null))
 			.catch(() => {});
 		return () => {
@@ -209,8 +204,6 @@ export default function CommunityWhyScreen() {
 	// A researched community gets the one-screen page (phase339); the rest keep
 	// the sections below, which need nothing but the row.
 	const profile = data.profile;
-	// On that page an empty reviews section is one row, not a section.
-	const reviewsRow = !!profile && !data.reviews;
 	const writeReview = () => {
 		if (!uid) {
 			router.push("/auth");
@@ -350,108 +343,13 @@ export default function CommunityWhyScreen() {
 						</>
 					)}
 
-					{/*
-					 * Resident reviews (phase E). Real people, read by a person before
-					 * they appear, shown without names. The section is always here so
-					 * the door to write one is always visible — an empty section beats
-					 * a generated one.
-					 */}
-					{/* With no review yet the section is a heading and a blank field
-					    (owner 2026-11-22: "comment可以加一个空白填文字的部分"). The
-					    field is the door to the review form, not an input of its own:
-					    a review needs its four scores and a signed-in resident, and
-					    is read by a person before it appears. */}
-					{reviewsRow && (
-						<View style={styles.reviewBlock}>
-							<Text style={styles.reviewBlockHead}>Reviews</Text>
-							<Pressable
-								style={({ pressed }) => [
-									styles.reviewField,
-									pressed && styles.reviewFieldPressed,
-								]}
-								accessibilityRole="button"
-								accessibilityLabel={
-									myStatus ? "Edit your review" : "Write a review"
-								}
-								onPress={writeReview}
-							>
-								<Text style={styles.reviewFieldText}>
-									{myStatus === "pending"
-										? "Your review is waiting to be read. Tap to edit it."
-										: myStatus
-											? "Edit your review…"
-											: "Live here? Tell buyers what it's like…"}
-								</Text>
-							</Pressable>
-						</View>
-					)}
-					{!reviewsRow && (
-						<Text style={styles.sectionHead}>RESIDENT REVIEWS</Text>
-					)}
-					{data.reviews ? (
-						<View style={styles.card}>
-							<View style={styles.statRow}>
-								<Text style={styles.scoreValue}>
-									{data.reviews.avgRating.toFixed(1)}
-									<Text style={styles.scoreOf}> / 5</Text>
-								</Text>
-								<Text style={styles.statLabel}>
-									{data.reviews.count}{" "}
-									{data.reviews.count === 1 ? "review" : "reviews"}
-								</Text>
-							</View>
-							{/* The four dimensions as bars — they were one run-on line. */}
-							<RatingBars dimensionAvgs={data.reviews.dimensionAvgs} />
-							{data.reviews.items.map((r) => (
-								<View key={r.id} style={styles.review}>
-									<View style={styles.reviewHead}>
-										<Text style={styles.reviewRating}>
-											{"★".repeat(r.rating)}
-											<Text style={styles.reviewRatingOff}>
-												{"★".repeat(5 - r.rating)}
-											</Text>
-										</Text>
-										<Text style={styles.reviewMeta}>
-											A resident · {reviewMonth(r.date)}
-										</Text>
-									</View>
-									<Text style={styles.reviewBody}>{r.body}</Text>
-									{/* App Store 1.2 (UGC): a way to report, next to every item. */}
-									<Pressable
-										hitSlop={8}
-										accessibilityRole="link"
-										onPress={() =>
-											Linking.openURL(
-												`mailto:hello@percho.co?subject=${encodeURIComponent(`Report review ${r.id}`)}`,
-											).catch(() => {})
-										}
-									>
-										<Text style={styles.reviewReport}>Report</Text>
-									</Pressable>
-								</View>
-							))}
-						</View>
-					) : reviewsRow ? null : (
-						<Text style={styles.reviewEmpty}>
-							No resident reviews yet. Live here? Yours would be the first.
-						</Text>
-					)}
-					{!reviewsRow && myStatus === "pending" && (
-						<Text style={styles.reviewPending}>
-							Your review is waiting to be read.
-						</Text>
-					)}
-					{!reviewsRow && (
-						<Pressable
-							style={styles.reviewCta}
-							accessibilityRole="button"
-							onPress={writeReview}
-						>
-							<Text style={styles.reviewCtaTxt}>
-								{myStatus ? "Edit your review" : "Write a review"}
-							</Text>
-						</Pressable>
-					)}
+					{/* Reviews, always at the foot, so the door to write one is always
+					    visible — an empty section beats a generated one (phase E). */}
+					<ReviewsSection
+						reviews={data.reviews}
+						myStatus={myStatus}
+						onWrite={writeReview}
+					/>
 
 					{/*
 					 * Sources (§3.4: every evidence block names where it came from) and
@@ -577,87 +475,6 @@ const styles = StyleSheet.create({
 		borderColor: colors.border,
 	},
 	chipTxt: { ...textStyles.footnote, fontSize: 14, color: colors.ink },
-
-	statRow: {
-		flexDirection: "row",
-		alignItems: "baseline",
-		justifyContent: "space-between",
-		paddingVertical: 13,
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
-	},
-	statLabel: { ...textStyles.footnote, fontSize: 14, color: colors.ink2 },
-	/** The reviews score, printed like a price rather than like a field. */
-	scoreValue: {
-		...textStyles.title1,
-		color: colors.ink,
-		fontVariant: ["tabular-nums"],
-	},
-	scoreOf: { ...textStyles.footnote, color: colors.ink2 },
-	review: {
-		paddingVertical: 13,
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
-		gap: 6,
-	},
-	reviewHead: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-	},
-	reviewRating: { fontSize: 14, color: colors.accent, letterSpacing: 1 },
-	reviewRatingOff: { color: colors.border },
-	reviewMeta: { ...textStyles.caption, fontSize: 12, color: colors.ink3 },
-	reviewBody: {
-		...textStyles.footnote,
-		fontSize: 15,
-		color: colors.ink,
-		lineHeight: 22,
-	},
-	reviewReport: {
-		...textStyles.caption,
-		fontSize: 12,
-		color: colors.ink3,
-		marginTop: 2,
-	},
-	reviewEmpty: {
-		...textStyles.footnote,
-		fontSize: 15,
-		color: colors.ink2,
-		lineHeight: 22,
-	},
-	reviewPending: {
-		...textStyles.footnote,
-		fontSize: 14,
-		color: colors.accent,
-		marginTop: 10,
-	},
-	reviewCta: {
-		marginTop: 14,
-		alignSelf: "flex-start",
-		paddingHorizontal: 16,
-		paddingVertical: 10,
-		borderRadius: radii.pill,
-		borderWidth: 1,
-		borderColor: colors.accent,
-	},
-	reviewCtaTxt: { ...textStyles.footnote, fontSize: 15, color: colors.accent },
-	reviewBlock: { marginTop: 20, gap: 8 },
-	reviewBlockHead: {
-		...textStyles.caption,
-		fontSize: 10.5,
-		color: colors.ink2,
-	},
-	/** Looks like the review form's own text box, which is where it leads. */
-	reviewField: {
-		minHeight: 76,
-		backgroundColor: colors.surface2,
-		borderRadius: radii.btn,
-		paddingHorizontal: 14,
-		paddingVertical: 12,
-	},
-	reviewFieldPressed: { opacity: 0.7 },
-	reviewFieldText: { ...textStyles.body, color: colors.ink3 },
 
 	source: {
 		...textStyles.caption,

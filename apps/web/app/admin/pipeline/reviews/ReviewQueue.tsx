@@ -20,7 +20,7 @@ export type ReviewQueueRow = {
   status: string;
   updatedAt: string;
   reviewedAt: string | null;
-  community: { name: string; city: string; slug: string } | null;
+  community: { name: string; city: string; href: string } | null;
 };
 
 const STATUS_CLASS: Record<string, string> = {
@@ -112,7 +112,7 @@ export function ReviewQueue({ rows }: { rows: ReviewQueueRow[] }) {
                     </span>
                     {r.community ? (
                       <Link
-                        href={`/c/${r.community.slug}`}
+                        href={r.community.href}
                         className="font-medium text-ink underline-offset-2 hover:underline"
                       >
                         {r.community.name}

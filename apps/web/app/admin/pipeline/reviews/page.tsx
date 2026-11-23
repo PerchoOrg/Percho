@@ -25,7 +25,7 @@ export default async function ReviewsPage() {
   const { data, error } = await createServiceClient()
     .from('community_reviews')
     .select(
-      'id, rating, dimensions, body, status, created_at, updated_at, reviewed_at, communities ( name, city, slug )',
+      'id, rating, dimensions, body, status, created_at, updated_at, reviewed_at, communities ( name, city, slug ), cities ( name, slug )',
     )
     .order('updated_at', { ascending: false })
     .limit(500);
@@ -34,6 +34,7 @@ export default async function ReviewsPage() {
   const rows: ReviewQueueRow[] = (data ?? [])
     .map((r) => {
       const c = r.communities as { name: string; city: string | null; slug: string } | null;
+      const city = r.cities as { name: string; slug: string } | null;
       return {
         id: r.id,
         rating: r.rating,
@@ -45,7 +46,12 @@ export default async function ReviewsPage() {
         status: r.status,
         updatedAt: r.updated_at,
         reviewedAt: r.reviewed_at,
-        community: c ? { name: c.name, city: c.city ?? '', slug: c.slug } : null,
+        // A review is about a community or a city (phase372), never both.
+        community: c
+          ? { name: c.name, city: c.city ?? '', href: `/c/${c.slug}` }
+          : city
+            ? { name: city.name, city: 'city page', href: `/watch/city/${city.slug}` }
+            : null,
       };
     })
     .sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));

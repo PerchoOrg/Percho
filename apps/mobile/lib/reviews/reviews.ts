@@ -56,9 +56,21 @@ export function draftProblem(d: ReviewDraft): string | null {
  * re-sets every payload column, and the role deliberately lacks UPDATE on
  * `community_id` / `user_id`, so an upsert is refused outright.
  */
+/**
+ * What a review is about. Both kinds are rows of `community_reviews`: a city's
+ * carries `city_id` where a community's carries `community_id` (phase372).
+ */
+export interface ReviewPlace {
+	kind: "community" | "city";
+	id: string;
+}
+
+const placeColumn = (place: ReviewPlace) =>
+	place.kind === "city" ? "city_id" : "community_id";
+
 export async function submitReview(
 	uid: string,
-	communityId: string,
+	place: ReviewPlace,
 	d: ReviewDraft,
 ): Promise<void> {
 	const patch = {
@@ -71,7 +83,7 @@ export async function submitReview(
 		.from("community_reviews")
 		.update({ ...patch, updated_at: new Date().toISOString() })
 		.eq("user_id", uid)
-		.eq("community_id", communityId)
+		.eq(placeColumn(place), place.id)
 		.select("id");
 	if (updated.error) throw new Error(updated.error.message);
 	if ((updated.data ?? []).length > 0) return;
@@ -79,19 +91,19 @@ export async function submitReview(
 	// the columns a new review needs, and that one is not among them.
 	const { error } = await supabase()
 		.from("community_reviews")
-		.insert({ community_id: communityId, user_id: uid, ...patch });
+		.insert({ [placeColumn(place)]: place.id, user_id: uid, ...patch });
 	if (error) throw new Error(error.message);
 }
 
 export async function fetchMyReview(
 	uid: string,
-	communityId: string,
+	place: ReviewPlace,
 ): Promise<MyReview | null> {
 	const { data, error } = await supabase()
 		.from("community_reviews")
 		.select("rating, dimensions, body, status, updated_at")
 		.eq("user_id", uid)
-		.eq("community_id", communityId)
+		.eq(placeColumn(place), place.id)
 		.maybeSingle();
 	if (error) throw new Error(error.message);
 	if (!data) return null;

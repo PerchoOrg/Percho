@@ -23,6 +23,21 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-23 06:18 UTC — phase372: city page — every school, articles under Resources, reviews at the foot
+
+**Objective**: owner on phase371's city page: "city explore 学校应该有很多吧 只看到三个 / resources可以加一些评论文章 / 最底下还是要有review 部分".
+**Actions**:
+- **Schools**. The tile named the best-ranked school at each level; it now lists every school the profile's publisher ranked (up to six, by level then rank) and ends "All 31 schools in and around Cumming ›". The sheet keeps the ladder and adds that full list under Elementary / Middle / High: name, miles from the centre, "Top 5%". The list is `scripts/admin/build-city-schools.ts` (`pnpm --filter @percho/web city:schools`) → `apps/web/lib/cities/city-schools.json`: every scored school whose mailing city is the city or that stands within 3.5 miles of its centre (Johns Creek has two schools with a Johns Creek address and seventeen inside it), standing as on the community page — share of Georgia's schools at that level by Georgia Milestones, rounded up. 13–35 schools a city. The sheet says it is a different measure from the published ranks above it, and "nearby — not an attendance zone".
+- **Articles** (`lib/cities/links.ts`): a Resources heading built from what each city's researched profile already cites — the pieces behind its non-school rankings ("Fortune: Best Places to Live for Families"), then the news and features among its sources (AJC, Saporta Report, Forsyth County News …), up to eight. Figures and official pages are not articles (Census, Data USA, Wikipedia, "City of …", U.S. News ranking tables). Nothing is searched for at read time. Plus **Niche reviews** under Community — what residents wrote, addressed as `<city>-<county>-ga` (confirmed on Cumming).
+- **Reviews**. A city can now be reviewed. Migration `20261122230000_city_reviews.sql`: `community_reviews` gains a nullable `city_id`, `community_id` stops being required, and a check keeps each row about exactly one place; a partial unique index gives one review per person per city. Same table on purpose — one moderation queue, one approval path, and the RLS policies are about who, not where, so they cover city rows unchanged. Web: `fetchCityReviews`, `reviews` and `id` on the city DTO, the admin queue shows a city's reviews and links them to `/watch/city/<slug>`. Mobile: `ReviewPlace` in `lib/reviews/reviews.ts`, the review form takes `kind=city`, and `components/community/ReviewsSection.tsx` — heading, the score card when there are reviews, the blank field always — is drawn at the foot of both pages (the community page's inline version and its twenty styles are gone; a community without a profile gets the field too, where it had a sentence and a button).
+**Decisions**:
+- One table, not `city_reviews`: a second table would have needed a second queue and a second approve route for the same thing. Its name now undersells it; renaming a table is a change to ask about, so it stays.
+- The same four scores (quiet, walkable, neighbourly, value) for a city.
+- The web deploy went out before the migration: `fetchCityReviews` is wrapped, so a missing column means no reviews, not a failed page.
+- `database.types.ts` edited by hand for the one column and its relationship (`db:types` reads a local database).
+**Verified**: mobile typecheck 0, lint clean, vitest 891; web tsc 0, vitest 1385 (cities: 3 new). After deploy and `db push`: the live city API and the new column checked. NOT seen on a device; no review was submitted end to end (it needs a signed-in phone).
+**Next steps**: owner writes one city review on the dev client and approves it in `/admin/pipeline/reviews` — the first end-to-end run.
+
 ## 2026-11-23 05:43 UTC — phase371: the city page in the community page's shape — five tiles, sheets, resources
 
 **Objective**: owner 2026-11-22, after the community Explore page settled (phase367–370.1): "现在把city card explore也做对应的优化".

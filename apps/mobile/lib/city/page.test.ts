@@ -10,6 +10,7 @@ import {
 	percentOf,
 	schoolColumns,
 	schoolRows,
+	schoolsByLevel,
 	stopLabel,
 } from "./page";
 
@@ -236,12 +237,23 @@ describe("the five tiles", () => {
 		]);
 	});
 
-	it("names the best school at each level in full, then a college", () => {
+	it("names every ranked school in full, by level then rank, a college last", () => {
 		expect(schoolRows(city)).toEqual([
 			{ name: "Daves Creek Elementary School", rank: "#6 in Georgia" },
 			{ name: "Alliance Academy for Innovation", rank: "#5 in Georgia" },
+			{ name: "Forsyth Central High School", rank: "#123 in Georgia" },
 			{ name: "University of North Georgia — Cumming" },
 		]);
+		expect(
+			schoolsByLevel([
+				{ name: "A High", level: "high", share: 4 },
+				{ name: "B Elementary", level: "elementary", share: 9, miles: 1.2 },
+			]).map((g) => [g.heading, g.schools.map((s) => s.name)]),
+		).toEqual([
+			["Elementary", ["B Elementary"]],
+			["High", ["A High"]],
+		]);
+		expect(schoolsByLevel(undefined)).toEqual([]);
 		expect(fullSchoolName("South Forsyth Middle")).toBe(
 			"South Forsyth Middle School",
 		);
