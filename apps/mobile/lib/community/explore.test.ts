@@ -1,4 +1,5 @@
 import type { CommunityProfile } from "@percho/shared/community-profile";
+import { topShare } from "@percho/shared/rank-share";
 import { describe, expect, it } from "vitest";
 import {
 	CURVE_STEPS,
@@ -18,7 +19,6 @@ import {
 	schoolName,
 	schoolRanks,
 	strokes,
-	topShare,
 	upcomingEvents,
 	usdShort,
 } from "./explore";

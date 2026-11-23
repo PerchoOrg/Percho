@@ -9,6 +9,7 @@ import type {
 	CommunityProfile,
 	CommunityRank,
 } from "@percho/shared/community-profile";
+import { topShare } from "@percho/shared/rank-share";
 import { useState } from "react";
 import {
 	Linking,
@@ -27,7 +28,6 @@ import {
 	otherRanks,
 	rankGroups,
 	schoolRanks,
-	topShare,
 	usdShort,
 } from "../../lib/community/explore";
 import { colors, radii } from "../../theme/tokens";

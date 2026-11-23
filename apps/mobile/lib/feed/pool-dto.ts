@@ -12,6 +12,8 @@ import { DIMS } from "@percho/shared/dims";
  *
  * Pure: no react/react-native/expo/zustand, so it is testable on its own.
  */
+import { GLANCE_MAX_CELLS, GLANCE_TOPICS } from "@percho/shared/glance";
+import type { GlanceCell, PlaceGlance } from "@percho/shared/glance";
 import type { CardIconName } from "@percho/shared/icons";
 import { CARD_ICON_NAMES } from "@percho/shared/icons";
 import type { DimKey } from "@percho/shared/types";
@@ -152,6 +154,34 @@ function tourSegments(v: unknown): {
 	return out;
 }
 
+/**
+ * The place line and figures under a card.
+ *
+ * The server words these and the block draws them as sent, so the check is
+ * only that each piece is something to print: a place with no lead is no
+ * glance, and a cell missing its figure or its label is dropped on its own —
+ * two figures are better than none. An unknown `topic` (a newer server) keeps
+ * the figure and loses the way in.
+ */
+function glance(v: unknown): PlaceGlance | undefined {
+	const raw = rec(v);
+	const place = rec(raw?.place);
+	const lead = str(place?.lead);
+	if (!raw || !lead) return undefined;
+	const rest = str(place?.rest);
+	const cells: GlanceCell[] = [];
+	for (const item of Array.isArray(raw.cells) ? raw.cells : []) {
+		const cell = rec(item);
+		const value = str(cell?.value);
+		const label = str(cell?.label);
+		if (!value || !label) continue;
+		const topic = GLANCE_TOPICS.find((t) => t === cell?.topic);
+		cells.push({ value, label, ...(topic ? { topic } : {}) });
+		if (cells.length === GLANCE_MAX_CELLS) break;
+	}
+	return { place: { lead, ...(rest ? { rest } : {}) }, cells };
+}
+
 function stats(v: unknown): GeoStats {
 	const raw = rec(v);
 	if (!raw) return {};
@@ -194,6 +224,7 @@ export function parseGeoUnit(v: unknown): GeoUnit | null {
 	const chapters = tourSegments(raw.tourChapters).map(
 		({ name, endFraction }) => ({ name, endFraction }),
 	);
+	const placeGlance = glance(raw.glance);
 	return {
 		id,
 		level: lvl,
@@ -206,6 +237,7 @@ export function parseGeoUnit(v: unknown): GeoUnit | null {
 		...(citySlug ? { citySlug } : {}),
 		...(segments.length > 0 ? { tourSegments: segments } : {}),
 		...(chapters.length > 0 ? { tourChapters: chapters } : {}),
+		...(placeGlance ? { glance: placeGlance } : {}),
 		communityCount: num(raw.communityCount) ?? 0,
 		sampleCommunityNames: strings(raw.sampleCommunityNames).slice(0, 3),
 		stats: stats(raw.stats),
@@ -373,6 +405,7 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 	// vocabulary, and a stale build must not drop pills for the whole pool.
 	const signalList = signals(raw.signals);
 	const segments = tourSegments(raw.tourSegments);
+	const placeGlance = glance(raw.glance);
 	return {
 		kind: "community",
 		id,
@@ -392,6 +425,7 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 		...(r.length > 0 ? { reasons: r } : {}),
 		...(signalList.length > 0 ? { signals: signalList } : {}),
 		...(segments.length > 0 ? { tourSegments: segments } : {}),
+		...(placeGlance ? { glance: placeGlance } : {}),
 	};
 }
 

@@ -65,10 +65,12 @@ h2{max-width:1340px;margin:30px auto 12px;font:600 19px var(--ui);color:#2B2116}
 .fx.top .facts{margin-top:6.6px;height:44px}
 .fx.under{padding:0 32px}
 .fx.under .loc{height:48.3px}
-.fx.under .where{font-size:16px}
-.fx.under .facts{margin-top:10px;height:50px}
-.fx.under .fact b{font-size:25px;line-height:30px}
-.fx.under .fact small{font-size:13px;line-height:17px}
+.fx.under .where{font-size:15.4px}
+.fx.under .facts{margin-top:11px;height:48.3px;align-items:stretch}
+.fx.under .fact{display:flex;flex-direction:column;justify-content:center;padding-left:11px;margin-left:6.6px}
+.fx.under .fact:first-child{padding-left:0;margin-left:0}
+.fx.under .fact b{font-size:24.1px;line-height:1.2}
+.fx.under .fact small{font-size:13.2px;line-height:1.2}
 
 /* the card (CommunityFace.tsx, after phase367.2) */
 .card{border-radius:28px;overflow:hidden;background:#2E2118 center/cover;box-shadow:0 3px 10px rgba(32,28,22,.05),0 16px 38px rgba(32,28,22,.085)}
@@ -117,17 +119,17 @@ h2{max-width:1340px;margin:30px auto 12px;font:600 19px var(--ui);color:#2B2116}
 <div class="row">
   <div class="col"><h3>Now<small>“Windward” is the largest line on the page and it is also on the card. The arrow beside it opens the same page as Explore.</small></h3><div class="phone" data-v="now" data-c="community"></div></div>
   <div class="col"><h3>1 · Numbers above the card<small>Same spot, same height. The name is gone from the top; the card does not move.</small></h3><div class="phone" data-v="top" data-c="community"></div></div>
-  <div class="col"><h3>2 · Film on top, numbers under it <span class="pick">suggested</span><small>The film starts at the top of the screen and is a little larger. Place, Map and the numbers sit right under the name and Explore, where the thumb is.</small></h3><div class="phone" data-v="under" data-c="community"></div></div>
+  <div class="col"><h3>2 · Film on top, numbers under it <span class="pick">chosen · built</span><small>The film starts at the top of the screen and is a little larger. Place, Map and the numbers sit right under the name and Explore, where the thumb is. Drawn at the sizes the app uses.</small></h3><div class="phone" data-v="under" data-c="community"></div></div>
 </div>
 
 <h2>A city card</h2>
 <div class="row">
   <div class="col"><h3>Now<small>“Cumming” three times: in the small line, in the title, on the card.</small></h3><div class="phone" data-v="now" data-c="city"></div></div>
   <div class="col"><h3>1 · Numbers above the card<small>The county takes the small line; the city's own numbers take the title's.</small></h3><div class="phone" data-v="top" data-c="city"></div></div>
-  <div class="col"><h3>2 · Film on top, numbers under it <span class="pick">suggested</span><small>Same as the community card.</small></h3><div class="phone" data-v="under" data-c="city"></div></div>
+  <div class="col"><h3>2 · Film on top, numbers under it <span class="pick">chosen · built</span><small>Same as the community card.</small></h3><div class="phone" data-v="under" data-c="city"></div></div>
 </div>
 
-<p class="foot"><b>Where the numbers come from.</b> Windward: home value is the ZIP's typical value, the school figure is the range across its nearby elementary, middle and high school among Georgia's schools, and the distance is a straight line from downtown Atlanta. Cumming: the city's typical home value, Forsyth County Schools' four-year graduation rate, and the drive to downtown outside rush hour. A card with no figure for a slot shows two numbers, not a placeholder.</p>
+<p class="foot"><b>Where the numbers come from.</b> Each is on the place's own Explore page. Windward: home value is the ZIP's typical value, the school figure is the range across its nearby elementary, middle and high school among Georgia's schools, and the distance is a straight line from downtown Atlanta. Cumming: the median home value its page lists first (the county's), Forsyth County Schools' four-year graduation rate, and the drive to downtown from off-peak to rush hour. A card with no figure for a slot shows two numbers, not a placeholder.</p>
 
 <script>
 const G = {feed:"",search:"",saved:"",you:""};
@@ -149,7 +151,7 @@ const CARDS = {
     // the film's 20 places, as fractions of its length
     ends: [.033,.079,.099,.138,.25,.343,.389,.455,.494,.553,.593,.632,.672,.712,.771,.81,.83,.909,.929,1],
     where: "<b>Alpharetta</b> · Fulton County",
-    facts: [["$747K","ZIP 30005 homes"],["Top 1–7%","schools nearby"],["26 mi","north of Atlanta"]],
+    facts: [["$747K","ZIP 30005 homes"],["Top 1–7%","schools nearby"],["25 mi","north of Atlanta"]],
   },
   city: {
     frame: "https://videodelivery.net/b64dc08e385e3847a865301818f20c81/thumbnails/thumbnail.jpg?time=3s&height=1200",
@@ -157,7 +159,7 @@ const CARDS = {
     ctx: ["Atlanta metro", "Cumming"], chevron: false, ctxDup: true,
     parts: [["Overview",25.2],["Schools",17.6],["Homes",16.8],["Commute",15.5],["Life",24.7]],
     where: "<b>Forsyth County</b> · north of Atlanta",
-    facts: [["$586K","Cumming homes"],["97.5%","graduate on time"],["~52 min","39 mi to downtown"]],
+    facts: [["$550K","median home · county"],["97.5%","graduate in 4 years"],["52–83 min","39 mi to downtown"]],
   },
 };
 
@@ -166,7 +168,7 @@ const W = 428, H = 926, SAFE_TOP = 47, TAB = 96, K = 1.097, ASPECT = 1080 / 1576
 function layout(v) {
   if (v === "under") {
     const w = W - 16, h = w / ASPECT, top = SAFE_TOP + 8;
-    return { card: { left: 8, top, w, h }, block: top + h + 26 };
+    return { card: { left: 8, top, w, h }, block: top + h + 18 };
   }
   const header = (v === "now" ? 86 : 90) * K;
   const stage = H - SAFE_TOP - header - TAB;

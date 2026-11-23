@@ -12,6 +12,7 @@
  *
  * Pure: no react/react-native/expo/zustand imports anywhere in lib/feed.
  */
+import type { PlaceGlance } from "@percho/shared/glance";
 
 export type GeoLevel = "area" | "city" | "zip";
 
@@ -55,6 +56,8 @@ export interface GeoUnit {
 	 * place, so a viewer can jump to the part they came for (phase345).
 	 */
 	tourChapters?: readonly { name: string; endFraction: number }[];
+	/** The place line and figures under a filmed city's card (phase378). */
+	glance?: PlaceGlance;
 	communityCount: number;
 	/** ≤3 real `communities.name`. */
 	sampleCommunityNames: readonly string[];

@@ -104,7 +104,12 @@ function ReasonRow({ reason }: { reason: CommunityReasonDTO }) {
 }
 
 export default function CommunityWhyScreen() {
-	const { slug } = useLocalSearchParams<{ slug: string }>();
+	// `open` is set when the page is reached from a figure under the feed
+	// card: the tile whose sheet to open (phase378).
+	const { slug, open } = useLocalSearchParams<{
+		slug: string;
+		open?: string;
+	}>();
 	const insets = useSafeAreaInsets();
 	const { width, height: screenH } = useWindowDimensions();
 	const [data, setData] = useState<CommunityDetailDTO | null>(null);
@@ -261,7 +266,11 @@ export default function CommunityWhyScreen() {
 					</View>
 
 					{profile && (
-						<ExploreBody profile={profile} segments={data.tourSegments} />
+						<ExploreBody
+							profile={profile}
+							segments={data.tourSegments}
+							open={open}
+						/>
 					)}
 
 					{/* Three figures as numerals — the old label/value rows charted. */}

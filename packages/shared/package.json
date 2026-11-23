@@ -11,11 +11,13 @@
     "./compare-take": "./src/compare-take.ts",
     "./dims": "./src/dims.ts",
     "./fmls": "./src/fmls.ts",
+    "./glance": "./src/glance.ts",
     "./icons": "./src/icons.ts",
     "./insights": "./src/insights.ts",
     "./lenses": "./src/lenses.ts",
     "./priorities": "./src/priorities.ts",
     "./property-tax": "./src/property-tax.ts",
+    "./rank-share": "./src/rank-share.ts",
     "./review-dimensions": "./src/review-dimensions.ts",
     "./tour-buckets": "./src/tour-buckets.ts",
     "./types": "./src/types.ts"

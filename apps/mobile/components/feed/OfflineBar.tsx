@@ -23,6 +23,12 @@ export function OfflineBar() {
 
 const styles = StyleSheet.create({
 	bar: {
+		/**
+		 * Above the card stage, whose paper band (`SwipeStack`'s `stageClip`)
+		 * reaches 120pt up and would paint over this bar. Since phase378 the
+		 * bar is the only thing drawn up there.
+		 */
+		zIndex: 100,
 		paddingVertical: 6,
 		paddingHorizontal: 16,
 		backgroundColor: colors.surface2,
