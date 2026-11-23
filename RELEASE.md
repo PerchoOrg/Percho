@@ -16,6 +16,9 @@ picture in the preview. If they have the Percho app, the link opens straight
 into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
+### 2026-11-23
+- **No more "You've seen everything" flash.** Opening the app briefly showed the end-of-feed message before the first card appeared. It now goes straight from loading to the first card.
+
 ### 2026-11-22
 - **Tighter neighbourhood and city pages.** The intro lines under the name are gone, and so is the "Residents say" box. A city's Potential box now carries a published forecast for 2050, and its Cost box shows what a month of owning a home there costs — property tax, electricity, water and trash. Photo credits look the same on both pages: one quiet line that opens. Arrives with the next app update.
 - **City pages: every school, articles, and reviews.** A city's Schools box now lists all its ranked schools and opens the full list of schools in and around the city — a few dozen — each with its distance and where it stands. Resources adds articles written about the city and what residents say on Niche. And cities can now be reviewed, with the review box at the foot of the page, the same as neighbourhoods. Arrives with the next app update.

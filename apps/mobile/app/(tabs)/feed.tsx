@@ -229,6 +229,14 @@ export default function FeedScreen() {
 	}, [activeIndex]);
 
 	const [engineExhausted, setEngineExhausted] = useState(false);
+	/**
+	 * The `poolReady` the deck on screen was composed from. The first pool
+	 * response and `loading: false` land in one render, and the compose effect
+	 * only runs after it — so for a frame the deck was still the empty one built
+	 * from `EMPTY_POOL`, whose `exhausted` is true, and the terminal card flashed
+	 * before the first real card (owner, 2026-11-23).
+	 */
+	const [composedPoolReady, setComposedPoolReady] = useState(false);
 	const rotate = useRef(0);
 
 	/**
@@ -355,6 +363,7 @@ export default function FeedScreen() {
 			if (sampled.length > 0) {
 				rotate.current = 0;
 				setDeck(sampled);
+				setComposedPoolReady(poolReady);
 				setEngineExhausted(false);
 				setActiveIndex(0);
 				return;
@@ -373,6 +382,7 @@ export default function FeedScreen() {
 		});
 		rotate.current = result.nextRotate;
 		setDeck(result.cards);
+		setComposedPoolReady(poolReady);
 
 		setEngineExhausted(result.exhausted);
 		setActiveIndex(0);
@@ -865,7 +875,11 @@ export default function FeedScreen() {
 	// §1.9's terminal card is for a genuinely dry pool, not for a momentary gap:
 	// the engine reports exhaustion when every slot had to reuse seen content, and
 	// the server reports it has no more inventory. Both, plus nothing left to show.
-	const showExhausted = atEnd && (engineExhausted || exhausted) && !loading;
+	// The pool is in but the deck has not been composed from it yet — still
+	// loading as far as the buyer is concerned (see `composedPoolReady`).
+	const composing = composedPoolReady !== poolReady;
+	const showExhausted =
+		atEnd && (engineExhausted || exhausted) && !loading && !composing;
 
 	return (
 		<SafeAreaView style={styles.screen} edges={["top"]}>
@@ -916,7 +930,7 @@ export default function FeedScreen() {
 				}
 			/>
 			<View style={styles.stackWrap}>
-				{deck.length === 0 && loading ? (
+				{deck.length === 0 && (loading || composing) ? (
 					<View style={styles.cardContainer}>
 						<CardSkeleton />
 					</View>
