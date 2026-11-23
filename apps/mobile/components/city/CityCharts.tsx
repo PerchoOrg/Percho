@@ -187,22 +187,31 @@ function Tile({ tile, url }: { tile: GlanceTile; url?: string }) {
 	}
 }
 
-export function GlanceTiles({ city }: { city: CityDetailDTO }) {
+export function GlanceTiles({
+	city,
+	only,
+}: {
+	city: CityDetailDTO;
+	/** Which tiles to draw — the page shows growth and cost apart from the rest. */
+	only?: (tile: GlanceTile) => boolean;
+}) {
 	return (
 		<View style={styles.tiles}>
-			{glanceTiles(city).map((t) => (
-				<Tile
-					key={`${t.kind}-${t.label}`}
-					tile={t}
-					url={
-						t.kind === "growth"
-							? city.growth.source.url
-							: t.kind === "compare"
-								? city.compare.source.url
-								: undefined
-					}
-				/>
-			))}
+			{glanceTiles(city)
+				.filter((t) => !only || only(t))
+				.map((t) => (
+					<Tile
+						key={`${t.kind}-${t.label}`}
+						tile={t}
+						url={
+							t.kind === "growth"
+								? city.growth.source.url
+								: t.kind === "compare"
+									? city.compare.source.url
+									: undefined
+						}
+					/>
+				))}
 		</View>
 	);
 }
@@ -602,11 +611,13 @@ const styles = StyleSheet.create({
 	ladderCol: { flex: 1, gap: 8 },
 	ladderHead: { ...textStyles.caption, fontSize: 11, color: colors.ink2 },
 	ladderItem: { gap: 1 },
+	// Ink, not the accent: the owner asked for school standings in ordinary
+	// type, not as green headline figures (2026-11-22).
 	ladderRank: {
 		...textStyles.title1,
 		fontSize: 24,
 		lineHeight: 28,
-		color: colors.accent,
+		color: colors.ink,
 		fontVariant: ["tabular-nums"],
 	},
 	ladderRankNext: { fontSize: 18, lineHeight: 22, color: colors.ink },

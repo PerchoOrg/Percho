@@ -14,38 +14,25 @@
 import type { CommunityProfile } from "@percho/shared/community-profile";
 import type { TourSegment } from "@percho/shared/tour-buckets";
 import { useMemo, useState } from "react";
-import {
-	Image,
-	Linking,
-	Pressable,
-	ScrollView,
-	StyleSheet,
-	Text,
-	View,
-	useWindowDimensions,
-} from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import {
 	againstBaseline,
 	axisTop,
 	closeBy,
 	linkGroups,
 	localDay,
-	logoFor,
 	nearbyStops,
 	schoolName,
 	schoolRanks,
 	topShare,
 	upcomingEvents,
 } from "../../lib/community/explore";
-import { colors, radii } from "../../theme/tokens";
+import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 import { BottomSheet } from "../BottomSheet";
 import { Lines } from "./ExploreCharts";
+import { GAP, PAGE_PAD, Resources, Tile, parts } from "./ExploreParts";
 import { ExploreSheet, type ExploreSheetKey } from "./ExploreSheets";
-
-/** The page's side padding and the gap between two tiles — a half tile's width follows from both. */
-const PAGE_PAD = 18;
-const GAP = 10;
 
 /** Sheets tall enough to need most of the screen; the rest open half-way. */
 const TALL: ReadonlySet<ExploreSheetKey> = new Set([
@@ -55,39 +42,6 @@ const TALL: ReadonlySet<ExploreSheetKey> = new Set([
 	"dues",
 	"words",
 ]);
-
-function Tile({
-	label,
-	wide,
-	width,
-	onPress,
-	children,
-}: {
-	label: string;
-	wide?: boolean;
-	width: number;
-	onPress: () => void;
-	children: React.ReactNode;
-}) {
-	return (
-		<Pressable
-			style={({ pressed }) => [
-				styles.tile,
-				{ width: wide ? width * 2 + GAP : width },
-				pressed && styles.pressed,
-			]}
-			onPress={onPress}
-			accessibilityRole="button"
-			accessibilityLabel={`${label} — more`}
-		>
-			<View style={styles.tileHead}>
-				<Text style={styles.tileLabel}>{label}</Text>
-				<Text style={styles.chevron}>›</Text>
-			</View>
-			{children}
-		</Pressable>
-	);
-}
 
 export function ExploreBody({
 	profile,
@@ -155,7 +109,7 @@ export function ExploreBody({
 				</View>
 			)}
 
-			<View style={styles.grid}>
+			<View style={parts.grid}>
 				{/* The page's four directions, in the order the owner names them
 				    (安 学 便 潜 — spec-v3 03 §3.3), then what it costs. Titles are
 				    his, 2026-11-22: "safety, schools, convenience, potential,
@@ -167,16 +121,16 @@ export function ExploreBody({
 						width={half}
 						onPress={() => setSheet("safety")}
 					>
-						<View style={styles.rows}>
+						<View style={parts.rows}>
 							{safety.rows.map((r) => (
-								<View key={r.label} style={styles.row}>
-									<Text style={styles.rowKind} numberOfLines={1}>
+								<View key={r.label} style={parts.row}>
+									<Text style={parts.rowKind} numberOfLines={1}>
 										{r.label}
 									</Text>
-									<Text style={styles.rowName} numberOfLines={1}>
+									<Text style={parts.rowName} numberOfLines={1}>
 										{r.name}
 									</Text>
-									{!!r.note && <Text style={styles.rowAside}>{r.note}</Text>}
+									{!!r.note && <Text style={parts.rowAside}>{r.note}</Text>}
 								</View>
 							))}
 						</View>
@@ -197,11 +151,11 @@ export function ExploreBody({
 						width={half}
 						onPress={() => setSheet("schools")}
 					>
-						<View style={styles.rows}>
+						<View style={parts.rows}>
 							{schools.map((r) => (
-								<View key={r.label} style={styles.row}>
+								<View key={r.label} style={parts.row}>
 									<Text
-										style={styles.rowName}
+										style={parts.rowName}
 										numberOfLines={1}
 										adjustsFontSizeToFit
 										minimumFontScale={0.85}
@@ -209,9 +163,9 @@ export function ExploreBody({
 										{schoolName(r)}
 									</Text>
 									{!!r.distance && (
-										<Text style={styles.rowAside}>{r.distance}</Text>
+										<Text style={parts.rowAside}>{r.distance}</Text>
 									)}
-									<Text style={styles.rowShare}>{topShare(r)}</Text>
+									<Text style={parts.rowShare}>{topShare(r)}</Text>
 								</View>
 							))}
 						</View>
@@ -227,16 +181,16 @@ export function ExploreBody({
 						width={half}
 						onPress={() => setSheet("nearby")}
 					>
-						<View style={styles.rows}>
+						<View style={parts.rows}>
 							{closeBy(nearby).map((s) => (
-								<View key={s.group} style={styles.row}>
-									<Text style={styles.rowKind} numberOfLines={1}>
+								<View key={s.group} style={parts.row}>
+									<Text style={parts.rowKind} numberOfLines={1}>
 										{s.group}
 									</Text>
-									<Text style={styles.rowName} numberOfLines={1}>
+									<Text style={parts.rowName} numberOfLines={1}>
 										{s.name}
 									</Text>
-									<Text style={styles.rowAside}>{s.miles} mi</Text>
+									<Text style={parts.rowAside}>{s.miles} mi</Text>
 								</View>
 							))}
 						</View>
@@ -250,7 +204,7 @@ export function ExploreBody({
 						width={half}
 						onPress={() => setSheet("homeValue")}
 					>
-						<Text style={styles.figure}>{homeValue.display}</Text>
+						<Text style={parts.figure}>{homeValue.display}</Text>
 						<View style={styles.spark}>
 							<Lines
 								height={34}
@@ -270,10 +224,10 @@ export function ExploreBody({
 								]}
 							/>
 						</View>
-						<Text style={styles.foot}>{homeValue.change}</Text>
+						<Text style={parts.foot}>{homeValue.change}</Text>
 						{againstMetro && (
 							<Text
-								style={styles.footSecond}
+								style={parts.footSecond}
 								numberOfLines={1}
 								adjustsFontSizeToFit
 								minimumFontScale={0.85}
@@ -291,9 +245,9 @@ export function ExploreBody({
 				{holding && (
 					<Tile label="Cost" wide width={half} onPress={() => setSheet("cost")}>
 						<View style={styles.costSplit}>
-							<Text style={styles.figure}>
+							<Text style={parts.figure}>
 								{holding.display}
-								<Text style={styles.figureUnit}>{"  a month"}</Text>
+								<Text style={parts.figureUnit}>{"  a month"}</Text>
 							</Text>
 							<View style={styles.costRows}>
 								{holding.rows.slice(0, 4).map((r) => (
@@ -316,9 +270,9 @@ export function ExploreBody({
 						width={half}
 						onPress={() => setSheet("dues")}
 					>
-						<Text style={styles.figure}>
+						<Text style={parts.figure}>
 							{dues.display}
-							<Text style={styles.figureUnit}>{`  ${dues.period}`}</Text>
+							<Text style={parts.figureUnit}>{`  ${dues.period}`}</Text>
 						</Text>
 						<View style={styles.covers}>
 							<Text style={styles.cover}>
@@ -341,14 +295,14 @@ export function ExploreBody({
 						onPress={() => setSheet("words")}
 					>
 						<Text
-							style={styles.figure}
+							style={parts.figure}
 							numberOfLines={1}
 							adjustsFontSizeToFit
 							minimumFontScale={0.7}
 						>
 							“{words.lead}”
 						</Text>
-						<Text style={styles.foot}>{words.leadNote}</Text>
+						<Text style={parts.foot}>{words.leadNote}</Text>
 					</Tile>
 				)}
 
@@ -375,50 +329,7 @@ export function ExploreBody({
 				)}
 			</View>
 
-			{/* Resources: the links under their headings, each with its site's
-			    own mark before the word (owner 2026-11-22: "链接最好用logo和文字
-			    更醒目"). A row scrolls sideways, so a heading costs one line
-			    however many links it holds. */}
-			{resources.length > 0 && (
-				<View style={styles.resources}>
-					<Text style={styles.tileLabel}>Resources</Text>
-					{resources.map((g) => (
-						<View key={g.group} style={styles.resourceRow}>
-							<Text style={styles.resourceGroup} numberOfLines={1}>
-								{g.group}
-							</Text>
-							<ScrollView
-								horizontal
-								showsHorizontalScrollIndicator={false}
-								style={styles.resourceScroll}
-								contentContainerStyle={styles.pills}
-							>
-								{g.links.map((l) => {
-									const logo = logoFor(l.url);
-									return (
-										<Pressable
-											key={l.url}
-											style={({ pressed }) => [
-												styles.pill,
-												pressed && styles.pressed,
-											]}
-											onPress={() =>
-												void Linking.openURL(l.url).catch(() => {})
-											}
-											accessibilityRole="link"
-										>
-											{!!logo && (
-												<Image source={{ uri: logo }} style={styles.pillLogo} />
-											)}
-											<Text style={styles.pillText}>{l.label}</Text>
-										</Pressable>
-									);
-								})}
-							</ScrollView>
-						</View>
-					))}
-				</View>
-			)}
+			<Resources groups={resources} />
 
 			<BottomSheet
 				visible={sheet !== null}
@@ -440,8 +351,6 @@ export function ExploreBody({
 }
 
 const styles = StyleSheet.create({
-	pressed: { opacity: 0.7 },
-
 	verdict: { flexDirection: "row", gap: GAP, marginTop: 14 },
 	verdictCol: { flex: 1, gap: 7 },
 	verdictLine: { flexDirection: "row", alignItems: "flex-start", gap: 7 },
@@ -471,92 +380,6 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 
-	grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP, marginTop: 16 },
-	tile: {
-		backgroundColor: colors.surface,
-		borderRadius: radii.btn,
-		borderWidth: StyleSheet.hairlineWidth,
-		borderColor: colors.border,
-		paddingHorizontal: 12,
-		paddingTop: 10,
-		paddingBottom: 12,
-	},
-	tileHead: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-	},
-	/**
-	 * `ink2`, not the accent (phase367). Six coloured labels were the loudest
-	 * thing in the grid, ahead of the figures they name. The accent on this
-	 * page is the finding itself — a rank, the community's line on a chart.
-	 */
-	tileLabel: { ...textStyles.caption, fontSize: 10.5, color: colors.ink2 },
-	chevron: {
-		...textStyles.footnote,
-		fontSize: 18,
-		lineHeight: 18,
-		color: colors.ink3,
-	},
-	figure: {
-		...textStyles.title2,
-		fontSize: 24,
-		color: colors.ink,
-		marginTop: 4,
-	},
-	figureUnit: { ...textStyles.footnote, fontSize: 12, color: colors.ink2 },
-	foot: {
-		...textStyles.footnote,
-		fontSize: 11.5,
-		color: colors.ink2,
-		marginTop: 5,
-	},
-	footSecond: {
-		...textStyles.footnote,
-		fontSize: 11.5,
-		color: colors.ink2,
-		marginTop: 1,
-	},
-
-	/** A wide tile's rows: a name on one line, its figure at the right edge. */
-	rows: { marginTop: 4 },
-	row: {
-		flexDirection: "row",
-		alignItems: "baseline",
-		gap: 10,
-		paddingVertical: 4,
-	},
-	rowKind: {
-		...textStyles.footnote,
-		fontSize: 12,
-		color: colors.ink2,
-		width: 84,
-	},
-	rowName: {
-		...textStyles.footnote,
-		fontSize: 14,
-		fontWeight: "600",
-		color: colors.ink,
-		flex: 1,
-		minWidth: 0,
-	},
-	/** A distance, a zone: the row's quieter second fact. */
-	rowAside: {
-		...textStyles.footnote,
-		fontSize: 13,
-		color: colors.ink2,
-		fontVariant: ["tabular-nums"],
-	},
-	/** A school's standing, in the row's own type. Wide enough for "Top 100%". */
-	rowShare: {
-		...textStyles.footnote,
-		fontSize: 13,
-		fontWeight: "600",
-		color: colors.ink,
-		width: 62,
-		textAlign: "right",
-		fontVariant: ["tabular-nums"],
-	},
 	/** The figure on the left, what it is made of on the right. */
 	costSplit: { flexDirection: "row", alignItems: "flex-start", gap: 20 },
 	costRows: { flex: 1, marginTop: 8, gap: 2 },
@@ -610,36 +433,4 @@ const styles = StyleSheet.create({
 		color: colors.ink,
 		marginTop: 1,
 	},
-
-	// The pill row runs to the screen's edges; its content keeps the page's inset.
-	resources: { marginTop: 18, gap: 8 },
-	resourceRow: { flexDirection: "row", alignItems: "center" },
-	resourceGroup: {
-		...textStyles.footnote,
-		fontSize: 12,
-		color: colors.ink2,
-		width: 76,
-	},
-	// A row of links runs to the screen's right edge; the heading keeps the
-	// page's inset.
-	resourceScroll: { marginRight: -PAGE_PAD },
-	pills: { paddingRight: PAGE_PAD, gap: 7 },
-	pill: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 6,
-		paddingHorizontal: 11,
-		paddingVertical: 7,
-		borderRadius: radii.pill,
-		backgroundColor: colors.surface,
-		borderWidth: StyleSheet.hairlineWidth,
-		borderColor: colors.border,
-	},
-	pillText: {
-		...textStyles.footnote,
-		fontSize: 13,
-		fontWeight: "500",
-		color: colors.ink,
-	},
-	pillLogo: { width: 16, height: 16, borderRadius: 4 },
 });

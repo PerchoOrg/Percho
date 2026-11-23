@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+	costRows,
+	driveRows,
 	driveTimes,
+	fullSchoolName,
+	glancePart,
 	glanceTiles,
+	otherRankings,
 	percentOf,
 	schoolColumns,
+	schoolRows,
 	stopLabel,
 } from "./page";
 
@@ -144,5 +150,127 @@ describe("stopLabel", () => {
 				text: "Incorporated as a city; still farmland.",
 			}),
 		).toBe("Incorporated as a");
+	});
+});
+
+describe("the five tiles", () => {
+	const src = { name: "U.S. News" };
+	const school = (
+		level: "elementary" | "middle" | "high" | "college",
+		name: string,
+		rank?: string,
+	) => ({
+		level,
+		name,
+		...(rank ? { rank, scope: "in Georgia" } : {}),
+		detail: "",
+		source: src,
+	});
+	const city = {
+		...base,
+		rankings: [
+			{
+				rank: "#1",
+				scope: "in metro Atlanta",
+				title: "Fastest-growing city",
+				detail: "",
+				source: src,
+			},
+			{
+				rank: "#6",
+				scope: "in Georgia",
+				title: "Daves Creek Elementary School",
+				detail: "",
+				source: src,
+			},
+			{
+				rank: "#5",
+				scope: "in Georgia",
+				title: "Alliance Academy for Innovation",
+				detail: "",
+				source: src,
+			},
+		],
+		stats: [
+			...base.stats,
+			{ label: "Median rent", value: "$2,090", note: "a month · county" },
+		],
+		compare: {
+			...base.compare,
+			rows: [
+				...base.compare.rows,
+				{
+					label: "Median home value · county",
+					city: { value: 550400, display: "$550,400" },
+					state: { value: 303300, display: "$303,300" },
+					takeaway: "1.8× the state",
+				},
+			],
+		},
+		education: {
+			schools: [
+				school("high", "Forsyth Central High", "#123"),
+				school("high", "Alliance Academy for Innovation", "#5"),
+				school("elementary", "Daves Creek Elementary", "#6"),
+				school("college", "University of North Georgia — Cumming"),
+			],
+			measure: "",
+			rows: [],
+			note: "",
+		},
+		gettingAround: [
+			{
+				label: "Downtown Atlanta · 39 mi",
+				value: "",
+				minutes: { min: 52, max: 83 },
+			},
+			{ label: "Georgia 400", value: "the county's highway" },
+			{ label: "City Hall · 1 mi", value: "", minutes: { min: 4, max: 4 } },
+		],
+		planning: [],
+	};
+
+	it("keeps a school's ranking out of the badges — the Schools tile says it", () => {
+		expect(otherRankings(city).map((r) => r.title)).toEqual([
+			"Fastest-growing city",
+		]);
+	});
+
+	it("names the best school at each level in full, then a college", () => {
+		expect(schoolRows(city)).toEqual([
+			{ name: "Daves Creek Elementary School", rank: "#6 in Georgia" },
+			{ name: "Alliance Academy for Innovation", rank: "#5 in Georgia" },
+			{ name: "University of North Georgia — Cumming" },
+		]);
+		expect(fullSchoolName("South Forsyth Middle")).toBe(
+			"South Forsyth Middle School",
+		);
+	});
+
+	it("lists the drives that have a time, off-peak to rush", () => {
+		expect(driveRows(city)).toEqual([
+			{ place: "Downtown Atlanta · 39 mi", time: "52–83 min" },
+			{ place: "City Hall · 1 mi", time: "4 min" },
+		]);
+	});
+
+	it("puts home value and rent under Cost, and each figure in one place", () => {
+		expect(costRows(city)).toEqual([
+			{
+				label: "Median home value · county",
+				value: "$550,400",
+				note: "1.8× the state",
+			},
+			{ label: "Median rent", value: "$2,090", note: "a month" },
+		]);
+		const where = glanceTiles(city).map((t) => [t.label, glancePart(t)]);
+		expect(where).toEqual([
+			["Residents", "potential"],
+			["Median household income", "glance"],
+			["Median home value · county", "cost"],
+			["Homes owner-occupied", "glance"],
+			["Parks", "glance"],
+			["Median rent", "cost"],
+		]);
 	});
 });

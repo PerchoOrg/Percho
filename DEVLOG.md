@@ -23,6 +23,21 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-23 05:43 UTC — phase371: the city page in the community page's shape — five tiles, sheets, resources
+
+**Objective**: owner 2026-11-22, after the community Explore page settled (phase367–370.1): "现在把city card explore也做对应的优化".
+**What "corresponding" was taken to mean** — each thing he asked for on the community page, applied to the city: the five titled tiles (Safety · Schools · Convenience · Potential · Cost); school standings in ordinary type with full names; nothing said twice; safety as facts about the place with crime only a link out; links grouped under Resources with logos.
+**Actions**:
+- **Mobile** (`app/city/[slug].tsx`, `lib/city/page.ts`): under the name, tagline and badges the page is now five full-width tiles, each a few rows, each opening a sheet that holds the chart the old section drew: Safety (hospital closest to the centre, fire stations within five miles → sheet with the crime-map and FEMA links), Schools (the best-ranked school at each level and a college, "#6 in Georgia" in the row's type → the existing ladder), Convenience (the first three drives, "52–83 min" → the drive-time bars), Potential (residents, the growth takeaway, projects planned → the growth tile and What's next), Cost (median home value against the state, median rent → those tiles). Then At a glance with only what is left (people, income, schooling — `glancePart` puts each figure in one place), History, Resources, credits. Schools / Getting around / What's next are no longer sections.
+- **Badges**: a ranking that is a school's is dropped from the row under the name (`otherRankings`) — the Schools tile says it; Cumming keeps "Fastest-growing city", loses three school badges.
+- The ladder's rank in the Schools sheet is ink, not the accent.
+- **Shared parts**: `components/community/ExploreParts.tsx` — the titled `Tile`, the row styles and the `Resources` block, moved out of `ExploreBody` now that two pages draw them. `linkGroups` takes an order (a city leads with its own pages).
+- **Web** (`lib/cities/links.ts`, `detail.ts`, `shared/city.ts`): the city DTO gains `links` and `safety`, both computed at read time — nothing written to `cities.profile`, no rebuild. Links: the city's site (from the `cities` row), county site, Wikipedia, Google Maps, Walk Score; Zillow, Redfin, Trulia, Homes.com, property records; the district; crime map, FEMA flood map; Reddit, YouTube.
+- **Safety data**: `community:safety --cities` (same script, one OpenStreetMap request) → `apps/web/lib/cities/city-safety.json` for the seven cities. No flood zone for a city: FEMA's is read at a point.
+**Decisions**: `city.ts` said "no safety or crime field — do not add one without him"; this applies his community ruling of the same day (place facts, crime as a link) rather than a new one, and the header says so. School names get "School" put back only after Elementary / Middle / High. Rankings keep their published form ("#6 in Georgia") — unlike the community page's computed ranks these read on their own.
+**Verified**: mobile typecheck 0, lint clean, vitest 891 (city page: 4 new); web tsc 0, vitest 1382 (links: 5 new). The live API checked after deploy. NOT seen on a device, and no mock was drawn of this page.
+**Next steps**: owner looks on the dev client. A new city needs a row in `local-links.ts` (Redfin id, county) and a re-run of `community:safety --cities`.
+
 ## 2026-11-22 23:36 UTC — phase370.1: Explore — Potential and Cost each a row, no school line in the verdict, Redfin and five more links
 
 **Objective**: owner on phase370: "Potential 单独一行 Cost 放下面 / 去掉explore page 下面的top school绿色标记文字 和下面的内容重复了 / 链接里没看到redfin啥的 你再看看缺啥 尽量全".

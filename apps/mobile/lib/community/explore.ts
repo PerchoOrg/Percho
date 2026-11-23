@@ -129,13 +129,15 @@ const LINK_GROUPS = ["Community", "Homes", "Schools", "Safety", "City"];
  */
 export function linkGroups(
 	links: readonly ProfileLink[] | undefined,
+	/** The city page leads with the city's own pages. */
+	order: readonly string[] = LINK_GROUPS,
 ): { group: string; links: ProfileLink[] }[] {
 	const of = (l: ProfileLink) => l.group ?? "Community";
-	const named = new Set(LINK_GROUPS);
+	const named = new Set(order);
 	const extra = [...new Set((links ?? []).map(of))].filter(
 		(g) => !named.has(g),
 	);
-	return [...LINK_GROUPS, ...extra]
+	return [...order, ...extra]
 		.map((group) => ({
 			group,
 			links: (links ?? []).filter((l) => of(l) === group),

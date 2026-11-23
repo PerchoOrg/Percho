@@ -34,6 +34,7 @@ import { parseCityProfile } from '@/lib/zod/city-profile';
 import type { CityDetailDTO, CityFilmCredits, CityFundamentals } from '@percho/shared/city';
 import { buildTourChapters } from '@percho/shared/tour-buckets';
 import { bySection } from './chapters';
+import { cityLinks, citySafety } from './links';
 
 export interface CityFilm {
   slug: string;
@@ -153,7 +154,7 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
   const anon = createUncachedAnonClient();
   const { data: city, error } = await anon
     .from('cities')
-    .select('id, slug, name, state, county, geo_unit_id, profile')
+    .select('id, slug, name, state, county, geo_unit_id, lat, lng, website, profile')
     .eq('slug', slug)
     .eq('status', 'active')
     .maybeSingle();
@@ -208,6 +209,7 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
     console.warn('[city] film unavailable', err);
   }
 
+  const safety = citySafety(city.slug);
   return {
     slug: city.slug,
     name: city.name,
@@ -218,5 +220,13 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
     tourSegments: segments,
     ...shared,
     credits,
+    ...(safety ? { safety } : {}),
+    links: cityLinks({
+      name: city.name,
+      county: city.county,
+      lat: city.lat,
+      lng: city.lng,
+      website: city.website,
+    }),
   };
 }
