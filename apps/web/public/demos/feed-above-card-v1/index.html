@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho feed — what goes above the card</title>
+<style>
+@font-face { font-family: "DM Serif Display"; src: url("/demos/feed-chrome-v1/DMSerifDisplay-Regular.ttf"); }
+@font-face { font-family: "TabBarIcons"; src: url("/demos/ui-accent-v1/TabBarIcons.ttf"); }
+@font-face { font-family: "TabBarIconsFill"; src: url("/demos/ui-accent-v1/TabBarIconsFill.ttf"); }
+:root{
+  --bg:#F7F5F0; --ink:#2B2116; --ink2:#76634B; --ink3:#9D8562; --border:#EADFD0;
+  --green:#0E6B57; --hctx:#6B726D; --httl:#181D1A; --mapfill:#E0E9E3; --mapink:#08685D;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --ui: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:var(--ink);padding:24px 16px 60px}
+.nav{max-width:1340px;margin:0 auto 8px;font:400 15px/1.6 var(--ui)}
+.nav h1{font:400 28px "DM Serif Display",serif;color:var(--green);margin-bottom:6px}
+.nav p{max-width:860px;color:#4A4038;margin-bottom:6px}
+.nav .key{display:inline-block;border:1.5px dashed #D9482B;border-radius:5px;padding:0 5px;color:#B3402A;font-weight:600}
+h2{max-width:1340px;margin:30px auto 12px;font:600 19px var(--ui);color:#2B2116}
+.row{max-width:1340px;margin:0 auto;display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+.col{width:428px}
+.col h3{font:600 16px var(--ui);color:#2B2116;margin:0 6px 10px;min-height:88px}
+.col h3 small{display:block;font:400 13.5px/1.45 var(--ui);color:#5C5046;margin-top:4px}
+@media (max-width:931px){.col h3{min-height:0}}
+.pick{display:inline-block;font:700 10px var(--ui);letter-spacing:.8px;text-transform:uppercase;color:#0E5C48;background:#DFF0EA;border-radius:4px;padding:2px 6px;margin-left:6px;vertical-align:middle}
+.foot{max-width:860px;margin:26px auto 0;font:400 13px/1.6 var(--ui);color:#5C5046}
+.foot b{color:#2B2116}
+
+/* ── the phone: 428 × 926, the owner's ─────────────────────────────── */
+.phone{width:428px;height:926px;background:var(--bg);border-radius:48px;box-shadow:0 12px 40px rgba(0,0,0,.18),0 0 0 8px #1C1A17;position:relative;overflow:hidden}
+.phone>*{position:absolute}
+.status{left:0;right:0;top:0;height:47px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 34px 9px 38px;font:600 16px var(--ui);color:#181D1A}
+.status i{display:block;width:26px;height:12px;border:1.2px solid #181D1A;border-radius:4px;opacity:.9;position:relative}
+.status i::after{content:"";position:absolute;inset:1.5px;border-radius:2px;background:#181D1A}
+
+/* today's header (FeedHeader.tsx at k = 1.097) */
+.fh{left:0;right:0;top:47px;padding:21.9px 26.3px 0}
+.fh .ctx{height:19.7px;font:400 14.3px/19.7px var(--ui);color:var(--hctx);white-space:nowrap}
+.fh .main{display:flex;align-items:center;height:48.3px;margin-top:4.4px}
+.fh .ttl{font:400 39.5px "DM Serif Display",serif;color:var(--httl);white-space:nowrap}
+.fh .chv{width:10px;height:10px;border-top:1.6px solid var(--hctx);border-right:1.6px solid var(--hctx);transform:rotate(45deg);margin:0 3px 0 8px}
+.map{display:flex;align-items:center;justify-content:center;gap:6.5px;background:var(--mapfill);color:var(--mapink);font:600 15.4px var(--ui);min-width:92px;height:48.3px;border-radius:24.2px;margin-left:13px;flex:none}
+.map svg{width:15px;height:19.5px;stroke:var(--mapink);fill:none;stroke-width:1.75}
+.map.sm{min-width:78px;height:35px;border-radius:17.5px;font-size:14.3px;gap:5.5px;margin-left:10px}
+.map.sm svg{width:12.5px;height:16.5px}
+.dup{outline:1.5px dashed #D9482B;outline-offset:3px;border-radius:5px}
+
+/* the place line + three numbers, above (.fx.top) or under (.fx.under) the card */
+.fx{left:0;right:0}
+.fx .loc{display:flex;align-items:center;justify-content:space-between}
+.fx .where{font:400 15px var(--ui);color:var(--hctx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx .where b{font-weight:600;color:var(--httl)}
+.fx .facts{display:flex}
+.fx .fact{flex:1 1 auto;min-width:0;padding-left:14px;border-left:1px solid #E2DCD0}
+.fx .fact:first-child{padding-left:0;border-left:0}
+.fx .fact b{display:block;font:700 24px/28px var(--serif);color:var(--httl);letter-spacing:-.3px;white-space:nowrap}
+.fx .fact small{display:block;font:400 12.5px/16px var(--ui);color:var(--hctx);white-space:nowrap}
+.fx.top{top:47px;padding:13.2px 26.3px 0}
+.fx.top .loc{height:35px}
+.fx.top .facts{margin-top:6.6px;height:44px}
+.fx.under{padding:0 32px}
+.fx.under .loc{height:48.3px}
+.fx.under .where{font-size:16px}
+.fx.under .facts{margin-top:10px;height:50px}
+.fx.under .fact b{font-size:25px;line-height:30px}
+.fx.under .fact small{font-size:13px;line-height:17px}
+
+/* the card (CommunityFace.tsx, after phase367.2) */
+.card{border-radius:28px;overflow:hidden;background:#2E2118 center/cover;box-shadow:0 3px 10px rgba(32,28,22,.05),0 16px 38px rgba(32,28,22,.085)}
+.card::before{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,transparent 55%,rgba(0,0,0,.5) 78%,rgba(0,0,0,.92) 100%)}
+.card.city::after{content:"";position:absolute;inset:0;background:linear-gradient(to left,rgba(0,0,0,.5),rgba(0,0,0,.22) 20%,transparent 38%)}
+.card>*{position:absolute;z-index:2}
+.ppill{top:12px;left:12px;display:flex;align-items:center;gap:5px;background:rgba(14,13,11,.5);border-radius:20px;padding:7px 10px;font:600 11.5px var(--ui);color:#fff}
+.ppill i{width:1px;height:12px;background:rgba(255,255,255,.35)}
+.ppill em{font-style:normal;font-weight:400;color:rgba(255,255,255,.86)}
+.ppill svg{width:9px;height:11px;fill:#fff}
+.corner{top:12px;right:12px;height:26px;border-radius:13px;background:rgba(14,13,11,.5);display:flex;align-items:center;gap:12px;padding:0 9px}
+.corner svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.rail{right:0;top:58px;bottom:92px;width:112px;display:flex;flex-direction:column}
+.rail div{display:flex;align-items:center;justify-content:flex-end;padding:0 28px 0 8px;font:500 14px var(--ui);letter-spacing:-.2px;color:rgba(255,255,255,.66);text-shadow:0 1px 3px rgba(0,0,0,.55)}
+.rail div.on{color:#fff;font-weight:700}
+.rail::before{content:"";position:absolute;right:15px;top:0;bottom:0;width:2px;border-radius:1px;background:rgba(255,255,255,.26)}
+.rail::after{content:"";position:absolute;right:15px;top:0;height:4%;width:2px;border-radius:1px;background:#fff}
+.info{left:24px;right:24px;bottom:24px}
+.tag{margin-bottom:6px;font:700 10px var(--ui);letter-spacing:1px;color:rgba(255,255,255,.86)}
+.irow{display:flex;align-items:center;gap:12px}
+.cname{font:600 27px/30px var(--serif);letter-spacing:-.9px;color:#fff}
+.irow .sp{flex:1}
+.explore{height:34px;padding:0 14px;border-radius:17px;background:rgba(255,255,255,.92);display:flex;align-items:center;font:600 13.5px var(--ui);color:#181B18}
+.dashes{left:24px;right:24px;bottom:12px;height:3px;display:flex;gap:3px}
+.dashes span{height:3px;border-radius:1.5px;background:rgba(255,255,255,.28);position:relative;overflow:hidden}
+.dashes span.done{background:#fff}
+.dashes span.part::after{content:"";position:absolute;left:0;top:0;bottom:0;width:60%;background:#fff}
+
+.tabbar{left:0;right:0;bottom:0;height:96px;padding-bottom:34px;display:flex;border-top:.5px solid rgba(23,23,21,.05)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font:500 12px var(--ui);color:#9D8562}
+.tab .pl{width:48px;height:33px;border-radius:17px;display:flex;align-items:center;justify-content:center;position:relative}
+.tab .g{font-family:"TabBarIcons";font-size:27px;line-height:27px}
+.tab .gf{font-family:"TabBarIconsFill";font-size:27px;line-height:27px;position:absolute;opacity:.22;display:none}
+.tab.on{color:var(--green);font-weight:600}.tab.on .pl{background:rgba(14,107,87,.10)}.tab.on .gf{display:block}
+.homebar{bottom:8px;left:50%;width:140px;height:5px;margin-left:-70px;border-radius:3px;background:#2B2116;opacity:.9}
+</style>
+</head>
+<body>
+<div class="nav">
+  <h1>Above the card: say what the card does not</h1>
+  <p>Today the space above the card repeats the card. On the “Now” phones the repeated words are marked <span class="key">like this</span>.</p>
+  <p>Both options take the big name out and keep one line for the place, with Map. Under it go three numbers a film cannot show: what homes cost, how the schools rank, how far Atlanta is. They are the numbers already on each Explore page; a tap on one opens that part of it. The card itself is the same in every phone.</p>
+</div>
+
+<h2>A community card</h2>
+<div class="row">
+  <div class="col"><h3>Now<small>“Windward” is the largest line on the page and it is also on the card. The arrow beside it opens the same page as Explore.</small></h3><div class="phone" data-v="now" data-c="community"></div></div>
+  <div class="col"><h3>1 · Numbers above the card<small>Same spot, same height. The name is gone from the top; the card does not move.</small></h3><div class="phone" data-v="top" data-c="community"></div></div>
+  <div class="col"><h3>2 · Film on top, numbers under it <span class="pick">suggested</span><small>The film starts at the top of the screen and is a little larger. Place, Map and the numbers sit right under the name and Explore, where the thumb is.</small></h3><div class="phone" data-v="under" data-c="community"></div></div>
+</div>
+
+<h2>A city card</h2>
+<div class="row">
+  <div class="col"><h3>Now<small>“Cumming” three times: in the small line, in the title, on the card.</small></h3><div class="phone" data-v="now" data-c="city"></div></div>
+  <div class="col"><h3>1 · Numbers above the card<small>The county takes the small line; the city's own numbers take the title's.</small></h3><div class="phone" data-v="top" data-c="city"></div></div>
+  <div class="col"><h3>2 · Film on top, numbers under it <span class="pick">suggested</span><small>Same as the community card.</small></h3><div class="phone" data-v="under" data-c="city"></div></div>
+</div>
+
+<p class="foot"><b>Where the numbers come from.</b> Windward: home value is the ZIP's typical value, the school figure is the range across its nearby elementary, middle and high school among Georgia's schools, and the distance is a straight line from downtown Atlanta. Cumming: the city's typical home value, Forsyth County Schools' four-year graduation rate, and the drive to downtown outside rush hour. A card with no figure for a slot shows two numbers, not a placeholder.</p>
+
+<script>
+const G = {feed:"",search:"",saved:"",you:""};
+const icon = {
+  share:'<svg viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 13v6h14v-6"/></svg>',
+  save:'<svg viewBox="0 0 24 24"><path d="M7 4h10v16l-5-4-5 4z"/></svg>',
+  sound:'<svg viewBox="0 0 24 24"><path d="M4 10v4h3l4 4V6L7 10zM15 9a4 4 0 010 6M17.5 6.5a8 8 0 010 11"/></svg>',
+  pin:'<svg viewBox="0 0 9 11"><path d="M4.5 0a4.1 4.1 0 00-4.1 4.1C.4 7 4.5 11 4.5 11s4.1-4 4.1-6.9A4.1 4.1 0 004.5 0zm0 5.6a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/></svg>',
+  map:'<svg viewBox="0 0 14 18"><path d="M7 1.2a5.6 5.6 0 00-5.6 5.6C1.4 10.9 7 16.6 7 16.6s5.6-5.7 5.6-9.8A5.6 5.6 0 007 1.2z"/><circle cx="7" cy="6.8" r="1.6"/></svg>',
+};
+
+/* Both cards as the live feed serves them (2026-11-23). */
+const CARDS = {
+  community: {
+    frame: "https://videodelivery.net/ddffd15040c57e3ef063ff45604e4605/thumbnails/thumbnail.jpg?time=2s&height=1200",
+    tag: "COMMUNITY", name: "Windward",
+    ctx: ["Atlanta metro", "Fulton County", "Alpharetta"], chevron: true,
+    place: ["Windward Clubhouse", "0 mi"],
+    // the film's 20 places, as fractions of its length
+    ends: [.033,.079,.099,.138,.25,.343,.389,.455,.494,.553,.593,.632,.672,.712,.771,.81,.83,.909,.929,1],
+    where: "<b>Alpharetta</b> · Fulton County",
+    facts: [["$747K","ZIP 30005 homes"],["Top 1–7%","schools nearby"],["26 mi","north of Atlanta"]],
+  },
+  city: {
+    frame: "https://videodelivery.net/b64dc08e385e3847a865301818f20c81/thumbnails/thumbnail.jpg?time=3s&height=1200",
+    tag: "CITY", name: "Cumming",
+    ctx: ["Atlanta metro", "Cumming"], chevron: false, ctxDup: true,
+    parts: [["Overview",25.2],["Schools",17.6],["Homes",16.8],["Commute",15.5],["Life",24.7]],
+    where: "<b>Forsyth County</b> · north of Atlanta",
+    facts: [["$586K","Cumming homes"],["97.5%","graduate on time"],["~52 min","39 mi to downtown"]],
+  },
+};
+
+/* The page's arithmetic, as `card-frame.ts` and `SwipeStack` do it. */
+const W = 428, H = 926, SAFE_TOP = 47, TAB = 96, K = 1.097, ASPECT = 1080 / 1576;
+function layout(v) {
+  if (v === "under") {
+    const w = W - 16, h = w / ASPECT, top = SAFE_TOP + 8;
+    return { card: { left: 8, top, w, h }, block: top + h + 26 };
+  }
+  const header = (v === "now" ? 86 : 90) * K;
+  const stage = H - SAFE_TOP - header - TAB;
+  const w = W - 32, h = Math.min(stage - 28, w / ASPECT);
+  const slack = stage - 28 - h;
+  return { card: { left: 16, top: SAFE_TOP + header + 12 + slack / 3, w, h } };
+}
+
+const mapPill = cls => `<span class="map ${cls}">${icon.map}Map</span>`;
+const facts = c => `<div class="facts">${c.facts.map(([n, l]) => `<div class="fact"><b>${n}</b><small>${l}</small></div>`).join("")}</div>`;
+
+function header(v, c) {
+  if (v === "now") {
+    const ctx = c.ctx.map((s, i) => (c.ctxDup && i === c.ctx.length - 1 ? `<span class="dup">${s}</span>` : s)).join(" › ");
+    return `<div class="fh"><div class="ctx">${ctx}</div>
+      <div class="main"><span class="ttl dup">${c.name}</span>${c.chevron ? '<span class="chv"></span>' : ""}${mapPill("")}</div></div>`;
+  }
+  if (v === "top") return `<div class="fx top"><div class="loc"><span class="where">${c.where}</span>${mapPill("sm")}</div>${facts(c)}</div>`;
+  return "";
+}
+
+function card(v, c, box) {
+  const dashes = c.ends ? `<div class="dashes">${c.ends.map((e, i) =>
+    `<span class="${i === 0 ? "part" : ""}" style="flex:${(e - (c.ends[i - 1] || 0)).toFixed(3)}"></span>`).join("")}</div>` : "";
+  const rail = c.parts ? `<div class="rail">${c.parts.map(([n, f], i) => `<div class="${i === 0 ? "on" : ""}" style="flex:${f}">${n}</div>`).join("")}</div>` : "";
+  return `<div class="card ${c.parts ? "city" : ""}" style="left:${box.left}px;top:${box.top.toFixed(1)}px;width:${box.w}px;height:${box.h.toFixed(1)}px;background-image:url('${c.frame}')">
+    ${c.place ? `<div class="ppill">${icon.pin}${c.place[0]}<i></i><em>${c.place[1]}</em></div>` : ""}
+    <div class="corner">${icon.sound}${icon.save}${icon.share}</div>
+    ${rail}
+    <div class="info"><div class="tag">${c.tag}</div><div class="irow"><div class="cname ${v === "now" ? "dup" : ""}">${c.name}</div><div class="sp"></div><div class="explore">Explore</div></div></div>
+    ${dashes}
+  </div>`;
+}
+
+const tabbar = `<div class="tabbar">${["feed","search","saved","you"].map(k =>
+  `<div class="tab ${k === "feed" ? "on" : ""}"><div class="pl"><span class="gf">${G[k]}</span><span class="g">${G[k]}</span></div>${k[0].toUpperCase() + k.slice(1)}</div>`).join("")}</div><div class="homebar"></div>`;
+
+for (const phone of document.querySelectorAll(".phone")) {
+  const v = phone.dataset.v, c = CARDS[phone.dataset.c], L = layout(v);
+  phone.innerHTML = `<div class="status"><span>9:41</span><i></i></div>${header(v, c)}${card(v, c, L.card)}
+    ${v === "under" ? `<div class="fx under" style="top:${L.block.toFixed(1)}px"><div class="loc"><span class="where">${c.where}</span>${mapPill("")}</div>${facts(c)}</div>` : ""}
+    ${tabbar}`;
+}
+
+/* Three phones across on a wide screen, one at a time on a narrow one. */
+function fit() {
+  const vw = document.documentElement.clientWidth - 32;
+  const across = vw >= 900 ? 3 : 1;
+  const k = Math.min(1, vw / (across * 428 + (across - 1) * 28));
+  for (const col of document.querySelectorAll(".col")) col.style.zoom = String(k);
+}
+fit();
+addEventListener("resize", fit);
+</script>
+</body>
+</html>
