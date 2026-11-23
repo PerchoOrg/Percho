@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-23
+- **A simpler Search map.** The Cost of living button is gone from the top of the map — the differences it coloured between counties were smaller than the estimates behind them. Schools stays. A county's page still shows the month-by-month cost breakdown. Arrives with the next app update.
 - **No more "You've seen everything" flash.** Opening the app briefly showed the end-of-feed message before the first card appeared. It now goes straight from loading to the first card.
 
 ### 2026-11-22
