@@ -29,6 +29,12 @@
  * five miles until the owner asked for the row to read like the others,
  * 2026-11-22). No flood zone — FEMA's is read at a point, and one
  * point says nothing about a city.
+ * Since phase383 the same request also finds the closest police station, each
+ * place's own website where OpenStreetMap carries one, the everyday places
+ * around the centre (groceries, a warehouse club, a pharmacy, a park, a
+ * library) and the websites of the schools around it — the last two go to
+ * `apps/web/lib/cities/city-places.json` (owner 2026-11-24: "safety 有警察局
+ * 或者别的吗 / convenient … 要生活上的方便 / 这些地方有官网的可以直接放链接").
  *   pnpm --filter @percho/web community:safety --cities
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -40,6 +46,7 @@ import { type SafetyFacts, milesBetween } from '../../apps/web/lib/communities/p
 const here = dirname(fileURLToPath(import.meta.url));
 const FILE = join(here, 'data/community-safety.json');
 const CITY_FILE = join(here, '../../apps/web/lib/cities/city-safety.json');
+const CITY_PLACES_FILE = join(here, '../../apps/web/lib/cities/city-places.json');
 const CITIES = process.argv.includes('--cities');
 const SLUGS = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const AGENT = 'percho-admin/1.0 (hello@percho.co)';
@@ -91,6 +98,61 @@ interface Place {
   name: string;
   lat: number;
   lng: number;
+  /** The place's own website, where OpenStreetMap carries one. */
+  site?: string;
+}
+
+interface Element {
+  lat?: number;
+  lon?: number;
+  center?: { lat: number; lon: number };
+  tags?: Record<string, string | undefined>;
+}
+
+/** One Overpass request. The instances shed load with a 429 / 502 / 504; the
+ * next one, or the same one a few seconds later, answers. */
+async function overpass(query: string): Promise<Element[]> {
+  let res: Response | undefined;
+  for (let attempt = 0; attempt < 6 && !res?.ok; attempt++) {
+    if (attempt > 0) await pause(4000 * attempt);
+    res = await fetch(`${OVERPASS[attempt % OVERPASS.length]}?data=${encodeURIComponent(query)}`, {
+      headers: { 'User-Agent': AGENT },
+    }).catch(() => undefined);
+  }
+  if (!res?.ok) throw new Error(`Overpass ${res?.status ?? 'unreachable'}`);
+  return ((await res.json()) as { elements: Element[] }).elements;
+}
+
+/** A named element as a place, with its website when it is an https one. */
+function placeOf(e: Element): Place | null {
+  const at =
+    e.center ?? (e.lat !== undefined && e.lon !== undefined ? { lat: e.lat, lon: e.lon } : null);
+  const name = e.tags?.name?.trim();
+  // "Abbotts Bridge Unit;CRNRA - Abbotts Bridge Unit": two names in one tag, not a name.
+  if (!at || !name || name.includes(';')) return null;
+  const site = (e.tags?.website ?? e.tags?.['contact:website'])?.trim();
+  return {
+    name,
+    lat: at.lat,
+    lng: at.lon,
+    ...(site?.startsWith('https://') ? { site } : {}),
+  };
+}
+
+/** The box around every point, widened by `reachM`, as Overpass reads it. */
+function boxAround(points: ReadonlyArray<{ lat: number; lng: number }>, reachM: number): string {
+  const dLat = reachM / 111_000;
+  const lats = points.map((p) => p.lat);
+  const lngs = points.map((p) => p.lng);
+  const dLng = dLat / Math.cos((Math.max(...lats) * Math.PI) / 180);
+  return [
+    Math.min(...lats) - dLat,
+    Math.min(...lngs) - dLng,
+    Math.max(...lats) + dLat,
+    Math.max(...lngs) + dLng,
+  ]
+    .map((n) => n.toFixed(4))
+    .join(',');
 }
 
 /**
@@ -117,64 +179,134 @@ function takesEmergencies(tags: Record<string, string | undefined>): boolean {
 async function places(
   points: ReadonlyArray<{ lat: number; lng: number }>,
 ): Promise<{ hospitals: Place[]; fire: Place[] }> {
-  // The box around every point, widened by the furthest a hospital may be.
-  const dLat = HOSPITAL_M / 111_000;
-  const lats = points.map((p) => p.lat);
-  const lngs = points.map((p) => p.lng);
-  const dLng = dLat / Math.cos((Math.max(...lats) * Math.PI) / 180);
-  const box = [
-    Math.min(...lats) - dLat,
-    Math.min(...lngs) - dLng,
-    Math.max(...lats) + dLat,
-    Math.max(...lngs) + dLng,
-  ]
-    .map((n) => n.toFixed(4))
-    .join(',');
+  // Widened by the furthest a hospital may be.
+  const box = boxAround(points, HOSPITAL_M);
   const query = `[out:json][timeout:90];(nwr["amenity"="hospital"](${box});nwr["amenity"="fire_station"](${box}););out center tags;`;
-  // The instances shed load with a 429 / 502 / 504; the next one, or the same
-  // one a few seconds later, answers.
-  let res: Response | undefined;
-  for (let attempt = 0; attempt < 6 && !res?.ok; attempt++) {
-    if (attempt > 0) await pause(4000 * attempt);
-    res = await fetch(`${OVERPASS[attempt % OVERPASS.length]}?data=${encodeURIComponent(query)}`, {
-      headers: { 'User-Agent': AGENT },
-    }).catch(() => undefined);
-  }
-  if (!res?.ok) throw new Error(`Overpass ${res?.status ?? 'unreachable'}`);
-  const body = (await res.json()) as {
-    elements: Array<{
-      lat?: number;
-      lon?: number;
-      center?: { lat: number; lon: number };
-      tags?: Record<string, string | undefined>;
-    }>;
-  };
   const out: { hospitals: Place[]; fire: Place[] } = { hospitals: [], fire: [] };
-  for (const e of body.elements) {
-    const at =
-      e.center ?? (e.lat !== undefined && e.lon !== undefined ? { lat: e.lat, lon: e.lon } : null);
-    const name = e.tags?.name?.trim();
-    if (!at || !name || !e.tags) continue;
-    const place = { name, lat: at.lat, lng: at.lon };
+  for (const e of await overpass(query)) {
+    const place = placeOf(e);
+    if (!place || !e.tags) continue;
     if (e.tags.amenity === 'fire_station') out.fire.push(place);
     else if (takesEmergencies(e.tags)) out.hospitals.push(place);
   }
   return out;
 }
 
+/** A community's closest: a name and a distance — its stored profile has no site. */
 function closest(
   lat: number,
   lng: number,
   among: readonly Place[],
   withinM: number,
 ): { name: string; miles: number } | undefined {
-  let best: { name: string; miles: number } | undefined;
-  for (const p of among) {
-    const miles = milesBetween(lat, lng, p.lat, p.lng);
-    if (miles * 1609.34 > withinM) continue;
-    if (!best || miles < best.miles) best = { name: p.name, miles: Math.round(miles * 10) / 10 };
+  const near = nearest(lat, lng, among, withinM, 1)[0];
+  return near ? { name: near.name, miles: near.miles } : undefined;
+}
+
+interface Near {
+  name: string;
+  miles: number;
+  site?: string;
+}
+
+/** The `count` closest places, each name once (the nearer Publix, not both). */
+function nearest(
+  lat: number,
+  lng: number,
+  among: readonly Place[],
+  withinM: number,
+  count: number,
+): Near[] {
+  const seen = new Set<string>();
+  return among
+    .map((p) => ({ p, miles: milesBetween(lat, lng, p.lat, p.lng) }))
+    .filter((x) => x.miles * 1609.34 <= withinM)
+    .sort((a, b) => a.miles - b.miles)
+    .filter((x) => !seen.has(x.p.name) && seen.add(x.p.name))
+    .slice(0, count)
+    .map(({ p, miles }) => ({
+      name: p.name,
+      miles: Math.max(0.1, Math.round(miles * 10) / 10),
+      ...(p.site ? { site: p.site } : {}),
+    }));
+}
+
+const POLICE_M = 15_000;
+/** Everyday places further than this are not "around" the city's centre. */
+const EVERYDAY_M = 12_000;
+const SCHOOL_M = 20_000;
+/** How many places of a kind the page's sheet lists. */
+const EVERYDAY_COUNT = 5;
+
+/** The page's everyday kinds, in its order, and the OSM tags each is read from. */
+const EVERYDAY: ReadonlyArray<{
+  kind: string;
+  is: (t: Record<string, string | undefined>) => boolean;
+}> = [
+  // A chain's store (OSM's `brand`): the nearest "supermarket" to Cumming's
+  // centre is a butcher's counter, which is not where the week's shopping is done.
+  { kind: 'Groceries', is: (t) => t.shop === 'supermarket' && !!t.brand },
+  // `shop=wholesale` is also restaurant suppliers; a household's are these three.
+  {
+    kind: 'Wholesale',
+    is: (t) => t.shop === 'wholesale' && /costco|sam's club|bj's/i.test(t.name ?? ''),
+  },
+  { kind: 'Pharmacy', is: (t) => t.amenity === 'pharmacy' },
+  { kind: 'Park', is: (t) => t.leisure === 'park' },
+  { kind: 'Library', is: (t) => t.amenity === 'library' },
+];
+
+/** A school's name as the two sources can both spell it. */
+const schoolKey = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/\bschool\b/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+/**
+ * Everything the city page names around a city's centre, in ONE request (see
+ * `places`): emergency services, everyday places and schools.
+ */
+async function cityPlaces(points: ReadonlyArray<{ lat: number; lng: number }>) {
+  const box = boxAround(points, HOSPITAL_M);
+  const query = `[out:json][timeout:120];(nwr["amenity"~"^(hospital|fire_station|police|pharmacy|library|school)$"](${box});nwr["shop"~"^(supermarket|wholesale)$"](${box});nwr["leisure"="park"]["name"](${box}););out center tags;`;
+  const out = {
+    hospitals: [] as Place[],
+    fire: [] as Place[],
+    police: [] as Place[],
+    schools: [] as Place[],
+    everyday: EVERYDAY.map((k) => ({ kind: k.kind, places: [] as Place[] })),
+  };
+  for (const e of await overpass(query)) {
+    const place = placeOf(e);
+    const tags = e.tags;
+    if (!place || !tags) continue;
+    if (tags.amenity === 'fire_station') out.fire.push(place);
+    else if (tags.amenity === 'police') out.police.push(place);
+    else if (tags.amenity === 'school') out.schools.push(place);
+    else if (tags.amenity === 'hospital') {
+      if (takesEmergencies(tags)) out.hospitals.push(place);
+    } else EVERYDAY.forEach((k, i) => k.is(tags) && out.everyday[i]?.places.push(place));
   }
-  return best;
+  return out;
+}
+
+/**
+ * The websites of the schools around a point, by `schoolKey`. A name two
+ * schools in reach share is left out: the page would link one of them wrongly.
+ */
+function schoolSites(lat: number, lng: number, schools: readonly Place[]): Record<string, string> {
+  const near = schools.filter((p) => milesBetween(lat, lng, p.lat, p.lng) * 1609.34 <= SCHOOL_M);
+  const count = new Map<string, number>();
+  for (const p of near) count.set(schoolKey(p.name), (count.get(schoolKey(p.name)) ?? 0) + 1);
+  return Object.fromEntries(
+    near
+      .flatMap((p) =>
+        p.site && count.get(schoolKey(p.name)) === 1 ? [[schoolKey(p.name), p.site] as const] : [],
+      )
+      .sort(([a], [b]) => a.localeCompare(b)),
+  );
 }
 
 /** Written after every community, so a run that dies keeps what it found. */
@@ -211,31 +343,63 @@ async function main() {
   if (CITIES) {
     const { data: rows, error: cityError } = await sb
       .from('cities')
-      .select('slug, lat, lng')
+      .select('slug, name, county, lat, lng')
       .eq('status', 'active');
     if (cityError) throw new Error(`read failed: ${JSON.stringify(cityError)}`);
     const cities = (rows ?? []).flatMap((c) =>
       typeof c.lat === 'number' && typeof c.lng === 'number'
-        ? [{ slug: c.slug as string, lat: c.lat, lng: c.lng }]
+        ? [
+            {
+              slug: c.slug as string,
+              name: c.name as string,
+              county: (c.county as string | null) ?? '',
+              lat: c.lat,
+              lng: c.lng,
+            },
+          ]
         : [],
     );
-    const around = await places(cities);
-    const out: Record<
+    const around = await cityPlaces(cities);
+    const out: Record<string, { hospital?: Near; fire?: Near; police?: Near }> = {};
+    const nearby: Record<
       string,
-      { hospital?: { name: string; miles: number }; fire?: { name: string; miles: number } }
+      { everyday: { kind: string; places: Near[] }[]; schoolSites: Record<string, string> }
     > = {};
     for (const c of cities.sort((a, b) => a.slug.localeCompare(b.slug))) {
-      const hospital = closest(c.lat, c.lng, around.hospitals, HOSPITAL_M);
-      const fire = closest(c.lat, c.lng, around.fire, FIRE_M);
-      out[c.slug] = { ...(hospital ? { hospital } : {}), ...(fire ? { fire } : {}) };
+      const hospital = nearest(c.lat, c.lng, around.hospitals, HOSPITAL_M, 1)[0];
+      const fire = nearest(c.lat, c.lng, around.fire, FIRE_M, 1)[0];
+      // The city's own force or its county's. The station nearest Johns
+      // Creek's centre is another county's sheriff, who does not police it.
+      const own = [c.name, c.county].filter(Boolean).map((n) => n.toLowerCase());
+      const police = nearest(
+        c.lat,
+        c.lng,
+        around.police.filter((p) => own.some((n) => p.name.toLowerCase().includes(n))),
+        POLICE_M,
+        1,
+      )[0];
+      out[c.slug] = {
+        ...(hospital ? { hospital } : {}),
+        ...(fire ? { fire } : {}),
+        ...(police ? { police } : {}),
+      };
+      const everyday = around.everyday
+        .map((k) => ({
+          kind: k.kind,
+          places: nearest(c.lat, c.lng, k.places, EVERYDAY_M, EVERYDAY_COUNT),
+        }))
+        .filter((k) => k.places.length > 0);
+      nearby[c.slug] = { everyday, schoolSites: schoolSites(c.lat, c.lng, around.schools) };
       console.log(
-        `  ${c.slug}: ${hospital ? `${hospital.name} ${hospital.miles} mi` : 'no hospital'} · ${fire ? `${fire.name} ${fire.miles} mi` : 'no fire station'}`,
+        `  ${c.slug}: ${hospital ? `${hospital.name} ${hospital.miles} mi` : 'no hospital'} · ${fire ? `${fire.name} ${fire.miles} mi` : 'no fire station'} · ${police ? `${police.name} ${police.miles} mi` : 'no police station'}`,
+      );
+      console.log(
+        `    ${everyday.map((k) => `${k.kind}: ${k.places[0]?.name} ${k.places[0]?.miles} mi`).join(' · ')} · ${Object.keys(nearby[c.slug]?.schoolSites ?? {}).length} school sites`,
       );
     }
-    writeFileSync(
-      CITY_FILE,
-      `${JSON.stringify({ asOf: new Date().toISOString().slice(0, 10), cities: out }, null, 2)}\n`,
-    );
+    const asOf = new Date().toISOString().slice(0, 10);
+    writeFileSync(CITY_FILE, `${JSON.stringify({ asOf, cities: out }, null, 2)}\n`);
+    writeFileSync(CITY_PLACES_FILE, `${JSON.stringify({ asOf, cities: nearby }, null, 2)}\n`);
     console.log(`Wrote ${Object.keys(out).length} cities to ${CITY_FILE}`);
     return;
   }

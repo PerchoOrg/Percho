@@ -37,7 +37,14 @@ import { fetchCityReviews } from '../communities/reviews';
 import { parseCommunityProfile } from '../zod/community-profile';
 import { bySection } from './chapters';
 import { cityForecast } from './forecasts';
-import { articleLinks, cityLinks, citySafety, citySchools } from './links';
+import {
+  articleLinks,
+  cityEveryday,
+  cityLinks,
+  citySafety,
+  citySchools,
+  schoolSite,
+} from './links';
 
 export interface CityFilm {
   slug: string;
@@ -272,6 +279,7 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
   const forecast = cityForecast(city.county);
   const safety = citySafety(city.slug);
   const allSchools = citySchools(city.slug);
+  const everyday = cityEveryday(city.slug);
   return {
     id: city.id,
     slug: city.slug,
@@ -282,8 +290,16 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
     ...(video ?? {}),
     tourSegments: segments,
     ...shared,
+    education: {
+      ...shared.education,
+      schools: shared.education.schools.map((s) => {
+        const site = schoolSite(city.slug, s.name);
+        return site ? { ...s, site } : s;
+      }),
+    },
     credits,
     ...(safety ? { safety } : {}),
+    ...(everyday ? { everyday } : {}),
     ...(reviews ? { reviews } : {}),
     ...(forecast ? { forecast } : {}),
     ...(holding ? { holding } : {}),

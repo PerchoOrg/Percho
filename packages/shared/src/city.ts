@@ -17,8 +17,8 @@
  *
  * `safety` on the page (phase371) follows the community page's ruling of
  * 2026-11-22 (`community-profile.ts`): facts about the PLACE — the hospital
- * and the fire station nearest the city's centre — and crime figures
- * only as a link out. It is not part of the stored, researched profile.
+ * the fire station and the police station nearest the city's centre (the
+ * last since phase383) — and crime figures only as a link out. It is not part of the stored, researched profile.
  */
 
 import type { ReviewDimension } from './review-dimensions';
@@ -74,6 +74,8 @@ export interface CityFundamentals {
       scope?: string;
       detail: string;
       source: CitySource;
+      /** The school's own website (phase383) — added at read time, not stored. */
+      site?: string;
     }>;
     measure: string;
     rows: Array<{ label: string; pct: number; display: string; baseline?: boolean }>;
@@ -122,7 +124,20 @@ export interface CityDetailDTO extends CityFundamentals {
   }>;
   credits: CityFilmCredits;
   /** Facts about the place, never about crime (see the header). */
-  safety?: { rows: Array<{ label: string; name: string; note?: string }> };
+  safety?: {
+    /** `site` is the place's own website, where OpenStreetMap carries one. */
+    rows: Array<{ label: string; name: string; note?: string; site?: string }>;
+  };
+  /**
+   * Everyday places around the city's centre, by kind — groceries, a
+   * warehouse club, a pharmacy, a park, a library — nearest first, straight-
+   * line miles (phase383; owner 2026-11-24: "convenient 不只是距离downtown和
+   * 机场的距离 要生活上的方便"). From OpenStreetMap, as `safety` is.
+   */
+  everyday?: Array<{
+    kind: string;
+    places: Array<{ name: string; miles: number; site?: string }>;
+  }>;
   /** Approved reviews of the city (phase372). Absent until one is approved. */
   reviews?: {
     count: number;
@@ -171,5 +186,7 @@ export interface CityDetailDTO extends CityFundamentals {
     level: 'elementary' | 'middle' | 'high';
     share: number;
     miles?: number;
+    /** The school's own website (phase383). */
+    site?: string;
   }>;
 }

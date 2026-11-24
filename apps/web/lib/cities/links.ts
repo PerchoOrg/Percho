@@ -2,7 +2,9 @@
  * What the city page adds to a stored profile at read time (phase371): the
  * Resources links and the safety rows. Neither is researched copy — the links
  * follow from the city's name, county and point, and the safety rows from
- * `city-safety.json` — so neither is stored in `cities.profile`.
+ * `city-safety.json` — so neither is stored in `cities.profile`. Since phase383
+ * also the everyday places around the centre and the schools' own websites,
+ * from `city-places.json` (both files: `import-community-safety.ts --cities`).
  *
  * Pure, so the page's links can be tested without a database.
  */
@@ -13,6 +15,7 @@ import {
   COUNTY_LINKS,
   REDFIN_CITIES,
 } from '../communities/local-links';
+import placesFile from './city-places.json';
 import safetyFile from './city-safety.json';
 import schoolsFile from './city-schools.json';
 
@@ -121,27 +124,60 @@ export function cityLinks(c: CityPlace): Links {
   return links;
 }
 
+type Near = { name: string; miles: number; site?: string };
 const SAFETY = safetyFile as {
-  cities: Record<
-    string,
-    { hospital?: { name: string; miles: number }; fire?: { name: string; miles: number } }
-  >;
+  cities: Record<string, { hospital?: Near; fire?: Near; police?: Near }>;
 };
 
 /**
  * Facts about the place, never about crime (`packages/shared/src/city.ts`):
- * the hospital and the fire station closest to the city's centre, each a
- * name and a distance — the community page's rows.
+ * the hospital, the fire station and the police station closest to the city's
+ * centre, each a name and a distance — the community page's rows — and its
+ * own website where there is one.
  */
 export function citySafety(slug: string): CityDetailDTO['safety'] | undefined {
   const facts = SAFETY.cities[slug];
   if (!facts) return undefined;
   const rows: NonNullable<CityDetailDTO['safety']>['rows'] = [];
-  if (facts.hospital)
-    rows.push({ label: 'Hospital', name: facts.hospital.name, note: `${facts.hospital.miles} mi` });
-  if (facts.fire)
-    rows.push({ label: 'Fire station', name: facts.fire.name, note: `${facts.fire.miles} mi` });
+  const add = (label: string, p: Near | undefined) => {
+    if (p)
+      rows.push({
+        label,
+        name: p.name,
+        note: `${p.miles} mi`,
+        ...(p.site ? { site: p.site } : {}),
+      });
+  };
+  add('Hospital', facts.hospital);
+  add('Fire station', facts.fire);
+  add('Police', facts.police);
   return rows.length > 0 ? { rows } : undefined;
+}
+
+const PLACES = placesFile as {
+  cities: Record<
+    string,
+    { everyday: NonNullable<CityDetailDTO['everyday']>; schoolSites: Record<string, string> }
+  >;
+};
+
+/** The everyday places around the city's centre, by kind, nearest first. */
+export function cityEveryday(slug: string): CityDetailDTO['everyday'] | undefined {
+  const kinds = PLACES.cities[slug]?.everyday;
+  return kinds && kinds.length > 0 ? kinds : undefined;
+}
+
+/** A school's name as the importer keys its website (`schoolKey` there). */
+const schoolKey = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/\bschool\b/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+/** The school's own website, when one school of that name is in reach of the city. */
+export function schoolSite(slug: string, name: string): string | undefined {
+  return PLACES.cities[slug]?.schoolSites[schoolKey(name)];
 }
 
 /** Publishers of figures and official pages — sources, but not something to read about the city. */
@@ -187,5 +223,9 @@ const SCHOOLS = schoolsFile as {
 /** Every scored school in and around the city (`build-city-schools.ts`). */
 export function citySchools(slug: string): CityDetailDTO['allSchools'] | undefined {
   const list = SCHOOLS.cities[slug];
-  return list && list.length > 0 ? list : undefined;
+  if (!list || list.length === 0) return undefined;
+  return list.map((s) => {
+    const site = schoolSite(slug, s.name);
+    return site ? { ...s, site } : s;
+  });
 }

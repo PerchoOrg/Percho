@@ -1,74 +1,110 @@
 {
-  "asOf": "2026-11-23",
+  "asOf": "2026-11-24",
   "cities": {
     "alpharetta-ga": {
       "hospital": {
         "name": "WellStar North Fulton Hospital",
-        "miles": 1.8
+        "miles": 1.8,
+        "site": "https://www.wellstar.org/locations/pages/wellstar-north-fulton-hospital.aspx"
       },
       "fire": {
         "name": "Alpharetta Fire Station 81",
         "miles": 1.1
+      },
+      "police": {
+        "name": "Alpharetta Police Department",
+        "miles": 0.6
       }
     },
     "buford-ga": {
       "hospital": {
         "name": "Northside Hospital Forsyth",
-        "miles": 8.8
+        "miles": 8.8,
+        "site": "https://www.northside.com/locations/northside-hospital-forsyth"
       },
       "fire": {
         "name": "Gwinnett County Station 14 Fire Station",
         "miles": 1.6
+      },
+      "police": {
+        "name": "Buford Police Station",
+        "miles": 0.2
       }
     },
     "cumming-ga": {
       "hospital": {
         "name": "Northside Hospital Forsyth",
-        "miles": 2
+        "miles": 2,
+        "site": "https://www.northside.com/locations/northside-hospital-forsyth"
       },
       "fire": {
         "name": "Forsyth County Fire Station #1",
         "miles": 0.8
+      },
+      "police": {
+        "name": "Forsyth County Sheriff's Office",
+        "miles": 0.1
       }
     },
     "duluth-ga": {
       "hospital": {
         "name": "Northside Hospital Duluth",
-        "miles": 1.1
+        "miles": 1.1,
+        "site": "https://www.northside.com/locations/northside-hospital-duluth"
       },
       "fire": {
         "name": "Gwinnett Fire Station 07",
-        "miles": 1.2
+        "miles": 1.2,
+        "site": "https://www.gwinnettcounty.com/web/gwinnett/Departments/FireandEmergencyServices/Organization/Divisions/Operations/Stations/Station07"
+      },
+      "police": {
+        "name": "Duluth Police Department",
+        "miles": 0.5
       }
     },
     "johns-creek-ga": {
       "hospital": {
         "name": "Emory Johns Creek Hospital",
-        "miles": 0.6
+        "miles": 0.6,
+        "site": "https://www.emoryhealthcare.org/locations/hospitals/emory-johns-creek-hospital"
       },
       "fire": {
         "name": "Forsyth County Fire Station #6",
         "miles": 2.4
+      },
+      "police": {
+        "name": "Johns Creek Police Department",
+        "miles": 6.5
       }
     },
     "sugar-hill-ga": {
       "hospital": {
         "name": "Northside Hospital Forsyth",
-        "miles": 7.9
+        "miles": 7.9,
+        "site": "https://www.northside.com/locations/northside-hospital-forsyth"
       },
       "fire": {
         "name": "Gwinnett County Station 14 Fire Station",
+        "miles": 1.4
+      },
+      "police": {
+        "name": "Gwinnett County Northeast Precinct Police Station",
         "miles": 1.4
       }
     },
     "suwanee-ga": {
       "hospital": {
         "name": "Emory Johns Creek Hospital",
-        "miles": 6.4
+        "miles": 6.4,
+        "site": "https://www.emoryhealthcare.org/locations/hospitals/emory-johns-creek-hospital"
       },
       "fire": {
         "name": "Gwinnett County Station 13 Fire Station",
         "miles": 0.4
+      },
+      "police": {
+        "name": "Suwanee Police Station",
+        "miles": 0.1
       }
     }
   }

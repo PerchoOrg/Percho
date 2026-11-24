@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { cityForecast } from './forecasts';
-import { articleLinks, cityLinks, citySafety, citySchools } from './links';
+import {
+  articleLinks,
+  cityEveryday,
+  cityLinks,
+  citySafety,
+  citySchools,
+  schoolSite,
+} from './links';
 
 describe('cityLinks', () => {
   const links = cityLinks({
@@ -112,15 +119,47 @@ describe('citySchools', () => {
 });
 
 describe('citySafety', () => {
-  it('names the hospital and the fire station with their distances, and nothing about crime', () => {
+  it('names the hospital, the fire station and the police with their distances, and nothing about crime', () => {
     const rows = citySafety('cumming-ga')?.rows ?? [];
-    expect(rows.map((r) => r.label)).toEqual(['Hospital', 'Fire station']);
+    expect(rows.map((r) => r.label)).toEqual(['Hospital', 'Fire station', 'Police']);
     for (const r of rows) {
       expect(r.name).not.toMatch(/within/);
       expect(r.note).toMatch(/^\d+(\.\d)? mi$/);
     }
     expect(JSON.stringify(rows)).not.toMatch(/crime/i);
     expect(citySafety('nowhere-ga')).toBeUndefined();
+  });
+
+  it('links a place to its own https site, and only where there is one', () => {
+    const rows = citySafety('duluth-ga')?.rows ?? [];
+    expect(rows.find((r) => r.label === 'Hospital')?.site).toMatch(
+      /^https:\/\/www\.northside\.com\//,
+    );
+    for (const r of rows) if (r.site) expect(r.site).toMatch(/^https:\/\//);
+  });
+});
+
+describe('cityEveryday', () => {
+  it('lists everyday places by kind, nearest first, groceries leading', () => {
+    const kinds = cityEveryday('duluth-ga') ?? [];
+    expect(kinds[0]?.kind).toBe('Groceries');
+    for (const k of kinds) {
+      expect(k.places.length).toBeGreaterThan(0);
+      expect(k.places.length).toBeLessThanOrEqual(5);
+      const miles = k.places.map((p) => p.miles);
+      expect(miles).toEqual([...miles].sort((a, b) => a - b));
+      expect(new Set(k.places.map((p) => p.name)).size).toBe(k.places.length);
+    }
+    expect(cityEveryday('nowhere-ga')).toBeUndefined();
+  });
+});
+
+describe('schoolSite', () => {
+  it('finds a school by its name with or without "School"', () => {
+    const site = schoolSite('duluth-ga', 'Peachtree Ridge High');
+    expect(site).toMatch(/^https:\/\//);
+    expect(schoolSite('duluth-ga', 'Peachtree Ridge High School')).toBe(site);
+    expect(schoolSite('duluth-ga', 'No Such Academy')).toBeUndefined();
   });
 });
 
