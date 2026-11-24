@@ -23,6 +23,25 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 10:20 UTC — phase390: the Explore tiles draw their figures — community and city
+
+**Objective**: owner on the phase389 compare: "不错 把多样的可视化推广到community和city card里的explore界面里". Both pages' tiles were rows of text since phase382 (one pattern: a plain name, one bold figure at the right); only the community's Potential had a chart.
+**What the phone shows** — still one tile a direction, same order, each still opens its sheet; the sheets are untouched.
+- **Community page**: Safety — hospital and fire station as two figures ("9 mi") with the place's name under each; the flood zone stays a row. Schools — a ring a school, filled to its standing, "Top 13%" inside, full name and distance under it. Convenience — the same rows, each with a bar for its distance. Potential — unchanged (figure + line). Cost — a donut of the month's parts with the total inside, the parts listed beside it with their colours.
+- **City page**: Safety — five pips beside each rating (FEMA's five steps; the crime band's five) before the word. Schools — a badge a level: "Elementary / #10 / in Georgia / Wilson Creek Elementary School". Convenience — a bar under each everyday place, and under each drive one span from the off-peak to the rush-hour minutes. Potential — the resident count as a figure beside its own history in columns (the newest column green), then the forecast and projects rows. Cost — home value and rent rows, then the tax-and-utilities month as the same donut.
+**Actions**:
+- `components/charts/Marks.tsx` (new): `useGrow`, `Bar`, `Span`, `Ring`, `Donut`, `Pips`, `Columns`, `seriesColor`. `Bar` / `Ring` / `useGrow` moved out of `components/compare/CompareVisuals.tsx`, which now imports them; `Ring` is built on an `Arc` that `Donut` stacks (arcs from the top to each part's end, longest first).
+- `components/community/ExploreParts.tsx`: the shared `parts` gain the cell, ring, split and swatch styles both pages use. `ExploreBody.tsx` and `app/city/[slug].tsx`: the tiles.
+- `lib/city/page.ts`: `hazardLevel`, `crimeLevel`; `hazardRows` carries `level`, `schoolRows` carries `level` / `place` / `scope`, `driveRows` carries `minutes` (tests updated, 2 assertions added).
+- `theme/tokens.ts`: `compareSeries` documented as also the parts of one total. ARCHITECTURE.md: `components/charts/`.
+**Decisions**:
+1. **The mark follows the figure**: standing out of 100 → ring; parts of a total → donut; a distance → bar; a range → span; a grade on a fixed scale → pips; a count over the years → columns; a rank → a badge. The city's top schools are all "#4–#53 in Georgia" — as rings they would be three full circles — so they are badges, not rings.
+2. **This reverses part of phase382** ("every box one pattern, one bold figure at the right") and of 2026-11-22 ("学校名字用全称在一行里 … school不要绿色的大字"): school names now wrap to two lines under a ring. His newer instruction wins; noted here so the next reader does not "fix" it back.
+3. **Pips are ink, not red/green** — on hazards more pips is more exposure, on crime more is worse than the state; a colour would add a verdict the words already carry, and `pos`/`neg` stay reserved.
+4. **Height**: the tiles grow — Schools by about 30 pt, Convenience by 6 pt a row, the city's Potential and Cost by about 40–60 pt each. The page is still one tile a direction with the detail in sheets, but the city page in particular is longer than it was. His call whether that is too long ("explore pages fit one screen").
+**Verified**: mobile typecheck 0, lint 0 errors / 5 warnings, vitest 918. The ring and the donut were drawn in headless Chrome with the same boxes, clips and rotations (Duluth's holding rows for the donut) and read correctly. **Not seen on a device.**
+**Next steps**: owner looks at a community page and a city page on the dev client. Open: tile heights; hospital distance in the comparison (asked three times, unanswered).
+
 ## 2026-11-24 09:35 UTC — phase389: a different chart for each compare card
 
 **Objective**: owner on phase388: "好一些了 比较的结果都是线 太单一 也可以尝试饼状图或者柱状图或者别的啥". After phase388 every card was the same horizontal bar.

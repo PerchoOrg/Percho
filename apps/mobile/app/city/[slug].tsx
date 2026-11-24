@@ -42,6 +42,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSheet } from "../../components/BottomSheet";
 import {
+	Bar,
+	Columns,
+	Donut,
+	Pips,
+	Span,
+	seriesColor,
+} from "../../components/charts/Marks";
+import {
 	DriveTimes,
 	GlanceTiles,
 	HistoryTimeline,
@@ -65,6 +73,7 @@ import {
 	TILE_DRIVES,
 	costRows,
 	crimeFigure,
+	crimeLevel,
 	driveRows,
 	everydayRows,
 	glancePart,
@@ -233,6 +242,10 @@ export default function CityScreen() {
 	const hazards = hazardRows(data);
 	const crime = crimeFigure(data);
 	const costs = costRows(data);
+	// Each kind of bar on its own scale: the farthest place, the longest drive.
+	const farthest = Math.max(1, ...everyday.map((r) => r.miles));
+	const tileDrives = drives.slice(0, TILE_DRIVES);
+	const longest = Math.max(1, ...tileDrives.map((r) => r.minutes.max));
 	const latest = data.growth.series[data.growth.series.length - 1];
 	const safetyLinks = (data.links ?? []).filter((l) => l.group === "Safety");
 	const allSchools = data.allSchools ?? [];
@@ -291,6 +304,7 @@ export default function CityScreen() {
 											<Text style={parts.rowName} numberOfLines={1}>
 												Violent crime
 											</Text>
+											<Pips level={crimeLevel(data)} />
 											<Text style={parts.rowFigure}>{crime}</Text>
 										</View>
 									)}
@@ -299,7 +313,11 @@ export default function CityScreen() {
 											<Text style={parts.rowName} numberOfLines={1}>
 												{r.label}
 											</Text>
-											<Text style={parts.rowFigure}>{r.rating}</Text>
+											{/* Where the word sits on FEMA's five steps. */}
+											{r.level > 0 && <Pips level={r.level} />}
+											<Text style={[parts.rowFigure, styles.rating]}>
+												{r.rating}
+											</Text>
 										</View>
 									))}
 								</View>
@@ -313,15 +331,24 @@ export default function CityScreen() {
 								width={half}
 								onPress={() => setSheet("schools")}
 							>
-								<View style={parts.rows}>
+								{/* A badge a level (phase390): the rank is the figure, the
+								    school's name under it. */}
+								<View style={parts.cells}>
 									{schools.map((r) => (
-										<View key={r.name} style={parts.row}>
-											<Text style={parts.rowName} numberOfLines={1}>
+										<View key={r.name} style={[parts.cell, styles.badge]}>
+											<Text style={parts.cellLabel}>{r.level}</Text>
+											{!!r.place && (
+												<Text style={parts.cellFigure}>{r.place}</Text>
+											)}
+											{!!r.scope && (
+												<Text style={parts.cellLabel}>{r.scope}</Text>
+											)}
+											<Text
+												style={[parts.cellName, styles.badgeName]}
+												numberOfLines={2}
+											>
 												{r.name}
 											</Text>
-											{!!r.rank && (
-												<Text style={parts.rowFigure}>{r.rank}</Text>
-											)}
 										</View>
 									))}
 								</View>
@@ -341,26 +368,46 @@ export default function CityScreen() {
 								onPress={() => setSheet("convenience")}
 							>
 								<View style={parts.rows}>
-									{everyday.map((r) => (
-										<View key={r.kind} style={parts.row}>
-											<Text style={parts.rowKind} numberOfLines={1}>
-												{r.kind}
-											</Text>
-											<Text style={parts.rowName} numberOfLines={1}>
-												{r.name}
-											</Text>
-											<Text style={parts.rowFigure}>{r.miles} mi</Text>
+									{everyday.map((r, i) => (
+										<View key={r.kind}>
+											<View style={parts.row}>
+												<Text style={parts.rowKind} numberOfLines={1}>
+													{r.kind}
+												</Text>
+												<Text style={parts.rowName} numberOfLines={1}>
+													{r.name}
+												</Text>
+												<Text style={parts.rowFigure}>{r.miles} mi</Text>
+											</View>
+											<View style={parts.rowBar}>
+												<Bar
+													pct={(r.miles / farthest) * 100}
+													index={i}
+													height={5}
+												/>
+											</View>
 										</View>
 									))}
-									{drives.slice(0, TILE_DRIVES).map((r) => (
-										<View key={r.place} style={parts.row}>
-											<Text style={parts.rowKind} numberOfLines={1}>
-												Drive
-											</Text>
-											<Text style={parts.rowName} numberOfLines={1}>
-												{r.place}
-											</Text>
-											<Text style={parts.rowFigure}>{r.time}</Text>
+									{tileDrives.map((r) => (
+										<View key={r.place}>
+											<View style={parts.row}>
+												<Text style={parts.rowKind} numberOfLines={1}>
+													Drive
+												</Text>
+												<Text style={parts.rowName} numberOfLines={1}>
+													{r.place}
+												</Text>
+												<Text style={parts.rowFigure}>{r.time}</Text>
+											</View>
+											{/* Off-peak to rush, as one span of minutes. */}
+											<View style={parts.rowBar}>
+												<Span
+													from={r.minutes.min}
+													to={r.minutes.max}
+													max={longest}
+													height={5}
+												/>
+											</View>
 										</View>
 									))}
 								</View>
@@ -374,16 +421,32 @@ export default function CityScreen() {
 								width={half}
 								onPress={() => setSheet("potential")}
 							>
-								<View style={parts.rows}>
-									<View style={parts.row}>
-										<Text style={parts.rowName} numberOfLines={1}>
-											Residents, {latest.label}
-										</Text>
-										<Text style={parts.rowAside}>{data.growth.takeaway}</Text>
-										<Text style={parts.rowFigure}>
+								{/* The count as a figure beside its own history in columns
+								    (phase390) — it was a row of text. */}
+								<View style={styles.growth}>
+									<View style={styles.growthFigure}>
+										<Text style={parts.cellFigure}>
 											{latest.value.toLocaleString("en-US")}
 										</Text>
+										<Text style={parts.cellLabel}>
+											residents, {latest.label}
+										</Text>
+										<Text style={parts.cellLabel}>{data.growth.takeaway}</Text>
 									</View>
+									<View style={styles.growthChart}>
+										<Columns
+											values={data.growth.series.map((p) => p.value)}
+											height={46}
+										/>
+										<View style={styles.growthYears}>
+											<Text style={parts.donutUnit}>
+												{data.growth.series[0]?.label}
+											</Text>
+											<Text style={parts.donutUnit}>{latest.label}</Text>
+										</View>
+									</View>
+								</View>
+								<View style={parts.rows}>
 									{data.forecast && (
 										<View style={parts.row}>
 											<Text style={parts.rowName} numberOfLines={1}>
@@ -425,18 +488,44 @@ export default function CityScreen() {
 											<Text style={parts.rowFigure}>{r.value}</Text>
 										</View>
 									))}
-									{data.holding && (
-										<View style={parts.row}>
-											<Text style={parts.rowName} numberOfLines={1}>
-												Tax and utilities
-											</Text>
-											<Text style={parts.rowAside}>a month</Text>
-											<Text style={parts.rowFigure}>
+								</View>
+								{data.holding && (
+									<View style={parts.split}>
+										<Donut
+											size={88}
+											parts={data.holding.rows.map((r, i) => ({
+												value: r.usd,
+												color: seriesColor(i),
+											}))}
+										>
+											<Text
+												style={parts.donutValue}
+												numberOfLines={1}
+												adjustsFontSizeToFit
+											>
 												{data.holding.display}
 											</Text>
+											<Text style={parts.donutUnit}>a month</Text>
+										</Donut>
+										<View style={parts.splitRows}>
+											<Text style={parts.cellLabel}>Tax and utilities</Text>
+											{data.holding.rows.map((r, i) => (
+												<View key={r.label} style={parts.splitRow}>
+													<View
+														style={[
+															parts.swatch,
+															{ backgroundColor: seriesColor(i) },
+														]}
+													/>
+													<Text style={parts.splitLabel} numberOfLines={1}>
+														{r.label}
+													</Text>
+													<Text style={parts.splitValue}>${r.usd}</Text>
+												</View>
+											))}
 										</View>
-									)}
-								</View>
+									</View>
+								)}
 							</Tile>
 						)}
 					</View>
@@ -730,6 +819,28 @@ const CITY_LINK_ORDER = [
 ];
 
 const styles = StyleSheet.create({
+	/** A rating word in a fixed column, so the pips before it line up. */
+	rating: { width: 74 },
+	badge: {
+		backgroundColor: colors.surface2,
+		borderRadius: 10,
+		paddingHorizontal: 9,
+		paddingVertical: 8,
+	},
+	badgeName: { marginTop: 3, lineHeight: 15 },
+	growth: {
+		flexDirection: "row",
+		alignItems: "flex-end",
+		gap: 16,
+		marginTop: 8,
+	},
+	growthFigure: { flex: 1, gap: 1 },
+	growthChart: { width: 132 },
+	growthYears: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		marginTop: 2,
+	},
 	root: { flex: 1, backgroundColor: colors.bg },
 	center: {
 		flex: 1,

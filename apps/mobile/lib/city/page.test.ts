@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
 	costRows,
 	crimeFigure,
+	crimeLevel,
 	driveRows,
 	driveTimes,
 	everydayRows,
 	fullSchoolName,
 	glancePart,
 	glanceTiles,
+	hazardLevel,
 	hazardRows,
 	otherRankings,
 	percentOf,
@@ -242,8 +244,20 @@ describe("the five tiles", () => {
 
 	it("names the best-ranked school at each level, in full", () => {
 		expect(schoolRows(city)).toEqual([
-			{ name: "Daves Creek Elementary School", rank: "#6 in Georgia" },
-			{ name: "Alliance Academy for Innovation", rank: "#5 in Georgia" },
+			{
+				name: "Daves Creek Elementary School",
+				level: "Elementary",
+				rank: "#6 in Georgia",
+				place: "#6",
+				scope: "in Georgia",
+			},
+			{
+				name: "Alliance Academy for Innovation",
+				level: "High",
+				rank: "#5 in Georgia",
+				place: "#5",
+				scope: "in Georgia",
+			},
 		]);
 		expect(
 			schoolsByLevel([
@@ -274,12 +288,15 @@ describe("the five tiles", () => {
 			],
 		};
 		expect(hazardRows({ hazards })).toEqual([
-			{ label: "Natural hazards, overall", rating: "Low" },
-			{ label: "Flood", rating: "Moderate" },
-			{ label: "Tornado", rating: "High" },
-			{ label: "Hail", rating: "Moderate" },
+			{ label: "Natural hazards, overall", rating: "Low", level: 2 },
+			{ label: "Flood", rating: "Moderate", level: 3 },
+			{ label: "Tornado", rating: "High", level: 4 },
+			{ label: "Hail", rating: "Moderate", level: 3 },
 		]);
 		expect(hazardRows({})).toEqual([]);
+		// A rating off FEMA's five steps draws no pips.
+		expect(hazardLevel("Very High")).toBe(5);
+		expect(hazardLevel("No Rating")).toBe(0);
 	});
 
 	it("says violent crime in words against the state", () => {
@@ -292,6 +309,8 @@ describe("the five tiles", () => {
 		};
 		expect(crimeFigure({ crime })).toBe("Below Georgia's rate");
 		expect(crimeFigure({})).toBeNull();
+		expect(crimeLevel({ crime })).toBe(2);
+		expect(crimeLevel({})).toBe(0);
 	});
 
 	it("names the closest everyday place of each kind", () => {
@@ -314,8 +333,18 @@ describe("the five tiles", () => {
 
 	it("lists the drives that have a time, off-peak to rush", () => {
 		expect(driveRows(city)).toEqual([
-			{ place: "Downtown Atlanta", miles: "39 mi", time: "52–83 min" },
-			{ place: "City Hall", miles: "1 mi", time: "4 min" },
+			{
+				place: "Downtown Atlanta",
+				miles: "39 mi",
+				time: "52–83 min",
+				minutes: { min: 52, max: 83 },
+			},
+			{
+				place: "City Hall",
+				miles: "1 mi",
+				time: "4 min",
+				minutes: { min: 4, max: 4 },
+			},
 		]);
 	});
 
