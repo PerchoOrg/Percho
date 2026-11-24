@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	type ShelfEntry,
 	buildShelves,
+	buildTiles,
 	shelfCountLine,
 	shelfListingIds,
 } from "./shelves";
@@ -112,5 +113,31 @@ describe("shelfListingIds", () => {
 			home("h2", "Woodstock"),
 		]);
 		expect(shelfListingIds(shelves[0] as never)).toEqual(["h1", "h2"]);
+	});
+});
+
+describe("buildTiles", () => {
+	it("makes a tile of every resolved save, an area included, in saved order", () => {
+		const tiles = buildTiles([
+			{ ...hood("c1", "Cumming"), fact: "Schools Top 12%" },
+			{
+				...area("area-city:alpharetta", "Alpharetta", "fulton"),
+				href: "/city/alpharetta",
+			},
+			home("h1", "Cumming"),
+		]);
+		expect(tiles.map((t) => [t.kind, t.title, t.sub])).toEqual([
+			["community", "Ashley Crossing", "Cumming"],
+			["area", "Alpharetta", "Cherokee County · $691/mo on a $500k home"],
+			["listing", "$624,000 · 4 bd", "Cumming"],
+		]);
+		expect(tiles[0]?.fact).toBe("Schools Top 12%");
+		expect(tiles[1]?.href).toBe("/city/alpharetta");
+	});
+
+	it("leaves out a save that has not resolved", () => {
+		expect(buildTiles([home("h1"), { id: "c9", kind: "community" }])).toEqual(
+			[],
+		);
 	});
 });

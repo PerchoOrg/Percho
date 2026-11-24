@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { areaUnitId, formatPrice, specsLine } from "./rows";
+import { areaUnitId, communityFact, formatPrice, specsLine } from "./rows";
 
 describe("formatPrice", () => {
 	it("formats with grouping and a dollar sign", () => {
@@ -31,5 +31,51 @@ describe("areaUnitId", () => {
 
 	it("passes a bare unit id through", () => {
 		expect(areaUnitId("city:decatur-ga")).toBe("city:decatur-ga");
+	});
+});
+
+describe("communityFact", () => {
+	const school = (label: string, rank: string) => ({
+		group: "Schools",
+		label,
+		rank,
+		of: "of 1,000 in GA",
+		percentile: 50,
+	});
+	const profile = {
+		asOf: "2026-11-01",
+		verdict: { good: [], watch: [] },
+		sources: [],
+	};
+
+	it("words the schools as a range and adds the home value", () => {
+		expect(
+			communityFact({
+				...profile,
+				ranks: { rows: [school("Elementary", "#120"), school("High", "#452")] },
+				homeValue: {
+					area: "ZIP 30005",
+					display: "$747K",
+					change: "",
+					headline: "",
+					baseline: "",
+					series: [],
+				},
+			}),
+		).toBe("Schools Top 12–46% · $747K");
+	});
+
+	it("prints one share when the levels agree", () => {
+		expect(
+			communityFact({
+				...profile,
+				ranks: { rows: [school("Elementary", "#120")] },
+			}),
+		).toBe("Schools Top 12%");
+	});
+
+	it("says nothing for a community with no findings", () => {
+		expect(communityFact(profile)).toBeUndefined();
+		expect(communityFact(undefined)).toBeUndefined();
 	});
 });
