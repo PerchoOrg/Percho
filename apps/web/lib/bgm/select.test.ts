@@ -362,3 +362,61 @@ describe('pricePercentile', () => {
     expect(paletteForListing({ pricePercentile: entry }).energy).toBe('moving');
   });
 });
+
+describe('selectBgm — length (phase366.25)', () => {
+  // Alpharetta's and Sugar Hill's city films ran 118 s on 80 s and 98 s
+  // tracks; the mux loops a short track, so its opening was heard twice.
+  const sized = (path: string, seconds?: number): BgmCandidate => ({
+    ...track(path, 'bed'),
+    ...(seconds !== undefined ? { seconds } : {}),
+  });
+
+  it('leaves out a track shorter than the film', () => {
+    const picks = new Set(
+      ['a', 'b', 'c', 'd', 'e', 'f'].map(
+        (seed) =>
+          selectBgm({
+            candidates: [sized('acoustic/short.mp3', 80), sized('acoustic/long.mp3', 194)],
+            vibe: 'acoustic',
+            role: 'bed',
+            seed,
+            minSeconds: 118,
+          })?.path,
+      ),
+    );
+    expect([...picks]).toEqual(['acoustic/long.mp3']);
+  });
+
+  it('drops even the incumbent when it would loop', () => {
+    const got = selectBgm({
+      candidates: [sized('acoustic/short.mp3', 98), sized('acoustic/long.mp3', 124)],
+      vibe: 'acoustic',
+      role: 'bed',
+      seed: 'x',
+      incumbent: 'acoustic/short.mp3',
+      minSeconds: 118,
+    });
+    expect(got?.path).toBe('acoustic/long.mp3');
+  });
+
+  it('keeps a track of unknown length, and never returns nothing', () => {
+    expect(
+      selectBgm({
+        candidates: [sized('acoustic/unmeasured.mp3')],
+        vibe: 'acoustic',
+        role: 'bed',
+        seed: 'x',
+        minSeconds: 118,
+      })?.path,
+    ).toBe('acoustic/unmeasured.mp3');
+    expect(
+      selectBgm({
+        candidates: [sized('acoustic/short.mp3', 60)],
+        vibe: 'acoustic',
+        role: 'bed',
+        seed: 'x',
+        minSeconds: 118,
+      })?.path,
+    ).toBe('acoustic/short.mp3');
+  });
+});

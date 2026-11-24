@@ -27,6 +27,8 @@ export interface BgmCandidate {
   /** "<vibe>/<file>.mp3" */
   path: string;
   meta?: BgmTrackMeta;
+  /** Length in seconds, when measured (`BgmState.seconds`). */
+  seconds?: number;
 }
 
 /**
@@ -171,6 +173,7 @@ export function selectBgm({
   seed,
   incumbent,
   usage,
+  minSeconds,
 }: {
   candidates: BgmCandidate[];
   vibe: BgmVibe;
@@ -192,6 +195,12 @@ export function selectBgm({
    * track ties and the seed decides, exactly as before.
    */
   usage?: Readonly<Record<string, number>>;
+  /**
+   * How long the film runs. A shorter track is looped by the mux and heard
+   * twice (phase366.25), so it is left out — the incumbent too — unless that
+   * would leave nothing. A track of unknown length stays in.
+   */
+  minSeconds?: number;
 }): BgmCandidate | null {
   if (candidates.length === 0) return null;
 
@@ -202,7 +211,11 @@ export function selectBgm({
   const vibeOf = (c: BgmCandidate): string => c.meta?.vibe ?? c.path.split('/')[0] ?? '';
 
   const usable = candidates.filter((c) => roleOf(c) === role);
-  const pool = usable.length > 0 ? usable : candidates;
+  const byRole = usable.length > 0 ? usable : candidates;
+  const longEnough = minSeconds
+    ? byRole.filter((c) => c.seconds === undefined || c.seconds >= minSeconds)
+    : byRole;
+  const pool = longEnough.length > 0 ? longEnough : byRole;
 
   // INCUMBENCY, before anything else. A track that already shipped keeps the
   // film sounding like itself; it loses its place only by being rejected,

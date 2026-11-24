@@ -132,6 +132,14 @@ export type BgmState = {
    * approve/reject process".
    */
   pending?: string[];
+  /**
+   * Each track's length in seconds, keyed like `meta` (phase366.25). A film
+   * longer than its track loops it — the mux runs the track with
+   * `-stream_loop -1` — and Alpharetta's and Sugar Hill's city films (118 s)
+   * played their 80 s and 98 s tracks a second time from the top. Measured by
+   * `scripts/admin/measure-bgm.ts`; absent for a track nobody measured yet.
+   */
+  seconds?: Record<string, number>;
   updated_at: string;
 };
 
@@ -141,6 +149,7 @@ export function emptyBgmState(): BgmState {
     rejected: [],
     pending: [],
     meta: {},
+    seconds: {},
     updated_at: new Date().toISOString(),
   };
 }
