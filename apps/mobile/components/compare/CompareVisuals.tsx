@@ -21,9 +21,11 @@ import {
 	Text,
 	View,
 } from "react-native";
-import type {
-	CompareVisuals,
-	DistanceRow,
+import {
+	type CompareVisuals,
+	type DistanceRow,
+	type ShortLine,
+	sharedFlood,
 } from "../../lib/community/compare-visuals";
 import { colors, compareSeries, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
@@ -118,7 +120,7 @@ export function CompareKey({ places }: { places: readonly ComparePlace[] }) {
 
 // ─── marks ──────────────────────────────────────────────────────────────────
 
-/** 0 → 1 once, on mount: bars grow and dots travel out from home. */
+/** 0 → 1 once, on mount: the bars grow. */
 function useGrow(delay: number): Animated.Value {
 	const v = useRef(new Animated.Value(0)).current;
 	useEffect(() => {
@@ -195,30 +197,13 @@ function PlaceLine({
 	);
 }
 
-function Dot({
-	miles,
-	axisMiles,
-	color,
-	index,
-}: { miles: number; axisMiles: number; color: string; index: number }) {
-	const grow = useGrow(index * 90);
-	return (
-		<Animated.View
-			style={[
-				styles.mileDot,
-				{
-					backgroundColor: color,
-					left: grow.interpolate({
-						inputRange: [0, 1],
-						outputRange: ["0%", `${Math.min(100, (miles / axisMiles) * 100)}%`],
-					}),
-				},
-			]}
-		/>
-	);
-}
-
-/** A kind of place: every community's nearest one on a shared mile line. */
+/**
+ * A kind of place: how far each community's nearest one is, a bar a place.
+ *
+ * It was dots on one shared mile line with the same places listed again
+ * underneath (phase386); on the phone that read as two charts of one thing
+ * (owner: "有点乱"). One line a place now, the same shape as a school's.
+ */
 function MileRow({
 	row,
 	places,
@@ -226,27 +211,6 @@ function MileRow({
 	return (
 		<View style={styles.group}>
 			<Text style={styles.groupLabel}>{row.label}</Text>
-			<View style={styles.mileAxis}>
-				<View style={styles.mileLine} />
-				<View style={styles.mileTrack}>
-					{row.cells.map((c, i) => {
-						const p = places[i];
-						return c && p ? (
-							<Dot
-								key={p.id}
-								miles={c.miles}
-								axisMiles={row.axisMiles}
-								color={p.color}
-								index={i}
-							/>
-						) : null;
-					})}
-				</View>
-			</View>
-			<View style={styles.mileEnds}>
-				<Text style={styles.mileEnd}>home</Text>
-				<Text style={styles.mileEnd}>{row.axisMiles} mi</Text>
-			</View>
 			{places.map((p, i) => {
 				const c = row.cells[i];
 				return (
@@ -255,10 +219,47 @@ function MileRow({
 						place={p}
 						text={c?.name}
 						value={c ? `${c.miles} mi` : undefined}
-					/>
+					>
+						<Bar
+							pct={c ? (c.miles / row.axisMiles) * 100 : undefined}
+							color={p.color}
+							index={i}
+						/>
+					</PlaceLine>
 				);
 			})}
 		</View>
+	);
+}
+
+/** The few plain lines the comparison opens on — `buildInShort`. */
+export function InShort({
+	lines,
+	places,
+}: { lines: readonly ShortLine[]; places: readonly ComparePlace[] }) {
+	return (
+		<Card title="In short">
+			<View style={styles.short}>
+				{lines.map((l) => {
+					const p = places[l.place];
+					return p ? (
+						<View key={l.text} style={styles.line}>
+							<View
+								style={[
+									styles.dot,
+									styles.shortDot,
+									{ backgroundColor: p.color },
+								]}
+							/>
+							<Text style={styles.shortText}>
+								<Text style={styles.shortName}>{p.name}</Text>
+								{`  ${l.text}`}
+							</Text>
+						</View>
+					) : null;
+				})}
+			</View>
+		</Card>
 	);
 }
 
@@ -286,6 +287,7 @@ export function CompareCards({
 	places,
 }: { visuals: CompareVisuals; places: readonly ComparePlace[] }) {
 	const { safety, schools, convenience, potential, cost } = visuals;
+	const flood = safety ? sharedFlood(safety.flood) : null;
 	const holdingMax = Math.max(
 		1,
 		...(cost?.holding ?? []).map((h) => h?.usd ?? 0),
@@ -300,9 +302,17 @@ export function CompareCards({
 					{safety.flood.some(Boolean) && (
 						<View style={styles.group}>
 							<Text style={styles.groupLabel}>Flood zone</Text>
-							{places.map((p, i) => (
-								<PlaceLine key={p.id} place={p} text={safety.flood[i]} />
-							))}
+							{/* The same zone for every place is said once, not once each. */}
+							{flood ? (
+								<Text style={styles.lineText}>
+									{places.length === 2 ? "Both" : `All ${places.length}`}:{" "}
+									{flood}
+								</Text>
+							) : (
+								places.map((p, i) => (
+									<PlaceLine key={p.id} place={p} text={safety.flood[i]} />
+								))
+							)}
 						</View>
 					)}
 				</Card>
@@ -445,7 +455,6 @@ export function CompareCards({
 }
 
 const DOT = 10;
-const MILE_DOT = 16;
 
 const styles = StyleSheet.create({
 	hero: {
@@ -528,6 +537,10 @@ const styles = StyleSheet.create({
 	cardTitle: { ...textStyles.headline, fontSize: 17, color: colors.ink },
 	cardNote: { ...textStyles.note, color: colors.ink2, flex: 1 },
 	group: { marginTop: 12, gap: 7 },
+	short: { marginTop: 10, gap: 9 },
+	shortDot: { marginTop: 5 },
+	shortText: { ...textStyles.body, color: colors.ink, flex: 1, lineHeight: 20 },
+	shortName: { fontWeight: "600" },
 	groupLabel: { ...textStyles.caption, color: colors.ink2 },
 
 	line: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
@@ -545,31 +558,6 @@ const styles = StyleSheet.create({
 	},
 	fill: { height: 8, borderRadius: 4 },
 
-	// The line is inset by half a dot each side, so a place at home or at the
-	// axis's end is drawn whole.
-	mileAxis: { height: MILE_DOT + 4, justifyContent: "center" },
-	mileLine: {
-		height: 4,
-		borderRadius: 2,
-		backgroundColor: colors.surface2,
-	},
-	mileTrack: {
-		position: "absolute",
-		left: MILE_DOT / 2,
-		right: MILE_DOT / 2,
-		top: 2,
-		height: MILE_DOT,
-	},
-	mileDot: {
-		position: "absolute",
-		top: 0,
-		width: MILE_DOT,
-		height: MILE_DOT,
-		marginLeft: -MILE_DOT / 2,
-		borderRadius: MILE_DOT / 2,
-		borderWidth: 2,
-		borderColor: colors.surface,
-	},
 	mileEnds: {
 		flexDirection: "row",
 		justifyContent: "space-between",

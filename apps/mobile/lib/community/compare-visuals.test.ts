@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
 	type VisualCommunity,
 	buildCompareVisuals,
+	buildInShort,
 	hasVisuals,
+	sharedFlood,
 } from "./compare-visuals";
 
 const seg = (name: string, distance: string, bucket: string) => ({
@@ -201,5 +203,34 @@ describe("buildCompareVisuals", () => {
 		});
 		expect(hasVisuals(none)).toBe(false);
 		expect(hasVisuals(v)).toBe(true);
+	});
+});
+
+describe("buildInShort", () => {
+	it("names the place that stands out in each direction, with its figure", () => {
+		const v = buildCompareVisuals([windward, northbrooke]);
+		expect(buildInShort(v)).toEqual([
+			{
+				place: 0,
+				text: "The best-ranked schools nearby — Top 3–12% in Georgia.",
+			},
+			{ place: 0, text: "The shortest drive to a hospital — 2.4 mi." },
+			{ place: 1, text: "The lowest home values — around $520K." },
+		]);
+	});
+
+	it("writes no line where only one place has a figure, or the gap is small", () => {
+		// One place alone, compared with a place nobody has researched.
+		expect(buildInShort(buildCompareVisuals([windward, bare]))).toEqual([]);
+		// The same place twice: every gap is zero.
+		expect(buildInShort(buildCompareVisuals([windward, windward]))).toEqual([]);
+	});
+});
+
+describe("sharedFlood", () => {
+	it("is the zone when every place has the same one", () => {
+		expect(sharedFlood(["Zone X", "Zone X", "Zone X"])).toBe("Zone X");
+		expect(sharedFlood(["Zone X", "Zone AE"])).toBeNull();
+		expect(sharedFlood(["Zone X", undefined])).toBeNull();
 	});
 });
