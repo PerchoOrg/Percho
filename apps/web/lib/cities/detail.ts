@@ -39,6 +39,7 @@ import { bySection } from './chapters';
 import { cityForecast } from './forecasts';
 import {
   articleLinks,
+  cityCrime,
   cityEveryday,
   cityHazards,
   cityLinks,
@@ -278,6 +279,7 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
   });
   const forecast = cityForecast(city.county);
   const hazards = cityHazards(city.slug);
+  const crime = cityCrime(city.slug);
   const allSchools = citySchools(city.slug);
   const everyday = cityEveryday(city.slug);
   return {
@@ -298,6 +300,7 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
       }),
     },
     credits,
+    ...(crime ? { crime } : {}),
     ...(hazards ? { hazards } : {}),
     ...(everyday ? { everyday } : {}),
     ...(reviews ? { reviews } : {}),

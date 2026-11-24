@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	costRows,
+	crimeFigure,
 	driveRows,
 	driveTimes,
 	everydayRows,
@@ -279,6 +280,18 @@ describe("the five tiles", () => {
 			{ label: "Hail", rating: "Moderate" },
 		]);
 		expect(hazardRows({})).toEqual([]);
+	});
+
+	it("says violent crime in words against the state", () => {
+		const crime = {
+			violent: "Below" as const,
+			against: "Georgia",
+			year: 2025,
+			agency: "Duluth Police Department",
+			source: { name: "FBI Crime Data Explorer" },
+		};
+		expect(crimeFigure({ crime })).toBe("Below Georgia's rate");
+		expect(crimeFigure({})).toBeNull();
 	});
 
 	it("names the closest everyday place of each kind", () => {

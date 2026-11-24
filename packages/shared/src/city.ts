@@ -12,19 +12,27 @@
  * fast it grew, its schools, getting around, what is planned — and every figure
  * names its source.
  *
- * NO CRIME FIELD, on purpose (owner 2026-11-15: "安全数据先不放"; `lenses.ts`
- * records the fair-housing reason). Do not add one without him.
+ * CRIME: one field, `crime`, and no more than it carries (phase385). It was
+ * kept off the page entirely (owner 2026-11-15: "安全数据先不放"; `lenses.ts`
+ * records the fair-housing reason) until his ruling of 2026-11-24: "只看暴力
+ * 犯罪 只定性 上链接 不显示具体数量". So: violent crime only; said in words
+ * against the state's rate; the source linked; NO count or rate on the wire;
+ * one figure for the whole city, never per community, never a map shading.
+ * Widening any of that needs him.
  *
  * Safety on the page is `hazards` (phase384): how exposed the place is to
  * natural hazards, by FEMA's National Risk Index. It was the hospital, fire
  * station and police station nearest the centre (phase371–383) until the
  * owner pointed out that every city has those (2026-11-24: "哪个城市没有警察局
- * … 放综合安全评分 以及flood等自然因素 不要放些公共设施"). Crime figures stay
- * a link out; a score that counts crime needs his ruling first. Not part of
- * the stored, researched profile.
+ * … 放综合安全评分 以及flood等自然因素 不要放些公共设施"). The two are shown
+ * side by side, not blended into one score — no weighting of crime against
+ * floods has a basis. Neither is part of the stored, researched profile.
  */
 
 import type { ReviewDimension } from './review-dimensions';
+
+/** How a city's violent-crime rate stands against its state's. */
+export type CrimeLevel = 'Well below' | 'Below' | 'Near' | 'Above' | 'Well above';
 
 export interface CitySource {
   name: string;
@@ -142,6 +150,20 @@ export interface CityDetailDTO extends CityFundamentals {
     /** FEMA's release, "December 2025". */
     version: string;
     rows: Array<{ label: string; rating: string }>;
+  };
+  /**
+   * Violent crime reported to the city's own police department in `year`, per
+   * resident, against the state's rate — in words only (see the header). Absent
+   * for a city with no department of its own or no full year of figures.
+   */
+  crime?: {
+    violent: CrimeLevel;
+    /** "Georgia" */
+    against: string;
+    year: number;
+    /** "Duluth Police Department" */
+    agency: string;
+    source: CitySource;
   };
   /**
    * Everyday places around the city's centre, by kind — groceries, a

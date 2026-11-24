@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { cityForecast } from './forecasts';
 import {
   articleLinks,
+  cityCrime,
   cityEveryday,
   cityHazards,
   cityLinks,
   citySchools,
+  crimeLevel,
   schoolSite,
 } from './links';
 
@@ -139,6 +141,33 @@ describe('cityHazards', () => {
     expect(h?.tracts).toBeGreaterThan(5);
     expect(JSON.stringify(h)).not.toMatch(/crime|police/i);
     expect(cityHazards('nowhere-ga')).toBeUndefined();
+  });
+});
+
+describe('cityCrime', () => {
+  it('puts a rate into words against the state’s', () => {
+    expect(crimeLevel(40, 305)).toBe('Well below');
+    expect(crimeLevel(152, 305)).toBe('Well below');
+    expect(crimeLevel(173, 305)).toBe('Below');
+    expect(crimeLevel(300, 305)).toBe('Near');
+    expect(crimeLevel(335, 305)).toBe('Near');
+    expect(crimeLevel(400, 305)).toBe('Above');
+    expect(crimeLevel(460, 305)).toBe('Well above');
+  });
+
+  it('sends words, a year and a source — never a count or a rate', () => {
+    const crime = cityCrime('duluth-ga');
+    expect(crime?.against).toBe('Georgia');
+    expect(crime?.agency).toBe('Duluth Police Department');
+    expect(crime?.source.url).toMatch(/^https:\/\//);
+    // The year is the only number on the wire.
+    expect(JSON.stringify({ ...crime, year: 0 })).not.toMatch(/[1-9]/);
+  });
+
+  it('says nothing for a city with no police department of its own', () => {
+    expect(cityCrime('sugar-hill-ga')).toBeUndefined();
+    expect(cityCrime('buford-ga')).toBeUndefined();
+    expect(cityCrime('nowhere-ga')).toBeUndefined();
   });
 });
 

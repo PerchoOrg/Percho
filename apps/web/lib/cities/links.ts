@@ -8,13 +8,14 @@
  *
  * Pure, so the page's links can be tested without a database.
  */
-import type { CityDetailDTO } from '@percho/shared/city';
+import type { CityDetailDTO, CrimeLevel } from '@percho/shared/city';
 import {
   CITY_DISTRICTS,
   CITY_SITES,
   COUNTY_LINKS,
   REDFIN_CITIES,
 } from '../communities/local-links';
+import crimeFile from './city-crime.json';
 import hazardsFile from './city-hazards.json';
 import placesFile from './city-places.json';
 import schoolsFile from './city-schools.json';
@@ -140,6 +141,46 @@ const HAZARDS = hazardsFile as {
  */
 export function cityHazards(slug: string): CityDetailDTO['hazards'] | undefined {
   return HAZARDS.cities[slug];
+}
+
+const CRIME = crimeFile as {
+  against: string;
+  cities: Record<
+    string,
+    { agency: string; year: number; violentPer100k: number; statePer100k: number }
+  >;
+};
+
+/**
+ * A rate against the state's, in words. Half the state's rate or less is
+ * "Well below"; within a tenth of it is "Near"; half as much again is "Well
+ * above". The bands are wide on purpose: a city of 30,000 moves by tens per
+ * 100,000 from one year to the next.
+ */
+export function crimeLevel(rate: number, stateRate: number): CrimeLevel {
+  const ratio = rate / stateRate;
+  if (ratio <= 0.5) return 'Well below';
+  if (ratio < 0.9) return 'Below';
+  if (ratio <= 1.1) return 'Near';
+  if (ratio < 1.5) return 'Above';
+  return 'Well above';
+}
+
+/**
+ * The city's violent crime against the state's rate — the words, the year,
+ * who reported it and where to read it. The rates stay in `city-crime.json`:
+ * the page shows no count (`packages/shared/src/city.ts`).
+ */
+export function cityCrime(slug: string): CityDetailDTO['crime'] | undefined {
+  const c = CRIME.cities[slug];
+  if (!c || !(c.statePer100k > 0)) return undefined;
+  return {
+    violent: crimeLevel(c.violentPer100k, c.statePer100k),
+    against: CRIME.against,
+    year: c.year,
+    agency: c.agency,
+    source: { name: 'FBI Crime Data Explorer', url: 'https://cde.ucr.cjis.gov/' },
+  };
 }
 
 const PLACES = placesFile as {
