@@ -34,6 +34,13 @@ export async function readBgmState(): Promise<BgmState> {
         ? parsed.pending.filter((s) => typeof s === 'string')
         : [],
       meta: parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {},
+      // Carried through for the same reason as `pending`: a reject click
+      // rewrites the sidecar and must not forget every track's length.
+      seconds: Object.fromEntries(
+        Object.entries(
+          parsed.seconds && typeof parsed.seconds === 'object' ? parsed.seconds : {},
+        ).filter((e): e is [string, number] => typeof e[1] === 'number' && e[1] > 0),
+      ),
       updated_at:
         typeof parsed.updated_at === 'string' ? parsed.updated_at : new Date().toISOString(),
     };

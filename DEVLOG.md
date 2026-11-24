@@ -23,6 +23,21 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 18:15 UTC — phase366.25: background music repeated — across films, and within two
+
+**Objective**: owner 2026-11-24: "背景音乐好像有重复的".
+**Findings**:
+- Across films: the nineteen community films each have their own track, but the plan's "least used first" counted community films only. Five tracks were in a city film and a community film both (vibehorn in Hedgerows and the Cumming and Buford city films; just-keep-walking in Ward's Crossing and Suwanee's; miromax in Edinburgh and Duluth's; the-hamptons in Arbors and Sugar Hill's), and two city films shared one.
+- Within a film: the mux loops a track shorter than the film (`-stream_loop -1`). Alpharetta's city film (118.5 s) ran an 80 s track and Sugar Hill's (118.5 s) a 98 s one, so each opened its track a second time near the end.
+**Actions**:
+- `lib/poi/tour-steps/plan.ts` `chooseBgm`: usage counts community AND city films, one per film, not counting the film's own rows; the film's length (clips less crossfades plus the end card) is passed as `minSeconds`.
+- `lib/bgm/select.ts` `selectBgm`: `minSeconds` leaves out tracks shorter than the film — the incumbent too — unless that empties the pool; a track of unknown length stays in. Tests in `select.test.ts` (3 new).
+- `BgmState.seconds` (`lib/bgm/storage.ts`, carried through by `state-store.ts` so a reject click does not wipe it) holds each track's length; `scripts/admin/measure-bgm.ts` measured all 72 tracks and wrote it.
+- Six city films re-assembled with tracks no other film uses and longer than the film: Cumming → Morning Light (160 s), Alpharetta → Warm Welcome (136 s), Sugar Hill → Inspiring Spaces (127 s), Buford → Life's a Movie (121 s), Duluth → Tides Turning (120 s), Suwanee → Daily Beetle (317 s). Johns Creek's was already unique and long enough. Narration re-voiced (~70 lines, no new spend).
+**Issue found on the way**: a photo's clip is ONE row per photo and engine, shared by every film that uses the photo. Community films since phase366 re-rendered eight clips that the Cumming, Suwanee and Sugar Hill city films also use, at their own (shorter) length and move; the first re-assembly picked those up and came out 1.5–7.5 s shorter with different camera moves. Re-rendered the eight at the city films' settings and re-assembled the three again — every shot is back to its original length (Suwanee 115.2 s against 112.0 s: its old film had been timed by the phase366.11 fit, not measured). The community films' uploaded videos are unaffected; a future re-assembly of one of them would pick up the city's version of a shared clip. Not fixed — the rule needs a clip per photo, engine AND duration, an owner-level change.
+- Final assemblies: Cumming `03182761`, Suwanee `61adc61b`, Sugar Hill `a1e44859`, Alpharetta `17bb7c4b`, Buford `618f2497`, Duluth `11084ffd`. Production `/api/mobile/city/<slug>` serves each.
+**Verified**: web vitest 480 (lib/bgm, lib/poi), typecheck 0; worker log shows each planned track muxed with every narration line voiced.
+
 ## 2026-11-24 16:42 UTC — phase366.24: White Columns (Alpharetta, 19th film)
 
 **Objective**: owner 2026-11-24 "go" on White Columns — pitched with its community footage confirmed first, and with the caveat that it is in the City of Milton by law and Alpharetta by post (`communities.city` says Alpharetta).

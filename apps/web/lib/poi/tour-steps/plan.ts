@@ -7,6 +7,7 @@
  * queue; this step writes its result back under that step's `photos` key,
  * because the whole admin surface reads the shot list from there.
  */
+import { TOUR_END_CARD_S, TOUR_XFADE_S } from '../../feed/tour-segments';
 import type { PlaceFact } from '../tour-orchestrator/insights';
 import { tourPoiSet } from '../tour-poi-set';
 import { planCityFilm } from './city-plan';
@@ -312,6 +313,7 @@ async function chooseBgm(sb: TourDb, run: RunRow, shots: unknown[]) {
     type Candidate = Parameters<typeof selectBgm>[0]['candidates'][number];
     const state = await readBgmState();
     const blocked = new Set([...state.rejected, ...(state.pending ?? [])]);
+    const lengths = state.seconds ?? {};
 
     const candidates: Candidate[] = [];
     for (const vibe of BGM_VIBES) {
@@ -320,7 +322,12 @@ async function chooseBgm(sb: TourDb, run: RunRow, shots: unknown[]) {
         if (!/\.mp3$/i.test(obj.name)) continue;
         const path = `${vibe}/${obj.name}`;
         if (blocked.has(path)) continue;
-        candidates.push({ path, meta: state.meta?.[path] });
+        const seconds = lengths[path];
+        candidates.push({
+          path,
+          meta: state.meta?.[path],
+          ...(seconds !== undefined ? { seconds } : {}),
+        });
       }
     }
     if (candidates.length === 0) return null;
@@ -341,45 +348,56 @@ async function chooseBgm(sb: TourDb, run: RunRow, shots: unknown[]) {
     const medianMiles = miles.length > 0 ? (miles[Math.floor(miles.length / 2)] ?? null) : null;
     const vibe = paletteForCommunity({ bucketCounts, medianMiles });
 
+    // How long the film will run: the clips joined by their crossfades, plus
+    // the end card. A shorter track would loop (phase366.25).
+    const clipSeconds = (shots as Array<{ duration_s?: number }>).map((sh) => sh.duration_s ?? 0);
+    const filmSeconds =
+      clipSeconds.reduce((a, b) => a + b, 0) -
+      TOUR_XFADE_S * Math.max(0, clipSeconds.length - 1) +
+      TOUR_END_CARD_S;
+
     // What this community last shipped with. Keeping it is what actually makes
     // the choice stable: the seed only picks an index, so growing the library
     // moves every index and a re-render would come back with music nobody
     // reviewed. Assemblies are the record of what really went out.
     //
     // The same rows also give the usage counts that spread the choice across
-    // the library (2026-09-03) — one per COMMUNITY, since a community that was
-    // re-rendered six times is still one film.
-    const { data: shipped } = await sb
-      .from('tour_assemblies')
-      .select('community_id, bgm')
-      .not('bgm', 'is', null)
-      .order('created_at', { ascending: false });
+    // the library (2026-09-03) — one per FILM, since a community that was
+    // re-rendered six times is still one film. City films count too
+    // (phase366.25): they play in the same deck, and counting only community
+    // films is how five tracks came to be in a city's film and a
+    // neighbourhood's both, and Cumming's and Buford's city films shared one.
+    // The film's own rows do not count against it.
+    const [{ data: shipped }, { data: cityShipped }] = await Promise.all([
+      sb
+        .from('tour_assemblies')
+        .select('community_id, bgm')
+        .not('bgm', 'is', null)
+        .order('created_at', { ascending: false }),
+      sb
+        .from('city_tour_assemblies')
+        .select('city_id, bgm')
+        .not('bgm', 'is', null)
+        .order('created_at', { ascending: false }),
+    ]);
+    const films = [
+      ...(shipped ?? []).map((r) => ({ kind: 'community', id: r.community_id, bgm: r.bgm })),
+      ...(cityShipped ?? []).map((r) => ({ kind: 'city', id: r.city_id, bgm: r.bgm })),
+    ];
     const usage: Record<string, number> = {};
     const counted = new Set<string>();
     let incumbent: string | null = null;
-    for (const row of shipped ?? []) {
-      const path = (row.bgm as { path?: string } | null)?.path;
+    for (const film of films) {
+      const path = (film.bgm as { path?: string } | null)?.path;
       if (!path) continue;
-      if (run.scope.kind === 'community' && row.community_id === run.entity_id) {
+      if (film.kind === run.scope.kind && film.id === run.entity_id) {
         incumbent ??= path;
+        continue;
       }
-      const key = `${row.community_id} ${path}`;
+      const key = `${film.kind} ${film.id} ${path}`;
       if (counted.has(key)) continue;
       counted.add(key);
       usage[path] = (usage[path] ?? 0) + 1;
-    }
-
-    // A city film (phase318) keeps its own last track; the community rows
-    // above still spread the choice across the library.
-    if (run.scope.kind === 'city') {
-      const { data: mine } = await sb
-        .from('city_tour_assemblies')
-        .select('bgm')
-        .eq('city_id', run.entity_id)
-        .not('bgm', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      incumbent = (mine?.[0]?.bgm as { path?: string } | null)?.path ?? null;
     }
 
     // 'bed' always: this film is narrated, and a track that surges fights the
@@ -391,6 +409,7 @@ async function chooseBgm(sb: TourDb, run: RunRow, shots: unknown[]) {
       seed: run.entity_id,
       incumbent,
       usage,
+      minSeconds: filmSeconds,
     });
     if (!picked) return null;
     return { path: picked.path, title: picked.meta?.title ?? null, vibe, role: 'bed' as const };
