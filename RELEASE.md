@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-24
+- **Cardinal Lake Estates in Duluth has a neighbourhood film — the twentieth.** It opens on the community pool and its private lake at sunset, then Duluth Town Green, the schools, Shorty Howell and McDaniel Farm parks, the railway museum, and the places to eat and shop nearby.
 - **No more repeated music.** Six city films have new background music, so no song now plays in both a city's film and a neighbourhood's, and none runs out and starts over before the film ends. New films choose a song long enough for their length.
 - **White Columns in Milton (Alpharetta) has a neighbourhood film.** It opens at the stone gates, the country club's pool, the Tom Fazio golf course and the clubhouse, then the lake, Birmingham Park's trails, the schools, Milton's parks, the library and live music under the pines at Matilda's.
 - **Ward's Crossing in Johns Creek has a neighbourhood film.** New townhomes by The Providence Group: it opens at the stone entrance, the pool and cabana and the neighbourhood from the air, then Autrey Mill, the river parks, The Forum, Johns Creek High and the places to eat nearby.

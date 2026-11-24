@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 19:18 UTC — phase366.26: Cardinal Lake Estates (Duluth) — the twentieth community film
+
+**Objective**: owner 2026-11-24 "下一个" on Cardinal Lake Estates, pitched with its footage confirmed first. It completes the batch the owner asked for on 2026-11-20 ("先扩充到20个").
+**Actions**: run `adb5d1f2`; the community act is Google's "Cardinal Lake Pool And Clubhouse Facility": the pool, and the lake three ways (sunset, sunbeams through cloud, blue water). The civic association's site (cardinallake.com) has no images; the one active listing's gallery is interiors only. Rejected by what they tell a buyer: a dock with a person's legs, a party set up indoors, the lake through a chain-link fence, a park map and a historical marker at 960 px, a coffee shop at 1146 and 450 px, a mall at 1237 px, a sauna room and its dome ceiling, school trophy cases (2), store interiors (2), food close-ups and display cases (5). Editorial, film-only: The Home Depot, USPS, Dave & Buster's, Gohan Buffet, Medieval Times, LA Fitness, Sweet Hut and La Abuela (their only photos were food), the association's board page. Restored after the plan warned `film_short` (51.5 s): McDaniel Farm Park's historic entrance (the barn and footbridge) and Jeju Sauna (its storefront only).
+- The first cut kept a plate of arepas for La Abuela; re-cut without it. Assembly `26d1e274`, `cf_stream_uid 552c9b530d95220a60fd297e0bd3e630`, 61.0 s, 21 clips; community act 4 clips. Music: Driving Ambition (102 s, used by no other film) — chosen under phase366.25's rules. **Spend: 2 Seedance ≈ $0.28** (the lake at sunset, Duluth Town Green). Profile written.
+**Verified**: frames every 2 s; production feed serves the uid (20 community films); `/watch/c/cardinal-lake` 200.
+**Next steps**: the batch is done. Open with the owner: the shared-clip drift (phase366.25), the FMLS points on four films (phase366.19/20).
+
 ## 2026-11-24 18:15 UTC — phase366.25: background music repeated — across films, and within two
 
 **Objective**: owner 2026-11-24: "背景音乐好像有重复的".
