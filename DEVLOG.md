@@ -23,6 +23,22 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 07:05 UTC — phase388: the comparison opens "In short"; one line a place; a shared flood zone said once
+
+**Objective**: owner, with a screenshot of the phase387 compare (Apremont - Highcroft / Ashley Crossing / Windward): "这个页面太多槽点 — 上面saved compare很奇怪; percho take 没看懂; safety没看到有点乱 而且重复了三句一样的flood zone".
+**What the phone shows**:
+- **Header**: a bare `‹` and `Compare`. "‹ Saved" set beside the title read as one phrase, "Saved Compare".
+- **In short** replaces Percho's take when the places have profiles: a few plain lines, each a coloured dot, the place's name in bold and what stands out — for his three: Windward "The best-ranked schools nearby — Top 1–7% in Georgia."; Apremont - Highcroft "The shortest drive to a hospital — 2.9 mi.", "The lowest home values — around $537K.", "The least to hold a home — ≈ $700 a month before the mortgage." (run against the live details).
+- **Safety / Convenience**: the mile line with dots is gone. One line a place — what it is, how far, a bar — the same shape as a school's row, so a card has one chart, not a chart and a list of the same thing.
+- **Flood zone**: when every place has the same one it is said once — "All 3: Minimal flood hazard · Zone X".
+**Actions**: `lib/community/compare-visuals.ts` — `buildInShort`, `sharedFlood` (tests +4, 13 in the file); `components/compare/CompareVisuals.tsx` — `InShort`, `MileRow` as bars, the `Dot` mark and its styles removed; `app/compare-communities.tsx` — header, and `TakeCard` only when nothing is drawn.
+**Decisions**:
+1. **The old take was the wrong text for this page, not just hard prose.** It is written from the phase281 table — POI counts ("40 fitness to Windward's 1"), owner-occupancy, resident ratings nobody has left — none of which the cards below show. "In short" is written from the cards' own figures, so each line can be checked in the card of the same name.
+2. **A line needs a real gap and an undisputed direction**: schools ≥ 5 points of mean share, groceries ≥ 0.5 mi, hospital ≥ 1 mi, home value ≥ 5%, holding cost ≥ $50 a month; better-ranked, nearer, cheaper. No line weighs one direction against another, and places with no clear gaps get no card. This does name a leader per direction, which the phase261 "no best cell" rule did not allow in the table; the table itself still marks nothing.
+3. Home value is worded "the lowest", not "the best" — cheaper is a fact, whether it is good depends on the buyer.
+**Verified**: mobile typecheck 0, lint 0 errors / 5 warnings, vitest 918. Not seen on a device.
+**Next steps**: owner looks again. Still open from phase387: whether the hospital distance belongs in the comparison.
+
 ## 2026-11-24 06:50 UTC — phase387: Saved's button says Compare; no fire station in the comparison
 
 **Objective**: owner on phase386: "不要用select 要说compare" and "比较里的safety比较fire station的距离很奇怪".

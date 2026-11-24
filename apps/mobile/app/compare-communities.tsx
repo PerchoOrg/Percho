@@ -36,6 +36,10 @@ import { splitRows } from "@percho/shared/compare-take";
  * colour a place (`components/compare/CompareVisuals.tsx`). The phase281
  * table is still here, whole, behind "Show the full table"; it opens by
  * itself when none of the places has a profile to draw.
+ *
+ * phase388: with profiles to draw, the take gives way to "In short" — a few
+ * plain lines from the same figures the cards show (`buildInShort`). The
+ * phase270 take is still what a set of unresearched places opens on.
  */
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -57,12 +61,14 @@ import {
 	CompareHero,
 	CompareKey,
 	type ComparePlace,
+	InShort,
 	placeColor,
 } from "../components/compare/CompareVisuals";
 import { TakeCard } from "../components/compare/TakeCard";
 import { communityDetailUrl } from "../lib/api/base";
 import {
 	buildCompareVisuals,
+	buildInShort,
 	hasVisuals,
 } from "../lib/community/compare-visuals";
 import type { CommunityDetailDTO } from "../lib/community/detail-dto";
@@ -149,6 +155,10 @@ export default function CompareCommunitiesScreen() {
 		color: placeColor(i),
 	}));
 	const drawn = visuals !== null && hasVisuals(visuals);
+	const short = useMemo(
+		() => (visuals ? buildInShort(visuals) : []),
+		[visuals],
+	);
 	// With nothing to draw the table is the screen, as it was before phase386.
 	const tableOpen = showTable || !drawn;
 
@@ -161,7 +171,9 @@ export default function CompareCommunitiesScreen() {
 					accessibilityRole="button"
 					accessibilityLabel="Back"
 				>
-					<Text style={styles.back}>‹ Saved</Text>
+					{/* A bare chevron: "‹ Saved" beside the title read as one phrase,
+					    "Saved Compare" (owner, phase388). */}
+					<Text style={styles.back}>‹</Text>
 				</Pressable>
 				<Text style={styles.title}>Compare</Text>
 			</View>
@@ -199,11 +211,14 @@ export default function CompareCommunitiesScreen() {
 						}}
 					/>
 					<CompareKey places={places} />
-					{take && (
+					{/* The phase270 take is written from the table; with profiles to
+					    draw, the page opens on what the cards say instead. */}
+					{!drawn && take && (
 						<View style={styles.take}>
 							<TakeCard take={take} />
 						</View>
 					)}
+					{short.length > 0 && <InShort lines={short} places={places} />}
 					{visuals && <CompareCards visuals={visuals} places={places} />}
 
 					{drawn && (
@@ -294,7 +309,7 @@ const styles = StyleSheet.create({
 		gap: 12,
 		marginBottom: 12,
 	},
-	back: { ...textStyles.body, color: colors.accent },
+	back: { ...textStyles.title1, fontWeight: "400", color: colors.accent },
 	title: { ...textStyles.title2, color: colors.ink },
 	center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
 	body: { ...textStyles.body, color: colors.ink2 },

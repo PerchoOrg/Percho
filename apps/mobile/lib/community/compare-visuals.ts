@@ -237,3 +237,146 @@ export function hasVisuals(v: CompareVisuals): boolean {
 		v.cost !== null
 	);
 }
+
+// ─── in short ───────────────────────────────────────────────────────────────
+
+/** One plain finding: which place, and what stands out about it. */
+export interface ShortLine {
+	/** Index of the place the line is about. */
+	place: number;
+	/** "The best-ranked schools nearby — Top 5–12% in Georgia." */
+	text: string;
+}
+
+/**
+ * The index of the lowest value, when it is clear of the next by `minGap`.
+ * Needs two places with a figure: one figure alone leads nothing.
+ */
+function lowest(
+	values: readonly (number | undefined)[],
+	minGap: number,
+): number | null {
+	const known = values
+		.map((v, i) => ({ v, i }))
+		.filter((x): x is { v: number; i: number } => x.v !== undefined)
+		.sort((a, b) => a.v - b.v);
+	const [first, second] = known;
+	if (!first || !second || second.v - first.v < minGap) return null;
+	return first.i;
+}
+
+/** "$747K" → 747000, "$1.2M" → 1200000. */
+function usdOf(display: string): number | undefined {
+	const m = display.match(/\$([\d.]+)\s*([KM])/i);
+	if (!m?.[1]) return undefined;
+	return Number(m[1]) * (m[2]?.toUpperCase() === "M" ? 1_000_000 : 1000);
+}
+
+/**
+ * What the cards below say, in a few plain lines (phase388).
+ *
+ * The comparison used to open on the phase270 take, written from the old
+ * table — "40 fitness to Windward's 1", owner-occupancy. Owner 2026-11-24, on
+ * the phone: "percho take 没看懂". This replaces it wherever the places have
+ * profiles: one line per direction, naming the place that stands out and the
+ * figure that says so, each readable in the card of the same name underneath.
+ *
+ * A line is only written when the gap is real (the thresholds below) and the
+ * direction is one nobody argues with — better-ranked, nearer, cheaper. It is
+ * not a verdict: no line weighs schools against cost, and a set of places
+ * with no clear gaps gets no lines.
+ */
+export function buildInShort(v: CompareVisuals): ShortLine[] {
+	const lines: ShortLine[] = [];
+
+	// Schools: the mean share over the levels a place has, at least 5 points
+	// clear of the next place.
+	const count = v.schools[0]?.cells.length ?? 0;
+	const shares = Array.from({ length: count }, (_, i) =>
+		v.schools.flatMap((l) => {
+			const c = l.cells[i];
+			return c ? [c.share] : [];
+		}),
+	);
+	const school = lowest(
+		shares.map((s) =>
+			s.length > 0 ? s.reduce((a, b) => a + b, 0) / s.length : undefined,
+		),
+		5,
+	);
+	const best = school !== null ? shares[school] : undefined;
+	if (school !== null && best) {
+		const lo = Math.min(...best);
+		const hi = Math.max(...best);
+		lines.push({
+			place: school,
+			text: `The best-ranked schools nearby — Top ${lo === hi ? lo : `${lo}–${hi}`}% in Georgia.`,
+		});
+	}
+
+	const nearest = (
+		row: DistanceRow | undefined,
+		minGap: number,
+		say: string,
+	) => {
+		const i = row
+			? lowest(
+					row.cells.map((c) => c?.miles),
+					minGap,
+				)
+			: null;
+		const c = i !== null ? row?.cells[i] : undefined;
+		if (i !== null && c)
+			lines.push({ place: i, text: `${say} — ${c.miles} mi.` });
+	};
+	nearest(
+		v.convenience.find((r) => r.label === "Errands"),
+		0.5,
+		"The shortest trip for groceries",
+	);
+	nearest(
+		v.safety?.rows.find((r) => r.label === "Hospital"),
+		1,
+		"The shortest drive to a hospital",
+	);
+
+	// Home value: the newest point of the charted line, else the printed
+	// figure. 5% apart or it is the same price.
+	const values = (v.potential?.cells ?? []).map((c, i) => {
+		const line = v.potential?.series[i];
+		return line?.[line.length - 1] ?? (c ? usdOf(c.display) : undefined);
+	});
+	const cheapest = lowest(values, 0);
+	const price = cheapest !== null ? values[cheapest] : undefined;
+	if (
+		cheapest !== null &&
+		price !== undefined &&
+		lowest(values, price * 0.05) === cheapest
+	) {
+		lines.push({
+			place: cheapest,
+			text: `The lowest home values — around ${v.potential?.cells[cheapest]?.display}.`,
+		});
+	}
+
+	const hold = lowest(
+		(v.cost?.holding ?? []).map((h) => h?.usd),
+		50,
+	);
+	if (hold !== null) {
+		lines.push({
+			place: hold,
+			text: `The least to hold a home — ${v.cost?.holding[hold]?.display} a month before the mortgage.`,
+		});
+	}
+
+	return lines;
+}
+
+/** The flood zone in one line when every place has the same one, else null. */
+export function sharedFlood(
+	flood: readonly (string | undefined)[],
+): string | null {
+	const first = flood[0];
+	return first !== undefined && flood.every((f) => f === first) ? first : null;
+}
