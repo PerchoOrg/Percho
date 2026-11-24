@@ -23,52 +23,36 @@
  * the bill.
  *
  * phase379: the header is the place block now (the owner, 2026-11-23, on the
- * header: "信息本身也和卡片有重合"; then "numbers above the card") — a place
- * line with Map over three figures, at the header's own 86, so nothing below
- * this paragraph moved. For one day (phase378) the block sat under the card
- * and the card hung from the top of the screen at an 8pt gutter.
+ * header: "信息本身也和卡片有重合"; then "numbers above the card"), at the
+ * header's own 86. For one day before that (phase378) the block sat under the
+ * card and the card hung from the top of the screen at an 8pt gutter.
+ *
+ * phase380, now: "card下方空隙多了 整体向下或者增大上面的文字". The page is laid
+ * out from the bottom (`theme/feed-page.ts`): the card 12 above the tab bar
+ * at an 8pt gutter, the larger block 14 above the card, and whatever is left
+ * above the block. The tests below run that arithmetic per device.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CANVAS_ASPECT, cardAspect, cardFrameHeight } from "./card-frame";
-import { headerScale } from "./header-scale";
+import {
+	BLOCK_GAP,
+	CARD_FOOT,
+	GUTTER,
+	MIN_ROOM,
+	blockHeight,
+	feedPage,
+} from "./feed-page";
 
 const FEED = readFileSync("app/(tabs)/feed.tsx", "utf8");
 const STACK = readFileSync("components/SwipeStack.tsx", "utf8");
 
-/** The feed's fixed chrome below the stage, in points. */
+/** The feed's fixed chrome below the page, in points. */
 const TAB_BAR = 62;
-/**
- * `CARD_INSET.top` / `.bottom`. No longer symmetric (2026-09-07): the type row
- * left the header, so the card hangs from the title's own line and 12 reads
- * closer than 16 did under an uppercase label.
- */
-const PAD_TOP = 12;
-const PAD_BOTTOM = 16;
-/**
- * `PlaceBlock`: 10 of room above, the 32pt place row with Map, a 4pt gap and
- * the 40pt figures row — 86, what `FeedHeader` was (20 above, an 18pt context
- * row, 4, the 44pt title row), so the card did not move when one replaced the
- * other. `theme/place-block.test.ts` pins those numbers at the component;
- * this is what they cost the film.
- *
- * It SCALES with the screen (owner decision 5 of the header, carried over),
- * so its height is per-device — `headerScale` is the same function the
- * component uses.
- */
-const HEADER_BASE = 10 + 32 + 4 + 40;
-const headerHeight = (w: number) => HEADER_BASE * headerScale(w);
 
-function pageOf(w: number, h: number, top: number, bottom: number) {
-	const cardWidth = w - gutter() * 2;
-	const content = h - top - (TAB_BAR + bottom);
-	const stage = content - headerHeight(w) - PAD_TOP - PAD_BOTTOM;
-	const ideal = cardWidth / CANVAS_ASPECT;
-	// What the stage has left once the card takes the film's shape — a third
-	// above the card and two thirds below it, by `SwipeStack`'s `restTop`.
-	const slack = stage - Math.min(stage, ideal);
-	return { cardWidth, stage, ideal, slack };
-}
+/** The page's own height: what `feed.tsx` measures and hands `feedPage`. */
+const contentOf = (h: number, top: number, bottom: number) =>
+	h - top - (TAB_BAR + bottom);
 
 /** width, height, top safe inset, bottom safe inset — points. */
 const DEVICES: readonly [string, number, number, number, number][] = [
@@ -76,15 +60,10 @@ const DEVICES: readonly [string, number, number, number, number][] = [
 	["iPhone 14 / 13", 390, 844, 47, 34],
 	["iPhone 15 / 16", 393, 852, 59, 34],
 	["iPhone 16 Pro", 402, 874, 62, 34],
+	["iPhone 14 Plus", 428, 926, 47, 34],
 	["iPhone 15 Pro Max", 430, 932, 59, 34],
 	["iPhone 16 Pro Max", 440, 956, 62, 34],
 ];
-
-function gutter(): number {
-	const m = FEED.match(/^const GUTTER = (\d+);$/m);
-	if (!m?.[1]) throw new Error("GUTTER not found in app/(tabs)/feed.tsx");
-	return Number(m[1]);
-}
 
 /** What `cover` throws away horizontally, as a share of the film's width. */
 function sideCrop(aspect: number): number {
@@ -120,8 +99,8 @@ describe("the shipping lineup", () => {
 	 */
 	it("never crops the film on a current iPhone", () => {
 		for (const [name, w, h, top, bottom] of DEVICES) {
-			const { cardWidth, stage } = pageOf(w, h, top, bottom);
-			const aspect = cardAspect(stage, cardWidth);
+			const page = feedPage(w, contentOf(h, top, bottom));
+			const aspect = page.cardWidth / page.cardHeight;
 			expect(
 				sideCrop(aspect),
 				`${name}: card aspect ${aspect.toFixed(3)} crops ${(sideCrop(aspect) * 100).toFixed(1)}% of the film`,
@@ -130,51 +109,93 @@ describe("the shipping lineup", () => {
 	});
 
 	/**
-	 * The SE is the one body whose stage caps the card below the film's shape,
-	 * so `cover` shaves its sides. The number has moved with every header
-	 * pass: ~5% at phase182.1's 78, 6.7% at phase183's 86, 8.3% at
-	 * phase183.4's 12 + 86, and **5.2% now** that the type row is gone and the
-	 * header is 86 again (× 0.962 on that screen) — the best it has been since
-	 * the wordmark came back.
-	 *
-	 * On record as a decision, not a regression: the shipping lineup starts at
-	 * the 13 mini, which draws the film whole. The guard tracks the real value
-	 * rather than sitting slack — anything that pushes the SE past ~6% needs
-	 * the owner's say-so, because it means a new row up there.
+	 * "card下方空隙多了 整体向下或者增大上面的文字" (owner, 2026-11-24, on
+	 * phase379). The gap under the card was 52–71pt; it is `CARD_FOOT` on
+	 * every phone now, and the room the screen has left goes ABOVE the place
+	 * block. This pins both halves: the whole block fits, and the room it
+	 * leaves at the top is neither negative nor a new hole.
 	 */
-	it("keeps the SE's crop under ~6%", () => {
-		const { cardWidth, stage } = pageOf(375, 667, 20, 0);
-		expect(sideCrop(cardAspect(stage, cardWidth))).toBeLessThan(0.06);
-	});
-
-	/**
-	 * The slack is what is left over, and since 2026-09-07 a THIRD of it goes
-	 * above the card and two thirds below (owner: 「the empty space between
-	 * card and header is too big」). Asserted as source because the split lives
-	 * in `SwipeStack`'s `restTop`, which the RN-free suite cannot execute. The
-	 * model above shows every shipping screen has real slack to share out.
-	 */
-	it("gives the card a third of the slack above it", () => {
-		expect(STACK).toContain("(stageHeight - frameHeight) / 3");
+	it("hangs the card a fixed step above the tab bar, the block on it", () => {
+		expect(CARD_FOOT).toBe(12);
 		for (const [name, w, h, top, bottom] of DEVICES) {
-			const { slack } = pageOf(w, h, top, bottom);
-			expect(slack, `${name}: slack`).toBeGreaterThanOrEqual(0);
+			const content = contentOf(h, top, bottom);
+			const page = feedPage(w, content);
+			expect(page.rows, `${name}: rows`).toBe("both");
+			const room =
+				content -
+				CARD_FOOT -
+				page.cardHeight -
+				BLOCK_GAP -
+				blockHeight(w, "both");
+			expect(room, `${name}: room above the block`).toBeGreaterThanOrEqual(
+				MIN_ROOM,
+			);
+			expect(room, `${name}: room above the block`).toBeLessThan(50);
 		}
 	});
 
 	/**
-	 * The card is 1080px wide on a 3x screen at 360pt. Past that it is
-	 * upsampling its own source. The Max phones deliberately sit a little over
-	 * (owner, 2026-08-23), so this is a ceiling on the OVERSHOOT, not on the
-	 * width — it fails if someone widens the card far enough to actually show.
+	 * The SE is the one body the page does not fit whole. The block gives way
+	 * instead of the film: the figures row, then the place row. Under the old
+	 * header it lost 5.2% of the film's width.
 	 */
-	it("does not outrun the 1080px source by more than ~15%", () => {
+	it("keeps the SE's film whole by giving up the block", () => {
+		const page = feedPage(375, contentOf(667, 20, 0));
+		expect(page.rows).toBe("none");
+		expect(sideCrop(page.cardWidth / page.cardHeight)).toBe(0);
+	});
+
+	/** The figures row goes first, the film is cut only when it does not fit
+	 * on its own. */
+	it("gives up the block before it cuts the film", () => {
+		const film = (390 - GUTTER * 2) / CANVAS_ASPECT;
+		const placeOnly =
+			CARD_FOOT + film + BLOCK_GAP + MIN_ROOM + blockHeight(390, "place");
+		expect(feedPage(390, placeOnly).rows).toBe("place");
+		const justTheFilm = feedPage(390, film + CARD_FOOT + MIN_ROOM);
+		expect(justTheFilm.rows).toBe("none");
+		expect(justTheFilm.cardHeight).toBeCloseTo(film, 5);
+		const tooShort = feedPage(390, film - 40);
+		expect(tooShort.rows).toBe("none");
+		expect(tooShort.cardHeight).toBeLessThan(film);
+	});
+
+	it("draws nothing before the screen is measured", () => {
+		// Pre-layout: the card must not paint a wrong frame and then jump.
+		expect(feedPage(390, 0).cardHeight).toBe(0);
+	});
+
+	/**
+	 * The stage is given exactly the card's height, so `SwipeStack` — which
+	 * still shares out slack by `restTop` for any caller that leaves some —
+	 * finds none and rests the card at the stage's top. The room is a flex
+	 * spacer ABOVE the block. Asserted as source because neither file can be
+	 * executed in this RN-free suite.
+	 */
+	it("gives the stage the card's own height and the room above the block", () => {
+		expect(FEED).toContain("height: page.cardHeight");
+		expect(FEED).toContain("paddingBottom: CARD_FOOT");
+		expect(FEED.indexOf("<View style={styles.room}>")).toBeLessThan(
+			FEED.indexOf("<PlaceBlock"),
+		);
+		expect(STACK).toContain("(stageHeight - frameHeight) / 3");
+	});
+
+	/**
+	 * The card is 1080px wide on a 3x screen at 360pt. Past that it is
+	 * upsampling its own source. The Max phones have sat a little over since
+	 * 2026-08-23 (1.13x at a 16pt gutter); the 8pt gutter takes the widest of
+	 * them to 1.18x, which is what the wider card costs. This is a ceiling on
+	 * the OVERSHOOT — it fails if someone widens the card further without a
+	 * bigger canvas.
+	 */
+	it("does not outrun the 1080px source by more than ~18%", () => {
 		for (const [name, w, , ,] of DEVICES) {
-			const k = ((w - gutter() * 2) * 3) / 1080;
+			const k = ((w - GUTTER * 2) * 3) / 1080;
 			expect(
 				k,
 				`${name}: card is ${k.toFixed(2)}x the source width`,
-			).toBeLessThan(1.15);
+			).toBeLessThan(1.18);
 		}
 	});
 });

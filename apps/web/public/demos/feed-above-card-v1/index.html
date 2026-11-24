@@ -56,18 +56,18 @@ h2{max-width:1340px;margin:30px auto 12px;font:600 19px var(--ui);color:#2B2116}
 .fx .where{font:400 15px var(--ui);color:var(--hctx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fx .where b{font-weight:600;color:var(--httl)}
 .fx .facts{display:flex}
-.fx .fact{flex:1 1 auto;min-width:0;padding-left:14px;border-left:1px solid #E2DCD0}
+.fx .fact{flex:1 1 auto;min-width:0;overflow:hidden;padding-left:14px;border-left:1px solid #E2DCD0}
 .fx .fact:first-child{padding-left:0;border-left:0}
 .fx .fact b{display:block;font:700 24px/28px var(--serif);color:var(--httl);letter-spacing:-.3px;white-space:nowrap}
 .fx .fact small{display:block;font:400 12.5px/16px var(--ui);color:var(--hctx);white-space:nowrap}
-.fx.top{top:47px;padding:11px 26.3px 0}
-.fx.top .loc{height:35.1px}
-.fx.top .where{font-size:15.4px}
-.fx.top .facts{margin-top:4.4px;height:43.9px;align-items:stretch}
+.fx.top{padding:0 17.6px}
+.fx.top .loc{height:48.3px}
+.fx.top .where{font-size:17.6px}
+.fx.top .facts{margin-top:8.8px;height:52.7px;align-items:stretch}
 .fx.top .fact{display:flex;flex-direction:column;justify-content:center;padding-left:11px;margin-left:6.6px}
 .fx.top .fact:first-child{padding-left:0;margin-left:0}
-.fx.top .fact b{font-size:24.1px;line-height:1.2}
-.fx.top .fact small{font-size:13.2px;line-height:1.2}
+.fx.top .fact b{font-size:28.5px;line-height:1.2}
+.fx.top .fact small{font-size:14.3px;line-height:1.2}
 .fx.under{padding:0 32px}
 .fx.under .loc{height:48.3px}
 .fx.under .where{font-size:15.4px}
@@ -123,14 +123,14 @@ h2{max-width:1340px;margin:30px auto 12px;font:600 19px var(--ui);color:#2B2116}
 <h2>A community card</h2>
 <div class="row">
   <div class="col"><h3>Now<small>“Windward” is the largest line on the page and it is also on the card. The arrow beside it opens the same page as Explore.</small></h3><div class="phone" data-v="now" data-c="community"></div></div>
-  <div class="col"><h3>1 · Numbers above the card <span class="pick">chosen · built</span><small>Same spot, same height. The name is gone from the top; the card does not move. Drawn at the sizes the app uses.</small></h3><div class="phone" data-v="top" data-c="community"></div></div>
+  <div class="col"><h3>1 · Numbers above the card <span class="pick">chosen · built</span><small>As built after your note on the gap under the card: the card is a little larger and sits just above the tab bar, the numbers are larger and sit on it, and the spare room is at the top. Drawn at the sizes the app uses.</small></h3><div class="phone" data-v="top" data-c="community"></div></div>
   <div class="col"><h3>2 · Film on top, numbers under it<small>The film starts at the top of the screen and is a little larger. Place, Map and the numbers sit right under the name and Explore, where the thumb is. Built for a day, then replaced by 1.</small></h3><div class="phone" data-v="under" data-c="community"></div></div>
 </div>
 
 <h2>A city card</h2>
 <div class="row">
   <div class="col"><h3>Now<small>“Cumming” three times: in the small line, in the title, on the card.</small></h3><div class="phone" data-v="now" data-c="city"></div></div>
-  <div class="col"><h3>1 · Numbers above the card <span class="pick">chosen · built</span><small>The county takes the small line; the city's own numbers take the title's.</small></h3><div class="phone" data-v="top" data-c="city"></div></div>
+  <div class="col"><h3>1 · Numbers above the card <span class="pick">chosen · built</span><small>Same as the community card.</small></h3><div class="phone" data-v="top" data-c="city"></div></div>
   <div class="col"><h3>2 · Film on top, numbers under it<small>Same as the community card.</small></h3><div class="phone" data-v="under" data-c="city"></div></div>
 </div>
 
@@ -171,6 +171,12 @@ const CARDS = {
 /* The page's arithmetic, as `card-frame.ts` and `SwipeStack` do it. */
 const W = 428, H = 926, SAFE_TOP = 47, TAB = 96, K = 1.097, ASPECT = 1080 / 1576;
 function layout(v) {
+  if (v === "top") {
+    // As built (phase380): the card 12 above the tab bar at an 8 gutter, the
+    // block 14 above the card, the leftover above the block.
+    const w = W - 16, h = w / ASPECT, top = H - TAB - 12 - h;
+    return { card: { left: 8, top, w, h }, block: top - 14 - 109.7 };
+  }
   if (v === "under") {
     const w = W - 16, h = w / ASPECT, top = SAFE_TOP + 8;
     return { card: { left: 8, top, w, h }, block: top + h + 18 };
@@ -191,7 +197,7 @@ function header(v, c) {
     return `<div class="fh"><div class="ctx">${ctx}</div>
       <div class="main"><span class="ttl dup">${c.name}</span>${c.chevron ? '<span class="chv"></span>' : ""}${mapPill("")}</div></div>`;
   }
-  if (v === "top") return `<div class="fx top"><div class="loc"><span class="where">${c.where}</span>${mapPill("sm")}</div>${facts(c)}</div>`;
+  if (v === "top") return "";
   return "";
 }
 
@@ -215,9 +221,22 @@ for (const phone of document.querySelectorAll(".phone")) {
   const v = phone.dataset.v, c = CARDS[phone.dataset.c], L = layout(v);
   phone.innerHTML = `<div class="status"><span>9:41</span><i></i></div>${header(v, c)}${card(v, c, L.card)}
     ${v === "under" ? `<div class="fx under" style="top:${L.block.toFixed(1)}px"><div class="loc"><span class="where">${c.where}</span>${mapPill("")}</div>${facts(c)}</div>` : ""}
+    ${v === "top" ? `<div class="fx top" style="top:${L.block.toFixed(1)}px"><div class="loc"><span class="where">${c.where}</span>${mapPill("")}</div>${facts(c)}</div>` : ""}
     ${tabbar}`;
 }
 
+/* A figure that does not fit its cell shrinks, as the app's adjustsFontSizeToFit does. */
+// Shrinking one figure reflows its neighbours, so this settles over a few passes.
+for (let pass = 0; pass < 4; pass++) {
+  for (const cell of document.querySelectorAll(".fx .fact")) {
+    const room = cell.clientWidth - parseFloat(getComputedStyle(cell).paddingLeft);
+    for (const el of cell.children) {
+      el.style.cssText += ";display:block;width:max-content;white-space:nowrap";
+      const need = el.getBoundingClientRect().width;
+      if (need > room + 0.5) el.style.fontSize = `${parseFloat(getComputedStyle(el).fontSize) * room / need}px`;
+    }
+  }
+}
 /* Three phones across on a wide screen, one at a time on a narrow one. */
 function fit() {
   const vw = document.documentElement.clientWidth - 32;
