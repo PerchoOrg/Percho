@@ -136,7 +136,14 @@ export const parts = StyleSheet.create({
 		color: colors.ink2,
 		marginTop: 1,
 	},
-	/** A wide tile's rows: a name on one line, its figure at the right edge. */
+	/**
+	 * A wide tile's rows, every tile the same three voices (phase382 — owner
+	 * 2026-11-23: "每一个section 字体 粗细 名字 类型 距离 排名 看不出重点"):
+	 * a name in plain ink, a quieter grey word before or after it, and ONE
+	 * semibold figure at the right edge — the row's finding. Names were
+	 * semibold too, so a tile was bold from edge to edge, and which of the
+	 * distance, the rank or the time was bold changed from tile to tile.
+	 */
 	rows: { marginTop: 4 },
 	row: {
 		flexDirection: "row",
@@ -146,35 +153,33 @@ export const parts = StyleSheet.create({
 	},
 	rowKind: {
 		...textStyles.footnote,
-		fontSize: 12,
 		color: colors.ink2,
 		width: 84,
 	},
 	rowName: {
 		...textStyles.footnote,
 		fontSize: 14,
-		fontWeight: "600",
 		color: colors.ink,
 		flex: 1,
 		minWidth: 0,
 	},
-	/** A distance, a zone: the row's quieter second fact. */
+	/** The row's quieter second fact: a distance beside a rank, "a month". */
 	rowAside: {
 		...textStyles.footnote,
-		fontSize: 13,
 		color: colors.ink2,
 		fontVariant: ["tabular-nums"],
 	},
-	/** A standing, in the row's own type. Wide enough for "Top 100%". */
-	rowShare: {
+	/** The row's finding: a distance, a rank, a time, a price. */
+	rowFigure: {
 		...textStyles.footnote,
-		fontSize: 13,
+		fontSize: 14,
 		fontWeight: "600",
 		color: colors.ink,
-		width: 62,
 		textAlign: "right",
 		fontVariant: ["tabular-nums"],
 	},
+	/** A figure column wide enough for "Top 100%", so the distances before it line up. */
+	rowShare: { width: 68 },
 });
 
 const styles = StyleSheet.create({

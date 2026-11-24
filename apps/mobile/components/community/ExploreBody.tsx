@@ -133,7 +133,7 @@ export function ExploreBody({
 									<Text style={parts.rowName} numberOfLines={1}>
 										{r.name}
 									</Text>
-									{!!r.note && <Text style={parts.rowAside}>{r.note}</Text>}
+									{!!r.note && <Text style={parts.rowFigure}>{r.note}</Text>}
 								</View>
 							))}
 						</View>
@@ -157,18 +157,15 @@ export function ExploreBody({
 						<View style={parts.rows}>
 							{schools.map((r) => (
 								<View key={r.label} style={parts.row}>
-									<Text
-										style={parts.rowName}
-										numberOfLines={1}
-										adjustsFontSizeToFit
-										minimumFontScale={0.85}
-									>
+									<Text style={parts.rowName} numberOfLines={1}>
 										{schoolName(r)}
 									</Text>
 									{!!r.distance && (
 										<Text style={parts.rowAside}>{r.distance}</Text>
 									)}
-									<Text style={parts.rowShare}>{topShare(r)}</Text>
+									<Text style={[parts.rowFigure, parts.rowShare]}>
+										{topShare(r)}
+									</Text>
 								</View>
 							))}
 						</View>
@@ -193,7 +190,7 @@ export function ExploreBody({
 									<Text style={parts.rowName} numberOfLines={1}>
 										{s.name}
 									</Text>
-									<Text style={parts.rowAside}>{s.miles} mi</Text>
+									<Text style={parts.rowFigure}>{s.miles} mi</Text>
 								</View>
 							))}
 						</View>

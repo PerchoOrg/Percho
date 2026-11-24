@@ -23,6 +23,20 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 02:09 UTC — phase382: Explore tiles — every row the same three voices, one bold figure
+
+**Objective**: owner on Duluth's Explore page (screenshot): "explore这里还是乱 每一个section 字体 粗细 名字 类型 距离 排名 看不出重点".
+**What was wrong**: each tile had its own grammar. Names were semibold everywhere, so a tile was bold edge to edge; the finding was grey in Safety and Convenience (the distance, the drive time) and bold in Schools (the rank); Potential was a 24pt figure over three grey sentences; Cost had grey labels; a long school name shrank to its own font size. Five sizes and no rule for which fact is the one to read.
+**What the phone shows**: in every tile a row is a name in plain ink (14), an optional quieter grey word (13), and ONE semibold figure at the right edge (14) — the hospital's distance, the school's rank, the drive time, the residents, the price. City Convenience splits "Downtown Atlanta · 30 mi" into the name and a grey "30 mi" before the bold "48–72 min". City Potential is three rows (Residents, 2020 · 11× since 1980 · **31,873** / Gwinnett County by 2050 · **+25% from 2020** / Projects planned · **2**) — the forecast's absolute number stays in the sheet. City Cost's third row is "Tax and utilities · a month · **≈ $610**".
+**Actions**:
+- `components/community/ExploreParts.tsx`: `rowName` 600 → 400; `rowKind` 12 → 13; new `rowFigure` (14 / 600, tabular, right); `rowShare` is now only the column width (68) laid over `rowFigure`.
+- `app/city/[slug].tsx`: the five tiles use the three styles; `rowRank` / `costLabel` / `costValue` deleted; Potential as rows; the "All N schools" sheet list follows through `parts`.
+- `components/community/ExploreBody.tsx`: Safety and Convenience distances are the figure; Schools as before (distance grey, share bold) in the new type.
+- `lib/city/page.ts`: `driveRows` returns `{ place, miles?, time }` (test updated).
+- `adjustsFontSizeToFit` removed from school names on both pages: a name too long for the row ends in "…" at the row's size instead of shrinking. On Duluth that is the unranked "Mason, Chattahoochee, Harris and Berkeley Lake Elementary School" row.
+**Decisions**: weight carries the emphasis, not size or colour — the accent stays for charts (phase367). The community page's Potential (figure + sparkline), Cost and Dues tiles keep their 24pt figure: they are a chart's caption, not a list; raised with the owner rather than flattened.
+**Verified**: mobile typecheck 0, lint 0 errors / 5 warnings (as main), vitest 897. An HTML recreation with Duluth's live rows fits at 428 and 375. Not seen on a device.
+
 ## 2026-11-24 01:47 UTC — phase381: the card and the numbers move up a little
 
 **Objective**: owner on phase380: "整体向上再一点点".

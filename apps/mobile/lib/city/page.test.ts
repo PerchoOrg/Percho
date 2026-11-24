@@ -261,8 +261,8 @@ describe("the five tiles", () => {
 
 	it("lists the drives that have a time, off-peak to rush", () => {
 		expect(driveRows(city)).toEqual([
-			{ place: "Downtown Atlanta · 39 mi", time: "52–83 min" },
-			{ place: "City Hall · 1 mi", time: "4 min" },
+			{ place: "Downtown Atlanta", miles: "39 mi", time: "52–83 min" },
+			{ place: "City Hall", miles: "1 mi", time: "4 min" },
 		]);
 	});
 
