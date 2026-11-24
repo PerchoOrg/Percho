@@ -23,6 +23,15 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 09:44 UTC — phase391: a shorter footer on the You tab
+
+**Objective**: owner: "you tab底部的声明 简化一下". The footer under the Account card was the links, a four-line music credit naming ten tracks with the licence URL spelled out, a photo-credit line and the version.
+**What the phone shows**: three short lines — `Privacy · Terms · Contact & support · Delete account`; `Music by Kevin MacLeod (incompetech.com), CC BY 4.0. Photo credits on each neighbourhood page.` ("CC BY 4.0" opens the licence); `Percho <version> (build n)`.
+**Actions**: `apps/mobile/app/(tabs)/you.tsx` — `MUSIC_CREDIT` removed, the credit and the photo line merged into one centred sentence.
+**Decisions**: the credit stays, shortened rather than removed — the tracks are CC BY 4.0, which asks for the author, the source and the licence with a link, and (unlike 3.0) not the titles. The ten titles were incompetech's suggested wording, not a licence term. The FMLS technical-entity line is untouched (only shown when `LISTINGS_IN_APP`, which is off).
+**Verified**: mobile typecheck 0, lint 0 errors / 5 warnings (unchanged). **Not seen on a device.**
+**Next steps**: owner looks on the dev client. If he wants it shorter still, the music credit could move to a page on percho.co and the footer keep only a "Credits" link.
+
 ## 2026-11-24 10:20 UTC — phase390: the Explore tiles draw their figures — community and city
 
 **Objective**: owner on the phase389 compare: "不错 把多样的可视化推广到community和city card里的explore界面里". Both pages' tiles were rows of text since phase382 (one pattern: a plain name, one bold figure at the right); only the community's Potential had a chart.

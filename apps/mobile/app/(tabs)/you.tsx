@@ -454,18 +454,16 @@ export default function YouTab() {
 						</Text>
 					) : null}
 				</View>
-				<Text style={styles.footerTxt}>
-					{MUSIC_CREDIT}{" "}
+				<Text style={[styles.footerTxt, styles.footerCentre]}>
+					Music by Kevin MacLeod (incompetech.com),{" "}
 					<Text
 						style={styles.footerLink}
 						onPress={() => void Linking.openURL(CC_BY_4)}
 						accessibilityRole="link"
 					>
-						{CC_BY_4}
+						CC BY 4.0
 					</Text>
-				</Text>
-				<Text style={styles.footerTxt}>
-					Film photos credited on each neighbourhood page.
+					. Photo credits on each neighbourhood page.
 				</Text>
 				<Text style={styles.footerTxt}>
 					Percho {Constants.expoConfig?.version ?? "?"}
@@ -488,20 +486,12 @@ export default function YouTab() {
 const RECENT_SHOWN = 10;
 
 /**
- * CC BY 4.0 credit for the Kevin MacLeod tracks in the film soundtrack
- * library — incompetech's own wording, with the tracks named.
- *
- * App-wide rather than per film: only assembled tours record their track,
- * and when the planned file is missing the render worker plays a random one
- * without writing it back, so a per-film credit could name the wrong piece.
- * The titles are every `KML_TRACKS` entry in
- * `scripts/render-worker/bgm/fetch.sh`: the render machine's manifest holds
- * seven of them, but the library of record is the `bgm` bucket, and naming a
- * track no film uses costs nothing where missing one breaks the licence. Add
- * one when a MacLeod track is added.
+ * The Kevin MacLeod tracks in the film soundtrack library are CC BY 4.0. The
+ * footer credits the author, the source and the licence (linked) — what 4.0
+ * asks for; it does not require the titles, and the owner wanted the footer
+ * short (2026-11-24). App-wide rather than per film: only assembled tours
+ * record their track, so a per-film credit could name the wrong piece.
  */
-const MUSIC_CREDIT =
-	'Music: "Carefree", "Cheery Monday", "Wallpaper", "Amazing Plan", "Wholesome", "Daily Beetle", "Happy Alley", "Balloon Game", "Take a Chance" and "Pookatori and Friends" by Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License';
 const CC_BY_4 = "https://creativecommons.org/licenses/by/4.0/";
 
 const LINKS = [
@@ -676,5 +666,6 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 	},
 	footerTxt: { ...textStyles.footnote, fontSize: 12, color: colors.ink3 },
+	footerCentre: { textAlign: "center" },
 	footerLink: { color: colors.ink2 },
 });
