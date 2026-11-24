@@ -163,6 +163,7 @@ type City = Pick<
 	| "planning"
 	| "everyday"
 	| "hazards"
+	| "crime"
 >;
 
 /** "South Forsyth Middle" → "South Forsyth Middle School"; any other name as it is. */
@@ -220,6 +221,14 @@ export function schoolsByLevel(
 			schools: (all ?? []).filter((s) => s.level === level),
 		}))
 		.filter((g) => g.schools.length > 0);
+}
+
+/**
+ * The crime row's figure: "Well below Georgia's rate". Words only — the page
+ * carries no count (owner 2026-11-24: "只定性 … 不显示具体数量").
+ */
+export function crimeFigure(d: Pick<City, "crime">): string | null {
+	return d.crime ? `${d.crime.violent} ${d.crime.against}'s rate` : null;
 }
 
 /** How many single hazards the Safety tile names under the overall rating. */

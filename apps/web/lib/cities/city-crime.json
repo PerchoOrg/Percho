@@ -1,0 +1,30 @@
+{
+  "asOf": "2026-11-24",
+  "against": "Georgia",
+  "cities": {
+    "alpharetta-ga": {
+      "agency": "Alpharetta Police Department",
+      "year": 2025,
+      "violentPer100k": 220,
+      "statePer100k": 305
+    },
+    "duluth-ga": {
+      "agency": "Duluth Police Department",
+      "year": 2025,
+      "violentPer100k": 173,
+      "statePer100k": 305
+    },
+    "johns-creek-ga": {
+      "agency": "Johns Creek Police Department",
+      "year": 2025,
+      "violentPer100k": 40,
+      "statePer100k": 305
+    },
+    "suwanee-ga": {
+      "agency": "Suwanee Police Department",
+      "year": 2025,
+      "violentPer100k": 131,
+      "statePer100k": 305
+    }
+  }
+}

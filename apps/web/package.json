@@ -25,6 +25,7 @@
     "community:profile": "tsx ../../scripts/admin/upsert-community-profile.ts",
     "community:safety": "tsx ../../scripts/admin/import-community-safety.ts",
     "city:schools": "tsx ../../scripts/admin/build-city-schools.ts",
+    "city:crime": "tsx ../../scripts/admin/import-city-crime.ts",
     "city:photos": "tsx ../../scripts/admin/city-photos.ts"
   },
   "dependencies": {

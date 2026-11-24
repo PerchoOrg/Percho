@@ -64,6 +64,7 @@ import { apiBase } from "../../lib/api/base";
 import {
 	TILE_DRIVES,
 	costRows,
+	crimeFigure,
 	driveRows,
 	everydayRows,
 	glancePart,
@@ -230,6 +231,7 @@ export default function CityScreen() {
 	const drives = driveRows(data);
 	const everyday = everydayRows(data);
 	const hazards = hazardRows(data);
+	const crime = crimeFigure(data);
 	const costs = costRows(data);
 	const latest = data.growth.series[data.growth.series.length - 1];
 	const safetyLinks = (data.links ?? []).filter((l) => l.group === "Safety");
@@ -276,7 +278,7 @@ export default function CityScreen() {
 					)}
 
 					<View style={parts.grid}>
-						{hazards.length > 0 && (
+						{(!!crime || hazards.length > 0) && (
 							<Tile
 								label="Safety"
 								wide
@@ -284,6 +286,14 @@ export default function CityScreen() {
 								onPress={() => setSheet("safety")}
 							>
 								<View style={parts.rows}>
+									{!!crime && (
+										<View style={parts.row}>
+											<Text style={parts.rowName} numberOfLines={1}>
+												Violent crime
+											</Text>
+											<Text style={parts.rowFigure}>{crime}</Text>
+										</View>
+									)}
 									{hazards.map((r) => (
 										<View key={r.label} style={parts.row}>
 											<Text style={parts.rowName} numberOfLines={1}>
@@ -477,23 +487,67 @@ export default function CityScreen() {
 					contentContainerStyle={styles.sheet}
 					showsVerticalScrollIndicator={false}
 				>
-					{sheet === "safety" && data.hazards && (
+					{sheet === "safety" && (
 						<>
-							<Text style={styles.sheetTitle}>Natural hazards</Text>
-							<PlaceRow name="Overall" figure={data.hazards.overall} />
-							<View style={styles.sheetGap}>
-								{data.hazards.rows.map((r) => (
-									<PlaceRow key={r.label} name={r.label} figure={r.rating} />
-								))}
-							</View>
+							{data.crime && (
+								<>
+									<Text style={styles.sheetTitle}>Violent crime</Text>
+									<PlaceRow
+										name={`${data.crime.year}, reported`}
+										figure={crime ?? undefined}
+									/>
+									<Text style={styles.sheetCaption}>
+										Violent crimes reported to the {data.crime.agency} in{" "}
+										{data.crime.year}, per resident, against{" "}
+										{data.crime.against}'s rate. One figure for the whole city:
+										it says nothing about a single street or neighbourhood, and
+										it counts only what was reported.
+									</Text>
+									{!!data.crime.source.url && (
+										<Pressable
+											onPress={() => openSite(data.crime?.source.url ?? "")}
+											accessibilityRole="link"
+											hitSlop={6}
+											style={styles.sheetLinks}
+										>
+											<Text style={styles.sheetLink}>
+												{data.crime.source.name} ↗
+											</Text>
+										</Pressable>
+									)}
+								</>
+							)}
+							{data.hazards && (
+								<>
+									<Text
+										style={
+											data.crime ? styles.sheetHeadSpaced : styles.sheetTitle
+										}
+									>
+										Natural hazards
+									</Text>
+									<PlaceRow name="Overall" figure={data.hazards.overall} />
+									<View style={styles.sheetGap}>
+										{data.hazards.rows.map((r) => (
+											<PlaceRow
+												key={r.label}
+												name={r.label}
+												figure={r.rating}
+											/>
+										))}
+									</View>
+									<Text style={styles.sheetCaption}>
+										FEMA's National Risk Index{" "}
+										{data.hazards.version ? `(${data.hazards.version}) ` : ""}
+										rates every census tract in the country against the rest.
+										Each line is the rating most of the {data.hazards.tracts}{" "}
+										tracts within {data.hazards.miles} miles of the city's
+										centre carry.
+									</Text>
+								</>
+							)}
 							<Text style={styles.sheetCaption}>
-								FEMA's National Risk Index{" "}
-								{data.hazards.version ? `(${data.hazards.version}) ` : ""}
-								rates every census tract in the country against the rest. Each
-								line is the rating most of the {data.hazards.tracts} tracts
-								within {data.hazards.miles} miles of the city's centre carry.
-								Percho does not show crime figures. The agencies publish their
-								own:
+								For more, the agencies publish their own:
 							</Text>
 							<View style={styles.sheetLinks}>
 								{safetyLinks.map((l) => (
@@ -657,7 +711,7 @@ type SheetKey = "safety" | "schools" | "convenience" | "potential" | "cost";
 /** Which tiles this city's page draws — the conditions on the tiles above. */
 function drawnTiles(data: CityDetailDTO): Record<SheetKey, boolean> {
 	return {
-		safety: !!data.hazards,
+		safety: !!data.hazards || !!data.crime,
 		schools: schoolRows(data).length > 0,
 		convenience: everydayRows(data).length > 0 || driveRows(data).length > 0,
 		potential: data.growth.series.length > 0,

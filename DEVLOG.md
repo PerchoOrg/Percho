@@ -23,6 +23,25 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 06:11 UTC — phase385: violent crime on the city page — in words, against Georgia, linked
+
+**Objective**: owner 2026-11-24, lifting his rulings of 11-15 and 11-22 for the city page. Asked whether the composite safety score should count crime: "放！". Shown the FBI's 2025 figures and two caveats (three cities have no figure; Suwanee's property-crime rate is 66% above Georgia's, shop theft over a small resident population): "只看暴力犯罪 只定性 上链接 不显示具体数量".
+**What the phone shows**: on four city pages the Safety tile opens with `Violent crime · Below Georgia's rate` (Duluth, Alpharetta) or `Well below Georgia's rate` (Johns Creek, Suwanee), above the natural-hazard rows. The sheet says whose reports, which year, that it is one figure for the whole city, and links the FBI's Crime Data Explorer. No count, no rate. Buford, Sugar Hill and Cumming show no crime row.
+**Actions**:
+- `scripts/admin/import-city-crime.ts` (`pnpm --filter @percho/web city:crime [year]`): FBI Crime Data Explorer, `summarized/agency/<ORI>/violent-crime`, the twelve monthly rates per 100,000 summed for the city's own police department and for Georgia → `apps/web/lib/cities/city-crime.json`. ORIs: Alpharetta GA0600400, Duluth GA0670500, Johns Creek GA0605800, Suwanee GA0670900. Optional `DATA_GOV_API_KEY` (`.env.example`); the public DEMO_KEY otherwise.
+- `packages/shared/src/city.ts`: `crime` — `violent` (`CrimeLevel`: Well below / Below / Near / Above / Well above), `against`, `year`, `agency`, `source`. The header's "NO CRIME FIELD" is replaced by the ruling and its limits.
+- `apps/web/lib/cities/links.ts`: `crimeLevel` (≤ 0.5 of the state's rate Well below; < 0.9 Below; ≤ 1.1 Near; < 1.5 Above; else Well above) and `cityCrime`. The rates stay in the JSON; a test asserts the wire carries no number but the year.
+- Mobile: `crimeFigure` (`lib/city/page.ts`); the tile row and the sheet's first section (`app/city/[slug].tsx`).
+**Decisions**:
+1. **Not blended into one score.** Crime and hazards stand side by side; no weighting of one against the other has a basis, and he accepted that when shown it.
+2. **The city's own department or nothing.** Buford and Sugar Hill are policed by their county and Cumming PD does not report in this format; a county's rate is not the city's, so those pages say nothing rather than something borrowed.
+3. **Wide bands**: a city of 30,000 moves by tens per 100,000 between years; five bands keep a year's noise from changing the word.
+4. **City level only.** Never per community, never a map lens — `lenses.ts` stands.
+**Issues**:
+- The script's own live runs returned 429 (the DEMO_KEY's hourly allowance was spent on the exploratory calls). `city-crime.json` was written from the four responses those calls had saved, by the script's arithmetic: 2025 violent per 100,000 — Alpharetta 220, Duluth 173, Suwanee 131, Johns Creek 40; Georgia 305. Re-run `city:crime 2025` once the allowance resets, or with a key, and confirm the file does not change.
+- **Fair housing** — he asked whether it applies to a community-first platform. Told him: I am not a lawyer; the Act's advertising and steering rules reach anyone in the business of selling or renting homes, and Percho carries agents' listings and holds an MLS licence, so it is not outside it; publishing an official, city-wide figure with its source is at the careful end, and the risk grows with finer areas and with agents' own words. Suggested a lawyer's read before live listings.
+**Verified**: web typecheck 0, vitest 1402 (links: 3 new); mobile typecheck 0, lint 0 errors / 5 warnings (as main), vitest 900 (1 new). Not seen on a device.
+
 ## 2026-11-24 05:43 UTC — phase384: a city's Safety is natural hazards, not public buildings
 
 **Objective**: owner on phase383: "对Duluth 警察局 0.5mile 啥意思？哪个城市没有警察局 这部分我觉得还是放综合安全评分 以及flood等自然因素 不要放些公共设施 对于community可以放一些设施". He is right: "Police · 0.5 mi" is a distance from a centre point to a building every city has — it separates no city from another.
