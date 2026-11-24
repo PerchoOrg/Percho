@@ -23,7 +23,7 @@ rotation, not on the way in.
 
 ---
 
-## 2026-11-24 00:52 UTC — phase381: the card and the numbers move up a little
+## 2026-11-24 01:47 UTC — phase381: the card and the numbers move up a little
 
 **Objective**: owner on phase380: "整体向上再一点点".
 **Actions**: the screen's leftover is shared out instead of all going above the block — `ROOM_ABOVE` 3 : `ROOM_BELOW` 1 (`theme/feed-page.ts`), two flex spacers in `app/(tabs)/feed.tsx`, the second under the stage. The block and card move up by a quarter of the leftover: 11.5pt on his 428 (room above 46 → 35, gap under the card 12 → 24), 7 on a 390, 5 on the mini. `theme/card-aspect.test.ts` pins the share and its bounds per device (room above 12–40, gap under the card < 26). Demo option 1 redrawn the same way.
