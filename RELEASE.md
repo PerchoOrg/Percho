@@ -17,7 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-24
-- **Three numbers above every card in the iPhone app.** The large neighbourhood name above each card is gone — it was already on the card. In its place: where the neighbourhood or city is, the Map button, and three numbers a film can't show — what homes cost, how the nearby schools stand, and how far Atlanta is. Tap a number to open that part of its page. The card itself stays where it was. Arrives with the next app update.
+- **Three numbers above every card in the iPhone app.** The large neighbourhood name above each card is gone — it was already on the card. In its place: where the neighbourhood or city is, the Map button, and three numbers a film can't show — what homes cost, how the nearby schools stand, and how far Atlanta is. Tap a number to open that part of its page. The film is also a little larger and sits just above the tab bar, so there is no longer a band of empty space under it. Arrives with the next app update.
 
 ### 2026-11-23
 - **Schools on the Search map are about schools.** Turning on Schools no longer tints whole counties — a county average hid how different its schools are. Each school's dot shows its own result instead; zoom in to see more of them. Arrives with the next app update.

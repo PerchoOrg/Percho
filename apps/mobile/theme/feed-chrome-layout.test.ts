@@ -18,7 +18,8 @@
  * community list. Every header since has carried `zIndex: 100` — `PlaceHeader`
  * (phase181), `FeedHeader` (phase183) and now `PlaceBlock` (phase379), whose
  * Map pill and three figures are all buttons: an unranked block would leave
- * four controls that cannot be seen but can be pressed.
+ * four controls that cannot be seen but can be pressed. Since phase380 the
+ * block sits 14 above the stage, well inside the band's reach.
  *
  * The offline bar sits above the block, and the band's top reaches it too.
  */
@@ -82,7 +83,7 @@ describe("feed chrome sits above the stage's paper band", () => {
 		expect(FEED).toContain("<PlaceBlock");
 		expect(FEED).not.toContain("<FeedHeader");
 		expect(FEED.indexOf("<PlaceBlock")).toBeLessThan(
-			FEED.indexOf("styles.stackWrap"),
+			FEED.indexOf("styles.stackWrap,"),
 		);
 		expect(FEED).not.toContain("zIndex: 100");
 	});

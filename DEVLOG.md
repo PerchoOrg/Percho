@@ -23,6 +23,25 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 00:37 UTC — phase380: the card sits down on the tab bar; the numbers are larger and sit on the card
+
+**Objective**: owner on phase379: "card下方空隙多了 整体向下或者增大上面的文字 你重新设计". With the block in the header's 86pt and the card at its old size, two thirds of the page's slack sat under the card: 52–71pt between it and the tab bar.
+**What the phone shows**: the card 12 above the tab bar and 16pt wider (8 of paper each side; 412×601 on his 428×926, the film whole). 14 above it, the place block, larger: a 16pt place line with the handoff's 84 × 44 Map pill, then 26pt figures over 13pt labels. Whatever the screen has left is above the block, under the status bar: 20–29pt on the 13 mini to the 16 Pro, 37–46 on the Max-size phones (46 on his).
+**Actions**:
+- `theme/feed-page.ts` (back, rewritten): `feedPage(width, contentHeight)` — the card at the film's shape and which of the block's rows fit; `GUTTER` 8, `CARD_FOOT` 12, `BLOCK_GAP` 14, `MIN_ROOM` 8, and the block's rows (`PLACE_ROW` 44, `ROW_GAP` 8, `FACTS_ROW` 48 — 100 at 390).
+- `app/(tabs)/feed.tsx`: a measured `page` view, bottom padding `CARD_FOOT`: a flex `room`, then `PlaceBlock`, then the stage at exactly the card's height (so `SwipeStack`'s `restTop` is 0; the stack is not edited). The answer echo moved into `room` — it cannot show in v1 (no listings, so nothing moves). `CARD_INSET` and the local `GUTTER` are gone; the inset history comment stays, with a paragraph for this.
+- `components/feed/PlaceBlock.tsx`: no top padding (the room is the page's); text 14 → 16, figures 22 → 26, labels 12 → 13; Map back to 84 × 44 with an 18pt pin; inset card edge + 8 (16). The figures row is drawn only when it fits.
+- Tests: `theme/card-aspect.test.ts` runs `feedPage` per device — film whole, both rows, the room above the block between 8 and 50, the card's foot fixed; `theme/place-block.test.ts` pins the rows, the sizes and the pill; `theme/feed-chrome-layout.test.ts` unchanged in substance.
+- Demo page: option 1 redrawn as built; its figures shrink to fit as the app's do.
+**Decisions**:
+1. **Both of his options at once.** The card hangs from the tab bar ("整体向下") and the text is larger ("增大上面的文字"). Larger text alone could not do it: three figures across reach their width at about 26pt — at 28–30, 22 of 24 real rows have to shrink (measured in Chrome with the system fonts, all 17 communities and 7 cities, every shipping width).
+2. **The card is wider again** (8pt gutter, phase378's). It is the film taking the room rather than paper: 25–30pt of the old gap goes into the picture. Up to 1.18x the 1080px source on a 3x screen; the test's ceiling says so.
+3. **The leftover goes to the top**, not between the block and the card or under the card — he has asked for neither gap to grow. It is largest on the Max-size phones (46 on his), where the tab bar and status bar are the same height as on a 390 but the page is taller.
+4. **Block text at card edge + 8**, the handoff's rule above the card; the card's own name sits at 32.
+5. **The SE gives up the block, not the film**: a 375×667 shows the card alone, whole. It is not in the shipping lineup.
+**Issues**: phase378's two open items stand (city vs community home value source; DM Serif Display unused). Not seen on a device.
+**Verified**: mobile typecheck 0, lint 0 errors / 5 warnings (as main), vitest 897, `expo export --platform ios` bundles. Web untouched but the demo page.
+
 ## 2026-11-24 00:20 UTC — phase379: the numbers go above the card; the card is back where it was
 
 **Objective**: owner, after phase378: "numbers above the card" — the title of option 1 on `/demos/feed-above-card-v1` ("Same spot, same height. The name is gone from the top; the card does not move."), in place of the "方案2" built in phase378.

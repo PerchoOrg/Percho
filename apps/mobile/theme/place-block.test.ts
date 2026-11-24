@@ -1,6 +1,6 @@
 /**
- * The place block's geometry (phase378, above the card since phase379),
- * asserted against the component's source.
+ * The place block's geometry (phase378; above the card since phase379; set
+ * down on it, larger, in phase380), asserted against the component's source.
  *
  * Read as text rather than rendered, the same way `listing-layout.test.ts`
  * pins the card's composition: the mobile vitest suite is deliberately
@@ -11,8 +11,9 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { FACTS_ROW, PLACE_ROW, ROW_GAP } from "./feed-page";
+
 const BLOCK = readFileSync("components/feed/PlaceBlock.tsx", "utf8");
-const FEED = readFileSync("app/(tabs)/feed.tsx", "utf8");
 
 /**
  * The block with its comments stripped. Not tidiness: the component's own
@@ -41,23 +42,31 @@ function n(name: string): number {
 
 describe("the block's rows", () => {
 	/**
-	 * 86 at 390: 10 of room above, the 32pt place row, a 4pt gap and the 40pt
-	 * figures row — the header's own total, so the card did not move when the
-	 * block replaced it (owner, picking "numbers above the card": "same spot,
-	 * same height"). `theme/card-aspect.test.ts` spends this number.
+	 * 100 at 390: a 44pt place row (the 16pt line and the handoff's 44pt Map
+	 * pill), 8, and a 48pt figures row (26pt figures over 13pt labels). The
+	 * rows are declared in `theme/feed-page.ts`, which finds room for them per
+	 * screen, so the two cannot drift.
 	 */
-	it("is 86 — two rows, one gap, and the room above", () => {
-		expect(n("PAD_TOP")).toBe(10);
-		expect(n("PLACE_ROW")).toBe(32);
-		expect(n("ROW_GAP")).toBe(4);
-		expect(n("FACTS_ROW")).toBe(40);
-		expect(n("PAD_TOP") + n("PLACE_ROW") + n("ROW_GAP") + n("FACTS_ROW")).toBe(
-			86,
-		);
-		expect(CODE).toContain("paddingTop: PAD_TOP * k");
+	it("is 100 — two rows and the gap between", () => {
+		expect(PLACE_ROW).toBe(44);
+		expect(ROW_GAP).toBe(8);
+		expect(FACTS_ROW).toBe(48);
 		expect(CODE).toContain("minHeight: PLACE_ROW * k");
 		expect(CODE).toContain("minHeight: FACTS_ROW * k");
 		expect(CODE).toContain("marginTop: ROW_GAP * k");
+		// The room above is the page's, not the block's.
+		expect(CODE).not.toContain("paddingTop");
+	});
+
+	/**
+	 * "增大上面的文字" (owner, 2026-11-24): the line 14 → 16, the figures 22 →
+	 * 26, the labels 12 → 13 — as large as three figures across will go
+	 * before most of the real rows have to shrink.
+	 */
+	it("sets the text larger than phase379 did", () => {
+		expect(n("PLACE_SIZE")).toBe(16);
+		expect(n("FIGURE_SIZE")).toBe(26);
+		expect(n("LABEL_SIZE")).toBe(13);
 	});
 
 	/**
@@ -71,15 +80,12 @@ describe("the block's rows", () => {
 	});
 
 	/**
-	 * "Header left = existing card left + 8", as the header was. The card's
-	 * left is `GUTTER` in `feed.tsx`, so the inset is derived from it — this
-	 * fails if the gutter moves and the block stays put.
+	 * "Header left = existing card left + 8", the handoff's rule for anything
+	 * above the card. Derived from the gutter, so it follows if that moves.
 	 */
 	it("insets 8 from each CARD edge, not from the screen", () => {
-		const gutter = FEED.match(/^const GUTTER = (\d+);$/m)?.[1];
-		expect(gutter, "GUTTER not found in app/(tabs)/feed.tsx").toBeDefined();
 		expect(n("CARD_EDGE_INSET")).toBe(8);
-		expect(CODE).toContain(`const EDGE = ${gutter} + CARD_EDGE_INSET;`);
+		expect(CODE).toContain("const EDGE = GUTTER + CARD_EDGE_INSET;");
 		expect(CODE).toContain("paddingHorizontal: EDGE * k");
 	});
 
@@ -123,35 +129,26 @@ describe("the block's rows", () => {
 });
 
 describe("map control B", () => {
-	/**
-	 * The handoff's control at the place line's height — 72 × 32 at radius 16,
-	 * as option 1 of `/demos/feed-above-card-v1` drew it beside a 14pt line —
-	 * with its touch target brought back to 44 by `hitSlop`.
-	 */
-	it("is a 72 x 32 pill at the line's height, and darkens when pressed", () => {
-		expect(n("MAP_WIDTH")).toBe(72);
-		expect(n("MAP_HEIGHT")).toBe(n("PLACE_ROW"));
-		expect(n("MAP_RADIUS")).toBe(n("MAP_HEIGHT") / 2);
+	/** The handoff's control, back at its own size beside a 16pt line. */
+	it("is 84 x 44 at radius 22, and darkens when pressed", () => {
+		expect(n("MAP_WIDTH")).toBe(84);
+		expect(n("MAP_HEIGHT")).toBe(44);
+		expect(n("MAP_HEIGHT")).toBe(PLACE_ROW);
+		expect(n("MAP_RADIUS")).toBe(22);
+		expect(n("MAP_GAP")).toBe(6);
 		// A floor, not a fixed frame: the pill widens for a scaled label.
 		expect(CODE).toContain("minWidth: MAP_WIDTH");
 		expect(CODE).toContain("minHeight: MAP_HEIGHT");
 		expect(CODE).toContain("mapPressed: { backgroundColor:");
 	});
 
-	it("gives its touch target back its 44", () => {
-		expect(CODE).toContain("const PLACE_SLOP = { top: 8, bottom: 4 };");
-		expect(n("MAP_HEIGHT") + 8 + 4).toBe(44);
-		expect(CODE).toContain("const CELL_SLOP = { bottom: 4 };");
-		expect(n("FACTS_ROW") + 4).toBe(44);
-	});
-
 	/**
 	 * The pin is a teardrop: one box, three corners rounded to half its width
-	 * and the fourth sharp, turned 45° so the sharp one points down. Sized by
+	 * and the fourth sharp, turned 45° so the sharp one points down. 18 is
 	 * the whole icon, not its head (owner, 2026-09-07: too big at 21.7).
 	 */
-	it("draws a teardrop pin sized by the whole icon", () => {
-		expect(n("PIN_SIZE")).toBeLessThan(n("MAP_HEIGHT") / 2);
+	it("draws an 18-TALL teardrop pin", () => {
+		expect(n("PIN_SIZE")).toBe(18);
 		expect(CODE).toContain("const PIN_HEAD = PIN_SIZE / PIN_TIP_RATIO;");
 		expect(CODE).toContain("height: PIN_SIZE * k");
 		expect(n("PIN_STROKE")).toBeLessThan(1.75);

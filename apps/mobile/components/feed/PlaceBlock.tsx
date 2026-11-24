@@ -1,12 +1,13 @@
 /**
- * The block above the feed card (phase378, moved up in phase379): where the
- * place is, the Map button, and up to three figures the film cannot show.
+ * The block above the feed card (phase378; moved up in phase379; larger and
+ * set down on the card in phase380): where the place is, the Map button, and
+ * up to three figures the film cannot show.
  *
- *     Alpharetta · Fulton County                [◎ Map]   ← place   32 high
- *     $747K            Top 1–7%         25 mi             ← figures 40 high
+ *     Alpharetta · Fulton County                [◎ Map]   ← place   44 high
+ *     $747K            Top 1–7%         25 mi             ← figures 48 high
  *     ZIP 30005 homes  schools nearby   north of Atlanta
- *
- *     10 above, 32, 4, 40 — 86, the header's own height; then the card.
+ *                                                         14
+ *     [card]
  *
  * ── What it replaced ────────────────────────────────────────────────────────
  *
@@ -15,19 +16,17 @@
  * card already and its chevron opened the page Explore opens. So the name is
  * said once, on the card, and this says what the card does not.
  *
- * He picked "方案2" off `/demos/feed-above-card-v1` first: this block UNDER the
- * card and the film at the top of the screen (phase378). The next day:
- * "numbers above the card" — option 1 of the same page, "same spot, same
- * height; the card does not move". It is 86 at 390 exactly as the header was
- * (`theme/card-aspect.test.ts` spends it), so the card sits where it always
- * has on every phone and the SE's crop is unchanged.
+ * Where it sits took three passes: under the card ("方案2", phase378), then
+ * above it in the header's own 86pt with the card unmoved ("numbers above
+ * the card", phase379), then — "card下方空隙多了 整体向下或者增大上面的文字" —
+ * set down on the card, which hangs 12 above the tab bar, with its text
+ * larger. Where it sits is `theme/feed-page.ts`'s; this file only draws.
  *
  * ── Carried over from the header, on purpose ────────────────────────────────
  *
- *   · **Map control B**, at the place line's height: the pale sage fill, an
- *     outlined pin and the word, no border and no shadow — 72 × 32 here
- *     rather than the handoff's 84 × 44, as option 1 drew it beside a 14pt
- *     line. `hitSlop` gives the touch target back its 44.
+ *   · **Map control B**, the handoff's 84 × 44: the pale sage fill, an
+ *     outlined pin and the word, no border and no shadow. With a 16pt line
+ *     beside it there is room for it again (phase379 had it at 72 × 32).
  *   · **Every number scales with the screen** (`theme/header-scale.ts`), so
  *     the proportion approved at 390 holds on the mini and the Max. That is
  *     why the sizes cannot live in a module-level `StyleSheet`: `sheet` is a
@@ -60,71 +59,60 @@ import {
 	mapAccessibilityLabel,
 	placeAccessibilityLabel,
 } from "../../lib/feed/place-block";
+import { FACTS_ROW, GUTTER, PLACE_ROW, ROW_GAP } from "../../theme/feed-page";
 import { headerScale } from "../../theme/header-scale";
 import { colors, feedHeader, fonts } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
-// ─── Geometry (logical units at 390) ─────────────────────────────────
 /**
- * The rows and the room above them: 10 + 32 + 4 + 40 = 86, the header's
- * total. `theme/place-block.test.ts` pins these and `theme/card-aspect.test.ts`
- * spends them, per device, through `headerScale`.
- */
-const PAD_TOP = 10;
-const PLACE_ROW = 32;
-const ROW_GAP = 4;
-const FACTS_ROW = 40;
-
-/**
- * Card edge + 8, as the header was. The card's own margin is `GUTTER` (16) in
- * `app/(tabs)/feed.tsx` — asserted against that constant rather than
- * repeated by hand.
+ * "Header left = existing card left + 8", the handoff's rule for anything
+ * above the card. The card's left is `GUTTER`.
  */
 const CARD_EDGE_INSET = 8;
-const EDGE = 16 + CARD_EDGE_INSET;
+const EDGE = GUTTER + CARD_EDGE_INSET;
 
 // ─── Type ────────────────────────────────────────────────────────────
-const PLACE_SIZE = 14;
+const PLACE_SIZE = 16;
 /** The floor a long line may shrink to before it is cut. */
 const PLACE_MIN_SCALE = 0.8;
-const FIGURE_SIZE = 22;
+const FIGURE_SIZE = 26;
 const FIGURE_MIN_SCALE = 0.75;
-const LABEL_SIZE = 12;
+const LABEL_SIZE = 13;
 const LABEL_MIN_SCALE = 0.8;
 /**
  * Between two figures: this much, a hairline, then this much.
  *
- * The sizes were set against the feed's real cards (2026-11-23, all 17
+ * The sizes were set against the feed's real cards (2026-11-24, all 17
  * communities and 7 cities, laid out with the system fonts at every shipping
- * width). At this block's width one row of 24 shrinks, to 92%
- * ("Peachtree Corners homes").
+ * width). At 26 / 13 across this block's width, 6 of 24 rows give up a
+ * little size and one gives up more — Apremont's "Top 30–63%", to 86%.
  */
 const CELL_BEFORE_RULE = 6;
 const CELL_AFTER_RULE = 10;
 
-// ─── Map control B, at the place line's height ───────────────────────
-const MAP_WIDTH = 72;
-const MAP_HEIGHT = 32;
-const MAP_RADIUS = 16;
-const MAP_LABEL_SIZE = 13;
+// ─── Map control B (handoff §4) ──────────────────────────────────────
+const MAP_WIDTH = 84;
+const MAP_HEIGHT = 44;
+const MAP_RADIUS = 22;
+const MAP_LABEL_SIZE = 14;
 /** Pin → "Map". */
-const MAP_GAP = 5;
-const MAP_PAD = 10;
+const MAP_GAP = 6;
+const MAP_PAD = 12;
 /** Place line → Map. */
 const PLACE_MAP_GAP = 12;
 
-// ─── The pin (outlined teardrop) ─────────────────────────────────────
+// ─── The pin (handoff §4: outlined, 18 tall) ─────────────────────────
 //
 // Composed from `View`s: the app bundles no SVG renderer and the icon-font
 // subset carries no pin. ONE box — a square with three corners rounded and
 // the fourth left sharp, rotated 45° so the sharp corner points down. Sized
 // by the whole icon (owner, 2026-09-07: 「Map icon is too big」), so the head
 // is derived from it and the stroke comes down with it.
-const PIN_SIZE = 15;
+const PIN_SIZE = 18;
 const PIN_TIP_RATIO = 1.207;
 const PIN_HEAD = PIN_SIZE / PIN_TIP_RATIO;
-const PIN_STROKE = 1.5;
-const PIN_DOT = 3.25;
+const PIN_STROKE = 1.6;
+const PIN_DOT = 3.75;
 
 /** The place line's chevron, when the line opens a home's community. */
 const CHEVRON_BOX = 12;
@@ -132,18 +120,15 @@ const CHEVRON_ARM = 7;
 const CHEVRON_STROKE = 1.5;
 const CHEVRON_GAP = 6;
 
-/**
- * Touch targets back to 44 without moving anything: the place row reaches 8
- * up into the room above it and across the 4 between the rows; a figure
- * reaches 4 down toward the card.
- */
-const PLACE_SLOP = { top: 8, bottom: 4 };
-const CELL_SLOP = { bottom: 4 };
+/** Below 390 the 44pt place row scales under the touch floor; this gives it back. */
+const TOUCH_SLOP = 4;
 
 type BlockStyles = ReturnType<typeof sheet>;
 
 interface PlaceBlockProps {
 	model: PlaceBlockModel;
+	/** The figures row. False on a screen with room for the place row only. */
+	facts: boolean;
 	/** Open a home's community. Absent → the line is text. */
 	onOpenPlace?: () => void;
 	/** Open the map on the card's place. Absent → no Map button at all. */
@@ -154,6 +139,7 @@ interface PlaceBlockProps {
 
 export function PlaceBlock({
 	model,
+	facts,
 	onOpenPlace,
 	onOpenMap,
 	onOpenCell,
@@ -172,7 +158,7 @@ export function PlaceBlock({
 						onPress={onOpenPlace}
 						accessibilityRole="button"
 						accessibilityLabel={placeAccessibilityLabel(model)}
-						hitSlop={PLACE_SLOP}
+						hitSlop={{ top: TOUCH_SLOP, bottom: TOUCH_SLOP }}
 						style={({ pressed }) => [styles.placeSlot, pressed && styles.dim]}
 					>
 						{line}
@@ -196,7 +182,7 @@ export function PlaceBlock({
 						accessible
 						accessibilityRole="button"
 						accessibilityLabel={mapAccessibilityLabel(model)}
-						hitSlop={PLACE_SLOP}
+						hitSlop={{ top: TOUCH_SLOP, bottom: TOUCH_SLOP }}
 						style={({ pressed }) => [styles.map, pressed && styles.mapPressed]}
 					>
 						<View style={styles.pinBox}>
@@ -210,35 +196,36 @@ export function PlaceBlock({
 				)}
 			</View>
 
-			<View style={styles.factsRow}>
-				{model.cells.map((cell, i) =>
-					onOpenCell !== undefined ? (
-						<Pressable
-							key={cell.label}
-							onPress={() => onOpenCell(cell)}
-							accessibilityRole="button"
-							accessibilityLabel={cellAccessibilityLabel(cell)}
-							hitSlop={CELL_SLOP}
-							style={({ pressed }) => [
-								styles.cell,
-								i > 0 && styles.cellAfter,
-								pressed && styles.dim,
-							]}
-						>
-							<Figure cell={cell} styles={styles} />
-						</Pressable>
-					) : (
-						<View
-							key={cell.label}
-							style={[styles.cell, i > 0 && styles.cellAfter]}
-							accessible
-							accessibilityLabel={cellAccessibilityLabel(cell)}
-						>
-							<Figure cell={cell} styles={styles} />
-						</View>
-					),
-				)}
-			</View>
+			{facts && (
+				<View style={styles.factsRow}>
+					{model.cells.map((cell, i) =>
+						onOpenCell !== undefined ? (
+							<Pressable
+								key={cell.label}
+								onPress={() => onOpenCell(cell)}
+								accessibilityRole="button"
+								accessibilityLabel={cellAccessibilityLabel(cell)}
+								style={({ pressed }) => [
+									styles.cell,
+									i > 0 && styles.cellAfter,
+									pressed && styles.dim,
+								]}
+							>
+								<Figure cell={cell} styles={styles} />
+							</Pressable>
+						) : (
+							<View
+								key={cell.label}
+								style={[styles.cell, i > 0 && styles.cellAfter]}
+								accessible
+								accessibilityLabel={cellAccessibilityLabel(cell)}
+							>
+								<Figure cell={cell} styles={styles} />
+							</View>
+						),
+					)}
+				</View>
+			)}
 		</View>
 	);
 }
@@ -310,7 +297,6 @@ function sheet(k: number) {
 		 */
 		wrap: {
 			zIndex: 100,
-			paddingTop: PAD_TOP * k,
 			paddingHorizontal: EDGE * k,
 			backgroundColor: colors.bg,
 		},

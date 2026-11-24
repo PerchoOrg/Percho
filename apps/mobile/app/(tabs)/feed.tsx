@@ -84,6 +84,7 @@ import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
 import { useSwipeHintStore } from "../../state/swipe-hint";
+import { BLOCK_GAP, CARD_FOOT, GUTTER, feedPage } from "../../theme/feed-page";
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -148,9 +149,13 @@ import { textStyles } from "../../theme/typography";
  * owner then picked the block ABOVE the card instead ("numbers above the
  * card", `/demos/feed-above-card-v1` option 1), at the header's own 86pt, so
  * these are what they were and the card sits where it always has.
+ *
+ * 2026-11-24 (phase380): "card下方空隙多了 整体向下或者增大上面的文字". The
+ * card stopped floating in a stage: it hangs `CARD_FOOT` (12) above the tab
+ * bar at an 8pt `GUTTER`, the place block sits `BLOCK_GAP` above it, and the
+ * screen's leftover goes above the block. The numbers live in
+ * `theme/feed-page.ts`, which `theme/card-aspect.test.ts` runs per device.
  */
-const CARD_INSET = { horizontal: 16, top: 12, bottom: 16 };
-const GUTTER = 16;
 
 /**
  * The card frame height is NOT decided here any more (owner, 2026-08-17: one
@@ -315,7 +320,18 @@ export default function FeedScreen() {
 		return cfScores === undefined ? scoped : { ...scoped, cfScores };
 	}, [pool, scope?.unitId, cfScores]);
 
-	const cardWidth = width - GUTTER * 2;
+	/**
+	 * What fits on this screen (`theme/feed-page.ts`): the card at the film's
+	 * shape, and which of the place block's rows fit above it. From the page's
+	 * own measured height, so the offline bar and the tab bar are already
+	 * paid for.
+	 */
+	const [contentHeight, setContentHeight] = useState(0);
+	const page = useMemo(
+		() => feedPage(width, contentHeight),
+		[width, contentHeight],
+	);
+	const cardWidth = page.cardWidth;
 
 	const poolRef = useRef(scopedPool);
 	poolRef.current = scopedPool;
@@ -889,116 +905,139 @@ export default function FeedScreen() {
 	return (
 		<SafeAreaView style={styles.screen} edges={["top"]}>
 			{offline && <OfflineBar />}
-			{/*
-			 * The place block (phase379, the owner's "numbers above the card"):
-			 * where the place is, Map, and three figures the film cannot show.
-			 * It replaced the header that repeated the card's name, at the
-			 * header's own height, so the card did not move.
-			 *
-			 * Each affordance appears only when its target is real: no map
-			 * target, no Map button; no page, and a figure is text. The place
-			 * line opens a community only for a HOME — on a community's own card
-			 * Explore already goes there.
-			 */}
-			<PlaceBlock
-				model={block}
-				onOpenPlace={
-					placeSlug !== null
-						? () => router.push(`/community/${placeSlug}`)
-						: undefined
-				}
-				onOpenMap={
-					// The card's own point first (owner, 2026-09-14: "redirected to
-					// that community or home on map, not just the county area") —
-					// the city unit only for a card that carries no coordinates.
-					mapPoint !== null
-						? () =>
-								router.navigate({
-									pathname: "/(tabs)/search",
-									params: {
-										focusLat: String(mapPoint.lat),
-										focusLng: String(mapPoint.lng),
-										focusKind: mapPoint.kind,
-									},
-								})
-						: mapUnitId !== null
-							? () =>
-									router.navigate({
-										pathname: "/(tabs)/search",
-										params: { focus: mapUnitId },
-									})
-							: undefined
-				}
-				onOpenCell={
-					explore !== null
-						? (cell) => {
-								if (topCard) emitGesture("datapoint_tap", topCard);
-								// The page opens on the part the figure belongs to.
-								const params = {
-									slug: explore.slug,
-									...(cell.topic ? { open: cell.topic } : {}),
-								};
-								router.push(
-									explore.kind === "community"
-										? { pathname: "/community/[slug]", params }
-										: { pathname: "/city/[slug]", params },
-								);
-							}
-						: undefined
-				}
-			/>
-			<View style={styles.stackWrap}>
-				{deck.length === 0 && (loading || composing) ? (
-					<View style={styles.cardContainer}>
-						<CardSkeleton />
-					</View>
-				) : showExhausted ? (
-					<View style={styles.cardContainer}>
-						<ExhaustedCard
-							/*
-							 * One exit now, not two. "Adjust my scope" opened the
-							 * scope sheet, and the sheet left the feed on
-							 * 2026-09-09 — so widening happens where it now lives,
-							 * which is the tab this button already went to.
-							 */
-							onBrowseMap={() => router.navigate("/(tabs)/search")}
-						/>
-					</View>
-				) : (
-					<SwipeStack
-						items={deck}
-						activeIndex={activeIndex}
-						onDecision={onDecision}
-						onTapTarget={onTapTarget}
-						onHintReady={onHintReady}
-						renderCard={renderCard}
-						renderOverlay={renderOverlay}
-						keyExtractor={deckKey}
-						cardWidth={cardWidth}
-						capability={capability}
+			<View
+				style={styles.page}
+				onLayout={(e) => setContentHeight(e.nativeEvent.layout.height)}
+			>
+				{/*
+				 * The room the screen has left over, above the block — the card and
+				 * the block sit down on the tab bar (owner, 2026-11-24: "card下方空隙
+				 * 多了 整体向下"). The trade-off answer's echo is said here.
+				 */}
+				<View style={styles.room}>
+					{echo !== null && (
+						<View style={styles.echo} pointerEvents="none">
+							<Text style={styles.echoText} numberOfLines={2}>
+								{echo}
+							</Text>
+						</View>
+					)}
+				</View>
+				{/*
+				 * The place block (phase378; above the card since phase379; set down
+				 * on it in phase380): where the place is, Map, and three figures the
+				 * film cannot show. It replaced the header that repeated the card's
+				 * name.
+				 *
+				 * Each affordance appears only when its target is real: no map
+				 * target, no Map button; no page, and a figure is text. The place
+				 * line opens a community only for a HOME — on a community's own
+				 * card Explore already goes there.
+				 */}
+				{page.rows !== "none" && (
+					<PlaceBlock
+						model={block}
+						facts={page.rows === "both"}
+						onOpenPlace={
+							placeSlug !== null
+								? () => router.push(`/community/${placeSlug}`)
+								: undefined
+						}
+						onOpenMap={
+							// The card's own point first (owner, 2026-09-14: "redirected to
+							// that community or home on map, not just the county area") —
+							// the city unit only for a card that carries no coordinates.
+							mapPoint !== null
+								? () =>
+										router.navigate({
+											pathname: "/(tabs)/search",
+											params: {
+												focusLat: String(mapPoint.lat),
+												focusLng: String(mapPoint.lng),
+												focusKind: mapPoint.kind,
+											},
+										})
+								: mapUnitId !== null
+									? () =>
+											router.navigate({
+												pathname: "/(tabs)/search",
+												params: { focus: mapUnitId },
+											})
+									: undefined
+						}
+						onOpenCell={
+							explore !== null
+								? (cell) => {
+										if (topCard) emitGesture("datapoint_tap", topCard);
+										// The page opens on the part the figure belongs to.
+										const params = {
+											slug: explore.slug,
+											...(cell.topic ? { open: cell.topic } : {}),
+										};
+										router.push(
+											explore.kind === "community"
+												? { pathname: "/community/[slug]", params }
+												: { pathname: "/city/[slug]", params },
+										);
+									}
+								: undefined
+						}
 					/>
 				)}
-				{echo !== null && (
-					<View style={styles.echo} pointerEvents="none">
-						<Text style={styles.echoText} numberOfLines={2}>
-							{echo}
-						</Text>
-					</View>
-				)}
-				{/*
-				 * Paused glyph, centred on the card. Drawn here rather than in the
-				 * faces: `suspended` also covers "an explore page is over us",
-				 * where nobody can see the card, and a glyph that appears for the
-				 * pop-back animation's duration would flash. Only a TAP pause
-				 * shows it. `pointerEvents="none"` so the next tap reaches the deck.
-				 */}
-				{paused && (
-					<View style={styles.pausedWrap} pointerEvents="none">
-						<View style={styles.pausedDisc}>
-							<View style={styles.pausedTriangle} />
+				<View
+					style={[
+						styles.stackWrap,
+						{
+							height: page.cardHeight,
+							marginTop: page.rows === "none" ? 0 : BLOCK_GAP,
+						},
+					]}
+				>
+					{deck.length === 0 && (loading || composing) ? (
+						<View style={styles.cardContainer}>
+							<CardSkeleton />
 						</View>
-					</View>
-				)}
+					) : showExhausted ? (
+						<View style={styles.cardContainer}>
+							<ExhaustedCard
+								/*
+								 * One exit now, not two. "Adjust my scope" opened the
+								 * scope sheet, and the sheet left the feed on
+								 * 2026-09-09 — so widening happens where it now lives,
+								 * which is the tab this button already went to.
+								 */
+								onBrowseMap={() => router.navigate("/(tabs)/search")}
+							/>
+						</View>
+					) : (
+						<SwipeStack
+							items={deck}
+							activeIndex={activeIndex}
+							onDecision={onDecision}
+							onTapTarget={onTapTarget}
+							onHintReady={onHintReady}
+							renderCard={renderCard}
+							renderOverlay={renderOverlay}
+							keyExtractor={deckKey}
+							cardWidth={cardWidth}
+							capability={capability}
+						/>
+					)}
+					{/*
+					 * Paused glyph, centred on the card. Drawn here rather than in the
+					 * faces: `suspended` also covers "an explore page is over us",
+					 * where nobody can see the card, and a glyph that appears for the
+					 * pop-back animation's duration would flash. Only a TAP pause
+					 * shows it. `pointerEvents="none"` so the next tap reaches the deck.
+					 */}
+					{paused && (
+						<View style={styles.pausedWrap} pointerEvents="none">
+							<View style={styles.pausedDisc}>
+								<View style={styles.pausedTriangle} />
+							</View>
+						</View>
+					)}
+				</View>
 			</View>
 		</SafeAreaView>
 	);
@@ -1012,30 +1051,33 @@ const styles = StyleSheet.create({
 	 * stack vertically centred and the card stretching edge to edge.
 	 */
 	/**
-	 * The answer echo. Absolutely positioned at the FOOT of the stage, in the
-	 * paper the card floats on — the card is `CARD_FRAME_RATIO` of the stage and
-	 * the slack below it is where this fits without covering anything.
+	 * The answer echo, in the room above the place block — the one stretch of
+	 * the page that is paper since the card sat down on the tab bar (phase380).
 	 */
 	echo: {
-		position: "absolute",
-		left: 24,
-		right: 24,
-		bottom: 6,
+		paddingHorizontal: 24,
 		alignItems: "center",
-		zIndex: 5,
 	},
 	echoText: {
 		...textStyles.footnote,
 		color: colors.ink2,
 		textAlign: "center",
 	},
+	/**
+	 * Everything between the status bar (and the offline bar) and the tab bar,
+	 * the card `CARD_FOOT` above the bar. Measured: `feedPage` decides what fits.
+	 */
+	page: { flex: 1, paddingBottom: CARD_FOOT },
+	/** Whatever is left over, above the block. */
+	room: { flex: 1, justifyContent: "center" },
+	/**
+	 * The stage: the card's own box and nothing more, so `SwipeStack` finds no
+	 * slack to share out and the card rests at its top.
+	 */
 	stackWrap: {
-		flex: 1,
 		alignItems: "center",
 		justifyContent: "center",
-		paddingHorizontal: CARD_INSET.horizontal,
-		paddingTop: CARD_INSET.top,
-		paddingBottom: CARD_INSET.bottom,
+		paddingHorizontal: GUTTER,
 	},
 	/**
 	 * Placeholder frame for skeleton / exhausted states — fills the same box
