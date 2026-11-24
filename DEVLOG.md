@@ -23,6 +23,23 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 09:35 UTC — phase389: a different chart for each compare card
+
+**Objective**: owner on phase388: "好一些了 比较的结果都是线 太单一 也可以尝试饼状图或者柱状图或者别的啥". After phase388 every card was the same horizontal bar.
+**What the phone shows** (neighbourhood compare, five cards, five forms):
+- **Safety** — the hospital distance as a large figure per place ("2.9 mi") with the hospital's name under it; flood zone as before.
+- **Schools** — a ring per school, a row per level, a column per place: filled to the school's standing, "Top 7%" in the middle, name and distance under it.
+- **Convenience** — horizontal bars, unchanged (several distances per place is what a bar is for).
+- **Potential** — figures and the line chart, unchanged.
+- **Cost** — a column per place for a month of holding a home, its height the total, stacked by what the month is made of (property tax, insurance, …) in lighter shades of the place's colour, with a key for the parts.
+**Actions**: `components/compare/CompareVisuals.tsx` — `Ring` (two half-rings turning inside half-width clips; no SVG), `MileFigures`, `Stack`; `lib/community/compare-visuals.ts` — `cost.holding[].rows` carries the month's parts (test updated).
+**Decisions**:
+1. **Form by what the figure is**, not variety for itself: a standing out of 100 is a gauge, one number is a figure, a total with parts is a stacked column, a series is a line.
+2. **No pie of places against each other** — he suggested a pie, and a pie says "shares of one whole"; three neighbourhoods are not parts of anything. The ring is the round form that is honest here (each school against the whole state), and the cost column is the part-to-whole one.
+3. Parts are shaded by opacity of the place's own colour, so the column still reads as that place; the key swatches are ink at the same steps.
+**Verified**: mobile typecheck 0, lint 0 errors / 5 warnings, vitest 918. The ring's geometry was drawn in headless Chrome with the same boxes, clips and rotations at 5 / 25 / 50 / 65 / 93 / 100% and reads correctly. **Not seen on a device** — the ring's seams and the column heights are the things to look at.
+**Next steps**: owner looks. Open: hospital distance in the comparison at all (asked twice, unanswered).
+
 ## 2026-11-24 07:05 UTC — phase388: the comparison opens "In short"; one line a place; a shared flood zone said once
 
 **Objective**: owner, with a screenshot of the phase387 compare (Apremont - Highcroft / Ashley Crossing / Windward): "这个页面太多槽点 — 上面saved compare很奇怪; percho take 没看懂; safety没看到有点乱 而且重复了三句一样的flood zone".

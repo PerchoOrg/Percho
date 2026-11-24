@@ -73,7 +73,15 @@ export interface CompareVisuals {
 		max: number;
 	} | null;
 	cost: {
-		holding: ({ display: string; usd: number } | undefined)[];
+		holding: (
+			| {
+					display: string;
+					usd: number;
+					/** What the month is made of, as the place's page lists it. */
+					rows: { label: string; usd: number }[];
+			  }
+			| undefined
+		)[];
 		dues: (string | undefined)[];
 	} | null;
 }
@@ -205,7 +213,11 @@ function costOf(
 	const holding = communities.map((c) => {
 		const h = c.profile?.homeValue?.holding;
 		return h
-			? { display: h.display, usd: h.rows.reduce((a, r) => a + r.usd, 0) }
+			? {
+					display: h.display,
+					usd: h.rows.reduce((a, r) => a + r.usd, 0),
+					rows: h.rows.map((r) => ({ label: r.label, usd: r.usd })),
+				}
 			: undefined;
 	});
 	const dues = communities.map((c) => {

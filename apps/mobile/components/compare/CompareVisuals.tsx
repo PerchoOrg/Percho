@@ -8,6 +8,11 @@
  * colour is identity, never a verdict; the key that names each colour stays
  * pinned under the header while the cards scroll.
  *
+ * Each card has the form its figure calls for (phase389, owner: "比较的结果
+ * 都是线 太单一"): a school's standing is a ring, a single distance is a
+ * figure, several distances are bars, a value over the years is a line, and
+ * a month's cost is a column stacked by what it is made of.
+ *
  * Plain Views, like the Explore charts: the app ships no chart or SVG library.
  */
 import { LinearGradient } from "expo-linear-gradient";
@@ -263,6 +268,175 @@ export function InShort({
 	);
 }
 
+/**
+ * A kind of place as figures: how far each community's nearest one is.
+ *
+ * One number a place needs no chart — the figure is the chart. Safety uses
+ * this; Convenience, with a row per kind, keeps the bars.
+ */
+function MileFigures({
+	row,
+	places,
+}: { row: DistanceRow; places: readonly ComparePlace[] }) {
+	return (
+		<View style={styles.group}>
+			<Text style={styles.groupLabel}>{row.label}</Text>
+			<View style={styles.figures}>
+				{places.map((p, i) => {
+					const c = row.cells[i];
+					return (
+						<View key={p.id} style={styles.figureCell}>
+							<View style={[styles.figureKey, { backgroundColor: p.color }]} />
+							<Text
+								style={[styles.figure, !c && styles.blank]}
+								numberOfLines={1}
+								adjustsFontSizeToFit
+							>
+								{c ? `${c.miles} mi` : "—"}
+							</Text>
+							{!!c && (
+								<Text style={styles.figureNote} numberOfLines={3}>
+									{c.name}
+								</Text>
+							)}
+						</View>
+					);
+				})}
+			</View>
+		</View>
+	);
+}
+
+/**
+ * A ring filled to `pct`, clockwise from the top, with its figure inside.
+ *
+ * No SVG, so the arc is two half-rings, each turning inside a clip the width
+ * of half the circle: the right clip shows the first 180°, the left the rest.
+ */
+function Ring({
+	size,
+	pct,
+	color,
+	index,
+	children,
+}: {
+	size: number;
+	pct: number | undefined;
+	color: string;
+	index: number;
+	children: ReactNode;
+}) {
+	const grow = useGrow(index * 90);
+	const angle = Math.max(0, Math.min(100, pct ?? 0)) * 3.6;
+	// Where the sweep crosses from the right half into the left.
+	const turn = angle > 180 ? 180 / angle : 1;
+	const weight = Math.round(size / 9);
+	const box = { width: size, height: size };
+	const ring = { ...box, borderRadius: size / 2, borderWidth: weight };
+	const half = (rotate: Animated.AnimatedInterpolation<string>) => (
+		<Animated.View style={[styles.ringLayer, box, { transform: [{ rotate }] }]}>
+			<View style={[styles.ringClip, { width: size / 2, height: size }]}>
+				<View style={[ring, { borderColor: color }]} />
+			</View>
+		</Animated.View>
+	);
+	return (
+		<View style={box}>
+			<View style={[styles.ringLayer, ring, styles.ringTrack]} />
+			{angle > 0 && (
+				<>
+					<View
+						style={[
+							styles.ringClip,
+							styles.ringLayer,
+							{ left: size / 2, width: size / 2, height: size },
+						]}
+					>
+						<View style={[styles.ringLayer, box, { left: -size / 2 }]}>
+							{half(
+								grow.interpolate({
+									inputRange: [0, turn, 1],
+									outputRange: [
+										"0deg",
+										`${Math.min(angle, 180)}deg`,
+										`${Math.min(angle, 180)}deg`,
+									],
+								}),
+							)}
+						</View>
+					</View>
+					{angle > 180 && (
+						<View
+							style={[
+								styles.ringClip,
+								styles.ringLayer,
+								{ width: size / 2, height: size },
+							]}
+						>
+							{half(
+								grow.interpolate({
+									inputRange: [0, turn, 1],
+									outputRange: ["180deg", "180deg", `${angle}deg`],
+								}),
+							)}
+						</View>
+					)}
+				</>
+			)}
+			<View style={[styles.ringLayer, box, styles.ringCenter]}>{children}</View>
+		</View>
+	);
+}
+
+const STACK_H = 132;
+/** A part's shade: the place's colour, lighter for each part up the column. */
+const partOpacity = (k: number) => Math.max(0.2, 1 - k * 0.26);
+
+/** One place's month as a column, stacked by what it is made of. */
+function Stack({
+	rows,
+	parts,
+	height,
+	color,
+	index,
+}: {
+	rows: readonly { label: string; usd: number }[];
+	/** Every part across the compared places, in a fixed order. */
+	parts: readonly string[];
+	height: number;
+	color: string;
+	index: number;
+}) {
+	const grow = useGrow(index * 90);
+	return (
+		<Animated.View
+			style={[
+				styles.stack,
+				{
+					height: grow.interpolate({
+						inputRange: [0, 1],
+						outputRange: [0, Math.max(6, height)],
+					}),
+				},
+			]}
+		>
+			{parts.map((label, k) => {
+				const usd = rows.find((r) => r.label === label)?.usd ?? 0;
+				return usd > 0 ? (
+					<View
+						key={label}
+						style={{
+							flex: usd,
+							backgroundColor: color,
+							opacity: partOpacity(k),
+						}}
+					/>
+				) : null;
+			})}
+		</Animated.View>
+	);
+}
+
 function Card({
 	title,
 	note,
@@ -292,12 +466,19 @@ export function CompareCards({
 		1,
 		...(cost?.holding ?? []).map((h) => h?.usd ?? 0),
 	);
+	// Every part any place's month has, in the order first listed — a part
+	// keeps its shade from one column to the next.
+	const holdingParts = [
+		...new Set(
+			(cost?.holding ?? []).flatMap((h) => h?.rows.map((r) => r.label) ?? []),
+		),
+	];
 	return (
 		<>
 			{safety && (
 				<Card title="Safety" note="the nearest hospital, and the flood zone">
 					{safety.rows.map((r) => (
-						<MileRow key={r.label} row={r} places={places} />
+						<MileFigures key={r.label} row={r} places={places} />
 					))}
 					{safety.flood.some(Boolean) && (
 						<View style={styles.group}>
@@ -323,24 +504,40 @@ export function CompareCards({
 					{schools.map((level) => (
 						<View key={level.level} style={styles.group}>
 							<Text style={styles.groupLabel}>{level.level}</Text>
-							{places.map((p, i) => {
-								const c = level.cells[i];
-								return (
-									<PlaceLine
-										key={p.id}
-										place={p}
-										text={c?.name}
-										aside={c?.distance}
-										value={c ? `Top ${c.share}%` : undefined}
-									>
-										<Bar
-											pct={c ? 100 - c.share : undefined}
-											color={p.color}
-											index={i}
-										/>
-									</PlaceLine>
-								);
-							})}
+							<View style={styles.columns}>
+								{places.map((p, i) => {
+									const c = level.cells[i];
+									return (
+										<View key={p.id} style={styles.column}>
+											<Ring
+												size={places.length <= 3 ? 72 : 52}
+												pct={c ? 100 - c.share : undefined}
+												color={p.color}
+												index={i}
+											>
+												{c ? (
+													<>
+														<Text style={styles.ringTop}>Top</Text>
+														<Text style={styles.ringValue}>{c.share}%</Text>
+													</>
+												) : (
+													<Text style={[styles.ringValue, styles.blank]}>
+														—
+													</Text>
+												)}
+											</Ring>
+											{!!c && (
+												<Text style={styles.columnName} numberOfLines={2}>
+													{c.name}
+												</Text>
+											)}
+											{!!c?.distance && (
+												<Text style={styles.columnNote}>{c.distance}</Text>
+											)}
+										</View>
+									);
+								})}
+							</View>
 						</View>
 					))}
 				</Card>
@@ -356,7 +553,7 @@ export function CompareCards({
 
 			{potential && (
 				<Card title="Potential" note="what a typical home there is worth">
-					<View style={styles.figures}>
+					<View style={[styles.figures, styles.figuresLead]}>
 						{places.map((p, i) => {
 							const c = potential.cells[i];
 							return (
@@ -416,23 +613,37 @@ export function CompareCards({
 					{cost.holding.some(Boolean) && (
 						<View style={styles.group}>
 							<Text style={styles.groupLabel}>A month to hold a home</Text>
-							{places.map((p, i) => {
-								const h = cost.holding[i];
-								return (
-									<PlaceLine
-										key={p.id}
-										place={p}
-										text={h ? p.name : undefined}
-										value={h?.display}
-									>
-										<Bar
-											pct={h ? (h.usd / holdingMax) * 100 : undefined}
-											color={p.color}
-											index={i}
+							<View style={[styles.columns, styles.stacks]}>
+								{places.map((p, i) => {
+									const h = cost.holding[i];
+									return (
+										<View key={p.id} style={styles.column}>
+											<Text style={[styles.stackValue, !h && styles.blank]}>
+												{h?.display ?? "—"}
+											</Text>
+											{!!h && (
+												<Stack
+													rows={h.rows}
+													parts={holdingParts}
+													height={(h.usd / holdingMax) * STACK_H}
+													color={p.color}
+													index={i}
+												/>
+											)}
+										</View>
+									);
+								})}
+							</View>
+							<View style={styles.partKey}>
+								{holdingParts.map((label, k) => (
+									<View key={label} style={styles.keyItem}>
+										<View
+											style={[styles.partSwatch, { opacity: partOpacity(k) }]}
 										/>
-									</PlaceLine>
-								);
-							})}
+										<Text style={styles.columnNote}>{label}</Text>
+									</View>
+								))}
+							</View>
 						</View>
 					)}
 					{cost.dues.some(Boolean) && (
@@ -565,7 +776,47 @@ const styles = StyleSheet.create({
 	},
 	mileEnd: { ...textStyles.note, fontSize: 10.5, color: colors.ink2 },
 
-	figures: { flexDirection: "row", gap: 10, marginTop: 12 },
+	figures: { flexDirection: "row", gap: 10, marginTop: 4 },
+	// Straight under a card's head, with no group label between.
+	figuresLead: { marginTop: 12 },
+
+	columns: { flexDirection: "row", gap: 8 },
+	column: { flex: 1, alignItems: "center", gap: 4 },
+	columnName: {
+		...textStyles.note,
+		color: colors.ink,
+		textAlign: "center",
+	},
+	columnNote: { ...textStyles.note, fontSize: 11, color: colors.ink2 },
+	ringLayer: { position: "absolute", left: 0, top: 0 },
+	ringClip: { overflow: "hidden" },
+	ringTrack: { borderColor: colors.surface2 },
+	ringCenter: { alignItems: "center", justifyContent: "center" },
+	ringTop: {
+		...textStyles.note,
+		fontSize: 9.5,
+		lineHeight: 11,
+		color: colors.ink2,
+	},
+	ringValue: { ...textStyles.headline, lineHeight: 18, color: colors.ink },
+
+	// Columns stand on one baseline; a part sits 2 pt off the next.
+	stacks: { alignItems: "flex-end", marginTop: 2 },
+	stack: {
+		width: 46,
+		borderRadius: 4,
+		overflow: "hidden",
+		flexDirection: "column-reverse",
+		gap: 2,
+	},
+	stackValue: { ...textStyles.footnote, fontWeight: "600", color: colors.ink },
+	partKey: { flexDirection: "row", flexWrap: "wrap", columnGap: 12, rowGap: 2 },
+	partSwatch: {
+		width: 10,
+		height: 10,
+		borderRadius: 2,
+		backgroundColor: colors.ink,
+	},
 	figureCell: { flex: 1, gap: 3 },
 	figureKey: { width: 22, height: 4, borderRadius: 2 },
 	figure: { ...textStyles.title2, color: colors.ink },
