@@ -31,6 +31,15 @@ rotation, not on the way in.
 - Assembly `121b8f72`, `cf_stream_uid 809d31c3659cb2c81e7b86f9f70f7789`, 74.5 s, 25 clips; community act 4 clips (entrance, pool from the air, pool and cabana, the neighbourhood from the air). **Spend: none** (Autrey Mill and Cauley Creek Seedance clips reused). Cover uploaded (the entrance). Profile written.
 **Verified**: frames every 2 s; production feed serves the uid (18 community films); `/watch/c/wards-crossing` 200.
 **Next steps**: two more to reach twenty — confirm community footage before each pitch.
+## 2026-11-24 10:05 UTC — phase392: the music credit moves to percho.co/credits
+
+**Objective**: owner on phase391: "不要单独写music by这部分".
+**What the phone shows**: the You tab footer is two lines — `Privacy · Terms · Contact & support · Credits · Delete account` and the version. "Credits" opens percho.co/credits in the browser, like the other links.
+**Actions**: `apps/mobile/app/(tabs)/you.tsx` — the music/photo line and `CC_BY_4` removed, a `Credits` entry added to `LINKS`. `apps/web/app/(public)/credits/page.tsx` (new, `LegalLayout`) — the full CC BY 4.0 credit (ten titles, author, incompetech, licence link) and the photo note.
+**Decisions**: the credit is moved, not dropped — the tracks are CC BY 4.0 and the licence requires attribution; §3(a)(2) lets it be a link to a page that carries it. The track list now lives on the web page; keep it in step with `KML_TRACKS` in `scripts/render-worker/bgm/fetch.sh`.
+**Verified**: mobile typecheck 0, lint 0 errors / 5 warnings; web typecheck 0, lint 0 errors, `next build` lists `/credits`. **Not seen on a device**; the page is live once Vercel deploys main.
+**Next steps**: owner looks on the dev client.
+
 ## 2026-11-24 09:44 UTC — phase391: a shorter footer on the You tab
 
 **Objective**: owner: "you tab底部的声明 简化一下". The footer under the Account card was the links, a four-line music credit naming ten tracks with the licence URL spelled out, a photo-credit line and the version.

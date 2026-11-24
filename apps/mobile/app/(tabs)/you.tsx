@@ -454,17 +454,6 @@ export default function YouTab() {
 						</Text>
 					) : null}
 				</View>
-				<Text style={[styles.footerTxt, styles.footerCentre]}>
-					Music by Kevin MacLeod (incompetech.com),{" "}
-					<Text
-						style={styles.footerLink}
-						onPress={() => void Linking.openURL(CC_BY_4)}
-						accessibilityRole="link"
-					>
-						CC BY 4.0
-					</Text>
-					. Photo credits on each neighbourhood page.
-				</Text>
 				<Text style={styles.footerTxt}>
 					Percho {Constants.expoConfig?.version ?? "?"}
 					{buildLabel()}
@@ -485,19 +474,12 @@ export default function YouTab() {
  */
 const RECENT_SHOWN = 10;
 
-/**
- * The Kevin MacLeod tracks in the film soundtrack library are CC BY 4.0. The
- * footer credits the author, the source and the licence (linked) — what 4.0
- * asks for; it does not require the titles, and the owner wanted the footer
- * short (2026-11-24). App-wide rather than per film: only assembled tours
- * record their track, so a per-film credit could name the wrong piece.
- */
-const CC_BY_4 = "https://creativecommons.org/licenses/by/4.0/";
-
 const LINKS = [
 	{ label: "Privacy", href: "https://www.percho.co/privacy" },
 	{ label: "Terms", href: "https://www.percho.co/terms" },
 	{ label: "Contact & support", href: "https://www.percho.co/contact" },
+	// The CC BY 4.0 music credit and the photo note live on this page.
+	{ label: "Credits", href: "https://www.percho.co/credits" },
 ] as const;
 
 /** " (build 2)" from app.json; empty in Expo Go where there is no build. */
@@ -666,6 +648,5 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 	},
 	footerTxt: { ...textStyles.footnote, fontSize: 12, color: colors.ink3 },
-	footerCentre: { textAlign: "center" },
 	footerLink: { color: colors.ink2 },
 });
