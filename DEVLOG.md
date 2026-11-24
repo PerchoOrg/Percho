@@ -23,6 +23,13 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 00:52 UTC — phase381: the card and the numbers move up a little
+
+**Objective**: owner on phase380: "整体向上再一点点".
+**Actions**: the screen's leftover is shared out instead of all going above the block — `ROOM_ABOVE` 3 : `ROOM_BELOW` 1 (`theme/feed-page.ts`), two flex spacers in `app/(tabs)/feed.tsx`, the second under the stage. The block and card move up by a quarter of the leftover: 11.5pt on his 428 (room above 46 → 35, gap under the card 12 → 24), 7 on a 390, 5 on the mini. `theme/card-aspect.test.ts` pins the share and its bounds per device (room above 12–40, gap under the card < 26). Demo option 1 redrawn the same way.
+**Decisions**: a share rather than a fixed step: a fixed 10–12pt would have left the mini and the 15 with ~8pt under the status bar (their leftover is ~20), while the Max-size phones, which have the most, move the most. The fit check (which rows fit) is unchanged — it never depended on where the leftover goes.
+**Verified**: mobile typecheck 0, lint 0 errors / 5 warnings (as main), vitest 897. Not seen on a device.
+
 ## 2026-11-24 00:37 UTC — phase380: the card sits down on the tab bar; the numbers are larger and sit on the card
 
 **Objective**: owner on phase379: "card下方空隙多了 整体向下或者增大上面的文字 你重新设计". With the block in the header's 86pt and the card at its old size, two thirds of the page's slack sat under the card: 52–71pt between it and the tab bar.

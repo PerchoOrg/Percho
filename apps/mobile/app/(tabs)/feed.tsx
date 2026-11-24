@@ -84,7 +84,14 @@ import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
 import { useSwipeHintStore } from "../../state/swipe-hint";
-import { BLOCK_GAP, CARD_FOOT, GUTTER, feedPage } from "../../theme/feed-page";
+import {
+	BLOCK_GAP,
+	CARD_FOOT,
+	GUTTER,
+	ROOM_ABOVE,
+	ROOM_BELOW,
+	feedPage,
+} from "../../theme/feed-page";
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -910,9 +917,10 @@ export default function FeedScreen() {
 				onLayout={(e) => setContentHeight(e.nativeEvent.layout.height)}
 			>
 				{/*
-				 * The room the screen has left over, above the block — the card and
-				 * the block sit down on the tab bar (owner, 2026-11-24: "card下方空隙
-				 * 多了 整体向下"). The trade-off answer's echo is said here.
+				 * Three quarters of the room the screen has left over, above the
+				 * block — the card and the block sit low on the page (owner,
+				 * 2026-11-24: "card下方空隙多了 整体向下", then "整体向上再一点点").
+				 * The trade-off answer's echo is said here.
 				 */}
 				<View style={styles.room}>
 					{echo !== null && (
@@ -1038,6 +1046,8 @@ export default function FeedScreen() {
 						</View>
 					)}
 				</View>
+				{/* The other quarter, under the card. */}
+				<View style={styles.foot} />
 			</View>
 		</SafeAreaView>
 	);
@@ -1068,8 +1078,9 @@ const styles = StyleSheet.create({
 	 * the card `CARD_FOOT` above the bar. Measured: `feedPage` decides what fits.
 	 */
 	page: { flex: 1, paddingBottom: CARD_FOOT },
-	/** Whatever is left over, above the block. */
-	room: { flex: 1, justifyContent: "center" },
+	/** The leftover, shared out: above the block, and under the card. */
+	room: { flex: ROOM_ABOVE, justifyContent: "center" },
+	foot: { flex: ROOM_BELOW },
 	/**
 	 * The stage: the card's own box and nothing more, so `SwipeStack` finds no
 	 * slack to share out and the card rests at its top.

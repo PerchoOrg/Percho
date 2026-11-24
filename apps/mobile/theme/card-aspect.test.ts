@@ -40,6 +40,8 @@ import {
 	CARD_FOOT,
 	GUTTER,
 	MIN_ROOM,
+	ROOM_ABOVE,
+	ROOM_BELOW,
 	blockHeight,
 	feedPage,
 } from "./feed-page";
@@ -110,27 +112,31 @@ describe("the shipping lineup", () => {
 
 	/**
 	 * "card下方空隙多了 整体向下或者增大上面的文字" (owner, 2026-11-24, on
-	 * phase379). The gap under the card was 52–71pt; it is `CARD_FOOT` on
-	 * every phone now, and the room the screen has left goes ABOVE the place
-	 * block. This pins both halves: the whole block fits, and the room it
-	 * leaves at the top is neither negative nor a new hole.
+	 * phase379): the gap under the card was 52–71pt. Then "整体向上再一点点":
+	 * a quarter of the leftover goes back under the card. This pins it on every
+	 * phone: the whole block fits, the room above it is real but not a hole,
+	 * and the gap under the card stays small.
 	 */
-	it("hangs the card a fixed step above the tab bar, the block on it", () => {
+	it("sits the card low, the block on it, the leftover shared 3 : 1", () => {
 		expect(CARD_FOOT).toBe(12);
+		expect([ROOM_ABOVE, ROOM_BELOW]).toEqual([3, 1]);
 		for (const [name, w, h, top, bottom] of DEVICES) {
 			const content = contentOf(h, top, bottom);
 			const page = feedPage(w, content);
 			expect(page.rows, `${name}: rows`).toBe("both");
-			const room =
+			const left =
 				content -
 				CARD_FOOT -
 				page.cardHeight -
 				BLOCK_GAP -
 				blockHeight(w, "both");
-			expect(room, `${name}: room above the block`).toBeGreaterThanOrEqual(
-				MIN_ROOM,
-			);
-			expect(room, `${name}: room above the block`).toBeLessThan(50);
+			expect(left, `${name}: leftover`).toBeGreaterThanOrEqual(MIN_ROOM);
+			const share = left / (ROOM_ABOVE + ROOM_BELOW);
+			const above = share * ROOM_ABOVE;
+			const under = CARD_FOOT + share * ROOM_BELOW;
+			expect(above, `${name}: room above the block`).toBeGreaterThan(12);
+			expect(above, `${name}: room above the block`).toBeLessThan(40);
+			expect(under, `${name}: gap under the card`).toBeLessThan(26);
 		}
 	});
 
@@ -178,6 +184,11 @@ describe("the shipping lineup", () => {
 		expect(FEED.indexOf("<View style={styles.room}>")).toBeLessThan(
 			FEED.indexOf("<PlaceBlock"),
 		);
+		expect(FEED.indexOf("<View style={styles.foot} />")).toBeGreaterThan(
+			FEED.indexOf("styles.stackWrap,"),
+		);
+		expect(FEED).toContain("room: { flex: ROOM_ABOVE");
+		expect(FEED).toContain("foot: { flex: ROOM_BELOW }");
 		expect(STACK).toContain("(stageHeight - frameHeight) / 3");
 	});
 
