@@ -23,6 +23,31 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 02:30 UTC — phase383: city page — police, three schools, everyday places, and places' own websites
+
+**Objective**: owner on phase382's Duluth page: "safety 有警察局或者别的吗 / schools 只显示3个小初高排名最高的 / convenient 不只是距离downtown和机场的距离 要生活上的方便 / 这些地方有官网的可以直接放链接". City page only; the community page is not touched.
+**What the phone shows** (Duluth):
+- **Safety**: a third row, `Police · Duluth Police Department · 0.5 mi`.
+- **Schools**: three rows — the best-ranked elementary, middle and high (Wilson Creek #10, River Trail #4, Peachtree Ridge #53). The other ranked schools and all 25 are in the sheet, as before.
+- **Convenience**: `Groceries · Publix · 0.9 mi`, `Wholesale · Sam's Club · 3.6 mi`, `Pharmacy · Walgreens · 0.8 mi`, `Park · Taylor Park · 0.1 mi`, then `Drive · Downtown Atlanta · 48–72 min` and `Drive · Hartsfield-Jackson · 52–76 min`. The sheet opens on **Everyday** — up to five places of each kind (plus Library), nearest first — and keeps the drive-time chart under it.
+- **Links**: in the sheets, a place with its own website shows ↗ after its name and the row opens the site: the hospital and fire station (Safety), stores and libraries (Everyday), schools (the all-schools list). The tiles stay one button each — a 22pt tile row is too short to carry its own link.
+**Actions**:
+- `scripts/admin/import-community-safety.ts --cities`: one Overpass request now also reads police stations, supermarkets, warehouse clubs, pharmacies, named parks, libraries and schools, with each element's `website` / `contact:website` (https only). Writes `city-safety.json` (now `police`, and `site` per place) and the new `apps/web/lib/cities/city-places.json` (`everyday` by kind, `schoolSites` by normalised name). `overpass()`, `placeOf()`, `boxAround()`, `nearest()` factored out; the community mode's output is unchanged (`closest` still returns name + miles).
+- `packages/shared/src/city.ts`: `safety.rows[].site`, `everyday`, `education.schools[].site`, `allSchools[].site` — all optional, all added at read time (`links.ts`: `citySafety`, `cityEveryday`, `schoolSite`, `citySchools`; `detail.ts`). Nothing stored in `cities.profile`.
+- Mobile `lib/city/page.ts`: `schoolRows` = the first school of each level column (`TILE_SCHOOLS` gone); `everydayRows` (first place of the first `TILE_EVERYDAY` = 4 kinds); `driveRows` no longer slices — the tile takes `TILE_DRIVES` = 2. `app/city/[slug].tsx`: the Convenience tile and sheet, `PlaceRow` for sheet rows that may link.
+**Decisions**:
+1. **OpenStreetMap, not Google Places** — free and keyless, the source Safety already uses; Places would bill per lookup.
+2. **Groceries are chain stores** (OSM `brand`): the nearest "supermarket" to Cumming's centre is a butcher's counter, to Buford's a small market — not where the week's shopping is done. Wholesale is Costco / Sam's / BJ's only (`shop=wholesale` is also restaurant suppliers). A "Shopping" kind was tried and dropped: its nearest entries were strip centres and a Big Lots.
+3. **Police is the city's own force or its county's** (the name must carry one of the two): the station nearest Johns Creek's centre is a Forsyth County sheriff's precinct, which does not police it. With the rule Johns Creek reads "Johns Creek Police Department · 6.5 mi".
+4. **Links only where OSM carries an https site** — nothing guessed. A name two schools in reach share gets none.
+**Issues**:
+- **School websites are thin**: OSM has a site for 2 of Duluth's 25 schools (http-only and missing entries are skipped), so most school rows have no ↗. `k12_schools` has no website column. NCES publishes one per school (free); importing it needs an additive column — raised with the owner, not done.
+- **No police site in OSM for any of the seven cities**, so the Police row never links yet.
+- Pre-existing, seen while checking: Johns Creek's "nearest fire station" is `Forsyth County Fire Station #6 · 2.4 mi` — OSM's Johns Creek stations are evidently unnamed or missing. Not changed here.
+- Distances are straight-line from the city's centre, as Safety's are; the sheet says so.
+**Verified**: web typecheck 0, vitest 1400 (links: 3 new); mobile typecheck 0, lint 0 errors / 5 warnings (as main), vitest 898 (1 new). Importer run for all 7 cities. Not seen on a device.
+**Next steps**: owner's call on the NCES school-website import; the same three changes on the community page if he wants them there.
+
 ## 2026-11-24 02:09 UTC — phase382: Explore tiles — every row the same three voices, one bold figure
 
 **Objective**: owner on Duluth's Explore page (screenshot): "explore这里还是乱 每一个section 字体 粗细 名字 类型 距离 排名 看不出重点".

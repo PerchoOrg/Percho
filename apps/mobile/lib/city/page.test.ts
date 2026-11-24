@@ -3,6 +3,7 @@ import {
 	costRows,
 	driveRows,
 	driveTimes,
+	everydayRows,
 	fullSchoolName,
 	glancePart,
 	glanceTiles,
@@ -237,12 +238,10 @@ describe("the five tiles", () => {
 		]);
 	});
 
-	it("names every ranked school in full, by level then rank, a college last", () => {
+	it("names the best-ranked school at each level, in full", () => {
 		expect(schoolRows(city)).toEqual([
 			{ name: "Daves Creek Elementary School", rank: "#6 in Georgia" },
 			{ name: "Alliance Academy for Innovation", rank: "#5 in Georgia" },
-			{ name: "Forsyth Central High School", rank: "#123 in Georgia" },
-			{ name: "University of North Georgia — Cumming" },
 		]);
 		expect(
 			schoolsByLevel([
@@ -257,6 +256,24 @@ describe("the five tiles", () => {
 		expect(fullSchoolName("South Forsyth Middle")).toBe(
 			"South Forsyth Middle School",
 		);
+	});
+
+	it("names the closest everyday place of each kind", () => {
+		const everyday = [
+			{
+				kind: "Groceries",
+				places: [
+					{ name: "Publix", miles: 0.9, site: "https://www.publix.com/" },
+					{ name: "Kroger", miles: 1.6 },
+				],
+			},
+			{ kind: "Park", places: [{ name: "Taylor Park", miles: 0.1 }] },
+		];
+		expect(everydayRows({ everyday })).toEqual([
+			{ kind: "Groceries", name: "Publix", miles: 0.9 },
+			{ kind: "Park", name: "Taylor Park", miles: 0.1 },
+		]);
+		expect(everydayRows({})).toEqual([]);
 	});
 
 	it("lists the drives that have a time, off-peak to rush", () => {

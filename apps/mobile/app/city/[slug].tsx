@@ -60,8 +60,10 @@ import { ReviewsSection } from "../../components/community/ReviewsSection";
 import { TourHero } from "../../components/community/TourHero";
 import { apiBase } from "../../lib/api/base";
 import {
+	TILE_DRIVES,
 	costRows,
 	driveRows,
+	everydayRows,
 	glancePart,
 	otherRankings,
 	schoolRows,
@@ -75,6 +77,47 @@ import { useAuthStore } from "../../state/auth";
 import { useSavedStore } from "../../state/saved";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
+
+const openSite = (url: string) => void Linking.openURL(url).catch(() => {});
+
+/**
+ * A sheet's row for a place: its name, a quieter word, its figure — and the
+ * place's own website one tap away where it has one (owner 2026-11-24: "这些
+ * 地方有官网的可以直接放链接"). The tiles stay one button each; the links are
+ * here, where a row is tall enough to tap.
+ */
+function PlaceRow({
+	name,
+	site,
+	aside,
+	figure,
+	share,
+}: {
+	name: string;
+	site?: string | undefined;
+	aside?: string | undefined;
+	figure?: string | undefined;
+	/** The figure is a "Top N%" share, in its fixed column. */
+	share?: boolean;
+}) {
+	return (
+		<Pressable
+			style={({ pressed }) => [styles.placeRow, pressed && styles.pressed]}
+			onPress={() => site && openSite(site)}
+			disabled={!site}
+			accessibilityRole={site ? "link" : "text"}
+		>
+			<Text style={parts.rowName} numberOfLines={1}>
+				{name}
+				{!!site && <Text style={styles.linkMark}> ↗</Text>}
+			</Text>
+			{!!aside && <Text style={parts.rowAside}>{aside}</Text>}
+			{!!figure && (
+				<Text style={[parts.rowFigure, share && parts.rowShare]}>{figure}</Text>
+			)}
+		</Pressable>
+	);
+}
 
 function Section({
 	title,
@@ -182,6 +225,7 @@ export default function CityScreen() {
 	const rankings = otherRankings(data);
 	const schools = schoolRows(data);
 	const drives = driveRows(data);
+	const everyday = everydayRows(data);
 	const costs = costRows(data);
 	const latest = data.growth.series[data.growth.series.length - 1];
 	const safetyLinks = (data.links ?? []).filter((l) => l.group === "Safety");
@@ -280,7 +324,7 @@ export default function CityScreen() {
 							</Tile>
 						)}
 
-						{drives.length > 0 && (
+						{(everyday.length > 0 || drives.length > 0) && (
 							<Tile
 								label="Convenience"
 								wide
@@ -288,14 +332,25 @@ export default function CityScreen() {
 								onPress={() => setSheet("convenience")}
 							>
 								<View style={parts.rows}>
-									{drives.map((r) => (
+									{everyday.map((r) => (
+										<View key={r.kind} style={parts.row}>
+											<Text style={parts.rowKind} numberOfLines={1}>
+												{r.kind}
+											</Text>
+											<Text style={parts.rowName} numberOfLines={1}>
+												{r.name}
+											</Text>
+											<Text style={parts.rowFigure}>{r.miles} mi</Text>
+										</View>
+									))}
+									{drives.slice(0, TILE_DRIVES).map((r) => (
 										<View key={r.place} style={parts.row}>
+											<Text style={parts.rowKind} numberOfLines={1}>
+												Drive
+											</Text>
 											<Text style={parts.rowName} numberOfLines={1}>
 												{r.place}
 											</Text>
-											{!!r.miles && (
-												<Text style={parts.rowAside}>{r.miles}</Text>
-											)}
 											<Text style={parts.rowFigure}>{r.time}</Text>
 										</View>
 									))}
@@ -427,15 +482,27 @@ export default function CityScreen() {
 						<>
 							<Text style={styles.sheetTitle}>Safety</Text>
 							{data.safety.rows.map((r) => (
-								<View key={r.label} style={styles.sheetRow}>
+								<Pressable
+									key={r.label}
+									style={({ pressed }) => [
+										styles.sheetRow,
+										pressed && styles.pressed,
+									]}
+									onPress={() => r.site && openSite(r.site)}
+									disabled={!r.site}
+									accessibilityRole={r.site ? "link" : "text"}
+								>
 									<View style={styles.sheetRowText}>
 										<Text style={styles.sheetRowKind}>{r.label}</Text>
-										<Text style={styles.sheetRowName}>{r.name}</Text>
+										<Text style={styles.sheetRowName}>
+											{r.name}
+											{!!r.site && <Text style={styles.linkMark}> ↗</Text>}
+										</Text>
 									</View>
 									{!!r.note && (
 										<Text style={styles.sheetRowNote}>{r.note}</Text>
 									)}
-								</View>
+								</Pressable>
 							))}
 							<Text style={styles.sheetCaption}>
 								Each is the closest to the city's centre, straight-line. Percho
@@ -475,17 +542,18 @@ export default function CityScreen() {
 										<View key={g.heading} style={styles.sheetGap}>
 											<Text style={styles.sheetRowKind}>{g.heading}</Text>
 											{g.schools.map((sc) => (
-												<View key={sc.name} style={parts.row}>
-													<Text style={parts.rowName} numberOfLines={1}>
-														{sc.name}
-													</Text>
-													{sc.miles !== undefined && (
-														<Text style={parts.rowAside}>{sc.miles} mi</Text>
-													)}
-													<Text style={[parts.rowFigure, parts.rowShare]}>
-														Top {sc.share}%
-													</Text>
-												</View>
+												<PlaceRow
+													key={sc.name}
+													name={sc.name}
+													site={sc.site}
+													aside={
+														sc.miles !== undefined
+															? `${sc.miles} mi`
+															: undefined
+													}
+													figure={`Top ${sc.share}%`}
+													share
+												/>
 											))}
 										</View>
 									))}
@@ -495,7 +563,38 @@ export default function CityScreen() {
 					)}
 					{sheet === "convenience" && (
 						<>
-							<Text style={styles.sheetTitle}>Getting around</Text>
+							{(data.everyday ?? []).length > 0 && (
+								<>
+									<Text style={styles.sheetTitle}>Everyday</Text>
+									{(data.everyday ?? []).map((k) => (
+										<View key={k.kind} style={styles.sheetGap}>
+											<Text style={styles.sheetRowKind}>{k.kind}</Text>
+											{k.places.map((pl) => (
+												<PlaceRow
+													key={pl.name}
+													name={pl.name}
+													site={pl.site}
+													figure={`${pl.miles} mi`}
+												/>
+											))}
+										</View>
+									))}
+									<Text style={styles.sheetCaption}>
+										The closest of each kind to the city's centre,
+										straight-line. Places from OpenStreetMap; ↗ opens a place's
+										own site.
+									</Text>
+								</>
+							)}
+							<Text
+								style={
+									(data.everyday ?? []).length > 0
+										? styles.sheetHeadSpaced
+										: styles.sheetTitle
+								}
+							>
+								Getting around
+							</Text>
 							<DriveTimes rows={data.gettingAround} />
 						</>
 					)}
@@ -573,7 +672,7 @@ function drawnTiles(data: CityDetailDTO): Record<SheetKey, boolean> {
 	return {
 		safety: !!data.safety,
 		schools: schoolRows(data).length > 0,
-		convenience: driveRows(data).length > 0,
+		convenience: everydayRows(data).length > 0 || driveRows(data).length > 0,
 		potential: data.growth.series.length > 0,
 		cost: costRows(data).length > 0 || !!data.holding,
 	};
@@ -630,6 +729,21 @@ const styles = StyleSheet.create({
 	sheetGap: { marginTop: 12 },
 	sheetFigure: { ...textStyles.title1, color: colors.ink, marginTop: 6 },
 	sheetHead: { ...textStyles.headline, color: colors.ink, marginTop: 22 },
+	sheetHeadSpaced: {
+		...textStyles.title2,
+		color: colors.ink,
+		marginTop: 26,
+		marginBottom: 12,
+	},
+	pressed: { opacity: 0.6 },
+	/** A sheet row that may be a link: the tile's row, tall enough to tap. */
+	placeRow: {
+		flexDirection: "row",
+		alignItems: "baseline",
+		gap: 10,
+		paddingVertical: 7,
+	},
+	linkMark: { color: colors.accent },
 	sheetRow: {
 		flexDirection: "row",
 		alignItems: "center",

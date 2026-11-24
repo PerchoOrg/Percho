@@ -1,0 +1,1220 @@
+{
+  "asOf": "2026-11-24",
+  "cities": {
+    "alpharetta-ga": {
+      "everyday": [
+        {
+          "kind": "Groceries",
+          "places": [
+            {
+              "name": "Publix",
+              "miles": 0.1,
+              "site": "https://www.publix.com/locations/556"
+            },
+            {
+              "name": "Whole Foods Market",
+              "miles": 0.9,
+              "site": "https://www.wholefoodsmarket.com/stores/avalon"
+            },
+            {
+              "name": "Walmart Supercenter",
+              "miles": 1.7,
+              "site": "https://www.walmart.com/store/2941-alpharetta-ga"
+            },
+            {
+              "name": "Kroger",
+              "miles": 1.7,
+              "site": "https://www.kroger.com/stores/grocery/ga/alpharetta/windward-commons/011/00495"
+            },
+            {
+              "name": "Aldi",
+              "miles": 2.1,
+              "site": "https://stores.aldi.us/ga/milton/12990-highway-9n"
+            }
+          ]
+        },
+        {
+          "kind": "Wholesale",
+          "places": [
+            {
+              "name": "Costco",
+              "miles": 1.4,
+              "site": "https://www.costco.com/warehouse-locations/alpharetta-ga-743.html"
+            },
+            {
+              "name": "Sam's Club",
+              "miles": 2.5,
+              "site": "https://www.samsclub.com/club/alpharetta-ga-sams-club/6646"
+            }
+          ]
+        },
+        {
+          "kind": "Pharmacy",
+          "places": [
+            {
+              "name": "Walgreens",
+              "miles": 0.4
+            },
+            {
+              "name": "CVS Pharmacy",
+              "miles": 1.7,
+              "site": "https://www.cvs.com/store-locator/roswell-ga-pharmacies/11710-alpharetta-hwy-roswell-ga-30076/storeid=2227"
+            },
+            {
+              "name": "Kaiser Permanente Alpharetta Medical Center",
+              "miles": 2.2
+            },
+            {
+              "name": "Walmart Pharmacy",
+              "miles": 3.2,
+              "site": "https://www.walmart.com/store/1578-roswell-ga/pharmacy"
+            },
+            {
+              "name": "Publix",
+              "miles": 6.8
+            }
+          ]
+        },
+        {
+          "kind": "Park",
+          "places": [
+            {
+              "name": "Brooke Street Park",
+              "miles": 0.1
+            },
+            {
+              "name": "Town Green at City Center",
+              "miles": 0.1
+            },
+            {
+              "name": "Alpharetta Memorial Park",
+              "miles": 0.6
+            },
+            {
+              "name": "Fitness Park at Westside",
+              "miles": 0.7
+            },
+            {
+              "name": "Wills Park",
+              "miles": 0.8
+            }
+          ]
+        },
+        {
+          "kind": "Library",
+          "places": [
+            {
+              "name": "Alpharetta Library",
+              "miles": 0.1,
+              "site": "https://www.fulcolibrary.org/locations/ALPH/"
+            },
+            {
+              "name": "Alpharetta/Louie E. Jones & Gertrude C. Jones Memorial Library",
+              "miles": 0.6
+            },
+            {
+              "name": "Milton Library Branch",
+              "miles": 2.8
+            },
+            {
+              "name": "Ocee Branch - Fulton County Library",
+              "miles": 4.8
+            },
+            {
+              "name": "East Roswell Branch Library",
+              "miles": 5,
+              "site": "https://www.fulcolibrary.org/locations/EAST_ROS/#"
+            }
+          ]
+        }
+      ],
+      "schoolSites": {
+        "addison elementary": "https://www.cobbk12.org/addison",
+        "alpharetta elementary": "https://alpharettaes.fultonschools.org/",
+        "amana academy": "https://amanaacademy.org/",
+        "austin elementary": "https://austines.dekalb.k12.ga.us",
+        "avery elementary": "https://www.cherokeek12.net/averyes",
+        "big blue marble academy": "https://bbmacademy.com/",
+        "big creek elementary": "https://www.forsyth.k12.ga.us/bigcreek",
+        "blessed trinity catholic high": "https://btcatholic.org/",
+        "brandywine elementary": "https://www.forsyth.k12.ga.us/brandywine",
+        "centennial high": "https://www.fultonschools.org/centennialhs",
+        "chamblee high": "https://chambleehs.dekalb.k12.ga.us",
+        "chattahoochee high": "https://www.fultonschools.org/chattahoocheehs",
+        "cherokee christian": "https://www.cherokeechristian.org/",
+        "chesnut": "https://chesnutes.dekalb.k12.ga.us",
+        "crabapple crossing elementary": "https://www.fultonschools.org/crabapplecrossinges",
+        "creekview high": "https://www.cherokeek12.net/creekviewhs",
+        "creekview middle": "https://www.cherokeek12.net/creeklandms/",
+        "dean rusk middle": "https://www.cherokeek12.net/deanruskms",
+        "dickerson middle": "https://www.cobbk12.org/Dickerson/",
+        "dodgen middle": "https://www.cobbk12.org/Dodgen/",
+        "dolvin elementary": "https://www.fultonschools.org/dolvines",
+        "dunwoody prep": "https://www.dunwoodyprep.com/",
+        "east cobb christian": "https://www.eccs.org/",
+        "free home elementary": "https://www.cherokeek12.net/FHES",
+        "fulton science academy": "https://fultonscienceacademy.org",
+        "hendricks middle": "https://www.forsyth.k12.ga.us/hms",
+        "hickory flat elementary": "https://www.cherokeek12.net/hickoryflates/home",
+        "hightower elementary": "https://hightoweres.dekalb.k12.ga.us",
+        "hightower trail middle": "https://www.cobbk12.org/HightowerTrail/",
+        "hillside elementary": "https://www.fultonschools.org/Page/116",
+        "holcomb bridge middle": "https://www.fultonschools.org/holcombbridgems",
+        "hopewell middle": "https://hopewell.fultonschools.org/",
+        "huntley hills elementary and montessori": "https://huntleyhillses.dekalb.k12.ga.us",
+        "ilm academy": "https://ilm-academy.com/",
+        "innovation academy": "https://www.fultonschools.org/innovationacademy",
+        "johns creek elementary": "https://www.forsyth.k12.ga.us/johnscreek",
+        "johns creek high": "https://www.fultonschools.org/johnscreekhs",
+        "keheley elementary": "https://www.cobbk12.org/Keheley",
+        "kelly mill elementary": "https://www.forsyth.k12.ga.us/kellymill",
+        "kids r kids learning academy": "https://kidsrkids.com/sandy-plains/contact-us/",
+        "kingsley elementary": "https://kingsleyes.dekalb.k12.ga.us",
+        "lambert high": "https://www.forsyth.k12.ga.us/lhs",
+        "lassiter high": "https://www.lassiterhigh.org/",
+        "mabry middle": "https://www.cobbk12.org/Mabry/",
+        "mccleskey middle": "https://www.cobbk12.org/mccleskey/",
+        "midway elementary": "https://www.forsyth.k12.ga.us/midway",
+        "montgomery elementary": "https://montgomeryes.dekalb.k12.ga.us",
+        "mount bethel christian academy lower and middle schools campus": "https://www.mtbethelchristian.org/",
+        "mount bethel christian academy upper campus": "https://www.mtbethelchristian.org/",
+        "mount vernon lower campus": "https://mountvernonschool.org/",
+        "mount vernon upper campus": "https://mountvernonschool.org/",
+        "murdock elementary": "https://www.cobbk12.org/Murdock/",
+        "new hope elementary": "https://www.forsyth.k12.ga.us/newhope",
+        "nicholson elementary": "https://www.cobbk12.org/Nicholson/",
+        "northwestern middle": "https://www.fultonschools.org/northwesternms",
+        "oakcliff traditional theme": "https://oakcliffes.dekalb.k12.ga.us",
+        "peachtree charter middle": "https://www.peachtreems.dekalb.k12.ga.us/",
+        "pope high": "https://www.cobbk12.org/Pope/",
+        "river eves elementary": "https://www.fultonschools.org/rivereveses",
+        "riverwatch middle": "https://www.forsyth.k12.ga.us/riverwatchms",
+        "rocky mount elementary": "https://www.cobbk12.org/rockymount",
+        "roswell high": "https://roswell.fultonschools.org/",
+        "saint francis elementary and middle schools": "https://www.saintfrancisschools.com/",
+        "saint john bosco academy shiloh campus": "https://sjbacademy.org/",
+        "sequoyah high": "https://www.cherokeek12.net/sequoyahhs",
+        "settles bridge elementary": "https://www.forsyth.k12.ga.us/settlesbridge",
+        "shallowford falls elementary": "https://www.shallowfordfalls.typepad.com/",
+        "sharon elementary": "https://www.forsyth.k12.ga.us/sharon",
+        "simpson elementary": "https://www.gcpsk12.org/simpsones",
+        "simpson middle": "https://www.cobbk12.org/Simpson/",
+        "south forsyth middle": "https://www.forsyth.k12.ga.us/SFMS",
+        "taylor road middle": "https://www.fultonschools.org/taylorroadms",
+        "the wood acres": "https://woodacresschool.org/",
+        "timber ridge elementary": "https://www.timberridge.typepad.com/",
+        "vanderlyn elementary": "https://vanderlynes.dekalb.k12.ga.us",
+        "vickery creek elementary": "https://www.forsyth.k12.ga.us/vickerycreekelem",
+        "vickery creek middle": "https://www.forsyth.k12.ga.us/vcms",
+        "vickery mill elementary": "https://vickerymill.fultonschools.org/",
+        "walton high": "https://www.waltonhigh.org/",
+        "wesleyan": "https://www.wesleyanschool.org/",
+        "whitlow elementary": "https://www.forsyth.k12.ga.us/whitlow"
+      }
+    },
+    "buford-ga": {
+      "everyday": [
+        {
+          "kind": "Groceries",
+          "places": [
+            {
+              "name": "Publix",
+              "miles": 2.1,
+              "site": "https://www.publix.com/locations/1678"
+            },
+            {
+              "name": "Walmart Supercenter",
+              "miles": 2.3,
+              "site": "https://www.walmart.com/store/1314-buford-ga"
+            },
+            {
+              "name": "Kroger",
+              "miles": 4.1,
+              "site": "https://www.kroger.com/stores/grocery/ga/sugar-hill/sugar-hill/011/00687"
+            },
+            {
+              "name": "ALDI",
+              "miles": 4.2,
+              "site": "https://stores.aldi.us/ga/buford/1705-mall-of-georgia-blvd"
+            },
+            {
+              "name": "Sprouts Farmers Market",
+              "miles": 4.9,
+              "site": "https://www.sprouts.com/store/ga/atlanta/529-buford-i85-hwy20/"
+            }
+          ]
+        },
+        {
+          "kind": "Wholesale",
+          "places": [
+            {
+              "name": "Sam's Club",
+              "miles": 3.6,
+              "site": "https://www.samsclub.com/club/buford-ga-sams-club/4780"
+            },
+            {
+              "name": "Costco",
+              "miles": 4.1,
+              "site": "https://www.costco.com/warehouse-locations/mall-of-georgia-buford-ga-366.html"
+            }
+          ]
+        },
+        {
+          "kind": "Pharmacy",
+          "places": [
+            {
+              "name": "CVS Pharmacy",
+              "miles": 0.9,
+              "site": "https://www.cvs.com/store-locator/buford-ga-pharmacies/1950-buford-hwy-buford-ga-30518/storeid=5653"
+            },
+            {
+              "name": "Walgreens",
+              "miles": 1.9
+            }
+          ]
+        },
+        {
+          "kind": "Park",
+          "places": [
+            {
+              "name": "Robinson Park",
+              "miles": 2.3
+            },
+            {
+              "name": "Bogan Park",
+              "miles": 2.4
+            },
+            {
+              "name": "EE Robinson Park",
+              "miles": 2.8
+            },
+            {
+              "name": "Little Shoal Creek Public Use Area",
+              "miles": 3.2
+            },
+            {
+              "name": "Ridge Lake Park",
+              "miles": 3.3,
+              "site": "https://cityofsugarhill.com/services/parks-recreation/ridge-lake-park/"
+            }
+          ]
+        },
+        {
+          "kind": "Library",
+          "places": [
+            {
+              "name": "Gwinnett County Public Library",
+              "miles": 0.7
+            },
+            {
+              "name": "Gwinnett Public Library - Suwanee Branch",
+              "miles": 5.7
+            },
+            {
+              "name": "Hall County Library Spout Springs",
+              "miles": 6.7
+            },
+            {
+              "name": "Collins Hill Library",
+              "miles": 7.3,
+              "site": "https://www.gwinnettpl.org/"
+            }
+          ]
+        }
+      ],
+      "schoolSites": {
+        "alliance academy for innovation": "https://www.forsyth.k12.ga.us/alliance",
+        "benefield elementary": "https://schools.gcpsk12.org/BenefieldES",
+        "big creek elementary": "https://www.forsyth.k12.ga.us/bigcreek",
+        "buford high": "https://www.bufordhs.org/",
+        "central gwinnett high": "https://centralgwinnetths.gcpsk12.org/",
+        "chattahoochee elementary": "https://www.forsyth.k12.ga.us/chattahoochee",
+        "chestatee elementary": "https://www.forsyth.k12.ga.us/chestatee",
+        "coal mountain elementary": "https://www.forsyth.k12.ga.us/coalmountain",
+        "collins hill high": "https://www.gcpsk12.org/CollinsHillHS",
+        "gwinnett online campus": "https://www.gcpsk12.org/gwinnettonline",
+        "haw creek elementary": "https://www.forsyth.k12.ga.us/hawcreek",
+        "international montessori auburn": "https://imsauburn.com/",
+        "jenkins elementary": "https://www.gcpsk12.org/JenkinsES",
+        "johns creek elementary": "https://www.forsyth.k12.ga.us/johnscreek",
+        "jones middle": "https://jonesms.gcpsk12.org/",
+        "jordan middle": "https://jordanms.gcpsk12.org/",
+        "kelly mill elementary": "https://www.forsyth.k12.ga.us/kellymill",
+        "lambert high": "https://www.forsyth.k12.ga.us/lhs",
+        "lawrenceville elementary": "https://lawrencevillees.gcpsk12.org/",
+        "level creek elementary": "https://levelcreekes.gcpsk12.org/",
+        "little mill middle": "https://www.forsyth.k12.ga.us/lmms",
+        "mashburn elementary": "https://www.forsyth.k12.ga.us/mashburn",
+        "mountain view high": "https://mountainviewhs.gcpsk12.org/",
+        "mountain view high campus": "https://mountainviewhs.gcpsk12.org/",
+        "new hope elementary": "https://www.forsyth.k12.ga.us/newhope",
+        "of the arts": "https://sota.gcpsk12.org/",
+        "peachtree ridge high": "https://peachtreeridgehs.gcpsk12.org/",
+        "phoenix high": "https://www.gcpsk12.org/phoenixhs",
+        "riverwatch middle": "https://www.forsyth.k12.ga.us/riverwatchms",
+        "saint john bosco academy shiloh campus": "https://sjbacademy.org/",
+        "settles bridge elementary": "https://www.forsyth.k12.ga.us/settlesbridge",
+        "sharon elementary": "https://www.forsyth.k12.ga.us/sharon",
+        "south forsyth middle": "https://www.forsyth.k12.ga.us/SFMS",
+        "sycamore elementary": "https://schools.gcpsk12.org/SycamoreES",
+        "twin rivers middle": "https://twinriversms.gcpsk12.org/",
+        "twin rivers middle campus": "https://twinriversms.gcpsk12.org/",
+        "whitlow elementary": "https://www.forsyth.k12.ga.us/whitlow",
+        "woodward mill elementary campus": "https://woodwardmilles.gcpsk12.org"
+      }
+    },
+    "cumming-ga": {
+      "everyday": [
+        {
+          "kind": "Groceries",
+          "places": [
+            {
+              "name": "Ingles",
+              "miles": 0.9
+            },
+            {
+              "name": "Publix",
+              "miles": 1.4,
+              "site": "https://www.publix.com/"
+            },
+            {
+              "name": "Sprouts Farmers Market",
+              "miles": 1.6,
+              "site": "https://www.sprouts.com/store/ga/cumming/cumming/"
+            },
+            {
+              "name": "Walmart Supercenter",
+              "miles": 1.7,
+              "site": "https://www.walmart.com/store/878-cumming-ga"
+            },
+            {
+              "name": "Lidl",
+              "miles": 3.2
+            }
+          ]
+        },
+        {
+          "kind": "Wholesale",
+          "places": [
+            {
+              "name": "BJ's Wholesale Club",
+              "miles": 1.2
+            },
+            {
+              "name": "Costco",
+              "miles": 1.4,
+              "site": "https://www.costco.com/warehouse-locations/cumming-ga-1175.html"
+            }
+          ]
+        },
+        {
+          "kind": "Pharmacy",
+          "places": [
+            {
+              "name": "Goodson Drug Company",
+              "miles": 0.1
+            },
+            {
+              "name": "CVS Pharmacy",
+              "miles": 1.4,
+              "site": "https://www.cvs.com/store-locator/cumming-ga-pharmacies/603-canton-hwy-cumming-ga-30040/storeid=5355"
+            },
+            {
+              "name": "Costco Pharmacy",
+              "miles": 1.5,
+              "site": "https://www.costco.com/warehouse-locations/cumming-ga-1175.html"
+            },
+            {
+              "name": "Sands Rx",
+              "miles": 1.5
+            },
+            {
+              "name": "Walmart Pharmacy",
+              "miles": 1.7,
+              "site": "https://www.walmart.com/store/878-cumming-ga/pharmacy"
+            }
+          ]
+        },
+        {
+          "kind": "Park",
+          "places": [
+            {
+              "name": "Cumming City Park",
+              "miles": 0.5
+            },
+            {
+              "name": "Steam Engine Pocket Park",
+              "miles": 0.8
+            },
+            {
+              "name": "Episcopal Church Park",
+              "miles": 1.4
+            },
+            {
+              "name": "Sawnee Mountain Preserve",
+              "miles": 2.1
+            },
+            {
+              "name": "Mary Alice Park",
+              "miles": 2.4
+            }
+          ]
+        },
+        {
+          "kind": "Library",
+          "places": [
+            {
+              "name": "Cumming Library",
+              "miles": 1
+            },
+            {
+              "name": "Post Road Library",
+              "miles": 4.6
+            },
+            {
+              "name": "Sharon Forks Public Library",
+              "miles": 6.2,
+              "site": "https://forsythpl.org/sharon-forks-library"
+            }
+          ]
+        }
+      ],
+      "schoolSites": {
+        "alliance academy for innovation": "https://www.forsyth.k12.ga.us/alliance",
+        "big creek elementary": "https://www.forsyth.k12.ga.us/bigcreek",
+        "black s mill elementary": "https://dawsonblacksmill.ss7.sharpschool.com/",
+        "brandywine elementary": "https://www.forsyth.k12.ga.us/brandywine",
+        "buford high": "https://www.bufordhs.org/",
+        "chattahoochee elementary": "https://www.forsyth.k12.ga.us/chattahoochee",
+        "chattahoochee high": "https://www.fultonschools.org/chattahoocheehs",
+        "chestatee elementary": "https://www.forsyth.k12.ga.us/chestatee",
+        "coal mountain elementary": "https://www.forsyth.k12.ga.us/coalmountain",
+        "creekview high": "https://www.cherokeek12.net/creekviewhs",
+        "creekview middle": "https://www.cherokeek12.net/creeklandms/",
+        "free home elementary": "https://www.cherokeek12.net/FHES",
+        "haw creek elementary": "https://www.forsyth.k12.ga.us/hawcreek",
+        "hendricks middle": "https://www.forsyth.k12.ga.us/hms",
+        "hopewell middle": "https://hopewell.fultonschools.org/",
+        "johns creek elementary": "https://www.forsyth.k12.ga.us/johnscreek",
+        "kelly mill elementary": "https://www.forsyth.k12.ga.us/kellymill",
+        "lambert high": "https://www.forsyth.k12.ga.us/lhs",
+        "level creek elementary": "https://levelcreekes.gcpsk12.org/",
+        "little mill middle": "https://www.forsyth.k12.ga.us/lmms",
+        "mashburn elementary": "https://www.forsyth.k12.ga.us/mashburn",
+        "matt elementary": "https://www.forsyth.k12.ga.us/matt",
+        "midway elementary": "https://www.forsyth.k12.ga.us/midway",
+        "new hope elementary": "https://www.forsyth.k12.ga.us/newhope",
+        "poole s mill elementary": "https://www.forsyth.k12.ga.us/poolesmilles",
+        "riverwatch middle": "https://www.forsyth.k12.ga.us/riverwatchms",
+        "saint john bosco academy shiloh campus": "https://sjbacademy.org/",
+        "sawnee elementary": "https://www.forsyth.k12.ga.us/sawneeelementary",
+        "settles bridge elementary": "https://www.forsyth.k12.ga.us/settlesbridge",
+        "sharon elementary": "https://www.forsyth.k12.ga.us/sharon",
+        "silver city elementary": "https://www.forsyth.k12.ga.us/silvercity",
+        "south forsyth middle": "https://www.forsyth.k12.ga.us/SFMS",
+        "sycamore elementary": "https://schools.gcpsk12.org/SycamoreES",
+        "taylor road middle": "https://www.fultonschools.org/taylorroadms",
+        "vickery creek elementary": "https://www.forsyth.k12.ga.us/vickerycreekelem",
+        "vickery creek middle": "https://www.forsyth.k12.ga.us/vcms",
+        "whitlow elementary": "https://www.forsyth.k12.ga.us/whitlow"
+      }
+    },
+    "duluth-ga": {
+      "everyday": [
+        {
+          "kind": "Groceries",
+          "places": [
+            {
+              "name": "Publix",
+              "miles": 0.9,
+              "site": "https://www.publix.com/locations/585"
+            },
+            {
+              "name": "Lidl",
+              "miles": 1.6,
+              "site": "https://www.lidl.com/stores/US01428"
+            },
+            {
+              "name": "Kroger",
+              "miles": 1.6,
+              "site": "https://www.kroger.com/stores/grocery/ga/duluth/peachtree-hill/011/00381"
+            },
+            {
+              "name": "Aldi",
+              "miles": 2.2,
+              "site": "https://stores.aldi.us/ga/duluth/2618-pleasant-hill-road"
+            },
+            {
+              "name": "Super H Mart",
+              "miles": 2.3
+            }
+          ]
+        },
+        {
+          "kind": "Wholesale",
+          "places": [
+            {
+              "name": "Sam's Club",
+              "miles": 3.6,
+              "site": "https://www.samsclub.com/club/duluth-ga-sams-club/8166"
+            },
+            {
+              "name": "Costco Wholesale",
+              "miles": 3.8,
+              "site": "https://www.costco.com/warehouse-locations/gwinnett-duluth-ga-187.html"
+            }
+          ]
+        },
+        {
+          "kind": "Pharmacy",
+          "places": [
+            {
+              "name": "Walgreens",
+              "miles": 0.8
+            },
+            {
+              "name": "Yoo Pharmacy",
+              "miles": 3.4
+            },
+            {
+              "name": "CVS Pharmacy",
+              "miles": 4.4,
+              "site": "https://www.cvs.com/store-locator/lawrenceville-ga-pharmacies/5710-sugarloaf-pkwy-lawrenceville-ga-30043/storeid=2841"
+            }
+          ]
+        },
+        {
+          "kind": "Park",
+          "places": [
+            {
+              "name": "Taylor Park",
+              "miles": 0.1
+            },
+            {
+              "name": "Duluth Train Watching Park",
+              "miles": 0.2
+            },
+            {
+              "name": "Pleasant Hill Park",
+              "miles": 0.9
+            },
+            {
+              "name": "Bunten Road Park",
+              "miles": 1.4
+            },
+            {
+              "name": "Chattapoochee Dog Park",
+              "miles": 1.7
+            }
+          ]
+        },
+        {
+          "kind": "Library",
+          "places": [
+            {
+              "name": "Gwinnett County Public Library - Duluth Branch",
+              "miles": 0.2,
+              "site": "https://www.gwinnettpl.org/"
+            },
+            {
+              "name": "Northeast-Spruill Oak Regional Library",
+              "miles": 4.6
+            },
+            {
+              "name": "GCPL - Peachtree Corners Branch",
+              "miles": 5.1,
+              "site": "https://www.gwinnettpl.org/library-location/peachtree-corners-branch"
+            },
+            {
+              "name": "Ocee Branch - Fulton County Library",
+              "miles": 5.7
+            },
+            {
+              "name": "Gwinnett County Public Library Norcross Branch",
+              "miles": 5.7
+            }
+          ]
+        }
+      ],
+      "schoolSites": {
+        "alpharetta elementary": "https://alpharettaes.fultonschools.org/",
+        "alton c crews middle": "https://crewsms.gcpsk12.org/",
+        "amana academy": "https://amanaacademy.org/",
+        "austin elementary": "https://austines.dekalb.k12.ga.us",
+        "benefield elementary": "https://schools.gcpsk12.org/BenefieldES",
+        "big creek elementary": "https://www.forsyth.k12.ga.us/bigcreek",
+        "brandywine elementary": "https://www.forsyth.k12.ga.us/brandywine",
+        "brockett elementary": "https://brockettes.dekalb.k12.ga.us",
+        "brookwood high": "https://www.gcpsk12.org/BrookwoodHS",
+        "cary reynolds elementary": "https://caryreynoldses.dekalb.k12.ga.us",
+        "centennial high": "https://www.fultonschools.org/centennialhs",
+        "central gwinnett high": "https://centralgwinnetths.gcpsk12.org/",
+        "chamblee high": "https://chambleehs.dekalb.k12.ga.us",
+        "chattahoochee high": "https://www.fultonschools.org/chattahoocheehs",
+        "chesnut": "https://chesnutes.dekalb.k12.ga.us",
+        "collins hill high": "https://www.gcpsk12.org/CollinsHillHS",
+        "dekalb early college academy": "https://deca.dekalb.k12.ga.us",
+        "dolvin elementary": "https://www.fultonschools.org/dolvines",
+        "dunwoody prep": "https://www.dunwoodyprep.com/",
+        "elizabeth andrews high": "https://www.andrewshs.dekalb.k12.ga.us/",
+        "evansdale magnet elementary": "https://evansdalees.dekalb.k12.ga.us",
+        "five forks middle": "https://fiveforksms.gcpsk12.org/",
+        "fulton science academy": "https://fultonscienceacademy.org",
+        "gwinnett online campus": "https://www.gcpsk12.org/gwinnettonline",
+        "haw creek elementary": "https://www.forsyth.k12.ga.us/hawcreek",
+        "hawthorne elementary": "https://hawthornees.dekalb.k12.ga.us",
+        "henderson middle": "https://hendersonms.dekalb.k12.ga.us",
+        "henderson mill elementary": "https://hendersonmilles.dekalb.k12.ga.us",
+        "hightower elementary": "https://hightoweres.dekalb.k12.ga.us",
+        "hillside elementary": "https://www.fultonschools.org/Page/116",
+        "holcomb bridge middle": "https://www.fultonschools.org/holcombbridgems",
+        "hopewell middle": "https://hopewell.fultonschools.org/",
+        "huntley hills elementary and montessori": "https://huntleyhillses.dekalb.k12.ga.us",
+        "ilm academy": "https://ilm-academy.com/",
+        "innovation academy": "https://www.fultonschools.org/innovationacademy",
+        "jenkins elementary": "https://www.gcpsk12.org/JenkinsES",
+        "johns creek elementary": "https://www.forsyth.k12.ga.us/johnscreek",
+        "johns creek high": "https://www.fultonschools.org/johnscreekhs",
+        "jordan middle": "https://jordanms.gcpsk12.org/",
+        "kingsley elementary": "https://kingsleyes.dekalb.k12.ga.us",
+        "lambert high": "https://www.forsyth.k12.ga.us/lhs",
+        "lawrenceville elementary": "https://lawrencevillees.gcpsk12.org/",
+        "level creek elementary": "https://levelcreekes.gcpsk12.org/",
+        "lilburn middle": "https://lilburnms.gcpsk12.org/",
+        "mashburn elementary": "https://www.forsyth.k12.ga.us/mashburn",
+        "midvale elementary": "https://midvalees.dekalb.k12.ga.us",
+        "midway elementary": "https://www.forsyth.k12.ga.us/midway",
+        "mountain view high": "https://mountainviewhs.gcpsk12.org/",
+        "mountain view high campus": "https://mountainviewhs.gcpsk12.org/",
+        "oakcliff traditional theme": "https://oakcliffes.dekalb.k12.ga.us",
+        "of the arts": "https://sota.gcpsk12.org/",
+        "parkview high": "https://parkviewhs.gcpsk12.org/",
+        "peachtree charter middle": "https://www.peachtreems.dekalb.k12.ga.us/",
+        "peachtree ridge high": "https://peachtreeridgehs.gcpsk12.org/",
+        "phoenix high": "https://www.gcpsk12.org/phoenixhs",
+        "river eves elementary": "https://www.fultonschools.org/rivereveses",
+        "riverwatch middle": "https://www.forsyth.k12.ga.us/riverwatchms",
+        "saint john bosco academy shiloh campus": "https://sjbacademy.org/",
+        "settles bridge elementary": "https://www.forsyth.k12.ga.us/settlesbridge",
+        "sharon elementary": "https://www.forsyth.k12.ga.us/sharon",
+        "simpson elementary": "https://www.gcpsk12.org/simpsones",
+        "south forsyth middle": "https://www.forsyth.k12.ga.us/SFMS",
+        "sycamore elementary": "https://schools.gcpsk12.org/SycamoreES",
+        "tapestry public charter": "https://tapestrycharter.org/dekalb",
+        "taylor road middle": "https://www.fultonschools.org/taylorroadms",
+        "twin rivers middle": "https://twinriversms.gcpsk12.org/",
+        "twin rivers middle campus": "https://twinriversms.gcpsk12.org/",
+        "vanderlyn elementary": "https://vanderlynes.dekalb.k12.ga.us",
+        "vickery mill elementary": "https://vickerymill.fultonschools.org/",
+        "wesleyan": "https://www.wesleyanschool.org/",
+        "woodward mill elementary campus": "https://woodwardmilles.gcpsk12.org"
+      }
+    },
+    "johns-creek-ga": {
+      "everyday": [
+        {
+          "kind": "Groceries",
+          "places": [
+            {
+              "name": "Kroger",
+              "miles": 0.6,
+              "site": "https://www.kroger.com/stores/grocery/ga/suwanee/johns-creek/011/00434"
+            },
+            {
+              "name": "Sprouts Farmers Market",
+              "miles": 0.7,
+              "site": "https://www.sprouts.com/store/ga/suwanee/johns-creek/"
+            },
+            {
+              "name": "Super H Mart",
+              "miles": 1.2,
+              "site": "https://www.hmart.com/"
+            },
+            {
+              "name": "Patel Brothers",
+              "miles": 1.6
+            },
+            {
+              "name": "Publix",
+              "miles": 1.7,
+              "site": "https://www.publix.com/locations/565"
+            }
+          ]
+        },
+        {
+          "kind": "Wholesale",
+          "places": [
+            {
+              "name": "Costco",
+              "miles": 6.5,
+              "site": "https://www.costco.com/warehouse-locations/alpharetta-ga-743.html"
+            }
+          ]
+        },
+        {
+          "kind": "Pharmacy",
+          "places": [
+            {
+              "name": "Walgreens",
+              "miles": 0.3
+            },
+            {
+              "name": "CVS Pharmacy",
+              "miles": 1.8,
+              "site": "https://www.cvs.com/store-locator/suwanee-ga-pharmacies/5370-laurel-springs-pkwy-suwanee-ga-30024/storeid=2279"
+            },
+            {
+              "name": "Kaiser Permanente Alpharetta Medical Center",
+              "miles": 5
+            },
+            {
+              "name": "Yoo Pharmacy",
+              "miles": 6.2
+            }
+          ]
+        },
+        {
+          "kind": "Park",
+          "places": [
+            {
+              "name": "Bell Road Pocket Park",
+              "miles": 1.7,
+              "site": "https://www.johnscreekga.gov/RecreationandParks/Parks-and-Facilities/Bell-Road-Pocket-Park"
+            },
+            {
+              "name": "CRNRA - Abbotts Bridge Unit",
+              "miles": 2
+            },
+            {
+              "name": "Cauley Creek Park",
+              "miles": 2.2
+            },
+            {
+              "name": "CRNRA - Rogers Bridge Unit",
+              "miles": 2.4
+            },
+            {
+              "name": "Caney Creek Preserve",
+              "miles": 2.7,
+              "site": "https://parks.forsythco.com/Parks/Caney-Creek-Preserve"
+            }
+          ]
+        },
+        {
+          "kind": "Library",
+          "places": [
+            {
+              "name": "Ocee Branch - Fulton County Library",
+              "miles": 2.3
+            },
+            {
+              "name": "Sharon Forks Public Library",
+              "miles": 4.1,
+              "site": "https://forsythpl.org/sharon-forks-library"
+            },
+            {
+              "name": "Gwinnett County Public Library - Duluth Branch",
+              "miles": 4.3,
+              "site": "https://www.gwinnettpl.org/"
+            },
+            {
+              "name": "Northeast-Spruill Oak Regional Library",
+              "miles": 4.5
+            },
+            {
+              "name": "Gwinnett Public Library - Suwanee Branch",
+              "miles": 5.8
+            }
+          ]
+        }
+      ],
+      "schoolSites": {
+        "alliance academy for innovation": "https://www.forsyth.k12.ga.us/alliance",
+        "alpharetta elementary": "https://alpharettaes.fultonschools.org/",
+        "amana academy": "https://amanaacademy.org/",
+        "austin elementary": "https://austines.dekalb.k12.ga.us",
+        "benefield elementary": "https://schools.gcpsk12.org/BenefieldES",
+        "big creek elementary": "https://www.forsyth.k12.ga.us/bigcreek",
+        "brandywine elementary": "https://www.forsyth.k12.ga.us/brandywine",
+        "buford high": "https://www.bufordhs.org/",
+        "centennial high": "https://www.fultonschools.org/centennialhs",
+        "central gwinnett high": "https://centralgwinnetths.gcpsk12.org/",
+        "chattahoochee high": "https://www.fultonschools.org/chattahoocheehs",
+        "chesnut": "https://chesnutes.dekalb.k12.ga.us",
+        "collins hill high": "https://www.gcpsk12.org/CollinsHillHS",
+        "crabapple crossing elementary": "https://www.fultonschools.org/crabapplecrossinges",
+        "dolvin elementary": "https://www.fultonschools.org/dolvines",
+        "dunwoody prep": "https://www.dunwoodyprep.com/",
+        "fulton science academy": "https://fultonscienceacademy.org",
+        "haw creek elementary": "https://www.forsyth.k12.ga.us/hawcreek",
+        "hendricks middle": "https://www.forsyth.k12.ga.us/hms",
+        "hightower elementary": "https://hightoweres.dekalb.k12.ga.us",
+        "hillside elementary": "https://www.fultonschools.org/Page/116",
+        "holcomb bridge middle": "https://www.fultonschools.org/holcombbridgems",
+        "hopewell middle": "https://hopewell.fultonschools.org/",
+        "ilm academy": "https://ilm-academy.com/",
+        "innovation academy": "https://www.fultonschools.org/innovationacademy",
+        "johns creek elementary": "https://www.forsyth.k12.ga.us/johnscreek",
+        "johns creek high": "https://www.fultonschools.org/johnscreekhs",
+        "kelly mill elementary": "https://www.forsyth.k12.ga.us/kellymill",
+        "kingsley elementary": "https://kingsleyes.dekalb.k12.ga.us",
+        "lambert high": "https://www.forsyth.k12.ga.us/lhs",
+        "level creek elementary": "https://levelcreekes.gcpsk12.org/",
+        "lilburn middle": "https://lilburnms.gcpsk12.org/",
+        "mashburn elementary": "https://www.forsyth.k12.ga.us/mashburn",
+        "midway elementary": "https://www.forsyth.k12.ga.us/midway",
+        "new hope elementary": "https://www.forsyth.k12.ga.us/newhope",
+        "northwestern middle": "https://www.fultonschools.org/northwesternms",
+        "oakcliff traditional theme": "https://oakcliffes.dekalb.k12.ga.us",
+        "of the arts": "https://sota.gcpsk12.org/",
+        "peachtree charter middle": "https://www.peachtreems.dekalb.k12.ga.us/",
+        "peachtree ridge high": "https://peachtreeridgehs.gcpsk12.org/",
+        "phoenix high": "https://www.gcpsk12.org/phoenixhs",
+        "river eves elementary": "https://www.fultonschools.org/rivereveses",
+        "riverwatch middle": "https://www.forsyth.k12.ga.us/riverwatchms",
+        "roswell high": "https://roswell.fultonschools.org/",
+        "saint francis elementary and middle schools": "https://www.saintfrancisschools.com/",
+        "saint john bosco academy shiloh campus": "https://sjbacademy.org/",
+        "settles bridge elementary": "https://www.forsyth.k12.ga.us/settlesbridge",
+        "sharon elementary": "https://www.forsyth.k12.ga.us/sharon",
+        "simpson elementary": "https://www.gcpsk12.org/simpsones",
+        "south forsyth middle": "https://www.forsyth.k12.ga.us/SFMS",
+        "sycamore elementary": "https://schools.gcpsk12.org/SycamoreES",
+        "taylor road middle": "https://www.fultonschools.org/taylorroadms",
+        "vanderlyn elementary": "https://vanderlynes.dekalb.k12.ga.us",
+        "vickery creek elementary": "https://www.forsyth.k12.ga.us/vickerycreekelem",
+        "vickery creek middle": "https://www.forsyth.k12.ga.us/vcms",
+        "vickery mill elementary": "https://vickerymill.fultonschools.org/",
+        "wesleyan": "https://www.wesleyanschool.org/",
+        "whitlow elementary": "https://www.forsyth.k12.ga.us/whitlow",
+        "woodward mill elementary campus": "https://woodwardmilles.gcpsk12.org"
+      }
+    },
+    "sugar-hill-ga": {
+      "everyday": [
+        {
+          "kind": "Groceries",
+          "places": [
+            {
+              "name": "Publix",
+              "miles": 2.5,
+              "site": "https://www.publix.com/locations/596"
+            },
+            {
+              "name": "Kroger",
+              "miles": 2.7,
+              "site": "https://www.kroger.com/stores/grocery/ga/sugar-hill/sugar-hill/011/00687"
+            },
+            {
+              "name": "Walmart Supercenter",
+              "miles": 2.8,
+              "site": "https://www.walmart.com/store/1314-buford-ga"
+            },
+            {
+              "name": "ALDI",
+              "miles": 3.9,
+              "site": "https://stores.aldi.us/ga/buford/1705-mall-of-georgia-blvd"
+            },
+            {
+              "name": "Sprouts Farmers Market",
+              "miles": 4.6,
+              "site": "https://www.sprouts.com/store/ga/atlanta/529-buford-i85-hwy20/"
+            }
+          ]
+        },
+        {
+          "kind": "Wholesale",
+          "places": [
+            {
+              "name": "Costco",
+              "miles": 3.7,
+              "site": "https://www.costco.com/warehouse-locations/mall-of-georgia-buford-ga-366.html"
+            },
+            {
+              "name": "Sam's Club",
+              "miles": 3.8,
+              "site": "https://www.samsclub.com/club/buford-ga-sams-club/4780"
+            }
+          ]
+        },
+        {
+          "kind": "Pharmacy",
+          "places": [
+            {
+              "name": "Walgreens",
+              "miles": 1.4
+            },
+            {
+              "name": "CVS Pharmacy",
+              "miles": 1.8,
+              "site": "https://www.cvs.com/store-locator/buford-ga-pharmacies/1950-buford-hwy-buford-ga-30518/storeid=5653"
+            }
+          ]
+        },
+        {
+          "kind": "Park",
+          "places": [
+            {
+              "name": "Robinson Park",
+              "miles": 0.8
+            },
+            {
+              "name": "EE Robinson Park",
+              "miles": 0.9
+            },
+            {
+              "name": "Ridge Lake Park",
+              "miles": 1.6,
+              "site": "https://cityofsugarhill.com/services/parks-recreation/ridge-lake-park/"
+            },
+            {
+              "name": "Gold Mine Park",
+              "miles": 1.7
+            },
+            {
+              "name": "Gary Pirkle Park",
+              "miles": 2.5
+            }
+          ]
+        },
+        {
+          "kind": "Library",
+          "places": [
+            {
+              "name": "Gwinnett County Public Library",
+              "miles": 1.9
+            },
+            {
+              "name": "Gwinnett Public Library - Suwanee Branch",
+              "miles": 3.9
+            },
+            {
+              "name": "Collins Hill Library",
+              "miles": 6.5,
+              "site": "https://www.gwinnettpl.org/"
+            },
+            {
+              "name": "Sharon Forks Public Library",
+              "miles": 7.1,
+              "site": "https://forsythpl.org/sharon-forks-library"
+            }
+          ]
+        }
+      ],
+      "schoolSites": {
+        "alliance academy for innovation": "https://www.forsyth.k12.ga.us/alliance",
+        "benefield elementary": "https://schools.gcpsk12.org/BenefieldES",
+        "big creek elementary": "https://www.forsyth.k12.ga.us/bigcreek",
+        "brandywine elementary": "https://www.forsyth.k12.ga.us/brandywine",
+        "buford high": "https://www.bufordhs.org/",
+        "central gwinnett high": "https://centralgwinnetths.gcpsk12.org/",
+        "chattahoochee elementary": "https://www.forsyth.k12.ga.us/chattahoochee",
+        "chattahoochee high": "https://www.fultonschools.org/chattahoocheehs",
+        "coal mountain elementary": "https://www.forsyth.k12.ga.us/coalmountain",
+        "collins hill high": "https://www.gcpsk12.org/CollinsHillHS",
+        "dolvin elementary": "https://www.fultonschools.org/dolvines",
+        "gwinnett online campus": "https://www.gcpsk12.org/gwinnettonline",
+        "haw creek elementary": "https://www.forsyth.k12.ga.us/hawcreek",
+        "international montessori auburn": "https://imsauburn.com/",
+        "jenkins elementary": "https://www.gcpsk12.org/JenkinsES",
+        "johns creek elementary": "https://www.forsyth.k12.ga.us/johnscreek",
+        "johns creek high": "https://www.fultonschools.org/johnscreekhs",
+        "jones middle": "https://jonesms.gcpsk12.org/",
+        "jordan middle": "https://jordanms.gcpsk12.org/",
+        "kelly mill elementary": "https://www.forsyth.k12.ga.us/kellymill",
+        "lambert high": "https://www.forsyth.k12.ga.us/lhs",
+        "lawrenceville elementary": "https://lawrencevillees.gcpsk12.org/",
+        "level creek elementary": "https://levelcreekes.gcpsk12.org/",
+        "little mill middle": "https://www.forsyth.k12.ga.us/lmms",
+        "mashburn elementary": "https://www.forsyth.k12.ga.us/mashburn",
+        "midway elementary": "https://www.forsyth.k12.ga.us/midway",
+        "mountain view high": "https://mountainviewhs.gcpsk12.org/",
+        "mountain view high campus": "https://mountainviewhs.gcpsk12.org/",
+        "new hope elementary": "https://www.forsyth.k12.ga.us/newhope",
+        "of the arts": "https://sota.gcpsk12.org/",
+        "peachtree ridge high": "https://peachtreeridgehs.gcpsk12.org/",
+        "phoenix high": "https://www.gcpsk12.org/phoenixhs",
+        "riverwatch middle": "https://www.forsyth.k12.ga.us/riverwatchms",
+        "saint john bosco academy shiloh campus": "https://sjbacademy.org/",
+        "sawnee elementary": "https://www.forsyth.k12.ga.us/sawneeelementary",
+        "settles bridge elementary": "https://www.forsyth.k12.ga.us/settlesbridge",
+        "sharon elementary": "https://www.forsyth.k12.ga.us/sharon",
+        "south forsyth middle": "https://www.forsyth.k12.ga.us/SFMS",
+        "sycamore elementary": "https://schools.gcpsk12.org/SycamoreES",
+        "taylor road middle": "https://www.fultonschools.org/taylorroadms",
+        "twin rivers middle": "https://twinriversms.gcpsk12.org/",
+        "twin rivers middle campus": "https://twinriversms.gcpsk12.org/",
+        "vickery creek elementary": "https://www.forsyth.k12.ga.us/vickerycreekelem",
+        "vickery creek middle": "https://www.forsyth.k12.ga.us/vcms",
+        "whitlow elementary": "https://www.forsyth.k12.ga.us/whitlow",
+        "woodward mill elementary campus": "https://woodwardmilles.gcpsk12.org"
+      }
+    },
+    "suwanee-ga": {
+      "everyday": [
+        {
+          "kind": "Groceries",
+          "places": [
+            {
+              "name": "Kroger",
+              "miles": 0.7,
+              "site": "https://www.kroger.com/stores/grocery/ga/suwanee/suwanee/011/00426"
+            },
+            {
+              "name": "Publix",
+              "miles": 1.4,
+              "site": "https://www.publix.com/locations/615"
+            },
+            {
+              "name": "Walmart Supercenter",
+              "miles": 1.6,
+              "site": "https://www.walmart.com/store/3462-suwanee-ga"
+            },
+            {
+              "name": "ALDI",
+              "miles": 1.8,
+              "site": "https://stores.aldi.us/ga/suwanee/1165-peachtree-industrial-b"
+            },
+            {
+              "name": "The Fresh Market",
+              "miles": 2.4
+            }
+          ]
+        },
+        {
+          "kind": "Wholesale",
+          "places": [
+            {
+              "name": "Costco",
+              "miles": 3.9,
+              "site": "https://www.costco.com/warehouse-locations/mall-of-georgia-buford-ga-366.html"
+            },
+            {
+              "name": "Sam's Club",
+              "miles": 4.9,
+              "site": "https://www.samsclub.com/club/buford-ga-sams-club/4780"
+            }
+          ]
+        },
+        {
+          "kind": "Pharmacy",
+          "places": [
+            {
+              "name": "CVS Pharmacy",
+              "miles": 0.8,
+              "site": "https://www.cvs.com/store-locator/suwanee-ga-pharmacies/485-peachtree-industrial-blvd-suwanee-ga-30024/storeid=5789"
+            },
+            {
+              "name": "Walgreens",
+              "miles": 1.7
+            },
+            {
+              "name": "Yoo Pharmacy",
+              "miles": 3.8
+            }
+          ]
+        },
+        {
+          "kind": "Park",
+          "places": [
+            {
+              "name": "Playtown Suwanee",
+              "miles": 0.3
+            },
+            {
+              "name": "George Pierce Park",
+              "miles": 0.5
+            },
+            {
+              "name": "George Pierce County Park",
+              "miles": 0.9
+            },
+            {
+              "name": "Neighborhood Pool",
+              "miles": 1.3
+            },
+            {
+              "name": "Sims Lake Park",
+              "miles": 1.3
+            }
+          ]
+        },
+        {
+          "kind": "Library",
+          "places": [
+            {
+              "name": "Gwinnett Public Library - Suwanee Branch",
+              "miles": 0.2
+            },
+            {
+              "name": "Collins Hill Library",
+              "miles": 4.6,
+              "site": "https://www.gwinnettpl.org/"
+            },
+            {
+              "name": "Gwinnett County Public Library",
+              "miles": 5.2
+            },
+            {
+              "name": "Gwinnett County Public Library - Duluth Branch",
+              "miles": 6.1,
+              "site": "https://www.gwinnettpl.org/"
+            },
+            {
+              "name": "Georgia Gwinnett College Library",
+              "miles": 6.4
+            }
+          ]
+        }
+      ],
+      "schoolSites": {
+        "alliance academy for innovation": "https://www.forsyth.k12.ga.us/alliance",
+        "alton c crews middle": "https://crewsms.gcpsk12.org/",
+        "benefield elementary": "https://schools.gcpsk12.org/BenefieldES",
+        "big creek elementary": "https://www.forsyth.k12.ga.us/bigcreek",
+        "brandywine elementary": "https://www.forsyth.k12.ga.us/brandywine",
+        "brookwood high": "https://www.gcpsk12.org/BrookwoodHS",
+        "buford high": "https://www.bufordhs.org/",
+        "central gwinnett high": "https://centralgwinnetths.gcpsk12.org/",
+        "chattahoochee high": "https://www.fultonschools.org/chattahoocheehs",
+        "collins hill high": "https://www.gcpsk12.org/CollinsHillHS",
+        "dolvin elementary": "https://www.fultonschools.org/dolvines",
+        "five forks middle": "https://fiveforksms.gcpsk12.org/",
+        "gwinnett online campus": "https://www.gcpsk12.org/gwinnettonline",
+        "haw creek elementary": "https://www.forsyth.k12.ga.us/hawcreek",
+        "jenkins elementary": "https://www.gcpsk12.org/JenkinsES",
+        "johns creek elementary": "https://www.forsyth.k12.ga.us/johnscreek",
+        "johns creek high": "https://www.fultonschools.org/johnscreekhs",
+        "jones middle": "https://jonesms.gcpsk12.org/",
+        "jordan middle": "https://jordanms.gcpsk12.org/",
+        "kelly mill elementary": "https://www.forsyth.k12.ga.us/kellymill",
+        "lambert high": "https://www.forsyth.k12.ga.us/lhs",
+        "lawrenceville elementary": "https://lawrencevillees.gcpsk12.org/",
+        "level creek elementary": "https://levelcreekes.gcpsk12.org/",
+        "mashburn elementary": "https://www.forsyth.k12.ga.us/mashburn",
+        "midway elementary": "https://www.forsyth.k12.ga.us/midway",
+        "mountain view high": "https://mountainviewhs.gcpsk12.org/",
+        "mountain view high campus": "https://mountainviewhs.gcpsk12.org/",
+        "new hope elementary": "https://www.forsyth.k12.ga.us/newhope",
+        "of the arts": "https://sota.gcpsk12.org/",
+        "peachtree ridge high": "https://peachtreeridgehs.gcpsk12.org/",
+        "phoenix high": "https://www.gcpsk12.org/phoenixhs",
+        "riverwatch middle": "https://www.forsyth.k12.ga.us/riverwatchms",
+        "saint john bosco academy shiloh campus": "https://sjbacademy.org/",
+        "settles bridge elementary": "https://www.forsyth.k12.ga.us/settlesbridge",
+        "sharon elementary": "https://www.forsyth.k12.ga.us/sharon",
+        "simpson elementary": "https://www.gcpsk12.org/simpsones",
+        "south forsyth middle": "https://www.forsyth.k12.ga.us/SFMS",
+        "sycamore elementary": "https://schools.gcpsk12.org/SycamoreES",
+        "taylor road middle": "https://www.fultonschools.org/taylorroadms",
+        "twin rivers middle": "https://twinriversms.gcpsk12.org/",
+        "twin rivers middle campus": "https://twinriversms.gcpsk12.org/",
+        "vickery creek elementary": "https://www.forsyth.k12.ga.us/vickerycreekelem",
+        "vickery creek middle": "https://www.forsyth.k12.ga.us/vcms",
+        "wesleyan": "https://www.wesleyanschool.org/",
+        "whitlow elementary": "https://www.forsyth.k12.ga.us/whitlow",
+        "woodward mill elementary campus": "https://woodwardmilles.gcpsk12.org"
+      }
+    }
+  }
+}

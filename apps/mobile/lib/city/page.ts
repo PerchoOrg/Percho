@@ -161,6 +161,7 @@ type City = Pick<
 	| "education"
 	| "gettingAround"
 	| "planning"
+	| "everyday"
 >;
 
 /** "South Forsyth Middle" → "South Forsyth Middle School"; any other name as it is. */
@@ -186,20 +187,16 @@ export function otherRankings(d: City): City["rankings"] {
 	return d.rankings.filter((r) => !schools.has(r.title.trim().toLowerCase()));
 }
 
-/** How many schools the Schools tile names before it points at the sheet. */
-export const TILE_SCHOOLS = 6;
-
 /**
- * The Schools tile: the schools a publisher ranked, by level and then by
- * rank, a college last — the name in full and its published rank in the row's
- * own type. It named only the best at each level until the owner asked where
- * the rest were (2026-11-22: "学校应该有很多吧 只看到三个"); every other school
- * is in the sheet.
+ * The Schools tile: the best-ranked school at each level — elementary,
+ * middle, high — the name in full and its published rank (owner 2026-11-24:
+ * "schools 只显示3个小初高排名最高的"). For a day it listed every ranked school
+ * (phase372, "学校应该有很多吧 只看到三个"); those, and every other school in
+ * and around the city, are in the sheet the tile opens.
  */
 export function schoolRows(d: City): { name: string; rank?: string }[] {
-	const { columns, colleges } = schoolColumns(d.education.schools);
-	return [...columns.flatMap((c) => c.schools), ...colleges]
-		.slice(0, TILE_SCHOOLS)
+	return schoolColumns(d.education.schools)
+		.columns.flatMap((c) => c.schools.slice(0, 1))
 		.map((s) => ({
 			name: fullSchoolName(s.name),
 			...(s.rank ? { rank: [s.rank, s.scope].filter(Boolean).join(" ") } : {}),
@@ -224,29 +221,47 @@ export function schoolsByLevel(
 		.filter((g) => g.schools.length > 0);
 }
 
+/** How many everyday kinds, and how many drives, the Convenience tile names. */
+export const TILE_EVERYDAY = 4;
+export const TILE_DRIVES = 2;
+
 /**
- * The Convenience tile: the first three drives, off-peak to rush. A label is
- * "Downtown Atlanta · 30 mi"; the miles are the row's quieter word, apart from
- * the name.
+ * The Convenience tile's everyday rows: the closest place of each kind to the
+ * city's centre — "Groceries · Publix · 0.9 mi" (owner 2026-11-24: "不只是距离
+ * downtown和机场的距离 要生活上的方便"). The rest of each kind is in the sheet.
+ */
+export function everydayRows(
+	d: Pick<City, "everyday">,
+): { kind: string; name: string; miles: number }[] {
+	return (d.everyday ?? []).slice(0, TILE_EVERYDAY).flatMap((k) => {
+		const first = k.places[0];
+		return first
+			? [{ kind: k.kind, name: first.name, miles: first.miles }]
+			: [];
+	});
+}
+
+/**
+ * The drives that have a time, off-peak to rush. A label is "Downtown Atlanta
+ * · 30 mi"; the miles are kept apart from the name. The tile names the first
+ * `TILE_DRIVES` under the everyday places; the sheet charts them all.
  */
 export function driveRows(
 	d: City,
 ): { place: string; miles?: string; time: string }[] {
-	return d.gettingAround
-		.flatMap((r) =>
-			r.minutes
-				? [
-						{
-							...placeAndMiles(r.label),
-							time:
-								r.minutes.min === r.minutes.max
-									? `${r.minutes.min} min`
-									: `${r.minutes.min}–${r.minutes.max} min`,
-						},
-					]
-				: [],
-		)
-		.slice(0, 3);
+	return d.gettingAround.flatMap((r) =>
+		r.minutes
+			? [
+					{
+						...placeAndMiles(r.label),
+						time:
+							r.minutes.min === r.minutes.max
+								? `${r.minutes.min} min`
+								: `${r.minutes.min}–${r.minutes.max} min`,
+					},
+				]
+			: [],
+	);
 }
 
 function placeAndMiles(label: string): { place: string; miles?: string } {
