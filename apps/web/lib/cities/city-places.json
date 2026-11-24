@@ -126,6 +126,21 @@
               "site": "https://www.fulcolibrary.org/locations/EAST_ROS/#"
             }
           ]
+        },
+        {
+          "kind": "Hospital",
+          "places": [
+            {
+              "name": "WellStar North Fulton Hospital",
+              "miles": 1.8,
+              "site": "https://www.wellstar.org/locations/pages/wellstar-north-fulton-hospital.aspx"
+            },
+            {
+              "name": "Emory Johns Creek Hospital",
+              "miles": 6.7,
+              "site": "https://www.emoryhealthcare.org/locations/hospitals/emory-johns-creek-hospital"
+            }
+          ]
         }
       ],
       "schoolSites": {
@@ -320,6 +335,21 @@
               "site": "https://www.gwinnettpl.org/"
             }
           ]
+        },
+        {
+          "kind": "Hospital",
+          "places": [
+            {
+              "name": "Northside Hospital Forsyth",
+              "miles": 8.8,
+              "site": "https://www.northside.com/locations/northside-hospital-forsyth"
+            },
+            {
+              "name": "Northeast Georgia Medical Center Braselton",
+              "miles": 9.6,
+              "site": "https://www.nghs.com/locations/braselton"
+            }
+          ]
         }
       ],
       "schoolSites": {
@@ -477,6 +507,21 @@
               "site": "https://forsythpl.org/sharon-forks-library"
             }
           ]
+        },
+        {
+          "kind": "Hospital",
+          "places": [
+            {
+              "name": "Northside Hospital Forsyth",
+              "miles": 2,
+              "site": "https://www.northside.com/locations/northside-hospital-forsyth"
+            },
+            {
+              "name": "Emory Johns Creek Hospital",
+              "miles": 9.9,
+              "site": "https://www.emoryhealthcare.org/locations/hospitals/emory-johns-creek-hospital"
+            }
+          ]
         }
       ],
       "schoolSites": {
@@ -632,6 +677,21 @@
             {
               "name": "Gwinnett County Public Library Norcross Branch",
               "miles": 5.7
+            }
+          ]
+        },
+        {
+          "kind": "Hospital",
+          "places": [
+            {
+              "name": "Northside Hospital Duluth",
+              "miles": 1.1,
+              "site": "https://www.northside.com/locations/northside-hospital-duluth"
+            },
+            {
+              "name": "Emory Johns Creek Hospital",
+              "miles": 4.8,
+              "site": "https://www.emoryhealthcare.org/locations/hospitals/emory-johns-creek-hospital"
             }
           ]
         }
@@ -826,6 +886,21 @@
               "miles": 5.8
             }
           ]
+        },
+        {
+          "kind": "Hospital",
+          "places": [
+            {
+              "name": "Emory Johns Creek Hospital",
+              "miles": 0.6,
+              "site": "https://www.emoryhealthcare.org/locations/hospitals/emory-johns-creek-hospital"
+            },
+            {
+              "name": "Northside Hospital Duluth",
+              "miles": 4.2,
+              "site": "https://www.northside.com/locations/northside-hospital-duluth"
+            }
+          ]
         }
       ],
       "schoolSites": {
@@ -999,6 +1074,21 @@
               "site": "https://forsythpl.org/sharon-forks-library"
             }
           ]
+        },
+        {
+          "kind": "Hospital",
+          "places": [
+            {
+              "name": "Northside Hospital Forsyth",
+              "miles": 7.9,
+              "site": "https://www.northside.com/locations/northside-hospital-forsyth"
+            },
+            {
+              "name": "Emory Johns Creek Hospital",
+              "miles": 8.6,
+              "site": "https://www.emoryhealthcare.org/locations/hospitals/emory-johns-creek-hospital"
+            }
+          ]
         }
       ],
       "schoolSites": {
@@ -1163,6 +1253,21 @@
             {
               "name": "Georgia Gwinnett College Library",
               "miles": 6.4
+            }
+          ]
+        },
+        {
+          "kind": "Hospital",
+          "places": [
+            {
+              "name": "Emory Johns Creek Hospital",
+              "miles": 6.4,
+              "site": "https://www.emoryhealthcare.org/locations/hospitals/emory-johns-creek-hospital"
+            },
+            {
+              "name": "Northside Hospital Duluth",
+              "miles": 6.9,
+              "site": "https://www.northside.com/locations/northside-hospital-duluth"
             }
           ]
         }

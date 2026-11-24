@@ -20,8 +20,10 @@
  * Schools, Convenience, Potential, Cost — each a few rows with its chart one
  * tap away in a sheet, then what is left of At a glance, the history, and the
  * Resources links. Schools, Getting around and What's next were sections of
- * their own; they are those sheets now. Safety is facts about the place and a
- * link out for crime, as on the community page — `packages/shared/src/city.ts`.
+ * their own; they are those sheets now. Safety is the place's exposure to
+ * natural hazards (phase384) and a link out for crime — a city's hospital and
+ * stations said nothing one city has and another lacks;
+ * `packages/shared/src/city.ts`.
  */
 import type { CityDetailDTO } from "@percho/shared/city";
 import { GLANCE_TOPICS } from "@percho/shared/glance";
@@ -65,6 +67,7 @@ import {
 	driveRows,
 	everydayRows,
 	glancePart,
+	hazardRows,
 	otherRankings,
 	schoolRows,
 	schoolsByLevel,
@@ -226,6 +229,7 @@ export default function CityScreen() {
 	const schools = schoolRows(data);
 	const drives = driveRows(data);
 	const everyday = everydayRows(data);
+	const hazards = hazardRows(data);
 	const costs = costRows(data);
 	const latest = data.growth.series[data.growth.series.length - 1];
 	const safetyLinks = (data.links ?? []).filter((l) => l.group === "Safety");
@@ -272,7 +276,7 @@ export default function CityScreen() {
 					)}
 
 					<View style={parts.grid}>
-						{data.safety && (
+						{hazards.length > 0 && (
 							<Tile
 								label="Safety"
 								wide
@@ -280,17 +284,12 @@ export default function CityScreen() {
 								onPress={() => setSheet("safety")}
 							>
 								<View style={parts.rows}>
-									{data.safety.rows.map((r) => (
+									{hazards.map((r) => (
 										<View key={r.label} style={parts.row}>
-											<Text style={parts.rowKind} numberOfLines={1}>
+											<Text style={parts.rowName} numberOfLines={1}>
 												{r.label}
 											</Text>
-											<Text style={parts.rowName} numberOfLines={1}>
-												{r.name}
-											</Text>
-											{!!r.note && (
-												<Text style={parts.rowFigure}>{r.note}</Text>
-											)}
+											<Text style={parts.rowFigure}>{r.rating}</Text>
 										</View>
 									))}
 								</View>
@@ -471,42 +470,30 @@ export default function CityScreen() {
 
 			<BottomSheet
 				visible={sheet !== null}
-				detent={sheet === "safety" ? "medium" : "large"}
+				detent="large"
 				onClose={() => setSheet(null)}
 			>
 				<ScrollView
 					contentContainerStyle={styles.sheet}
 					showsVerticalScrollIndicator={false}
 				>
-					{sheet === "safety" && data.safety && (
+					{sheet === "safety" && data.hazards && (
 						<>
-							<Text style={styles.sheetTitle}>Safety</Text>
-							{data.safety.rows.map((r) => (
-								<Pressable
-									key={r.label}
-									style={({ pressed }) => [
-										styles.sheetRow,
-										pressed && styles.pressed,
-									]}
-									onPress={() => r.site && openSite(r.site)}
-									disabled={!r.site}
-									accessibilityRole={r.site ? "link" : "text"}
-								>
-									<View style={styles.sheetRowText}>
-										<Text style={styles.sheetRowKind}>{r.label}</Text>
-										<Text style={styles.sheetRowName}>
-											{r.name}
-											{!!r.site && <Text style={styles.linkMark}> ↗</Text>}
-										</Text>
-									</View>
-									{!!r.note && (
-										<Text style={styles.sheetRowNote}>{r.note}</Text>
-									)}
-								</Pressable>
-							))}
+							<Text style={styles.sheetTitle}>Natural hazards</Text>
+							<PlaceRow name="Overall" figure={data.hazards.overall} />
+							<View style={styles.sheetGap}>
+								{data.hazards.rows.map((r) => (
+									<PlaceRow key={r.label} name={r.label} figure={r.rating} />
+								))}
+							</View>
 							<Text style={styles.sheetCaption}>
-								Each is the closest to the city's centre, straight-line. Percho
-								does not show crime figures. The agencies publish their own:
+								FEMA's National Risk Index{" "}
+								{data.hazards.version ? `(${data.hazards.version}) ` : ""}
+								rates every census tract in the country against the rest. Each
+								line is the rating most of the {data.hazards.tracts} tracts
+								within {data.hazards.miles} miles of the city's centre carry.
+								Percho does not show crime figures. The agencies publish their
+								own:
 							</Text>
 							<View style={styles.sheetLinks}>
 								{safetyLinks.map((l) => (
@@ -670,7 +657,7 @@ type SheetKey = "safety" | "schools" | "convenience" | "potential" | "cost";
 /** Which tiles this city's page draws — the conditions on the tiles above. */
 function drawnTiles(data: CityDetailDTO): Record<SheetKey, boolean> {
 	return {
-		safety: !!data.safety,
+		safety: !!data.hazards,
 		schools: schoolRows(data).length > 0,
 		convenience: everydayRows(data).length > 0 || driveRows(data).length > 0,
 		potential: data.growth.series.length > 0,
@@ -744,25 +731,7 @@ const styles = StyleSheet.create({
 		paddingVertical: 7,
 	},
 	linkMark: { color: colors.accent },
-	sheetRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 10,
-		paddingVertical: 7,
-	},
-	sheetRowText: { flex: 1, minWidth: 0, gap: 1 },
 	sheetRowKind: { ...textStyles.note, color: colors.ink2 },
-	sheetRowName: {
-		...textStyles.footnote,
-		fontSize: 14,
-		fontWeight: "600",
-		color: colors.ink,
-	},
-	sheetRowNote: {
-		...textStyles.headline,
-		color: colors.ink,
-		fontVariant: ["tabular-nums"],
-	},
 	sheetCaption: { ...textStyles.note, color: colors.ink2, marginTop: 10 },
 	sheetLinks: {
 		flexDirection: "row",

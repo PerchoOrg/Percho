@@ -7,6 +7,7 @@ import {
 	fullSchoolName,
 	glancePart,
 	glanceTiles,
+	hazardRows,
 	otherRankings,
 	percentOf,
 	schoolColumns,
@@ -256,6 +257,28 @@ describe("the five tiles", () => {
 		expect(fullSchoolName("South Forsyth Middle")).toBe(
 			"South Forsyth Middle School",
 		);
+	});
+
+	it("rates natural hazards: overall, flood, then the highest of the rest", () => {
+		const hazards = {
+			overall: "Relatively Low",
+			tracts: 14,
+			miles: 3,
+			version: "December 2025",
+			rows: [
+				{ label: "Tornado", rating: "Relatively High" },
+				{ label: "Hail", rating: "Relatively Moderate" },
+				{ label: "Flood", rating: "Relatively Moderate" },
+				{ label: "Wildfire", rating: "Very Low" },
+			],
+		};
+		expect(hazardRows({ hazards })).toEqual([
+			{ label: "Natural hazards, overall", rating: "Low" },
+			{ label: "Flood", rating: "Moderate" },
+			{ label: "Tornado", rating: "High" },
+			{ label: "Hail", rating: "Moderate" },
+		]);
+		expect(hazardRows({})).toEqual([]);
 	});
 
 	it("names the closest everyday place of each kind", () => {

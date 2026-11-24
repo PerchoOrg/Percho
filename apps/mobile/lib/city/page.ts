@@ -162,6 +162,7 @@ type City = Pick<
 	| "gettingAround"
 	| "planning"
 	| "everyday"
+	| "hazards"
 >;
 
 /** "South Forsyth Middle" → "South Forsyth Middle School"; any other name as it is. */
@@ -219,6 +220,32 @@ export function schoolsByLevel(
 			schools: (all ?? []).filter((s) => s.level === level),
 		}))
 		.filter((g) => g.schools.length > 0);
+}
+
+/** How many single hazards the Safety tile names under the overall rating. */
+export const TILE_HAZARDS = 3;
+
+/** FEMA's "Relatively Low" → "Low"; "Very Low" → "Very low". The sheet keeps FEMA's words. */
+export function shortRating(rating: string): string {
+	const short = rating.replace(/^Relatively /, "");
+	return short.charAt(0) + short.slice(1).toLowerCase();
+}
+
+/**
+ * The Safety tile: the composite natural-hazard rating, then Flood — the one
+ * the owner named (2026-11-24: "flood等自然因素") — then the highest-rated of
+ * the rest. `hazards.rows` arrives highest first.
+ */
+export function hazardRows(
+	d: Pick<City, "hazards">,
+): { label: string; rating: string }[] {
+	if (!d.hazards) return [];
+	const flood = d.hazards.rows.filter((r) => r.label === "Flood");
+	const rest = d.hazards.rows.filter((r) => r.label !== "Flood");
+	return [
+		{ label: "Natural hazards, overall", rating: d.hazards.overall },
+		...[...flood, ...rest].slice(0, TILE_HAZARDS),
+	].map((r) => ({ label: r.label, rating: shortRating(r.rating) }));
 }
 
 /** How many everyday kinds, and how many drives, the Convenience tile names. */

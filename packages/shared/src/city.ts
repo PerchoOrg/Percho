@@ -15,10 +15,13 @@
  * NO CRIME FIELD, on purpose (owner 2026-11-15: "安全数据先不放"; `lenses.ts`
  * records the fair-housing reason). Do not add one without him.
  *
- * `safety` on the page (phase371) follows the community page's ruling of
- * 2026-11-22 (`community-profile.ts`): facts about the PLACE — the hospital
- * the fire station and the police station nearest the city's centre (the
- * last since phase383) — and crime figures only as a link out. It is not part of the stored, researched profile.
+ * Safety on the page is `hazards` (phase384): how exposed the place is to
+ * natural hazards, by FEMA's National Risk Index. It was the hospital, fire
+ * station and police station nearest the centre (phase371–383) until the
+ * owner pointed out that every city has those (2026-11-24: "哪个城市没有警察局
+ * … 放综合安全评分 以及flood等自然因素 不要放些公共设施"). Crime figures stay
+ * a link out; a score that counts crime needs his ruling first. Not part of
+ * the stored, researched profile.
  */
 
 import type { ReviewDimension } from './review-dimensions';
@@ -123,16 +126,28 @@ export interface CityDetailDTO extends CityFundamentals {
     bucketLabel?: string;
   }>;
   credits: CityFilmCredits;
-  /** Facts about the place, never about crime (see the header). */
-  safety?: {
-    /** `site` is the place's own website, where OpenStreetMap carries one. */
-    rows: Array<{ label: string; name: string; note?: string; site?: string }>;
+  /**
+   * Natural-hazard exposure, never crime (see the header): the FEMA rating
+   * most of the census tracts within `miles` of the centre carry — the
+   * composite, then each rated hazard, highest first. Ratings are FEMA's own
+   * words ("Relatively Low"), against every tract in the country.
+   *
+   * A field of its own, not `safety`: builds that read `safety.rows` as
+   * places with distances simply draw no Safety tile.
+   */
+  hazards?: {
+    overall: string;
+    tracts: number;
+    miles: number;
+    /** FEMA's release, "December 2025". */
+    version: string;
+    rows: Array<{ label: string; rating: string }>;
   };
   /**
    * Everyday places around the city's centre, by kind — groceries, a
-   * warehouse club, a pharmacy, a park, a library — nearest first, straight-
+   * warehouse club, a pharmacy, a park, a library, a hospital — nearest first, straight-
    * line miles (phase383; owner 2026-11-24: "convenient 不只是距离downtown和
-   * 机场的距离 要生活上的方便"). From OpenStreetMap, as `safety` is.
+   * 机场的距离 要生活上的方便"). From OpenStreetMap.
    */
   everyday?: Array<{
     kind: string;
