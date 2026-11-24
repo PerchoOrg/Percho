@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 10:00 UTC — phase366.23: Ward's Crossing (Johns Creek builder slot)
+
+**Objective**: owner 2026-11-24: "做下一个community". The open question (phase366.22) was the Johns Creek builder slot; I went to Ward's Crossing after finding, before building, that it has footage from inside the community: The Providence Group's live page (`/new-homes/ga/johns-creek/wards-crossing/10421/`) shows the entrance and the pool, Google's "Ward's Crossing by The Providence Group" has the pool in 3840 px, and an FMLS listing has the neighbourhood from the air.
+**Actions**: `communities` row `wards-crossing` (county_gis): name "Wards Crossing" → "Ward's Crossing" (the builder's spelling), city Alpharetta → Johns Creek (builder and listings: Johns Creek 30022; its home value now reads Johns Creek's series), `website` → the builder's live page (research had written a 404). Run `f08e36d8` with `--steps research,resolve,photos` — no site `ingest`: the builder page is 107 images, nearly all kitchens, single homes and other places (Peachtree Corners, Medlock Bridge's clubhouse, a rendering of the amenity centre). Four photos ingested by hand with provenance: the entrance monument (builder, 1920 px), the pool (builder, 640 px — later rejected for the 3840 px Google pair), the green (builder), the neighbourhood aerial (FMLS, 167 Wards Crossing Way, The Promise Realty Group).
+- Editorial, film-only: The Home Depot, Crunch, Chick-fil-A, Target, Newtown Dream Dog Park, Peach Coffee Roasters (a latte close-up and a counter). Photos rejected by what they tell a buyer: a third angle on the pool, store aisles and produce (3), food close-ups (2), a 1200 px Life Time front.
+- Assembly `121b8f72`, `cf_stream_uid 809d31c3659cb2c81e7b86f9f70f7789`, 74.5 s, 25 clips; community act 4 clips (entrance, pool from the air, pool and cabana, the neighbourhood from the air). **Spend: none** (Autrey Mill and Cauley Creek Seedance clips reused). Cover uploaded (the entrance). Profile written.
+**Verified**: frames every 2 s; production feed serves the uid (18 community films); `/watch/c/wards-crossing` 200.
+**Next steps**: two more to reach twenty — confirm community footage before each pitch.
 ## 2026-11-24 09:44 UTC — phase391: a shorter footer on the You tab
 
 **Objective**: owner: "you tab底部的声明 简化一下". The footer under the Account card was the links, a four-line music credit naming ten tracks with the licence URL spelled out, a photo-credit line and the version.
