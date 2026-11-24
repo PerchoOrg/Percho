@@ -293,7 +293,7 @@ export function CompareCards({
 	return (
 		<>
 			{safety && (
-				<Card title="Safety" note="how far help is, and the flood zone">
+				<Card title="Safety" note="the nearest hospital, and the flood zone">
 					{safety.rows.map((r) => (
 						<MileRow key={r.label} row={r} places={places} />
 					))}

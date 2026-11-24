@@ -104,21 +104,19 @@ describe("buildCompareVisuals", () => {
 	const v = buildCompareVisuals([windward, northbrooke, bare]);
 
 	it("keeps a cell per place, undefined where a place has no figure", () => {
-		expect(v.safety?.rows.map((r) => r.label)).toEqual([
-			"Hospital",
-			"Fire station",
-		]);
 		expect(v.safety?.rows[0]?.cells.map((c) => c?.miles)).toEqual([
 			2.4,
 			5.1,
 			undefined,
 		]);
-		expect(v.safety?.rows[1]?.cells[1]).toBeUndefined();
+	});
+
+	it("does not compare how far the fire station is", () => {
+		expect(v.safety?.rows.map((r) => r.label)).toEqual(["Hospital"]);
 	});
 
 	it("ends a distance axis on the next whole mile past the farthest place", () => {
 		expect(v.safety?.rows[0]?.axisMiles).toBe(6);
-		expect(v.safety?.rows[1]?.axisMiles).toBe(1);
 	});
 
 	it("says the flood zone in words, apart from the distances", () => {

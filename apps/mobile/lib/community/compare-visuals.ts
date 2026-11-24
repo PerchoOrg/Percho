@@ -80,6 +80,12 @@ export interface CompareVisuals {
 
 const SCHOOL_LEVELS = ["Elementary", "Middle", "High"];
 const FLOOD_LABEL = "Flood zone";
+/**
+ * Not compared (phase387, owner: "比较fire station的距离很奇怪"): every
+ * neighbourhood has a station a few minutes off, and half a mile more or less
+ * of it decides nothing. It stays on the community's own page.
+ */
+const NOT_COMPARED = new Set(["Fire station"]);
 
 const some = <T>(cells: readonly (T | undefined)[]): boolean =>
 	cells.some((c) => c !== undefined);
@@ -102,7 +108,8 @@ function safetyOf(
 	const labels: string[] = [];
 	for (const c of communities) {
 		for (const r of rowsOf(c)) {
-			if (r.label === FLOOD_LABEL || milesOf(r.note) === null) continue;
+			if (r.label === FLOOD_LABEL || NOT_COMPARED.has(r.label)) continue;
+			if (milesOf(r.note) === null) continue;
 			if (!labels.includes(r.label)) labels.push(r.label);
 		}
 	}
