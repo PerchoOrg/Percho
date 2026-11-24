@@ -1,8 +1,8 @@
 /**
  * What the city page adds to a stored profile at read time (phase371): the
- * Resources links and the safety rows. Neither is researched copy — the links
- * follow from the city's name, county and point, and the safety rows from
- * `city-safety.json` — so neither is stored in `cities.profile`. Since phase383
+ * Resources links and the safety block (natural hazards since phase384). Neither is researched copy — the links
+ * follow from the city's name, county and point, and the hazard ratings from
+ * `city-hazards.json` — so neither is stored in `cities.profile`. Since phase383
  * also the everyday places around the centre and the schools' own websites,
  * from `city-places.json` (both files: `import-community-safety.ts --cities`).
  *
@@ -15,8 +15,8 @@ import {
   COUNTY_LINKS,
   REDFIN_CITIES,
 } from '../communities/local-links';
+import hazardsFile from './city-hazards.json';
 import placesFile from './city-places.json';
-import safetyFile from './city-safety.json';
 import schoolsFile from './city-schools.json';
 
 type Links = NonNullable<CityDetailDTO['links']>;
@@ -96,6 +96,11 @@ export function cityLinks(c: CityPlace): Links {
     label: 'Crime map',
     url: `https://communitycrimemap.com/?address=${q(`${c.name}, GA`)}`,
   });
+  links.push({
+    group: 'Safety',
+    label: 'FEMA Risk Index',
+    url: 'https://hazards.fema.gov/nri/map',
+  });
   if (c.lat !== null && c.lng !== null)
     links.push({
       group: 'Safety',
@@ -124,34 +129,17 @@ export function cityLinks(c: CityPlace): Links {
   return links;
 }
 
-type Near = { name: string; miles: number; site?: string };
-const SAFETY = safetyFile as {
-  cities: Record<string, { hospital?: Near; fire?: Near; police?: Near }>;
+const HAZARDS = hazardsFile as {
+  cities: Record<string, NonNullable<CityDetailDTO['hazards']>>;
 };
 
 /**
- * Facts about the place, never about crime (`packages/shared/src/city.ts`):
- * the hospital, the fire station and the police station closest to the city's
- * centre, each a name and a distance — the community page's rows — and its
- * own website where there is one.
+ * How exposed the city is to natural hazards (`packages/shared/src/city.ts`):
+ * FEMA's National Risk Index ratings for the tracts around its centre, as
+ * `import-community-safety.ts --cities` found them. Nothing about crime.
  */
-export function citySafety(slug: string): CityDetailDTO['safety'] | undefined {
-  const facts = SAFETY.cities[slug];
-  if (!facts) return undefined;
-  const rows: NonNullable<CityDetailDTO['safety']>['rows'] = [];
-  const add = (label: string, p: Near | undefined) => {
-    if (p)
-      rows.push({
-        label,
-        name: p.name,
-        note: `${p.miles} mi`,
-        ...(p.site ? { site: p.site } : {}),
-      });
-  };
-  add('Hospital', facts.hospital);
-  add('Fire station', facts.fire);
-  add('Police', facts.police);
-  return rows.length > 0 ? { rows } : undefined;
+export function cityHazards(slug: string): CityDetailDTO['hazards'] | undefined {
+  return HAZARDS.cities[slug];
 }
 
 const PLACES = placesFile as {

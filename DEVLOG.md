@@ -23,6 +23,23 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 05:43 UTC — phase384: a city's Safety is natural hazards, not public buildings
+
+**Objective**: owner on phase383: "对Duluth 警察局 0.5mile 啥意思？哪个城市没有警察局 这部分我觉得还是放综合安全评分 以及flood等自然因素 不要放些公共设施 对于community可以放一些设施". He is right: "Police · 0.5 mi" is a distance from a centre point to a building every city has — it separates no city from another.
+**What the phone shows** (city pages only): Safety is four rows — `Natural hazards, overall · Low`, `Flood · Moderate`, then the two highest of the rest (Duluth: Tornado, Hail — Moderate). The sheet lists the overall rating and all 13 rated hazards in FEMA's own words, says where they come from, and keeps the crime-map and flood-map links. Hospital, fire station and police are gone from Safety; the hospital is now the last kind under Convenience → Everyday. The community page keeps its hospital / fire station / flood zone, as he said.
+**Data**: FEMA National Risk Index (December 2025 release), census-tract layer, free and keyless. For each city: the tracts within 3 miles of the centre (14–31 of them), and for the composite and each hazard the rating most of them carry — of two equally common, the higher. The seven cities: Alpharetta Very Low; the other six Relatively Low. Flood is Relatively Moderate everywhere but Alpharetta (Relatively Low); Cumming's tornado rating is Relatively High.
+**Actions**:
+- `scripts/admin/import-community-safety.ts --cities`: `hazards()` (one ArcGIS query per city) → `apps/web/lib/cities/city-hazards.json`; `city-safety.json` deleted; fire and police no longer read for a city; `Hospital` appended to `everyday` in `city-places.json`. Community mode unchanged.
+- `packages/shared/src/city.ts`: `safety` removed from the city DTO, `hazards` added. `links.ts`: `cityHazards` replaces `citySafety`; a "FEMA Risk Index" link joins the Safety links.
+- Mobile: `hazardRows` / `shortRating` (`lib/city/page.ts`), the tile and the sheet (`app/city/[slug].tsx`); the Safety sheet opens large.
+**Decisions**:
+1. **Tracts, not the county.** FEMA's county rating for Gwinnett and Fulton is "Relatively High" (95th percentile) — the index is expected annual loss in dollars, so a county of a million people rates high for being large. Tracts are all about the same size; the same places read Low. The county figure would have told a buyer the opposite of the truth.
+2. **A new field, not `safety` reshaped**: a build that reads `safety.rows` as places with distances now draws no Safety tile instead of a wrong one.
+3. **The composite is FEMA's, and it is natural hazards only.** His "综合安全评分" may mean a score that counts crime. Crime on the page is still under his own rulings of 2026-11-15 and 11-22 (`lenses.ts`); I did not build one and asked him.
+**Issues**: ratings are relative to the whole country and five steps wide, so six of seven cities read the same overall — the differences are in the single hazards. Not seen on a device.
+**Verified**: web typecheck 0, vitest 1400; mobile typecheck 0, lint 0 errors / 5 warnings (as main), vitest 899 (1 new).
+**Next steps**: his answer on a crime-based score; NCES school websites (phase383) still open.
+
 ## 2026-11-24 02:30 UTC — phase383: city page — police, three schools, everyday places, and places' own websites
 
 **Objective**: owner on phase382's Duluth page: "safety 有警察局或者别的吗 / schools 只显示3个小初高排名最高的 / convenient 不只是距离downtown和机场的距离 要生活上的方便 / 这些地方有官网的可以直接放链接". City page only; the community page is not touched.

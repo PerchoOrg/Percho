@@ -40,8 +40,8 @@ import { cityForecast } from './forecasts';
 import {
   articleLinks,
   cityEveryday,
+  cityHazards,
   cityLinks,
-  citySafety,
   citySchools,
   schoolSite,
 } from './links';
@@ -277,7 +277,7 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
     return undefined;
   });
   const forecast = cityForecast(city.county);
-  const safety = citySafety(city.slug);
+  const hazards = cityHazards(city.slug);
   const allSchools = citySchools(city.slug);
   const everyday = cityEveryday(city.slug);
   return {
@@ -298,7 +298,7 @@ export async function fetchCityDetail(slug: string): Promise<CityDetailDTO | nul
       }),
     },
     credits,
-    ...(safety ? { safety } : {}),
+    ...(hazards ? { hazards } : {}),
     ...(everyday ? { everyday } : {}),
     ...(reviews ? { reviews } : {}),
     ...(forecast ? { forecast } : {}),

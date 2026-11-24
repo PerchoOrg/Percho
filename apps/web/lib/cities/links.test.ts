@@ -3,8 +3,8 @@ import { cityForecast } from './forecasts';
 import {
   articleLinks,
   cityEveryday,
+  cityHazards,
   cityLinks,
-  citySafety,
   citySchools,
   schoolSite,
 } from './links';
@@ -53,6 +53,7 @@ describe('cityLinks', () => {
       'Google Maps',
       'Homes on Zillow',
       'Crime map',
+      'FEMA Risk Index',
       'Reddit',
       'YouTube',
     ]);
@@ -118,31 +119,34 @@ describe('citySchools', () => {
   });
 });
 
-describe('citySafety', () => {
-  it('names the hospital, the fire station and the police with their distances, and nothing about crime', () => {
-    const rows = citySafety('cumming-ga')?.rows ?? [];
-    expect(rows.map((r) => r.label)).toEqual(['Hospital', 'Fire station', 'Police']);
-    for (const r of rows) {
-      expect(r.name).not.toMatch(/within/);
-      expect(r.note).toMatch(/^\d+(\.\d)? mi$/);
-    }
-    expect(JSON.stringify(rows)).not.toMatch(/crime/i);
-    expect(citySafety('nowhere-ga')).toBeUndefined();
-  });
+describe('cityHazards', () => {
+  const RATINGS = [
+    'Very Low',
+    'Relatively Low',
+    'Relatively Moderate',
+    'Relatively High',
+    'Very High',
+  ];
 
-  it('links a place to its own https site, and only where there is one', () => {
-    const rows = citySafety('duluth-ga')?.rows ?? [];
-    expect(rows.find((r) => r.label === 'Hospital')?.site).toMatch(
-      /^https:\/\/www\.northside\.com\//,
-    );
-    for (const r of rows) if (r.site) expect(r.site).toMatch(/^https:\/\//);
+  it('rates the composite and each hazard in FEMA’s words, highest first, and nothing about crime', () => {
+    const h = cityHazards('duluth-ga');
+    expect(RATINGS).toContain(h?.overall);
+    const rows = h?.rows ?? [];
+    expect(rows.map((r) => r.label)).toContain('Flood');
+    const levels = rows.map((r) => RATINGS.indexOf(r.rating));
+    expect(levels.every((l) => l >= 0)).toBe(true);
+    expect(levels).toEqual([...levels].sort((a, b) => b - a));
+    expect(h?.tracts).toBeGreaterThan(5);
+    expect(JSON.stringify(h)).not.toMatch(/crime|police/i);
+    expect(cityHazards('nowhere-ga')).toBeUndefined();
   });
 });
 
 describe('cityEveryday', () => {
-  it('lists everyday places by kind, nearest first, groceries leading', () => {
+  it('lists everyday places by kind, nearest first, groceries leading and the hospital last', () => {
     const kinds = cityEveryday('duluth-ga') ?? [];
     expect(kinds[0]?.kind).toBe('Groceries');
+    expect(kinds[kinds.length - 1]?.kind).toBe('Hospital');
     for (const k of kinds) {
       expect(k.places.length).toBeGreaterThan(0);
       expect(k.places.length).toBeLessThanOrEqual(5);

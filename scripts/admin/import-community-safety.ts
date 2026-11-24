@@ -35,6 +35,16 @@
  * library) and the websites of the schools around it — the last two go to
  * `apps/web/lib/cities/city-places.json` (owner 2026-11-24: "safety 有警察局
  * 或者别的吗 / convenient … 要生活上的方便 / 这些地方有官网的可以直接放链接").
+ *
+ * Phase384, the same day: a CITY's Safety is not its public buildings — every
+ * city has a police station half a mile from its centre (owner: "哪个城市没有
+ * 警察局 … 放综合安全评分 以及flood等自然因素 不要放些公共设施 对于community
+ * 可以放一些设施"). `--cities` now writes `city-hazards.json` instead of
+ * `city-safety.json`: FEMA's National Risk Index ratings — the composite and
+ * each natural hazard — for the census tracts around the centre. The hospital
+ * moves to the everyday places; the fire and police stations are not read for
+ * a city any more. A community's facts (hospital, fire station, flood zone)
+ * are unchanged.
  *   pnpm --filter @percho/web community:safety --cities
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -45,7 +55,7 @@ import { type SafetyFacts, milesBetween } from '../../apps/web/lib/communities/p
 
 const here = dirname(fileURLToPath(import.meta.url));
 const FILE = join(here, 'data/community-safety.json');
-const CITY_FILE = join(here, '../../apps/web/lib/cities/city-safety.json');
+const CITY_FILE = join(here, '../../apps/web/lib/cities/city-hazards.json');
 const CITY_PLACES_FILE = join(here, '../../apps/web/lib/cities/city-places.json');
 const CITIES = process.argv.includes('--cities');
 const SLUGS = process.argv.slice(2).filter((a) => !a.startsWith('--'));
@@ -231,7 +241,6 @@ function nearest(
     }));
 }
 
-const POLICE_M = 15_000;
 /** Everyday places further than this are not "around" the city's centre. */
 const EVERYDAY_M = 12_000;
 const SCHOOL_M = 20_000;
@@ -266,15 +275,13 @@ const schoolKey = (name: string) =>
 
 /**
  * Everything the city page names around a city's centre, in ONE request (see
- * `places`): emergency services, everyday places and schools.
+ * `places`): hospitals, everyday places and schools.
  */
 async function cityPlaces(points: ReadonlyArray<{ lat: number; lng: number }>) {
   const box = boxAround(points, HOSPITAL_M);
-  const query = `[out:json][timeout:120];(nwr["amenity"~"^(hospital|fire_station|police|pharmacy|library|school)$"](${box});nwr["shop"~"^(supermarket|wholesale)$"](${box});nwr["leisure"="park"]["name"](${box}););out center tags;`;
+  const query = `[out:json][timeout:120];(nwr["amenity"~"^(hospital|pharmacy|library|school)$"](${box});nwr["shop"~"^(supermarket|wholesale)$"](${box});nwr["leisure"="park"]["name"](${box}););out center tags;`;
   const out = {
     hospitals: [] as Place[],
-    fire: [] as Place[],
-    police: [] as Place[],
     schools: [] as Place[],
     everyday: EVERYDAY.map((k) => ({ kind: k.kind, places: [] as Place[] })),
   };
@@ -282,14 +289,116 @@ async function cityPlaces(points: ReadonlyArray<{ lat: number; lng: number }>) {
     const place = placeOf(e);
     const tags = e.tags;
     if (!place || !tags) continue;
-    if (tags.amenity === 'fire_station') out.fire.push(place);
-    else if (tags.amenity === 'police') out.police.push(place);
-    else if (tags.amenity === 'school') out.schools.push(place);
+    if (tags.amenity === 'school') out.schools.push(place);
     else if (tags.amenity === 'hospital') {
       if (takesEmergencies(tags)) out.hospitals.push(place);
     } else EVERYDAY.forEach((k, i) => k.is(tags) && out.everyday[i]?.places.push(place));
   }
   return out;
+}
+
+/** Tracts this close to the centre are the city's — `build-city-schools.ts` draws schools about as far. */
+const HAZARD_MILES = 3;
+const NRI =
+  'https://services.arcgis.com/XG15cJAlne2vxtgt/arcgis/rest/services/National_Risk_Index_Census_Tracts/FeatureServer/0/query';
+/** FEMA's hazard codes the page names, as a buyer would say them. */
+const HAZARDS: ReadonlyArray<readonly [code: string, label: string]> = [
+  ['IFLD', 'Flood'],
+  ['TRND', 'Tornado'],
+  ['HAIL', 'Hail'],
+  ['SWND', 'Strong wind'],
+  ['LTNG', 'Lightning'],
+  ['HRCN', 'Hurricane'],
+  ['WNTW', 'Winter weather'],
+  ['ISTM', 'Ice storm'],
+  ['WFIR', 'Wildfire'],
+  ['ERQK', 'Earthquake'],
+  ['LNDS', 'Landslide'],
+  ['HWAV', 'Heat wave'],
+  ['CWAV', 'Cold wave'],
+  ['DRGT', 'Drought'],
+];
+/** FEMA's five ratings, lowest first. Anything else ("No Rating", "Not Applicable") is not a rating. */
+const RATINGS = [
+  'Very Low',
+  'Relatively Low',
+  'Relatively Moderate',
+  'Relatively High',
+  'Very High',
+];
+
+/**
+ * The rating most of the tracts carry; of two equally common, the higher — a
+ * page that must round rounds toward the risk. Undefined when most tracts
+ * have none.
+ */
+function commonRating(values: ReadonlyArray<string | null | undefined>): string | undefined {
+  const rated = values.filter((v): v is string => !!v && RATINGS.includes(v));
+  if (rated.length * 2 < values.length) return undefined;
+  let best: string | undefined;
+  let bestCount = 0;
+  for (const r of RATINGS) {
+    const n = rated.filter((v) => v === r).length;
+    if (n > 0 && n >= bestCount) {
+      best = r;
+      bestCount = n;
+    }
+  }
+  return best;
+}
+
+interface Hazards {
+  /** FEMA's composite Risk Index rating. */
+  overall: string;
+  tracts: number;
+  miles: number;
+  /** "December 2025" */
+  version: string;
+  /** Each rated hazard, the highest first, then in the page's order. */
+  rows: { label: string; rating: string }[];
+}
+
+/** FEMA's National Risk Index for the census tracts around a point. Free, keyless. */
+async function hazards(lat: number, lng: number): Promise<Hazards | undefined> {
+  const body = new URLSearchParams({
+    where: '1=1',
+    geometry: `${lng},${lat}`,
+    geometryType: 'esriGeometryPoint',
+    inSR: '4326',
+    distance: String(HAZARD_MILES),
+    units: 'esriSRUnit_StatuteMile',
+    spatialRel: 'esriSpatialRelIntersects',
+    outFields: ['NRI_VER', 'RISK_RATNG', ...HAZARDS.map(([code]) => `${code}_RISKR`)].join(','),
+    returnGeometry: 'false',
+    f: 'json',
+  });
+  let res: Response | undefined;
+  for (let attempt = 0; attempt < 4 && !res?.ok; attempt++) {
+    if (attempt > 0) await pause(3000 * attempt);
+    res = await fetch(NRI, {
+      method: 'POST',
+      body,
+      headers: { 'User-Agent': AGENT },
+    }).catch(() => undefined);
+  }
+  if (!res?.ok) throw new Error(`FEMA NRI ${res?.status ?? 'unreachable'}`);
+  const json = (await res.json()) as {
+    features?: Array<{ attributes: Record<string, string | null> }>;
+  };
+  const tracts = (json.features ?? []).map((f) => f.attributes);
+  const overall = commonRating(tracts.map((t) => t.RISK_RATNG));
+  if (!overall) return undefined;
+  const rows = HAZARDS.flatMap(([code, label]) => {
+    const rating = commonRating(tracts.map((t) => t[`${code}_RISKR`]));
+    return rating ? [{ label, rating }] : [];
+  }).sort((a, b) => RATINGS.indexOf(b.rating) - RATINGS.indexOf(a.rating));
+  return {
+    overall,
+    tracts: tracts.length,
+    miles: HAZARD_MILES,
+    version: tracts[0]?.NRI_VER ?? '',
+    rows,
+  };
 }
 
 /**
@@ -343,55 +452,34 @@ async function main() {
   if (CITIES) {
     const { data: rows, error: cityError } = await sb
       .from('cities')
-      .select('slug, name, county, lat, lng')
+      .select('slug, lat, lng')
       .eq('status', 'active');
     if (cityError) throw new Error(`read failed: ${JSON.stringify(cityError)}`);
     const cities = (rows ?? []).flatMap((c) =>
       typeof c.lat === 'number' && typeof c.lng === 'number'
-        ? [
-            {
-              slug: c.slug as string,
-              name: c.name as string,
-              county: (c.county as string | null) ?? '',
-              lat: c.lat,
-              lng: c.lng,
-            },
-          ]
+        ? [{ slug: c.slug as string, lat: c.lat, lng: c.lng }]
         : [],
     );
     const around = await cityPlaces(cities);
-    const out: Record<string, { hospital?: Near; fire?: Near; police?: Near }> = {};
+    const out: Record<string, Hazards> = {};
     const nearby: Record<
       string,
       { everyday: { kind: string; places: Near[] }[]; schoolSites: Record<string, string> }
     > = {};
     for (const c of cities.sort((a, b) => a.slug.localeCompare(b.slug))) {
-      const hospital = nearest(c.lat, c.lng, around.hospitals, HOSPITAL_M, 1)[0];
-      const fire = nearest(c.lat, c.lng, around.fire, FIRE_M, 1)[0];
-      // The city's own force or its county's. The station nearest Johns
-      // Creek's centre is another county's sheriff, who does not police it.
-      const own = [c.name, c.county].filter(Boolean).map((n) => n.toLowerCase());
-      const police = nearest(
-        c.lat,
-        c.lng,
-        around.police.filter((p) => own.some((n) => p.name.toLowerCase().includes(n))),
-        POLICE_M,
-        1,
-      )[0];
-      out[c.slug] = {
-        ...(hospital ? { hospital } : {}),
-        ...(fire ? { fire } : {}),
-        ...(police ? { police } : {}),
-      };
-      const everyday = around.everyday
-        .map((k) => ({
+      const risk = await hazards(c.lat, c.lng);
+      if (risk) out[c.slug] = risk;
+      const hospitals = nearest(c.lat, c.lng, around.hospitals, HOSPITAL_M, 2);
+      const everyday = [
+        ...around.everyday.map((k) => ({
           kind: k.kind,
           places: nearest(c.lat, c.lng, k.places, EVERYDAY_M, EVERYDAY_COUNT),
-        }))
-        .filter((k) => k.places.length > 0);
+        })),
+        { kind: 'Hospital', places: hospitals },
+      ].filter((k) => k.places.length > 0);
       nearby[c.slug] = { everyday, schoolSites: schoolSites(c.lat, c.lng, around.schools) };
       console.log(
-        `  ${c.slug}: ${hospital ? `${hospital.name} ${hospital.miles} mi` : 'no hospital'} · ${fire ? `${fire.name} ${fire.miles} mi` : 'no fire station'} · ${police ? `${police.name} ${police.miles} mi` : 'no police station'}`,
+        `  ${c.slug}: ${risk ? `${risk.overall} over ${risk.tracts} tracts · ${risk.rows.map((r) => `${r.label} ${r.rating}`).join(', ')}` : 'no risk rating'}`,
       );
       console.log(
         `    ${everyday.map((k) => `${k.kind}: ${k.places[0]?.name} ${k.places[0]?.miles} mi`).join(' · ')} · ${Object.keys(nearby[c.slug]?.schoolSites ?? {}).length} school sites`,
