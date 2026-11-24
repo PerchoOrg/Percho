@@ -17,7 +17,8 @@ import {
  *     icon and a popover, not the segment chips deleted in phase187: those
  *     were a permanent bar that ate a row and forced you into one segment,
  *     this costs nothing until opened and defaults to Everything.
- *   · SELECT — turns cards (and area headers) into checkboxes, up to
+ *   · COMPARE (the button read "Select" until phase387; owner: "不要用select
+ *     要说compare" — it names what the mode is for) — turns cards (and area headers) into checkboxes, up to
  *     COMPARE_MAX. The FIRST pick sets the kind and the rest dim: homes,
  *     neighbourhoods and areas have three different compare tables and there
  *     is no such thing as comparing a house against a county.
@@ -519,7 +520,7 @@ export default function SavedTab() {
 							accessibilityRole="button"
 						>
 							<Text style={[styles.iconTxt, selecting && styles.iconTxtOn]}>
-								{selecting ? "Done" : "Select"}
+								{selecting ? "Done" : "Compare"}
 							</Text>
 						</Pressable>
 					)}

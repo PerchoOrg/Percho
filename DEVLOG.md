@@ -23,6 +23,15 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 06:50 UTC — phase387: Saved's button says Compare; no fire station in the comparison
+
+**Objective**: owner on phase386: "不要用select 要说compare" and "比较里的safety比较fire station的距离很奇怪".
+**What the phone shows**: the Saved header button reads `Compare` (it read `Select`; `Done` while picking is unchanged). In a neighbourhood comparison, Safety is the nearest hospital on its mile line and the flood zone in words — no fire station row.
+**Actions**: `app/(tabs)/saved.tsx` (the label); `lib/community/compare-visuals.ts` `NOT_COMPARED` skips the "Fire station" safety row (test updated); the Safety card's note reads "the nearest hospital, and the flood zone".
+**Decisions**: the fire station stays on the community's own page (his ruling of 2026-11-24, phase384: "对于community可以放一些设施") — it is only not compared. The hospital row is kept: he named the fire station, and a hospital's distance does differ by miles between neighbourhoods. Remove still lives in the same mode as before; the button is named for the mode's main use.
+**Verified**: mobile typecheck 0, lint 0 errors / 5 warnings, vitest 915. Not seen on a device.
+**Next steps**: ask whether the hospital distance should go from the comparison too.
+
 ## 2026-11-24 06:30 UTC — phase386: Saved in four views; the community side-by-side is drawn
 
 **Objective**: owner 2026-11-23: "saved 重新设计一下 支持多种示图 比较页面要生动一些". Read as: the Saved tab gets several ways to lay the shortlist out (视图), and the compare screen stops being a table of text.
