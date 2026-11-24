@@ -244,7 +244,9 @@ export default function CityScreen() {
 											<Text style={parts.rowName} numberOfLines={1}>
 												{r.name}
 											</Text>
-											{!!r.note && <Text style={parts.rowAside}>{r.note}</Text>}
+											{!!r.note && (
+												<Text style={parts.rowFigure}>{r.note}</Text>
+											)}
 										</View>
 									))}
 								</View>
@@ -261,15 +263,12 @@ export default function CityScreen() {
 								<View style={parts.rows}>
 									{schools.map((r) => (
 										<View key={r.name} style={parts.row}>
-											<Text
-												style={parts.rowName}
-												numberOfLines={1}
-												adjustsFontSizeToFit
-												minimumFontScale={0.85}
-											>
+											<Text style={parts.rowName} numberOfLines={1}>
 												{r.name}
 											</Text>
-											{!!r.rank && <Text style={styles.rowRank}>{r.rank}</Text>}
+											{!!r.rank && (
+												<Text style={parts.rowFigure}>{r.rank}</Text>
+											)}
 										</View>
 									))}
 								</View>
@@ -294,7 +293,10 @@ export default function CityScreen() {
 											<Text style={parts.rowName} numberOfLines={1}>
 												{r.place}
 											</Text>
-											<Text style={parts.rowAside}>{r.time}</Text>
+											{!!r.miles && (
+												<Text style={parts.rowAside}>{r.miles}</Text>
+											)}
+											<Text style={parts.rowFigure}>{r.time}</Text>
 										</View>
 									))}
 								</View>
@@ -308,27 +310,37 @@ export default function CityScreen() {
 								width={half}
 								onPress={() => setSheet("potential")}
 							>
-								<Text style={parts.figure}>
-									{latest.value.toLocaleString("en-US")}
-									<Text
-										style={parts.figureUnit}
-									>{`  residents, ${latest.label}`}</Text>
-								</Text>
-								<Text style={parts.foot}>{data.growth.takeaway}</Text>
-								{data.forecast && (
-									<Text style={parts.footSecond}>
-										Forecast: {data.forecast.value.toLocaleString("en-US")} in{" "}
-										{data.forecast.area} by {data.forecast.year} (
-										{data.forecast.takeaway})
-									</Text>
-								)}
-								{data.planning.length > 0 && (
-									<Text style={parts.footSecond}>
-										{data.planning.length === 1
-											? "1 project planned"
-											: `${data.planning.length} projects planned`}
-									</Text>
-								)}
+								<View style={parts.rows}>
+									<View style={parts.row}>
+										<Text style={parts.rowName} numberOfLines={1}>
+											Residents, {latest.label}
+										</Text>
+										<Text style={parts.rowAside}>{data.growth.takeaway}</Text>
+										<Text style={parts.rowFigure}>
+											{latest.value.toLocaleString("en-US")}
+										</Text>
+									</View>
+									{data.forecast && (
+										<View style={parts.row}>
+											<Text style={parts.rowName} numberOfLines={1}>
+												{data.forecast.area} by {data.forecast.year}
+											</Text>
+											<Text style={parts.rowFigure}>
+												{data.forecast.takeaway}
+											</Text>
+										</View>
+									)}
+									{data.planning.length > 0 && (
+										<View style={parts.row}>
+											<Text style={parts.rowName} numberOfLines={1}>
+												Projects planned
+											</Text>
+											<Text style={parts.rowFigure}>
+												{data.planning.length}
+											</Text>
+										</View>
+									)}
+								</View>
 							</Tile>
 						)}
 
@@ -342,23 +354,21 @@ export default function CityScreen() {
 								<View style={parts.rows}>
 									{costs.map((r) => (
 										<View key={r.label} style={parts.row}>
-											<Text style={styles.costLabel} numberOfLines={1}>
+											<Text style={parts.rowName} numberOfLines={1}>
 												{r.label}
 											</Text>
 											{!!r.note && <Text style={parts.rowAside}>{r.note}</Text>}
-											<Text style={styles.costValue}>{r.value}</Text>
+											<Text style={parts.rowFigure}>{r.value}</Text>
 										</View>
 									))}
 									{data.holding && (
 										<View style={parts.row}>
-											<Text style={styles.costLabel} numberOfLines={1}>
-												To hold a home
+											<Text style={parts.rowName} numberOfLines={1}>
+												Tax and utilities
 											</Text>
-											<Text style={parts.rowAside}>
-												tax, power, water, trash
-											</Text>
-											<Text style={styles.costValue}>
-												{data.holding.display}/mo
+											<Text style={parts.rowAside}>a month</Text>
+											<Text style={parts.rowFigure}>
+												{data.holding.display}
 											</Text>
 										</View>
 									)}
@@ -472,7 +482,9 @@ export default function CityScreen() {
 													{sc.miles !== undefined && (
 														<Text style={parts.rowAside}>{sc.miles} mi</Text>
 													)}
-													<Text style={parts.rowShare}>Top {sc.share}%</Text>
+													<Text style={[parts.rowFigure, parts.rowShare]}>
+														Top {sc.share}%
+													</Text>
 												</View>
 											))}
 										</View>
@@ -611,29 +623,6 @@ const styles = StyleSheet.create({
 		color: colors.ink2,
 		marginTop: 26,
 		marginBottom: 10,
-	},
-
-	/** A school's published rank, in the row's own type. */
-	rowRank: {
-		...textStyles.footnote,
-		fontSize: 13,
-		fontWeight: "600",
-		color: colors.ink,
-		fontVariant: ["tabular-nums"],
-	},
-	costLabel: {
-		...textStyles.footnote,
-		fontSize: 13,
-		color: colors.ink2,
-		flex: 1,
-		minWidth: 0,
-	},
-	costValue: {
-		...textStyles.footnote,
-		fontSize: 14,
-		fontWeight: "600",
-		color: colors.ink,
-		fontVariant: ["tabular-nums"],
 	},
 
 	sheet: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: 36 },

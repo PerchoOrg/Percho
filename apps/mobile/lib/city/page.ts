@@ -224,14 +224,20 @@ export function schoolsByLevel(
 		.filter((g) => g.schools.length > 0);
 }
 
-/** The Convenience tile: the first three drives, off-peak to rush. */
-export function driveRows(d: City): { place: string; time: string }[] {
+/**
+ * The Convenience tile: the first three drives, off-peak to rush. A label is
+ * "Downtown Atlanta · 30 mi"; the miles are the row's quieter word, apart from
+ * the name.
+ */
+export function driveRows(
+	d: City,
+): { place: string; miles?: string; time: string }[] {
 	return d.gettingAround
 		.flatMap((r) =>
 			r.minutes
 				? [
 						{
-							place: r.label,
+							...placeAndMiles(r.label),
 							time:
 								r.minutes.min === r.minutes.max
 									? `${r.minutes.min} min`
@@ -241,6 +247,11 @@ export function driveRows(d: City): { place: string; time: string }[] {
 				: [],
 		)
 		.slice(0, 3);
+}
+
+function placeAndMiles(label: string): { place: string; miles?: string } {
+	const m = /^(.+?) · (\d+(?:\.\d+)? mi)$/.exec(label.trim());
+	return m?.[1] && m[2] ? { place: m[1], miles: m[2] } : { place: label };
 }
 
 const isHomeValue = (label: string) => /median home value/i.test(label);
