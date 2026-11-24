@@ -1,19 +1,18 @@
 /**
- * The under-card block's geometry (phase378), asserted against the
- * component's source.
+ * The place block's geometry (phase378, above the card since phase379),
+ * asserted against the component's source.
  *
  * Read as text rather than rendered, the same way `listing-layout.test.ts`
  * pins the card's composition: the mobile vitest suite is deliberately
  * react-native-free (`vitest.config.ts`), so a number that lives in a
  * `StyleSheet` can only be checked this way. What the model DECIDES is tested
- * for real in `lib/feed/place-block.test.ts`, and what fits on which screen in
- * `theme/card-aspect.test.ts`; this file guards the drawing.
+ * for real in `lib/feed/place-block.test.ts`, and what the block's height
+ * costs the film in `theme/card-aspect.test.ts`; this file guards the drawing.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { FACTS_ROW, GUTTER, PLACE_ROW, ROW_GAP } from "./feed-page";
-
 const BLOCK = readFileSync("components/feed/PlaceBlock.tsx", "utf8");
+const FEED = readFileSync("app/(tabs)/feed.tsx", "utf8");
 
 /**
  * The block with its comments stripped. Not tidiness: the component's own
@@ -42,14 +41,20 @@ function n(name: string): number {
 
 describe("the block's rows", () => {
 	/**
-	 * 98 at 390: a 44pt place row, a 10pt gap, a 44pt figures row. This is
-	 * the number `theme/feed-page.ts` finds room for, per screen — the rows
-	 * are declared there so the two cannot drift.
+	 * 86 at 390: 10 of room above, the 32pt place row, a 4pt gap and the 40pt
+	 * figures row — the header's own total, so the card did not move when the
+	 * block replaced it (owner, picking "numbers above the card": "same spot,
+	 * same height"). `theme/card-aspect.test.ts` spends this number.
 	 */
-	it("is two 44pt rows with 10 between", () => {
-		expect(PLACE_ROW).toBe(44);
-		expect(FACTS_ROW).toBe(44);
-		expect(ROW_GAP).toBe(10);
+	it("is 86 — two rows, one gap, and the room above", () => {
+		expect(n("PAD_TOP")).toBe(10);
+		expect(n("PLACE_ROW")).toBe(32);
+		expect(n("ROW_GAP")).toBe(4);
+		expect(n("FACTS_ROW")).toBe(40);
+		expect(n("PAD_TOP") + n("PLACE_ROW") + n("ROW_GAP") + n("FACTS_ROW")).toBe(
+			86,
+		);
+		expect(CODE).toContain("paddingTop: PAD_TOP * k");
 		expect(CODE).toContain("minHeight: PLACE_ROW * k");
 		expect(CODE).toContain("minHeight: FACTS_ROW * k");
 		expect(CODE).toContain("marginTop: ROW_GAP * k");
@@ -66,15 +71,16 @@ describe("the block's rows", () => {
 	});
 
 	/**
-	 * The card's own text starts 24 inside its edge, and the card's edge is
-	 * `GUTTER` from the screen's — so the name, the place and the figures
-	 * share one left edge. Derived, so it follows the gutter if that moves.
+	 * "Header left = existing card left + 8", as the header was. The card's
+	 * left is `GUTTER` in `feed.tsx`, so the inset is derived from it — this
+	 * fails if the gutter moves and the block stays put.
 	 */
-	it("starts on the card's own text edge", () => {
-		expect(n("CARD_TEXT_INSET")).toBe(24);
-		expect(CODE).toContain("const EDGE = GUTTER + CARD_TEXT_INSET;");
-		expect(CODE).toContain("paddingHorizontal: EDGE");
-		expect(GUTTER + n("CARD_TEXT_INSET")).toBe(32);
+	it("insets 8 from each CARD edge, not from the screen", () => {
+		const gutter = FEED.match(/^const GUTTER = (\d+);$/m)?.[1];
+		expect(gutter, "GUTTER not found in app/(tabs)/feed.tsx").toBeDefined();
+		expect(n("CARD_EDGE_INSET")).toBe(8);
+		expect(CODE).toContain(`const EDGE = ${gutter} + CARD_EDGE_INSET;`);
+		expect(CODE).toContain("paddingHorizontal: EDGE * k");
 	});
 
 	/**
@@ -117,25 +123,35 @@ describe("the block's rows", () => {
 });
 
 describe("map control B", () => {
-	/** The owner's handoff control, carried over from the header unchanged. */
-	it("is 84 x 44 at radius 22, and darkens when pressed", () => {
-		expect(n("MAP_WIDTH")).toBe(84);
-		expect(n("MAP_HEIGHT")).toBe(44);
-		expect(n("MAP_RADIUS")).toBe(22);
-		expect(n("MAP_GAP")).toBe(6);
+	/**
+	 * The handoff's control at the place line's height — 72 × 32 at radius 16,
+	 * as option 1 of `/demos/feed-above-card-v1` drew it beside a 14pt line —
+	 * with its touch target brought back to 44 by `hitSlop`.
+	 */
+	it("is a 72 x 32 pill at the line's height, and darkens when pressed", () => {
+		expect(n("MAP_WIDTH")).toBe(72);
+		expect(n("MAP_HEIGHT")).toBe(n("PLACE_ROW"));
+		expect(n("MAP_RADIUS")).toBe(n("MAP_HEIGHT") / 2);
 		// A floor, not a fixed frame: the pill widens for a scaled label.
 		expect(CODE).toContain("minWidth: MAP_WIDTH");
 		expect(CODE).toContain("minHeight: MAP_HEIGHT");
 		expect(CODE).toContain("mapPressed: { backgroundColor:");
 	});
 
+	it("gives its touch target back its 44", () => {
+		expect(CODE).toContain("const PLACE_SLOP = { top: 8, bottom: 4 };");
+		expect(n("MAP_HEIGHT") + 8 + 4).toBe(44);
+		expect(CODE).toContain("const CELL_SLOP = { bottom: 4 };");
+		expect(n("FACTS_ROW") + 4).toBe(44);
+	});
+
 	/**
 	 * The pin is a teardrop: one box, three corners rounded to half its width
-	 * and the fourth sharp, turned 45° so the sharp one points down. 18 is
+	 * and the fourth sharp, turned 45° so the sharp one points down. Sized by
 	 * the whole icon, not its head (owner, 2026-09-07: too big at 21.7).
 	 */
-	it("draws an 18-TALL teardrop pin", () => {
-		expect(n("PIN_SIZE")).toBe(18);
+	it("draws a teardrop pin sized by the whole icon", () => {
+		expect(n("PIN_SIZE")).toBeLessThan(n("MAP_HEIGHT") / 2);
 		expect(CODE).toContain("const PIN_HEAD = PIN_SIZE / PIN_TIP_RATIO;");
 		expect(CODE).toContain("height: PIN_SIZE * k");
 		expect(n("PIN_STROKE")).toBeLessThan(1.75);
@@ -174,7 +190,11 @@ describe("what the block must not become", () => {
 	it("draws no container", () => {
 		expect(CODE).not.toContain("shadow");
 		expect(CODE).not.toContain("elevation");
-		expect(CODE).not.toContain("backgroundColor: colors.");
+		const wrap = CODE.slice(CODE.indexOf("wrap: {"));
+		expect(wrap.slice(0, wrap.indexOf("},"))).not.toMatch(/border/);
+		expect(CODE.match(/backgroundColor: colors\.\w+/g)).toEqual([
+			"backgroundColor: colors.bg",
+		]);
 	});
 
 	/**

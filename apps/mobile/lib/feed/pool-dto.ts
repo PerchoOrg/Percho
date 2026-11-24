@@ -155,7 +155,7 @@ function tourSegments(v: unknown): {
 }
 
 /**
- * The place line and figures under a card.
+ * The place line and figures printed with a card.
  *
  * The server words these and the block draws them as sent, so the check is
  * only that each piece is something to print: a place with no lead is no

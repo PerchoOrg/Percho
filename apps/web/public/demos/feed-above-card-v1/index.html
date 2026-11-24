@@ -46,8 +46,8 @@ h2{max-width:1340px;margin:30px auto 12px;font:600 19px var(--ui);color:#2B2116}
 .fh .chv{width:10px;height:10px;border-top:1.6px solid var(--hctx);border-right:1.6px solid var(--hctx);transform:rotate(45deg);margin:0 3px 0 8px}
 .map{display:flex;align-items:center;justify-content:center;gap:6.5px;background:var(--mapfill);color:var(--mapink);font:600 15.4px var(--ui);min-width:92px;height:48.3px;border-radius:24.2px;margin-left:13px;flex:none}
 .map svg{width:15px;height:19.5px;stroke:var(--mapink);fill:none;stroke-width:1.75}
-.map.sm{min-width:78px;height:35px;border-radius:17.5px;font-size:14.3px;gap:5.5px;margin-left:10px}
-.map.sm svg{width:12.5px;height:16.5px}
+.map.sm{min-width:79px;height:35.1px;border-radius:17.6px;font-size:14.3px;gap:5.5px;margin-left:13px;padding:0 11px}
+.map.sm svg{width:12.7px;height:16.5px}
 .dup{outline:1.5px dashed #D9482B;outline-offset:3px;border-radius:5px}
 
 /* the place line + three numbers, above (.fx.top) or under (.fx.under) the card */
@@ -60,9 +60,14 @@ h2{max-width:1340px;margin:30px auto 12px;font:600 19px var(--ui);color:#2B2116}
 .fx .fact:first-child{padding-left:0;border-left:0}
 .fx .fact b{display:block;font:700 24px/28px var(--serif);color:var(--httl);letter-spacing:-.3px;white-space:nowrap}
 .fx .fact small{display:block;font:400 12.5px/16px var(--ui);color:var(--hctx);white-space:nowrap}
-.fx.top{top:47px;padding:13.2px 26.3px 0}
-.fx.top .loc{height:35px}
-.fx.top .facts{margin-top:6.6px;height:44px}
+.fx.top{top:47px;padding:11px 26.3px 0}
+.fx.top .loc{height:35.1px}
+.fx.top .where{font-size:15.4px}
+.fx.top .facts{margin-top:4.4px;height:43.9px;align-items:stretch}
+.fx.top .fact{display:flex;flex-direction:column;justify-content:center;padding-left:11px;margin-left:6.6px}
+.fx.top .fact:first-child{padding-left:0;margin-left:0}
+.fx.top .fact b{font-size:24.1px;line-height:1.2}
+.fx.top .fact small{font-size:13.2px;line-height:1.2}
 .fx.under{padding:0 32px}
 .fx.under .loc{height:48.3px}
 .fx.under .where{font-size:15.4px}
@@ -118,15 +123,15 @@ h2{max-width:1340px;margin:30px auto 12px;font:600 19px var(--ui);color:#2B2116}
 <h2>A community card</h2>
 <div class="row">
   <div class="col"><h3>Now<small>“Windward” is the largest line on the page and it is also on the card. The arrow beside it opens the same page as Explore.</small></h3><div class="phone" data-v="now" data-c="community"></div></div>
-  <div class="col"><h3>1 · Numbers above the card<small>Same spot, same height. The name is gone from the top; the card does not move.</small></h3><div class="phone" data-v="top" data-c="community"></div></div>
-  <div class="col"><h3>2 · Film on top, numbers under it <span class="pick">chosen · built</span><small>The film starts at the top of the screen and is a little larger. Place, Map and the numbers sit right under the name and Explore, where the thumb is. Drawn at the sizes the app uses.</small></h3><div class="phone" data-v="under" data-c="community"></div></div>
+  <div class="col"><h3>1 · Numbers above the card <span class="pick">chosen · built</span><small>Same spot, same height. The name is gone from the top; the card does not move. Drawn at the sizes the app uses.</small></h3><div class="phone" data-v="top" data-c="community"></div></div>
+  <div class="col"><h3>2 · Film on top, numbers under it<small>The film starts at the top of the screen and is a little larger. Place, Map and the numbers sit right under the name and Explore, where the thumb is. Built for a day, then replaced by 1.</small></h3><div class="phone" data-v="under" data-c="community"></div></div>
 </div>
 
 <h2>A city card</h2>
 <div class="row">
   <div class="col"><h3>Now<small>“Cumming” three times: in the small line, in the title, on the card.</small></h3><div class="phone" data-v="now" data-c="city"></div></div>
-  <div class="col"><h3>1 · Numbers above the card<small>The county takes the small line; the city's own numbers take the title's.</small></h3><div class="phone" data-v="top" data-c="city"></div></div>
-  <div class="col"><h3>2 · Film on top, numbers under it <span class="pick">chosen · built</span><small>Same as the community card.</small></h3><div class="phone" data-v="under" data-c="city"></div></div>
+  <div class="col"><h3>1 · Numbers above the card <span class="pick">chosen · built</span><small>The county takes the small line; the city's own numbers take the title's.</small></h3><div class="phone" data-v="top" data-c="city"></div></div>
+  <div class="col"><h3>2 · Film on top, numbers under it<small>Same as the community card.</small></h3><div class="phone" data-v="under" data-c="city"></div></div>
 </div>
 
 <p class="foot"><b>Where the numbers come from.</b> Each is on the place's own Explore page. Windward: home value is the ZIP's typical value, the school figure is the range across its nearby elementary, middle and high school among Georgia's schools, and the distance is a straight line from downtown Atlanta. Cumming: the median home value its page lists first (the county's), Forsyth County Schools' four-year graduation rate, and the drive to downtown from off-peak to rush hour. A card with no figure for a slot shows two numbers, not a placeholder.</p>
@@ -170,7 +175,7 @@ function layout(v) {
     const w = W - 16, h = w / ASPECT, top = SAFE_TOP + 8;
     return { card: { left: 8, top, w, h }, block: top + h + 18 };
   }
-  const header = (v === "now" ? 86 : 90) * K;
+  const header = 86 * K;
   const stage = H - SAFE_TOP - header - TAB;
   const w = W - 32, h = Math.min(stage - 28, w / ASPECT);
   const slack = stage - 28 - h;

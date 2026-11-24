@@ -236,7 +236,7 @@ describe("parseCommunity", () => {
 	});
 
 	/**
-	 * The place line and figures under the card (phase378). The server words
+	 * The place line and figures above the card (phase378). The server words
 	 * them and the block draws them as sent, so the parser only checks that
 	 * each piece is something to print.
 	 */

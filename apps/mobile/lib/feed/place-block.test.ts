@@ -1,5 +1,5 @@
 /**
- * The under-card block's model (phase378), as tests.
+ * The place block's model (phase378), as tests.
  *
  * Everything the block decides lives here rather than in the component, which
  * is what makes these assertable: the mobile vitest suite runs no React Native
