@@ -16,10 +16,9 @@
  * Plain Views, like the Explore charts: the app ships no chart or SVG library.
  */
 import { LinearGradient } from "expo-linear-gradient";
-import { type ReactNode, useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import {
 	Animated,
-	Easing,
 	Image,
 	Pressable,
 	StyleSheet,
@@ -34,6 +33,7 @@ import {
 } from "../../lib/community/compare-visuals";
 import { colors, compareSeries, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
+import { Bar, Ring, useGrow } from "../charts/Marks";
 import { Lines } from "../community/ExploreCharts";
 
 export interface ComparePlace {
@@ -124,48 +124,6 @@ export function CompareKey({ places }: { places: readonly ComparePlace[] }) {
 }
 
 // ─── marks ──────────────────────────────────────────────────────────────────
-
-/** 0 → 1 once, on mount: the bars grow. */
-function useGrow(delay: number): Animated.Value {
-	const v = useRef(new Animated.Value(0)).current;
-	useEffect(() => {
-		Animated.timing(v, {
-			toValue: 1,
-			duration: 560,
-			delay,
-			easing: Easing.out(Easing.cubic),
-			// Width and left are layout; the native driver cannot move them.
-			useNativeDriver: false,
-		}).start();
-	}, [v, delay]);
-	return v;
-}
-
-function Bar({
-	pct,
-	color,
-	index,
-}: { pct: number | undefined; color: string; index: number }) {
-	const grow = useGrow(index * 90);
-	return (
-		<View style={styles.track}>
-			{pct !== undefined && (
-				<Animated.View
-					style={[
-						styles.fill,
-						{
-							backgroundColor: color,
-							width: grow.interpolate({
-								inputRange: [0, 1],
-								outputRange: ["0%", `${Math.max(3, Math.min(100, pct))}%`],
-							}),
-						},
-					]}
-				/>
-			)}
-		</View>
-	);
-}
 
 /** One place's line in a card: its dot, what the figure is of, the figure. */
 function PlaceLine({
@@ -303,87 +261,6 @@ function MileFigures({
 					);
 				})}
 			</View>
-		</View>
-	);
-}
-
-/**
- * A ring filled to `pct`, clockwise from the top, with its figure inside.
- *
- * No SVG, so the arc is two half-rings, each turning inside a clip the width
- * of half the circle: the right clip shows the first 180°, the left the rest.
- */
-function Ring({
-	size,
-	pct,
-	color,
-	index,
-	children,
-}: {
-	size: number;
-	pct: number | undefined;
-	color: string;
-	index: number;
-	children: ReactNode;
-}) {
-	const grow = useGrow(index * 90);
-	const angle = Math.max(0, Math.min(100, pct ?? 0)) * 3.6;
-	// Where the sweep crosses from the right half into the left.
-	const turn = angle > 180 ? 180 / angle : 1;
-	const weight = Math.round(size / 9);
-	const box = { width: size, height: size };
-	const ring = { ...box, borderRadius: size / 2, borderWidth: weight };
-	const half = (rotate: Animated.AnimatedInterpolation<string>) => (
-		<Animated.View style={[styles.ringLayer, box, { transform: [{ rotate }] }]}>
-			<View style={[styles.ringClip, { width: size / 2, height: size }]}>
-				<View style={[ring, { borderColor: color }]} />
-			</View>
-		</Animated.View>
-	);
-	return (
-		<View style={box}>
-			<View style={[styles.ringLayer, ring, styles.ringTrack]} />
-			{angle > 0 && (
-				<>
-					<View
-						style={[
-							styles.ringClip,
-							styles.ringLayer,
-							{ left: size / 2, width: size / 2, height: size },
-						]}
-					>
-						<View style={[styles.ringLayer, box, { left: -size / 2 }]}>
-							{half(
-								grow.interpolate({
-									inputRange: [0, turn, 1],
-									outputRange: [
-										"0deg",
-										`${Math.min(angle, 180)}deg`,
-										`${Math.min(angle, 180)}deg`,
-									],
-								}),
-							)}
-						</View>
-					</View>
-					{angle > 180 && (
-						<View
-							style={[
-								styles.ringClip,
-								styles.ringLayer,
-								{ width: size / 2, height: size },
-							]}
-						>
-							{half(
-								grow.interpolate({
-									inputRange: [0, turn, 1],
-									outputRange: ["180deg", "180deg", `${angle}deg`],
-								}),
-							)}
-						</View>
-					)}
-				</>
-			)}
-			<View style={[styles.ringLayer, box, styles.ringCenter]}>{children}</View>
 		</View>
 	);
 }
@@ -761,13 +638,6 @@ const styles = StyleSheet.create({
 	lineAside: { ...textStyles.note, color: colors.ink2 },
 	lineValue: { ...textStyles.footnote, fontWeight: "600", color: colors.ink },
 	blank: { color: colors.ink3 },
-	track: {
-		height: 8,
-		borderRadius: 4,
-		backgroundColor: colors.surface2,
-		overflow: "hidden",
-	},
-	fill: { height: 8, borderRadius: 4 },
 
 	mileEnds: {
 		flexDirection: "row",
@@ -788,10 +658,6 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 	},
 	columnNote: { ...textStyles.note, fontSize: 11, color: colors.ink2 },
-	ringLayer: { position: "absolute", left: 0, top: 0 },
-	ringClip: { overflow: "hidden" },
-	ringTrack: { borderColor: colors.surface2 },
-	ringCenter: { alignItems: "center", justifyContent: "center" },
 	ringTop: {
 		...textStyles.note,
 		fontSize: 9.5,

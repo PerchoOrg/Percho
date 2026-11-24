@@ -14,7 +14,7 @@
  */
 import type { CommunityProfile } from "@percho/shared/community-profile";
 import { GLANCE_TOPICS, type GlanceTopic } from "@percho/shared/glance";
-import { topShare } from "@percho/shared/rank-share";
+import { rankShare } from "@percho/shared/rank-share";
 import type { TourSegment } from "@percho/shared/tour-buckets";
 import { useMemo, useState } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
@@ -24,6 +24,7 @@ import {
 	closeBy,
 	linkGroups,
 	localDay,
+	milesOf,
 	nearbyStops,
 	schoolName,
 	schoolRanks,
@@ -32,6 +33,7 @@ import {
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 import { BottomSheet } from "../BottomSheet";
+import { Bar, Donut, Ring, seriesColor } from "../charts/Marks";
 import { Lines } from "./ExploreCharts";
 import { GAP, PAGE_PAD, Resources, Tile, parts } from "./ExploreParts";
 import { ExploreSheet, type ExploreSheetKey } from "./ExploreSheets";
@@ -98,6 +100,9 @@ export function ExploreBody({
 		[profile.events],
 	);
 	const schools = schoolRanks(profile.ranks);
+	const close = nearby ? closeBy(nearby) : [];
+	// The bars share one scale: the farthest of the places the tile names.
+	const farthest = Math.max(1, ...close.map((s) => s.miles));
 	// The verdict lines under the name and the "Residents say" tile are not
 	// drawn (owner 2026-11-22: "去掉 … explore下面的简介", "resident say没啥价值
 	// 去掉"). `profile.verdict` and `profile.words` are still stored: build 12
@@ -124,18 +129,37 @@ export function ExploreBody({
 						width={half}
 						onPress={() => setSheet("safety")}
 					>
+						{/* A distance is a figure (phase390); the flood zone is a word
+						    and stays a row. */}
+						{safety.rows.some((r) => milesOf(r.note) !== null) && (
+							<View style={parts.cells}>
+								{safety.rows
+									.filter((r) => milesOf(r.note) !== null)
+									.map((r) => (
+										<View key={r.label} style={parts.cell}>
+											<Text style={parts.cellLabel}>{r.label}</Text>
+											<Text style={parts.cellFigure}>{r.note}</Text>
+											<Text style={parts.cellName} numberOfLines={1}>
+												{r.name}
+											</Text>
+										</View>
+									))}
+							</View>
+						)}
 						<View style={parts.rows}>
-							{safety.rows.map((r) => (
-								<View key={r.label} style={parts.row}>
-									<Text style={parts.rowKind} numberOfLines={1}>
-										{r.label}
-									</Text>
-									<Text style={parts.rowName} numberOfLines={1}>
-										{r.name}
-									</Text>
-									{!!r.note && <Text style={parts.rowFigure}>{r.note}</Text>}
-								</View>
-							))}
+							{safety.rows
+								.filter((r) => milesOf(r.note) === null)
+								.map((r) => (
+									<View key={r.label} style={parts.row}>
+										<Text style={parts.rowKind} numberOfLines={1}>
+											{r.label}
+										</Text>
+										<Text style={parts.rowName} numberOfLines={1}>
+											{r.name}
+										</Text>
+										{!!r.note && <Text style={parts.rowFigure}>{r.note}</Text>}
+									</View>
+								))}
 						</View>
 					</Tile>
 				)}
@@ -154,18 +178,25 @@ export function ExploreBody({
 						width={half}
 						onPress={() => setSheet("schools")}
 					>
-						<View style={parts.rows}>
+						{/* A ring a school (phase390): filled to its standing, the
+						    share inside, the name and the distance under it. Until
+						    then one line a school, the share as a bold figure. */}
+						<View style={parts.cells}>
 							{schools.map((r) => (
-								<View key={r.label} style={parts.row}>
-									<Text style={parts.rowName} numberOfLines={1}>
+								<View key={r.label} style={[parts.cell, parts.cellCenter]}>
+									<Ring size={62} pct={100 - rankShare(r)}>
+										<Text style={parts.ringTop}>Top</Text>
+										<Text style={parts.ringValue}>{rankShare(r)}%</Text>
+									</Ring>
+									<Text
+										style={[parts.cellName, parts.cellNameCenter]}
+										numberOfLines={2}
+									>
 										{schoolName(r)}
 									</Text>
 									{!!r.distance && (
-										<Text style={parts.rowAside}>{r.distance}</Text>
+										<Text style={parts.cellLabel}>{r.distance}</Text>
 									)}
-									<Text style={[parts.rowFigure, parts.rowShare]}>
-										{topShare(r)}
-									</Text>
 								</View>
 							))}
 						</View>
@@ -182,15 +213,24 @@ export function ExploreBody({
 						onPress={() => setSheet("nearby")}
 					>
 						<View style={parts.rows}>
-							{closeBy(nearby).map((s) => (
-								<View key={s.group} style={parts.row}>
-									<Text style={parts.rowKind} numberOfLines={1}>
-										{s.group}
-									</Text>
-									<Text style={parts.rowName} numberOfLines={1}>
-										{s.name}
-									</Text>
-									<Text style={parts.rowFigure}>{s.miles} mi</Text>
+							{close.map((s, i) => (
+								<View key={s.group}>
+									<View style={parts.row}>
+										<Text style={parts.rowKind} numberOfLines={1}>
+											{s.group}
+										</Text>
+										<Text style={parts.rowName} numberOfLines={1}>
+											{s.name}
+										</Text>
+										<Text style={parts.rowFigure}>{s.miles} mi</Text>
+									</View>
+									<View style={parts.rowBar}>
+										<Bar
+											pct={(s.miles / farthest) * 100}
+											index={i}
+											height={5}
+										/>
+									</View>
 								</View>
 							))}
 						</View>
@@ -244,18 +284,38 @@ export function ExploreBody({
 				    under it (owner 2026-11-22: "Potential 单独一行 Cost 放下面"). */}
 				{holding && (
 					<Tile label="Cost" wide width={half} onPress={() => setSheet("cost")}>
-						<View style={styles.costSplit}>
-							<Text style={parts.figure}>
-								{holding.display}
-								<Text style={parts.figureUnit}>{"  a month"}</Text>
-							</Text>
-							<View style={styles.costRows}>
-								{holding.rows.slice(0, 4).map((r) => (
-									<View key={r.label} style={styles.costRow}>
-										<Text style={styles.costLabel} numberOfLines={1}>
+						{/* The month as a donut of its parts, the total inside
+						    (phase390). */}
+						<View style={parts.split}>
+							<Donut
+								size={88}
+								parts={holding.rows.map((r, i) => ({
+									value: r.usd,
+									color: seriesColor(i),
+								}))}
+							>
+								<Text
+									style={parts.donutValue}
+									numberOfLines={1}
+									adjustsFontSizeToFit
+								>
+									{holding.display}
+								</Text>
+								<Text style={parts.donutUnit}>a month</Text>
+							</Donut>
+							<View style={parts.splitRows}>
+								{holding.rows.map((r, i) => (
+									<View key={r.label} style={parts.splitRow}>
+										<View
+											style={[
+												parts.swatch,
+												{ backgroundColor: seriesColor(i) },
+											]}
+										/>
+										<Text style={parts.splitLabel} numberOfLines={1}>
 											{r.label}
 										</Text>
-										<Text style={styles.costValue}>${r.usd}</Text>
+										<Text style={parts.splitValue}>${r.usd}</Text>
 									</View>
 								))}
 							</View>
@@ -326,24 +386,6 @@ export function ExploreBody({
 }
 
 const styles = StyleSheet.create({
-	/** The figure on the left, what it is made of on the right. */
-	costSplit: { flexDirection: "row", alignItems: "flex-start", gap: 20 },
-	costRows: { flex: 1, marginTop: 8, gap: 2 },
-	costRow: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
-	costLabel: {
-		...textStyles.footnote,
-		fontSize: 11.5,
-		color: colors.ink2,
-		flexShrink: 1,
-	},
-	costValue: {
-		...textStyles.footnote,
-		fontSize: 11.5,
-		fontWeight: "600",
-		color: colors.ink,
-		fontVariant: ["tabular-nums"],
-	},
-
 	spark: { marginTop: 6 },
 	covers: { marginTop: 7, gap: 3 },
 	cover: {

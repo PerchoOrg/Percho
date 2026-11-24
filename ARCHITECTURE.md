@@ -146,7 +146,7 @@ copied per entity.
 | Folder | Responsibility |
 |---|---|
 | `app/` | expo-router routes. `(tabs)/` is the tab bar; `listing/[id]`, `community/[slug]`, `city/[slug]` are detail screens. `+native-intent.tsx` turns a universal link's web path (`/c/<slug>`) into the app's route (phase335). |
-| `components/` | `cards/` are the swipeable feed faces, `feed/` the deck chrome, `listing/` the detail sheets. |
+| `components/` | `cards/` are the swipeable feed faces, `feed/` the deck chrome, `listing/` the detail sheets, `charts/` the small marks (ring, donut, bar, pips, columns) the place pages and the compare draw figures with. |
 | `lib/feed/` | Feed generation, ordering, rhythm, behavioural signals. |
 | `lib/listing/` | Listing detail: hotspots, tours, section nav. |
 | `lib/gesture/` | Swipe physics and capability detection. |

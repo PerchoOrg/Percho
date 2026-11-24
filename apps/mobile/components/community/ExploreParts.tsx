@@ -180,6 +180,64 @@ export const parts = StyleSheet.create({
 	},
 	/** A figure column wide enough for "Top 100%", so the distances before it line up. */
 	rowShare: { width: 68 },
+
+	/**
+	 * A tile as columns rather than rows (phase390): one cell a thing — a
+	 * school with its ring, a hospital with its distance, a rank as a badge.
+	 */
+	cells: { flexDirection: "row", gap: 10, marginTop: 8 },
+	cell: { flex: 1, minWidth: 0, gap: 2 },
+	cellCenter: { alignItems: "center", gap: 4 },
+	cellLabel: { ...textStyles.footnote, fontSize: 11.5, color: colors.ink2 },
+	cellFigure: {
+		...textStyles.title2,
+		fontSize: 22,
+		color: colors.ink,
+		fontVariant: ["tabular-nums"],
+	},
+	cellName: { ...textStyles.footnote, fontSize: 12, color: colors.ink },
+	cellNameCenter: { textAlign: "center", lineHeight: 15 },
+	/** Inside a ring: a small word over the figure. */
+	ringTop: {
+		...textStyles.footnote,
+		fontSize: 9.5,
+		lineHeight: 11,
+		color: colors.ink2,
+	},
+	ringValue: {
+		...textStyles.footnote,
+		fontSize: 14,
+		fontWeight: "600",
+		lineHeight: 17,
+		color: colors.ink,
+	},
+	/** A row with a bar under it: the bar hangs off the row's own baseline. */
+	rowBar: { marginTop: -1, marginBottom: 3 },
+	/** A donut on the left, what it is made of on the right. */
+	split: { flexDirection: "row", alignItems: "center", gap: 16, marginTop: 8 },
+	splitRows: { flex: 1, gap: 3 },
+	splitRow: { flexDirection: "row", alignItems: "center", gap: 7 },
+	swatch: { width: 9, height: 9, borderRadius: 2 },
+	splitLabel: {
+		...textStyles.footnote,
+		fontSize: 12,
+		color: colors.ink2,
+		flex: 1,
+	},
+	splitValue: {
+		...textStyles.footnote,
+		fontSize: 12,
+		fontWeight: "600",
+		color: colors.ink,
+		fontVariant: ["tabular-nums"],
+	},
+	donutValue: {
+		...textStyles.footnote,
+		fontSize: 14,
+		fontWeight: "600",
+		color: colors.ink,
+	},
+	donutUnit: { ...textStyles.footnote, fontSize: 10, color: colors.ink2 },
 });
 
 const styles = StyleSheet.create({

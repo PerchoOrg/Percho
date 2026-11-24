@@ -196,13 +196,29 @@ export function otherRankings(d: City): City["rankings"] {
  * (phase372, "学校应该有很多吧 只看到三个"); those, and every other school in
  * and around the city, are in the sheet the tile opens.
  */
-export function schoolRows(d: City): { name: string; rank?: string }[] {
-	return schoolColumns(d.education.schools)
-		.columns.flatMap((c) => c.schools.slice(0, 1))
-		.map((s) => ({
+export function schoolRows(d: City): {
+	name: string;
+	/** "Elementary" — the tile's badge is headed by it (phase390). */
+	level: string;
+	/** "#10 in Georgia" */
+	rank?: string;
+	/** The two halves of `rank`, for a badge that sets them apart. */
+	place?: string;
+	scope?: string;
+}[] {
+	return schoolColumns(d.education.schools).columns.flatMap((c) =>
+		c.schools.slice(0, 1).map((s) => ({
 			name: fullSchoolName(s.name),
-			...(s.rank ? { rank: [s.rank, s.scope].filter(Boolean).join(" ") } : {}),
-		}));
+			level: c.heading,
+			...(s.rank
+				? {
+						rank: [s.rank, s.scope].filter(Boolean).join(" "),
+						place: s.rank,
+						...(s.scope ? { scope: s.scope } : {}),
+					}
+				: {}),
+		})),
+	);
 }
 
 const LEVEL_HEADING = {
@@ -240,6 +256,24 @@ export function shortRating(rating: string): string {
 	return short.charAt(0) + short.slice(1).toLowerCase();
 }
 
+const HAZARD_SCALE = ["very low", "low", "moderate", "high", "very high"];
+
+/**
+ * Where a FEMA rating sits on its five steps, 1 (Very Low) to 5 (Very High) —
+ * the pips beside the word (phase390). 0 for a rating that is not one of the
+ * five ("No Rating", "Insufficient Data"): no pips, the words alone.
+ */
+export function hazardLevel(rating: string): number {
+	return HAZARD_SCALE.indexOf(shortRating(rating).toLowerCase()) + 1;
+}
+
+const CRIME_SCALE = ["Well below", "Below", "Near", "Above", "Well above"];
+
+/** The crime band on its five steps, 1 (Well below the state) to 5. */
+export function crimeLevel(d: Pick<City, "crime">): number {
+	return d.crime ? CRIME_SCALE.indexOf(d.crime.violent) + 1 : 0;
+}
+
 /**
  * The Safety tile: the composite natural-hazard rating, then Flood — the one
  * the owner named (2026-11-24: "flood等自然因素") — then the highest-rated of
@@ -247,14 +281,18 @@ export function shortRating(rating: string): string {
  */
 export function hazardRows(
 	d: Pick<City, "hazards">,
-): { label: string; rating: string }[] {
+): { label: string; rating: string; level: number }[] {
 	if (!d.hazards) return [];
 	const flood = d.hazards.rows.filter((r) => r.label === "Flood");
 	const rest = d.hazards.rows.filter((r) => r.label !== "Flood");
 	return [
 		{ label: "Natural hazards, overall", rating: d.hazards.overall },
 		...[...flood, ...rest].slice(0, TILE_HAZARDS),
-	].map((r) => ({ label: r.label, rating: shortRating(r.rating) }));
+	].map((r) => ({
+		label: r.label,
+		rating: shortRating(r.rating),
+		level: hazardLevel(r.rating),
+	}));
 }
 
 /** How many everyday kinds, and how many drives, the Convenience tile names. */
@@ -282,14 +320,19 @@ export function everydayRows(
  * · 30 mi"; the miles are kept apart from the name. The tile names the first
  * `TILE_DRIVES` under the everyday places; the sheet charts them all.
  */
-export function driveRows(
-	d: City,
-): { place: string; miles?: string; time: string }[] {
+export function driveRows(d: City): {
+	place: string;
+	miles?: string;
+	time: string;
+	/** Off-peak to rush, for the span the tile draws. */
+	minutes: { min: number; max: number };
+}[] {
 	return d.gettingAround.flatMap((r) =>
 		r.minutes
 			? [
 					{
 						...placeAndMiles(r.label),
+						minutes: r.minutes,
 						time:
 							r.minutes.min === r.minutes.max
 								? `${r.minutes.min} min`
