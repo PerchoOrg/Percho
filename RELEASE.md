@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-24
+- **White Columns in Milton (Alpharetta) has a neighbourhood film.** It opens at the stone gates, the country club's pool, the Tom Fazio golf course and the clubhouse, then the lake, Birmingham Park's trails, the schools, Milton's parks, the library and live music under the pines at Matilda's.
 - **Ward's Crossing in Johns Creek has a neighbourhood film.** New townhomes by The Providence Group: it opens at the stone entrance, the pool and cabana and the neighbourhood from the air, then Autrey Mill, the river parks, The Forum, Johns Creek High and the places to eat nearby.
 - **A tidier You tab.** The small print at the bottom of the You tab is now three short lines instead of a block of text.
 - **Neighbourhood and city pages you can read by eye.** The boxes on a neighbourhood's or city's page now draw their numbers instead of listing them: rings for how nearby schools stand, a wheel showing what a month of owning is made of, bars for how far the groceries and parks are, a band from off-peak to rush-hour for each drive, small steps for hazard and crime ratings, and columns for how a city's population has grown. Tap any box for the detail, as before. Arrives with the next app update.
