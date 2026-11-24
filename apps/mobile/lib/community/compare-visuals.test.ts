@@ -185,7 +185,14 @@ describe("buildCompareVisuals", () => {
 
 	it("sums what a month of holding costs, and words the dues", () => {
 		expect(v.cost?.holding).toEqual([
-			{ display: "≈ $940", usd: 940 },
+			{
+				display: "≈ $940",
+				usd: 940,
+				rows: [
+					{ label: "Property tax", usd: 640 },
+					{ label: "Insurance", usd: 300 },
+				],
+			},
 			undefined,
 			undefined,
 		]);
