@@ -1,5 +1,5 @@
 /**
- * The place line and three figures the phone prints under a feed card
+ * The place line and three figures the phone prints above a feed card
  * (phase378) — what a film cannot show: what homes cost, how the schools
  * stand, how far Atlanta is.
  *

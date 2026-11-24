@@ -24,9 +24,10 @@ export function OfflineBar() {
 const styles = StyleSheet.create({
 	bar: {
 		/**
-		 * Above the card stage, whose paper band (`SwipeStack`'s `stageClip`)
-		 * reaches 120pt up and would paint over this bar. Since phase378 the
-		 * bar is the only thing drawn up there.
+		 * Above the card stage's paper band (`SwipeStack`'s `stageClip`), which
+		 * reaches 120pt up the page: the place block and the card's top inset
+		 * take 95–107 of that, and the rest lands on this bar. The block rides
+		 * 100 too; the bar comes first in the tree.
 		 */
 		zIndex: 100,
 		paddingVertical: 6,

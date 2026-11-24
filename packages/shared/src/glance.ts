@@ -1,5 +1,5 @@
 /**
- * What the feed prints under a card (phase378): one line for the place and up
+ * What the feed prints above a card (phase378): one line for the place and up
  * to three figures the film cannot show.
  *
  * Built by the server for every filmed community and city on

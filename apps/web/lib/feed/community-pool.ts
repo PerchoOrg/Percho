@@ -122,7 +122,7 @@ export interface PoolCommunityDTO {
    * not come from an assembly, or came from one whose shot list is unreadable.
    */
   tourSegments?: TourSegment[];
-  /** The place line and figures the phone prints under the card (phase378). */
+  /** The place line and figures the phone prints above the card (phase378). */
   glance?: PlaceGlance;
 }
 

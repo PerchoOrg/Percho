@@ -1,15 +1,15 @@
 /**
- * The block under the feed card (phase378) — one read of the ACTIVE CARD:
+ * The block above the feed card (phase378) — one read of the ACTIVE CARD:
  * where the place is, the Map button's target, and up to three figures the
  * film cannot show.
  *
  *     Alpharetta · Fulton County          [Map]
- *     $747K          Top 1–7%        26 mi
+ *     $747K          Top 1–7%        25 mi
  *     ZIP 30005 homes  schools nearby  north of Atlanta
  *
  * ── What this replaced, and why ─────────────────────────────────────────────
  *
- * `feed-header.ts` (phase183): the header ABOVE the card — a breadcrumb over
+ * `feed-header.ts` (phase183): the header above the card — a breadcrumb over
  * the card's name at 36pt with a chevron and the Map pill. Owner 2026-11-23:
  * "感觉还是以填充为主 信息本身也和卡片有重合". He was right on both counts: the
  * name was on the card 500pt below, the chevron opened the page Explore
@@ -17,9 +17,10 @@
  * county / city and Map were not already on the card.
  *
  * So the name is said once, on the card, and what is left says what the card
- * does not. It sits UNDER the card (his pick, "方案2", off
- * `/demos/feed-above-card-v1`): the film starts at the top of the screen and
- * the place, Map and figures are one cluster with the name and Explore.
+ * does not, in the header's place and at its height (owner, 2026-11-24:
+ * "numbers above the card" — option 1 of `/demos/feed-above-card-v1`). For a
+ * day it sat UNDER the card, with the film moved to the top of the screen
+ * (phase378, his first pick, "方案2").
  *
  * ── The words come from the server ──────────────────────────────────────────
  *

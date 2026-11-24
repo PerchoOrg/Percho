@@ -269,7 +269,7 @@ export interface CommunityCardV3 {
 	 */
 	tourChapters?: readonly { name: string; endFraction: number }[];
 	/**
-	 * The place line and figures printed under the card (phase378) — worded
+	 * The place line and figures printed above the card (phase378) — worded
 	 * by the server, drawn as sent. Absent from an older server; the block
 	 * then names the place from `city` / `county` and prints no figures.
 	 */

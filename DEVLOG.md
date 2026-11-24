@@ -23,6 +23,25 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 00:20 UTC — phase379: the numbers go above the card; the card is back where it was
+
+**Objective**: owner, after phase378: "numbers above the card" — the title of option 1 on `/demos/feed-above-card-v1` ("Same spot, same height. The name is gone from the top; the card does not move."), in place of the "方案2" built in phase378.
+**What the phone shows**: the card at its pre-378 size and position (16pt gutter, a third of the slack above it). Above it, where the header was: `Alpharetta · Fulton County` with Map at the right, then `$747K` ZIP 30005 homes · `Top 1–7%` schools nearby · `25 mi` north of Atlanta. Same figures, same taps (a figure opens its Explore sheet) — only the place changed.
+**Actions**:
+- `app/(tabs)/feed.tsx`: the pre-378 layout restored — `CARD_INSET`, `GUTTER` 16, the flex stage with `SwipeStack`'s `restTop`, the answer echo at the stage's foot; its styles are byte-identical to `09c39e5e`. `PlaceBlock` mounts where `FeedHeader` did. `theme/feed-page.ts` (the under-card arithmetic) deleted.
+- `components/feed/PlaceBlock.tsx`: 10 above + a 32pt place row + 4 + a 40pt figures row = **86 at 390, the header's own total**, scaled by `headerScale`; inset card edge + 8 (24) as the header was; `zIndex: 100` on the page's paper, the rule every header above the stage has had (`stageClip`, 2026-08-31). The figures row is always drawn (there is no row to drop now).
+- Map control B at the place line's height: 72 × 32 at radius 16, 13pt label, a 15pt pin — option 1's drawing beside a 14pt line, not the handoff's 84 × 44. `hitSlop` brings both rows' targets back to 44 (place row 8 up and 4 down, figures 4 down).
+- Tests: `theme/card-aspect.test.ts` back to the header model with `HEADER_BASE = 10 + 32 + 4 + 40`; `theme/place-block.test.ts` pins the 86, the edge and the pill; `theme/feed-chrome-layout.test.ts` back to "anything above the stage out-ranks the band", with the block and the offline bar.
+- Comments that placed the block under the card reworded (mobile, web, shared). The server, the wire and the Explore `?open=` path are phase378's, unchanged.
+- Demo page: option 1 redrawn at the app's sizes and marked chosen; option 2 says it was built for a day and replaced.
+**Decisions**:
+1. **86, not option 1's drawn 90.** At 90 the SE's film crop would go from 5.2% to 6.0%, past the line `card-aspect.test.ts` keeps for the owner's say-so; at 86 nothing below the block moves on any phone, which is what option 1 promised.
+2. **The card went back to 16pt and its old position**, because option 1 says the card does not move. Keeping the 8pt gutter with the block above would also fit (31–59pt of slack left from the 13 mini up, the film whole) — offered to the owner, not built.
+3. **Map at the right end of the place line**, as option 1 drew it. The header's decision 1 (Map follows the 36pt name) was about a title with ~150pt of nothing beside it; a 14pt line with Map at the edge is what he picked here.
+4. At this width (342pt for the figures at 390, was 326 under the card) one row of 24 shrinks, to 92% — "Peachtree Corners homes".
+**Issues**: phase378's two open items stand — the city page prices homes by the Census median and community pages by Zillow (owner's ruling owed), and DM Serif Display is bundled with no user left. The 32pt pill is under the handoff's 44 visually; its target is 44.
+**Verified**: mobile typecheck 0, lint 0 errors / 5 warnings (as main), vitest 894, `expo export --platform ios` bundles. Web typecheck 0, feed tests 176. Not seen on a device — dev client 11 shows it after the pull, build 12 does not.
+
 ## 2026-11-23 23:48 UTC — phase378: the feed card starts at the top; the place, Map and three figures sit under it
 
 **Objective**: owner on `/demos/feed-above-card-v1` (phase376): "方案2", then "数字还有别的选项吗". Built with the three figures the demo drew; which figures a card carries is the server's to change (below), so his answer needs no app release.

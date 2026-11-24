@@ -56,7 +56,7 @@ export interface GeoUnit {
 	 * place, so a viewer can jump to the part they came for (phase345).
 	 */
 	tourChapters?: readonly { name: string; endFraction: number }[];
-	/** The place line and figures under a filmed city's card (phase378). */
+	/** The place line and figures above a filmed city's card (phase378). */
 	glance?: PlaceGlance;
 	communityCount: number;
 	/** ≤3 real `communities.name`. */
