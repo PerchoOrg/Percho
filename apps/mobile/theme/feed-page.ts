@@ -1,14 +1,14 @@
 /**
  * The feed page's arithmetic (phase380): the place block and the card sit
- * together at the BOTTOM of the page, the card a fixed step above the tab
- * bar, and whatever the screen has left over goes above the block.
+ * together low on the page, and whatever the screen has left over is shared
+ * out — three quarters above the block, a quarter under the card (phase381).
  *
  *     status bar
- *     ── room (whatever is left; 20–46pt on the shipping phones) ──
+ *     ── room: ¾ of what is left (15–35pt on the shipping phones) ──
  *     place row · 8 · figures row        ← `PlaceBlock`
  *     14
  *     card, the film's own shape
- *     12
+ *     12 + ¼ of what is left (17–24pt)
  *     tab bar
  *
  * ── Why ─────────────────────────────────────────────────────────────────────
@@ -25,9 +25,17 @@
  * ── Why the page is laid out by sum ─────────────────────────────────────────
  *
  * The stage is given exactly the card's height, so `SwipeStack` finds no
- * slack to share out and the card rests at the stage's top; the room above
- * the block is a flex spacer. Only the short-screen fallback needs this
- * module to know the block's height.
+ * slack to share out and the card rests at the stage's top; the leftover is
+ * two flex spacers, `ROOM_ABOVE` : `ROOM_BELOW`. Only the short-screen
+ * fallback needs this module to know the block's height.
+ *
+ * ── The share (owner, 2026-11-24) ───────────────────────────────────────────
+ *
+ * phase380 put all of it above the block and hung the card 12 above the tab
+ * bar. Owner: "整体向上再一点点". A quarter of the leftover now goes under the
+ * card, so the whole moves up by that much: ~12pt on his 428, ~5 on the mini
+ * — a little everywhere, and never so much that the gap under the card he
+ * asked to close comes back.
  *
  * ── The block gives way before the film does ────────────────────────────────
  *
@@ -46,8 +54,11 @@ import { headerScale } from "./header-scale";
  * `theme/card-aspect.test.ts` holds the ceiling.
  */
 export const GUTTER = 8;
-/** Card → tab bar. */
+/** Card → tab bar, at least; a share of the leftover is added to it. */
 export const CARD_FOOT = 12;
+/** How the leftover is shared: above the block : under the card. */
+export const ROOM_ABOVE = 3;
+export const ROOM_BELOW = 1;
 /** Block → card. */
 export const BLOCK_GAP = 14;
 /** Status bar → block, at least. */

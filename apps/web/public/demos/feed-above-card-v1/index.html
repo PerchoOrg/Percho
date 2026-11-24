@@ -123,7 +123,7 @@ h2{max-width:1340px;margin:30px auto 12px;font:600 19px var(--ui);color:#2B2116}
 <h2>A community card</h2>
 <div class="row">
   <div class="col"><h3>Now<small>“Windward” is the largest line on the page and it is also on the card. The arrow beside it opens the same page as Explore.</small></h3><div class="phone" data-v="now" data-c="community"></div></div>
-  <div class="col"><h3>1 · Numbers above the card <span class="pick">chosen · built</span><small>As built after your note on the gap under the card: the card is a little larger and sits just above the tab bar, the numbers are larger and sit on it, and the spare room is at the top. Drawn at the sizes the app uses.</small></h3><div class="phone" data-v="top" data-c="community"></div></div>
+  <div class="col"><h3>1 · Numbers above the card <span class="pick">chosen · built</span><small>As built after your notes on the gap under the card: the card is a little larger and sits low, the numbers are larger and sit on it, and the spare room is mostly at the top. Drawn at the sizes the app uses.</small></h3><div class="phone" data-v="top" data-c="community"></div></div>
   <div class="col"><h3>2 · Film on top, numbers under it<small>The film starts at the top of the screen and is a little larger. Place, Map and the numbers sit right under the name and Explore, where the thumb is. Built for a day, then replaced by 1.</small></h3><div class="phone" data-v="under" data-c="community"></div></div>
 </div>
 
@@ -172,9 +172,12 @@ const CARDS = {
 const W = 428, H = 926, SAFE_TOP = 47, TAB = 96, K = 1.097, ASPECT = 1080 / 1576;
 function layout(v) {
   if (v === "top") {
-    // As built (phase380): the card 12 above the tab bar at an 8 gutter, the
-    // block 14 above the card, the leftover above the block.
-    const w = W - 16, h = w / ASPECT, top = H - TAB - 12 - h;
+    // As built (phase381): the card at an 8 gutter, the block 14 above it, and
+    // the leftover shared three quarters above the block, a quarter under the
+    // card (on top of a 12pt foot).
+    const w = W - 16, h = w / ASPECT;
+    const left = H - SAFE_TOP - TAB - 12 - h - 14 - 109.7;
+    const top = H - TAB - 12 - left / 4 - h;
     return { card: { left: 8, top, w, h }, block: top - 14 - 109.7 };
   }
   if (v === "under") {
