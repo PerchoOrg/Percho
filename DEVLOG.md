@@ -37,7 +37,7 @@ rotation, not on the way in.
 2. **A new field, not `safety` reshaped**: a build that reads `safety.rows` as places with distances now draws no Safety tile instead of a wrong one.
 3. **The composite is FEMA's, and it is natural hazards only.** His "综合安全评分" may mean a score that counts crime. Crime on the page is still under his own rulings of 2026-11-15 and 11-22 (`lenses.ts`); I did not build one and asked him.
 **Issues**: ratings are relative to the whole country and five steps wide, so six of seven cities read the same overall — the differences are in the single hazards. Not seen on a device.
-**Verified**: web typecheck 0, vitest 1400; mobile typecheck 0, lint 0 errors / 5 warnings (as main), vitest 899 (1 new).
+**Verified**: web typecheck 0, vitest 1399; mobile typecheck 0, lint 0 errors / 5 warnings (as main), vitest 899 (1 new).
 **Next steps**: his answer on a crime-based score; NCES school websites (phase383) still open.
 
 ## 2026-11-24 02:30 UTC — phase383: city page — police, three schools, everyday places, and places' own websites
