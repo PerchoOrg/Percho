@@ -97,6 +97,11 @@ export interface CommunityDetailDTO {
    */
   heroUrl?: string;
   /**
+   * Where the community is (`communities.lat` / `lng`) — the Saved tab's map
+   * view places a save by it (phase386). Absent when the row has no point.
+   */
+  center?: { lat: number; lng: number };
+  /**
    * The community's video, chosen by the SAME priority the feed card uses
    * (`fetchVerticalVideos`): the assembled tour / bucket video on Cloudflare
    * Stream (HLS manifest URL) first, else the latest READY `ai_tour_videos`
@@ -170,10 +175,12 @@ type DetailRow = {
   residents_count: string | number | null;
   homeowners_pct: string | number | null;
   avg_age: string | number | null;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 const COLUMNS =
-  'id, slug, name, city, state, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age';
+  'id, slug, name, city, state, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age, lat, lng';
 
 /**
  * One community by id or slug, or `null`.
@@ -337,6 +344,9 @@ export function projectCommunityDetail(
     city: r.city ?? '',
     state: r.state ?? '',
     ...(r.cover_storage_path ? { heroUrl: publicCoverImageUrl(r.cover_storage_path) } : {}),
+    ...(typeof r.lat === 'number' && typeof r.lng === 'number'
+      ? { center: { lat: r.lat, lng: r.lng } }
+      : {}),
     ...(videoUrl ? { videoUrl } : {}),
     // Segments without a film to seek make no sense on the wire.
     ...(videoUrl && tourSegments && tourSegments.length > 0 ? { tourSegments } : {}),

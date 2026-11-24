@@ -34,9 +34,18 @@ import {
  *     and no listing date; a 404 from the detail endpoint is the one honest
  *     "gone" signal and renders as such, at the foot.
  *
+ * ── Views, as of phase386 ───────────────────────────────────────────────────
+ * Owner: "saved 重新设计一下 支持多种视图". The shelves above are one of four
+ * ways to lay the same shortlist out, switched under the title and remembered
+ * (`state/saved-view.ts`): Towns (the shelves), Grid (photographs), List
+ * (compact rows) and Map (`components/saved/`). The three new ones are flat —
+ * a saved area is a tile of its own there — and each tile carries a line of
+ * what its page found. Filter and Select work the same in all four.
+ *
  * Rows re-fetch from the detail endpoints on every mount — the store keeps
  * ids only, so a price change shows the moment the server knows it.
  */
+import type { CommunityProfile } from "@percho/shared/community-profile";
 import { fmlsNumberLabel } from "@percho/shared/fmls";
 import type { Area } from "@percho/shared/lenses";
 import { lensById, valuesFor } from "@percho/shared/lenses";
@@ -53,6 +62,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FmlsDisclosure } from "../../components/FmlsDisclosure";
+import { SavedMap } from "../../components/saved/SavedMap";
+import { SavedGrid, SavedList } from "../../components/saved/SavedViews";
 import { useAreas } from "../../hooks/use-areas";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { communityDetailUrl, listingDetailUrl } from "../../lib/api/base";
@@ -64,17 +75,29 @@ import {
 import { countyKeyForPoint } from "../../lib/areas/locate";
 import { COMPARE_MAX, COMPARE_MIN } from "../../lib/listing/compare";
 import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
-import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
 import {
+	areaUnitId,
+	communityFact,
+	formatPrice,
+	specsLine,
+} from "../../lib/saved/rows";
+import {
+	type SavedTile,
 	type Shelf,
 	type ShelfEntry,
 	buildShelves,
+	buildTiles,
 	shelfCountLine,
 	shelfListingIds,
 } from "../../lib/saved/shelves";
 import { useAuthStore } from "../../state/auth";
 import { useFunnelStore } from "../../state/funnel";
 import { type SavedItem, useSavedStore } from "../../state/saved";
+import {
+	SAVED_VIEWS,
+	SAVED_VIEW_LABEL,
+	useSavedViewStore,
+} from "../../state/saved-view";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -90,6 +113,9 @@ type Row =
 			thumbUrl?: string;
 			href: string;
 			mlsNumber?: string;
+			/** What its page found, for the flat views. Communities only. */
+			fact?: string;
+			center?: { lat: number; lng: number };
 	  }
 	| { status: "gone" }
 	| { status: "error" };
@@ -178,7 +204,10 @@ async function fetchRow(item: SavedItem): Promise<Row> {
 			city: string;
 			state: string;
 			heroUrl: string;
+			center?: { lat: number; lng: number };
+			profile?: CommunityProfile;
 		};
+		const fact = communityFact(d.profile);
 		return {
 			status: "ready",
 			title: d.name,
@@ -186,6 +215,8 @@ async function fetchRow(item: SavedItem): Promise<Row> {
 			place: placeOf(d.city),
 			thumbUrl: d.heroUrl,
 			href: `/community/${d.slug}`,
+			...(fact ? { fact } : {}),
+			...(d.center ? { center: d.center } : {}),
 		};
 	} catch {
 		return { status: "error" };
@@ -220,6 +251,8 @@ export default function SavedTab() {
 
 	const [rows, setRows] = useState<Record<string, Row>>({});
 	const [filter, setFilter] = useState<Filter>("all");
+	const view = useSavedViewStore((s) => s.view);
+	const setView = useSavedViewStore((s) => s.setView);
 	const [popOpen, setPopOpen] = useState(false);
 	const [selecting, setSelecting] = useState(false);
 	const [picked, setPicked] = useState<string[]>([]);
@@ -288,15 +321,18 @@ export default function SavedTab() {
 		return items.map((item): ShelfEntry => {
 			if (item.kind === "area") {
 				const unit = areaUnitId(item.id);
-				const name = pool.geoUnits.find((u) => u.id === unit)?.name;
+				const geo = pool.geoUnits.find((u) => u.id === unit);
 				const key = countyOf(unit)?.key;
 				const cost = costLineFor(unit);
 				return {
 					id: item.id,
 					kind: "area",
-					...(name ? { place: name } : {}),
+					...(geo ? { place: geo.name, center: geo.centroid } : {}),
 					...(cost ? { costLine: cost } : {}),
 					...(key ? { areaKey: key } : {}),
+					// The flat views draw an area as a tile: its photo, its page.
+					...(geo?.heroUrl ? { thumbUrl: geo.heroUrl } : {}),
+					...(geo?.citySlug ? { href: `/city/${geo.citySlug}` } : {}),
 				};
 			}
 			const r = rows[item.id];
@@ -310,17 +346,23 @@ export default function SavedTab() {
 				...(r.thumbUrl ? { thumbUrl: r.thumbUrl } : {}),
 				href: r.href,
 				...(r.mlsNumber ? { mlsNumber: r.mlsNumber } : {}),
+				...(r.fact ? { fact: r.fact } : {}),
+				...(r.center ? { center: r.center } : {}),
 			};
 		});
 	}, [items, rows, pool.geoUnits, countyOf, costLineFor]);
 
-	const { shelves, unplaced } = useMemo(
+	const shownEntries = useMemo(
 		() =>
-			buildShelves(
-				filter === "all" ? entries : entries.filter((e) => e.kind === filter),
-			),
+			filter === "all" ? entries : entries.filter((e) => e.kind === filter),
 		[entries, filter],
 	);
+	const { shelves, unplaced } = useMemo(
+		() => buildShelves(shownEntries),
+		[shownEntries],
+	);
+	/** The same saves, flat — what the grid, the list and the map draw. */
+	const tiles = useMemo(() => buildTiles(shownEntries), [shownEntries]);
 
 	/** The kind the first pick locked us into, if anything is picked. */
 	const lockedKind = useMemo((): keyof typeof BOUNDS | null => {
@@ -397,6 +439,22 @@ export default function SavedTab() {
 		}
 		closeSelect();
 	};
+
+	/** A tile in a flat view: a pick while selecting, otherwise its page. */
+	const pressTile = (t: SavedTile) => {
+		if (selecting) return togglePick(t.id, t.kind);
+		if (t.href) return router.push(t.href as never);
+		// An area with no page of its own opens on the Search map, as its shelf
+		// header does.
+		if (t.kind === "area") {
+			router.navigate({
+				pathname: "/(tabs)/search",
+				params: { focus: areaUnitId(t.id) },
+			});
+		}
+	};
+	const flat = { tiles, selecting, picked, lockedKind, onPress: pressTile };
+	const fmlsShown = tiles.some((t) => t.mlsNumber);
 
 	const removePicked = () => {
 		for (const id of picked) {
@@ -481,66 +539,104 @@ export default function SavedTab() {
 				</View>
 			</View>
 
-			<ScrollView
-				style={styles.list}
-				contentContainerStyle={{
-					paddingBottom: insets.bottom + (selecting ? 108 : 24),
-				}}
-			>
-				{shelves.map((shelf) => (
-					<ShelfBlock
-						key={shelf.place}
-						shelf={shelf}
-						selecting={selecting}
-						picked={picked}
-						lockedKind={lockedKind}
-						onPick={togglePick}
-					/>
+			{/* How the shortlist is laid out. Words, not glyphs: four small icons
+			    would have to be learned, and a word is its own label. */}
+			<View style={styles.views} accessibilityRole="tablist">
+				{SAVED_VIEWS.map((v) => (
+					<Pressable
+						key={v}
+						style={[styles.viewBtn, view === v && styles.viewBtnOn]}
+						onPress={() => setView(v)}
+						accessibilityRole="tab"
+						accessibilityState={{ selected: view === v }}
+					>
+						<Text style={[styles.viewTxt, view === v && styles.viewTxtOn]}>
+							{SAVED_VIEW_LABEL[v]}
+						</Text>
+					</Pressable>
 				))}
+			</View>
 
-				{/* Only once nothing is still in flight — on a cold open every row
+			{view === "map" && tiles.length > 0 && (
+				<View
+					style={[
+						styles.list,
+						{ paddingBottom: selecting ? insets.bottom + 84 : 12 },
+					]}
+				>
+					<SavedMap {...flat} />
+					{fmlsShown && (
+						<FmlsDisclosure variant="results" style={styles.fmls} />
+					)}
+				</View>
+			)}
+
+			{(view !== "map" || tiles.length === 0) && (
+				<ScrollView
+					style={styles.list}
+					contentContainerStyle={{
+						paddingBottom: insets.bottom + (selecting ? 108 : 24),
+					}}
+				>
+					{view === "towns" &&
+						shelves.map((shelf) => (
+							<ShelfBlock
+								key={shelf.place}
+								shelf={shelf}
+								selecting={selecting}
+								picked={picked}
+								lockedKind={lockedKind}
+								onPick={togglePick}
+							/>
+						))}
+					{view === "grid" && <SavedGrid {...flat} />}
+					{view === "list" && tiles.length > 0 && <SavedList {...flat} />}
+
+					{/* Only once nothing is still in flight — on a cold open every row
 				    is loading and every shelf is empty, and saying "nothing saved"
 				    over a column of spinners would be a lie that corrects itself. */}
-				{shelves.length === 0 && unplaced.length === 0 && (
-					<Text style={styles.note}>
-						Nothing saved under {FILTER_LABEL[filter].toLowerCase()} yet.
-					</Text>
-				)}
+					{shelves.length === 0 && unplaced.length === 0 && (
+						<Text style={styles.note}>
+							Nothing saved under {FILTER_LABEL[filter].toLowerCase()} yet.
+						</Text>
+					)}
 
-				{/* Saves we can't shelve: still in flight, gone from the market, or
+					{/* Saves we can't shelve: still in flight, gone from the market, or
 				    a failed fetch. They keep their own retry/remove affordances —
 				    a row with no place cannot be grouped, and silently dropping it
 				    would lose the buyer's save. */}
-				{unplaced.length > 0 && (
-					<View style={styles.loose}>
-						{unplaced.map((e) => (
-							<LooseRow
-								key={e.id}
-								row={rows[e.id] ?? { status: "loading" }}
-								onRetry={() => {
-									const item = items.find((i) => i.id === e.id);
-									if (item) void load(item);
-								}}
-								onRemove={() => toggle(e.id, e.kind)}
-							/>
-						))}
-					</View>
-				)}
+					{unplaced.length > 0 && (
+						<View style={styles.loose}>
+							{unplaced.map((e) => (
+								<LooseRow
+									key={e.id}
+									row={rows[e.id] ?? { status: "loading" }}
+									onRetry={() => {
+										const item = items.find((i) => i.id === e.id);
+										if (item) void load(item);
+									}}
+									onRemove={() => toggle(e.id, e.kind)}
+								/>
+							))}
+						</View>
+					)}
 
-				{/* A bare asterisk is a dangling mark. It costs one line to say what
+					{/* A bare asterisk is a dangling mark. It costs one line to say what
 				    it means, and without it the header implies more certainty than
 				    the same figure carries on the map. */}
-				{shelves.some((s) => s.area?.costLine?.includes("*")) && (
-					<Text style={styles.note}>
-						* water and trash are still our estimate. Tap a place for the rest.
-					</Text>
-				)}
+					{shownEntries.some((e) => e.place && e.costLine?.includes("*")) && (
+						<Text style={styles.note}>
+							* water and trash are still our estimate. Tap a place for the
+							rest.
+						</Text>
+					)}
 
-				{/* IDX rule 13.7(e)i — under any list that shows an FMLS home. */}
-				{shelves.some((s) => s.cards.some((c) => c.mlsNumber)) && (
-					<FmlsDisclosure variant="results" style={styles.fmls} />
-				)}
-			</ScrollView>
+					{/* IDX rule 13.7(e)i — under any list that shows an FMLS home. */}
+					{fmlsShown && (
+						<FmlsDisclosure variant="results" style={styles.fmls} />
+					)}
+				</ScrollView>
+			)}
 
 			{popOpen && (
 				<>
@@ -844,6 +940,24 @@ const styles = StyleSheet.create({
 	iconTxt: { ...textStyles.footnote, fontWeight: "600", color: colors.ink },
 	iconTxtOn: { color: colors.surface },
 	list: { flex: 1 },
+	views: {
+		flexDirection: "row",
+		marginHorizontal: 20,
+		marginBottom: 14,
+		padding: 3,
+		borderRadius: 12,
+		backgroundColor: colors.surface2,
+	},
+	viewBtn: {
+		flex: 1,
+		minHeight: 32,
+		alignItems: "center",
+		justifyContent: "center",
+		borderRadius: 9,
+	},
+	viewBtnOn: { backgroundColor: colors.surface },
+	viewTxt: { ...textStyles.footnote, fontWeight: "600", color: colors.ink2 },
+	viewTxtOn: { color: colors.ink },
 
 	shelf: { marginBottom: 20 },
 	sHead: {

@@ -23,6 +23,32 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 06:30 UTC — phase386: Saved in four views; the community side-by-side is drawn
+
+**Objective**: owner 2026-11-23: "saved 重新设计一下 支持多种示图 比较页面要生动一些". Read as: the Saved tab gets several ways to lay the shortlist out (视图), and the compare screen stops being a table of text.
+**Assumptions, stated** (no mockup round first — mobile work lands and he judges it on the phone): (1) "多种视图" = switchable layouts of the same saves, not new kinds of content; (2) "比较页面" = the neighbourhood side-by-side, the one the communities-only build reaches most. The area (county) compare and the web `/compare` are untouched.
+**What the phone shows**:
+- **Saved**: a four-way switch under the title — `Towns · Grid · List · Map` — remembered between launches. Towns is the phase272 shelves, unchanged and still the default. Grid is photographs two across with the name on the picture. List is one compact row a save. Map is where the saves are, with a rail of them underneath: swipe the rail and the map flies to that save, tap a mark and its card comes up. In the three new views a saved city is a tile of its own (photo, opens the city page), and every neighbourhood carries one line from its Explore page — `Schools Top 13–19% · $586K`. Filter and Select → "Get the take" / Remove work the same in all four.
+- **Compare** (pick 2–5 neighbourhoods in Saved → Get the take): opens on the places' photographs side by side ("vs" between two), each with a colour bar. That colour is the place's down the whole page, and the key naming them stays pinned while scrolling. Then the take, then a card per Explore direction in the page's order — Safety (hospital / fire station on a mile line, flood zone in words), Schools (a bar per school by its standing, `Top 13%`, with its name and distance), Convenience (nearest errands / food / outdoors on a mile line), Potential (each area's home value figure and all of them as lines on one chart), Cost (a month to hold as bars, HOA dues). Bars grow and dots travel out from "home" once, on open. The old table is whole behind "Show the full table" and opens by itself when no compared place has a profile.
+**Actions**:
+- `apps/mobile/lib/community/compare-visuals.ts` (+ test, 9): pure shaping from the detail DTOs' `profile` and `tourSegments`, reusing `explore.ts` (`schoolRanks`, `schoolName`, `nearbyStops`, `closeBy`, `milesOf`, `axisTop`) and `rankShare`, so a figure reads here exactly as on the place's own page. Home value lines are drawn over the years every charted place has; fewer than two shared years → figures only.
+- `apps/mobile/components/compare/CompareVisuals.tsx`: `CompareHero`, `CompareKey`, `CompareCards`. Plain Views and RN `Animated` — still no chart or SVG library. `app/compare-communities.tsx` leads with them; the table's header thumbnails became colour keys (the photos are the hero now).
+- `theme/tokens.ts`: `compareSeries`, five identity colours. Checked as a set with the dataviz validator against the white surface (lightness band, chroma floor, colour-blind separation of neighbouring slots, 3:1 contrast — all pass). Identity only; `pos` / `neg` keep meaning better / worse.
+- `apps/mobile/state/saved-view.ts` (persisted view), `lib/saved/shelves.ts` `buildTiles` + `SavedTile` (flat tiles; an area is a tile there), `lib/saved/rows.ts` `communityFact`, `components/saved/SavedViews.tsx` (`SavedGrid`, `SavedList`), `components/saved/SavedMap.tsx`, and `app/(tabs)/saved.tsx` wires the switch. Tests: rows +3, shelves +2.
+- Server: the community detail DTO gains `center` (`communities.lat` / `lng`) for the map view (`apps/web/lib/communities/detail.ts`, mirror in `apps/mobile/lib/community/detail-dto.ts`; test +2).
+**Decisions**:
+1. **Still no winner.** Bars and dots draw each place's own figure; no cell is marked best and nothing is scored — the rule `community-compare.ts` argues. The one change of position: `compare-table.ts` held that a bar on a dollar amount "would crown a winner", and Cost now draws the monthly holding figure as a bar. It is magnitude beside its printed figure, unranked; if he reads it as a verdict it goes back to figures.
+2. **The schools line on a Saved tile is a range** (best–worst of the levels nearby), so it never claims more than the weakest school.
+3. **The map does not depend on marker taps.** Search's history of lost taps on small custom markers is long; here the rail opens and picks, and a marker tap only brings its card up.
+4. **Words, not icons, on the view switch** — four small glyphs would have to be learned.
+5. **Residents' words / verdict lines are not drawn** in the comparison, as on the Explore page since 2026-11-22.
+**Issues / risks**:
+- **Not seen on a device.** No simulator on this host. Verified: mobile typecheck 0, lint 0 errors / 5 warnings (as main), vitest 914; web typecheck 0, vitest 1404; `expo export --platform ios` bundles. The shaping was also run against the live Northbrooke detail (safety, three school levels, three convenience rows, an 11-year value series, holding cost all resolve). Layout, the sticky key and the map are unproven until he opens them.
+- Map marks need `center`, which reaches the phone once this deploys to Vercel; a neighbourhood read before then has a card in the rail and no mark. Saved cities place from the pool's centroid and show at once.
+- Two neighbourhoods in one city share a home-value series (the series is per area — "Cumming"), so their lines coincide; the area's name is printed under each figure so it reads as the same figure rather than a drawing fault.
+- New UI needs the dev client (1.0.1 (11)); build 12's JS is frozen.
+**Next steps**: owner opens Saved and a comparison on the dev client. Open with him: whether the same treatment goes to the city/area compare (it still compares counties on a $500k home, not the cities' own pages) and to the web `/compare`.
+
 ## 2026-11-24 06:11 UTC — phase385: violent crime on the city page — in words, against Georgia, linked
 
 **Objective**: owner 2026-11-24, lifting his rulings of 11-15 and 11-22 for the city page. Asked whether the composite safety score should count crime: "放！". Shown the FBI's 2025 figures and two caveats (three cities have no figure; Suwanee's property-crime rate is 66% above Georgia's, shop theft over a small resident population): "只看暴力犯罪 只定性 上链接 不显示具体数量".

@@ -54,6 +54,8 @@ export interface CommunityDetailDTO {
 	/** Absent when the row has no cover photo — the map's dots reach every
 	 *  active community, photo or not, and the hero shows the initial. */
 	heroUrl?: string;
+	/** Where it is, for the Saved tab's map view. Absent on an older API. */
+	center?: { lat: number; lng: number };
 	/** The community's film — the SAME one the feed card plays. */
 	videoUrl?: string;
 	/** Present only when `videoUrl` is the assembled tour. */

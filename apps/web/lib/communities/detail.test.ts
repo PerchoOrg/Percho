@@ -147,3 +147,17 @@ describe('dedupeLabels', () => {
     expect(out?.interests).toEqual(['Home Improvement & DIY', 'Pets']);
   });
 });
+
+describe('projectCommunityDetail center', () => {
+  it('ships the point when the row has both halves', () => {
+    const out = projectCommunityDetail({ ...ROW, lat: 34.05, lng: -84.07 }, undefined);
+    expect(out?.center).toEqual({ lat: 34.05, lng: -84.07 });
+  });
+
+  it('omits it for a row with no point', () => {
+    expect(
+      projectCommunityDetail({ ...ROW, lat: 34.05, lng: null }, undefined)?.center,
+    ).toBeUndefined();
+    expect(projectCommunityDetail(ROW, undefined)?.center).toBeUndefined();
+  });
+});

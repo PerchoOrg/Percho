@@ -29,12 +29,18 @@ import { splitRows } from "@percho/shared/compare-take";
  * strategy needs to be applied for community comparison") — drawn by the
  * shared `CompareBlock`, with "the basics" underneath and only those
  * collapsing behind the toggle.
+ *
+ * Since phase386 (owner: "比较页面要生动一些") the screen opens on the places'
+ * photographs and draws what their Explore pages hold — Safety, Schools,
+ * Convenience, Potential, Cost — as bars, mile lines and a value chart, one
+ * colour a place (`components/compare/CompareVisuals.tsx`). The phase281
+ * table is still here, whole, behind "Show the full table"; it opens by
+ * itself when none of the places has a profile to draw.
  */
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
-	Image,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -46,8 +52,19 @@ import {
 	ColumnHeaderSpacer,
 	CompareBlock,
 } from "../components/compare/CompareSection";
+import {
+	CompareCards,
+	CompareHero,
+	CompareKey,
+	type ComparePlace,
+	placeColor,
+} from "../components/compare/CompareVisuals";
 import { TakeCard } from "../components/compare/TakeCard";
 import { communityDetailUrl } from "../lib/api/base";
+import {
+	buildCompareVisuals,
+	hasVisuals,
+} from "../lib/community/compare-visuals";
 import type { CommunityDetailDTO } from "../lib/community/detail-dto";
 import { usePriorityStore } from "../state/priorities";
 import { colors, radii } from "../theme/tokens";
@@ -73,6 +90,7 @@ export default function CompareCommunitiesScreen() {
 	const [state, setState] = useState<State>({ status: "loading" });
 	const [nonce, setNonce] = useState(0);
 	const [showAll, setShowAll] = useState(false);
+	const [showTable, setShowTable] = useState(false);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `nonce` is the retry trigger; `key` stands in for `list`
 	useEffect(() => {
@@ -118,6 +136,21 @@ export default function CompareCommunitiesScreen() {
 	// collapse — the four aspect sections are the point of the screen and are
 	// always whole. The ordering above decides which basics survive the cut.
 	const { shown, collapsible } = splitRows(table?.basics ?? [], showAll);
+	const visuals = useMemo(
+		() =>
+			state.status === "ready" ? buildCompareVisuals(state.communities) : null,
+		[state],
+	);
+	const places: ComparePlace[] = (table?.headers ?? []).map((h, i) => ({
+		id: h.id,
+		name: h.name,
+		place: h.place,
+		...(h.thumbUrl ? { thumbUrl: h.thumbUrl } : {}),
+		color: placeColor(i),
+	}));
+	const drawn = visuals !== null && hasVisuals(visuals);
+	// With nothing to draw the table is the screen, as it was before phase386.
+	const tableOpen = showTable || !drawn;
 
 	return (
 		<View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
@@ -154,65 +187,89 @@ export default function CompareCommunitiesScreen() {
 			{table && (
 				<ScrollView
 					contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+					// The colour key (the second child) stays under the header.
+					stickyHeaderIndices={[1]}
+					showsVerticalScrollIndicator={false}
 				>
-					{take && <TakeCard take={take} />}
-					<Text style={styles.factsHead}>The numbers behind it</Text>
-					<View style={styles.headerRow}>
-						<ColumnHeaderSpacer count={table.headers.length} />
-						{table.headers.map((h) => (
-							<Pressable
-								key={h.id}
-								style={styles.cell}
-								onPress={() => router.push(`/community/${h.slug}`)}
-								accessibilityRole="button"
-								accessibilityLabel={`Open ${h.name}`}
-							>
-								{h.thumbUrl ? (
-									<Image source={{ uri: h.thumbUrl }} style={styles.thumb} />
-								) : (
-									<View style={styles.thumb} />
-								)}
-								<Text style={styles.headName} numberOfLines={2}>
-									{h.name}
-								</Text>
-								{!!h.place && (
-									<Text style={styles.headPlace} numberOfLines={2}>
-										{h.place}
-									</Text>
-								)}
-							</Pressable>
-						))}
-					</View>
+					<CompareHero
+						places={places}
+						onOpen={(id) => {
+							const h = table.headers.find((x) => x.id === id);
+							if (h) router.push(`/community/${h.slug}`);
+						}}
+					/>
+					<CompareKey places={places} />
+					{take && (
+						<View style={styles.take}>
+							<TakeCard take={take} />
+						</View>
+					)}
+					{visuals && <CompareCards visuals={visuals} places={places} />}
 
-					{table.aspects.map((a) => (
-						<CompareBlock
-							key={a.key}
-							title={a.title}
-							{...(a.note ? { note: a.note } : {})}
-							rows={a.rows}
-							ids={table.headers.map((h) => h.id)}
-						/>
-					))}
+					{drawn && (
+						<Pressable
+							style={styles.tableToggle}
+							onPress={() => setShowTable((v) => !v)}
+							accessibilityRole="button"
+							accessibilityState={{ expanded: tableOpen }}
+						>
+							<Text style={styles.moreTxt}>
+								{showTable ? "Hide the full table" : "Show the full table"}
+							</Text>
+						</Pressable>
+					)}
 
-					<CompareBlock
-						title="The basics"
-						rows={shown}
-						ids={table.headers.map((h) => h.id)}
-					>
-						{collapsible && (
-							<Pressable
-								style={styles.more}
-								onPress={() => setShowAll((v) => !v)}
-								accessibilityRole="button"
+					{tableOpen && (
+						<>
+							<Text style={styles.factsHead}>The numbers behind it</Text>
+							<View style={styles.headerRow}>
+								<ColumnHeaderSpacer count={table.headers.length} />
+								{table.headers.map((h, i) => (
+									<View key={h.id} style={styles.cell}>
+										<View
+											style={[
+												styles.headKey,
+												{ backgroundColor: placeColor(i) },
+											]}
+										/>
+										<Text style={styles.headName} numberOfLines={2}>
+											{h.name}
+										</Text>
+									</View>
+								))}
+							</View>
+
+							{table.aspects.map((a) => (
+								<CompareBlock
+									key={a.key}
+									title={a.title}
+									{...(a.note ? { note: a.note } : {})}
+									rows={a.rows}
+									ids={table.headers.map((h) => h.id)}
+								/>
+							))}
+
+							<CompareBlock
+								title="The basics"
+								rows={shown}
+								ids={table.headers.map((h) => h.id)}
 							>
-								<Text style={styles.moreTxt}>
-									{showAll
-										? "Show fewer"
-										: `Show all ${table.basics.length} figures`}
-								</Text>
-							</Pressable>
-						)}
-					</CompareBlock>
+								{collapsible && (
+									<Pressable
+										style={styles.more}
+										onPress={() => setShowAll((v) => !v)}
+										accessibilityRole="button"
+									>
+										<Text style={styles.moreTxt}>
+											{showAll
+												? "Show fewer"
+												: `Show all ${table.basics.length} figures`}
+										</Text>
+									</Pressable>
+								)}
+							</CompareBlock>
+						</>
+					)}
 
 					{/* The same promise the home table's foot makes, and it has to be
 					    made here too: the table ranks nothing, the take is built from
@@ -248,25 +305,27 @@ const styles = StyleSheet.create({
 		paddingVertical: 12,
 	},
 	btnTxt: { ...textStyles.headline, color: colors.surface },
-	factsHead: { ...textStyles.caption, color: colors.ink2, marginBottom: 10 },
+	take: { marginTop: 12, marginBottom: -20 },
+	tableToggle: { minHeight: 44, justifyContent: "center", marginTop: 8 },
+	factsHead: {
+		...textStyles.caption,
+		color: colors.ink2,
+		marginTop: 8,
+		marginBottom: 10,
+	},
 	headerRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
 	// Row/section geometry lives in `components/compare/CompareSection.tsx`
 	// since phase281 — one renderer for homes and communities.
 	cell: { flex: 1 },
 	more: { minHeight: 44, justifyContent: "center", marginTop: 12 },
 	moreTxt: { ...textStyles.footnote, fontWeight: "600", color: colors.accent },
-	thumb: {
-		width: "100%",
-		aspectRatio: 4 / 3,
-		borderRadius: radii.tile,
-		backgroundColor: colors.surface2,
-		marginBottom: 6,
+	headKey: {
+		alignSelf: "center",
+		width: 22,
+		height: 4,
+		borderRadius: 2,
+		marginBottom: 5,
 	},
 	headName: { ...textStyles.footnote, color: colors.ink, textAlign: "center" },
-	headPlace: {
-		...textStyles.caption,
-		color: colors.ink2,
-		textAlign: "center",
-	},
 	foot: { ...textStyles.note, color: colors.ink3, marginTop: 18 },
 });

@@ -47,6 +47,10 @@ export interface ShelfEntry {
 	costLine?: string;
 	/** `area` only: the lens key, for `/compare-areas`. Absent outside metro. */
 	areaKey?: string;
+	/** What the place's own page found, in a line — see `communityFact`. */
+	fact?: string;
+	/** Where it is, for the map view. */
+	center?: { lat: number; lng: number };
 }
 
 export interface ShelfCard {
@@ -137,4 +141,49 @@ export function shelfCountLine(shelf: Shelf): string {
 /** The listing ids on a shelf — what its own "Compare N" hands to `/compare`. */
 export function shelfListingIds(shelf: Shelf): string[] {
 	return shelf.cards.filter((c) => c.kind === "listing").map((c) => c.id);
+}
+
+/**
+ * One save as the grid, list and map views draw it (phase386).
+ *
+ * Those three are flat — a save is a tile whatever town it is in — so here a
+ * saved AREA is a tile too, named for itself, where a shelf makes it the
+ * header. Its `href` is the city's page when it has one; without one the tab
+ * opens it on the Search map, as the shelf header does.
+ */
+export interface SavedTile {
+	id: string;
+	kind: ShelfEntry["kind"];
+	title: string;
+	/** The town for a home or a neighbourhood; the county line for an area. */
+	sub: string;
+	fact?: string;
+	thumbUrl?: string;
+	href?: string;
+	center?: { lat: number; lng: number };
+	mlsNumber?: string;
+	areaKey?: string;
+}
+
+/** Every save that has resolved, in saved order (newest first). */
+export function buildTiles(entries: readonly ShelfEntry[]): SavedTile[] {
+	return entries.flatMap((e): SavedTile[] => {
+		const title = e.kind === "area" ? e.place : e.title;
+		if (!e.place || !title) return [];
+		const sub = e.kind === "area" ? (e.costLine ?? "") : e.place;
+		return [
+			{
+				id: e.id,
+				kind: e.kind,
+				title,
+				sub,
+				...(e.fact ? { fact: e.fact } : {}),
+				...(e.thumbUrl ? { thumbUrl: e.thumbUrl } : {}),
+				...(e.href ? { href: e.href } : {}),
+				...(e.center ? { center: e.center } : {}),
+				...(e.mlsNumber ? { mlsNumber: e.mlsNumber } : {}),
+				...(e.areaKey ? { areaKey: e.areaKey } : {}),
+			},
+		];
+	});
 }

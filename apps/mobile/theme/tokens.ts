@@ -101,6 +101,24 @@ export const colors = {
 } as const;
 
 /**
+ * One colour per compared place (phase386) — the side-by-side screen's bars,
+ * lines and dots. A place keeps its colour down the whole page, by the column
+ * it was picked in; five slots because five is the most a compare holds.
+ *
+ * Identity only: never "better" or "worse" (`pos` / `neg` say that), and every
+ * mark that wears one also carries the place's name. Checked as a set against
+ * the white surface for colour-blind separation of neighbouring slots — keep
+ * the order when changing a value.
+ */
+export const compareSeries = [
+	"#00856A",
+	"#3272C0",
+	"#D2622A",
+	"#B8508A",
+	"#B98A10",
+] as const;
+
+/**
  * Redline card tokens (2026-07-30) — the owner-supplied "Percho Swipe Cards"
  * redline + reference board, adopted verbatim for the four front faces
  * (listing / community / trade-off / insight). Owner instruction:
