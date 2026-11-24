@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-24 16:42 UTC — phase366.24: White Columns (Alpharetta, 19th film)
+
+**Objective**: owner 2026-11-24 "go" on White Columns — pitched with its community footage confirmed first, and with the caveat that it is in the City of Milton by law and Alpharetta by post (`communities.city` says Alpharetta).
+**Actions**: run `d71c3d3e`. Google's "White Columns Country Club" (the Fazio course and clubhouse) and the gated section's HOA site (gatedwhitecolumns.com, 38 photos) gave the community act. Photos rejected by what they tell a buyer: flowers (2), a food truck, a snack table, tree trunks, two logos, the club's dining room, the clubhouse at night over a car park, a duplicate pond; schools at 879, 641 and 451 px; food close-ups, a deli case, a produce aisle, a bar shelf, a gym interior, a dirt path at dusk. Editorial, film-only: Crabapple Ace, Chick-fil-A, EarthWise Pet, Scottsdale Farms Garden Center and its café, the second Publix, Atlanta National Golf Club (a different club), The Union, Milton Athletic Club, and the nearer Publix (its only photos were inside).
+- Assembly `9204817d`, `cf_stream_uid c19695fefdf24a9e82993a5b8d6ad967`, 70.0 s, 23 clips; community act 8 clips (two entrance shots, the pool, the course three ways, the clubhouse, the lake). **Spend: 2 Seedance ≈ $0.28** (the course under a storm sky, Birmingham Park's trail). Profile written.
+**Verified**: frames every 2 s; production feed serves the uid (19 community films); `/watch/c/white-columns` 200.
+**Next steps**: one more to reach twenty.
+
 ## 2026-11-24 10:00 UTC — phase366.23: Ward's Crossing (Johns Creek builder slot)
 
 **Objective**: owner 2026-11-24: "做下一个community". The open question (phase366.22) was the Johns Creek builder slot; I went to Ward's Crossing after finding, before building, that it has footage from inside the community: The Providence Group's live page (`/new-homes/ga/johns-creek/wards-crossing/10421/`) shows the entrance and the pool, Google's "Ward's Crossing by The Providence Group" has the pool in 3840 px, and an FMLS listing has the neighbourhood from the air.
