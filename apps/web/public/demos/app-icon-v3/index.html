@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — app icon choices, round 3</title>
+<style>
+:root{--serif:ui-serif,"New York","Iowan Old Style",Georgia,serif;--ui:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;--green:#0E6B57}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#EDE9E1;font-family:var(--ui);color:#2B2116;padding:0 14px 70px}
+button{border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;font:inherit;background:none;color:inherit}
+.wrap{max-width:900px;margin:0 auto}
+.nav{padding-top:26px}
+.nav h1{font:600 26px var(--serif);color:var(--green);margin-bottom:6px}
+.nav p{font:400 14.5px/1.55 var(--ui);color:#5A4E40;margin:6px 0;max-width:640px}
+.icon{position:relative;overflow:hidden;border-radius:22.37%;flex:none}
+.icon svg{display:block;width:100%;height:100%}
+/* the choices */
+h2{font:600 19px var(--ui);margin:30px 0 4px}
+body.sheet .nav,body.sheet .stage{display:none}
+h2+p{font:400 13.5px/1.45 var(--ui);color:#5A4E40;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.tile{background:#fff;border-radius:20px;padding:18px 16px 16px;text-align:left;outline:3px solid transparent;outline-offset:-3px;transition:outline-color .15s;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.tile.on{outline-color:var(--green)}
+.tile .icon{width:132px;height:132px;align-self:center;box-shadow:0 6px 18px rgba(32,28,22,.18),0 0 0 .5px rgba(0,0,0,.1)}
+.tile .code{font:700 12px var(--ui);color:var(--green);letter-spacing:.04em}
+.tile .t{font:600 15px var(--ui);margin-top:2px}
+.tile .d{font:400 12.5px/1.45 var(--ui);color:#6B5D4C;margin-top:3px}
+/* the preview, pinned */
+.stage{position:sticky;top:0;z-index:5;background:#EDE9E1;padding:14px 0;border-bottom:1px solid rgba(0,0,0,.08);display:flex;gap:22px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+.phone{width:300px;height:330px;border-radius:34px;padding:26px 18px 0;overflow:hidden;position:relative;transition:background .3s}
+.phone.light{background:linear-gradient(160deg,#B9CFE0 0%,#E7D8C6 55%,#D9B99B 100%)}
+.phone.dark{background:linear-gradient(160deg,#10151C 0%,#1E2833 60%,#2B2430 100%)}
+.home{display:grid;grid-template-columns:repeat(4,1fr);row-gap:16px;justify-items:center}
+.app{display:flex;flex-direction:column;align-items:center;gap:5px;width:62px}
+.app .icon{width:56px;height:56px}
+.app span{font:500 10.5px var(--ui);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
+.ph{width:56px;height:56px;border-radius:22.37%;display:flex;align-items:center;justify-content:center}
+.ph i{display:block;background:rgba(255,255,255,.9)}
+.side{display:flex;flex-direction:column;gap:12px;width:320px}
+.store{background:#fff;border-radius:18px;padding:14px;display:flex;gap:12px;align-items:center}
+.store .icon{width:64px;height:64px;box-shadow:0 0 0 .5px rgba(0,0,0,.12)}
+.store .n{font:600 16px var(--ui)}
+.store .s{font:400 12.5px var(--ui);color:#8A7D6C;margin-top:2px}
+.store .get{margin-left:auto;background:#EEF0F3;color:#0A6CFF;font:700 13px var(--ui);border-radius:14px;padding:6px 16px}
+.sizes{background:#fff;border-radius:18px;padding:12px 14px;display:flex;align-items:flex-end;gap:12px}
+.sizes .icon{box-shadow:0 0 0 .5px rgba(0,0,0,.12)}
+.sizes small{display:block;text-align:center;font:400 10px var(--ui);color:#8A7D6C;margin-top:4px}
+.pick{font:600 15px var(--ui)}
+.seg{display:inline-flex;background:rgba(0,0,0,.08);border-radius:10px;padding:3px;align-self:flex-start}
+.seg button{padding:6px 12px;border-radius:8px;font:500 13px var(--ui);color:#5A4E40}
+.seg button.on{background:#fff;color:#2B2116;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav">
+    <h1>Twenty more icons for Percho</h1>
+    <p>Twenty new ideas, none repeated from the first two rounds. They are in six families; within a family the ideas are cousins. Tap one and the preview at the top shows it on an iPhone home screen, in the App Store and at the small sizes iOS uses.</p>
+    <p>Every idea comes on green or on cream — switch beside the preview. Reply with a number and a colour, e.g. "11 green".</p>
+  </div>
+  <div class="stage">
+    <div class="phone light" id="phone"><div class="home" id="home"></div></div>
+    <div class="side">
+      <div class="pick" id="pick"></div>
+      <div class="store"><div class="icon" id="storeIcon"></div><div><div class="n">Percho</div><div class="s">Feel the neighbourhood first</div></div><div class="get">Get</div></div>
+      <div class="sizes" id="sizes"></div>
+      <div class="seg" id="pal"><button data-p="green" class="on">On green</button><button data-p="cream">On cream</button></div>
+      <div class="seg" id="seg"><button data-m="light" class="on">Light wallpaper</button><button data-m="dark">Dark wallpaper</button></div>
+    </div>
+  </div>
+
+  <div id="groups"></div>
+</div>
+
+  <h2>The ideas</h2>
+  <p>The rounded shape that appears in several of them is the thing that has landed. It is deliberately only a shape.</p>
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+const PAL={green:{bg:'#0E6B57',fg:'#F7F5F0',ac:'#F0A94B'},cream:{bg:'#F7F5F0',fg:'#0E6B57',ac:'#EE9B2F'}};
+const SERIF='ui-serif,&quot;New York&quot;,&quot;DM Serif Display&quot;,Georgia,serif';
+const svg=(p,body)=>`<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><rect width="1024" height="1024" fill="${p.bg}"/>${body}</svg>`;
+/* a gabled house: centre x, base y, width, wall height, roof height */
+const house=(cx,base,w,wall,roof,fill,r=28)=>`<path d="M${cx-w/2} ${base} V${base-wall} L${cx} ${base-wall-roof} L${cx+w/2} ${base-wall} V${base} Z" fill="${fill}" stroke="${fill}" stroke-width="${r}" stroke-linejoin="round"/>`;
+
+const GROUPS=[
+ {t:'Today',d:'For comparison.',items:[
+  {code:'Now',t:'The letter P',d:'What the app has today.',
+   svg:()=>`<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><rect width="1024" height="1024" fill="#0E6B57"/><text x="512" y="720" text-anchor="middle" font-family="${SERIF}" font-size="600" fill="#fff">P</text></svg>`}]},
+ {t:'The letter, with a meaning',d:'Still a P, but each one is also a thing.',items:[
+  {code:'1',t:'P with a window',d:'A solid P whose opening is an arched window with the light on.',
+   svg:p=>svg(p,`<path d="M296 216 H538 A200 200 0 0 1 538 616 H470 V808 H296 Z" fill="${p.fg}" stroke="${p.fg}" stroke-width="36" stroke-linejoin="round"/><path d="M474 506 V398 A62 62 0 0 1 598 398 V506 Z" fill="${p.ac}"/>`)},
+  {code:'2',t:'The signpost',d:'A post and a sign pointing the way. Side by side they read as a P.',
+   svg:p=>svg(p,`<rect x="252" y="200" width="100" height="624" rx="50" fill="${p.fg}"/><path d="M400 262 H640 L748 376 L640 490 H400 Z" fill="${p.ac}" stroke="${p.ac}" stroke-width="40" stroke-linejoin="round"/>`)},
+  {code:'3',t:'The p is a house',d:'A small p whose round part is a house, with someone home.',
+   svg:p=>svg(p,`<path d="M330 800 V404 L530 240 L730 404 V604 H330" fill="none" stroke="${p.fg}" stroke-width="92" stroke-linecap="round" stroke-linejoin="round"/><circle cx="530" cy="446" r="58" fill="${p.ac}"/>`)},
+ ]},
+ {t:'Windows and doors',d:'Looking in before you go in.',items:[
+  {code:'4',t:'The lit window',d:'An arched window with one pane lit: somebody lives here.',
+   svg:p=>svg(p,`<path d="M282 800 V470 A230 230 0 0 1 742 470 V800 Z" fill="${p.fg}"/><path d="M326 510 V470 A186 186 0 0 1 492 285 V510 Z" fill="${p.bg}"/><path d="M532 510 V285 A186 186 0 0 1 698 470 V510 Z" fill="${p.bg}"/><rect x="326" y="550" width="166" height="206" fill="${p.bg}"/><rect x="532" y="550" width="166" height="206" fill="${p.ac}"/>`)},
+  {code:'5',t:'The open door',d:'A door standing open with warm light behind it.',
+   svg:p=>svg(p,`<rect x="336" y="236" width="372" height="560" rx="20" fill="${p.ac}"/><path d="M336 236 L566 170 V862 L336 796 Z" fill="${p.fg}" stroke="${p.fg}" stroke-width="24" stroke-linejoin="round"/><circle cx="516" cy="524" r="24" fill="${p.bg}"/>`)},
+ ]},
+ {t:'The street',d:'A neighbourhood is more than one house.',items:[
+  {code:'6',t:'Rooftops',d:'A row of roofs in one line; the one in the middle is yours.',
+   svg:p=>svg(p,`<polyline points="100,668 239,512 378,668" fill="none" stroke="${p.fg}" stroke-width="74" stroke-linecap="round" stroke-linejoin="round"/><polyline points="646,668 785,512 924,668" fill="none" stroke="${p.fg}" stroke-width="74" stroke-linecap="round" stroke-linejoin="round"/><polyline points="378,668 512,400 646,668" fill="none" stroke="${p.ac}" stroke-width="74" stroke-linecap="round" stroke-linejoin="round"/>`)},
+  {code:'7',t:'Next door',d:'Two houses leaning into each other: neighbours.',
+   svg:p=>svg(p,`${house(378,716,360,236,176,p.fg)}<g>${house(646,716,360,236,176,p.bg,64)}${house(646,716,360,236,176,p.ac)}</g>`)},
+  {code:'8',t:'The picket fence',d:'Three pickets of a front-yard fence, one painted.',
+   svg:p=>svg(p,`<rect x="150" y="430" width="724" height="56" rx="28" fill="${p.fg}" opacity=".5"/><rect x="150" y="640" width="724" height="56" rx="28" fill="${p.fg}" opacity=".5"/>${[[302,p.fg],[512,p.ac],[722,p.fg]].map(([x,c])=>`<path d="M${x-66} 800 V330 L${x} 250 L${x+66} 330 V800 Z" fill="${c}" stroke="${c}" stroke-width="24" stroke-linejoin="round"/>`).join('')}`)},
+  {code:'9',t:'The mailbox',d:'The mailbox at the end of every American driveway, with its flag up.',
+   svg:p=>svg(p,`<rect x="478" y="560" width="92" height="300" rx="20" fill="${p.fg}"/><rect x="640" y="196" width="34" height="230" rx="10" fill="${p.ac}"/><rect x="640" y="196" width="136" height="84" rx="12" fill="${p.ac}"/><path d="M262 610 V440 A136 136 0 0 1 398 304 H724 A44 44 0 0 1 768 348 V610 Z" fill="${p.fg}" stroke="${p.fg}" stroke-width="24" stroke-linejoin="round"/><path d="M262 610 V440 A136 136 0 0 1 534 440 V610 Z" fill="${p.bg}" opacity=".16"/>`)},
+ ]},
+ {t:'A home, perched',d:'The perch idea, with a home in the place of a bird.',items:[
+  {code:'10',t:'Home on the hill',d:'A small house on the top of a hill, looking out.',
+   svg:p=>svg(p,`<circle cx="512" cy="1262" r="650" fill="${p.fg}"/>${house(512,616,300,156,140,p.ac)}<rect x="482" y="514" width="60" height="102" rx="8" fill="${p.bg}"/>`)},
+  {code:'11',t:'Home on a branch',d:'A house sitting on a branch, the way a bird would.',
+   svg:p=>svg(p,`<rect x="140" y="700" width="744" height="58" rx="29" fill="${p.fg}"/>${house(540,688,330,180,170,p.ac)}<rect x="506" y="574" width="68" height="114" rx="10" fill="${p.bg}"/>`)},
+  {code:'12',t:'Home in the tree',d:'A round tree with a house in its branches.',
+   svg:p=>svg(p,`<rect x="470" y="600" width="84" height="270" rx="20" fill="${p.fg}"/><circle cx="512" cy="430" r="278" fill="${p.fg}"/>${house(512,540,220,116,108,p.ac)}`)},
+  {code:'13',t:'The swing',d:'A swing hanging from a branch: a perch for people.',
+   svg:p=>svg(p,`<rect x="150" y="214" width="724" height="62" rx="31" fill="${p.fg}"/><g transform="rotate(9 512 245)"><path d="M380 270 V700 M644 270 V700" stroke="${p.fg}" stroke-width="36" stroke-linecap="round"/><rect x="316" y="686" width="392" height="68" rx="34" fill="${p.ac}"/></g>`)},
+ ]},
+ {t:'The place',d:'Where it is, and how it looks from above.',items:[
+  {code:'14',t:'Sunrise over the roof',d:'The sun coming up behind a roof.',
+   svg:p=>svg(p,`<circle cx="512" cy="520" r="262" fill="${p.ac}"/><path d="M110 1100 V740 L512 426 L914 740 V1100 Z" fill="${p.fg}" stroke="${p.fg}" stroke-width="40" stroke-linejoin="round"/>`)},
+  {code:'15',t:'The road home',d:'A road winding up to a house.',
+   svg:p=>svg(p,`<path d="M250 1080 C250 760 640 860 640 560" fill="none" stroke="${p.fg}" stroke-width="104" stroke-linecap="round"/>${house(640,470,300,150,140,p.ac)}`)},
+  {code:'16',t:'The map',d:'A few blocks of a street map and one dot: this place.',
+   svg:p=>svg(p,`<rect x="150" y="150" width="724" height="724" rx="120" fill="${p.fg}"/><path d="M120 650 L904 400" stroke="${p.bg}" stroke-width="64"/><path d="M400 120 L520 904" stroke="${p.bg}" stroke-width="64"/><circle cx="690" cy="660" r="78" fill="${p.ac}"/>`)},
+  {code:'17',t:'The house pin',d:'A map pin in the shape of a house.',
+   svg:p=>svg(p,`<path d="M512 196 L756 398 V560 L512 836 L268 560 V398 Z" fill="${p.fg}" stroke="${p.fg}" stroke-width="56" stroke-linejoin="round"/><circle cx="512" cy="456" r="92" fill="${p.ac}"/>`)},
+ ]},
+ {t:'Something else',d:'Three that stand apart.',items:[
+  {code:'18',t:'The cairn',d:'Stacked stones: the trail marker that says "this is the spot".',
+   svg:p=>svg(p,`<ellipse cx="512" cy="700" rx="262" ry="98" fill="${p.fg}"/><ellipse cx="498" cy="520" rx="186" ry="82" transform="rotate(-4 498 520)" fill="${p.fg}"/><ellipse cx="522" cy="372" rx="118" ry="66" transform="rotate(6 522 372)" fill="${p.ac}"/>`)},
+  {code:'19',t:'The feather',d:'What is left on a perch. No bird — only its trace.',
+   svg:p=>svg(p,`<g transform="translate(540 470) rotate(38)"><path d="M0 -350 C160 -260 196 -40 112 160 C84 222 34 262 0 282 C-34 262 -84 222 -112 160 C-196 -40 -160 -260 0 -350 Z" fill="${p.fg}"/><path d="M0 -230 V282" stroke="${p.bg}" stroke-width="24" stroke-linecap="round"/><path d="M170 10 L70 96 M-168 -70 L-70 16" stroke="${p.bg}" stroke-width="26" stroke-linecap="round"/><path d="M0 282 V420" stroke="${p.ac}" stroke-width="34" stroke-linecap="round"/></g>`)},
+  {code:'20',t:'The deck',d:'The app itself: a stack of film cards to swipe through.',
+   svg:p=>svg(p,`<rect x="270" y="250" width="400" height="540" rx="64" transform="rotate(-11 470 520)" fill="${p.fg}" opacity=".5"/><rect x="352" y="244" width="400" height="540" rx="64" transform="rotate(6 552 514)" fill="${p.fg}"/><path d="M500 420 V608 L664 514 Z" transform="rotate(6 552 514)" fill="${p.ac}" stroke="${p.ac}" stroke-width="30" stroke-linejoin="round"/>`)},
+ ]},
+];
+const ICONS=GROUPS.flatMap(g=>g.items);
+
+const OTHER=[['#34C759','Messages',['50%','62%','62%']],['#FF9500','Photos',['50%','50%','50%']],['#0A84FF','Mail',['4px','64%','46%']],['#FFD60A','Notes',['3px','60%','8%']],['#5E5CE6','Podcasts',['50%','44%','44%']],['#FF375F','Music',['50%','26%','26%']],['#30B0C7','Weather',['50%','48%','48%']],['#8E8E93','Settings',['50%','58%','58%']],['#1C1C1E','Wallet',['6px','64%','40%']],['#0A84FF','App Store',['6px','50%','50%']],['#FF9F0A','Books',['3px','40%','60%']]];
+
+const Q=new URLSearchParams(location.search);
+if(Q.get('sheet'))document.body.classList.add('sheet');
+let cur=1,pal=Q.get('c')==='cream'?'cream':'green';
+const iconEl=(i,px)=>`<div class="icon" style="width:${px}px;height:${px}px">${ICONS[i].svg(PAL[pal])}</div>`;
+function render(){
+  const ic=ICONS[cur];
+  document.getElementById('pick').textContent=ic.code+' — '+ic.t+(ic.code==='Now'?'':' · '+pal);
+  const apps=OTHER.map(([c,n,[r,w,h]])=>`<div class="app"><div class="ph" style="background:${c}"><i style="border-radius:${r};width:${w};height:${h}"></i></div><span>${n}</span></div>`);
+  apps.splice(5,0,`<div class="app">${iconEl(cur,56)}<span>Percho</span></div>`);
+  document.getElementById('home').innerHTML=apps.join('');
+  document.getElementById('storeIcon').innerHTML=ic.svg(PAL[pal]);
+  document.getElementById('sizes').innerHTML=[[80,'Spotlight'],[60,'Home'],[40,'Search'],[29,'Settings'],[20,'Notification']].map(([px,l])=>`<div>${iconEl(cur,px)}<small>${l}</small></div>`).join('');
+  let n=0;
+  document.getElementById('groups').innerHTML=GROUPS.map(g=>`<h2>${g.t}</h2><p>${g.d}</p><div class="grid">${g.items.map(x=>{const i=n++;return `<button class="tile${i===cur?' on':''}" data-i="${i}">${iconEl(i,132)}<div><div class="code">${x.code==='Now'?'NOW':x.code}</div><div class="t">${x.t}</div><div class="d">${x.d}</div></div></button>`}).join('')}</div>`).join('');
+  document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{cur=+t.dataset.i;render();window.scrollTo({top:0,behavior:'smooth'})});
+  document.querySelectorAll('#pal button').forEach(b=>b.classList.toggle('on',b.dataset.p===pal));
+}
+document.querySelectorAll('#pal button').forEach(b=>b.onclick=()=>{pal=b.dataset.p;render()});
+document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#seg button').forEach(x=>x.classList.toggle('on',x===b));document.getElementById('phone').className='phone '+b.dataset.m});
+const q=Q.get('i');if(q){const k=ICONS.findIndex(x=>x.code===q);if(k>=0)cur=k}
+render();
+</script>
+</body>
+</html>

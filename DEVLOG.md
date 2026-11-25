@@ -23,6 +23,16 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 04:58 UTC — phase396.2: icon rounds 3 and 4 — twenty new ideas, then ten variations of the bird on the roof
+
+**Objective**: owner: 「再给我出20个logo方案 不要重复现在的」, then, interrupting: 「第一版里那个房顶上小鸟的不错 给我10个基于它的变化」.
+**Actions**:
+- `apps/web/public/demos/app-icon-v3/` — twenty ideas in six families (the letter with a meaning; windows and doors; the street; a home, perched; the place; something else), numbered 1–20, each on green or cream.
+- `apps/web/public/demos/app-icon-v4/` — round 1's A (bird on a roof) and ten variations A1–A10: simpler bird, rounder bird, colours swapped, on cream, the whole house, a solid roof, on the chimney, two roofs, against the sun, close-up.
+**Decisions**: the "no drawn bird" brief from round 2 is superseded for this idea — the owner chose the drawn bird on the roof. v3 was finished when he redirected, so it ships too.
+**Verified**: contact sheets of both pages in headless Chrome.
+**Next steps**: owner picks an A-code (or a mix) → final art, `icon.png` / `splash-icon.png`, build 1.1.0 (13).
+
 ## 2026-11-25 04:45 UTC — phase396.1: icon round 2 — the perch without a drawn bird; owner's answers on the 1.1.0 release
 
 **Objective**: owner, off `/demos/app-icon-v1`: 「logo再设计一下 鸟有栖息的寓意 可以取这个意向 但是不要画出鸟的具象」. And on the release proposal: age rating stays 4+; screenshots may carry captions, shown to him before upload; the company is registered, no D-U-N-S yet.

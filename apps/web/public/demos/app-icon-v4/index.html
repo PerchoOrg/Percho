@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — the bird on the roof, ten ways</title>
+<style>
+:root{--serif:ui-serif,"New York","Iowan Old Style",Georgia,serif;--ui:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;--green:#0E6B57}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#EDE9E1;font-family:var(--ui);color:#2B2116;padding:0 14px 70px}
+button{border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;font:inherit;background:none;color:inherit}
+.wrap{max-width:900px;margin:0 auto}
+.nav{padding-top:26px}
+.nav h1{font:600 26px var(--serif);color:var(--green);margin-bottom:6px}
+.nav p{font:400 14.5px/1.55 var(--ui);color:#5A4E40;margin:6px 0;max-width:640px}
+.icon{position:relative;overflow:hidden;border-radius:22.37%;flex:none}
+.icon svg{display:block;width:100%;height:100%}
+/* the choices */
+h2{font:600 19px var(--ui);margin:30px 0 4px}
+body.sheet .nav,body.sheet .stage{display:none}
+h2+p{font:400 13.5px/1.45 var(--ui);color:#5A4E40;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.tile{background:#fff;border-radius:20px;padding:18px 16px 16px;text-align:left;outline:3px solid transparent;outline-offset:-3px;transition:outline-color .15s;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.tile.on{outline-color:var(--green)}
+.tile .icon{width:132px;height:132px;align-self:center;box-shadow:0 6px 18px rgba(32,28,22,.18),0 0 0 .5px rgba(0,0,0,.1)}
+.tile .code{font:700 12px var(--ui);color:var(--green);letter-spacing:.04em}
+.tile .t{font:600 15px var(--ui);margin-top:2px}
+.tile .d{font:400 12.5px/1.45 var(--ui);color:#6B5D4C;margin-top:3px}
+/* the preview, pinned */
+.stage{position:sticky;top:0;z-index:5;background:#EDE9E1;padding:14px 0;border-bottom:1px solid rgba(0,0,0,.08);display:flex;gap:22px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+.phone{width:300px;height:330px;border-radius:34px;padding:26px 18px 0;overflow:hidden;position:relative;transition:background .3s}
+.phone.light{background:linear-gradient(160deg,#B9CFE0 0%,#E7D8C6 55%,#D9B99B 100%)}
+.phone.dark{background:linear-gradient(160deg,#10151C 0%,#1E2833 60%,#2B2430 100%)}
+.home{display:grid;grid-template-columns:repeat(4,1fr);row-gap:16px;justify-items:center}
+.app{display:flex;flex-direction:column;align-items:center;gap:5px;width:62px}
+.app .icon{width:56px;height:56px}
+.app span{font:500 10.5px var(--ui);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
+.ph{width:56px;height:56px;border-radius:22.37%;display:flex;align-items:center;justify-content:center}
+.ph i{display:block;background:rgba(255,255,255,.9)}
+.side{display:flex;flex-direction:column;gap:12px;width:320px}
+.store{background:#fff;border-radius:18px;padding:14px;display:flex;gap:12px;align-items:center}
+.store .icon{width:64px;height:64px;box-shadow:0 0 0 .5px rgba(0,0,0,.12)}
+.store .n{font:600 16px var(--ui)}
+.store .s{font:400 12.5px var(--ui);color:#8A7D6C;margin-top:2px}
+.store .get{margin-left:auto;background:#EEF0F3;color:#0A6CFF;font:700 13px var(--ui);border-radius:14px;padding:6px 16px}
+.sizes{background:#fff;border-radius:18px;padding:12px 14px;display:flex;align-items:flex-end;gap:12px}
+.sizes .icon{box-shadow:0 0 0 .5px rgba(0,0,0,.12)}
+.sizes small{display:block;text-align:center;font:400 10px var(--ui);color:#8A7D6C;margin-top:4px}
+.pick{font:600 15px var(--ui)}
+.seg{display:inline-flex;background:rgba(0,0,0,.08);border-radius:10px;padding:3px;align-self:flex-start}
+.seg button{padding:6px 12px;border-radius:8px;font:500 13px var(--ui);color:#5A4E40}
+.seg button.on{background:#fff;color:#2B2116;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav">
+    <h1>The bird on the roof, ten ways</h1>
+    <p>Ten variations on idea A from the first round — the bird on the roof. The first tile is that original, for comparison. Tap one and the preview at the top shows it on an iPhone home screen, in the App Store and at the small sizes iOS uses.</p>
+    <p>Reply with a code, e.g. "A6". Or mix two, e.g. "A2's bird on A6's roof".</p>
+  </div>
+  <div class="stage">
+    <div class="phone light" id="phone"><div class="home" id="home"></div></div>
+    <div class="side">
+      <div class="pick" id="pick"></div>
+      <div class="store"><div class="icon" id="storeIcon"></div><div><div class="n">Percho</div><div class="s">Feel the neighbourhood first</div></div><div class="get">Get</div></div>
+      <div class="sizes" id="sizes"></div>
+      <div class="seg" id="seg"><button data-m="light" class="on">Light wallpaper</button><button data-m="dark">Dark wallpaper</button></div>
+    </div>
+  </div>
+
+  <h2>The variations</h2>
+  <p>What changes from one to the next: the bird's shape, the colours, how much of the house is drawn, and where the bird sits.</p>
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+const G='#0E6B57',GD='#0A5343',GX='#083F33',C='#F7F5F0',CW='#DCD6C8',A='#F0A94B',AD='#C9781E',INK='#2B2116';
+const svg=(body,bg=G)=>`<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><rect width="1024" height="1024" fill="${bg}"/>${body}</svg>`;
+const roof=(pts,stroke,w=78)=>`<polyline points="${pts}" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+/* round 1's songbird, facing right; (x,y) = where its feet touch, s = scale */
+const bird=(x,y,s,o)=>`<g transform="translate(${x} ${y}) scale(${s})">
+  <path d="M-90 -60 L-262 18 L-236 -34 L-120 -112 Z" fill="${o.fill}"/>
+  <ellipse cx="-6" cy="-98" rx="132" ry="84" transform="rotate(-20 -6 -98)" fill="${o.fill}"/>
+  <circle cx="92" cy="-176" r="64" fill="${o.fill}"/>
+  ${o.wing?`<path d="M-128 -70 Q-40 -150 52 -118 Q-10 -48 -128 -70 Z" fill="${o.wing}"/>`:''}
+  <path d="M148 -192 L208 -170 L148 -150 Z" fill="${o.beak}"/>
+  ${o.eye?`<circle cx="106" cy="-188" r="13" fill="${o.eye}"/>`:''}
+  ${o.legs?`<path d="M-24 -20 L-34 0 M30 -26 L22 0" stroke="${o.beak}" stroke-width="16" stroke-linecap="round"/>`:''}
+</g>`;
+/* a rounder bird: one ball of a body, short tail up */
+const chick=(x,y,s,o)=>`<g transform="translate(${x} ${y}) scale(${s})">
+  <path d="M-70 -90 C-160 -120 -214 -186 -226 -256 C-160 -250 -96 -232 -30 -204 Z" fill="${o.fill}"/>
+  <circle cx="0" cy="-128" r="128" fill="${o.fill}"/>
+  ${o.wing?`<path d="M-86 -116 Q-20 -176 44 -128 Q-6 -62 -86 -116 Z" fill="${o.wing}"/>`:''}
+  <path d="M116 -176 L184 -150 L116 -122 Z" fill="${o.beak}" stroke="${o.beak}" stroke-width="10" stroke-linejoin="round"/>
+  <circle cx="62" cy="-172" r="15" fill="${o.eye}"/>
+</g>`;
+const AMBER={fill:A,beak:AD,eye:GX,wing:AD,legs:true};
+const R1='170,800 512,520 854,800';
+
+const ICONS=[
+  {code:'A',t:'Round 1\'s original',d:'For comparison: the one you picked out.',
+   svg:svg(roof(R1,C)+bird(500,482,1.3,AMBER))},
+  {code:'A1',t:'Simpler bird',d:'The same bird as one clean shape — no legs, no wing line. Holds up better when the icon is tiny.',
+   svg:svg(roof(R1,C)+bird(500,494,1.3,{fill:A,beak:AD,eye:GX}))},
+  {code:'A2',t:'Rounder bird',d:'A plumper, friendlier bird with its tail up.',
+   svg:svg(roof(R1,C)+chick(516,488,1.34,{fill:A,beak:AD,eye:GX,wing:AD}))},
+  {code:'A3',t:'Colours swapped',d:'A cream bird on an amber roof.',
+   svg:svg(roof(R1,A)+bird(500,482,1.3,{fill:C,beak:A,eye:GX,wing:CW,legs:true}))},
+  {code:'A4',t:'On cream',d:'A light icon: green roof, amber bird, cream background.',
+   svg:svg(roof(R1,G)+bird(500,482,1.3,{fill:A,beak:AD,eye:INK,wing:AD,legs:true}),C)},
+  {code:'A5',t:'The whole house',d:'Walls and a door under the roof, so it reads as a home at a glance. The bird is smaller.',
+   svg:svg(`<path d="M262 868 V622 L512 416 L762 622 V868 Z" fill="none" stroke="${C}" stroke-width="72" stroke-linejoin="round"/><path d="M462 868 V730 A50 50 0 0 1 562 730 V868 Z" fill="${C}"/>`+bird(503,380,0.92,AMBER))},
+  {code:'A6',t:'Solid roof',d:'The roof as one solid shape rising from the bottom edge. Bolder, fewer lines.',
+   svg:svg(`<path d="M40 1100 L512 590 L984 1100 Z" fill="${C}" stroke="${C}" stroke-width="60" stroke-linejoin="round"/>`+bird(500,566,1.36,AMBER))},
+  {code:'A7',t:'On the chimney',d:'The bird off to one side, on the chimney.',
+   svg:svg(`<path d="M634 452 H766 V724 L634 618 Z" fill="${C}" stroke="${C}" stroke-width="20" stroke-linejoin="round"/>`+roof('150,810 512,520 874,810',C)+bird(692,452,0.92,AMBER))},
+  {code:'A8',t:'Two roofs',d:'A second roof behind the first: a neighbourhood, not one house.',
+   svg:svg(`<g opacity=".45">${roof('70,700 300,500 500,667',C,70)}</g>`+roof('290,850 600,600 910,850',G,150)+roof('290,850 600,600 910,850',C)+bird(590,562,1.08,AMBER))},
+  {code:'A9',t:'Against the sun',d:'The bird as a dark shape in front of a low sun.',
+   svg:svg(`<circle cx="512" cy="430" r="316" fill="${A}"/>`+roof('150,850 512,570 874,850',C)+bird(528,532,1.08,{fill:GX,beak:GX,legs:true}))},
+  {code:'A10',t:'Close-up',d:'Closer in: the bird fills the icon and only the peak of the roof shows.',
+   svg:svg(roof('-60,1010 512,650 1084,1010',C,92)+bird(540,608,1.62,AMBER))},
+];
+
+const OTHER=[['#34C759','Messages',['50%','62%','62%']],['#FF9500','Photos',['50%','50%','50%']],['#0A84FF','Mail',['4px','64%','46%']],['#FFD60A','Notes',['3px','60%','8%']],['#5E5CE6','Podcasts',['50%','44%','44%']],['#FF375F','Music',['50%','26%','26%']],['#30B0C7','Weather',['50%','48%','48%']],['#8E8E93','Settings',['50%','58%','58%']],['#1C1C1E','Wallet',['6px','64%','40%']],['#0A84FF','App Store',['6px','50%','50%']],['#FF9F0A','Books',['3px','40%','60%']]];
+
+const Q=new URLSearchParams(location.search);
+if(Q.get('sheet'))document.body.classList.add('sheet');
+let cur=1;
+const iconEl=(i,px)=>`<div class="icon" style="width:${px}px;height:${px}px">${ICONS[i].svg}</div>`;
+function render(){
+  const ic=ICONS[cur];
+  document.getElementById('pick').textContent=ic.code+' — '+ic.t;
+  const apps=OTHER.map(([c,n,[r,w,h]])=>`<div class="app"><div class="ph" style="background:${c}"><i style="border-radius:${r};width:${w};height:${h}"></i></div><span>${n}</span></div>`);
+  apps.splice(5,0,`<div class="app">${iconEl(cur,56)}<span>Percho</span></div>`);
+  document.getElementById('home').innerHTML=apps.join('');
+  document.getElementById('storeIcon').innerHTML=ic.svg;
+  document.getElementById('sizes').innerHTML=[[80,'Spotlight'],[60,'Home'],[40,'Search'],[29,'Settings'],[20,'Notification']].map(([p,l])=>`<div>${iconEl(cur,p)}<small>${l}</small></div>`).join('');
+  document.querySelectorAll('.tile').forEach((t,i)=>t.classList.toggle('on',i===cur));
+}
+document.getElementById('grid').innerHTML=ICONS.map((ic,i)=>`<button class="tile" data-i="${i}">${iconEl(i,132)}<div><div class="code">${ic.code}</div><div class="t">${ic.t}</div><div class="d">${ic.d}</div></div></button>`).join('');
+document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{cur=+t.dataset.i;render();window.scrollTo({top:0,behavior:'smooth'})});
+document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#seg button').forEach(x=>x.classList.toggle('on',x===b));document.getElementById('phone').className='phone '+b.dataset.m});
+const q=Q.get('i');if(q){const k=ICONS.findIndex(x=>x.code===q);if(k>=0)cur=k}
+render();
+</script>
+</body>
+</html>
