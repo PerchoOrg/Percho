@@ -23,6 +23,21 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 06:05 UTC — phase398: the launch screen stays until the first card is ready
+
+**Objective**: owner: 「第一次打开延迟2秒 才出第一个feed 有咩有办法过度？」 — a cold open shows nothing useful for about two seconds.
+**Findings**:
+- What he sees in that gap is `CardSkeleton`: a plain card-shaped block a shade off the paper, breathing. The launch screen leaves as soon as the first view mounts, long before the feed answers.
+- Where the time goes: `/api/mobile/feed` measured from here — **1.53 s** to first byte on a CDN MISS, **0.10–0.23 s** on a HIT (52 KB). The route caches for `s-maxage=60, stale-while-revalidate=120`, so with today's traffic nearly every cold open is a MISS. The rest is the first card's still loading.
+**Actions**:
+- `lib/splash-gate.ts`: `holdSplash()` (module scope of `app/_layout.tsx`) keeps the launch screen up and asks for a 350 ms fade; `releaseSplash()` is idempotent. A 3 s timer armed outside React releases it whatever happens.
+- `app/(tabs)/feed.tsx`: releases once the deck's first card has its still (`Image.prefetch`), or at once when there is nothing to wait for (dry pool, offline, a card with no picture). `lib/feed/first-poster.ts` (`cardPoster`, 3 tests) names that still per card kind.
+- `app/_layout.tsx`: a launch onto any route but the feed (a shared link) releases as soon as the fonts are in.
+**Decisions**: hold the mark rather than dress up the placeholder — one fade from the bird to the first film, no in-between screen. `CardSkeleton` stays for what the launch screen does not cover (the 3 s cap, a scope change). The wait itself is not shorter: that is the CDN window, and its comment says it was kept short on purpose so the owner sees a new film within a minute of publishing — a longer `stale-while-revalidate` (serve the cached copy at once, refresh behind it) is put to him, not done.
+**Verified**: mobile typecheck 0, vitest 921, biome clean, `expo export` bundles.
+**Not verified**: on a phone, and it cannot be fully seen on the dev client — 1.0.1 (11) launches through the dev launcher with the old P splash. The real launch is only in a production build (14).
+**Risk**: a launch screen that never leaves would be a dead app. Three independent releases cover it (feed, route, timer), and the timer does not depend on any render.
+
 ## 2026-11-25 05:58 UTC — phase397.3: the fourth tab is "You" again
 
 **Objective**: owner, on phase397.2's "Preferences": 「太长了 还是用you」.

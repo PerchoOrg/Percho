@@ -9,7 +9,7 @@
  * notched device.
  */
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { View } from "react-native";
@@ -18,6 +18,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { TAB_BAR_FONT, TAB_BAR_FONT_FILL } from "../components/TabBarIconFont";
 import { ICON_FONT, OUTLINE_FONT } from "../components/cards/redline/icon-font";
 import { createEventsTransport } from "../lib/events-transport";
+import { holdSplash, releaseSplash } from "../lib/splash-gate";
 import { initAuth } from "../state/auth";
 import { shouldAutoDrain, useEventQueue } from "../state/event-queue";
 
@@ -26,6 +27,9 @@ import { colors } from "../theme/tokens";
 
 /** Queue depth that triggers an opportunistic mid-session drain. */
 const DRAIN_THRESHOLD = 20;
+
+// The launch screen stays until the feed has its first card — see `lib/splash-gate.ts`.
+holdSplash();
 
 export default function RootLayout() {
 	/**
@@ -68,6 +72,14 @@ export default function RootLayout() {
 		[TAB_BAR_FONT_FILL]: require("../assets/fonts/TabBarIconsFill.ttf"),
 		[DM_SERIF_FONT]: require("../assets/fonts/DMSerifDisplay-Regular.ttf"),
 	});
+
+	// Only the feed holds the launch screen. A shared link opens on its own
+	// page, where there is no first card to wait for.
+	const pathname = usePathname();
+	const ready = fontsLoaded || !!fontsError;
+	useEffect(() => {
+		if (ready && pathname !== "/" && pathname !== "/feed") releaseSplash();
+	}, [ready, pathname]);
 
 	// Font load failure must NOT white-screen the app — fall through and let
 	// the system fallback render (a few tofu glyphs beat a dead app).
