@@ -179,6 +179,11 @@ export const redline = {
 	pill: "rgba(255,255,255,0.90)",
 	/** The heart button's disc — "white 88% opacity". */
 	heart: "rgba(255,255,255,0.88)",
+	/**
+	 * A saved heart — on the card corner and every explore surface (owner
+	 * 2026-11-25: 「爱心是红色」, after phase395 made the save mark a heart).
+	 */
+	saved: "#FF3B4E",
 	/** The "18 Photos" pill — "dark translucent background". */
 	photoPill: "rgba(14,13,11,0.50)",
 	/** Community lifestyle blocks — rgba(255,255,255,0.13) + a 0.15 border. */

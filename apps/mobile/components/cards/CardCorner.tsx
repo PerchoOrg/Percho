@@ -82,11 +82,6 @@ import { RedlineIcon, type RedlineIconName } from "./redline/RedlineChrome";
 
 /** Glyph colour, shared with the label in the other corner. */
 const INK = redline.onPhoto;
-/**
- * A saved bookmark's colour (owner 2026-11-25: 「点击收藏显示黄色」). Gold, not
- * the accent green: on dark glass the green did not carry (phase367.2).
- */
-const SAVED_INK = "#F5C542";
 
 /** One control's disc. Under Apple's 44pt on its own; the slop makes it up. */
 export const CORNER_DISC = 36;
@@ -163,7 +158,8 @@ export function CardCorner({ sound, save, share }: CardCornerProps) {
 				/>
 			)}
 			{/* Saved fills the heart — outline → fill is the bit `SaveGlyph`
-			    signals with everywhere else — and turns it gold. Heart and the
+			    signals with everywhere else — and turns it red (gold until the
+			    owner's 「爱心是红色」). Heart and the
 			    paper-plane share since phase395 (owner pick off
 			    `/demos/card-icons-v2`). */}
 			{save && (
@@ -172,7 +168,7 @@ export function CardCorner({ sound, save, share }: CardCornerProps) {
 					label={save.saved ? "Saved" : "Save"}
 					name="heart"
 					weight={save.saved ? "fill" : "outline"}
-					{...(save.saved ? { color: SAVED_INK } : {})}
+					{...(save.saved ? { color: redline.saved } : {})}
 				/>
 			)}
 			{share && <Disc control={share} label="Share" name="share" />}
