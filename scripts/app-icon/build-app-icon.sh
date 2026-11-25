@@ -2,7 +2,7 @@
 # Renders the app icon and splash mark from the SVGs beside this script into
 # apps/mobile/assets/. Needs Google Chrome (headless) and ffmpeg.
 #   icon.png        1024x1024, RGB, NO alpha (an alpha channel is an ITMS-90717 rejection)
-#   splash-icon.png 1024x1024, RGBA, transparent ground
+#   splash-icon.png 1024x1024, RGBA, fully transparent — the mark is drawn by LaunchAnimation.tsx
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 out="$here/../../apps/mobile/assets"
