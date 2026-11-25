@@ -23,6 +23,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 05:52 UTC — phase397.1: the tab bar wears play / magnifying glass / heart / sliders, in bold
+
+**Objective**: owner, off `/demos/tab-icons-v1`: "f6 s2 y6 bold" — Feed is the play circle, Search the magnifying glass, You the sliders; all four icons in bold lines.
+**Actions**:
+- `scripts/icon-fonts/build-tabbar-icon-font.py`: glyphs play-circle (\ue3d2) / magnifying-glass (\ue30c) / heart (\ue2a8) / sliders-horizontal (\ue434); the outline layer is subset from `Phosphor-Bold.ttf` instead of regular. Both fonts rebuilt (`TabBarIcons.ttf` 2.2 KB, `TabBarIconsFill.ttf` 2.0 KB); file and family names unchanged, so `_layout.tsx` is untouched.
+- `components/TabBarIconFont.ts`: codepoints; centres re-measured with fontTools (0.438 / 0.438 / 0.406 / 0.438 — bold and fill agree); `TAB_BAR_GLYPH_SCALE` all 1 (play 0.844, glass 0.845, heart 0.841 by `sqrt(w·h)`; sliders 0.716 is two lines and is left at its drawn size).
+- `components/TabBar.tsx`: header comment only — geometry, pill, duotone (fill at 22% under the outline) and the pop are unchanged.
+- `apps/mobile/app.json`: `associatedDomains` back on one line. EAS's autoIncrement rewrote the file when it bumped the build number, and the commit of buildNumber 13 took that formatting with it — `pnpm lint` on main failed on it until now.
+**Verified**: mobile typecheck 0, vitest 918 (the font test finds all four codepoints in both fonts), biome clean. The two built fonts rendered in headless Chrome with the bar's own placement maths: every glyph centred in its 24pt box, fill registered under the bold outline.
+**Not verified**: on a phone. It is JS plus a font asset: dev client 1.0.1 (11) shows it after a full close and reopen; 1.1.0 (13) in TestFlight does not have it.
+**Learnings**: after an EAS production build, run `biome format --write apps/mobile/app.json` before committing the bumped build number.
+**Next steps**: the store release needs build 14 to carry this; not started — the owner says when the UI is settled.
+
 ## 2026-11-25 05:46 UTC — phase397: other icons for the Feed, Search and You tabs (demo only)
 
 **Objective**: owner: 「feed search 和you的图标重新设计」. The bar's glyphs are Phosphor house-line / compass / heart / hand-waving (2026-09-05, when the brief was "interesting, immersive, cute"); today's brief for the app icon was the opposite — a business app for agents, not cute.

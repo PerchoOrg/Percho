@@ -1,5 +1,5 @@
 /**
- * The TabBar icon set, as two FONTS — Phosphor regular (outline) and fill.
+ * The TabBar icon set, as two FONTS — Phosphor bold (outline) and fill.
  *
  * Why a font and not SVG: `react-native-svg` red-screens in Expo Go on this
  * project (DEVLOG 2026-07-30 04:55), so the same constraint that drove the
@@ -10,6 +10,13 @@
  * duotone: the fill glyph at low opacity under the outline glyph. Both weights
  * carry the same four codepoints and, as measured below, the same bounds, so
  * the two layers register exactly and one table addresses both fonts.
+ *
+ * 2026-11-25 (owner, off `/demos/tab-icons-v1`: "f6 s2 y6 bold"): the glyphs
+ * are play-circle / magnifying-glass / heart / sliders-horizontal, and the
+ * outline layer is Phosphor BOLD. The September set was chosen for "cute";
+ * the app is a business tool for agents and buyers, and the waving hand in
+ * particular did not say "account and settings". Every number below was
+ * re-measured on the new subsets.
  *
  * The TabBar sits OUTSIDE the redline (its tokens are theme/tokens `colors`,
  * warm paper + amber accent, not the redline green), so it gets its own fonts
@@ -26,10 +33,10 @@ export const TAB_BAR_FONT = "TabBarIcons";
 export const TAB_BAR_FONT_FILL = "TabBarIconsFill";
 
 export const TAB_BAR_GLYPH: Record<TabBarIconName, string> = {
-	feed: "", // house-line
-	search: "", // compass
+	feed: "", // play-circle
+	search: "", // magnifying-glass
 	saved: "", // heart
-	you: "", // hand-waving
+	you: "", // sliders-horizontal
 };
 
 /**
@@ -51,15 +58,15 @@ export const TAB_BAR_GLYPH: Record<TabBarIconName, string> = {
  * fontSize`), and the font's hhea (ascent 960, descent −64 of a 1024 upm) puts
  * that box's centre at 0.4375 em above the baseline — see `TAB_BAR_BOX_CENTER_Y`.
  * A glyph whose own centre differs sits high or low by the difference: heart is
- * 0.031 em low (≈0.75 px at 24 pt), house-line 0.015 em high. Small, but this
- * is a row of four icons where any one sitting off the line is what the eye
- * catches.
+ * 0.031 em low (≈0.75 px at 24 pt); the other three sit on the centre. Small,
+ * but this is a row of four icons where any one sitting off the line is what
+ * the eye catches. Bold and fill agree on every centre.
  */
 export const TAB_BAR_GLYPH_CENTER_Y: Record<TabBarIconName, number> = {
-	feed: 0.453,
+	feed: 0.438,
 	search: 0.438,
 	saved: 0.406,
-	you: 0.422,
+	you: 0.438,
 };
 
 /** Centre of the 1 em line box, above the baseline: `ascent / (ascent + |descent|)`. */
@@ -69,13 +76,14 @@ export const TAB_BAR_BOX_CENTER_Y = 0.4375;
  * Per-glyph visual scale, applied on top of `TAB_BAR_OPTICAL_SCALE`.
  *
  * Optical size tracks `sqrt(w * h)` of the drawing better than either
- * dimension alone: compass 0.812, heart 0.810, hand-waving 0.828, house-line
- * 0.856. Only house-line is meaningfully off the group (+4%), so only
- * house-line is corrected. The others are within 2% of each other and a
- * "correction" there would be noise.
+ * dimension alone. On the bold subsets: play-circle 0.844, magnifying-glass
+ * 0.845, heart 0.841 — within 1% of each other, so none is corrected.
+ * sliders-horizontal is 0.716 (0.781 wide, 0.656 tall): it is two lines, not
+ * a filled outline, and is left at its drawn size rather than shrinking the
+ * other three to meet it.
  */
 export const TAB_BAR_GLYPH_SCALE: Record<TabBarIconName, number> = {
-	feed: 0.96,
+	feed: 1,
 	search: 1,
 	saved: 1,
 	you: 1,
@@ -84,9 +92,9 @@ export const TAB_BAR_GLYPH_SCALE: Record<TabBarIconName, number> = {
 /**
  * Font size to request per point of nominal icon size.
  *
- * The art fills ~0.81–0.86 em of the em box (mean ≈0.83), so a glyph set at
- * `fontSize === size` renders ~17% smaller than its box. 1.13 brings the mean
- * to ~0.94 em — visually the requested size, with the widest glyph still
- * inside its row.
+ * The outlined glyphs fill ~0.84 em of the em box, so a glyph set at
+ * `fontSize === size` renders ~16% smaller than its box. 1.13 brings them to
+ * ~0.95 em — visually the requested size, with the widest glyph (heart,
+ * 0.906 em → 24.6 pt) still inside its 48 pt pill.
  */
 export const TAB_BAR_OPTICAL_SCALE = 1.13;

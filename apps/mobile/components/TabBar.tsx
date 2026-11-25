@@ -16,6 +16,9 @@
  *      container in the bar.
  *   4. The active icon is duotone (fill glyph at 22% under the outline) and
  *      pops + tilts when it is selected.
+ * 2026-11-25 (owner, off `/demos/tab-icons-v1`): the glyphs are now play-circle
+ * / magnifying-glass / heart / sliders-horizontal in Phosphor bold — see
+ * `TabBarIconFont.ts`. Geometry, pill, duotone and pop are unchanged.
  * No floating capsule: the bar stays flush to the bottom edge (owner,
  * 2026-08-14), and the cards stay the visual centre.
  */
