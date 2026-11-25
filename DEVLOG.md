@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 05:33 UTC — phase396.4: the new icon ships; iOS 1.1.0 (13) built and in TestFlight
+
+**Objective**: owner picked "s2 line roof" off `/demos/app-icon-v5`. Make it the app icon and build the release the proposal described.
+**Actions**:
+- Icon: `scripts/app-icon/icon.svg` + `splash-icon.svg`, rendered by `build-app-icon.sh` (headless Chrome → ffmpeg) into `apps/mobile/assets/icon.png` (1024², RGB, `hasAlpha: no`) and `splash-icon.png` (RGBA, transparent). An amber one-path bird with an eye dot on a cream roofline, green ground; the splash is the same mark with a green roof on the warm paper. Against the demo, the bird was lowered so its belly overlaps the roof peak (it floated ~15 px at full size) and the whole mark moved up to sit centred.
+- `app.json` version 1.0.1 → **1.1.0**; merged as `2f91362b`. Pre-flight on that tree: mobile typecheck 0, vitest 918, biome clean. No entitlement or native-dependency change since build 12.
+- `eas build --platform ios --profile production --non-interactive` → `cdb3afc8-8ede-4d69-9fb7-0df369af3474`, FINISHED, **1.1.0 (13)** from `1a512575`. `eas submit --id cdb3afc8… --profile production` (ASC key in `eas.json` locally, reverted) → submission `ac28fe8c…`; ASC build `b1e4d8b0-f530-46c1-b132-16458ac0588a` `VALID`, `usesNonExemptEncryption: false`, added to `Internal` (204), `IN_BETA_TESTING`. `app.json` buildNumber 13 committed here.
+- ASC (API): version **1.1.0** created (`ce9900b3-35e8-4360-a719-f77103063b2f`, release type MANUAL, copyright unchanged); description, keywords, URLs, review contact and both screenshot sets carried over. What's New written for 1.1.0. Review notes rewritten: sign-in path (the form takes the password directly — "Use a password instead" went in phase311), reviews on cities too, what Safety shows for a neighbourhood and for a city (FEMA, FBI comparison in words), Resources links open in Safari. Build 13 attached to the version. **Not submitted for review.**
+**Decisions**: age rating stays 4+ (owner). The web has no favicon; adding one from the same mark was offered, not done.
+**Open before submitting**: the two screenshot sets are still the four 1.0.0 captures — the owner captures six from build 13, the captioned versions go to him before upload; the demo account's password (printed once into a session in phase342) is to be rotated; seller name still the individual's — the owner applies for a D-U-N-S, then Apple converts the membership.
+**Next steps**: owner installs 1.1.0 (13) from TestFlight (it replaces dev client 11 — reinstall 11 from Previous Builds afterwards), sends the six captures; then frame, upload, rotate the password, submit.
+
 ## 2026-11-25 05:13 UTC — phase396.3: icon round 5 — a simpler bird on the roof
 
 **Objective**: owner, on the bird on the roof: 「能不能把鸟做的cute一点」, then, before that round was published: 「能不能把鸟的特征简化下 不要太cute 这是商业app 用的都是房产经纪人 不是幼儿园小朋友」.
