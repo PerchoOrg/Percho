@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 05:46 UTC — phase397: other icons for the Feed, Search and You tabs (demo only)
+
+**Objective**: owner: 「feed search 和you的图标重新设计」. The bar's glyphs are Phosphor house-line / compass / heart / hand-waving (2026-09-05, when the brief was "interesting, immersive, cute"); today's brief for the app icon was the opposite — a business app for agents, not cute.
+**Actions**: `apps/web/public/demos/tab-icons-v1/` — a picker: the tab bar pinned at the top wears whatever is tapped below, and a tap on a tab selects it. Feed F1–F8 (house now, plain house, cards, film strip, film reel, play, bird, and the app icon's own bird-on-a-roof drawn as a glyph), Search S1–S6 (compass now, magnifying glass, folded map, map pin, pin on an area, binoculars), You Y1–Y7 (waving hand now, person, person in a circle / square, ID card, sliders, gear). Each tile shows idle grey and selected green (outline over its fill at 22%, in the pill — the app's own treatment). Thin / Bold / Solid switch. Phosphor 2.1.1 SVGs from jsDelivr, inlined. Saved keeps its heart.
+**Decisions**: nothing built in the app. Every Phosphor pick is a re-subset of `TabBarIcons.ttf` / `TabBarIconsFill.ttf` (`scripts/icon-fonts/build-tabbar-icon-font.py`) plus its optical numbers in `TabBarIconFont.ts`; F8 is not in Phosphor and would need its own glyph or an SVG.
+**Verified**: screenshotted in headless Chrome.
+**Next steps**: owner replies with codes ("F3 S2 Y2") and a weight. A tab-bar change needs a new build to reach the store — 1.1.0 (13) is in TestFlight, not yet submitted, so it can still go into this release as build 14.
+
 ## 2026-11-25 05:33 UTC — phase396.4: the new icon ships; iOS 1.1.0 (13) built and in TestFlight
 
 **Objective**: owner picked "s2 line roof" off `/demos/app-icon-v5`. Make it the app icon and build the release the proposal described.
