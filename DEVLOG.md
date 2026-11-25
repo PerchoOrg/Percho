@@ -23,6 +23,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 07:20 UTC — phase402: comparing cities looks like comparing neighbourhoods
+
+**Objective**: owner, on build 18: 「city compare还是之前的版本 改成community compare的版本」.
+**Before**: picking saved cities in Saved → Compare opened `/compare-areas`, the county table ("the same $500k home, in each of your areas") from before phase386. It compared COUNTIES: Suwanee and Duluth (both Gwinnett) de-duplicated to one key and the bar refused ("Those are in the same county").
+**Actions**:
+- `app/compare-cities.tsx` (new): the community comparison's screen — photos (the films' posters), the colour key pinned, "In short", the five cards — fed by `/api/mobile/city/<slug>` for each city.
+- `lib/city/compare-visuals.ts` (new, 10 tests): `buildCityCompareVisuals` fills the shared `CompareVisuals` from each city page's own tiles — Safety: FEMA overall and flood, violent crime in words; Schools: the best-standing school at each level from `allSchools` (ring); Convenience: the closest of each everyday kind (bars) and the first two drives; Potential: residents over the census years all the cities have (lines), the published forecast; Cost: the month to hold a home (stacked), median home value, median rent. `buildCityInShort` keeps the community's school and holding lines and adds the nearest groceries and hospital, the lowest home values and the shortest drive downtown — no line about crime or population. `citySlugsOf` decides the route.
+- `lib/community/compare-visuals.ts`: `CompareVisuals` gains optional `notes` (a card's subtitle) and `texts` (rows of words per card); `lowest` exported. `components/compare/CompareVisuals.tsx` draws them (`TextRows`; a value every place shares is said once — "Both: Moderate").
+- `app/(tabs)/saved.tsx`: when every picked area has a city page, Compare opens `/compare-cities` (2–5); otherwise the county table, as before.
+**Verified**: mobile typecheck 0, vitest 939, biome clean, `expo export` bundles. The builders run against the live API for Suwanee/Duluth, Alpharetta/Johns Creek/Cumming and Buford/Sugar Hill: every card filled; In short e.g. "Duluth: the shortest drive to a hospital — Northside Hospital Duluth, 1.1 mi".
+**Noticed**: Cumming's population is Forsyth County's (251,283) — the city page says so and the film is about "Cumming and the county"; the comparison prints the page's figure.
+**Not verified**: on a phone. Needs a build (19).
+
 ## 2026-11-25 06:51 UTC — phase401.1: the explore row sits where the card's row sits
 
 **Objective**: owner, on phase401: 「位置也要一致」.

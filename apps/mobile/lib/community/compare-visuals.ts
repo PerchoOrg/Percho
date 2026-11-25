@@ -55,7 +55,29 @@ export interface SchoolCell {
 	distance?: string;
 }
 
+/**
+ * A figure each place has as words or a printed value, one line a place —
+ * "Low" for a FEMA rating, "48–72 min" for a drive. The city side-by-side
+ * (phase402) carries these; a community's sections have none.
+ */
+export interface TextRow {
+	label: string;
+	cells: (string | undefined)[];
+}
+
+/** The five sections, in the Explore page's order. */
+export type CompareSection =
+	| "safety"
+	| "schools"
+	| "convenience"
+	| "potential"
+	| "cost";
+
 export interface CompareVisuals {
+	/** What each card says it shows, where a section's default does not fit. */
+	notes?: Partial<Record<CompareSection, string>>;
+	/** Rows of words or printed figures, drawn under each card's own marks. */
+	texts?: Partial<Record<CompareSection, TextRow[]>>;
 	safety: {
 		rows: DistanceRow[];
 		/** "Minimal flood hazard · Zone X", one per place. */
@@ -242,6 +264,7 @@ export function buildCompareVisuals(
 /** Whether there is anything to draw above the table at all. */
 export function hasVisuals(v: CompareVisuals): boolean {
 	return (
+		Object.values(v.texts ?? {}).some((rows) => rows.length > 0) ||
 		v.safety !== null ||
 		v.schools.length > 0 ||
 		v.convenience.length > 0 ||
@@ -264,7 +287,7 @@ export interface ShortLine {
  * The index of the lowest value, when it is clear of the next by `minGap`.
  * Needs two places with a figure: one figure alone leads nothing.
  */
-function lowest(
+export function lowest(
 	values: readonly (number | undefined)[],
 	minGap: number,
 ): number | null {

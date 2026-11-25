@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-25
+- **Comparing cities looks like comparing neighbourhoods.** Pick two or more saved cities and tap Compare: the page opens on their photos and "In short", then draws safety, schools, everyday places, how the city has grown and what a home costs, one colour a city. Two cities in the same county — Suwanee and Duluth — can now be compared; before, the comparison was by county and refused them.
 - **The same buttons on a neighbourhood's page as on its card.** At the top of a neighbourhood or city page, sound, save and share are now the same round dark buttons as on the feed card, with the same icons in the same order. The sound button no longer sits on its own under the back arrow.
 - **The red heart keeps its shape.** Saving a place made the heart on the card jump in size and lose its right edge. A saved heart is now exactly the size of an unsaved one, on the cards and on neighbourhood and city pages.
 - **An opening that draws itself.** When the app opens, the Percho mark is drawn on screen — the roofline first, then the bird in one pen line, then its colour — and fades into the first film once it is ready. There is no longer an empty placeholder while the first card loads, and the film starts as it comes into view rather than behind the opening screen. About two and a half seconds; with Reduce Motion on, the finished mark is shown instead. Arrives with the next app update.

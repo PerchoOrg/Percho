@@ -26,9 +26,11 @@ import {
 	View,
 } from "react-native";
 import {
+	type CompareSection,
 	type CompareVisuals,
 	type DistanceRow,
 	type ShortLine,
+	type TextRow,
 	sharedFlood,
 } from "../../lib/community/compare-visuals";
 import { colors, compareSeries, radii } from "../../theme/tokens";
@@ -330,6 +332,42 @@ function Card({
 	);
 }
 
+/**
+ * Figures as words, one line a place — the city cards' ratings and drive
+ * times. A figure every place shares is said once, as the flood zone is.
+ */
+function TextRows({
+	rows,
+	places,
+}: { rows: readonly TextRow[]; places: readonly ComparePlace[] }) {
+	return (
+		<>
+			{rows.map((r) => {
+				const same = sharedFlood(r.cells);
+				return (
+					<View key={r.label} style={styles.group}>
+						<Text style={styles.groupLabel}>{r.label}</Text>
+						{same ? (
+							<Text style={styles.lineText}>
+								{places.length === 2 ? "Both" : `All ${places.length}`}: {same}
+							</Text>
+						) : (
+							places.map((p, i) => (
+								<PlaceLine
+									key={p.id}
+									place={p}
+									text={r.cells[i] ? p.name : undefined}
+									value={r.cells[i]}
+								/>
+							))
+						)}
+					</View>
+				);
+			})}
+		</>
+	);
+}
+
 // ─── the cards ──────────────────────────────────────────────────────────────
 
 /** A card per Explore direction, in the page's own order. */
@@ -338,6 +376,9 @@ export function CompareCards({
 	places,
 }: { visuals: CompareVisuals; places: readonly ComparePlace[] }) {
 	const { safety, schools, convenience, potential, cost } = visuals;
+	const texts = (s: CompareSection) => visuals.texts?.[s] ?? [];
+	const note = (s: CompareSection, fallback: string) =>
+		visuals.notes?.[s] ?? fallback;
 	const flood = safety ? sharedFlood(safety.flood) : null;
 	const holdingMax = Math.max(
 		1,
@@ -352,12 +393,15 @@ export function CompareCards({
 	];
 	return (
 		<>
-			{safety && (
-				<Card title="Safety" note="the nearest hospital, and the flood zone">
-					{safety.rows.map((r) => (
+			{(safety || texts("safety").length > 0) && (
+				<Card
+					title="Safety"
+					note={note("safety", "the nearest hospital, and the flood zone")}
+				>
+					{safety?.rows.map((r) => (
 						<MileFigures key={r.label} row={r} places={places} />
 					))}
-					{safety.flood.some(Boolean) && (
+					{safety?.flood.some(Boolean) && (
 						<View style={styles.group}>
 							<Text style={styles.groupLabel}>Flood zone</Text>
 							{/* The same zone for every place is said once, not once each. */}
@@ -368,16 +412,20 @@ export function CompareCards({
 								</Text>
 							) : (
 								places.map((p, i) => (
-									<PlaceLine key={p.id} place={p} text={safety.flood[i]} />
+									<PlaceLine key={p.id} place={p} text={safety?.flood[i]} />
 								))
 							)}
 						</View>
 					)}
+					<TextRows rows={texts("safety")} places={places} />
 				</Card>
 			)}
 
 			{schools.length > 0 && (
-				<Card title="Schools" note="nearby, by their standing in Georgia">
+				<Card
+					title="Schools"
+					note={note("schools", "nearby, by their standing in Georgia")}
+				>
 					{schools.map((level) => (
 						<View key={level.level} style={styles.group}>
 							<Text style={styles.groupLabel}>{level.level}</Text>
@@ -420,16 +468,23 @@ export function CompareCards({
 				</Card>
 			)}
 
-			{convenience.length > 0 && (
-				<Card title="Convenience" note="the closest of each kind">
+			{(convenience.length > 0 || texts("convenience").length > 0) && (
+				<Card
+					title="Convenience"
+					note={note("convenience", "the closest of each kind")}
+				>
 					{convenience.map((r) => (
 						<MileRow key={r.label} row={r} places={places} />
 					))}
+					<TextRows rows={texts("convenience")} places={places} />
 				</Card>
 			)}
 
 			{potential && (
-				<Card title="Potential" note="what a typical home there is worth">
+				<Card
+					title="Potential"
+					note={note("potential", "what a typical home there is worth")}
+				>
 					<View style={[styles.figures, styles.figuresLead]}>
 						{places.map((p, i) => {
 							const c = potential.cells[i];
@@ -482,12 +537,13 @@ export function CompareCards({
 							</View>
 						</>
 					)}
+					<TextRows rows={texts("potential")} places={places} />
 				</Card>
 			)}
 
-			{cost && (
-				<Card title="Cost" note="before the mortgage">
-					{cost.holding.some(Boolean) && (
+			{(cost || texts("cost").length > 0) && (
+				<Card title="Cost" note={note("cost", "before the mortgage")}>
+					{cost?.holding.some(Boolean) && (
 						<View style={styles.group}>
 							<Text style={styles.groupLabel}>A month to hold a home</Text>
 							<View style={[styles.columns, styles.stacks]}>
@@ -523,7 +579,7 @@ export function CompareCards({
 							</View>
 						</View>
 					)}
-					{cost.dues.some(Boolean) && (
+					{cost?.dues.some(Boolean) && (
 						<View style={styles.group}>
 							<Text style={styles.groupLabel}>HOA dues</Text>
 							{places.map((p, i) => (
@@ -536,6 +592,7 @@ export function CompareCards({
 							))}
 						</View>
 					)}
+					<TextRows rows={texts("cost")} places={places} />
 				</Card>
 			)}
 		</>
