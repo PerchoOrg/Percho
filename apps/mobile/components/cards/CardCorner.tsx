@@ -116,6 +116,12 @@ interface CardCornerProps {
 	save?: CornerControl & { saved: boolean };
 	/** Present when the card has a page to send someone to (phase335). */
 	share?: CornerControl;
+	/**
+	 * Lay the row out in place instead of pinning it to the card's top-right.
+	 * The explore page's hero puts the same row in its own nav bar
+	 * (phase401), so the controls look and sit the same on both screens.
+	 */
+	inline?: boolean;
 }
 
 function Disc({
@@ -153,10 +159,15 @@ function Disc({
 }
 
 /** The top-right corner: mute, save and share, each its own disc, in a row. */
-export function CardCorner({ sound, save, share }: CardCornerProps) {
+export function CardCorner({
+	sound,
+	save,
+	share,
+	inline = false,
+}: CardCornerProps) {
 	if (!sound && !save && !share) return null;
 	return (
-		<View style={styles.corner}>
+		<View style={[styles.row, !inline && styles.pinned]}>
 			{sound && (
 				<Disc
 					control={sound}
@@ -183,27 +194,32 @@ export function CardCorner({ sound, save, share }: CardCornerProps) {
 	);
 }
 
+/** The look of one disc, for a control that sits beside the row (the hero's back button). */
+export const CORNER_DISC_STYLE = {
+	width: CORNER_DISC,
+	height: CORNER_DISC,
+	borderRadius: CORNER_DISC / 2,
+	alignItems: "center",
+	justifyContent: "center",
+	backgroundColor: redline.photoPill,
+} as const;
+
 const styles = StyleSheet.create({
-	corner: {
-		position: "absolute",
-		top: 12,
-		right: 12,
-		zIndex: 2,
+	row: {
 		flexDirection: "row",
 		alignItems: "center",
 		gap: CORNER_GAP,
 	},
-	disc: {
-		width: CORNER_DISC,
-		height: CORNER_DISC,
-		borderRadius: CORNER_DISC / 2,
-		alignItems: "center",
-		justifyContent: "center",
-		/**
-		 * The fill of the label in the other corner. Plain translucency, no
-		 * blur — expo-blur red-screens Expo Go (DEVLOG 2026-07-30; f7680a62).
-		 */
-		backgroundColor: redline.photoPill,
+	pinned: {
+		position: "absolute",
+		top: 12,
+		right: 12,
+		zIndex: 2,
 	},
+	/**
+	 * The fill is the label's in the other corner. Plain translucency, no
+	 * blur — expo-blur red-screens Expo Go (DEVLOG 2026-07-30; f7680a62).
+	 */
+	disc: CORNER_DISC_STYLE,
 	pressed: { opacity: 0.7 },
 });
