@@ -23,6 +23,23 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 06:33 UTC — phase399.1: the launch screen draws the mark; iOS 1.1.0 (14) in TestFlight
+
+**Objective**: owner, off `/demos/launch-animation-v1`: "b 不加名字", then 「直接build下一版本 我截图 你再发布ios」.
+**Actions**:
+- `components/LaunchAnimation.tsx` — a layer over the whole app from the first render: the roof draws (150–850 ms), a pen traces the bird's outline (800–1800), the colour comes in (1750–2150), the eye pops (2050–2350); at 2600 ms it waits for the app, then fades over 350 ms and unmounts. `react-native-svg` 15.15.4 (the SDK 57 pin) added for it — `strokeDashoffset` on a path is the one thing Views cannot do. Path lengths are constants measured by flattening the paths (roof 915.3, bird 1307.3). Reduce Motion: the finished mark for 600 ms, no drawing.
+- `lib/launch-ready.ts` — two one-way flags (`createLaunchFlag`, 4 tests): `launchReady` (the feed's first still is in / a non-feed route / the timer) and `launchDone` (the layer has started to leave). `lib/launch-timeline.ts` holds the timings (3 tests).
+- `lib/splash-gate.ts` — the native launch screen is now only the paper and is hidden by the layer's first layout; the 5 s timer hides it and sets both flags whatever else happens. `releaseSplash()` keeps its name and now sets `launchReady`.
+- `app/_layout.tsx` — one tree across the font gate, so the layer stays mounted and the drawing does not restart when the fonts land.
+- `app/(tabs)/feed.tsx` — the first film is `suspended` until `launchDone` (it would have played, narration and all, under the drawing), and the first-run swipe nudge waits for it too.
+- `assets/splash-icon.png` is blank on purpose (`scripts/app-icon/splash-icon.svg` says why): a mark already on the native screen would vanish and be drawn again.
+- Builds from `b61f6150`: **1.1.0 (14)** production — EAS `e6dc96c3-ce94-4341-9bd4-1b16b46dd480`, submission `f5a5bba5…`, ASC build `d3e73c5b-1d98-4960-8efc-ca6867d0fe90` `VALID`, in `Internal`, attached to version 1.1.0 in place of 13. **1.1.0 (15)** dev client (`development-testflight`) — EAS `c5243bff-d7bb-4712-ae05-44be7cafa731`, still building at the time of writing; needed because dev client 1.0.1 (11) has no `RNSVG` native module and cannot load this JS. It will be uploaded but kept out of `Internal` until the release is submitted, so the newest build the owner sees is the one to screenshot. `app.json` buildNumber 15.
+- Reference worktree pulled to `7ec9c1f6` and `pnpm install` run there (new dependency).
+**Verified**: mobile typecheck 0, vitest 928, biome clean, `expo export` bundles.
+**Not verified**: the animation on a device — nothing here can run the app. Build 14 is the first place it runs.
+**Risk**: a launch layer that stays is a dead app. It leaves on (drawn AND ready), and the 5 s timer outside React forces both; the component has its own 5.35 s unmount as well.
+**Next steps**: owner installs 14, checks the launch and the tab bar, sends six screenshots; captions → his review → upload, rotate the demo password, submit. Then add dev client 15 to `Internal`. Still unanswered: lengthening the feed's `stale-while-revalidate` (phase398).
+
 ## 2026-11-25 06:12 UTC — phase399: an animated opening screen, three ways (demo only)
 
 **Objective**: owner, after phase398 held the launch screen for the first card: 「有没有可能把启动画面做成简笔画的动画 大概两三秒？」
