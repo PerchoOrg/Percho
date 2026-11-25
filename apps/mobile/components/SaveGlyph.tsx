@@ -62,6 +62,8 @@ export function SaveGlyph({ saved, size, color }: SaveGlyphProps) {
 			size={size}
 			color={saved ? redline.saved : color}
 			weight={saved ? "fill" : "outline"}
+			// Same size saved and unsaved — see `matchOutline`.
+			matchOutline
 		/>
 	);
 }

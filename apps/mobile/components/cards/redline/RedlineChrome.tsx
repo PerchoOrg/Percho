@@ -45,6 +45,18 @@ interface RedlineIconProps {
 	 * centring numbers (see `icon-font.ts`).
 	 */
 	weight?: "fill" | "outline";
+	/**
+	 * Draw a FILL glyph at the outline font's size instead of the fill font's.
+	 *
+	 * For a control that swaps between the two weights of ONE glyph (save:
+	 * outline heart → filled heart). The fill font is set 1.18× larger than
+	 * the outline one, because most fill drawings are a smaller solid core of
+	 * their outline — but the heart's bounds are the same in both fonts, so a
+	 * saved heart came out 18% bigger than the unsaved one and, its em box now
+	 * wider than the slot, lost its right edge to clipping (owner, 2026-11-25:
+	 * 「爱心点击以后就变形了」).
+	 */
+	matchOutline?: boolean;
 }
 
 /**
@@ -77,10 +89,12 @@ export function RedlineIcon({
 	size,
 	color,
 	weight = "fill",
+	matchOutline = false,
 }: RedlineIconProps) {
 	const outline = weight === "outline";
 	const fontSize =
-		size * (outline ? OUTLINE_OPTICAL_SCALE : ICON_OPTICAL_SCALE);
+		size *
+		(outline || matchOutline ? OUTLINE_OPTICAL_SCALE : ICON_OPTICAL_SCALE);
 	return (
 		<View style={[styles.iconBox, { width: size, height: size }]}>
 			<Text

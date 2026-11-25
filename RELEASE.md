@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-25
+- **The red heart keeps its shape.** Saving a place made the heart on the card jump in size and lose its right edge. A saved heart is now exactly the size of an unsaved one, on the cards and on neighbourhood and city pages.
 - **An opening that draws itself.** When the app opens, the Percho mark is drawn on screen — the roofline first, then the bird in one pen line, then its colour — and fades into the first film once it is ready. There is no longer an empty placeholder while the first card loads, and the film starts as it comes into view rather than behind the opening screen. About two and a half seconds; with Reduce Motion on, the finished mark is shown instead. Arrives with the next app update.
 - **New icons on the tab bar.** Feed is now a play button, Search a magnifying glass and You a pair of sliders, all drawn in a bolder line; Saved keeps its heart. Arrives with the next app update.
 - **A new app icon.** The plain letter P is replaced by a small bird sitting on a roofline — a perch, which is where the name Percho comes from. The opening screen shows the same mark. Arrives with the next app update.
