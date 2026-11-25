@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — app icon choices, round 2</title>
+<style>
+:root{--serif:ui-serif,"New York","Iowan Old Style",Georgia,serif;--ui:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;--green:#0E6B57}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#EDE9E1;font-family:var(--ui);color:#2B2116;padding:0 14px 70px}
+button{border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;font:inherit;background:none;color:inherit}
+.wrap{max-width:900px;margin:0 auto}
+.nav{padding-top:26px}
+.nav h1{font:600 26px var(--serif);color:var(--green);margin-bottom:6px}
+.nav p{font:400 14.5px/1.55 var(--ui);color:#5A4E40;margin:6px 0;max-width:640px}
+.icon{position:relative;overflow:hidden;border-radius:22.37%;flex:none}
+.icon svg{display:block;width:100%;height:100%}
+/* the choices */
+h2{font:600 19px var(--ui);margin:30px 0 4px}
+h2+p{font:400 13.5px/1.45 var(--ui);color:#5A4E40;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.tile{background:#fff;border-radius:20px;padding:18px 16px 16px;text-align:left;outline:3px solid transparent;outline-offset:-3px;transition:outline-color .15s;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.tile.on{outline-color:var(--green)}
+.tile .icon{width:132px;height:132px;align-self:center;box-shadow:0 6px 18px rgba(32,28,22,.18),0 0 0 .5px rgba(0,0,0,.1)}
+.tile .code{font:700 12px var(--ui);color:var(--green);letter-spacing:.04em}
+.tile .t{font:600 15px var(--ui);margin-top:2px}
+.tile .d{font:400 12.5px/1.45 var(--ui);color:#6B5D4C;margin-top:3px}
+/* the preview, pinned */
+.stage{position:sticky;top:0;z-index:5;background:#EDE9E1;padding:14px 0;border-bottom:1px solid rgba(0,0,0,.08);display:flex;gap:22px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+.phone{width:300px;height:330px;border-radius:34px;padding:26px 18px 0;overflow:hidden;position:relative;transition:background .3s}
+.phone.light{background:linear-gradient(160deg,#B9CFE0 0%,#E7D8C6 55%,#D9B99B 100%)}
+.phone.dark{background:linear-gradient(160deg,#10151C 0%,#1E2833 60%,#2B2430 100%)}
+.home{display:grid;grid-template-columns:repeat(4,1fr);row-gap:16px;justify-items:center}
+.app{display:flex;flex-direction:column;align-items:center;gap:5px;width:62px}
+.app .icon{width:56px;height:56px}
+.app span{font:500 10.5px var(--ui);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
+.ph{width:56px;height:56px;border-radius:22.37%;display:flex;align-items:center;justify-content:center}
+.ph i{display:block;background:rgba(255,255,255,.9)}
+.side{display:flex;flex-direction:column;gap:12px;width:320px}
+.store{background:#fff;border-radius:18px;padding:14px;display:flex;gap:12px;align-items:center}
+.store .icon{width:64px;height:64px;box-shadow:0 0 0 .5px rgba(0,0,0,.12)}
+.store .n{font:600 16px var(--ui)}
+.store .s{font:400 12.5px var(--ui);color:#8A7D6C;margin-top:2px}
+.store .get{margin-left:auto;background:#EEF0F3;color:#0A6CFF;font:700 13px var(--ui);border-radius:14px;padding:6px 16px}
+.sizes{background:#fff;border-radius:18px;padding:12px 14px;display:flex;align-items:flex-end;gap:12px}
+.sizes .icon{box-shadow:0 0 0 .5px rgba(0,0,0,.12)}
+.sizes small{display:block;text-align:center;font:400 10px var(--ui);color:#8A7D6C;margin-top:4px}
+.pick{font:600 15px var(--ui)}
+.seg{display:inline-flex;background:rgba(0,0,0,.08);border-radius:10px;padding:3px;align-self:flex-start}
+.seg button{padding:6px 12px;border-radius:8px;font:500 13px var(--ui);color:#5A4E40}
+.seg button.on{background:#fff;color:#2B2116;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav">
+    <h1>Percho's icon — the perch, without drawing a bird</h1>
+    <p>Eight new ideas. Each keeps the meaning of a perch — something that has landed and stays — but none of them draws a bird: no beak, no eye, no wings. Tap one and the preview at the top shows it on an iPhone home screen, in the App Store and at the small sizes iOS uses.</p>
+    <p>Every idea comes on green or on cream — switch beside the preview. Reply with a code and a colour, e.g. "C green".</p>
+  </div>
+  <div class="stage">
+    <div class="phone light" id="phone"><div class="home" id="home"></div></div>
+    <div class="side">
+      <div class="pick" id="pick"></div>
+      <div class="store"><div class="icon" id="storeIcon"></div><div><div class="n">Percho</div><div class="s">Feel the neighbourhood first</div></div><div class="get">Get</div></div>
+      <div class="sizes" id="sizes"></div>
+      <div class="seg" id="pal"><button data-p="green" class="on">On green</button><button data-p="cream">On cream</button></div>
+      <div class="seg" id="seg"><button data-m="light" class="on">Light wallpaper</button><button data-m="dark">Dark wallpaper</button></div>
+    </div>
+  </div>
+
+  <h2>The ideas</h2>
+  <p>The rounded shape that appears in several of them is the thing that has landed. It is deliberately only a shape.</p>
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+const PAL={green:{bg:'#0E6B57',fg:'#F7F5F0',ac:'#F0A94B'},cream:{bg:'#F7F5F0',fg:'#0E6B57',ac:'#EE9B2F'}};
+const SERIF='ui-serif,&quot;New York&quot;,&quot;DM Serif Display&quot;,Georgia,serif';
+const svg=(p,body)=>`<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><rect width="1024" height="1024" fill="${p.bg}"/>${body}</svg>`;
+/* the thing that has landed: a rounded shape with a tapered end; (x,y) = where it rests */
+const drop=(x,y,s,fill,rot=0)=>`<path transform="translate(${x} ${y}) rotate(${rot}) scale(${s})" d="M-285 -22 C-210 -150 -90 -250 0 -250 C90 -250 145 -192 145 -122 C145 -48 80 0 0 0 C-90 0 -200 -8 -285 -22 Z" fill="${fill}"/>`;
+
+const ICONS=[
+  {code:'Now',t:'The letter P',d:'What the app has today, for comparison.',
+   svg:()=>`<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><rect width="1024" height="1024" fill="#0E6B57"/><text x="512" y="720" text-anchor="middle" font-family="${SERIF}" font-size="600" fill="#fff">P</text></svg>`},
+  {code:'A',t:'Landed on the roof',d:'A roofline, and one shape resting on its peak.',
+   svg:p=>svg(p,`<polyline points="170,810 512,530 854,810" fill="none" stroke="${p.fg}" stroke-width="78" stroke-linecap="round" stroke-linejoin="round"/>${drop(530,492,1.02,p.ac,-20)}`)},
+  {code:'B',t:'The perch',d:'A branch and the shape resting on it. Nothing else.',
+   svg:p=>svg(p,`<rect x="150" y="690" width="724" height="56" rx="28" fill="${p.fg}"/>${drop(590,692,1.3,p.ac,-24)}`)},
+  {code:'C',t:'A line and a dot',d:'The line is the perch, the dot is what lands on it — and together they are the P of Percho.',
+   svg:p=>svg(p,`<rect x="270" y="206" width="116" height="612" rx="58" fill="${p.fg}"/><circle cx="584" cy="390" r="184" fill="${p.ac}"/>`)},
+  {code:'D',t:'The nest',d:'An egg in a nest: a home, and someone settling into it.',
+   svg:p=>svg(p,`<ellipse cx="512" cy="436" rx="128" ry="160" fill="${p.ac}"/><path d="M214 520 L810 520 A298 236 0 0 1 214 520 Z" fill="${p.fg}" stroke="${p.fg}" stroke-width="44" stroke-linejoin="round"/>`)},
+  {code:'E',t:'Neighbours on a wire',d:'Three on a wire, side by side. One of them is you.',
+   svg:p=>svg(p,`<path d="M120 572 Q512 676 904 572" fill="none" stroke="${p.fg}" stroke-width="40" stroke-linecap="round"/>${drop(300,578,0.54,p.fg,-24)}${drop(540,598,0.54,p.ac,-24)}${drop(780,580,0.54,p.fg,-24)}`)},
+  {code:'F',t:'Landed on the P',d:'Keeps today\'s letter and puts the shape on top of it.',
+   svg:p=>svg(p,`<text x="512" y="842" text-anchor="middle" font-family="${SERIF}" font-size="640" fill="${p.fg}">P</text>${drop(566,404,0.68,p.ac,-22)}`)},
+  {code:'G',t:'The birdhouse',d:'A little house with a round door and a perch under it.',
+   svg:p=>svg(p,`<path d="M512 206 L792 440 L792 804 L232 804 L232 440 Z" fill="${p.fg}" stroke="${p.fg}" stroke-width="52" stroke-linejoin="round"/><circle cx="512" cy="500" r="104" fill="${p.bg}"/><rect x="442" y="676" width="140" height="48" rx="24" fill="${p.ac}"/>`)},
+  {code:'H',t:'Against the sun',d:'The shape on its branch, seen against a low sun.',
+   svg:p=>svg(p,`<circle cx="512" cy="452" r="330" fill="${p.ac}"/>${drop(600,694,1.22,p.bg,-24)}<rect x="96" y="690" width="832" height="56" rx="28" fill="${p.fg}"/>`)},
+];
+
+const OTHER=[['#34C759','Messages',['50%','62%','62%']],['#FF9500','Photos',['50%','50%','50%']],['#0A84FF','Mail',['4px','64%','46%']],['#FFD60A','Notes',['3px','60%','8%']],['#5E5CE6','Podcasts',['50%','44%','44%']],['#FF375F','Music',['50%','26%','26%']],['#30B0C7','Weather',['50%','48%','48%']],['#8E8E93','Settings',['50%','58%','58%']],['#1C1C1E','Wallet',['6px','64%','40%']],['#0A84FF','App Store',['6px','50%','50%']],['#FF9F0A','Books',['3px','40%','60%']]];
+
+const Q=new URLSearchParams(location.search);
+let cur=1,pal=Q.get('c')==='cream'?'cream':'green';
+const iconEl=(i,px)=>`<div class="icon" style="width:${px}px;height:${px}px">${ICONS[i].svg(PAL[pal])}</div>`;
+function render(){
+  const ic=ICONS[cur];
+  document.getElementById('pick').textContent=ic.code+' — '+ic.t+(ic.code==='Now'?'':' · '+pal);
+  const apps=OTHER.map(([c,n,[r,w,h]])=>`<div class="app"><div class="ph" style="background:${c}"><i style="border-radius:${r};width:${w};height:${h}"></i></div><span>${n}</span></div>`);
+  apps.splice(5,0,`<div class="app">${iconEl(cur,56)}<span>Percho</span></div>`);
+  document.getElementById('home').innerHTML=apps.join('');
+  document.getElementById('storeIcon').innerHTML=ic.svg(PAL[pal]);
+  document.getElementById('sizes').innerHTML=[[80,'Spotlight'],[60,'Home'],[40,'Search'],[29,'Settings'],[20,'Notification']].map(([px,l])=>`<div>${iconEl(cur,px)}<small>${l}</small></div>`).join('');
+  document.getElementById('grid').innerHTML=ICONS.map((x,i)=>`<button class="tile${i===cur?' on':''}" data-i="${i}">${iconEl(i,132)}<div><div class="code">${x.code==='Now'?'NOW':x.code}</div><div class="t">${x.t}</div><div class="d">${x.d}</div></div></button>`).join('');
+  document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{cur=+t.dataset.i;render();window.scrollTo({top:0,behavior:'smooth'})});
+  document.querySelectorAll('#pal button').forEach(b=>b.classList.toggle('on',b.dataset.p===pal));
+}
+document.querySelectorAll('#pal button').forEach(b=>b.onclick=()=>{pal=b.dataset.p;render()});
+document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#seg button').forEach(x=>x.classList.toggle('on',x===b));document.getElementById('phone').className='phone '+b.dataset.m});
+const q=Q.get('i');if(q){const k=ICONS.findIndex(x=>x.code===q);if(k>=0)cur=k}
+render();
+</script>
+</body>
+</html>
