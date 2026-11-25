@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 07:34 UTC — phase403: the 1.1.0 store screenshots, for the owner's review
+
+**Objective**: owner sent seven captures from build 18 (「截图已经完成」); captions were agreed earlier, and he reviews the finished images before they are uploaded.
+**Actions**: each 1284×2778 capture has its top 150 px cropped (the status bar, which carried "◀ TestFlight" on five of them — a blurred patch over it showed as a box on photo backgrounds), set at 1090 px wide with 64 px corners on the brand green, under a New York caption (cream, 92 px, balanced wrap). Rendered in headless Chrome at 1290×2796 (`APP_IPHONE_67`) and 1284×2778 (`APP_IPHONE_65`), RGB, no alpha — kept outside the repo until approved. Preview: `apps/web/public/demos/store-screenshots-v1/` (645 px JPEGs).
+Order and captions: 1 Every neighbourhood, on film (Windward card) · 2 A whole city in five short parts (Suwanee card) · 3 See what's nearby before you drive there (Windward page, film) · 4 Schools, safety and cost at a glance (Windward page, boxes) · 5 Know the city before you visit (Suwanee page) · 6 Compare places side by side · 7 Keep the places you like (Saved map).
+**Noticed**: in capture 6 the compare header breaks "Northbrooke" as "Northbrook / e" — a long name in the photo header wraps mid-word. Not fixed; raised with the owner.
+**Next steps**: owner approves → replace both screenshot sets on version 1.1.0, rotate the demo password, attach build 19 and submit.
+
 ## 2026-11-25 07:20 UTC — phase402: comparing cities looks like comparing neighbourhoods
 
 **Objective**: owner, on build 18: 「city compare还是之前的版本 改成community compare的版本」.
