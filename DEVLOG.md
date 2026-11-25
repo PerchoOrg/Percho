@@ -23,6 +23,17 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 00:56 UTC — phase393: mute, save and share stop sharing a pill
+
+**Objective**: owner 2026-11-24: 「静音 收藏 分享当个按钮贴在一起 又小又难看 重新设计这几个按键以及在card上的分布」.
+**Actions**:
+- `components/cards/CardCorner.tsx`: the 26pt pill of three 15pt glyphs is gone. Every control is its own 36pt disc with a 19pt glyph. `CardCorner` (absolute, top-right, dark glass) and a new `CardActions` (in flow, save + share, light glass `rgba(255,255,255,0.2)` because it sits on the bottom scrim).
+- `components/cards/CommunityFace.tsx` (every card in the deck today — community films and city films): the corner holds the mute only; `CardActions` sits at the right end of the tag row, directly over Explore. `tagRow` is a row (`space-between`, tag at its foot, `marginBottom` 6 → 8). `RAIL_BOTTOM` 92 → 120 so a city film's rail of parts ends above the discs.
+- `theme/listing-layout.test.ts`: the "ONE object at the badge's height" test now asserts the opposite, with the reason.
+**Decisions**: split by what a control acts on — the mute on the film (stays by the film's corner), save and share on the place (with its name, where the thumb already is for Explore). Not three bigger discs in the top-right row: 124pt of discs would leave the place pill ~205pt and ellipsize it. Not a vertical stack in the corner: that is the shape phase140 removed (「右上两个 button 很奇怪」) and it collides with the city rail. `ListingFace` and `AreaFace` are not in the deck (listings off; every city has a film) and were not restructured — they still pass all three to `CardCorner` and get a row of separate discs.
+**Verified**: mobile typecheck 0, vitest 918, biome clean. NOT seen on a device — no simulator here; the owner reviews on the dev client.
+**Risks**: the top-right disc is 36pt beside the 26pt place pill (centres 5pt apart) — the mismatch phase175 removed, accepted for size. On a city film the rail is 28pt shorter. A two-line name lifts the discs with it.
+
 ## 2026-11-24 19:18 UTC — phase366.26: Cardinal Lake Estates (Duluth) — the twentieth community film
 
 **Objective**: owner 2026-11-24 "下一个" on Cardinal Lake Estates, pitched with its footage confirmed first. It completes the batch the owner asked for on 2026-11-20 ("先扩充到20个").

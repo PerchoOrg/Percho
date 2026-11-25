@@ -84,14 +84,28 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 	 * things that made it look wrong: the container is now the LISTING badge's
 	 * height and fill instead of a 37pt / 0.85 capsule, and both glyphs come
 	 * from the Phosphor subset instead of being drawn from bordered `View`s.
+	 *
+	 * phase393 ends the one-object rule. With share in it (phase335) the pill
+	 * was three 15pt glyphs in 26pt — owner 2026-11-24: 「贴在一起 又小又难看」.
+	 * Every control is its own 36pt disc; the mute keeps the corner and the
+	 * community face puts save and share over Explore.
 	 */
-	it("puts the mute and the bookmark in ONE object, at the badge's height", () => {
-		// Every cell, one container — a pill for two or three (phase335 added
-		// share as the third), a disc for one.
-		expect(CORNER).toContain("pill ? styles.pill : styles.disc");
+	it("draws every control as its own disc, and splits them by what they act on", () => {
+		expect(CORNER).not.toContain("styles.pill");
+		expect(CORNER).toContain("const DISC = 36");
 		expect(CORNER).toContain('name="share"');
-		expect(CORNER).toContain("const CORNER_HEIGHT = 26");
-		expect(CORNER).toContain("disc: { width: CORNER_HEIGHT");
+		expect(CORNER).toContain("export function CardActions");
+		// The community face: only the mute up top, save and share in the
+		// bottom block's tag row.
+		const corner = COMMUNITY.slice(
+			COMMUNITY.indexOf("<CardCorner"),
+			COMMUNITY.indexOf("<LinearGradient", COMMUNITY.indexOf("<CardCorner")),
+		);
+		expect(corner).toContain("sound={{");
+		expect(corner).not.toContain("save={{");
+		expect(COMMUNITY).toMatch(
+			/styles\.tagRow[\s\S]{0,120}<CardActions\s+save=\{\{/,
+		);
 		// Real glyphs, no hand-built art: a `View`-drawn speaker is what the
 		// owner saw as "weird" at 17pt.
 		expect(CORNER).toContain('name={sound.on ? "soundOn" : "soundOff"}');

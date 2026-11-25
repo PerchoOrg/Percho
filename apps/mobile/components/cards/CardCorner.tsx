@@ -61,23 +61,37 @@
  * the controls and the labels step back to dark glass and white glyphs, and
  * Explore keeps the white. The capsule still matches its neighbour in the
  * other corner: same fill, same height.
+ *
+ * ── Separate discs, and the card's actions at its foot (phase393) ───────────
+ *
+ * Owner 2026-11-24: 「静音 收藏 分享当个按钮贴在一起 又小又难看 重新设计这几个
+ * 按键以及在card上的分布」. Three 15pt glyphs in one 26pt pill were one small
+ * object with no edges between its parts. Two changes:
+ *
+ *   1. Every control is its own 36pt disc with a 19pt glyph — nothing shares
+ *      a container, so nothing is "stuck together".
+ *   2. They are placed by what they act on. The mute acts on the film and
+ *      stays in the top-right corner, alone (`CardCorner`). Save and share
+ *      act on the place and sit with the place's name, directly above Explore
+ *      where the thumb already is (`CardActions`, mounted by the face in its
+ *      bottom block). The community face — every card in the deck today —
+ *      does this; a face that mounts no `CardActions` still passes all three
+ *      to `CardCorner` and gets a row of discs.
  */
 import { Pressable, StyleSheet, View } from "react-native";
 import { redline } from "../../theme/tokens";
-import { RedlineIcon } from "./redline/RedlineChrome";
+import { RedlineIcon, type RedlineIconName } from "./redline/RedlineChrome";
 
 /** Glyph colour, shared with the label in the other corner. */
 const INK = redline.onPhoto;
 
-/**
- * The LISTING badge's height: 9.5pt label (≈11.4pt line box) + 7pt padding top
- * and bottom. The control matches it so the top row holds one size of white.
- */
-const CORNER_HEIGHT = 26;
-/** Glyph size — the largest that keeps 5.5pt of air inside a 26pt pill. */
-const GLYPH = 15;
-/** Air between the two glyphs; half of it is each cell's horizontal hit slop. */
-const GAP = 12;
+/** One control's disc. Under Apple's 44pt on its own; the slop makes it up. */
+const DISC = 36;
+/** Glyph size — a little over half the disc. */
+const GLYPH = 19;
+/** Air between two discs; half of it is each disc's horizontal hit slop. */
+const GAP = 10;
+const SLOP = { top: 8, bottom: 8, left: GAP / 2, right: GAP / 2 };
 
 /**
  * One control. `onTouchStart` arms the stack's `tapSlot` (the face owns the
@@ -89,131 +103,125 @@ interface CornerControl {
 	onTouchStart?: () => void;
 }
 
-interface CardCornerProps {
-	/**
-	 * Present when the card has a film to mute. A photo-only card shows no
-	 * speaker rather than a control that promises audio it does not have.
-	 */
-	sound?: CornerControl & { on: boolean };
+interface CardActionsProps {
 	/** Present when the card is saveable. */
 	save?: CornerControl & { saved: boolean };
 	/** Present when the card has a page to send someone to (phase335). */
 	share?: CornerControl;
 }
 
-/**
- * One object in the corner: a pill when the card has two or three controls, a
- * disc when it has one, nothing when it has neither.
- */
-export function CardCorner({ sound, save, share }: CardCornerProps) {
-	const count = [sound, save, share].filter((c) => c !== undefined).length;
-	if (count === 0) return null;
-	const pill = count > 1;
-
+interface CardCornerProps extends CardActionsProps {
 	/**
-	 * Each cell's hit slop: the full 12pt on the pill's outer edges, half the
-	 * gap between neighbours so two cells never claim the same point.
+	 * Present when the card has a film to mute. A photo-only card shows no
+	 * speaker rather than a control that promises audio it does not have.
 	 */
-	const slop = (first: boolean, last: boolean) =>
-		pill
-			? {
-					top: 12,
-					bottom: 12,
-					left: first ? 12 : GAP / 2,
-					right: last ? 12 : GAP / 2,
-				}
-			: 12;
-	const firstKey = sound ? "sound" : save ? "save" : "share";
-	const lastKey = share ? "share" : save ? "save" : "sound";
+	sound?: CornerControl & { on: boolean };
+}
 
-	const soundCell = sound && (
-		<Pressable
-			key="sound"
-			onTouchStart={sound.onTouchStart}
-			onPress={sound.onTouchStart ? undefined : sound.onPress}
-			accessibilityRole="button"
-			accessibilityLabel={sound.on ? "Mute" : "Unmute"}
-			hitSlop={slop(firstKey === "sound", lastKey === "sound")}
-			style={({ pressed }) => [styles.cell, pressed && styles.pressed]}
-		>
-			<RedlineIcon
-				name={sound.on ? "soundOn" : "soundOff"}
-				size={GLYPH}
-				color={INK}
-				weight="outline"
-			/>
-		</Pressable>
-	);
-
-	const saveCell = save && (
-		<Pressable
-			key="save"
-			onTouchStart={save.onTouchStart}
-			onPress={save.onTouchStart ? undefined : save.onPress}
-			accessibilityRole="button"
-			accessibilityLabel={save.saved ? "Saved" : "Save"}
-			hitSlop={slop(firstKey === "save", lastKey === "save")}
-			style={({ pressed }) => [styles.cell, pressed && styles.pressed]}
-		>
-			{/* Saved fills the bookmark. It turned green as well while the
-			    capsule was white; on dark glass the green does not carry, and
-			    outline → fill is the bit `SaveGlyph` signals with everywhere
-			    else. */}
-			<RedlineIcon
-				name="bookmark"
-				size={GLYPH}
-				color={INK}
-				weight={save.saved ? "fill" : "outline"}
-			/>
-		</Pressable>
-	);
-
-	const shareCell = share && (
-		<Pressable
-			key="share"
-			onTouchStart={share.onTouchStart}
-			onPress={share.onTouchStart ? undefined : share.onPress}
-			accessibilityRole="button"
-			accessibilityLabel="Share"
-			hitSlop={slop(firstKey === "share", lastKey === "share")}
-			style={({ pressed }) => [styles.cell, pressed && styles.pressed]}
-		>
-			<RedlineIcon name="share" size={GLYPH} color={INK} weight="outline" />
-		</Pressable>
-	);
-
+function Disc({
+	control,
+	label,
+	name,
+	weight = "outline",
+	glass,
+}: {
+	control: CornerControl;
+	label: string;
+	name: RedlineIconName;
+	weight?: "outline" | "fill";
+	glass: "dark" | "light";
+}) {
 	return (
-		<View style={[styles.slot, pill ? styles.pill : styles.disc]}>
-			{soundCell}
-			{saveCell}
-			{shareCell}
-		</View>
+		<Pressable
+			onTouchStart={control.onTouchStart}
+			onPress={control.onTouchStart ? undefined : control.onPress}
+			accessibilityRole="button"
+			accessibilityLabel={label}
+			hitSlop={SLOP}
+			style={({ pressed }) => [
+				styles.disc,
+				glass === "dark" ? styles.darkGlass : styles.lightGlass,
+				pressed && styles.pressed,
+			]}
+		>
+			<RedlineIcon name={name} size={GLYPH} color={INK} weight={weight} />
+		</Pressable>
 	);
 }
 
+function discs(
+	{ sound, save, share }: CardCornerProps,
+	glass: "dark" | "light",
+) {
+	return (
+		<>
+			{sound && (
+				<Disc
+					control={sound}
+					label={sound.on ? "Mute" : "Unmute"}
+					name={sound.on ? "soundOn" : "soundOff"}
+					glass={glass}
+				/>
+			)}
+			{/* Saved fills the bookmark: outline → fill is the bit `SaveGlyph`
+			    signals with everywhere else. */}
+			{save && (
+				<Disc
+					control={save}
+					label={save.saved ? "Saved" : "Save"}
+					name="bookmark"
+					weight={save.saved ? "fill" : "outline"}
+					glass={glass}
+				/>
+			)}
+			{share && (
+				<Disc control={share} label="Share" name="share" glass={glass} />
+			)}
+		</>
+	);
+}
+
+/**
+ * The top-right corner: the mute, and — on a face that mounts no
+ * `CardActions` — save and share beside it, each its own disc.
+ */
+export function CardCorner(props: CardCornerProps) {
+	if (!props.sound && !props.save && !props.share) return null;
+	return (
+		<View style={[styles.row, styles.corner]}>{discs(props, "dark")}</View>
+	);
+}
+
+/**
+ * Save and share, for the face's bottom block. In flow, not absolute — the
+ * face decides the row they sit in. Light glass: they sit on the dark bottom
+ * scrim, where the corner's dark glass would disappear.
+ */
+export function CardActions(props: CardActionsProps) {
+	if (!props.save && !props.share) return null;
+	return <View style={styles.row}>{discs(props, "light")}</View>;
+}
+
 const styles = StyleSheet.create({
-	slot: {
+	row: { flexDirection: "row", alignItems: "center", gap: GAP },
+	corner: {
 		position: "absolute",
 		top: 12,
 		right: 12,
 		zIndex: 2,
-		flexDirection: "row",
-		alignItems: "center",
-		/**
-		 * The fill of the label in the other corner — the two sit on one row
-		 * and any difference between them reads as a mistake. Plain
-		 * translucency, no blur — expo-blur red-screens Expo Go (DEVLOG
-		 * 2026-07-30; f7680a62).
-		 */
-		backgroundColor: redline.photoPill,
-		height: CORNER_HEIGHT,
-		borderRadius: CORNER_HEIGHT / 2,
-		overflow: "hidden",
 	},
-	/** Two or three glyphs, `GAP` apart, in the badge's height. */
-	pill: { paddingHorizontal: 9, gap: GAP },
-	/** One glyph: a disc of the same height, so both faces show one object. */
-	disc: { width: CORNER_HEIGHT, justifyContent: "center" },
-	cell: { alignItems: "center", justifyContent: "center" },
+	disc: {
+		width: DISC,
+		height: DISC,
+		borderRadius: DISC / 2,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	/**
+	 * The fill of the label in the other corner. Plain translucency, no blur
+	 * — expo-blur red-screens Expo Go (DEVLOG 2026-07-30; f7680a62).
+	 */
+	darkGlass: { backgroundColor: redline.photoPill },
+	lightGlass: { backgroundColor: "rgba(255,255,255,0.2)" },
 	pressed: { opacity: 0.7 },
 });
