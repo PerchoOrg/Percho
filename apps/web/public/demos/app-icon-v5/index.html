@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — a simpler bird on the roof</title>
+<style>
+:root{--serif:ui-serif,"New York","Iowan Old Style",Georgia,serif;--ui:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;--green:#0E6B57}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#EDE9E1;font-family:var(--ui);color:#2B2116;padding:0 14px 70px}
+button{border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;font:inherit;background:none;color:inherit}
+.wrap{max-width:900px;margin:0 auto}
+.nav{padding-top:26px}
+.nav h1{font:600 26px var(--serif);color:var(--green);margin-bottom:6px}
+.nav p{font:400 14.5px/1.55 var(--ui);color:#5A4E40;margin:6px 0;max-width:640px}
+.icon{position:relative;overflow:hidden;border-radius:22.37%;flex:none}
+.icon svg{display:block;width:100%;height:100%}
+/* the choices */
+h2{font:600 19px var(--ui);margin:30px 0 4px}
+body.sheet .nav,body.sheet .stage{display:none}
+h2+p{font:400 13.5px/1.45 var(--ui);color:#5A4E40;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.tile{background:#fff;border-radius:20px;padding:18px 16px 16px;text-align:left;outline:3px solid transparent;outline-offset:-3px;transition:outline-color .15s;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.tile.on{outline-color:var(--green)}
+.tile .icon{width:132px;height:132px;align-self:center;box-shadow:0 6px 18px rgba(32,28,22,.18),0 0 0 .5px rgba(0,0,0,.1)}
+.tile .code{font:700 12px var(--ui);color:var(--green);letter-spacing:.04em}
+.tile .t{font:600 15px var(--ui);margin-top:2px}
+.tile .d{font:400 12.5px/1.45 var(--ui);color:#6B5D4C;margin-top:3px}
+/* the preview, pinned */
+.stage{position:sticky;top:0;z-index:5;background:#EDE9E1;padding:14px 0;border-bottom:1px solid rgba(0,0,0,.08);display:flex;gap:22px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+.phone{width:300px;height:330px;border-radius:34px;padding:26px 18px 0;overflow:hidden;position:relative;transition:background .3s}
+.phone.light{background:linear-gradient(160deg,#B9CFE0 0%,#E7D8C6 55%,#D9B99B 100%)}
+.phone.dark{background:linear-gradient(160deg,#10151C 0%,#1E2833 60%,#2B2430 100%)}
+.home{display:grid;grid-template-columns:repeat(4,1fr);row-gap:16px;justify-items:center}
+.app{display:flex;flex-direction:column;align-items:center;gap:5px;width:62px}
+.app .icon{width:56px;height:56px}
+.app span{font:500 10.5px var(--ui);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
+.ph{width:56px;height:56px;border-radius:22.37%;display:flex;align-items:center;justify-content:center}
+.ph i{display:block;background:rgba(255,255,255,.9)}
+.side{display:flex;flex-direction:column;gap:12px;width:320px}
+.store{background:#fff;border-radius:18px;padding:14px;display:flex;gap:12px;align-items:center}
+.store .icon{width:64px;height:64px;box-shadow:0 0 0 .5px rgba(0,0,0,.12)}
+.store .n{font:600 16px var(--ui)}
+.store .s{font:400 12.5px var(--ui);color:#8A7D6C;margin-top:2px}
+.store .get{margin-left:auto;background:#EEF0F3;color:#0A6CFF;font:700 13px var(--ui);border-radius:14px;padding:6px 16px}
+.sizes{background:#fff;border-radius:18px;padding:12px 14px;display:flex;align-items:flex-end;gap:12px}
+.sizes .icon{box-shadow:0 0 0 .5px rgba(0,0,0,.12)}
+.sizes small{display:block;text-align:center;font:400 10px var(--ui);color:#8A7D6C;margin-top:4px}
+.pick{font:600 15px var(--ui)}
+.seg{display:inline-flex;background:rgba(0,0,0,.08);border-radius:10px;padding:3px;align-self:flex-start}
+.seg button{padding:6px 12px;border-radius:8px;font:500 13px var(--ui);color:#5A4E40}
+.seg button.on{background:#fff;color:#2B2116;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav">
+    <h1>A simpler bird on the roof</h1>
+    <p>Eight plainer birds for the roof: flat shapes, one or two colours, almost no detail — the kind of mark a business uses. The first tile is round 1's original, for comparison. Tap one and the preview at the top shows it on an iPhone home screen, in the App Store and at the small sizes iOS uses.</p>
+    <p>The switch beside the preview changes the roof under every bird: a line (as in round 1) or a solid shape. Reply with a code and a roof, e.g. "S2, solid roof".</p>
+  </div>
+  <div class="stage">
+    <div class="phone light" id="phone"><div class="home" id="home"></div></div>
+    <div class="side">
+      <div class="pick" id="pick"></div>
+      <div class="store"><div class="icon" id="storeIcon"></div><div><div class="n">Percho</div><div class="s">Feel the neighbourhood first</div></div><div class="get">Get</div></div>
+      <div class="sizes" id="sizes"></div>
+      <div class="seg" id="roofseg"><button data-r="line" class="on">Line roof</button><button data-r="solid">Solid roof</button></div>
+      <div class="seg" id="seg"><button data-m="light" class="on">Light wallpaper</button><button data-m="dark">Dark wallpaper</button></div>
+    </div>
+  </div>
+
+  <h2>The birds</h2>
+  <p>From the plainest outline to a little more drawing. None has a face beyond a single dot for the eye.</p>
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+const G='#0E6B57',GX='#083F33',C='#F7F5F0',A='#F0A94B',AD='#C9781E';
+const svg=(body,bg=G)=>`<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><rect width="1024" height="1024" fill="${bg}"/>${body}</svg>`;
+/* the roof under every bird, and where its peak is */
+const ROOF={
+  line:{x:512,y:562,svg:c=>`<polyline points="150,880 512,600 874,880" fill="none" stroke="${c}" stroke-width="78" stroke-linecap="round" stroke-linejoin="round"/>`},
+  solid:{x:512,y:562,svg:c=>`<path d="M40 1100 L512 590 L984 1100 Z" fill="${c}" stroke="${c}" stroke-width="60" stroke-linejoin="round"/>`},
+};
+const g=(x,y,s,inner)=>`<g transform="translate(${x} ${y}) scale(${s})">${inner}</g>`;
+/* one outline: beak, crown, back, tail, belly, chest */
+const SIL='M222 -206 L156 -232 C140 -268 98 -288 58 -280 C6 -270 -52 -232 -104 -168 L-286 -44 L-262 -8 L-96 -66 C-60 -18 4 0 62 -10 C128 -22 170 -82 170 -150 C170 -168 164 -182 156 -188 Z';
+const SIL2='M214 -214 L152 -238 C134 -276 92 -296 50 -288 C-10 -276 -70 -236 -112 -170 L-232 -84 L-206 -48 L-108 -84 C-76 -24 -4 0 60 -8 C132 -18 176 -84 172 -156 C171 -174 164 -188 154 -194 Z';
+const EYE=c=>`<circle cx="108" cy="-226" r="13" fill="${c}"/>`;
+
+const first=(x,y,s)=>g(x,y,s,`<path d="M-90 -60 L-262 18 L-236 -34 L-120 -112 Z" fill="${A}"/><ellipse cx="-6" cy="-98" rx="132" ry="84" transform="rotate(-20 -6 -98)" fill="${A}"/><circle cx="92" cy="-176" r="64" fill="${A}"/><path d="M-128 -70 Q-40 -150 52 -118 Q-10 -48 -128 -70 Z" fill="${AD}"/><path d="M148 -192 L208 -170 L148 -150 Z" fill="${AD}"/><circle cx="106" cy="-188" r="13" fill="${GX}"/><path d="M-24 -20 L-34 0 M30 -26 L22 0" stroke="${AD}" stroke-width="16" stroke-linecap="round"/>`);
+
+const ICONS=[
+  {code:'A',t:'Round 1\'s original',d:'For comparison.',draw:r=>first(r.x-12,r.y,1.3)},
+  {code:'S1',t:'Silhouette',d:'The bird as one flat shape. No eye, no wing, no legs.',draw:r=>g(r.x+30,r.y,1.3,`<path d="${SIL}" fill="${A}"/>`)},
+  {code:'S2',t:'Silhouette with an eye',d:'The same shape with a single dot for the eye.',draw:r=>g(r.x+30,r.y,1.3,`<path d="${SIL}" fill="${A}"/>${EYE(GX)}`)},
+  {code:'S3',t:'With a wing line',d:'The eye and one curved line for the wing.',draw:r=>g(r.x+30,r.y,1.3,`<path d="${SIL}" fill="${A}"/>${EYE(GX)}<path d="M-92 -112 C-36 -76 40 -88 84 -146" fill="none" stroke="${G}" stroke-width="15" stroke-linecap="round"/>`)},
+  {code:'S4',t:'Circles and triangles',d:'Built from plain shapes: two circles, a triangle for the tail and one for the beak.',draw:r=>g(r.x+22,r.y,1.3,`<path d="M-116 -176 L-292 -62 L-70 -44 Z" fill="${A}" stroke="${A}" stroke-width="14" stroke-linejoin="round"/><path d="M150 -222 L228 -198 L152 -172 Z" fill="${AD}" stroke="${AD}" stroke-width="10" stroke-linejoin="round"/><circle cx="-8" cy="-128" r="128" fill="${A}"/><circle cx="96" cy="-200" r="68" fill="${A}"/><circle cx="112" cy="-212" r="13" fill="${GX}"/>`)},
+  {code:'S5',t:'Half-circle bird',d:'A geometric bird in two tones: a half-circle body, a round head, a darker wing.',draw:r=>g(r.x+20,r.y,1.28,`<g transform="rotate(-16 -10 -150)"><path d="M-140 -150 L-322 -180 L-150 -74 Z" fill="${A}" stroke="${A}" stroke-width="12" stroke-linejoin="round"/><path d="M-160 -150 A150 150 0 0 0 140 -150 Z" fill="${A}"/><path d="M-84 -150 A80 80 0 0 0 76 -150 Z" fill="${AD}"/></g><path d="M176 -232 L248 -210 L180 -182 Z" fill="${AD}" stroke="${AD}" stroke-width="10" stroke-linejoin="round"/><circle cx="126" cy="-206" r="62" fill="${A}"/>`)},
+  {code:'S6',t:'Line drawing',d:'The bird drawn as an outline in the same line as the roof.',mono:true,draw:r=>g(r.x+30,r.y-22,1.22,`<path d="${SIL}" fill="${G}" stroke="${C}" stroke-width="40" stroke-linejoin="round"/>`)},
+  {code:'S7',t:'One colour',d:'Bird and roof in a single colour, like a stamp. Works anywhere, even printed in black.',draw:r=>g(r.x+30,r.y,1.3,`<path d="${SIL}" fill="${C}"/>${EYE(G)}`)},
+  {code:'S8',t:'Compact',d:'The silhouette with a rounder body and a shorter tail, and the eye.',draw:r=>g(r.x+14,r.y,1.34,`<path d="${SIL2}" fill="${A}"/><circle cx="104" cy="-232" r="13" fill="${GX}"/>`)},
+].map(ic=>({...ic,svg:m=>svg(ROOF[m].svg(C)+ic.draw(ROOF[m]))}));
+
+const OTHER=[['#34C759','Messages',['50%','62%','62%']],['#FF9500','Photos',['50%','50%','50%']],['#0A84FF','Mail',['4px','64%','46%']],['#FFD60A','Notes',['3px','60%','8%']],['#5E5CE6','Podcasts',['50%','44%','44%']],['#FF375F','Music',['50%','26%','26%']],['#30B0C7','Weather',['50%','48%','48%']],['#8E8E93','Settings',['50%','58%','58%']],['#1C1C1E','Wallet',['6px','64%','40%']],['#0A84FF','App Store',['6px','50%','50%']],['#FF9F0A','Books',['3px','40%','60%']]];
+
+const Q=new URLSearchParams(location.search);
+if(Q.get('sheet'))document.body.classList.add('sheet');
+let cur=1,mode=Q.get('r')==='solid'?'solid':'line';
+const iconEl=(i,px)=>`<div class="icon" style="width:${px}px;height:${px}px">${ICONS[i].svg(mode)}</div>`;
+function render(){
+  const ic=ICONS[cur];
+  document.getElementById('pick').textContent=ic.code+' — '+ic.t+' · '+mode+' roof';
+  const apps=OTHER.map(([c,n,[r,w,h]])=>`<div class="app"><div class="ph" style="background:${c}"><i style="border-radius:${r};width:${w};height:${h}"></i></div><span>${n}</span></div>`);
+  apps.splice(5,0,`<div class="app">${iconEl(cur,56)}<span>Percho</span></div>`);
+  document.getElementById('home').innerHTML=apps.join('');
+  document.getElementById('storeIcon').innerHTML=ic.svg(mode);
+  document.getElementById('sizes').innerHTML=[[80,'Spotlight'],[60,'Home'],[40,'Search'],[29,'Settings'],[20,'Notification']].map(([p,l])=>`<div>${iconEl(cur,p)}<small>${l}</small></div>`).join('');
+  document.getElementById('grid').innerHTML=ICONS.map((x,i)=>`<button class="tile${i===cur?' on':''}" data-i="${i}">${iconEl(i,132)}<div><div class="code">${x.code}</div><div class="t">${x.t}</div><div class="d">${x.d}</div></div></button>`).join('');
+  document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{cur=+t.dataset.i;render();window.scrollTo({top:0,behavior:'smooth'})});
+  document.querySelectorAll('#roofseg button').forEach(b=>b.classList.toggle('on',b.dataset.r===mode));
+}
+document.querySelectorAll('#roofseg button').forEach(b=>b.onclick=()=>{mode=b.dataset.r;render()});
+document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#seg button').forEach(x=>x.classList.toggle('on',x===b));document.getElementById('phone').className='phone '+b.dataset.m});
+const q=Q.get('i');if(q){const k=ICONS.findIndex(x=>x.code===q);if(k>=0)cur=k}
+render();
+</script>
+</body>
+</html>

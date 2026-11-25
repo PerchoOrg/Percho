@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 05:13 UTC — phase396.3: icon round 5 — a simpler bird on the roof
+
+**Objective**: owner, on the bird on the roof: 「能不能把鸟做的cute一点」, then, before that round was published: 「能不能把鸟的特征简化下 不要太cute 这是商业app 用的都是房产经纪人 不是幼儿园小朋友」.
+**Actions**: `apps/web/public/demos/app-icon-v5/` — round 1's A and eight plainer birds S1–S8: one-path silhouette, with an eye dot, with a wing line, circles and triangles, a half-circle bird, a line drawing, one colour, and a compact silhouette. A switch puts every bird on the line roof or the solid roof.
+**Decisions**: the cute set (round bodies, big glinting eyes, blush, tufts) was drawn and dropped unpublished — the audience is agents and buyers, and the mark has to read as a business's. The rule for the bird from here: flat shapes, at most two colours, no face beyond one dot.
+**Verified**: both roofs screenshotted in headless Chrome.
+**Next steps**: owner picks an S-code and a roof → final art, `icon.png` / `splash-icon.png`, build 1.1.0 (13).
+
 ## 2026-11-25 04:58 UTC — phase396.2: icon rounds 3 and 4 — twenty new ideas, then ten variations of the bird on the roof
 
 **Objective**: owner: 「再给我出20个logo方案 不要重复现在的」, then, interrupting: 「第一版里那个房顶上小鸟的不错 给我10个基于它的变化」.
