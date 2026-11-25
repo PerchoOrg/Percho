@@ -87,25 +87,20 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 	 *
 	 * phase393 ends the one-object rule. With share in it (phase335) the pill
 	 * was three 15pt glyphs in 26pt — owner 2026-11-24: 「贴在一起 又小又难看」.
-	 * Every control is its own 36pt disc; the mute keeps the corner and the
-	 * community face puts save and share over Explore.
+	 * Every control is its own 36pt disc; phase394 (owner pick "C") keeps all
+	 * three in one row in the top-right corner.
 	 */
-	it("draws every control as its own disc, and splits them by what they act on", () => {
+	it("draws every control as its own disc, all three in the corner", () => {
 		expect(CORNER).not.toContain("styles.pill");
-		expect(CORNER).toContain("const DISC = 36");
+		expect(CORNER).toContain("export const CORNER_DISC = 36");
 		expect(CORNER).toContain('name="share"');
-		expect(CORNER).toContain("export function CardActions");
-		// The community face: only the mute up top, save and share in the
-		// bottom block's tag row.
+		expect(CORNER).not.toContain("CardActions");
 		const corner = COMMUNITY.slice(
 			COMMUNITY.indexOf("<CardCorner"),
 			COMMUNITY.indexOf("<LinearGradient", COMMUNITY.indexOf("<CardCorner")),
 		);
-		expect(corner).toContain("sound={{");
-		expect(corner).not.toContain("save={{");
-		expect(COMMUNITY).toMatch(
-			/styles\.tagRow[\s\S]{0,120}<CardActions\s+save=\{\{/,
-		);
+		expect(corner).toContain("save={{");
+		expect(corner).toContain("share: {");
 		// Real glyphs, no hand-built art: a `View`-drawn speaker is what the
 		// owner saw as "weird" at 17pt.
 		expect(CORNER).toContain('name={sound.on ? "soundOn" : "soundOff"}');
