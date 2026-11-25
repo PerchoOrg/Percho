@@ -94,8 +94,8 @@ export default function PrivacyPage() {
       <h2>4. Your choices</h2>
       <ul>
         <li>
-          <strong>Delete your account</strong> from the You tab in the app. This permanently removes
-          your account, your saves and your reviews.
+          <strong>Delete your account</strong> from the Preferences tab in the app (called You
+          before version 1.1). This permanently removes your account, your saves and your reviews.
         </li>
         <li>
           <strong>Edit a review</strong> from the neighbourhood page at any time. To remove one

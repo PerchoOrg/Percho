@@ -18,7 +18,8 @@ const TABS: readonly [TabItem, TabItem, TabItem, TabItem] = [
 	{ key: "feed", label: "Feed" },
 	{ key: "search", label: "Search" },
 	{ key: "saved", label: "Saved" },
-	{ key: "you", label: "You" },
+	// The route and key stay `you`; the buyer reads "Preferences" (owner, 2026-11-25).
+	{ key: "you", label: "Preferences" },
 ];
 
 export default function TabsLayout() {

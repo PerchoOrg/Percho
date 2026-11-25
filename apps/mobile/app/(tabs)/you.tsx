@@ -162,7 +162,7 @@ export default function YouTab() {
 				paddingHorizontal: 20,
 			}}
 		>
-			<Text style={styles.title}>You</Text>
+			<Text style={styles.title}>Preferences</Text>
 
 			{/* Persona card */}
 			<View style={styles.personaCard}>
