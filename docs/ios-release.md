@@ -65,11 +65,13 @@ phase137:
       own percho.com. ⚠ Permanent once the App Store Connect record exists.
 - [x] App icon `apps/mobile/assets/icon.png` — 1024×1024, **no alpha channel**
       (verified with `sips`; an alpha channel is an automatic ITMS-90717
-      rejection at upload). Forest green #0E6B57 + DM Serif "P".
-      **Placeholder-quality by design** — owner may replace the art; keep
+      rejection at upload). Since 1.1.0 (phase396): an amber bird on a cream
+      roofline, forest green #0E6B57 ground. Source and renderer:
+      `scripts/app-icon/` (`build-app-icon.sh` writes both PNGs). Keep
       1024², no transparency, no rounded corners (iOS masks its own).
-- [x] Splash via `expo-splash-screen` plugin — green P on warm paper #F7F5F0,
-      `assets/splash-icon.png` (alpha here is correct and expected).
+- [x] Splash via `expo-splash-screen` plugin — the same mark (green roof,
+      amber bird) on warm paper #F7F5F0, `assets/splash-icon.png` (alpha here
+      is correct and expected).
 - [x] `eas.json`: `development` / `preview` (internal) / `production`
       (autoIncrement) profiles.
 - [x] **No iOS permission prompts to declare.** The app requests no location,
