@@ -74,6 +74,11 @@ import {
 	AREA_COMPARE_MIN,
 } from "../../lib/areas/compare-areas";
 import { countyKeyForPoint } from "../../lib/areas/locate";
+import {
+	CITY_COMPARE_MAX,
+	CITY_COMPARE_MIN,
+	citySlugsOf,
+} from "../../lib/city/compare-visuals";
 import { COMPARE_MAX, COMPARE_MIN } from "../../lib/listing/compare";
 import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
 import {
@@ -402,10 +407,27 @@ export default function SavedTab() {
 		return [...new Set(keys)];
 	}, [picked, entries, lockedKind]);
 
+	/**
+	 * The picked areas as city pages, when every one has a page (phase402):
+	 * those open the city comparison, which compares the cities themselves —
+	 * so two in one county are fine. `null` sends the pick to the county table.
+	 */
+	const pickedCitySlugs = useMemo(
+		() =>
+			lockedKind === "area"
+				? citySlugsOf(
+						picked.map((id) => entries.find((e) => e.id === id)?.href),
+					)
+				: null,
+		[picked, entries, lockedKind],
+	);
+
 	const canCompare =
 		lockedKind !== null &&
 		(lockedKind === "area"
-			? pickedAreaKeys.length >= AREA_COMPARE_MIN
+			? pickedCitySlugs
+				? pickedCitySlugs.length >= CITY_COMPARE_MIN
+				: pickedAreaKeys.length >= AREA_COMPARE_MIN
 			: picked.length >= BOUNDS[lockedKind].min);
 
 	/**
@@ -431,6 +453,11 @@ export default function SavedTab() {
 			router.push({
 				pathname: "/compare-communities",
 				params: { ids: picked.join(",") },
+			});
+		} else if (pickedCitySlugs) {
+			router.push({
+				pathname: "/compare-cities",
+				params: { slugs: pickedCitySlugs.slice(0, CITY_COMPARE_MAX).join(",") },
 			});
 		} else {
 			router.push({
@@ -691,6 +718,7 @@ export default function SavedTab() {
 						</Text>
 						<Text style={styles.barSub} numberOfLines={2}>
 							{lockedKind === "area" &&
+							!pickedCitySlugs &&
 							picked.length >= 2 &&
 							pickedAreaKeys.length < 2
 								? "Those are in the same county — pick one in another."
