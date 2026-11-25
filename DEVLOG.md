@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 06:49 UTC — phase401: the explore hero wears the feed card's sound, save and share
+
+**Objective**: owner, on build 14: 「explore 界面里的分享和声音按键要和feed里保持一致」.
+**Before**: the community and city explore hero (`TourHero`) used the listing hero's chrome — white glass discs with dark ink, share drawn as a text "↑", and the sound as an emoji speaker (`SoundToggle`, 🔊/🔇) on its own under the back button. The feed card has dark-glass 36pt discs with Phosphor glyphs: speaker, heart, paper plane, in that order, top right.
+**Actions**:
+- `components/cards/CardCorner.tsx`: `inline` lays the row out in place instead of pinning it to a card's corner; `CORNER_DISC_STYLE` exported (one disc's look).
+- `components/community/TourHero.tsx`: the right side of the nav is `<CardCorner inline>` — sound (films only; the global setting, so it still mutes the feed too), save, share. The back disc takes the same dark glass with a white arrow, so the nav is one material.
+- `theme/save-glyph.test.ts`: TourHero leaves the SaveGlyph list (it draws the card's heart through `CardCorner`, which is asserted there already) and gains a test that it renders `CardCorner`, no `SoundToggle`, no "↑".
+**Decisions**: the back button was not named, but leaving one white disc beside three dark ones on the same bar would be the inconsistency the owner just reported; told him. The listing hero (`MediaCarousel`) keeps the old chrome — listings are not in the app (`LISTINGS_IN_APP = false`).
+**Verified**: mobile typecheck 0, vitest 929, biome clean.
+**Next steps**: production build 17 for the release (16 was built with the heart fix but never uploaded — this supersedes it).
+
 ## 2026-11-25 06:41 UTC — phase400: a saved heart is the size of an unsaved one
 
 **Objective**: owner, with a screenshot of build 14's feed card: 「爱心点击以后就变形了」 — the red heart is wider than the other two glyphs and flat down its right side.

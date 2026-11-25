@@ -25,9 +25,12 @@ import {
 	OUTLINE_ART_WIDTH,
 } from "../components/cards/redline/icon-font";
 
-/** Every surface that draws the save control outside a feed card. */
+/**
+ * Every surface that draws the save control outside a feed card. The
+ * community and city hero is not one of them since phase401: it draws the
+ * feed card's own `CardCorner` row, asserted below.
+ */
 const SURFACES = [
-	"components/community/TourHero.tsx",
 	"components/listing/explore/MediaCarousel.tsx",
 	"components/listing/explore/CollapsedAppBar.tsx",
 	"components/listing/explore/ActionDock.tsx",
@@ -79,5 +82,12 @@ describe("the save control wears one mark (phase260)", () => {
 		expect(ICON_ART_WIDTH.heart).toBe(OUTLINE_ART_WIDTH.heart);
 		expect(code("components/SaveGlyph.tsx")).toContain("matchOutline");
 		expect(code("components/cards/CardCorner.tsx")).toContain("matchOutline");
+	});
+
+	it("the explore hero draws the feed card's own row of controls (phase401)", () => {
+		const hero = code("components/community/TourHero.tsx");
+		expect(hero).toContain("<CardCorner");
+		expect(hero).not.toContain("SoundToggle");
+		expect(hero).not.toContain("↑");
 	});
 });

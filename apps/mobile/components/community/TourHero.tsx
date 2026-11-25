@@ -21,8 +21,11 @@ import { type TourSegment, buildTourGroups } from "@percho/shared/tour-buckets";
  * The strip hides itself when the film's structure is unknown (a legacy AI
  * video, or no tour at all) — no empty chrome.
  *
- * Chrome is the listing hero's: ← / ↑ / bookmark glass discs, the global sound
- * toggle, a top cap and a foot wash. The page's paper body palette
+ * Chrome: a back disc on the left and, on the right, the feed card's own row —
+ * sound, save, share as dark-glass discs with the same glyphs, in the same
+ * order (phase401, owner: 「explore 界面里的分享和声音按键要和feed里保持一致」).
+ * Before, this was the listing hero's white discs with a "↑" for share and an
+ * emoji speaker under the back button. A top cap and a foot wash. The page's paper body palette
  * stays out of here — this is media, and `explore.*` is what the listing hero
  * already draws over media.
  */
@@ -39,9 +42,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSoundStore } from "../../state/sound";
-import { explore, fonts, radii } from "../../theme/tokens";
-import { SaveGlyph } from "../SaveGlyph";
-import { SoundToggle } from "../SoundToggle";
+import { explore, fonts, radii, redline } from "../../theme/tokens";
+import { CORNER_DISC_STYLE, CardCorner } from "../cards/CardCorner";
 
 export interface TourHeroProps {
 	width: number;
@@ -167,6 +169,8 @@ export function TourHero(props: TourHeroProps) {
 		onShare,
 	} = props;
 	const insets = useSafeAreaInsets();
+	const soundOn = useSoundStore((s) => s.soundOn);
+	const toggleSound = useSoundStore((s) => s.toggle);
 	const [activeIndex, setActiveIndex] = useState(0);
 	const seekRef = useRef<((index: number) => void) | null>(null);
 
@@ -246,43 +250,26 @@ export function TourHero(props: TourHeroProps) {
 				<Pressable
 					onPress={onBack}
 					hitSlop={10}
-					style={styles.gbtn}
+					style={({ pressed }) => [
+						CORNER_DISC_STYLE,
+						pressed && styles.pressed,
+					]}
 					accessibilityRole="button"
 					accessibilityLabel="Back"
 				>
-					<Text style={styles.gbtnGlyph}>←</Text>
+					<Text style={styles.backGlyph}>←</Text>
 				</Pressable>
-				<View style={styles.navRight}>
-					{!!onShare && (
-						<Pressable
-							onPress={onShare}
-							hitSlop={10}
-							style={styles.gbtn}
-							accessibilityRole="button"
-							accessibilityLabel="Share"
-						>
-							<Text style={styles.gbtnGlyph}>↑</Text>
-						</Pressable>
-					)}
-					<Pressable
-						onPress={onToggleSave}
-						hitSlop={10}
-						style={styles.gbtn}
-						accessibilityRole="button"
-						accessibilityLabel={saved ? "Saved" : "Save"}
-					>
-						<SaveGlyph saved={saved} size={16} color={explore.ink} />
-					</Pressable>
-				</View>
+				{/* The feed card's row. Sound is the global setting, so muting
+				    here mutes the feed too, as before; only a film has one. */}
+				<CardCorner
+					inline
+					{...(videoUrl
+						? { sound: { on: soundOn, onPress: toggleSound } }
+						: {})}
+					save={{ saved, onPress: onToggleSave }}
+					{...(onShare ? { share: { onPress: onShare } } : {})}
+				/>
 			</View>
-
-			{/* The global mute toggle — the film's audio follows it, so the buyer
-			    needs a way to flip it here, same as the listing hero. */}
-			{!!videoUrl && (
-				<View style={[styles.tl, { top: insets.top + 54 }]}>
-					<SoundToggle />
-				</View>
-			)}
 
 			{strip}
 		</View>
@@ -299,17 +286,8 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		justifyContent: "space-between",
 	},
-	navRight: { flexDirection: "row", gap: 8 },
-	gbtn: {
-		width: 36,
-		height: 36,
-		borderRadius: radii.pill,
-		backgroundColor: explore.glass,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	gbtnGlyph: { fontSize: 16, fontWeight: "600", color: explore.ink },
-	tl: { position: "absolute", left: 12 },
+	backGlyph: { fontSize: 17, fontWeight: "600", color: redline.onPhoto },
+	pressed: { opacity: 0.7 },
 	jumpWrap: { position: "absolute", left: 0, right: 0, bottom: 0 },
 	jumpRow: { paddingHorizontal: 12, paddingBottom: 14, gap: 6 },
 	chip: {

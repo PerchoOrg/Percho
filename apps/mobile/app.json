@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "co.percho.app",
-      "buildNumber": "15",
+      "buildNumber": "16",
       "usesAppleSignIn": true,
       "associatedDomains": ["applinks:www.percho.co"],
       "infoPlist": {
