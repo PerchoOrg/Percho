@@ -23,6 +23,12 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 05:45 UTC — phase395.1: a saved heart is red
+
+**Objective**: owner 2026-11-25: 「爱心是红色」, on phase395's heart (which turned gold when saved, from phase394.1).
+**Actions**: `theme/tokens.ts` `redline.saved` #FF3B4E. `CardCorner.tsx` drops its gold `SAVED_INK` for it; `SaveGlyph.tsx` draws a saved heart in it on all four explore surfaces (the caller's `color` is now the unsaved outline only), so the card and the pages agree.
+**Verified**: mobile typecheck 0, vitest 918, biome clean.
+
 ## 2026-11-25 05:20 UTC — phase395: the save mark is a heart, share is a paper plane
 
 **Objective**: owner, off `/demos/card-icons-v2`: "Heart paper plane and small speaker" — S3 heart, H2 (the tilted plane, the one the v1 demo showed), M1 (unchanged). No weight named, so the thin line stays.

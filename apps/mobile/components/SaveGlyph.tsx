@@ -43,6 +43,7 @@
  * — is kept by changing this file with the card. The web's rose Like heart is
  * still a different promise; on the phone it is the swipe, never drawn.
  */
+import { redline } from "../theme/tokens";
 import { RedlineIcon } from "./cards/redline/RedlineChrome";
 
 interface SaveGlyphProps {
@@ -50,6 +51,7 @@ interface SaveGlyphProps {
 	saved: boolean;
 	/** Nominal box, matched to the typographic glyphs on the same surface. */
 	size: number;
+	/** The unsaved outline's colour; a saved heart is always `redline.saved`. */
 	color: string;
 }
 
@@ -58,7 +60,7 @@ export function SaveGlyph({ saved, size, color }: SaveGlyphProps) {
 		<RedlineIcon
 			name="heart"
 			size={size}
-			color={color}
+			color={saved ? redline.saved : color}
 			weight={saved ? "fill" : "outline"}
 		/>
 	);
