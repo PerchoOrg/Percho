@@ -22,7 +22,13 @@
  * `See on map →`).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import {
+	Image,
+	StyleSheet,
+	Text,
+	View,
+	useWindowDimensions,
+} from "react-native";
 
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -55,6 +61,7 @@ import { cityFilmCard } from "../../lib/feed/city-film-card";
 import { deckKey } from "../../lib/feed/deck-key";
 import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
+import { cardPoster } from "../../lib/feed/first-poster";
 import {
 	RERANK_HOLD,
 	generateFeed,
@@ -78,6 +85,7 @@ import {
 	sharedCardInPool,
 } from "../../lib/share/share-link";
 import { openShareSheet } from "../../lib/share/share-sheet";
+import { releaseSplash } from "../../lib/splash-gate";
 import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
@@ -908,6 +916,20 @@ export default function FeedScreen() {
 	const composing = composedPoolReady !== poolReady;
 	const showExhausted =
 		atEnd && (engineExhausted || exhausted) && !loading && !composing;
+
+	/**
+	 * Let the launch screen go (`lib/splash-gate.ts`). It waits for the first
+	 * card's still, so the cross-fade lands on a picture; a dry pool or no
+	 * network has nothing to wait for. The gate's own timer covers a slow image.
+	 */
+	const firstPoster = deck[0] ? cardPoster(deck[0]) : undefined;
+	const nothingToWaitFor = showExhausted || offline;
+	useEffect(() => {
+		if (nothingToWaitFor) releaseSplash();
+		else if (deck.length === 0) return;
+		else if (!firstPoster) releaseSplash();
+		else Image.prefetch(firstPoster).then(releaseSplash, releaseSplash);
+	}, [deck.length, firstPoster, nothingToWaitFor]);
 
 	return (
 		<SafeAreaView style={styles.screen} edges={["top"]}>
