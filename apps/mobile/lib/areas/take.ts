@@ -147,14 +147,14 @@ export function buildAreaTake(
 				// The buyer's axis argues first; the one they down-weighted still
 				// gets said, because a lean that hides its cost is a sales pitch.
 				points: top === "schools" ? [...points].reverse() : points,
-				caveat: `Be clear what that costs you: ${countyName(areas[other.winner])} is the better of the two on ${top === "schools" ? "what it really costs" : "schools"}. Change what matters on the Preferences tab and I'll read it differently.`,
+				caveat: `Be clear what that costs you: ${countyName(areas[other.winner])} is the better of the two on ${top === "schools" ? "what it really costs" : "schools"}. Change what matters on the You tab and I'll read it differently.`,
 			};
 		}
 		return {
 			lead: `It’s the classic trade: ${countyName(areas[cost.winner])} is the cheaper hold, ${countyName(areas[school.winner])} has the stronger schools.`,
 			points,
 			caveat:
-				"What a school point is worth per month is your call, not mine — that’s why nothing below is marked as the overall winner. Tell me on the Preferences tab and I'll take a side.",
+				"What a school point is worth per month is your call, not mine — that’s why nothing below is marked as the overall winner. Tell me on the You tab and I'll take a side.",
 		};
 	}
 
