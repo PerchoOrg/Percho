@@ -21,7 +21,14 @@
  * no dead affordance rather than fake navigation (the call PLAN B11 made for
  * `See on map →`).
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	useSyncExternalStore,
+} from "react";
 import {
 	Image,
 	StyleSheet,
@@ -76,6 +83,7 @@ import {
 	SHARE_TAP_TARGET,
 	SOUND_TAP_TARGET,
 } from "../../lib/gesture/tap-slot";
+import { launchDone } from "../../lib/launch-ready";
 import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
 import {
 	type SharedRef,
@@ -232,7 +240,14 @@ export default function FeedScreen() {
 	 * faces get `suspended` while something covers us; that pauses without
 	 * rewinding, so coming back resumes the card where it was.
 	 */
-	const [focused, setFocused] = useState(true);
+	const [tabFocused, setFocused] = useState(true);
+	/**
+	 * The first film waits for the launch animation to start leaving
+	 * (`lib/launch-ready.ts`) — otherwise it plays, with its narration, under
+	 * the drawing and is two seconds in when the buyer first sees it.
+	 */
+	const launched = useSyncExternalStore(launchDone.subscribe, launchDone.get);
+	const focused = tabFocused && launched;
 	useFocusEffect(
 		useCallback(() => {
 			setFocused(true);
@@ -813,8 +828,11 @@ export default function FeedScreen() {
 	const onHintReady = useCallback((hint: SwipeHintHandle) => {
 		hintRef.current = hint;
 	}, []);
-	/** A deck is up and the buyer is on its first card. Flips once. */
-	const hintEligible = deck.length > 0 && activeIndex === 0;
+	/**
+	 * A deck is up, the buyer is on its first card, and the launch animation
+	 * is out of the way (the nudge would play unseen under it). Flips once.
+	 */
+	const hintEligible = launched && deck.length > 0 && activeIndex === 0;
 	useEffect(() => {
 		if (!hintHydrated || !hintEligible || hintRunOnce.current) return;
 		hintRunOnce.current = true;
@@ -918,9 +936,10 @@ export default function FeedScreen() {
 		atEnd && (engineExhausted || exhausted) && !loading && !composing;
 
 	/**
-	 * Let the launch screen go (`lib/splash-gate.ts`). It waits for the first
-	 * card's still, so the cross-fade lands on a picture; a dry pool or no
-	 * network has nothing to wait for. The gate's own timer covers a slow image.
+	 * Tell the launch animation the feed is ready (`lib/splash-gate.ts`). It
+	 * waits for the first card's still, so its fade lands on a picture; a dry
+	 * pool or no network has nothing to wait for. The gate's own timer covers a
+	 * slow image.
 	 */
 	const firstPoster = deck[0] ? cardPoster(deck[0]) : undefined;
 	const nothingToWaitFor = showExhausted || offline;

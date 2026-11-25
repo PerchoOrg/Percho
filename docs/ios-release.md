@@ -69,9 +69,10 @@ phase137:
       roofline, forest green #0E6B57 ground. Source and renderer:
       `scripts/app-icon/` (`build-app-icon.sh` writes both PNGs). Keep
       1024², no transparency, no rounded corners (iOS masks its own).
-- [x] Splash via `expo-splash-screen` plugin — the same mark (green roof,
-      amber bird) on warm paper #F7F5F0, `assets/splash-icon.png` (alpha here
-      is correct and expected).
+- [x] Splash via `expo-splash-screen` plugin — warm paper #F7F5F0 only;
+      `assets/splash-icon.png` is blank on purpose (alpha is correct and
+      expected). Since phase399 the mark is drawn over it by
+      `components/LaunchAnimation.tsx`, which then fades into the app.
 - [x] `eas.json`: `development` / `preview` (internal) / `production`
       (autoIncrement) profiles.
 - [x] **No iOS permission prompts to declare.** The app requests no location,

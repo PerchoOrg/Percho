@@ -1,10 +1,5 @@
 <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-  <!-- Splash mark: the icon's bird and roof on a transparent ground, for the warm-paper splash (#F7F5F0 in app.json). -->
-  <g transform="translate(512 512) scale(0.7) translate(-512 -515)">
-    <polyline points="150,830 512,550 874,830" fill="none" stroke="#0E6B57" stroke-width="78" stroke-linecap="round" stroke-linejoin="round"/>
-    <g transform="translate(534 536) scale(1.3)">
-      <path d="M222 -206 L156 -232 C140 -268 98 -288 58 -280 C6 -270 -52 -232 -104 -168 L-286 -44 L-262 -8 L-96 -66 C-60 -18 4 0 62 -10 C128 -22 170 -82 170 -150 C170 -168 164 -182 156 -188 Z" fill="#EE9B2F"/>
-      <circle cx="108" cy="-226" r="13" fill="#083F33"/>
-    </g>
-  </g>
+  <!-- Deliberately empty. The native launch screen is only the warm paper (#F7F5F0 in app.json):
+       the mark is DRAWN on it by apps/mobile/components/LaunchAnimation.tsx, and a mark already
+       sitting there would vanish and be drawn again. The plugin still wants an image. -->
 </svg>

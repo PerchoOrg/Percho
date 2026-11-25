@@ -15,6 +15,7 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { LaunchAnimation } from "../components/LaunchAnimation";
 import { TAB_BAR_FONT, TAB_BAR_FONT_FILL } from "../components/TabBarIconFont";
 import { ICON_FONT, OUTLINE_FONT } from "../components/cards/redline/icon-font";
 import { createEventsTransport } from "../lib/events-transport";
@@ -28,7 +29,7 @@ import { colors } from "../theme/tokens";
 /** Queue depth that triggers an opportunistic mid-session drain. */
 const DRAIN_THRESHOLD = 20;
 
-// The launch screen stays until the feed has its first card — see `lib/splash-gate.ts`.
+// The native launch screen stays until the launch animation has taken over — see `lib/splash-gate.ts`.
 holdSplash();
 
 export default function RootLayout() {
@@ -73,8 +74,8 @@ export default function RootLayout() {
 		[DM_SERIF_FONT]: require("../assets/fonts/DMSerifDisplay-Regular.ttf"),
 	});
 
-	// Only the feed holds the launch screen. A shared link opens on its own
-	// page, where there is no first card to wait for.
+	// Only the feed makes the launch animation wait for a first card. A shared
+	// link opens on its own page, where there is none to wait for.
 	const pathname = usePathname();
 	const ready = fontsLoaded || !!fontsError;
 	useEffect(() => {
@@ -83,16 +84,20 @@ export default function RootLayout() {
 
 	// Font load failure must NOT white-screen the app — fall through and let
 	// the system fallback render (a few tofu glyphs beat a dead app).
-	if (!fontsLoaded && !fontsError) {
-		return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
-	}
-
+	//
+	// One tree for both states: the launch layer has to stay MOUNTED across the
+	// font gate, or its drawing would start over when the fonts land.
 	return (
 		<GestureHandlerRootView style={{ flex: 1 }}>
-			<SafeAreaProvider>
-				<StatusBar style="dark" />
-				<Stack screenOptions={{ headerShown: false }} />
-			</SafeAreaProvider>
+			{ready ? (
+				<SafeAreaProvider>
+					<StatusBar style="dark" />
+					<Stack screenOptions={{ headerShown: false }} />
+				</SafeAreaProvider>
+			) : (
+				<View style={{ flex: 1, backgroundColor: colors.bg }} />
+			)}
+			<LaunchAnimation />
 		</GestureHandlerRootView>
 	);
 }
