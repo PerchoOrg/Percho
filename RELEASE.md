@@ -17,7 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-25
-- **Bigger, clearer buttons on the cards.** Mute, save and share are no longer three tiny icons squeezed into one small strip. Each is its own round button, larger and easier to hit, side by side in the card's top corner. When the place shown in the top-left label has a long name, the distance is left out so the name fits.
+- **Bigger, clearer buttons on the cards.** Mute, save and share are no longer three tiny icons squeezed into one small strip. Each is its own round button, larger and easier to hit, side by side in the card's top corner. A saved place's bookmark turns gold. When the place shown in the top-left label has a long name, the distance is left out so the name fits.
 
 ### 2026-11-24
 - **Cardinal Lake Estates in Duluth has a neighbourhood film — the twentieth.** It opens on the community pool and its private lake at sunset, then Duluth Town Green, the schools, Shorty Howell and McDaniel Farm parks, the railway museum, and the places to eat and shop nearby.
