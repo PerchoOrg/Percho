@@ -23,6 +23,17 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 03:30 UTC — phase394: all three card buttons in one top-right row (owner pick "C")
+
+**Objective**: owner, off `/demos/card-actions-v1`: the choice was the top-right row (C) or save + share stacked bottom-right (B), and B ran into the city film's rail of parts — 「你觉得怎么搞」. I recommended C; owner: "c".
+**Actions**:
+- `components/cards/CardCorner.tsx`: `CardActions` and the light-glass variant removed; one row of 36pt dark-glass discs (19pt glyphs, 8pt apart) at 12/12. `CORNER_DISC` / `CORNER_GAP` exported.
+- `components/cards/CommunityFace.tsx`: mute, save and share go back to `CardCorner`; the tag row and `RAIL_BOTTOM` (120 → 92) are as before phase393. The place pill's slot ends at `PLACE_RIGHT` (12 + 3×36 + 2×8 + 8 = 144pt, was 68), ~205pt on a 361pt card; it drops the distance when the name is over 22 characters (`PLACE_NAME_WITH_DISTANCE`) so the name is cut later.
+- `theme/listing-layout.test.ts` asserts the row.
+**Decisions**: B's cost was the city rail (377 → ~260pt, shortest part ~40pt) and the same control in two places on two kinds of card. The 22-character cut is a character count, not a measured width — cheap and close enough at 10.5pt; a measured version needs a hidden text pass.
+**Verified**: mobile typecheck 0, vitest 918, biome clean. Not seen on a device here.
+**Risks**: the discs (36pt) are taller than the place pill (26pt); a short place name with no distance is a narrower pill.
+
 ## 2026-11-25 01:20 UTC — phase393.1: four layouts for the card's buttons, as a demo
 
 **Objective**: owner, after phase393 landed: 「给我几个demo看看」.

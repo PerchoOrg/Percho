@@ -183,7 +183,7 @@ import { redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
-import { CardActions, CardCorner } from "./CardCorner";
+import { CORNER_DISC, CORNER_GAP, CardCorner } from "./CardCorner";
 import { EXPLORE_TAP_TARGET, SAVE_TAP_TARGET } from "./ListingFace";
 
 /**
@@ -225,11 +225,23 @@ const CHAPTER_TAP_SLOP = 8;
 export const CHAPTER_TAP_TARGET = "chapter";
 /**
  * Where that rail runs, down the card's right edge: from under the top-right
- * mute to above save and share (phase393 put them over Explore, which is 28pt
- * the rail used to have).
+ * controls to above the name row.
  */
 const RAIL_TOP = 58;
-const RAIL_BOTTOM = 120;
+const RAIL_BOTTOM = 92;
+/**
+ * The place pill's right edge: clear of three corner discs and 8pt of air.
+ * A card with fewer controls keeps the same edge, so the pill does not change
+ * width from one card to the next.
+ */
+const PLACE_RIGHT = 12 + 3 * CORNER_DISC + 2 * CORNER_GAP + 8;
+/**
+ * Longest place name that still shows its distance. The pill has ~205pt on a
+ * 361pt card; past ~22 characters of 10.5pt label the name and the distance
+ * do not both fit, and the name is the one a buyer needs (owner pick "C",
+ * phase394: drop the distance before cutting the name).
+ */
+const PLACE_NAME_WITH_DISTANCE = 22;
 
 interface CommunityFaceProps {
 	card: CommunityCardV3;
@@ -639,29 +651,44 @@ export function CommunityFace({
 						<Text style={styles.placeName} numberOfLines={1}>
 							{place.name}
 						</Text>
-						{!!place.distance && (
-							<>
-								<View style={styles.placeRule} />
-								<Text style={styles.placeDistance}>{place.distance}</Text>
-							</>
-						)}
+						{!!place.distance &&
+							place.name.length <= PLACE_NAME_WITH_DISTANCE && (
+								<>
+									<View style={styles.placeRule} />
+									<Text style={styles.placeDistance}>{place.distance}</Text>
+								</>
+							)}
 					</View>
 				</View>
 			)}
 
-			{/* Top-RIGHT: the mute, alone — it acts on the film. Save and share
-			    act on the place and sit over Explore, below (phase393, owner
-			    2026-11-24: 「贴在一起 又小又难看 重新设计这几个按键以及在card上的
-			    分布」). A community with no film has nothing up here. */}
-			{!!card.videoUrl && (
-				<CardCorner
-					sound={{
-						on: soundOn,
-						onPress: toggleSound,
-						...(tapSlot ? { onTouchStart: arm(SOUND_TAP_TARGET) } : {}),
-					}}
-				/>
-			)}
+			{/* Top-RIGHT: mute, save and share, three discs in one row
+			    (phase394, owner pick "C" off `/demos/card-actions-v1`). A
+			    community with no film passes no `sound`. */}
+			<CardCorner
+				{...(card.videoUrl
+					? {
+							sound: {
+								on: soundOn,
+								onPress: toggleSound,
+								...(tapSlot ? { onTouchStart: arm(SOUND_TAP_TARGET) } : {}),
+							},
+						}
+					: {})}
+				save={{
+					saved,
+					onPress: () => toggleSaved(card.id, saveKind),
+					...(tapSlot ? { onTouchStart: arm(SAVE_TAP_TARGET) } : {}),
+				}}
+				{...(onShare
+					? {
+							share: {
+								onPress: onShare,
+								...(tapSlot ? { onTouchStart: arm(SHARE_TAP_TARGET) } : {}),
+							},
+						}
+					: {})}
+			/>
 
 			{/* Bottom scrim — transparent until ~55% down, then darkening to a
 			    deep 0.92 at the bottom (owner 2026-08-19: 底部渐变 + 信息文字条,
@@ -691,21 +718,6 @@ export function CommunityFace({
 			<View style={styles.info}>
 				<View style={styles.tagRow}>
 					<Text style={styles.badgeLabel}>{tag}</Text>
-					<CardActions
-						save={{
-							saved,
-							onPress: () => toggleSaved(card.id, saveKind),
-							...(tapSlot ? { onTouchStart: arm(SAVE_TAP_TARGET) } : {}),
-						}}
-						{...(onShare
-							? {
-									share: {
-										onPress: onShare,
-										...(tapSlot ? { onTouchStart: arm(SHARE_TAP_TARGET) } : {}),
-									},
-								}
-							: {})}
-					/>
 				</View>
 				<View style={styles.infoRow}>
 					<View style={styles.infoLeft}>
@@ -965,7 +977,13 @@ const styles = StyleSheet.create({
 	 * capsule's 12 inset + its ~74 width at two cells, halved to leave the pill
 	 * the majority of the card and a real gap.
 	 */
-	badgeSlot: { position: "absolute", top: 12, left: 12, right: 68, zIndex: 2 },
+	badgeSlot: {
+		position: "absolute",
+		top: 12,
+		left: 12,
+		right: PLACE_RIGHT,
+		zIndex: 2,
+	},
 	/**
 	 * The place pill — the COMMUNITY badge's fill, radius and padding, because
 	 * it is the same object in the same slot with different words in it.
@@ -1041,12 +1059,8 @@ const styles = StyleSheet.create({
 	 * first. It was a white pill, one size down from the badge it replaced.
 	 */
 	tagRow: {
-		flexDirection: "row",
-		// The tag stays on the name: it sits at the foot of the row, whose
-		// height is now the discs'.
-		alignItems: "flex-end",
-		justifyContent: "space-between",
-		marginBottom: 8,
+		alignSelf: "flex-start",
+		marginBottom: 6,
 	},
 	/**
 	 * The rail of parts — down the card's right edge, between the top-right
