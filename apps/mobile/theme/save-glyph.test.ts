@@ -20,6 +20,10 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import {
+	ICON_ART_WIDTH,
+	OUTLINE_ART_WIDTH,
+} from "../components/cards/redline/icon-font";
 
 /** Every surface that draws the save control outside a feed card. */
 const SURFACES = [
@@ -62,5 +66,18 @@ describe("the save control wears one mark (phase260)", () => {
 		expect(code("components/SaveGlyph.tsx")).toContain(
 			'weight={saved ? "fill" : "outline"}',
 		);
+	});
+
+	/**
+	 * Saving must not resize the mark. The fill font is drawn 1.18× larger than
+	 * the outline font, which is right for most glyphs and wrong for a toggle
+	 * between two weights of one drawing: the saved heart came out bigger and
+	 * clipped (owner, 2026-11-25). Both renderers must ask for the outline size,
+	 * and that only works while the heart's bounds agree across the two fonts.
+	 */
+	it("draws the heart the same size saved and unsaved", () => {
+		expect(ICON_ART_WIDTH.heart).toBe(OUTLINE_ART_WIDTH.heart);
+		expect(code("components/SaveGlyph.tsx")).toContain("matchOutline");
+		expect(code("components/cards/CardCorner.tsx")).toContain("matchOutline");
 	});
 });

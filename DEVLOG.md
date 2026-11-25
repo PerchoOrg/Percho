@@ -23,6 +23,16 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 06:41 UTC — phase400: a saved heart is the size of an unsaved one
+
+**Objective**: owner, with a screenshot of build 14's feed card: 「爱心点击以后就变形了」 — the red heart is wider than the other two glyphs and flat down its right side.
+**Finding**: `RedlineIcon` sets the fill font at 1.18× the nominal size and the outline font at 1.0×, because most fill drawings are a smaller solid core of their outline. The heart is not: fontTools gives the same bounds in both fonts (x 0–0.875, y 0.031–0.781). So tapping save swapped a 19pt heart for a 22.4pt one, whose 1 em advance was then wider than its 19pt slot — and iOS clips a `<Text>` to its line rather than letting the glyph hang (the bug `TabBar.tsx` documents for itself), which took the right lobe. Reproduced in headless Chrome from the two fonts with the same numbers. The bookmark had the same 18% jump from phase175 to phase395; on a narrow glyph nobody saw it.
+**Actions**: `RedlineIcon` takes `matchOutline` — draw a fill glyph at the outline font's size. `CardCorner`'s discs and `SaveGlyph` (the four explore surfaces) pass it. `theme/save-glyph.test.ts` asserts both callers do, and that the heart's width still agrees across the two fonts.
+**Decisions**: a prop, not a change to `ICON_OPTICAL_SCALE` — every other fill glyph in the app (chips, the trade-off discs, the swipe stamps) is sized against 1.18 and was not reported.
+**Noticed, not changed**: any fill glyph whose art is wider than 1/1.18 = 0.847 em (car, family, school, sparkle, tree, dog, handshake) has the same clipping exposure wherever its slot is exactly `size` wide.
+**Verified**: mobile typecheck 0, vitest 929, biome clean; before/after rendered from the fonts.
+**Next steps**: build 14 has the bug, so the release needs a new production build (16; 15 is the dev client, which gets this over Metro).
+
 ## 2026-11-25 06:33 UTC — phase399.1: the launch screen draws the mark; iOS 1.1.0 (14) in TestFlight
 
 **Objective**: owner, off `/demos/launch-animation-v1`: "b 不加名字", then 「直接build下一版本 我截图 你再发布ios」.

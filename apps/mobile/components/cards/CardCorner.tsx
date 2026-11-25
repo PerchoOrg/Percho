@@ -140,7 +140,14 @@ function Disc({
 			hitSlop={SLOP}
 			style={({ pressed }) => [styles.disc, pressed && styles.pressed]}
 		>
-			<RedlineIcon name={name} size={GLYPH} color={color} weight={weight} />
+			<RedlineIcon
+				name={name}
+				size={GLYPH}
+				color={color}
+				weight={weight}
+				// Every glyph here sits beside, or swaps with, an outline one.
+				matchOutline
+			/>
 		</Pressable>
 	);
 }
