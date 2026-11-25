@@ -162,13 +162,15 @@ export function CardCorner({ sound, save, share }: CardCornerProps) {
 					name={sound.on ? "soundOn" : "soundOff"}
 				/>
 			)}
-			{/* Saved fills the bookmark — outline → fill is the bit `SaveGlyph`
-			    signals with everywhere else — and turns it gold. */}
+			{/* Saved fills the heart — outline → fill is the bit `SaveGlyph`
+			    signals with everywhere else — and turns it gold. Heart and the
+			    paper-plane share since phase395 (owner pick off
+			    `/demos/card-icons-v2`). */}
 			{save && (
 				<Disc
 					control={save}
 					label={save.saved ? "Saved" : "Save"}
-					name="bookmark"
+					name="heart"
 					weight={save.saved ? "fill" : "outline"}
 					{...(save.saved ? { color: SAVED_INK } : {})}
 				/>

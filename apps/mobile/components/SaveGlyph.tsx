@@ -34,6 +34,14 @@
  * glass on the heroes, 50pt on the dock), and each glyph is set to sit with the
  * typographic chrome beside it — the `←` / `↑` / `✕` those surfaces still draw.
  * Unifying THAT chrome is a separate job; this file only claims the save mark.
+ *
+ * ── The mark is a heart again (phase395) ────────────────────────────────────
+ *
+ * The owner picked the heart for the card's save off `/demos/card-icons-v2`
+ * ("Heart paper plane and small speaker"). The argument above for the bookmark
+ * stands as history; what it guarded — one mark for one action across the app
+ * — is kept by changing this file with the card. The web's rose Like heart is
+ * still a different promise; on the phone it is the swipe, never drawn.
  */
 import { RedlineIcon } from "./cards/redline/RedlineChrome";
 
@@ -48,7 +56,7 @@ interface SaveGlyphProps {
 export function SaveGlyph({ saved, size, color }: SaveGlyphProps) {
 	return (
 		<RedlineIcon
-			name="bookmark"
+			name="heart"
 			size={size}
 			color={color}
 			weight={saved ? "fill" : "outline"}

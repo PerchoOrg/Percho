@@ -9,15 +9,15 @@
 ## v1.11 — Send a neighbourhood to anyone
 
 Any neighbourhood or city card can now be sent to someone else — an agent to
-a buyer, a buyer to their partner. Tap the share button in the card's top
-corner (or on its page) and pick Messages, WhatsApp, email or anything else
+a buyer, a buyer to their partner. Tap the paper-plane button in the card's
+top corner (or on its page) and pick Messages, WhatsApp, email or anything else
 on the phone. The person on the other end gets a link with the film's
 picture in the preview. If they have the Percho app, the link opens straight
 into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-25
-- **Bigger, clearer buttons on the cards.** Mute, save and share are no longer three tiny icons squeezed into one small strip. Each is its own round button, larger and easier to hit, side by side in the card's top corner. A saved place's bookmark turns gold. When the place shown in the top-left label has a long name, the distance is left out so the name fits.
+- **Bigger, clearer buttons on the cards.** Mute, save and share are no longer three tiny icons squeezed into one small strip. Each is its own round button, larger and easier to hit, side by side in the card's top corner. Save is now a heart — the same as the Saved tab — and turns gold when a place is saved; share is a paper plane. The save button on neighbourhood and city pages is a heart too. When the place shown in the top-left label has a long name, the distance is left out so the name fits.
 
 ### 2026-11-24
 - **Cardinal Lake Estates in Duluth has a neighbourhood film — the twentieth.** It opens on the community pool and its private lake at sunset, then Duluth Town Green, the schools, Shorty Howell and McDaniel Farm parks, the railway museum, and the places to eat and shop nearby.

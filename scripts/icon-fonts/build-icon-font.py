@@ -103,7 +103,10 @@ GLYPHS = {
     # renders a real glyph again (owner pick "H1"), and it is deliberately
     # `bookmark-simple`, the SAVED TAB's drawing (`TAB_BAR_GLYPH.saved`), so
     # the card's save and the tab it saves into are the same shape.
-    "bookmark": "bookmark-simple-fill",   # saved state (filled bookmark)
+    # phase395: the save mark is a HEART (owner pick off
+    # `/demos/card-icons-v2`: "Heart paper plane and small speaker"). It
+    # replaced `bookmark` (bookmark-simple-fill) everywhere a save is drawn.
+    "heart": "heart-fill",                # saved state (filled heart)
     "arrowRight": "arrow-right-fill",     # explore link affordance
     # Added 2026-09-05 for the card corner's mute (owner pick "H1"). Neither
     # icon font had a speaker, which is why phase140 drew one from bordered
@@ -115,7 +118,8 @@ GLYPHS = {
     # Added 2026-11-15 (phase335) for the card corner's share: `export` is the
     # box-and-arrow iOS itself draws for its share sheet, so the buyer reads it
     # as "send this" without a label.
-    "share": "export-fill",
+    # phase395: a tilted paper plane — "send" — in place of export-fill.
+    "share": "paper-plane-tilt-fill",
 }
 
 

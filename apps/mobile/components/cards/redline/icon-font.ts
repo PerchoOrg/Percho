@@ -64,17 +64,18 @@ export type RedlineIconName =
 	| "dog"
 	| "handshake"
 	| "shieldCheck"
-	// 2026-08-13 listing-card chrome: saved bookmark (filled when saved) and
-	// the explore link's arrow.
-	| "bookmark"
+	// 2026-08-13 listing-card chrome: the save mark (filled when saved) and
+	// the explore link's arrow. The save mark is a heart since phase395; it
+	// was `bookmark` (bookmark-simple) from 2026-09-05.
+	| "heart"
 	| "arrowRight"
 	// 2026-09-05 card corner (owner pick "H1"): the mute, in both states. The
 	// corner drew its speaker from bordered `View`s until this date because no
 	// font here had one — see `CardCorner.tsx`.
 	| "soundOn"
 	| "soundOff"
-	// phase335: the card corner's share — the box-and-arrow iOS draws for its
-	// own share sheet.
+	// phase335: the card corner's share. A tilted paper plane — "send" — since
+	// phase395; it was the box-and-arrow iOS draws for its share sheet.
 	| "share";
 
 /** The family name registered with `expo-font`. */
@@ -121,19 +122,14 @@ export const ICON_GLYPH: Record<RedlineIconName, string> = {
 	dog: "\ue74a", // dog-fill              — "Dog Friendly"
 	handshake: "\ue582", // handshake-fill  — "Friendly" / "Welcoming" / "Neighbors"
 	shieldCheck: "\ue40c", // shield-check-fill — "Safe"
-	// bookmark-simple, NOT bookmark: picked to match `TAB_BAR_GLYPH.saved`, the
-	// Saved tab's drawing at the time (owner pick "H1", 2026-09-05). phase177
-	// changed that tab to a HEART later the same day, so the match no longer
-	// holds — see `CardCorner`. The glyph stays: since phase260 it is the mark
-	// every save control in the app wears, cards and explore surfaces alike.
-	// It was bookmark-fill
-	// (\ue0e8) while nothing rendered it — phase140 drew the bookmark from
-	// `View`s instead.
-	bookmark: "\ue0ea", // bookmark-simple-fill — saved listing (filled bookmark)
+	// phase395 (owner pick off `/demos/card-icons-v2`): the save mark is a
+	// HEART, the Saved tab's own shape. It was bookmark-simple-fill (\ue0ea)
+	// from 2026-09-05, and bookmark-fill (\ue0e8) before that.
+	heart: "\ue2a8", // heart-fill — saved (filled heart)
 	arrowRight: "\ue06c", // arrow-right-fill — explore link affordance
 	soundOn: "\ue450", // speaker-simple-high-fill  — tour audio playing
 	soundOff: "\ue456", // speaker-simple-slash-fill — muted
-	share: "\ueaf0", // export-fill — send this card (phase335)
+	share: "\ue398", // paper-plane-tilt-fill — send this card (phase395; was export-fill)
 };
 
 /**
@@ -181,11 +177,11 @@ export const ICON_ART_WIDTH: Record<RedlineIconName, number> = {
 	dog: 0.875,
 	handshake: 1,
 	shieldCheck: 0.75,
-	bookmark: 0.5625,
+	heart: 0.875,
 	arrowRight: 0.75,
 	soundOn: 0.8438,
 	soundOff: 0.8438,
-	share: 0.6875,
+	share: 0.875,
 };
 
 /**
@@ -216,12 +212,11 @@ export const OUTLINE_ART_WIDTH: Record<RedlineIconName, number> = {
 	dog: 0.9375,
 	handshake: 1,
 	shieldCheck: 0.875,
-	// 0.7812 until 2026-09-05, when `bookmark` became bookmark-simple.
-	bookmark: 0.5625,
+	heart: 0.875,
 	arrowRight: 0.875,
 	soundOn: 0.8438,
 	soundOff: 0.8438,
-	share: 0.6875,
+	share: 0.875,
 };
 
 /**

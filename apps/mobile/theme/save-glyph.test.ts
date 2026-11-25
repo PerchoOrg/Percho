@@ -52,10 +52,8 @@ describe("the save control wears one mark (phase260)", () => {
 	it("SaveGlyph and the card's corner draw the SAME glyph", () => {
 		// If these two ever diverge the app is back to two marks for one action,
 		// which is the whole defect — and it would look deliberate on device.
-		expect(code("components/SaveGlyph.tsx")).toContain('name="bookmark"');
-		expect(code("components/cards/CardCorner.tsx")).toContain(
-			'name="bookmark"',
-		);
+		expect(code("components/SaveGlyph.tsx")).toContain('name="heart"');
+		expect(code("components/cards/CardCorner.tsx")).toContain('name="heart"');
 	});
 
 	it("saved is signalled by WEIGHT, the way the card signals it", () => {
