@@ -85,6 +85,8 @@ const INK = redline.onPhoto;
 
 /** One control's disc. Under Apple's 44pt on its own; the slop makes it up. */
 export const CORNER_DISC = 36;
+/** The row's distance from the card's top and right edges. */
+export const CORNER_INSET = 12;
 /** Air between two discs; half of it is each disc's horizontal hit slop. */
 export const CORNER_GAP = 8;
 /** Glyph size — a little over half the disc. */
@@ -212,8 +214,8 @@ const styles = StyleSheet.create({
 	},
 	pinned: {
 		position: "absolute",
-		top: 12,
-		right: 12,
+		top: CORNER_INSET,
+		right: CORNER_INSET,
 		zIndex: 2,
 	},
 	/**
