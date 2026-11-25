@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — an animated opening screen</title>
+<style>
+:root{--serif:ui-serif,"New York","Iowan Old Style",Georgia,serif;--ui:-apple-system,"SF Pro Text","Helvetica Neue",sans-serif;--green:#0E6B57;--amber:#EE9B2F;--paper:#F7F5F0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:0 12px 60px}
+button{border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;font:inherit;background:none;color:inherit}
+.wrap{max-width:820px;margin:0 auto}
+.nav{padding-top:24px;font:400 14.5px/1.55 var(--ui)}
+.nav h1{font:600 24px var(--serif);color:var(--green);margin-bottom:4px}
+.nav p{color:#5A4E40;margin:6px 0;max-width:640px}
+.stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;justify-content:center;margin-top:18px}
+.phone{position:relative;width:300px;height:620px;border-radius:44px;overflow:hidden;background:var(--paper);box-shadow:0 0 0 9px #1c1c1e,0 18px 40px rgba(32,28,22,.25);flex:none}
+.splash{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--paper);transition:opacity .35s}
+.splash svg{width:160px;height:160px;overflow:visible}
+.name{font:600 26px var(--serif);color:var(--green);letter-spacing:.01em;margin-top:2px;opacity:0;height:32px}
+.app{position:absolute;inset:0;background:var(--paper);display:flex;flex-direction:column}
+.app .nums{display:flex;justify-content:space-between;padding:52px 20px 10px;font:600 15px var(--ui)}
+.app .nums small{display:block;font:400 10.5px var(--ui);color:#76634B}
+.app .card{flex:1;margin:0 8px;border-radius:26px;background:#20262A center/cover;position:relative;overflow:hidden}
+.app .card:after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 55%,rgba(0,0,0,.8))}
+.app .card b{position:absolute;left:18px;bottom:18px;z-index:1;font:600 22px var(--serif);color:#fff}
+.app .tabs{display:flex;height:74px;padding-bottom:16px;align-items:center;justify-content:space-around;font:500 10.5px var(--ui);color:#9B9B94}
+.app .tabs span:first-child{color:var(--green);font-weight:600}
+.side{display:flex;flex-direction:column;gap:12px;max-width:330px}
+.opt{text-align:left;background:#fff;border-radius:16px;padding:12px 14px;outline:3px solid transparent;outline-offset:-3px;transition:outline-color .15s}
+.opt.on{outline-color:var(--green)}
+.opt .c{font:700 12px var(--ui);color:var(--green)}
+.opt .t{font:600 15px var(--ui);margin-top:1px}
+.opt .d{font:400 12.5px/1.45 var(--ui);color:#6B5D4C;margin-top:3px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{background:var(--green);color:#fff;font:600 14px var(--ui);border-radius:12px;padding:9px 16px}
+.seg{display:inline-flex;background:rgba(0,0,0,.08);border-radius:10px;padding:3px}
+.seg button{padding:6px 12px;border-radius:8px;font:500 13px var(--ui);color:#5A4E40}
+.seg button.on{background:#fff;color:#2B2116;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.note{font:400 12.5px/1.45 var(--ui);color:#5A4E40}
+
+/* ── the three animations. Everything is drawn in the splash mark's own coordinates. ── */
+.roof{fill:none;stroke:var(--green);stroke-width:78;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:draw .7s cubic-bezier(.5,0,.3,1) .15s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.fillb{fill:var(--amber)}
+.eye{fill:#083F33}
+.line{fill:none;stroke:var(--amber);stroke-width:18;stroke-linejoin:round;stroke-linecap:round}
+.bird{transform-box:view-box;transform-origin:534px 536px}
+
+/* A — the bird flies in and lands */
+.vA .line{display:none}
+.vA .bird{opacity:0;animation:fly .85s cubic-bezier(.3,.1,.3,1) .75s forwards,land .5s ease-out 1.6s forwards}
+@keyframes fly{0%{opacity:0;transform:translate(-520px,-300px) rotate(-16deg) scale(.7)}25%{opacity:1}70%{transform:translate(-90px,-150px) rotate(-8deg) scale(.95)}100%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}}
+@keyframes land{0%{transform:scale(1,1)}35%{transform:scale(1.06,.9)}70%{transform:scale(.98,1.04)}100%{transform:scale(1,1)}}
+
+/* B — a pen draws the bird, then the colour comes in */
+.vB .line{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1s cubic-bezier(.45,0,.35,1) .8s forwards}
+.vB .fillb{opacity:0;animation:fade .4s ease 1.75s forwards}
+.vB .eye{transform-box:fill-box;transform-origin:center;transform:scale(0);animation:pop .3s cubic-bezier(.3,1.6,.5,1) 2.05s forwards}
+@keyframes fade{to{opacity:1}}
+@keyframes pop{to{transform:scale(1)}}
+
+/* C — the sketch is wiped in from tail to beak, then the colour comes in */
+.vC .wipe{animation:wipe .75s cubic-bezier(.45,0,.35,1) .8s both}
+@keyframes wipe{from{width:0}to{width:760px}}
+.vC .fillb{opacity:0;animation:fade .4s ease 1.5s forwards}
+.vC .eye{transform-box:fill-box;transform-origin:center;transform:scale(0);animation:pop .3s cubic-bezier(.3,1.6,.5,1) 1.8s forwards}
+
+.withname .name{animation:fade .45s ease 1.9s forwards}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav">
+    <h1>An animated opening screen</h1>
+    <p>Three ways the opening screen could draw itself, each about two and a half seconds, then fade into the first card. Pick one on the right; it plays in the phone. Press Play again to see it once more.</p>
+    <p>Reply with a letter, e.g. "B", and whether you want the name under it.</p>
+  </div>
+  <div class="stage">
+    <div class="phone">
+      <div class="app">
+        <div class="nums"><div>$612k<small>Typical home</small></div><div>Top 12%<small>Schools nearby</small></div><div>27 mi<small>To Atlanta</small></div></div>
+        <div class="card" id="card"><b>Cardinal Lake Estates</b></div>
+        <div class="tabs"><span>Feed</span><span>Search</span><span>Saved</span><span>You</span></div>
+      </div>
+      <div class="splash" id="splash"></div>
+    </div>
+    <div class="side">
+      <div id="opts"></div>
+      <div class="row">
+        <button class="btn" id="play">Play again</button>
+        <div class="seg" id="nameseg"><button data-n="0" class="on">Mark only</button><button data-n="1">With the name</button></div>
+      </div>
+      <div class="note">On the phone this plays once, when the app is opened cold. If the first card is not ready when the drawing ends, the finished mark simply waits for it.</div>
+    </div>
+  </div>
+</div>
+<script>
+const SIL='M222 -206 L156 -232 C140 -268 98 -288 58 -280 C6 -270 -52 -232 -104 -168 L-286 -44 L-262 -8 L-96 -66 C-60 -18 4 0 62 -10 C128 -22 170 -82 170 -150 C170 -168 164 -182 156 -188 Z';
+const BIRD_T='translate(534 536) scale(1.3)';
+const mark=(v)=>`<svg viewBox="0 0 1024 1024" class="v${v}"><g transform="translate(512 512) scale(0.7) translate(-512 -515)">
+  <polyline class="roof" pathLength="1" points="150,830 512,550 874,830"/>
+  <g class="bird">${v==='C'
+    ?`<clipPath id="wipe"><rect class="wipe" x="150" y="150" width="760" height="420"/></clipPath><g clip-path="url(#wipe)"><path class="line" transform="${BIRD_T}" d="${SIL}"/></g>`
+    :`<path class="line" pathLength="1" transform="${BIRD_T}" d="${SIL}"/>`}
+    <path class="fillb" transform="${BIRD_T}" d="${SIL}"/>
+    <g transform="${BIRD_T}"><circle class="eye" cx="108" cy="-226" r="13"/></g>
+  </g></g></svg>`;
+const OPTS=[
+  ['A','The bird lands','The roof draws itself, then the bird flies in and settles on the peak.',2300],
+  ['B','Drawn by a pen','The roof draws itself, a pen traces the bird in one line, then the colour comes in and the eye appears.',2600],
+  ['C','Sketched in','The roof draws itself, the bird\'s outline sweeps in from tail to beak, then the colour comes in.',2350],
+];
+let cur='B',named=false,timer;
+function play(){
+  clearTimeout(timer);
+  const s=document.getElementById('splash');
+  s.style.transition='none'; s.style.opacity=1; s.className='splash'+(named?' withname':'');
+  s.innerHTML=mark(cur)+'<div class="name">Percho</div>';
+  void s.offsetWidth; s.style.transition='';
+  timer=setTimeout(()=>{s.style.opacity=0},OPTS.find(o=>o[0]===cur)[3]+(named?250:0));
+}
+function paint(){
+  document.getElementById('opts').innerHTML=OPTS.map(([c,t,d])=>`<button class="opt${c===cur?' on':''}" data-c="${c}" style="display:block;width:100%;margin-bottom:10px"><div class="c">${c}</div><div class="t">${t}</div><div class="d">${d}</div></button>`).join('');
+  document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{cur=b.dataset.c;paint();play()});
+}
+document.getElementById('play').onclick=play;
+document.querySelectorAll('#nameseg button').forEach(b=>b.onclick=()=>{named=b.dataset.n==='1';document.querySelectorAll('#nameseg button').forEach(x=>x.classList.toggle('on',x===b));play()});
+document.getElementById('card').style.backgroundImage="url('https://videodelivery.net/552c9b530d95220a60fd297e0bd3e630/thumbnails/thumbnail.jpg?time=3s&height=800')";
+const q=new URLSearchParams(location.search); if(q.get('v'))cur=q.get('v'); if(q.get('n'))named=true;
+paint();
+/* ?t=<seconds> freezes the animation at that moment, for stills */
+if(q.get('t')){const t=+q.get('t');const s=document.getElementById('splash');s.className='splash'+(named?' withname':'');s.innerHTML=mark(cur)+'<div class="name">Percho</div>';
+  const st=document.createElement('style');st.textContent=`.splash *{animation-play-state:paused!important}`;document.head.appendChild(st);
+  s.querySelectorAll('*').forEach(el=>{const cs=getComputedStyle(el);if(cs.animationName!=='none'){el.style.animationDelay=cs.animationDelay.split(',').map(d=>(parseFloat(d)-t)+'s').join(',')}});
+}else play();
+</script>
+</body>
+</html>
