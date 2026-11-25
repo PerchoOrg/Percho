@@ -23,6 +23,16 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 04:10 UTC — phase394.1: saved turns gold; a demo of icon styles for the corner
+
+**Objective**: owner, on phase394: 「好一点了 点击收藏显示黄色 这几个图标的样式还有别的选择么？」 — read as two asks: saved should show yellow, and what other icon styles there are.
+**Actions**:
+- `components/cards/CardCorner.tsx`: a saved bookmark is filled AND gold (`SAVED_INK` #F5C542); the other glyphs stay white.
+- `apps/web/public/demos/card-icons-v1/` — seven styles on the same corner, each on a card and enlarged (saved / not saved), all with gold saved: A thin line on dark glass (now), B bold line, C solid, D bare glyphs with a shadow, E white discs, F one 36pt bar with dividers, G heart + paper plane. Glyphs are Phosphor's own SVGs (regular / bold / fill) from jsDelivr, inlined.
+**Decisions**: the app subset carries only Phosphor Regular and Fill; B, E, F and G need the Bold font (or new glyphs) re-subset with `pyftsubset` — a font change, no new dependency.
+**Verified**: mobile typecheck 0, vitest 918; demo screenshotted in headless Chrome.
+**Next steps**: owner picks a style.
+
 ## 2026-11-25 03:30 UTC — phase394: all three card buttons in one top-right row (owner pick "C")
 
 **Objective**: owner, off `/demos/card-actions-v1`: the choice was the top-right row (C) or save + share stacked bottom-right (B), and B ran into the city film's rail of parts — 「你觉得怎么搞」. I recommended C; owner: "c".

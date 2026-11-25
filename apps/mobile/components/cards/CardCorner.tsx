@@ -82,6 +82,11 @@ import { RedlineIcon, type RedlineIconName } from "./redline/RedlineChrome";
 
 /** Glyph colour, shared with the label in the other corner. */
 const INK = redline.onPhoto;
+/**
+ * A saved bookmark's colour (owner 2026-11-25: 「点击收藏显示黄色」). Gold, not
+ * the accent green: on dark glass the green did not carry (phase367.2).
+ */
+const SAVED_INK = "#F5C542";
 
 /** One control's disc. Under Apple's 44pt on its own; the slop makes it up. */
 export const CORNER_DISC = 36;
@@ -123,11 +128,13 @@ function Disc({
 	label,
 	name,
 	weight = "outline",
+	color = INK,
 }: {
 	control: CornerControl;
 	label: string;
 	name: RedlineIconName;
 	weight?: "outline" | "fill";
+	color?: string;
 }) {
 	return (
 		<Pressable
@@ -138,7 +145,7 @@ function Disc({
 			hitSlop={SLOP}
 			style={({ pressed }) => [styles.disc, pressed && styles.pressed]}
 		>
-			<RedlineIcon name={name} size={GLYPH} color={INK} weight={weight} />
+			<RedlineIcon name={name} size={GLYPH} color={color} weight={weight} />
 		</Pressable>
 	);
 }
@@ -155,14 +162,15 @@ export function CardCorner({ sound, save, share }: CardCornerProps) {
 					name={sound.on ? "soundOn" : "soundOff"}
 				/>
 			)}
-			{/* Saved fills the bookmark: outline → fill is the bit `SaveGlyph`
-			    signals with everywhere else. */}
+			{/* Saved fills the bookmark — outline → fill is the bit `SaveGlyph`
+			    signals with everywhere else — and turns it gold. */}
 			{save && (
 				<Disc
 					control={save}
 					label={save.saved ? "Saved" : "Save"}
 					name="bookmark"
 					weight={save.saved ? "fill" : "outline"}
+					{...(save.saved ? { color: SAVED_INK } : {})}
 				/>
 			)}
 			{share && <Disc control={share} label="Share" name="share" />}
