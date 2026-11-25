@@ -125,7 +125,8 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 		expect(COMMUNITY).not.toContain("COMMUNITY_SOUND_TOP");
 		// The control's inset belongs to the control now — no per-face override.
 		expect(CORNER).not.toContain("top?: number");
-		expect(CORNER).toContain("top: 12,");
+		expect(CORNER).toContain("export const CORNER_INSET = 12;");
+		expect(CORNER).toContain("top: CORNER_INSET,");
 	});
 
 	it("renders price, specs and address on the photo — no white container", () => {

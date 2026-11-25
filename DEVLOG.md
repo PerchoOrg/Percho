@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 06:51 UTC — phase401.1: the explore row sits where the card's row sits
+
+**Objective**: owner, on phase401: 「位置也要一致」.
+**Actions**: `CardCorner` exports `CORNER_INSET` (12, the row's distance from the card's top and right edges). `TourHero`'s nav is now `GUTTER + CORNER_INSET` (8 + 12 = 20pt) in from each side of the screen — the x the feed card's discs and place pill have on screen, so tapping Explore leaves sound, save and share in the same column — and `CORNER_INSET` below the status bar (was 12pt from the sides and 8pt down). `theme/listing-layout.test.ts` reads the constant instead of the literal.
+**Decisions**: the vertical position cannot be the feed's on-screen y: on the feed the card starts under the place row and the three figures (~190pt down); the explore film starts at the top of the screen. The gap is measured from where the picture becomes visible, as on the card. Said so to the owner.
+**Verified**: mobile typecheck 0, vitest 929, biome clean.
+**Build**: production 17 (EAS `238e529f…`, phase401 without this) was left to finish on EAS and NOT uploaded; 18 carries this.
+
 ## 2026-11-25 06:49 UTC — phase401: the explore hero wears the feed card's sound, save and share
 
 **Objective**: owner, on build 14: 「explore 界面里的分享和声音按键要和feed里保持一致」.

@@ -42,8 +42,13 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSoundStore } from "../../state/sound";
+import { GUTTER } from "../../theme/feed-page";
 import { explore, fonts, radii, redline } from "../../theme/tokens";
-import { CORNER_DISC_STYLE, CardCorner } from "../cards/CardCorner";
+import {
+	CORNER_DISC_STYLE,
+	CORNER_INSET,
+	CardCorner,
+} from "../cards/CardCorner";
 
 export interface TourHeroProps {
 	width: number;
@@ -246,7 +251,7 @@ export function TourHero(props: TourHeroProps) {
 				pointerEvents="none"
 			/>
 
-			<View style={[styles.nav, { top: insets.top + 8 }]}>
+			<View style={[styles.nav, { top: insets.top + CORNER_INSET }]}>
 				<Pressable
 					onPress={onBack}
 					hitSlop={10}
@@ -279,10 +284,17 @@ export function TourHero(props: TourHeroProps) {
 const styles = StyleSheet.create({
 	topWash: { position: "absolute", top: 0, left: 0, right: 0, height: 90 },
 	footWash: { position: "absolute", bottom: 0, left: 0, right: 0, height: 150 },
+	/**
+	 * Where the row sits on the feed card, on screen: the card is `GUTTER` in
+	 * from the screen's edge and the row `CORNER_INSET` in from the card's, so
+	 * tapping Explore leaves sound, save and share where they were across the
+	 * screen. Vertically the film runs up under the status bar, so the inset
+	 * is taken from where the picture becomes visible (owner: 「位置也要一致」).
+	 */
 	nav: {
 		position: "absolute",
-		left: 12,
-		right: 12,
+		left: GUTTER + CORNER_INSET,
+		right: GUTTER + CORNER_INSET,
 		flexDirection: "row",
 		justifyContent: "space-between",
 	},
