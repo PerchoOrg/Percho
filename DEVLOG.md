@@ -29,7 +29,7 @@ rotation, not on the way in.
 **Actions**: `CardCorner` exports `CORNER_INSET` (12, the row's distance from the card's top and right edges). `TourHero`'s nav is now `GUTTER + CORNER_INSET` (8 + 12 = 20pt) in from each side of the screen — the x the feed card's discs and place pill have on screen, so tapping Explore leaves sound, save and share in the same column — and `CORNER_INSET` below the status bar (was 12pt from the sides and 8pt down). `theme/listing-layout.test.ts` reads the constant instead of the literal.
 **Decisions**: the vertical position cannot be the feed's on-screen y: on the feed the card starts under the place row and the three figures (~190pt down); the explore film starts at the top of the screen. The gap is measured from where the picture becomes visible, as on the card. Said so to the owner.
 **Verified**: mobile typecheck 0, vitest 929, biome clean.
-**Build**: production 17 (EAS `238e529f…`, phase401 without this) was left to finish on EAS and NOT uploaded; 18 carries this.
+**Build**: production 17 (EAS `238e529f…`, phase401 without this) was left to finish on EAS and NOT uploaded. **1.1.0 (18)** from `a582dff8`: EAS `a176c8ff-900e-4449-8885-0248b3c62d04`, ASC build `2ba46226-2d16-4951-98ad-20cd5bec1998` `VALID`, in `Internal` (`IN_BETA_TESTING`), attached to version 1.1.0 in place of 14. This is the build to screenshot and submit. `app.json` buildNumber 18.
 
 ## 2026-11-25 06:49 UTC — phase401: the explore hero wears the feed card's sound, save and share
 
