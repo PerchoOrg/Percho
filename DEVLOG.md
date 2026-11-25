@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 06:12 UTC — phase399: an animated opening screen, three ways (demo only)
+
+**Objective**: owner, after phase398 held the launch screen for the first card: 「有没有可能把启动画面做成简笔画的动画 大概两三秒？」
+**Actions**: `apps/web/public/demos/launch-animation-v1/` — the splash mark drawing itself in a phone frame, then fading into a feed card. A "the bird lands" (roof draws, the bird flies in and settles with a small squash), B "drawn by a pen" (roof draws, the bird's outline is traced in one line, colour fades in, the eye pops), C "sketched in" (as B, but the outline is wiped in from tail to beak). 2.3–2.6 s each; a switch adds the name "Percho" under the mark; Play again; `?v=B&t=1.2` freezes a frame.
+**Decisions**: nothing built in the app. How each would be built: the native launch screen cannot animate, so it becomes a JS layer that takes over from it (phase398's gate already holds it and knows when the first card is ready). A and C need only Reanimated, Views and two PNGs. B traces a path, which needs `react-native-svg` — a native dependency the app does not have (it was dropped in July for red-screening in Expo Go), so B also means a new development build before the owner's dev client can load the JS at all.
+**Verified**: stills at four moments of each variant in headless Chrome.
+**Next steps**: owner picks a letter and name / no name; then build it and fold it into build 14.
+
 ## 2026-11-25 06:05 UTC — phase398: the launch screen stays until the first card is ready
 
 **Objective**: owner: 「第一次打开延迟2秒 才出第一个feed 有咩有办法过度？」 — a cold open shows nothing useful for about two seconds.
