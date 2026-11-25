@@ -23,6 +23,12 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 04:40 UTC — phase394.2: demo of other shapes for mute, save and share
+
+**Objective**: owner, off `/demos/card-icons-v1`: 「换形状 还有别的选择吗」 — more shapes than G's heart + paper plane.
+**Actions**: `apps/web/public/demos/card-icons-v2/` — a picker: a live card pinned at the top wears whatever is tapped below. Save S1–S6 (bookmark now, folded bookmark, heart, star, pin, house), share H1–H7 (box-and-arrow now, tilted / flat paper plane, Android's three dots, solid / line forward arrow, link), mute M1–M4. A Thin / Bold / Solid switch; saved is gold throughout. Phosphor SVGs from jsDelivr, inlined.
+**Next steps**: owner replies with codes ("S3 H2 M1"); each new glyph is a re-subset of the icon fonts (`icon-font.ts`), no new dependency.
+
 ## 2026-11-25 04:10 UTC — phase394.1: saved turns gold; a demo of icon styles for the corner
 
 **Objective**: owner, on phase394: 「好一点了 点击收藏显示黄色 这几个图标的样式还有别的选择么？」 — read as two asks: saved should show yellow, and what other icon styles there are.
