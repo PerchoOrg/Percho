@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 05:55 UTC — phase397.2: the You tab is called Preferences
+
+**Objective**: owner, after the tab got its sliders icon: 「you改成preferences」.
+**Actions**:
+- `app/(tabs)/_layout.tsx`: the fourth tab's label is "Preferences". The route, key and file stay `you` — nothing links by label. `app/(tabs)/you.tsx`: the page title reads "Preferences" too.
+- Copy that names the tab: `lib/areas/take.ts` (two lines) and `lib/listing/take.ts` now say "the Preferences tab".
+- Web `/privacy` and `/terms`: account deletion is "from the Preferences tab in the app (called You before version 1.1)" — 1.0.1 is still the live build and still says You.
+- App Store Connect review notes for 1.1.0: "Preferences tab > Sign in", "Preferences tab > Delete account".
+**Decisions**: the page already has a "YOUR PREFERENCES" section under the new title; left as is and raised with the owner. Code comments still say "You tab" — they describe the file, and the file is still `you.tsx`.
+**Verified**: mobile typecheck 0, vitest 918, biome clean; web typecheck 0, biome clean. "Preferences" at 12pt is about 70pt wide in a 94pt tab on the narrowest phone.
+**Not verified**: on a phone. Dev client 1.0.1 (11) shows it; 1.1.0 (13) does not — the release still needs build 14.
+
 ## 2026-11-25 05:52 UTC — phase397.1: the tab bar wears play / magnifying glass / heart / sliders, in bold
 
 **Objective**: owner, off `/demos/tab-icons-v1`: "f6 s2 y6 bold" — Feed is the play circle, Search the magnifying glass, You the sliders; all four icons in bold lines.

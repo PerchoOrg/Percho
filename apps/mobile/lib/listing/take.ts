@@ -264,7 +264,7 @@ export function buildHomeTake(
 			points: [...dims.map((d) => d.point), ...(blindSpot ? [blindSpot] : [])],
 			caveat:
 				against.length > 0
-					? `Be clear what that costs you: ${listJoin(against.map((d) => `${street(homes[d.winner])} wins on ${d.name}`))}. Change what matters on the You tab and I'll read it differently.`
+					? `Be clear what that costs you: ${listJoin(against.map((d) => `${street(homes[d.winner])} wins on ${d.name}`))}. Change what matters on the Preferences tab and I'll read it differently.`
 					: tradeOff(homes, decisive.winner),
 		};
 	}

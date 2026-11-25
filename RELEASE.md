@@ -17,7 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-25
-- **New icons on the tab bar.** Feed is now a play button, Search a magnifying glass and You a pair of sliders, all drawn in a bolder line; Saved keeps its heart. Arrives with the next app update.
+- **New icons on the tab bar, and "You" is now "Preferences".** Feed is a play button, Search a magnifying glass and the last tab — renamed Preferences — a pair of sliders, all drawn in a bolder line; Saved keeps its heart. Arrives with the next app update.
 - **A new app icon.** The plain letter P is replaced by a small bird sitting on a roofline — a perch, which is where the name Percho comes from. The opening screen shows the same mark. Arrives with the next app update.
 - **Bigger, clearer buttons on the cards.** Mute, save and share are no longer three tiny icons squeezed into one small strip. Each is its own round button, larger and easier to hit, side by side in the card's top corner. Save is now a heart — the same as the Saved tab — and turns red when a place is saved; share is a paper plane. The save button on neighbourhood and city pages is the same red heart. When the place shown in the top-left label has a long name, the distance is left out so the name fits.
 
