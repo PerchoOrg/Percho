@@ -23,6 +23,13 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 01:20 UTC — phase393.1: four layouts for the card's buttons, as a demo
+
+**Objective**: owner, after phase393 landed: 「给我几个demo看看」.
+**Actions**: `apps/web/public/demos/card-actions-v1/` — a static page, each layout on a community card (Cardinal Lake Estates, a two-line name) and a city card (Buford, with the rail of parts), drawn with the app's own icon fonts. A: what phase393 shipped (mute top-right, save + share over Explore). B: save + share as a 44pt column on the right edge with their words. C: three separate 36pt discs in the top corner. D: "Save" / "Share" named buttons on one row with Explore under the name. The old pill last, for comparison. Mute and save toggle.
+**Verified**: headless Chrome screenshots of every variant.
+**Next steps**: owner picks a letter; build it in `CardCorner.tsx` / `CommunityFace.tsx`. B costs the city rail ~110pt; C cuts the place pill to ~200pt; D lets a long name keep one line.
+
 ## 2026-11-25 00:56 UTC — phase393: mute, save and share stop sharing a pill
 
 **Objective**: owner 2026-11-24: 「静音 收藏 分享当个按钮贴在一起 又小又难看 重新设计这几个按键以及在card上的分布」.

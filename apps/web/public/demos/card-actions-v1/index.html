@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho card — mute, save and share</title>
+<style>
+@font-face{font-family:PIcon;src:url(PerchoIcons.ttf)}
+@font-face{font-family:PIconO;src:url(PerchoIconsOutline.ttf)}
+:root{
+  --card-ink:#181B18;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --ui: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --dark: rgba(14,13,11,.5);
+  --light: rgba(255,255,255,.2);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:24px 12px 60px}
+.nav{max-width:760px;margin:0 auto 8px;font:400 14px/1.6 var(--ui)}
+.nav h1{font:600 24px var(--serif);color:#086B5B;margin-bottom:4px}
+.nav p{color:#5A4E40;margin:6px 0}
+.variant{max-width:760px;margin:34px auto 0}
+.variant h2{font:600 19px/1.25 var(--ui)}
+.variant h2 em{font-style:normal;font-weight:500;font-size:12px;color:#fff;background:#086B5B;border-radius:9px;padding:2px 8px;margin-left:6px;vertical-align:2px}
+.variant p{font:400 13.5px/1.45 var(--ui);color:#5A4E40;margin:4px 0 14px;max-width:700px}
+.pair{display:flex;flex-wrap:wrap;gap:20px 24px;justify-content:center}
+.card{position:relative;width:361px;height:527px;border-radius:28px;overflow:hidden;background:#20262A center/cover;box-shadow:0 3px 10px rgba(32,28,22,.05),0 16px 38px rgba(32,28,22,.16)}
+.scrim{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 55%,rgba(0,0,0,.5) 78%,rgba(0,0,0,.92) 100%);pointer-events:none}
+.city .scrim{background:linear-gradient(to left,rgba(0,0,0,.5) 0%,rgba(0,0,0,.22) 20%,transparent 38%),linear-gradient(to bottom,transparent 55%,rgba(0,0,0,.5) 78%,rgba(0,0,0,.92) 100%)}
+button{font-family:inherit;cursor:pointer;border:0;-webkit-tap-highlight-color:transparent}
+/* top-left place pill, as the app draws it */
+.place{position:absolute;top:12px;left:12px;display:inline-flex;align-items:center;gap:5px;background:var(--dark);border-radius:13px;height:26px;padding:0 10px;font:600 10.5px var(--ui);color:#fff;white-space:nowrap;max-width:281px}
+.place span{overflow:hidden;text-overflow:ellipsis}
+.place i{width:1px;height:12px;background:rgba(255,255,255,.35);flex:none}
+.place b{font-weight:400;color:rgba(255,255,255,.86);flex:none}
+/* a control */
+.d{width:36px;height:36px;border-radius:50%;background:var(--dark);color:#fff;display:flex;align-items:center;justify-content:center;font:19px/1 PIconO;flex:none}
+.d.on{font-family:PIcon}
+.d:active{opacity:.7}
+.corner{position:absolute;top:12px;right:12px;display:flex;gap:10px}
+/* bottom block */
+.info{position:absolute;left:24px;right:24px;bottom:24px;color:#fff}
+.tagrow{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:6px}
+.tag{font:700 9.5px var(--ui);letter-spacing:1px;color:rgba(255,255,255,.86)}
+.row{display:flex;align-items:center;gap:12px}
+.name{font:600 27px/30px var(--serif);flex:1;min-width:0}
+.explore{flex:none;height:34px;padding:0 14px;border-radius:17px;background:rgba(255,255,255,.92);color:var(--card-ink);font:600 13.5px var(--ui)}
+.acts{display:flex;gap:10px}
+.acts .d{background:var(--light)}
+/* community progress dashes */
+.dashes{position:absolute;left:24px;right:24px;bottom:12px;display:flex;gap:3px}
+.dashes u{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.3)}
+.dashes u.on{background:#fff}
+/* city rail */
+.rail{position:absolute;right:0;top:58px;bottom:92px;width:112px}
+.rail .track{position:absolute;right:15px;top:0;bottom:0;width:2px;border-radius:1px;background:rgba(255,255,255,.26)}
+.rail .track b{display:block;width:100%;height:36%;border-radius:1px;background:#fff}
+.rail .track s{position:absolute;left:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#8E918E;box-shadow:0 0 0 2px rgba(18,20,18,.45)}
+.rail .track s.on{background:#fff}
+.rail span{position:absolute;right:28px;display:flex;align-items:center;font:500 12px var(--ui);color:rgba(255,255,255,.66);text-shadow:0 1px 3px rgba(0,0,0,.55)}
+.rail span.on{color:#fff;font-weight:700}
+
+/* 0 — before: one small pill */
+.V0 .corner{gap:12px;background:var(--dark);height:26px;border-radius:13px;padding:0 9px;align-items:center}
+.V0 .corner .d{width:15px;height:15px;background:none;font-size:15px;border-radius:0}
+.V0 .place{max-width:240px}
+
+/* A — on the phone now: tagrow carries the actions */
+.VA .tagrow{margin-bottom:8px}
+.VA .rail{bottom:120px}
+
+/* B — a column on the right, with words */
+.col{position:absolute;right:20px;bottom:82px;display:flex;flex-direction:column;gap:12px;align-items:center}
+.col div{color:#fff;font:500 10.5px var(--ui);display:flex;flex-direction:column;align-items:center;gap:4px;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.col .d{width:44px;height:44px;font-size:23px;background:var(--dark)}
+.VB .rail{bottom:232px}
+.VB .info{right:24px}
+
+/* C — three discs in the corner */
+.VC .corner{gap:8px}
+.VC .place{max-width:200px}
+
+/* D — a bar of named buttons under the name */
+.bar{display:flex;gap:8px;margin-top:12px;align-items:center}
+.bar .lab{height:36px;padding:0 13px 0 11px;border-radius:18px;background:var(--light);color:#fff;font:600 13px var(--ui);display:inline-flex;align-items:center;gap:6px}
+.bar .lab .g{font:17px/1 PIconO}
+.bar .lab.on .g{font-family:PIcon}
+.bar .explore{margin-left:auto;height:36px;border-radius:18px}
+.VD .rail{bottom:136px}
+.VD .dashes{bottom:12px}
+</style>
+</head>
+<body>
+<div class="nav">
+  <h1>Mute, save and share on the card</h1>
+  <p>Four ways to draw the three buttons, each on a neighbourhood card (left) and a city card (right), with the old one at the bottom for comparison. The buttons work: tap mute or save to see the other state.</p>
+  <p>Reply with a letter — A, B, C or D — or a mix ("B but without the words").</p>
+</div>
+<div id="out"></div>
+<script>
+const G = { on:'', off:'', save:'', share:'' };
+const still = (uid, t) => `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg?time=${t}s&height=1054`;
+const CARDS = [
+  { kind:'community', tag:'COMMUNITY', name:'Cardinal Lake Estates', place:'Cardinal Lake Pool And Clubhouse', dist:'0.3 mi', img:still('552c9b530d95220a60fd297e0bd3e630', 3) },
+  { kind:'city', tag:'CITY', name:'Buford', place:'Buford High', dist:'', img:still('f5f455fb2683c28899d6ffaef5a9b5af', 26) },
+];
+const SECTIONS = [["Overview",0.1938],["Schools",0.4317],["Life",0.6388],["Homes",0.8282],["Commute",1]];
+
+const mute = `<button class="d" data-k="mute" aria-label="Mute">${G.on}</button>`;
+const save = `<button class="d" data-k="save" aria-label="Save">${G.save}</button>`;
+const share = `<button class="d" aria-label="Share">${G.share}</button>`;
+const explore = `<button class="explore">Explore</button>`;
+const place = (c) => `<div class="place"><span>${c.place}</span>${c.dist ? `<i></i><b>${c.dist}</b>` : ''}</div>`;
+const rail = () => {
+  let prev = 0;
+  const words = SECTIONS.map(([n, e], i) => { const s = `<span class="${i === 1 ? 'on' : ''}" style="top:${prev * 100}%;height:${(e - prev) * 100}%">${n}</span>`; prev = e; return s; }).join('');
+  const dots = SECTIONS.slice(0, -1).map(([, e], i) => `<s class="${i === 0 ? 'on' : ''}" style="top:${e * 100}%"></s>`).join('');
+  return `<div class="rail"><div class="track"><b></b>${dots}</div>${words}</div>`;
+};
+const dashes = `<div class="dashes">${Array.from({ length: 9 }, (_, i) => `<u class="${i < 3 ? 'on' : ''}"></u>`).join('')}</div>`;
+const foot = (c) => (c.kind === 'city' ? rail() : dashes);
+const info = (c, { tagRight = '', under = '', withExplore = true } = {}) =>
+  `<div class="info"><div class="tagrow"><span class="tag">${c.tag}</span>${tagRight}</div><div class="row"><div class="name">${c.name}</div>${withExplore ? explore : ''}</div>${under}</div>`;
+
+const VARIANTS = [
+  { id:'VA', title:'A · Mute up top, save and share over Explore', now:true,
+    note:'What is on the phone now. Mute stays alone in the top corner. Save and share sit at the bottom right, directly above Explore.',
+    draw:(c) => `<div class="corner">${mute}</div>${info(c, { tagRight:`<div class="acts">${save}${share}</div>` })}` },
+  { id:'VB', title:'B · A column on the right, with words',
+    note:'The way short-video apps do it: save and share stacked on the right edge, large, each with its word underneath. Mute stays in the top corner. On a city card the list of parts has to end higher to make room.',
+    draw:(c) => `<div class="corner">${mute}</div><div class="col"><div>${save}<span>Save</span></div><div>${share}<span>Share</span></div></div>${info(c)}` },
+  { id:'VC', title:'C · All three in the top corner, apart',
+    note:'Where they were, but three separate round buttons at the larger size. Nothing moves to the bottom. The place label on the left gets less room, so a long place name is cut short sooner.',
+    draw:(c) => `<div class="corner">${mute}${save}${share}</div>${info(c)}` },
+  { id:'VD', title:'D · Named buttons in a row under the name',
+    note:'Save and Share become buttons with their words, on one line with Explore at the foot. The name gets the whole width above them, so a long name no longer wraps. Mute stays in the top corner.',
+    draw:(c) => `<div class="corner">${mute}</div>${info(c, { withExplore:false, under:`<div class="bar"><button class="lab" data-k="save"><span class="g">${G.save}</span><span class="w">Save</span></button><button class="lab"><span class="g">${G.share}</span>Share</button>${explore}</div>` })}` },
+  { id:'V0', title:'Before · one small strip',
+    note:'What it was until today: three small icons in one strip in the top corner.',
+    draw:(c) => `<div class="corner">${mute}${save}${share}</div>${info(c)}` },
+];
+
+const out = document.getElementById('out');
+for (const v of VARIANTS) {
+  const el = document.createElement('section');
+  el.className = 'variant';
+  el.innerHTML = `<h2>${v.title}${v.now ? '<em>on the phone now</em>' : ''}</h2><p>${v.note}</p><div class="pair">${CARDS.map((c) =>
+    `<div class="card ${v.id} ${c.kind}" style="background-image:url('${c.img}')"><div class="scrim"></div>${place(c)}${v.draw(c)}${foot(c)}</div>`).join('')}</div>`;
+  out.appendChild(el);
+}
+// D lifts the dashes' neighbour: nothing else to wire but the two toggles.
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-k]');
+  if (!b) return;
+  const on = b.classList.toggle('on');
+  if (b.dataset.k === 'mute') b.textContent = on ? G.off : G.on;
+  const w = b.querySelector('.w');
+  if (w) w.textContent = on ? 'Saved' : 'Save';
+});
+</script>
+</body>
+</html>
