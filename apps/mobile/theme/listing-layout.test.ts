@@ -71,7 +71,7 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 		// the listing face mounts it and passes the saved state.
 		expect(LISTING).toContain("<CardCorner");
 		expect(LISTING).toContain("save={{");
-		expect(CORNER).toContain('name="bookmark"');
+		expect(CORNER).toContain('name="heart"');
 	});
 
 	/**

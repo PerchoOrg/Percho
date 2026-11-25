@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 05:20 UTC — phase395: the save mark is a heart, share is a paper plane
+
+**Objective**: owner, off `/demos/card-icons-v2`: "Heart paper plane and small speaker" — S3 heart, H2 (the tilted plane, the one the v1 demo showed), M1 (unchanged). No weight named, so the thin line stays.
+**Actions**:
+- `scripts/icon-fonts/build-icon-font.py`: `bookmark` (bookmark-simple-fill) → `heart` (heart-fill, \ue2a8); `share` export-fill → paper-plane-tilt-fill (\ue398). Both fonts rebuilt (fill 7.2 KB, outline 8.5 KB, 22 glyphs); the old bookmark and export glyphs are no longer in them.
+- `icon-font.ts`: `RedlineIconName` `bookmark` → `heart`; codepoints and art widths (0.875 both, measured with fontTools).
+- `CardCorner.tsx` and `SaveGlyph.tsx` draw `heart`, so every save control — card corner and the four explore surfaces — changes together (phase260's one-mark rule). Saved is still fill + gold on the card.
+- Tests: `save-glyph.test.ts`, `listing-layout.test.ts` name the heart.
+**Decisions**: phase260 chose the bookmark because the web's rose heart is Like. The owner's pick overrides that; the phone has no drawn Like (it is the swipe), and the Saved tab is already a heart, so the save and the tab it fills now match.
+**Verified**: mobile typecheck 0, vitest 918, biome clean; the two fonts rendered in headless Chrome show the speaker, heart (outline / gold fill) and plane (outline / fill).
+**Next steps**: a font asset changed — the dev client needs a full close and reopen to pick it up, not just a reload.
+
 ## 2026-11-25 04:40 UTC — phase394.2: demo of other shapes for mute, save and share
 
 **Objective**: owner, off `/demos/card-icons-v1`: 「换形状 还有别的选择吗」 — more shapes than G's heart + paper plane.
