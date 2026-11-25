@@ -23,6 +23,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 07:52 UTC — phase403.1: iOS 1.1.0 (19) submitted to App Review
+
+**Objective**: owner: screenshots approved (「截图没问题」); What's New and the description rewritten to describe features, not which places are filmed (「关于内容的部分不用特意说明加了哪些社区和城市 这里应该写的是feature本身」); then "ok".
+**Actions** (App Store Connect API, version 1.1.0 `ce9900b3-35e8-4360-a719-f77103063b2f`):
+- Screenshots: the four 1.0.0 captures deleted from both sets; the seven approved images uploaded to `APP_IPHONE_65` (1284×2778) and `APP_IPHONE_67` (1290×2796) in order, all `COMPLETE`.
+- Localization en-US: What's New (659 chars, features only), description (1,169 chars — no place names, no counts; keeps "some of the motion is AI-assisted"; adds cities, at-a-glance pages, compare, Saved views, sharing, Google sign-in), promotional text (first time set, 111 chars). Read back identical. Keywords and subtitle unchanged.
+- Review notes: comparisons for neighbourhoods or cities. Demo account `app-review@percho.co`: password rotated through the Supabase admin API (it had been printed into a session in phase342), password sign-in with the new one 200, stored in the review details only — not printed, not in any file.
+- Pre-flight: build 19 `VALID`, `usesNonExemptEncryption: false`; release MANUAL; age rating 4+ unchanged on the new app info (`7bee5daf…`: UGC yes, social media no, unrestricted web no); no open submissions.
+- `reviewSubmissions` `afe2b194-7126-4ce6-b3cb-7e01e0e851e3` → submitted 2026-11-25 07:52 UTC; version 1.1.0 `WAITING_FOR_REVIEW`.
+- Dev client 1.1.0 (15) (`3690950f…`) added to `Internal` now that the release build is submitted.
+**Not in this build**: the compare header's mid-word break ("Northbrook / e"), owner shipped as is; lengthening the feed's CDN window (phase398) — no answer yet.
+**Next steps**: watch the review (Resolution Center if Apple asks); keep `/admin/pipeline/reviews` watched (UGC). On approval nothing goes live (MANUAL) — the owner picks the day. Seller name: D-U-N-S for the registered company, then Apple converts the membership.
+
 ## 2026-11-25 07:34 UTC — phase403: the 1.1.0 store screenshots, for the owner's review
 
 **Objective**: owner sent seven captures from build 18 (「截图已经完成」); captions were agreed earlier, and he reviews the finished images before they are uploaded.
