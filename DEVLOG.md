@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 04:45 UTC — phase396.1: icon round 2 — the perch without a drawn bird; owner's answers on the 1.1.0 release
+
+**Objective**: owner, off `/demos/app-icon-v1`: 「logo再设计一下 鸟有栖息的寓意 可以取这个意向 但是不要画出鸟的具象」. And on the release proposal: age rating stays 4+; screenshots may carry captions, shown to him before upload; the company is registered, no D-U-N-S yet.
+**Actions**: `apps/web/public/demos/app-icon-v2/` — eight ideas with no beak, eye or wing: A a shape on a roof peak, B the shape on a branch, C a line and a dot that make the P, D an egg in a nest, E three on a wire, F the shape on today's serif P, G a birdhouse, H the shape against a sun. One shared "landed" shape (a rounded body with a tapered end, tilted 20–24°). Each idea on green or cream (switch), with the same home-screen / App Store / small-size preview as v1.
+**Decisions**: a flat-lying shape read as a mound or a computer mouse; tilting it so the tapered end crosses the perch is what makes it read as something perched. A ball in a U-shaped nest read as a person with raised arms, so D is an egg behind a solid bowl.
+**Verified**: both colourways screenshotted in headless Chrome.
+**Next steps**: owner replies with a code and a colour → final art, `icon.png` / `splash-icon.png`, then build 1.1.0 (13). Seller name: owner applies for a D-U-N-S for the registered entity, then asks Apple Developer Support to convert the individual membership to an organisation.
+
 ## 2026-11-25 04:31 UTC — phase396: app icon choices (demo) and the 1.1.0 store proposal
 
 **Objective**: owner: release the current version to iOS — change What's New, the preview screenshots, the age rating and the developer name (to the company); propose first, then publish. Then: 「还要设计app的logo 现在就是一个p」.
