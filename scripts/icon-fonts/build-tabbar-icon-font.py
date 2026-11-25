@@ -13,8 +13,13 @@ sits under the outline glyph. That needs the same four drawings in both
 weights, so this script now builds two subsets from two upstream TTFs.
 Codepoints are identical across weights, so one table addresses both.
 
-Source: Phosphor's regular (outline) weight TTF from the @phosphor-icons/web
-npm package (`package/src/regular/Phosphor.ttf`), subset with fontTools
+2026-11-25 (owner, off `/demos/tab-icons-v1`: "f6 s2 y6 bold"): the glyphs
+are play-circle / magnifying-glass / heart / sliders-horizontal, and the
+outline layer is Phosphor BOLD instead of regular. `TabBarIcons.ttf` keeps
+its file and family name — it is "the outline layer", whatever its weight.
+
+Source: Phosphor's bold (outline) weight TTF from the @phosphor-icons/web
+npm package (`package/src/bold/Phosphor-Bold.ttf`), subset with fontTools
 subset — the same reproducible path `scripts/icon-fonts/build-icon-font.py` uses for the
 fill weight. The fill-weight codepoints are the same across weights, so they
 line up with `brand/icons/phosphor-selection.json`.
@@ -44,18 +49,18 @@ PKG_URL = "https://registry.npmjs.org/@phosphor-icons/web/-/web-2.1.2.tgz"
 
 # (upstream TTF inside the package, output font, registered family name)
 WEIGHTS = [
-    ("regular", "TabBarIcons.ttf", "TabBarIcons"),
+    ("bold", "TabBarIcons.ttf", "TabBarIcons"),
     ("fill", "TabBarIconsFill.ttf", "TabBarIconsFill"),
 ]
 
-GLYPHS = ["house-line", "compass", "heart", "hand-waving"]
+GLYPHS = ["play-circle", "magnifying-glass", "heart", "sliders-horizontal"]
 
 # Codepoints (phosphor-selection.json) — identical in every weight.
 CODEPOINTS = {
-    "house-line": 0xE2C4,
-    "compass": 0xE1C8,
+    "play-circle": 0xE3D2,
+    "magnifying-glass": 0xE30C,
     "heart": 0xE2A8,
-    "hand-waving": 0xE580,
+    "sliders-horizontal": 0xE434,
 }
 
 

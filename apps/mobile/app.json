@@ -12,9 +12,7 @@
       "bundleIdentifier": "co.percho.app",
       "buildNumber": "13",
       "usesAppleSignIn": true,
-      "associatedDomains": [
-        "applinks:www.percho.co"
-      ],
+      "associatedDomains": ["applinks:www.percho.co"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
