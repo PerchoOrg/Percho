@@ -79,8 +79,7 @@ export default function TermsPage() {
       <h2>7. Termination</h2>
       <p>
         We may suspend or terminate accounts that violate these Terms. You may delete your account
-        at any time from the Preferences tab in the app (called You before version 1.1) or from your
-        profile settings on the website.
+        at any time from the You tab in the app or from your profile settings on the website.
       </p>
 
       <h2>8. Disclaimers</h2>

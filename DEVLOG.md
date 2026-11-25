@@ -23,6 +23,13 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 05:58 UTC — phase397.3: the fourth tab is "You" again
+
+**Objective**: owner, on phase397.2's "Preferences": 「太长了 还是用you」.
+**Actions**: `git revert` of `2c110b88`'s code — tab label and page title "You"; the take copy in `lib/areas/take.ts` / `lib/listing/take.ts` and the web `/privacy` and `/terms` lines back to "the You tab". App Store Connect review notes for 1.1.0 back to "You tab > Sign in" / "You tab > Delete account". The sliders icon stays (phase397.1).
+**Verified**: mobile typecheck 0, vitest 918, biome clean; web typecheck 0, biome clean.
+**Learnings**: the tab labels are one short word each (Feed / Search / Saved / You); a long one reads as out of step with the row even when it fits.
+
 ## 2026-11-25 05:55 UTC — phase397.2: the You tab is called Preferences
 
 **Objective**: owner, after the tab got its sliders icon: 「you改成preferences」.
