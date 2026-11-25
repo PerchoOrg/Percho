@@ -23,6 +23,17 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-25 04:31 UTC — phase396: app icon choices (demo) and the 1.1.0 store proposal
+
+**Objective**: owner: release the current version to iOS — change What's New, the preview screenshots, the age rating and the developer name (to the company); propose first, then publish. Then: 「还要设计app的logo 现在就是一个p」.
+**Actions**:
+- Read App Store Connect over the API: 1.0.1 (12) is `READY_FOR_SALE`; 46 `apps/mobile` commits since. Age rating 4+ (UGC yes, social media no, unrestricted web no — links open in Safari via `Linking.openURL`, no in-app browser). Screenshots are the four 1.0.0 captures. Seller is the individual account's legal name.
+- Proposal sent (not executed): version 1.1.0 (13); What's New drafted from RELEASE.md since 2026-11-17; six new screenshots captured by the owner from the production build in TestFlight; age rating kept at 4+ unless he says otherwise; review notes updated; demo-account password rotated; release MANUAL.
+- `apps/web/public/demos/app-icon-v1/` — eight icon ideas beside today's P (A bird on a roof, B bird on a perch, C bird on the P, D P as a map pin, E house with a play-button door, F arched window at sunset, G dusk street, H P under a roof), each previewed on a home screen (light/dark wallpaper), in an App Store row and at 80/60/40/29/20 px. Inline SVG, brand green/cream/amber from `theme/tokens.ts`.
+**Decisions**: the icon ships inside the build, so it is picked before 1.1.0 (13) is built. The developer name cannot change through App Store Connect: an individual membership shows the person's name; showing "Percho, Inc." needs a registered entity, a D-U-N-S number and Apple Developer Support converting the membership — independent of this release.
+**Verified**: demo screenshotted in headless Chrome.
+**Next steps**: owner picks an icon code and answers the proposal (age rating, captions on screenshots, entity status). Then: refine the picked icon, export `icon.png` (1024², no alpha) and `splash-icon.png`, bump `app.json` to 1.1.0 / 13, `eas build` + submit to TestFlight.
+
 ## 2026-11-25 05:45 UTC — phase395.1: a saved heart is red
 
 **Objective**: owner 2026-11-25: 「爱心是红色」, on phase395's heart (which turned gold when saved, from phase394.1).
