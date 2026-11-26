@@ -15,8 +15,8 @@
  * Pure: no react, no store, no clock.
  */
 import type { CommunityCardV3, FeedCardV3, ListingCardV3 } from "./card-types";
-import type { PlaceFocus } from "./follow";
 import type { FeedPool } from "./generate-feed";
+import type { PlaceFocus } from "./place-deck";
 
 /** As much of a neighbourhood as a home card says about where it is. */
 export type HomeOf = Pick<CommunityCardV3, "slug" | "name"> &

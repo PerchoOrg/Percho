@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — 入口按钮和里面那一页（设计方案）</title>
+<style>
+:root{
+  --green:#086B5B;
+  --ink:#181B18;
+  --ink2:#5A4E40;
+  --paper:#F6F3EC;
+  --sage:#E0E9E3;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, "Songti SC", serif;
+  --ui: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+  --dark: rgba(14,13,11,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:24px 14px 80px}
+section,.nav{max-width:1000px;margin:0 auto}
+h1{font:600 26px var(--serif);color:var(--green);margin-bottom:8px}
+h2{font:600 21px/1.3 var(--ui);margin:0 0 6px}
+h3{font:600 17px/1.35 var(--ui);margin:34px 0 4px}
+h3 em{font-style:normal;font-weight:500;font-size:12px;color:#fff;background:var(--green);border-radius:9px;padding:2px 8px;margin-left:8px;vertical-align:2px}
+p,li{font:400 15px/1.65 var(--ui);color:var(--ink2)}
+p{margin:6px 0;max-width:800px}
+b{color:#2B2116}
+code{font:500 13px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.6);border-radius:5px;padding:1px 6px;color:var(--green);white-space:nowrap}
+section{margin-top:50px}
+ul{margin:4px 0 4px 20px;max-width:800px}
+.done{background:rgba(255,255,255,.55);border-radius:14px;padding:12px 18px;margin-top:14px;max-width:820px}
+.pros{display:flex;flex-wrap:wrap;gap:4px 28px;margin:6px 0 16px;max-width:880px}
+.pros div{flex:1 1 300px;font:400 14px/1.55 var(--ui);color:var(--ink2)}
+.phones{display:flex;flex-wrap:wrap;gap:24px 20px;justify-content:center}
+.cap{width:300px;font:400 13px/1.5 var(--ui);color:var(--ink2);margin-top:9px}
+.cap b{color:#2B2116}
+
+/* ── phone ─────────────────────────────────────────── */
+.phone{width:300px;height:640px;border-radius:34px;background:var(--paper);overflow:hidden;position:relative;box-shadow:0 3px 10px rgba(32,28,22,.06),0 16px 38px rgba(32,28,22,.16);display:flex;flex-direction:column}
+.status{height:32px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font:600 11px var(--ui);color:var(--ink)}
+.room{height:18px;flex:none}
+.row{height:40px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px}
+.line{flex:1;min-width:0;font:400 13.5px var(--ui);color:var(--ink2);white-space:nowrap;overflow:hidden}
+.line b{font-weight:600;color:var(--ink)}
+.pill{flex:none;height:34px;padding:0 13px;border-radius:17px;background:var(--sage);color:var(--green);font:600 13.5px/34px var(--ui);white-space:nowrap}
+.pill.wide{flex:1;text-align:center}
+.disc{flex:none;width:34px;height:34px;border-radius:17px;background:var(--sage);color:var(--green);font:600 17px/34px var(--ui);text-align:center}
+.figs{height:42px;flex:none;display:flex;padding:0 14px;margin-top:5px}
+.figs div{flex:1;font:400 8.5px/1.3 var(--ui);color:var(--ink2);padding-left:8px;border-left:1px solid rgba(0,0,0,.1)}
+.figs div:first-child{padding-left:0;border-left:0}
+.figs b{display:block;font:600 17px/1.2 var(--ui);color:var(--ink)}
+.stage{flex:1;margin:10px 6px 12px;position:relative}
+.card{position:absolute;inset:0;border-radius:22px;overflow:hidden;background:#20262A center/cover}
+.scrim{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 48%,rgba(0,0,0,.5) 72%,rgba(0,0,0,.92) 100%)}
+.city .scrim{background:linear-gradient(to left,rgba(0,0,0,.45) 0%,rgba(0,0,0,.18) 20%,transparent 38%),linear-gradient(to bottom,transparent 48%,rgba(0,0,0,.5) 72%,rgba(0,0,0,.92) 100%)}
+.fpill{position:absolute;top:10px;left:10px;height:22px;padding:0 9px;border-radius:11px;background:var(--dark);color:#fff;font:600 9.5px/22px var(--ui);white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.corner{position:absolute;top:8px;right:8px;display:flex;gap:6px}
+.corner i{width:27px;height:27px;border-radius:50%;background:var(--dark);display:block}
+.info{position:absolute;left:16px;right:16px;bottom:18px;color:#fff}
+.tag{font:700 8px var(--ui);letter-spacing:1px;color:rgba(255,255,255,.86);margin-bottom:4px}
+.nrow{display:flex;align-items:center;gap:8px}
+.name{font:600 22px/25px var(--serif);flex:1;min-width:0}
+.sub{font:400 11.5px var(--ui);color:rgba(255,255,255,.86);margin-top:3px}
+.btns{display:flex;gap:7px;margin-top:10px}
+.bx{height:30px;padding:0 12px;border-radius:15px;font:600 11.5px/30px var(--ui);white-space:nowrap}
+.bx.white{background:rgba(255,255,255,.92);color:var(--ink)}
+.bx.glass{background:rgba(255,255,255,.2);color:#fff}
+.dashes{position:absolute;left:16px;right:16px;bottom:8px;display:flex;gap:3px}
+.dashes u{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.3)}
+.dashes u.on{background:#fff}
+.rail{position:absolute;right:0;top:46px;width:92px}
+.rail span{display:block;text-align:right;padding-right:22px;height:26px;font:500 10px/26px var(--ui);color:rgba(255,255,255,.66);text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.rail span.on{color:#fff;font-weight:700}
+.rail::after{content:"";position:absolute;right:12px;top:4px;bottom:4px;width:2px;background:rgba(255,255,255,.3);border-radius:1px}
+.testtag{position:absolute;top:10px;left:10px;background:#C86B3C;color:#fff;font:600 9px/20px var(--ui);border-radius:10px;padding:0 8px}
+.tabs{height:58px;flex:none;border-top:1px solid rgba(0,0,0,.07);display:flex;justify-content:space-around;padding-top:9px;font:500 9px/1.5 var(--ui);color:#8A8478;text-align:center}
+.tabs b{color:var(--green);font-weight:600}
+.new{outline:2px dashed #C86B3C;outline-offset:2px}
+/* inside page header variants */
+.hbar{height:52px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px}
+.hbar .t{flex:1;text-align:center;line-height:1.15}
+.hbar .t b{display:block;font:600 18px var(--serif);color:var(--ink)}
+.hbar .t span{font:400 11px var(--ui);color:var(--ink2)}
+.big{flex:none;padding:6px 16px 2px}
+.big .back{font:500 13.5px var(--ui);color:var(--green)}
+.big .title{font:600 26px/1.15 var(--serif);color:var(--ink);margin-top:6px}
+.big .title span{font:400 14px var(--ui);color:var(--ink2);margin-left:6px}
+.ask{background:rgba(255,255,255,.6);border-radius:14px;padding:12px 18px;margin-top:12px;max-width:820px}
+.ask p{margin:3px 0}
+</style>
+</head>
+<body>
+<div class="nav">
+  <h1>入口按钮放哪、里面那一页怎么排</h1>
+  <p>你说的两个问题：</p>
+  <ul>
+    <li><b>城市卡片上</b>，按钮左边写的是 county 或城市名，点按钮时不知道看的是哪里的社区。</li>
+    <li><b>点进去之后</b>，左边的返回和右边的 Homes 大小、样式都对不上，有点乱。</li>
+  </ul>
+  <p>下面先给入口的三种放法，再给里面那一页的两种排法。都是设计稿，app 里还没改。每个方案画了三台手机：一个短名字的城市、一个长名字的城市、一个社区（社区的 Homes 只在测试版出现）。<b>虚线框</b>是和现在不一样的地方。</p>
+  <div class="done">
+    <p><b>这次已经直接改好的两件事</b></p>
+    <p>1. 学校数字改成区间的上端：社区卡显示附近最好那所学校，比如 Windward 从 <code>Top 3%</code> 变回 <code>Top 1%</code>；城市卡显示毕业率最高那所，Suwanee 是 <code>97.4%</code>。到市中心的时间仍是平均值。</p>
+    <p>2. 喜欢城市或社区之后自动接着放它的社区或房子，这个已经关掉了，等这部分设计好再做。</p>
+  </div>
+</div>
+
+<section>
+  <h2>一、城市卡片上的入口</h2>
+  <p>问题的根源：按钮和"Gwinnett County · northeast of Atlanta"在同一行，看起来像是这一行（县）的按钮，而不是这张卡（Suwanee）的。</p>
+  <div id="entry"></div>
+</section>
+
+<section>
+  <h2>二、点进去之后的那一页</h2>
+  <p>现在的问题：左边 <code>‹ Suwanee</code> 是绿色文字，右边 <code>Homes ›</code> 是浅绿胶囊，中间还夹着一行地名，三样东西三种样子。而在 Suwanee 页里，每张卡的地名都是同一个城市，这一行其实没有信息。</p>
+  <p>两种排法都假设入口用 <b>方案 A</b>（按钮在卡片上），所以里面那页卡片上同样有 <code>Homes</code> 按钮，顶部只管"我在哪、怎么回去"。</p>
+  <div id="inside"></div>
+</section>
+
+<section>
+  <h2>要你回复的</h2>
+  <div class="ask"><p><b>1. 入口选哪个</b>：A、B 或 C。我推荐 <b>A</b>。</p></div>
+  <div class="ask"><p><b>2. 里面那页选哪个</b>：1 或 2。我推荐 <b>1</b>。</p></div>
+  <div class="ask"><p><b>3. 学校数字下面那行小字</b>：现在显示的是最好的一所，但小字还写着 "schools nearby"（附近的学校），读起来像是附近学校都这么好。要不要改成 "best school nearby"？城市卡同理，改成 "best high school"。</p></div>
+  <p style="margin-top:14px">回一句比如"A + 1，小字改"就行。</p>
+</section>
+
+<script>
+const still = (uid, t = 5) => `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg?time=${t}s&height=860`;
+const SUWANEE = { kind:'city', name:'Suwanee', img:still('324ac35659ec5a6e0a5218620575a57a', 6), fpill:'Suwanee Town Center',
+  where:['Gwinnett County','northeast of Atlanta'], figs:[['$481K','median home value'],['97.4%','graduate in 4 years'],['62 min','33 mi to downtown']] };
+const JOHNS = { kind:'city', name:'Johns Creek', img:still('7b4661a5af1d96e939d2d310d6a075bf', 6), fpill:'Autrey Mill Nature Preserve',
+  where:['Fulton County','north-northeast of Atlanta'], figs:[['$629K','median home value'],['98%','graduate in 4 years'],['62 min','30 mi to downtown']] };
+const EDINBURGH = { kind:'community', name:'Edinburgh', img:still('bbcc652c5781ea1227d705a6661fbe68'), fpill:'Edinburgh Clubhouse',
+  where:['Suwanee','Gwinnett County'], figs:[['$589K','Suwanee homes'],['Top 1%','schools nearby'],['28 mi','northeast of Atlanta']] };
+const HARVEST = { kind:'community', name:'Harvest Park', img:still('748e5dfc8c83f5caf3a8719d7b7aaf5a'), fpill:'Harvest Park Pool',
+  where:['Suwanee','Gwinnett County'], figs:[['$589K','Suwanee homes'],['Top 2%','schools nearby'],['27 mi','northeast of Atlanta']] };
+const HOME = { kind:'home', name:'$299,900', sub:'4 bd · 3 ba · 2,910 sqft', img:still('b35ac84331d156485cbb8da2355ed79d', 3),
+  where:['Edinburgh','Suwanee'], figs:[['$299,900','list price'],['4 · 3','beds · baths'],['2,910','sqft']] };
+const RAIL = ['Overview','Schools','Life','Homes','Commute'];
+
+/** The card. `btns`: what sits under the name — null keeps today's name + Explore row. */
+function card(c, { btns = null, newBtn = false } = {}) {
+  const inner = c.kind === 'city' ? 'card city' : c.kind === 'home' ? 'card home' : 'card';
+  const tag = c.kind === 'city' ? 'CITY' : c.kind === 'home' ? 'HOME' : 'COMMUNITY';
+  const top = c.kind === 'home' ? '<div class="testtag">TEST · 测试素材</div>' : `<div class="fpill">${c.fpill}</div>`;
+  const rail = c.kind === 'city' ? `<div class="rail" style="${btns ? 'top:40px' : ''}">${RAIL.map((r, i) => `<span class="${i === 0 ? 'on' : ''}">${r}</span>`).join('')}</div>` : '';
+  const dashes = c.kind === 'community' ? `<div class="dashes">${Array.from({ length: 9 }, (_, i) => `<u class="${i < 3 ? 'on' : ''}"></u>`).join('')}</div>` : '';
+  const sub = c.sub ? `<div class="sub">${c.sub}</div>` : '';
+  const body = btns
+    ? `<div class="name">${c.name}</div>${sub}<div class="btns ${newBtn ? 'new' : ''}" style="border-radius:16px">${btns}</div>`
+    : `<div class="nrow"><div class="name">${c.name}</div><div class="bx white">Explore</div></div>${sub}`;
+  return `<div class="${inner}" style="background-image:url('${c.img}')"><div class="scrim"></div>${top}<div class="corner"><i></i><i></i><i></i></div>${rail}<div class="info"><div class="tag">${tag}</div>${body}</div>${dashes}</div>`;
+}
+const figs = (c) => `<div class="figs">${c.figs.map(([v, l]) => `<div><b>${v}</b>${l}</div>`).join('')}</div>`;
+const line = (c) => `<div class="line"><b>${c.where[0]}</b><span class="rest"> · ${c.where[1]}</span></div>`;
+const tabs = '<div class="tabs"><b>▶<br>Feed</b><span>⌕<br>Search</span><span>♡<br>Saved</span><span>☰<br>You</span></div>';
+const phone = (head, c, cardOpts) =>
+  `<div class="phone"><div class="status"><span>9:41</span><span>●●● ▮</span></div>${head}${figs(c)}<div class="stage">${card(c, cardOpts)}</div>${tabs}</div>`;
+const shot = (html, cap) => `<div>${html}<div class="cap">${cap}</div></div>`;
+
+/** The button(s) under the name for option A. */
+const aBtns = (c) => {
+  if (c.kind === 'city') return '<span class="bx white">Explore</span><span class="bx glass">Communities ›</span>';
+  if (c.kind === 'community') return '<span class="bx white">Explore</span><span class="bx glass">Homes ›</span>';
+  return '<span class="bx white">Explore</span>';
+};
+
+const ENTRY = [
+  { title:'A · 按钮放进卡片，和 Explore 并排', rec:true,
+    what:'名字单独一行，下面一排按钮：<code>Explore</code> 和 <code>Communities ›</code>（社区卡上是 <code>Homes ›</code>）。按钮在卡片里，明显属于这张卡。卡片上方那一行恢复成原来的样子：地点加 Map。',
+    good:'不会再看错是谁的社区；Map 回到城市卡上；城市卡和社区卡的上方一行又一样了；长名字不影响按钮。',
+    bad:'卡片底部多出一排按钮，挡住影片下方大约 40pt；城市卡右边的章节列表要往上收一点。',
+    shots:[
+      [phone(`<div class="room"></div><div class="row">${line(SUWANEE)}<div class="pill">◎ Map</div></div>`, SUWANEE, { btns:aBtns(SUWANEE), newBtn:true }), '<b>Suwanee</b>：卡片上 <code>Communities ›</code>，上方一行回到县名加 Map。'],
+      [phone(`<div class="room"></div><div class="row">${line(JOHNS)}<div class="pill">◎ Map</div></div>`, JOHNS, { btns:aBtns(JOHNS), newBtn:true }), '<b>Johns Creek</b>：名字再长，按钮也不受影响。'],
+      [phone(`<div class="room"></div><div class="row">${line(EDINBURGH)}<div class="pill">◎ Map</div></div>`, EDINBURGH, { btns:aBtns(EDINBURGH), newBtn:true }), '<b>社区卡</b>（测试版）：同一位置是 <code>Homes ›</code>。'],
+    ] },
+  { title:'B · 按钮留在上方一行，左边改成这张卡自己的名字',
+    what:'上方一行左边不再写县，而是写这张卡：<code>Suwanee · Gwinnett County</code>，右边 <code>Communities ›</code>。读起来就是"Suwanee 的社区"。',
+    good:'改动最小，卡片不变。',
+    bad:'名字在卡片上已经有了，这里又写一遍（11 月 23 日你说过"信息和卡片有重合"）；城市卡仍然没有 Map；长名字时左边又会挤。',
+    shots:[
+      [phone(`<div class="room"></div><div class="row"><div class="line new"><b>Suwanee</b><span class="rest"> · Gwinnett County</span></div><div class="pill">Communities ›</div></div>`, SUWANEE), '<b>Suwanee</b>：左边是城市名，按钮就是它的。'],
+      [phone(`<div class="room"></div><div class="row"><div class="line new"><b>Johns Creek</b><span class="rest"> · Fulton County</span></div><div class="pill">Communities ›</div></div>`, JOHNS), '<b>Johns Creek</b>：后半句放不下就整段省掉，左边只剩名字。'],
+      [phone(`<div class="room"></div><div class="row">${line(EDINBURGH)}<div class="pill">Homes ›</div></div>`, EDINBURGH), '<b>社区卡</b>：本来就是 "Suwanee · Gwinnett County"，左右读起来像 Suwanee 的房子，也会误会。'],
+    ] },
+  { title:'C · 上方一行整条变成按钮，名字写在按钮里',
+    what:'城市卡的上方一行变成一整条浅绿按钮 <code>Communities in Suwanee ›</code>，右边一个圆形 Map。县名这行不要了（城市页里有）。',
+    good:'按钮最大最显眼，也写明了是谁的。',
+    bad:'城市卡失去"在哪个县、在亚特兰大哪个方向"这句；城市卡和社区卡上方一行长得不一样；社区卡同样处理的话，社区卡也会失去地名。',
+    shots:[
+      [phone(`<div class="room"></div><div class="row new" style="border-radius:20px"><div class="pill wide">Communities in Suwanee ›</div><div class="disc">◎</div></div>`, SUWANEE), '<b>Suwanee</b>：整条按钮加圆形 Map。'],
+      [phone(`<div class="room"></div><div class="row new" style="border-radius:20px"><div class="pill wide">Communities in Johns Creek ›</div><div class="disc">◎</div></div>`, JOHNS), '<b>Johns Creek</b>：一行放得下。'],
+      [phone(`<div class="room"></div><div class="row new" style="border-radius:20px"><div class="pill wide">Homes in Edinburgh ›</div><div class="disc">◎</div></div>`, EDINBURGH), '<b>社区卡</b>：同样一整条，地名没了。'],
+    ] },
+];
+
+const INSIDE = [
+  { title:'1 · 顶部一条标题栏：返回 · 地名 · Map', rec:true,
+    what:'最上面一条：左边圆形返回键（和 Map 同一种浅绿），中间地名加一行小字说明这页是什么（<code>Communities</code> / <code>Homes</code>），右边 Map。每张卡上方那行地名去掉——这页里都是同一个地方。数字行保留，卡片和 feed 一样大，底部 tab bar 也在。',
+    good:'返回、标题、Map 三样东西一样高、同一种材质；页面一眼看出"我在 Suwanee 的社区里"；卡片尺寸和 feed 完全一样。',
+    bad:'返回键是圆形图标，不带字（"返回到哪"由标题表达）。',
+    shots:[
+      [`<div class="phone"><div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="hbar new" style="border-radius:16px"><div class="disc">‹</div><div class="t"><b>Suwanee</b><span>Communities</span></div><div class="pill">◎ Map</div></div>${figs(HARVEST)}<div class="stage">${card(HARVEST, { btns:aBtns(HARVEST) })}</div>${tabs}</div>`, '<b>Suwanee 页</b>：顶部一条，卡片上是这个社区自己的按钮。'],
+      [`<div class="phone"><div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="hbar new" style="border-radius:16px"><div class="disc">‹</div><div class="t"><b>Edinburgh</b><span>Homes</span></div><div class="pill">◎ Map</div></div>${figs(HOME)}<div class="stage">${card(HOME, { btns:aBtns(HOME) })}</div>${tabs}</div>`, '<b>Edinburgh 的房子页</b>（测试版）：同一种标题栏，返回到 Suwanee 页。'],
+    ] },
+  { title:'2 · 大标题：小字返回，下面一行大地名',
+    what:'左上角小字 <code>‹ Feed</code>，下面一行大号地名 <code>Suwanee</code> 加灰色 <code>Communities</code>，像 iOS 的设置页。再下面保留每张卡的地点行和 Map。',
+    good:'最像 iOS 原生页面；返回到哪写得清清楚楚。',
+    bad:'头部高了，卡片比 feed 矮大约 45pt，影片两侧会被裁；地点行和标题重复说同一个城市。',
+    shots:[
+      [`<div class="phone"><div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="big new" style="border-radius:16px"><div class="back">‹ Feed</div><div class="title">Suwanee<span>Communities</span></div></div><div class="row">${line(HARVEST)}<div class="pill">◎ Map</div></div>${figs(HARVEST)}<div class="stage">${card(HARVEST, { btns:aBtns(HARVEST) })}</div>${tabs}</div>`, '<b>Suwanee 页</b>：大标题，卡片变矮。'],
+      [`<div class="phone"><div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="big new" style="border-radius:16px"><div class="back">‹ Suwanee</div><div class="title">Edinburgh<span>Homes</span></div></div><div class="row">${line(HOME)}<div class="pill">◎ Map</div></div>${figs(HOME)}<div class="stage">${card(HOME, { btns:aBtns(HOME) })}</div>${tabs}</div>`, '<b>Edinburgh 的房子页</b>（测试版）。'],
+    ] },
+];
+
+function render(list, el) {
+  document.getElementById(el).innerHTML = list.map((o) => `
+    <h3>${o.title}${o.rec ? '<em>推荐</em>' : ''}</h3>
+    <p>${o.what}</p>
+    <div class="pros"><div><b>好处：</b>${o.good}</div><div><b>代价：</b>${o.bad}</div></div>
+    <div class="phones">${o.shots.map(([h, c]) => shot(h, c)).join('')}</div>`).join('');
+}
+render(ENTRY, 'entry');
+render(INSIDE, 'inside');
+// As the app does: the line's second half is left out whole when it does not fit.
+for (const el of document.querySelectorAll('.line')) {
+  const rest = el.querySelector('.rest');
+  if (rest && el.scrollWidth > el.clientWidth) rest.remove();
+}
+</script>
+</body>
+</html>

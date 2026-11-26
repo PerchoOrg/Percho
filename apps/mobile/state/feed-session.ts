@@ -61,8 +61,8 @@ interface FeedSessionState {
 	recent: readonly RecentEntry[];
 	/**
 	 * Card ids swiped since the app was opened, oldest first. Not persisted:
-	 * `lib/feed/follow.ts` reads it so a like does not queue what the buyer
-	 * just went through, and so a deck drops what was swiped on another page.
+	 * the feed reads it to drop what was swiped on a place's own page
+	 * (`withoutSwipedAway`, `lib/feed/place-deck.ts`).
 	 */
 	swipedThisRun: readonly string[];
 	/** Nth session for this install (§1.10 `session_n`). */

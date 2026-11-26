@@ -72,25 +72,21 @@ import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
 import { cardPoster } from "../../lib/feed/first-poster";
 import {
-	FOLLOW_MAX,
-	type FollowRun,
-	type PlaceFocus,
-	type SwipeHistory,
-	cardsWithin,
-	followStep,
-	placeDeck,
-	placeLinkAccessibilityLabel,
-	placeLinkLabel,
-	placeWithin,
-	withoutSwipedAway,
-} from "../../lib/feed/follow";
-import {
 	RERANK_HOLD,
 	generateFeed,
 	movedUpCount,
 	rerankTail,
 } from "../../lib/feed/generate-feed";
 import { placeBlockModel, withoutPageName } from "../../lib/feed/place-block";
+import {
+	type PlaceFocus,
+	type SwipeHistory,
+	placeDeck,
+	placeLinkAccessibilityLabel,
+	placeLinkLabel,
+	placeWithin,
+	withoutSwipedAway,
+} from "../../lib/feed/place-deck";
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
 import { preferScope } from "../../lib/feed/scope";
 import { placePool, poolAround } from "../../lib/feed/test-homes";
@@ -223,13 +219,12 @@ function leaveToTab(key: string): void {
 	router.navigate(href);
 }
 
-/** What `lib/feed/follow.ts` needs to know of the buyer's swipes, read now. */
+/** What a place's deck needs to know of the buyer's swipes, read now. */
 function swipeHistory(): SwipeHistory {
 	const s = useFeedSession.getState();
 	return {
 		seenIds: new Set(s.seenIds),
 		passedIds: new Set(s.signals.passedCommunityIds),
-		recentIds: new Set(s.swipedThisRun),
 	};
 }
 
@@ -290,11 +285,6 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	 * rewinding, so coming back resumes the card where it was.
 	 */
 	const [tabFocused, setFocused] = useState(true);
-	/**
-	 * A like's queued cards still to come (`lib/feed/follow.ts`). A ref: it
-	 * orders the deck, it draws nothing.
-	 */
-	const followRun = useRef<FollowRun | null>(null);
 	const activeIndexRef = useRef(0);
 	/** How much had been swiped when something covered this deck. */
 	const swipedWhenCovered = useRef<number | null>(null);
@@ -316,13 +306,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 					useFeedSession.getState().swipedThisRun.slice(before),
 				);
 				const at = activeIndexRef.current;
-				followRun.current = withoutSwipedAway(
-					deckRef.current,
-					at,
-					followRun.current,
-					away,
-				).run;
-				setDeck((d) => withoutSwipedAway(d, at, null, away).deck);
+				setDeck((d) => withoutSwipedAway(d, at, away));
 			}
 			return () => {
 				swipedWhenCovered.current =
@@ -492,7 +476,6 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		// A place's own deck is its cards in order — nothing for the composer
 		// to ration, and nothing to loop.
 		if (focus) {
-			followRun.current = null;
 			setDeck(
 				placeDeck(
 					placePool(poolRef.current, focus, testHomesRef.current),
@@ -733,31 +716,12 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 			 * slack) and reorders each kind only among its own slots, so the
 			 * deck-key invariant and the mix rhythm both hold by construction.
 			 */
-			/*
-			 * A like steps down a level first (`lib/feed/follow.ts`): the liked
-			 * city's neighbourhoods are queued behind the card underneath. While
-			 * such a run is waiting — and on a place's own page, whose order is
-			 * the place's — the tail is not re-ranked under it.
-			 *
-			 * The run is settled here, from the deck on screen; the deck itself
-			 * inside the updater, from whatever it holds by then (an appended
-			 * page may be queued ahead of this). Same inputs, so the two agree.
-			 */
-			const follow = {
-				index,
-				verdict: decision,
-				run: followRun.current,
-				pool: poolAround(poolRef.current, card, testHomesRef.current),
-				history: swipeHistory(),
-			};
-			const settled = followStep({ ...follow, deck: deckRef.current }).run;
-			followRun.current = settled;
-			setDeck((d) => {
-				const next = followStep({ ...follow, deck: d }).deck;
-				return settled !== null || inPlace
-					? next
-					: rerankTail(next, index + 1 + RERANK_HOLD, fresh, poolRef.current);
-			});
+			// Not on a place's own page: its order is the place's.
+			if (!inPlace) {
+				setDeck((d) =>
+					rerankTail(d, index + 1 + RERANK_HOLD, fresh, poolRef.current),
+				);
+			}
 
 			if (card.kind === "tradeoff") {
 				const moved = movedUpCount(pool.listings, card, decision);
@@ -787,24 +751,6 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 			inPlace,
 		],
 	);
-
-	/**
-	 * The stills a like on this card would queue, fetched while the card is
-	 * still being watched: a followed card is seated directly behind the next
-	 * one, so it has one card's viewing — not the usual two — before it shows.
-	 */
-	useEffect(() => {
-		if (!topCard) return;
-		const within = cardsWithin(
-			topCard,
-			poolAround(poolRef.current, topCard, testHomes),
-			swipeHistory(),
-		);
-		for (const card of within.slice(0, FOLLOW_MAX)) {
-			const poster = cardPoster(card);
-			if (poster) Image.prefetch(poster).catch(() => {});
-		}
-	}, [topCard, testHomes]);
 
 	/**
 	 * The place the top card is the way into — a city's neighbourhoods, a

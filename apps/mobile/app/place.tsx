@@ -14,7 +14,7 @@
  */
 import { Redirect, useLocalSearchParams } from "expo-router";
 import { useMemo } from "react";
-import { parsePlaceFocus } from "../lib/feed/follow";
+import { parsePlaceFocus } from "../lib/feed/place-deck";
 import FeedScreen from "./(tabs)/feed";
 
 export default function PlaceScreen() {
