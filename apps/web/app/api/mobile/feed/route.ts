@@ -21,6 +21,12 @@
  *   stage 3    → previews only inside communities the buyer already liked.
  *   stage 4    → unlocked.
  *
+ * **Focus (phase404).** `city=city:suwanee-ga` narrows the pool to that city —
+ * its communities and the homes in it; `community=<slug>` to the homes in that
+ * community. The buyer liked the place and stepped down a level. Narrowed
+ * here, not on the phone: see `lib/feed/pool-focus.ts`. The gate above and
+ * `listings=0` apply to a focused pool unchanged.
+ *
  * Ask / tradeoff / challenge pools stay client-side static — they have no data
  * dependency, matching this route's original comment ("Ask-cards are NOT
  * injected here. Mobile client owns ask interleaving").
@@ -51,6 +57,13 @@ import { cityGlance } from '@/lib/feed/glance';
 import { type LikedCommunityRef, type PoolListingDTO, gateListings } from '@/lib/feed/listing-gate';
 import { listingHighlightDims } from '@/lib/feed/listing-highlights';
 import type { NeighborhoodScores } from '@/lib/feed/neighborhood-score';
+import {
+  cityUnitId,
+  focusCommunities,
+  focusGeoUnits,
+  listingPlaceFor,
+  resolvePoolFocus,
+} from '@/lib/feed/pool-focus';
 import {
   fetchVerticalVideoCommunityIds,
   fetchVerticalVideoListingIds,
@@ -146,15 +159,6 @@ function formatPrice(price: number | null): string {
   return `$${price.toLocaleString('en-US')}`;
 }
 
-function citySlug(city: string | null, state: string | null): string | undefined {
-  if (!city || !state) return undefined;
-  const slug = `${city}-${state}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-  return `city:${slug}`;
-}
-
 /**
  * @param verticalUid 9:16 stream uid for this listing, when one exists. Preferred
  * over the browse-card hero because that hero resolves to
@@ -218,8 +222,8 @@ function projectListing(card: BrowseCard, verticalUid?: string): PoolListingDTO 
     ...(card.photoCount !== undefined && card.photoCount > 1
       ? { photoCount: card.photoCount }
       : {}),
-    ...(citySlug(card.listing.city, card.listing.state)
-      ? { geoUnitId: citySlug(card.listing.city, card.listing.state) }
+    ...(cityUnitId(card.listing.city, card.listing.state)
+      ? { geoUnitId: cityUnitId(card.listing.city, card.listing.state) }
       : {}),
     ...(card.listing.mlsNumber?.trim() ? { mlsNumber: card.listing.mlsNumber.trim() } : {}),
   };
@@ -227,14 +231,28 @@ function projectListing(card: BrowseCard, verticalUid?: string): PoolListingDTO 
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const { stage, offset, limit, videosOnly, videoFirst, likedCommunityIds, cities } =
-    parseFeedPoolQuery(url);
+  const {
+    stage,
+    offset,
+    limit,
+    videosOnly,
+    videoFirst,
+    likedCommunityIds,
+    cities,
+    city,
+    community,
+  } = parseFeedPoolQuery(url);
+
+  // The one place this pool is narrowed to, if the buyer asked for one.
+  const focus = await resolvePoolFocus({ city, community });
+  const listingPlace = listingPlaceFor(focus);
 
   // Stage 0 shows no listings at all, so don't pay for the listing query.
   // `listings=0` is the communities-only app (iOS v1.0, phase308): no listing
   // row is read, so neither listings nor the trade-off doors' listing photos
-  // can reach the response.
-  const needsListingRows = stage > 0 && parseMobileListingsFlag(url);
+  // can reach the response. Nor is one read for a focus on a place we do not
+  // have — its pool is empty.
+  const needsListingRows = stage > 0 && parseMobileListingsFlag(url) && focus?.kind !== 'unknown';
   // Communities are Stage 3's main card type; earlier stages don't show them.
   const needsCommunities = stage >= 3;
   /**
@@ -260,12 +278,19 @@ export async function GET(request: Request) {
   ] = await Promise.all([
     needsListingRows
       ? videosOnly
-        ? fetchBrowseCardsVideosOnly(offset, limit)
-        : fetchBrowseCards(offset, limit)
+        ? fetchBrowseCardsVideosOnly(offset, limit, listingPlace)
+        : fetchBrowseCards(offset, limit, listingPlace)
       : Promise.resolve([] as BrowseCard[]),
     fetchCityGeoUnits(),
     needsCommunities
-      ? fetchCommunityPool({ offset, limit, cities })
+      ? focus?.kind === 'community'
+        ? fetchCommunityPoolByIds([focus.communityId])
+        : // A focused city pages its own communities, not the metro's.
+          fetchCommunityPool({
+            offset,
+            limit,
+            cities: focus?.kind === 'city' ? [focus.city] : cities,
+          })
       : Promise.resolve([] as PoolCommunityDTO[]),
     // Cheap (15 ready rows) and needed for both listings and communities.
     // Uncached, so a new or re-cut film reaches the phone (phase312).
@@ -287,7 +312,8 @@ export async function GET(request: Request) {
    * did not fetch — the reason this needs its own read.
    */
   let rows = pageRows;
-  if (needsListingRows && videoFirst && !videosOnly) {
+  // Not under a focus: the filmed listings are the metro's, not the place's.
+  if (needsListingRows && videoFirst && !videosOnly && focus === null) {
     const videoIds = await fetchVerticalVideoListingIds();
     const videoCards = videoIds.length > 0 ? await fetchBrowseCardsByIds(videoIds) : [];
     const seen = new Set(videoCards.map((c) => c.listing.id));
@@ -466,7 +492,7 @@ export async function GET(request: Request) {
   // (owner, 2026-09-07). It also means a right-swipe on a community credits
   // its city, which it never did.
   const communityRowsWithGeo = communityRows.map((c) => {
-    const geoUnitId = citySlug(c.city, c.state);
+    const geoUnitId = cityUnitId(c.city, c.state);
     return geoUnitId ? { ...c, geoUnitId } : c;
   });
   // Attach vertical video to communities too. `CommunityFace` already renders
@@ -496,16 +522,21 @@ export async function GET(request: Request) {
   const videoBearing = videosOnly
     ? communitiesWithVideo.filter((c) => c.videoUrl)
     : communitiesWithVideo;
-  const orderedCommunities = videoFirst
-    ? [...videoBearing.filter((c) => c.videoUrl), ...videoBearing.filter((c) => !c.videoUrl)]
-    : // `videoBearing`, not `communitiesWithVideo` — the un-sorted branch has to
-      // honour the filter too, or `videosOnly` would only work with `videoFirst`.
-      videoBearing;
+  const orderedCommunities = focusCommunities(
+    videoFirst
+      ? [...videoBearing.filter((c) => c.videoUrl), ...videoBearing.filter((c) => !c.videoUrl)]
+      : // `videoBearing`, not `communitiesWithVideo` — the un-sorted branch has to
+        // honour the filter too, or `videosOnly` would only work with `videoFirst`.
+        videoBearing,
+    // Last, on what the buyer actually gets: `videosOnly` and `videoFirst`
+    // read every filmed community in the metro whatever the page was.
+    focus,
+  );
 
   // A city with a film plays it on its card and opens its page (phase327). Its
   // poster is the film's own first frame: the view's `hero_storage_path` is the
   // cover of whichever community sorts first, which is not a picture of the city.
-  const geoUnits = cityUnits.map((unit) => {
+  const geoUnits = focusGeoUnits(cityUnits, focus).map((unit) => {
     const film = cityFilms.get(unit.id);
     if (!film) return unit;
     const glance = cityGlance(film.place);
