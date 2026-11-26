@@ -11,15 +11,7 @@
  * feed's `activeIndex` survives a push to a detail screen and back (§1.9).
  */
 import { Tabs } from "expo-router";
-import { TabBar, type TabItem } from "../../components/TabBar";
-
-/** Exactly 4 (§0.6 #6) — `TabBar` types this as a 4-tuple. */
-const TABS: readonly [TabItem, TabItem, TabItem, TabItem] = [
-	{ key: "feed", label: "Feed" },
-	{ key: "search", label: "Search" },
-	{ key: "saved", label: "Saved" },
-	{ key: "you", label: "You" },
-];
+import { APP_TABS, TabBar } from "../../components/TabBar";
 
 export default function TabsLayout() {
 	return (
@@ -27,13 +19,13 @@ export default function TabsLayout() {
 			screenOptions={{ headerShown: false }}
 			tabBar={({ state, navigation }) => (
 				<TabBar
-					tabs={TABS}
+					tabs={APP_TABS}
 					activeKey={state.routeNames[state.index] ?? "feed"}
 					onSelect={(key) => navigation.navigate(key)}
 				/>
 			)}
 		>
-			{/* Order fixes the bar order, so it must match TABS. */}
+			{/* Order fixes the bar order, so it must match APP_TABS. */}
 			<Tabs.Screen name="feed" />
 			<Tabs.Screen name="search" />
 			<Tabs.Screen name="saved" />

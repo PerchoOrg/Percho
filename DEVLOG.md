@@ -23,6 +23,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-26 16:31 UTC — phase404.5: the link takes the Map button's place; a place's page keeps the tab bar; the Explore film stops under it
+
+**Objective**: owner, on the dev client with phase404.4: 「字太小 把现在的map button替换掉吧 / 点进去要能看到最底下的bar / 点进去后音乐oveelap了 旧的音乐要停止」.
+**What the phone does now**:
+- **The link is the pill where Map was.** On a city's card the place row ends in `More of Suwanee ›` — Map control B's box, fill and 14pt label, no pin — instead of `◎ Map`. The one-line text in the room above the block is gone. A card with no deck of its own (every neighbourhood card in the store build) keeps its Map button; a city card no longer has one. In the test bundle a neighbourhood's card says `Homes in … ›` there.
+- **A place's page has the tab bar.** The page is still pushed (back works as before), and draws the app's own bar under itself with Feed lit; a tab leaves the page for that tab (`dismissAll`, then the tab). The bar it had at the top is gone: the place row leads with `‹ Suwanee` in the accent, which is the way back and the page's name, so the page is laid out exactly as the feed — the same card, the same two rows — on every phone.
+- **The film on an Explore page pauses when a page opens over it** and resumes on return. That was the overlap: `More of … ›` on a city's page pushed the deck while `TourHero` kept playing. (The feed's own card already paused — `tabFocused`.)
+**Actions** (`apps/mobile`): `components/feed/PlaceBlock.tsx` — `deck` (drawn instead of Map) and `back` (leads the row); `theme/place-block.test.ts` — five controls now, and two tests that the deck link is Map's pill and never beside it. `app/(tabs)/feed.tsx` — the room is the echo's alone again; the bar and its styles removed; `TabBar` under a place's page; `leaveToTab`. `components/TabBar.tsx` — `APP_TABS`, from the tabs layout. `components/community/TourHero.tsx` — `useIsFocused` → `TourVideo`'s `suspended`.
+**Decisions**: the back control went into the place row rather than staying a bar because with the tab bar back the page has the feed's height, and a 44pt bar would have cost the figures row on his phone (35pt of room). The bar under the page is drawn, not navigated: making `/place` a hidden tab would lose the stack — city → neighbourhood → back.
+**Verified**: mobile typecheck 0, biome 0 errors / 5 warnings (as main), vitest 982, `expo export --platform ios`. **Not run on a device.**
+**Risks**: a long label (`More of Johns Creek ›`) takes room from the place line, which shrinks to 80% and then cuts. On a screen too short for the block (`rows: "none"`, below the 13 mini) a place's page has no `‹` — the tab bar, the end card and the edge swipe still leave it.
+**Next steps**: owner on the phone.
+
 ## 2026-11-26 16:03 UTC — phase404.4: the link is on the feed too; a place's page does not repeat its name; homes, for testing only
 
 **Objective**: owner, on phase404.3: 「这个链接是重要入口 在feed里也应该显示 不应等用户喜欢了再显示 进去了不用再重复city」 and 「房子也做」 (earlier: 「如果需要房子视频 你找之前的素材测试 不要在正式ios里显示就行 只测试」).

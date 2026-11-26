@@ -31,7 +31,6 @@ import {
 } from "react";
 import {
 	Image,
-	Pressable,
 	StyleSheet,
 	Text,
 	View,
@@ -45,6 +44,7 @@ import {
 	type SwipeHintHandle,
 	SwipeStack,
 } from "../../components/SwipeStack";
+import { APP_TABS, TabBar } from "../../components/TabBar";
 import { AreaFace } from "../../components/cards/AreaFace";
 import {
 	CHAPTER_TAP_TARGET,
@@ -205,6 +205,22 @@ import { textStyles } from "../../theme/typography";
  * and area/community at `width × 1.2` — which meant an alternating deck
  * cross-faded the frame height on every commit and the page visibly jumped.
  */
+
+/** Where each tab of a place's own bar goes. */
+const TAB_HREF = {
+	feed: "/(tabs)/feed",
+	search: "/(tabs)/search",
+	saved: "/(tabs)/saved",
+	you: "/(tabs)/you",
+} as const;
+
+/** Off a place's page — and any page under it — to a tab. */
+function leaveToTab(key: string): void {
+	const href = TAB_HREF[key as keyof typeof TAB_HREF];
+	if (href === undefined) return;
+	if (router.canDismiss()) router.dismissAll();
+	router.navigate(href);
+}
 
 /** What `lib/feed/follow.ts` needs to know of the buyer's swipes, read now. */
 function swipeHistory(): SwipeHistory {
@@ -791,9 +807,10 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 
 	/**
 	 * The place the top card is the way into — a city's neighbourhoods, a
-	 * neighbourhood's homes — said in the room above the block, on every such
-	 * card (owner, 2026-11-26: 「这个链接是重要入口 在feed里也应该显示 不应等用户
-	 * 喜欢了再显示」). The same words as the Explore page's button.
+	 * neighbourhood's homes — said on every such card, where the Map button
+	 * was (owner, 2026-11-26: 「这个链接是重要入口 在feed里也应该显示 不应等用户
+	 * 喜欢了再显示」, then 「字太小 把现在的map button替换掉吧」). The same words
+	 * as the Explore page's button.
 	 */
 	const placeLink = useMemo(
 		() =>
@@ -1120,27 +1137,8 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	}, [deck.length, firstPoster, nothingToWaitFor]);
 
 	return (
-		// No tab bar under a place's page, so the home indicator is its own.
-		<SafeAreaView
-			style={styles.screen}
-			edges={inPlace ? ["top", "bottom"] : ["top"]}
-		>
+		<SafeAreaView style={styles.screen} edges={["top"]}>
 			{offline && <OfflineBar />}
-			{focus && (
-				<View style={styles.placeBar}>
-					<Pressable
-						onPress={backOrFeed}
-						hitSlop={12}
-						accessibilityRole="button"
-						accessibilityLabel="Back"
-					>
-						<Text style={styles.placeBack}>‹</Text>
-					</Pressable>
-					<Text style={styles.placeTitle} numberOfLines={1}>
-						{focus.name}
-					</Text>
-				</View>
-			)}
 			<View
 				style={styles.page}
 				onLayout={(e) => setContentHeight(e.nativeEvent.layout.height)}
@@ -1152,37 +1150,13 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				 * The trade-off answer's echo is said here.
 				 */}
 				<View style={styles.room}>
-					{echo !== null ? (
+					{echo !== null && (
 						<View style={styles.echo} pointerEvents="none">
 							<Text style={styles.echoText} numberOfLines={2}>
 								{echo}
 							</Text>
 						</View>
-					) : placeLink !== null ? (
-						<Pressable
-							onPress={() =>
-								router.push({
-									pathname: "/place",
-									params: {
-										kind: placeLink.kind,
-										id: placeLink.id,
-										name: placeLink.name,
-									},
-								})
-							}
-							hitSlop={12}
-							style={({ pressed }) => [
-								styles.placeLink,
-								pressed && styles.placeLinkPressed,
-							]}
-							accessibilityRole="button"
-							accessibilityLabel={placeLinkLabel(placeLink)}
-						>
-							<Text style={styles.placeLinkText} numberOfLines={1}>
-								{placeLinkLabel(placeLink)} ›
-							</Text>
-						</Pressable>
-					) : null}
+					)}
 				</View>
 				{/*
 				 * The place block (phase378; above the card since phase379; set down
@@ -1194,11 +1168,36 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				 * target, no Map button; no page, and a figure is text. The place
 				 * line opens a community only for a HOME — on a community's own
 				 * card Explore already goes there.
+				 *
+				 * A card that is the way into a place's own deck says so where
+				 * Map was (phase404.5); on such a page the line leads with the
+				 * way back, which is also the page's name.
 				 */}
 				{page.rows !== "none" && (
 					<PlaceBlock
 						model={block}
 						facts={page.rows === "both"}
+						deck={
+							placeLink !== null
+								? {
+										label: placeLinkLabel(placeLink),
+										onPress: () =>
+											router.push({
+												pathname: "/place",
+												params: {
+													kind: placeLink.kind,
+													id: placeLink.id,
+													name: placeLink.name,
+												},
+											}),
+									}
+								: undefined
+						}
+						back={
+							focus
+								? { label: focus.name || "Back", onPress: backOrFeed }
+								: undefined
+						}
 						onOpenPlace={
 							placeSlug !== null
 								? () => router.push(`/community/${placeSlug}`)
@@ -1309,22 +1308,21 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				{/* The other quarter, under the card. */}
 				<View style={styles.foot} />
 			</View>
+			{/*
+			 * A place's page is pushed over the tabs, which would take the bar
+			 * away (owner, 2026-11-26: 「点进去要能看到最底下的bar」). It draws
+			 * the same bar under itself: the page then measures exactly as the
+			 * feed does, and a tab leaves the page for that tab.
+			 */}
+			{inPlace && (
+				<TabBar tabs={APP_TABS} activeKey="feed" onSelect={leaveToTab} />
+			)}
 		</SafeAreaView>
 	);
 }
 
 const styles = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: colors.bg },
-	/** A place's page: back and its name, as the compare pages draw theirs. */
-	placeBar: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 12,
-		paddingHorizontal: 16,
-		paddingTop: 8,
-	},
-	placeBack: { ...textStyles.title1, fontWeight: "400", color: colors.accent },
-	placeTitle: { ...textStyles.title2, color: colors.ink, flexShrink: 1 },
 	/**
 	 * CardContainer (2026-08-13 redesign) — the card's only margin, now that
 	 * the card fills the available height. `flex: 1` + centering keeps the
@@ -1342,17 +1340,6 @@ const styles = StyleSheet.create({
 		...textStyles.footnote,
 		color: colors.ink2,
 		textAlign: "center",
-	},
-	/**
-	 * The way into the top card's place, in the same room: one line of the
-	 * accent's ink, no fill — the room is 15pt on the smallest phone.
-	 */
-	placeLink: { alignSelf: "center", paddingHorizontal: 12 },
-	placeLinkPressed: { opacity: 0.6 },
-	placeLinkText: {
-		...textStyles.footnote,
-		fontWeight: "600",
-		color: colors.accent,
 	},
 	/**
 	 * Everything between the status bar (and the offline bar) and the tab bar,

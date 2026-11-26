@@ -30,6 +30,7 @@ import { type TourSegment, buildTourGroups } from "@percho/shared/tour-buckets";
  * already draws over media.
  */
 import { LinearGradient } from "expo-linear-gradient";
+import { useIsFocused } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { type MutableRefObject, useEffect, useRef, useState } from "react";
 import {
@@ -95,6 +96,7 @@ function TourVideo({
 	segments,
 	onActiveChange,
 	seekRef,
+	suspended,
 }: {
 	url: string;
 	width: number;
@@ -103,6 +105,8 @@ function TourVideo({
 	/** Called on every tick; the parent's setState ignores repeats. */
 	onActiveChange: (index: number) => void;
 	seekRef: MutableRefObject<((index: number) => void) | null>;
+	/** Another page is over this one: the film and its sound wait. */
+	suspended: boolean;
 }) {
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const player = useVideoPlayer(url, (p) => {
@@ -116,6 +120,14 @@ function TourVideo({
 	useEffect(() => {
 		player.muted = !soundOn;
 	}, [player, soundOn]);
+
+	// A place's deck opens OVER this page (phase404.5) and its first card
+	// plays at once; the film under it kept playing too (owner, 2026-11-26:
+	// 「点进去后音乐overlap了 旧的音乐要停止」). No rewind: back resumes it.
+	useEffect(() => {
+		if (suspended) player.pause();
+		else player.play();
+	}, [suspended, player]);
 
 	// The strip's seek. `seekBy`, not `player.currentTime = …`: on an HLS
 	// source the setter seeks with zero tolerance and a slow seek is abandoned
@@ -178,6 +190,7 @@ export function TourHero(props: TourHeroProps) {
 	const toggleSound = useSoundStore((s) => s.toggle);
 	const [activeIndex, setActiveIndex] = useState(0);
 	const seekRef = useRef<((index: number) => void) | null>(null);
+	const pageFocused = useIsFocused();
 
 	const { groups, keyByIndex } = buildTourGroups(segments);
 	/** The lit chip: the group the place now on screen belongs to. */
@@ -227,6 +240,7 @@ export function TourHero(props: TourHeroProps) {
 					segments={segments}
 					onActiveChange={setActiveIndex}
 					seekRef={seekRef}
+					suspended={!pageFocused}
 				/>
 			) : heroUrl ? (
 				<Image

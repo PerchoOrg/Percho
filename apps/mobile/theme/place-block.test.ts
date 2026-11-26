@@ -169,6 +169,25 @@ describe("map control B", () => {
 	});
 });
 
+/**
+ * Owner, 2026-11-26, on the one-line link above the block: 「字太小 把现在的map
+ * button替换掉吧」.
+ */
+describe("the deck link takes the Map button's place", () => {
+	it("is the same pill — Map's box, fill and label — with the words for the pin", () => {
+		const pill = CODE.slice(CODE.indexOf("{deck !== undefined ? ("));
+		const deck = pill.slice(0, pill.indexOf(") : onOpenMap !== undefined ? ("));
+		expect(deck).toContain("styles.map, pressed && styles.mapPressed");
+		expect(deck).toContain("style={styles.mapLabel}");
+		expect(deck).not.toContain("pinBox");
+	});
+
+	it("is drawn INSTEAD of Map, never beside it", () => {
+		expect(CODE).toContain(") : onOpenMap !== undefined ? (");
+		expect(CODE).not.toContain("{onOpenMap !== undefined && (");
+	});
+});
+
 describe("what the block must not become", () => {
 	/**
 	 * The header this replaced said the card's name again, at 36pt (owner,
@@ -196,10 +215,12 @@ describe("what the block must not become", () => {
 
 	/**
 	 * Separate controls, each its own target: the place line (a home's
-	 * community), Map, and a figure. Never one button around the block.
+	 * community), Map, and a figure — and since phase404.5 the way into the
+	 * card's own deck, which takes Map's place, and the way back on a place's
+	 * page. Never one button around the block.
 	 */
 	it("wraps no shared button around the block", () => {
-		expect(CODE.match(/<Pressable/g) ?? []).toHaveLength(3);
+		expect(CODE.match(/<Pressable/g) ?? []).toHaveLength(5);
 		const wrap = CODE.slice(CODE.indexOf("<View style={[styles.wrap"));
 		expect(wrap.slice(0, 80)).not.toContain("Pressable");
 	});
