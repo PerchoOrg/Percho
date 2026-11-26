@@ -74,14 +74,15 @@ function homesCell(homeValue: CommunityProfile['homeValue'] | undefined): Glance
 /**
  * Where the nearby schools stand among Georgia's, as the Explore tile words
  * each one — "Top 1%", "Top 2%", "Top 7%" — and the figure is the best of
- * them: "Top 1%".
+ * them: "Top 1%". The label says so ("best school nearby"): under "schools
+ * nearby" the best one's figure read as all of theirs.
  */
 function schoolsCell(ranks: CommunityProfile['ranks'] | undefined): GlanceCell | null {
   const rows = (ranks?.rows ?? []).filter((r) => r.group === SCHOOLS_GROUP).slice(0, 3);
   if (rows.length === 0) return null;
   return {
     value: `Top ${Math.min(...rows.map(rankShare))}%`,
-    label: rows.length === 1 ? 'school nearby' : 'schools nearby',
+    label: rows.length === 1 ? 'school nearby' : 'best school nearby',
     topic: 'schools',
   };
 }
@@ -147,7 +148,8 @@ function measureLabel(measure: string): string {
 /**
  * The city's own schools by its page's headline measure — the district and
  * state rows it is drawn against are left out. The figure is the highest
- * school's, as the page prints it.
+ * school's, as the page prints it — and where the city has several, a
+ * graduation rate is labelled as the top one rather than as the city's.
  */
 function graduationCell(education: CityFundamentals['education']): GlanceCell | null {
   const own = education.rows.filter((r) => !r.baseline);
@@ -157,7 +159,12 @@ function graduationCell(education: CityFundamentals['education']): GlanceCell | 
     undefined,
   );
   if (!best || !label) return null;
-  return { value: best.display, label, topic: 'schools' };
+  const topOfSeveral = own.length > 1 && /^graduate\b/.test(label);
+  return {
+    value: best.display,
+    label: topOfSeveral ? 'top graduation rate' : label,
+    topic: 'schools',
+  };
 }
 
 /**

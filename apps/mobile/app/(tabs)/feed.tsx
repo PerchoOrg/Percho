@@ -77,7 +77,7 @@ import {
 	movedUpCount,
 	rerankTail,
 } from "../../lib/feed/generate-feed";
-import { placeBlockModel, withoutPageName } from "../../lib/feed/place-block";
+import { placeBlockModel } from "../../lib/feed/place-block";
 import {
 	type PlaceFocus,
 	type SwipeHistory,
@@ -92,6 +92,7 @@ import { preferScope } from "../../lib/feed/scope";
 import { placePool, poolAround } from "../../lib/feed/test-homes";
 import {
 	CARD_TAP_TARGET,
+	DECK_TAP_TARGET,
 	SHARE_TAP_TARGET,
 	SOUND_TAP_TARGET,
 } from "../../lib/gesture/tap-slot";
@@ -217,6 +218,14 @@ function leaveToTab(key: string): void {
 	if (href === undefined) return;
 	if (router.canDismiss()) router.dismissAll();
 	router.navigate(href);
+}
+
+/** Onto a place's own deck (`app/place.tsx`). */
+function openPlace(place: PlaceFocus): void {
+	router.push({
+		pathname: "/place",
+		params: { kind: place.kind, id: place.id, name: place.name },
+	});
 }
 
 /** What a place's deck needs to know of the buyer's swipes, read now. */
@@ -651,16 +660,12 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	const topCard = deck[activeIndex];
 	const block = useMemo(
 		() =>
-			// On a place's own page the bar has said its name already.
-			withoutPageName(
-				placeBlockModel({
-					card: topCard,
-					geoUnits: pool.geoUnits,
-					communities: pool.communities,
-				}),
-				focus?.name,
-			),
-		[topCard, pool.geoUnits, pool.communities, focus?.name],
+			placeBlockModel({
+				card: topCard,
+				geoUnits: pool.geoUnits,
+				communities: pool.communities,
+			}),
+		[topCard, pool.geoUnits, pool.communities],
 	);
 
 	/**
@@ -753,18 +758,25 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	);
 
 	/**
-	 * The place the top card is the way into — a city's neighbourhoods, a
-	 * neighbourhood's homes — said on every such card, where the Map button
-	 * was (owner, 2026-11-26: 「这个链接是重要入口 在feed里也应该显示 不应等用户
-	 * 喜欢了再显示」, then 「字太小 把现在的map button替换掉吧」). The same words
-	 * as the Explore page's button.
+	 * The pill at a card's bottom right: the way into its own deck — a city's
+	 * neighbourhoods, a neighbourhood's homes — on every card that has one
+	 * (owner, 2026-11-26: 「这个链接是重要入口 在feed里也应该显示 不应等用户喜欢了
+	 * 再显示」, then 「把新的communities或者homes 放到右下方」). The same words
+	 * as the Explore page's button; absent for a card with nothing inside.
 	 */
-	const placeLink = useMemo(
-		() =>
-			topCard
-				? placeWithin(topCard, poolAround(pool, topCard, testHomes))
-				: null,
-		[topCard, pool, testHomes],
+	const deckOf = useCallback(
+		(card: FeedCardV3) => {
+			const place = placeWithin(card, poolAround(pool, card, testHomes));
+			if (place === null) return {};
+			return {
+				deck: {
+					label: placeLinkLabel(place),
+					accessibilityLabel: placeLinkAccessibilityLabel(place),
+					onPress: () => openPlace(place),
+				},
+			};
+		},
+		[pool, testHomes],
 	);
 
 	const capability = useCallback(
@@ -839,6 +851,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 								tapSlot={args.tapSlot}
 								deckGesture={args.deckGesture}
 								{...(toCity ? { onExplore: toCity } : {})}
+								{...deckOf(card)}
 								{...share}
 							/>
 						);
@@ -884,6 +897,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 							/* Lets the progress bar's drag block the deck's swipe —
 							   without it the two race for the same gesture. */
 							deckGesture={args.deckGesture}
+							{...deckOf(card)}
 							{...share}
 							/*
 							 * "Why people love it →" now has a destination (owner,
@@ -923,6 +937,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 			takeSeq,
 			focused,
 			paused,
+			deckOf,
 		],
 	);
 
@@ -1030,6 +1045,17 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				if (shareTarget) openShareSheet(shareTarget);
 				return;
 			}
+			if (target === DECK_TAP_TARGET) {
+				const top = deckRef.current[activeIndex];
+				const place = top
+					? placeWithin(
+							top,
+							poolAround(poolRef.current, top, testHomesRef.current),
+						)
+					: null;
+				if (place) openPlace(place);
+				return;
+			}
 			if (target === EXPLORE_TAP_TARGET) {
 				const top = deckRef.current[activeIndex];
 				if (top && top.kind === "listing") {
@@ -1116,34 +1142,20 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				 * line opens a community only for a HOME — on a community's own
 				 * card Explore already goes there.
 				 *
-				 * A card that is the way into a place's own deck says so where
-				 * Map was (phase404.5); on such a page the line leads with the
-				 * way back, which is also the page's name.
+				 * On a place's own page the row is the page's header instead
+				 * (phase404.9): back, the place and what the page holds, Map.
 				 */}
 				{page.rows !== "none" && (
 					<PlaceBlock
 						model={block}
 						facts={page.rows === "both"}
-						deck={
-							placeLink !== null
-								? {
-										label: placeLinkLabel(placeLink),
-										accessibilityLabel: placeLinkAccessibilityLabel(placeLink),
-										onPress: () =>
-											router.push({
-												pathname: "/place",
-												params: {
-													kind: placeLink.kind,
-													id: placeLink.id,
-													name: placeLink.name,
-												},
-											}),
-									}
-								: undefined
-						}
-						back={
+						header={
 							focus
-								? { label: focus.name || "Back", onPress: backOrFeed }
+								? {
+										title: focus.name,
+										subtitle: placeLinkLabel(focus),
+										onBack: backOrFeed,
+									}
 								: undefined
 						}
 						onOpenPlace={

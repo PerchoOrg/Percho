@@ -23,6 +23,21 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-26 23:00 UTC — phase404.9: the card's name is its link; the deck pill at the bottom right; a place's page has a header
+
+**Objective**: owner, on `/demos/feed-focus-v4`: 「按照你推荐的」 — T1, an empty bottom right on a store-build neighbourhood card, the school label changed; with the inside page he chose on `-v3` (option 1).
+**What the phone does now** (dev client):
+- **A card's name opens its Explore page.** It ends in a light `›`, tied to the last word by a no-break space so a two-line name ends in it. The white `Explore` pill is gone.
+- **Bottom right: the next level.** `Communities ›` on a city's card, `Homes ›` on a neighbourhood's where there are homes (test bundle), in the pill Explore had; it is what breathes at 82% now. A card with nothing inside — every neighbourhood card in the store build — has nothing there.
+- **The place row is place + Map again** on every card; a city's card has its Map button back.
+- **A place's page** (`/place`): the row above the figures is the page's header — a round sage back button, the place in serif 18 over what the page holds ("Suwanee" / "Communities"), Map. No place line per card. Same height as the place row, so the card and the figures sit exactly where they do on the feed; tab bar underneath as before.
+- **Labels** (server, live on deploy): `best school nearby` under a community's school figure (one school: `school nearby`); `top graduation rate` under a city's when it has several high schools. Proposed to him as "best high school"; changed because under a percentage that does not say what the percentage is.
+**Actions**: `components/cards/CommunityFace.tsx` — `deck` prop, the name in a `Pressable` armed with `EXPLORE_TAP_TARGET`, the pill armed with `DECK_TAP_TARGET` (new, `lib/gesture/tap-slot.ts`). `app/(tabs)/feed.tsx` — `deckOf(card)` hands each face its pill, `onTapTarget` answers it, `openPlace`; the block gets `header` on a place's page. `components/feed/PlaceBlock.tsx` — `header` (back disc, centred title over the row, Map); `deck` and `back` removed. `lib/feed/place-block.ts` — `withoutPageName` removed with the line it trimmed. `apps/web/lib/feed/glance.ts` — the two labels. Tests: `theme/place-block.test.ts` (header: Map's material, centred on the screen, no per-card line; 4 controls), `theme/community-panel-fit.test.ts` (the name is the Explore link, the pill the deck's, the feed answers it), glance (11).
+**Not changed**: the home card (`ListingFace`) keeps its own Explore link — it shows only in the test bundle and has its own layout tests; it gets the name-link when homes are designed for release. The Explore pages' `PlaceDeckLink` button stays.
+**Verified**: mobile typecheck 0, biome 0 errors / 5 warnings, vitest 971; web tsc 0, glance tests 11; `expo export --platform ios`. **Not run on a device.**
+**Risks**: on a screen too short for the block (`rows: "none"`) a place's page has no header — the tab bar, the end card and the edge swipe leave it. The name's tap target is the name's own box plus 12pt; a one-word name is a small target next to the card-wide pause tap.
+**Next steps**: owner on the phone. The follow rule waits for its design.
+
 ## 2026-11-26 22:33 UTC — phase404.8: shared links stay film-only; the card's name becomes its link (demo)
 
 **Owner**: 「先不允许 增加app的下载可能性」 — a shared link keeps opening the film and the App Store button only; no web page one level down. Then, on A of `/demos/feed-focus-v3`: 「两个按钮都在卡片上的同一位置不好 你看能不能把卡片左下角的title做成链接button 功能替换explore 给我设计看看 把新的communities或者homes 放到右下方」.

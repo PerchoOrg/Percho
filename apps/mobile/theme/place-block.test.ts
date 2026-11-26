@@ -118,8 +118,9 @@ describe("the block's rows", () => {
 		const texts = CODE.match(/<Text\b[\s\S]*?>/g) ?? [];
 		const lines = CODE.match(/numberOfLines=\{1\}/g) ?? [];
 		expect(lines).toHaveLength(texts.length);
-		// The figure and its label — each alone in its column.
-		expect(CODE.match(/adjustsFontSizeToFit/g) ?? []).toHaveLength(2);
+		// The figure and its label — each alone in its column — and a place
+		// page's title, alone on its line.
+		expect(CODE.match(/adjustsFontSizeToFit/g) ?? []).toHaveLength(3);
 		expect(n("FIGURE_MIN_SCALE")).toBeGreaterThanOrEqual(0.75);
 		expect(n("LABEL_MIN_SCALE")).toBeGreaterThanOrEqual(0.75);
 		expect(CODE.slice(CODE.indexOf("function sheet"))).not.toContain(
@@ -178,12 +179,14 @@ describe("map control B", () => {
  * A place line that shrank beside the pill read as a different face.
  */
 describe("the place row is one size", () => {
-	it("draws the way back, the line and the pill at PLACE_SIZE, with no other size", () => {
+	it("draws the line and the Map pill at PLACE_SIZE", () => {
 		const body = CODE.slice(CODE.indexOf("function sheet(k: number)"));
-		const row = body.slice(0, body.indexOf("factsRow: {"));
-		const sizes = [...row.matchAll(/fontSize: (\w+) \* k/g)].map((m) => m[1]);
-		expect(sizes.length).toBeGreaterThanOrEqual(3);
-		expect(new Set(sizes)).toEqual(new Set(["PLACE_SIZE"]));
+		for (const name of ["place", "mapLabel"]) {
+			const rule = body.slice(body.indexOf(`\t\t${name}: {`));
+			expect(rule.slice(0, rule.indexOf("}")), name).toContain(
+				"fontSize: PLACE_SIZE * k",
+			);
+		}
 	});
 
 	it("gives up the line's second half whole before a name loses a letter", () => {
@@ -197,18 +200,38 @@ describe("the place row is one size", () => {
 	});
 });
 
-describe("the deck link takes the Map button's place", () => {
-	it("is the same pill — Map's box, fill and label — with the words for the pin", () => {
-		const pill = CODE.slice(CODE.indexOf("{deck !== undefined ? ("));
-		const deck = pill.slice(0, pill.indexOf(") : onOpenMap !== undefined ? ("));
-		expect(deck).toContain("styles.map, pressed && styles.mapPressed");
-		expect(deck).toContain("style={styles.mapLabel}");
-		expect(deck).not.toContain("pinBox");
+/**
+ * A place's own page (phase404.9; owner, 2026-11-26, of the back text beside
+ * the pill: 「左边返回的按键和右边的homes大小格式有点乱 重新设计下innner page」,
+ * then option 1 of `/demos/feed-focus-v3`).
+ */
+describe("a place's page: the row is its header", () => {
+	it("draws the way back in the Map pill's height, radius and fill", () => {
+		const body = CODE.slice(CODE.indexOf("backDisc: {"));
+		const disc = body.slice(0, body.indexOf("},"));
+		expect(disc).toContain("width: MAP_HEIGHT * k");
+		expect(disc).toContain("minHeight: MAP_HEIGHT * k");
+		expect(disc).toContain("borderRadius: MAP_RADIUS * k");
+		expect(disc).toContain("backgroundColor: feedHeader.mapFill");
 	});
 
-	it("is drawn INSTEAD of Map, never beside it", () => {
-		expect(CODE).toContain(") : onOpenMap !== undefined ? (");
-		expect(CODE).not.toContain("{onOpenMap !== undefined && (");
+	it("centres the place on the screen, clear of both controls", () => {
+		const body = CODE.slice(CODE.indexOf("headerTitle: {"));
+		const title = body.slice(0, body.indexOf("},"));
+		expect(title).toContain('position: "absolute"');
+		expect(title).toContain(
+			"paddingHorizontal: (MAP_WIDTH + PLACE_MAP_GAP) * k",
+		);
+	});
+
+	it("replaces the per-card place line, and keeps Map", () => {
+		const row = CODE.slice(CODE.indexOf("{header !== undefined ? ("));
+		const header = row.slice(
+			0,
+			row.indexOf(") : onOpenPlace !== undefined ? ("),
+		);
+		expect(header).not.toContain("{line}");
+		expect(CODE).toContain("{onOpenMap !== undefined && (");
 	});
 });
 
@@ -239,12 +262,11 @@ describe("what the block must not become", () => {
 
 	/**
 	 * Separate controls, each its own target: the place line (a home's
-	 * community), Map, and a figure — and since phase404.5 the way into the
-	 * card's own deck, which takes Map's place, and the way back on a place's
-	 * page. Never one button around the block.
+	 * community), Map, a figure — and, on a place's own page, the way back
+	 * (phase404.9). Never one button around the block.
 	 */
 	it("wraps no shared button around the block", () => {
-		expect(CODE.match(/<Pressable/g) ?? []).toHaveLength(5);
+		expect(CODE.match(/<Pressable/g) ?? []).toHaveLength(4);
 		const wrap = CODE.slice(CODE.indexOf("<View style={[styles.wrap"));
 		expect(wrap.slice(0, 80)).not.toContain("Pressable");
 	});
