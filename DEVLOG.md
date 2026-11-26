@@ -23,6 +23,20 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-26 08:27 UTC — phase404.2: the design for "1 + 3", as a page he can swipe (demo only)
+
+**Objective**: owner, on `/demos/feed-focus-v1`: 「1+3 给我出设计方案 在网页里也用中文 如果需要房子视频 你找之前的素材测试 不要在正式ios里显示就行 只测试」.
+**Actions**: `apps/web/public/demos/feed-focus-v2/` — the page is in Chinese; the app's own strings in it stay English. Nothing in the app.
+- **A working phone**: drag a card or use the buttons; a line beside it says what just happened. Five city films and fifteen community films by their stills; homes are the six `fmls_bridge` test listings' films, badged TEST, standing in for whichever community was liked. A switch turns homes off, which is what the store build shows. `#s=RLOB…` replays a path (R like, L pass, O the line, B back, H homes off) — used to check the states in headless Chrome.
+- **The rule as designed**: the card already underneath plays; the place's cards start behind it — a city's neighbourhoods, a neighbourhood's homes, at most 4, unseen first, never one that was passed. Two passes in a row stop it and send the rest back. The same rule inside a place's page.
+- **The line**: in the strip above the place line, at once on a like, gone when the run ends; only when the place has something left; no count. `More of Suwanee ›` / `Homes in Edinburgh ›`.
+- **The page**: back + the place's name, the card at the feed's size; city → its neighbourhoods (unseen first), later its homes, no second showing of the city film; neighbourhood → its homes; an end card, no loop; not remembered across launches.
+- **Explore**: the same words as a button under the page's title, drawn for a city and for a community.
+- **Store build vs test**: the city half can ship; homes only where a dev build turns them on.
+**Asked of him**: the two English lines; whether the one-card wait after a like is acceptable (the alternative pre-places a city's neighbourhood under every city card, so a pass shows one too); whether the city half goes into the next release while homes stay test-only.
+**Note**: the page shows frames of the FMLS test listings' films on percho.co (noindex), on his instruction and for this review only.
+**Next steps**: on his "好" — `apps/mobile`: the follow rule in the composer, the line in the feed's `room`, a pushed deck route fed by phase404's `city=` / `community=`, the Explore buttons; homes behind a dev-only switch with `LISTINGS_IN_APP` left false. Still waiting: `relink-listings.ts --apply` (two test listings → their communities).
+
 ## 2026-11-26 08:14 UTC — phase404.1: staying in a place you liked — three ways (demo only)
 
 **Objective**: owner, on phase404's proposal: 「你给我出几个设计方案 回答这几个问题 这个应该做成某种ui上的功能 还是主动推荐的逻辑 如果是前者 如何呈现？」.
