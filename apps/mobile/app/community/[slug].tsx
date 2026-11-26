@@ -62,6 +62,7 @@ import { RedlineIcon } from "../../components/cards/redline/RedlineChrome";
 import { CreditsFoot } from "../../components/community/CreditsFoot";
 import { ExploreBody } from "../../components/community/ExploreBody";
 import { NearbyChart } from "../../components/community/NearbyChart";
+import { PlaceDeckLink } from "../../components/community/PlaceDeckLink";
 import { ReviewsSection } from "../../components/community/ReviewsSection";
 import { StatBand } from "../../components/community/StatBand";
 import { TourHero } from "../../components/community/TourHero";
@@ -70,6 +71,7 @@ import type {
 	CommunityDetailDTO,
 	CommunityReasonDTO,
 } from "../../lib/community/detail-dto";
+import { LISTINGS_IN_APP, TEST_HOMES } from "../../lib/listings-in-app";
 import { type ReviewStatus, fetchMyReview } from "../../lib/reviews/reviews";
 import { backOrFeed } from "../../lib/share/back-or-feed";
 import { openShareSheet } from "../../lib/share/share-sheet";
@@ -264,6 +266,14 @@ export default function CommunityWhyScreen() {
 						</Text>
 						{!!place && <Text style={styles.place}>{place}</Text>}
 					</View>
+
+					{/* Into the neighbourhood's own deck (phase404.4) — its homes. A
+					    build without homes does not ask whether there are any. */}
+					{(LISTINGS_IN_APP || TEST_HOMES) && (
+						<PlaceDeckLink
+							focus={{ kind: "community", id: data.slug, name: data.name }}
+						/>
+					)}
 
 					{profile && (
 						<ExploreBody

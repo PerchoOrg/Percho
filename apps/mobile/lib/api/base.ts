@@ -69,6 +69,11 @@ export function feedPoolUrl(params: {
 	 * narrowing — `apps/web/lib/feed/pool-focus.ts`.
 	 */
 	focus?: { kind: "city" | "community"; id: string };
+	/**
+	 * Ask for homes whatever the build shows — only `hooks/use-test-homes.ts`
+	 * passes it, and only in a development bundle. Absent, the build decides.
+	 */
+	listings?: boolean;
 }): string {
 	const q = new URLSearchParams({
 		stage: String(params.stage),
@@ -82,7 +87,7 @@ export function feedPoolUrl(params: {
 	if (params.videosOnly) q.set("videosOnly", "1");
 	if (params.videoFirst) q.set("videoFirst", "1");
 	if (params.focus) q.set(params.focus.kind, params.focus.id);
-	if (!LISTINGS_IN_APP) q.set("listings", "0");
+	if (!(params.listings ?? LISTINGS_IN_APP)) q.set("listings", "0");
 	return `${apiBase()}/api/mobile/feed?${q.toString()}`;
 }
 

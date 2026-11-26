@@ -63,6 +63,7 @@ import { OfflineBar } from "../../components/feed/OfflineBar";
 import { PlaceBlock } from "../../components/feed/PlaceBlock";
 import { useCfScores } from "../../hooks/use-cf-scores";
 import { useFeedPool } from "../../hooks/use-feed-pool";
+import { useTestHomes } from "../../hooks/use-test-homes";
 import { cardBehavior } from "../../lib/feed/behavior";
 import type { FeedCardV3 } from "../../lib/feed/card-types";
 import { cityFilmCard } from "../../lib/feed/city-film-card";
@@ -78,6 +79,8 @@ import {
 	cardsWithin,
 	followStep,
 	placeDeck,
+	placeLinkLabel,
+	placeWithin,
 	withoutSwipedAway,
 } from "../../lib/feed/follow";
 import {
@@ -86,9 +89,10 @@ import {
 	movedUpCount,
 	rerankTail,
 } from "../../lib/feed/generate-feed";
-import { placeBlockModel } from "../../lib/feed/place-block";
+import { placeBlockModel, withoutPageName } from "../../lib/feed/place-block";
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
 import { preferScope } from "../../lib/feed/scope";
+import { placePool, poolAround } from "../../lib/feed/test-homes";
 import {
 	CARD_TAP_TARGET,
 	SHARE_TAP_TARGET,
@@ -220,7 +224,6 @@ function swipeHistory(): SwipeHistory {
 export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	const { width } = useWindowDimensions();
 	const inPlace = focus !== undefined;
-	const placeKind = focus?.kind ?? "city";
 
 	const stage = useFunnelStore((s) => s.stage);
 	const stageHydrated = useFunnelStore((s) => s.hydrated);
@@ -426,6 +429,15 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	poolRef.current = scopedPool;
 
 	/**
+	 * A development bundle's stand-in homes (`lib/feed/test-homes.ts`); none in
+	 * any other, and then every use of it below hands the pool straight
+	 * back.
+	 */
+	const testHomes = useTestHomes();
+	const testHomesRef = useRef(testHomes);
+	testHomesRef.current = testHomes;
+
+	/**
 	 * DEV-ONLY recompose trigger, and 0 whenever the sampler is off.
 	 *
 	 * A number rather than the pool object: the pool is a new object identity on
@@ -462,9 +474,15 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		const s = useFeedSession.getState();
 		// A place's own deck is its cards in order — nothing for the composer
 		// to ration, and nothing to loop.
-		if (inPlace) {
+		if (focus) {
 			followRun.current = null;
-			setDeck(placeDeck(poolRef.current, placeKind, swipeHistory()));
+			setDeck(
+				placeDeck(
+					placePool(poolRef.current, focus, testHomesRef.current),
+					focus.kind,
+					swipeHistory(),
+				),
+			);
 			setComposedPoolReady(poolReady);
 			setEngineExhausted(true);
 			setActiveIndex(0);
@@ -521,8 +539,10 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		samplerPoolSize,
 		poolReady,
 		scope?.unitId,
-		inPlace,
-		placeKind,
+		focus,
+		// A place's page deals its test homes when they arrive. Never the tab:
+		// its deck holds no homes until a like queues them.
+		inPlace ? testHomes.length : 0,
 	]);
 
 	/**
@@ -540,12 +560,14 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	const appendPage = useCallback(() => {
 		const s = useFeedSession.getState();
 		const current = deckRef.current;
-		if (inPlace) {
+		if (focus) {
 			// A later page of the place's pool: whatever is not in the deck yet.
 			const have = new Set(current.map((c) => c.id));
-			const more = placeDeck(poolRef.current, placeKind, swipeHistory()).filter(
-				(c) => !have.has(c.id),
-			);
+			const more = placeDeck(
+				placePool(poolRef.current, focus, testHomesRef.current),
+				focus.kind,
+				swipeHistory(),
+			).filter((c) => !have.has(c.id));
 			if (more.length > 0) setDeck((d) => [...d, ...more]);
 			return;
 		}
@@ -563,7 +585,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		setDeck((d) => [...d, ...result.cards]);
 
 		setEngineExhausted(result.exhausted);
-	}, [stage, inPlace, placeKind]);
+	}, [stage, focus]);
 
 	/**
 	 * A shared link opened the app here (phase337, owner: "跳转到app的explore页面
@@ -629,12 +651,16 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	const topCard = deck[activeIndex];
 	const block = useMemo(
 		() =>
-			placeBlockModel({
-				card: topCard,
-				geoUnits: pool.geoUnits,
-				communities: pool.communities,
-			}),
-		[topCard, pool.geoUnits, pool.communities],
+			// On a place's own page the bar has said its name already.
+			withoutPageName(
+				placeBlockModel({
+					card: topCard,
+					geoUnits: pool.geoUnits,
+					communities: pool.communities,
+				}),
+				focus?.name,
+			),
+		[topCard, pool.geoUnits, pool.communities, focus?.name],
 	);
 
 	/**
@@ -704,7 +730,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				index,
 				verdict: decision,
 				run: followRun.current,
-				pool: poolRef.current,
+				pool: poolAround(poolRef.current, card, testHomesRef.current),
 				history: swipeHistory(),
 			};
 			const settled = followStep({ ...follow, deck: deckRef.current }).run;
@@ -752,12 +778,30 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	 */
 	useEffect(() => {
 		if (!topCard) return;
-		const within = cardsWithin(topCard, poolRef.current, swipeHistory());
+		const within = cardsWithin(
+			topCard,
+			poolAround(poolRef.current, topCard, testHomes),
+			swipeHistory(),
+		);
 		for (const card of within.slice(0, FOLLOW_MAX)) {
 			const poster = cardPoster(card);
 			if (poster) Image.prefetch(poster).catch(() => {});
 		}
-	}, [topCard]);
+	}, [topCard, testHomes]);
+
+	/**
+	 * The place the top card is the way into — a city's neighbourhoods, a
+	 * neighbourhood's homes — said in the room above the block, on every such
+	 * card (owner, 2026-11-26: 「这个链接是重要入口 在feed里也应该显示 不应等用户
+	 * 喜欢了再显示」). The same words as the Explore page's button.
+	 */
+	const placeLink = useMemo(
+		() =>
+			topCard
+				? placeWithin(topCard, poolAround(pool, topCard, testHomes))
+				: null,
+		[topCard, pool, testHomes],
+	);
 
 	const capability = useCallback(
 		(card: FeedCardV3) => cardBehavior(card).capability,
@@ -1108,13 +1152,37 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				 * The trade-off answer's echo is said here.
 				 */}
 				<View style={styles.room}>
-					{echo !== null && (
+					{echo !== null ? (
 						<View style={styles.echo} pointerEvents="none">
 							<Text style={styles.echoText} numberOfLines={2}>
 								{echo}
 							</Text>
 						</View>
-					)}
+					) : placeLink !== null ? (
+						<Pressable
+							onPress={() =>
+								router.push({
+									pathname: "/place",
+									params: {
+										kind: placeLink.kind,
+										id: placeLink.id,
+										name: placeLink.name,
+									},
+								})
+							}
+							hitSlop={12}
+							style={({ pressed }) => [
+								styles.placeLink,
+								pressed && styles.placeLinkPressed,
+							]}
+							accessibilityRole="button"
+							accessibilityLabel={placeLinkLabel(placeLink)}
+						>
+							<Text style={styles.placeLinkText} numberOfLines={1}>
+								{placeLinkLabel(placeLink)} ›
+							</Text>
+						</Pressable>
+					) : null}
 				</View>
 				{/*
 				 * The place block (phase378; above the card since phase379; set down
@@ -1274,6 +1342,17 @@ const styles = StyleSheet.create({
 		...textStyles.footnote,
 		color: colors.ink2,
 		textAlign: "center",
+	},
+	/**
+	 * The way into the top card's place, in the same room: one line of the
+	 * accent's ink, no fill — the room is 15pt on the smallest phone.
+	 */
+	placeLink: { alignSelf: "center", paddingHorizontal: 12 },
+	placeLinkPressed: { opacity: 0.6 },
+	placeLinkText: {
+		...textStyles.footnote,
+		fontWeight: "600",
+		color: colors.accent,
 	},
 	/**
 	 * Everything between the status bar (and the offline bar) and the tab bar,

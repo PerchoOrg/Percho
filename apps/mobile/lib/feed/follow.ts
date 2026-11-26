@@ -208,6 +208,36 @@ export interface PlaceFocus {
 	name: string;
 }
 
+/**
+ * The place a card is the way into, when the pool holds something inside it:
+ * a city with a neighbourhood, a neighbourhood with a home. Whatever the buyer
+ * has seen or passed — the link to a place does not wait for a like, and its
+ * page shows all of it.
+ */
+export function placeWithin(
+	card: FeedCardV3,
+	pool: FeedPool,
+): PlaceFocus | null {
+	if (card.kind === "area") {
+		return pool.communities.some((c) => c.geoUnitId === card.unit.id)
+			? { kind: "city", id: card.unit.id, name: card.unit.name }
+			: null;
+	}
+	if (card.kind === "community") {
+		return pool.listings.some((l) => l.communityId === card.slug)
+			? { kind: "community", id: card.slug, name: card.name }
+			: null;
+	}
+	return null;
+}
+
+/** What the link into a place's deck says, on the feed and on its Explore page. */
+export function placeLinkLabel(focus: PlaceFocus): string {
+	return focus.kind === "city"
+		? `More of ${focus.name}`
+		: `Homes in ${focus.name}`;
+}
+
 /** A route's params as a focus, or null when they do not name a place. */
 export function parsePlaceFocus(params: {
 	kind?: string | string[];

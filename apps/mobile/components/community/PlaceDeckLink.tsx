@@ -11,7 +11,10 @@
  *
  * Drawn only when the deck has something in it: it asks for the place's pool
  * (the request the deck itself makes, so the answer is already cached when the
- * page opens) and stays out of the page until a card comes back. No count.
+ * page opens) and stays out of the page until a card comes back — so on a
+ * neighbourhood's page it draws nothing in a build without homes. No count.
+ *
+ * The same words sit above the place's card on the feed (`app/(tabs)/feed.tsx`).
  *
  * The Map control's material — the pale sage fill and the accent's ink — so
  * the page has one kind of "go somewhere else" button.
@@ -19,11 +22,24 @@
 import { router } from "expo-router";
 import { Pressable, StyleSheet, Text } from "react-native";
 import { useFeedPool } from "../../hooks/use-feed-pool";
-import type { PlaceFocus } from "../../lib/feed/follow";
+import { useTestHomes } from "../../hooks/use-test-homes";
+import {
+	type PlaceFocus,
+	type SwipeHistory,
+	placeDeck,
+	placeLinkLabel,
+} from "../../lib/feed/follow";
+import { placePool } from "../../lib/feed/test-homes";
 import { feedHeader } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
 const NONE: readonly string[] = [];
+/** Whether there is a deck at all does not depend on what was swiped. */
+const NO_HISTORY: SwipeHistory = {
+	seenIds: new Set(),
+	passedIds: new Set(),
+	recentIds: new Set(),
+};
 
 export function PlaceDeckLink({ focus }: { focus: PlaceFocus }) {
 	const { pool } = useFeedPool({
@@ -33,9 +49,14 @@ export function PlaceDeckLink({ focus }: { focus: PlaceFocus }) {
 		enabled: true,
 		focus,
 	});
-	if (pool.communities.length + pool.listings.length === 0) return null;
-	const label =
-		focus.kind === "city" ? `More of ${focus.name}` : `Homes in ${focus.name}`;
+	const testHomes = useTestHomes();
+	const deck = placeDeck(
+		placePool(pool, focus, testHomes),
+		focus.kind,
+		NO_HISTORY,
+	);
+	if (deck.length === 0) return null;
+	const label = placeLinkLabel(focus);
 	return (
 		<Pressable
 			onPress={() =>

@@ -23,6 +23,24 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-26 16:03 UTC — phase404.4: the link is on the feed too; a place's page does not repeat its name; homes, for testing only
+
+**Objective**: owner, on phase404.3: 「这个链接是重要入口 在feed里也应该显示 不应等用户喜欢了再显示 进去了不用再重复city」 and 「房子也做」 (earlier: 「如果需要房子视频 你找之前的素材测试 不要在正式ios里显示就行 只测试」).
+**What the phone does now**:
+- **On the feed**, above the place line of every city card: `More of Suwanee ›` — one line in the accent's ink, in the room where the trade-off echo is said. It does not wait for a like. It opens the same `/place` page as the Explore page's button. A neighbourhood's card says `Homes in Edinburgh ›` in the same spot, where there are homes (test bundle only, below).
+- **On a place's page**, the line over each card no longer leads with the page's own name: in Suwanee's page a neighbourhood reads `Gwinnett County`, not `Suwanee · Gwinnett County`; in a neighbourhood's page a home reads `Suwanee · Gwinnett County` and the line is no longer a link to the page one is in. This is how 「进去了不用再重复city」 was read — the city's film was already not dealt inside. The figures' labels ("Suwanee homes") come from the server and still say it.
+- **Homes, in a development bundle started with `EXPO_PUBLIC_TEST_HOMES=1`**: like a neighbourhood and up to 4 homes follow it; its card and its Explore page say `Homes in … ›`; that page is the six homes and an end card; a home's Explore opens the listing page. The homes are the six `fmls_bridge` sandbox films, re-addressed to whichever neighbourhood is asked about — the same six everywhere.
+**Actions** (`apps/mobile`):
+- `lib/listings-in-app.ts`: `TEST_HOMES = __DEV__ && EXPO_PUBLIC_TEST_HOMES === "1"`. `LISTINGS_IN_APP` is untouched: Search, Saved, You, compare and the feed's mix are the store build's.
+- `lib/feed/test-homes.ts` (new, 8 tests incl. the gate), `hooks/use-test-homes.ts` (new; one read of the unfocused pool with listings on, no request unless the switch is on), `lib/api/base.ts` (`listings` override for that read).
+- `lib/feed/follow.ts`: `placeWithin` (the place a card opens: a city with a neighbourhood in the pool, a neighbourhood with a home), `placeLinkLabel` (+4 tests). `lib/feed/place-block.ts`: `withoutPageName` (+3 tests).
+- `app/(tabs)/feed.tsx`: the link in `room`; `withoutPageName` on the block; `poolAround` / `placePool` wherever the follow rule, the stills prefetch and a place's deck read the pool. `components/community/PlaceDeckLink.tsx`: decides by `placeDeck` (a neighbourhood's own card is not a deck), shares the label. `app/community/[slug].tsx`: the link, only in a build with homes — the store build does not ask. `app/listing/[id].tsx`: reachable under `TEST_HOMES`.
+**Decisions**: the link is text, not a pill — the room above the block is 15pt on the smallest phone and the block under it was settled over five phases; nothing in `theme/feed-page.ts` moves. Test homes keep their real ids (the listing page, saves and the swipe log need them), so within one run of the app a home already swiped is not queued again behind a second neighbourhood — its page still shows all six. Stand-ins are made on the phone, not served: a production endpoint that re-addresses listings would be false data with a URL.
+**Verified**: mobile typecheck 0, biome 0 errors / 5 warnings (as main), vitest 980 (was 965), `expo export --platform ios`; the release bundle contains no `EXPO_PUBLIC_TEST_HOMES` (`strings` on the .hbc: 0). **Not run on a device.**
+**Metro**: restarted from the reference worktree with the switch — see the end of this entry's commit trail in chat; the command is `EXPO_PUBLIC_TEST_HOMES=1 pnpm exec expo start --lan --port 443` in `apps/mobile`. A restart without the variable turns the homes off again.
+**Risks**: the test homes' swipes reach `mobile_events` and the owner's own likes, as any dev-client swipe does. FMLS sandbox films on a phone outside the Vendor System — a development bundle on the owner's device only, on his instruction; the amendment for iOS is still owed before any shipped build shows a listing.
+**Next steps**: owner on the phone. Still open: `relink-listings.ts --apply`; the `videosOnly` rule for real homes; the mirror → `listings` projection.
+
 ## 2026-11-26 08:52 UTC — phase404.3: the feed follows a like; a city's own deck opens from its Explore page (iOS, the city half)
 
 **Objective**: owner, on `/demos/feed-focus-v2`: 「感觉放在explore page里比较好」 — after "1+3". Read as: the way into a place's own deck is on its Explore page, and the feed gets no line above the card. The feed's own part is the rule alone. Built without a further "go": the two picks settle the design, and what is left open has a default he can overrule on the phone.
