@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho feed — staying in a place you liked</title>
+<style>
+:root{
+  --green:#086B5B;
+  --ink:#181B18;
+  --ink2:#5A4E40;
+  --paper:#F6F3EC;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --ui: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --dark: rgba(14,13,11,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:24px 12px 70px}
+.nav,.option,.end{max-width:960px;margin:0 auto}
+.nav h1{font:600 25px var(--serif);color:var(--green);margin-bottom:6px}
+.nav p,.end p{font:400 14.5px/1.55 var(--ui);color:var(--ink2);margin:7px 0;max-width:760px}
+.nav p b,.end p b{color:#2B2116}
+.option{margin-top:44px}
+.option h2{font:600 20px/1.25 var(--ui)}
+.option h2 em{font-style:normal;font-weight:500;font-size:12px;color:#fff;background:var(--green);border-radius:9px;padding:2px 8px;margin-left:8px;vertical-align:2px;white-space:nowrap}
+.option>p{font:400 14px/1.5 var(--ui);color:var(--ink2);margin:5px 0 4px;max-width:760px}
+.pros{display:flex;flex-wrap:wrap;gap:4px 28px;margin:8px 0 18px;font:400 13.5px/1.5 var(--ui);color:var(--ink2);max-width:860px}
+.pros div{flex:1 1 300px}
+.pros b{color:#2B2116}
+.steps{display:flex;flex-wrap:wrap;gap:26px 22px;justify-content:center}
+.step{width:300px}
+.step .cap{font:400 13px/1.45 var(--ui);color:var(--ink2);margin-top:10px}
+.step .cap b{color:#2B2116}
+.step .n{display:inline-block;width:19px;height:19px;border-radius:50%;background:#2B2116;color:#fff;font:600 11px/19px var(--ui);text-align:center;margin-right:6px}
+
+/* the phone: status bar · gap · place line · figures · card · tab bar */
+.phone{width:300px;height:640px;border-radius:34px;background:var(--paper);overflow:hidden;position:relative;box-shadow:0 3px 10px rgba(32,28,22,.06),0 16px 38px rgba(32,28,22,.16)}
+.status{height:32px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font:600 11px var(--ui);color:var(--ink)}
+.gap{height:24px;display:flex;align-items:center;justify-content:center}
+.gap.mark{outline:1.5px dashed #C86B3C;outline-offset:-2px;border-radius:6px;margin:0 8px}
+.placerow{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 14px}
+.placerow .where{font:600 13px var(--ui);color:var(--ink)}
+.placerow .where span{font-weight:400;color:var(--ink2)}
+.map{height:30px;padding:0 12px;border-radius:15px;background:#DDE9E3;color:var(--green);font:600 12px var(--ui);display:flex;align-items:center;gap:4px}
+.figs{height:40px;display:flex;padding:0 14px;margin-top:5px}
+.figs div{flex:1;font:400 9px/1.3 var(--ui);color:var(--ink2)}
+.figs b{display:block;font:600 17px/1.15 var(--ui);color:var(--ink)}
+.stage{position:absolute;left:6px;right:6px;top:147px;height:420px}
+.card{position:absolute;inset:0;border-radius:22px;overflow:hidden;background:#20262A center/cover}
+.card.under{transform:scale(.96);filter:brightness(.8)}
+.card.liked{transform:translate(64px,6px) rotate(7deg);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.scrim{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 55%,rgba(0,0,0,.5) 78%,rgba(0,0,0,.92) 100%)}
+.like{position:absolute;top:26px;left:20px;border:3px solid #37D39B;color:#37D39B;border-radius:8px;padding:2px 10px;font:800 22px var(--ui);letter-spacing:1px;transform:rotate(-12deg)}
+.corner{position:absolute;top:10px;right:10px;display:flex;gap:6px}
+.corner i{width:28px;height:28px;border-radius:50%;background:var(--dark);display:block}
+.info{position:absolute;left:18px;right:18px;bottom:20px;color:#fff}
+.tag{font:700 8.5px var(--ui);letter-spacing:1px;color:rgba(255,255,255,.86);margin-bottom:5px}
+.row{display:flex;align-items:center;gap:10px}
+.name{font:600 22px/25px var(--serif);flex:1;min-width:0}
+.explore{flex:none;height:28px;padding:0 12px;border-radius:14px;background:rgba(255,255,255,.92);color:var(--ink);font:600 11.5px/28px var(--ui)}
+.home{background:linear-gradient(160deg,#8B8F86,#55594F)}
+.home .ph{position:absolute;inset:0 0 110px;display:flex;align-items:center;justify-content:center;font:500 12px var(--ui);color:rgba(255,255,255,.75);text-align:center;line-height:1.5}
+.tabs{position:absolute;left:0;right:0;bottom:0;height:60px;background:var(--paper);border-top:1px solid rgba(0,0,0,.07);display:flex;justify-content:space-around;padding-top:10px;font:500 9.5px var(--ui);color:#8A8478}
+.tabs b{color:var(--green);font-weight:600}
+
+/* what each option adds */
+.line{font:600 12.5px var(--ui);color:var(--green);display:inline-flex;align-items:center;gap:5px}
+.line.pill{background:#DDE9E3;height:22px;padding:0 11px;border-radius:11px}
+.line .x{font-weight:400;color:var(--ink2);margin-left:2px}
+.topbar{height:24px;display:flex;align-items:center;padding:0 14px}
+.topbar .back{font:500 12.5px var(--ui);color:var(--green);white-space:nowrap;width:80px}
+.topbar .title{flex:1;text-align:center;font:600 16px var(--serif);color:var(--ink);padding-right:80px}
+.note{font:400 12.5px/1.5 var(--ui);color:var(--ink2);background:rgba(255,255,255,.5);border-radius:10px;padding:10px 14px;margin:16px auto 0;max-width:760px}
+.end{margin-top:50px;border-top:1px solid rgba(0,0,0,.12);padding-top:22px}
+.end h2{font:600 20px var(--ui);margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="nav">
+  <h1>Staying in a place you liked</h1>
+  <p>You like Suwanee. What should the feed do — and should it do it <b>on its own</b>, or only when you <b>tap something</b>? The same question one level down: you like Edinburgh, and want its homes.</p>
+  <p>Three ways, drawn on the feed as it is on the phone today. Homes are grey placeholders until they are in the app.</p>
+  <p><b>My answer: both, for two different things.</b> The feed should follow a like on its own (1) — that needs no button and works today. A button is only needed for "<i>only</i> this place", which the feed cannot guess, and that is better as the place's own page (3) than as a switch on the feed (2). So: <b>1 + 3</b>.</p>
+  <p>Reply with a number, or a mix.</p>
+</div>
+<div id="out"></div>
+
+<div class="end">
+  <h2>What I would not do</h2>
+  <p><b>A card that asks</b> ("You liked Suwanee — stay here?" as a card in the deck). The question cards were taken out in August.</p>
+  <p><b>A count on the offer</b> ("3 neighbourhoods in Suwanee"). You said the feed does not need to show how many.</p>
+  <p><b>A list of the city's neighbourhoods above the card.</b> Built and removed once already.</p>
+</div>
+
+<script>
+const still = (uid, t) => `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg?time=${t}s&height=840`;
+const SUWANEE = { kind:'CITY', name:'Suwanee', img:still('324ac35659ec5a6e0a5218620575a57a', 6),
+  where:['Gwinnett County','northeast of Atlanta'], figs:[['$481K','median home value'],['95–97%','graduate in 4 years'],['49–74 min','33 mi to downtown']] };
+const EDINBURGH = { kind:'COMMUNITY', name:'Edinburgh', img:still('bbcc652c5781ea1227d705a6661fbe68', 5),
+  where:['Suwanee','Gwinnett County'], figs:[['$589K','Suwanee homes'],['Top 1–7%','schools nearby'],['28 mi','northeast of Atlanta']] };
+const HARVEST = { kind:'COMMUNITY', name:'Harvest Park', img:still('748e5dfc8c83f5caf3a8719d7b7aaf5a', 5),
+  where:['Suwanee','Gwinnett County'], figs:[['$589K','Suwanee homes'],['Top 2–7%','schools nearby'],['27 mi','northeast of Atlanta']] };
+const HOME = { kind:'HOME', name:'A home in Edinburgh', home:true,
+  where:['Edinburgh','Suwanee'], figs:[['$—','price'],['—','beds · baths'],['—','sqft']] };
+
+const face = (c, cls = '') => c.home
+  ? `<div class="card home ${cls}"><div class="ph">a home's photos or film<br>(placeholder)</div><div class="scrim"></div><div class="corner"><i></i><i></i><i></i></div><div class="info"><div class="tag">HOME</div><div class="row"><div class="name">${c.name}</div><div class="explore">Explore</div></div></div></div>`
+  : `<div class="card ${cls}" style="background-image:url('${c.img}')"><div class="scrim"></div>${cls.includes('liked') ? '<div class="like">LIKE</div>' : ''}<div class="corner"><i></i><i></i><i></i></div><div class="info"><div class="tag">${c.kind}</div><div class="row"><div class="name">${c.name}</div><div class="explore">Explore</div></div></div></div>`;
+
+/**
+ * One phone. `top` is the card on top; `under` the one beneath (shown when the
+ * top card is flying off); `gap` what sits in the strip above the place line;
+ * `bar` a page header that replaces that strip (option 3's place page).
+ */
+const phone = ({ top, under, liked = false, gap = '', mark = false, bar = '' }) => {
+  return `<div class="phone">
+    <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+    ${bar ? `<div class="topbar">${bar}</div>` : `<div class="gap ${mark ? 'mark' : ''}">${gap}</div>`}
+    <div class="placerow"><div class="where">${top.where[0]} <span>· ${top.where[1]}</span></div><div class="map">◎ Map</div></div>
+    <div class="figs">${top.figs.map(([v, l]) => `<div><b>${v}</b>${l}</div>`).join('')}</div>
+    <div class="stage">${liked ? face(under, 'under') + face(top, 'liked') : face(top)}</div>
+    <div class="tabs"><b>▶<br>Feed</b><span>⌕<br>Search</span><span>♡<br>Saved</span><span>☰<br>You</span></div>
+  </div>`;
+};
+const step = (n, p, cap) => `<div class="step">${phone(p)}<div class="cap"><span class="n">${n}</span>${cap}</div></div>`;
+const back = (to, title) => `<span class="back">‹ ${to}</span><span class="title">${title}</span>`;
+
+const OPTIONS = [
+  { title:'1 · The feed follows your like', badge:'recommended, with 3',
+    what:'Nothing new on the screen. Like a city and its neighbourhoods are the next cards; like a neighbourhood and a few of its homes are next. Then the feed goes back to everything. Pass twice in a row and it stops early.',
+    good:'Nothing to learn and nothing to tap. Works today, with the films we have. The feed stays as clean as it is.',
+    bad:'You cannot say "only Suwanee", and you cannot ask for more than the feed chose to show. Today the app already leans this way, but so weakly you would not notice — this makes it plain.',
+    steps:[
+      [{ top:SUWANEE, under:EDINBURGH, liked:true }, 'You like <b>Suwanee</b>.'],
+      [{ top:EDINBURGH }, 'The next cards are Suwanee\'s neighbourhoods — Edinburgh, Harvest Park, Aberdeen — before any other city. The line above the card already says where you are.'],
+      [{ top:HOME }, 'You like <b>Edinburgh</b>: a few of its homes come next, then the feed moves on. (Once homes are in the app.)'],
+    ] },
+  { title:'2 · A line above the card turns the feed into Suwanee',
+    what:'After a like, one line appears in the strip above the place (dashed here; it is empty today). Tap it and the feed itself changes: only Suwanee until you tap ✕.',
+    good:'One tap, and you can always see that the feed is narrowed and how to undo it.',
+    bad:'The feed becomes a mode you can forget you are in. The strip is small — 15pt on the smallest phones. In September you asked for the scope choice to stay out of the main feed; this brings a form of it back.',
+    steps:[
+      [{ top:EDINBURGH, mark:true, gap:'<span class="line pill">Only Suwanee</span>' }, 'You liked Suwanee. On the next card, for a few seconds: <b>Only Suwanee</b>. Ignore it and nothing changes.'],
+      [{ top:HARVEST, mark:true, gap:'<span class="line">Suwanee only <span class="x">✕</span></span>' }, 'Tapped. The feed is Suwanee\'s film, its neighbourhoods, and later its homes — until <b>✕</b>.'],
+      [{ top:HOME, mark:true, gap:'<span class="line">Edinburgh homes <span class="x">✕</span></span>' }, 'Same for a neighbourhood: like Edinburgh, tap <b>Homes in Edinburgh</b>, and the feed is its homes.'],
+    ] },
+  { title:'3 · The place opens as its own page', badge:'recommended, with 1',
+    what:'The same line after a like, but it opens a page instead of changing the feed: the same swipe cards, only that place, with a back arrow. The same button also sits on the place\'s Explore page, so it is there later too — not just in the seconds after a like.',
+    good:'You always know where you are, and back is the way out. The main feed is exactly where you left it. City → neighbourhood → homes is three pages, each one step in.',
+    bad:'One more page to build. It needs homes to feel full: today Suwanee\'s page is its film and three neighbourhoods.',
+    steps:[
+      [{ top:EDINBURGH, mark:true, gap:'<span class="line">More of Suwanee ›</span>' }, 'You liked Suwanee. On the next card: <b>More of Suwanee ›</b>. Also on Suwanee\'s Explore page.'],
+      [{ top:HARVEST, bar:back('Feed', 'Suwanee') }, 'Suwanee\'s own page: its film, its neighbourhoods, later its homes. Swipe as usual. <b>‹ Feed</b> goes back.'],
+      [{ top:HOME, bar:back('Suwanee', 'Edinburgh') }, 'In it, like Edinburgh and <b>Homes in Edinburgh ›</b> opens the next page: that neighbourhood\'s homes.'],
+    ] },
+];
+
+const out = document.getElementById('out');
+for (const o of OPTIONS) {
+  const el = document.createElement('section');
+  el.className = 'option';
+  el.innerHTML = `<h2>${o.title}${o.badge ? `<em>${o.badge}</em>` : ''}</h2><p>${o.what}</p>
+    <div class="pros"><div><b>For:</b> ${o.good}</div><div><b>Against:</b> ${o.bad}</div></div>
+    <div class="steps">${o.steps.map(([p, cap], i) => step(i + 1, p, cap)).join('')}</div>`;
+  out.appendChild(el);
+}
+</script>
+</body>
+</html>

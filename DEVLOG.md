@@ -23,6 +23,17 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-26 08:14 UTC — phase404.1: staying in a place you liked — three ways (demo only)
+
+**Objective**: owner, on phase404's proposal: 「你给我出几个设计方案 回答这几个问题 这个应该做成某种ui上的功能 还是主动推荐的逻辑 如果是前者 如何呈现？」.
+**Actions**: `apps/web/public/demos/feed-focus-v1/` — one page, three options, each as three phones on today's feed (place line, Map, figures, card, tab bar; Suwanee, Edinburgh and Harvest Park from their films' stills; a home is a grey placeholder, no listing photo). Nothing in the app.
+- **1 · The feed follows your like** — no new control: a liked city's neighbourhoods are the next cards, a liked neighbourhood's homes after it, then the mix resumes; two passes in a row end it. (Today `geoAffinity` leans this way by at most +3, after `RERANK_HOLD`.)
+- **2 · A line above the card turns the feed into the place** — `Only Suwanee` in the strip above the place line, then `Suwanee only ✕`. The feed becomes a mode.
+- **3 · The place opens as its own page** — `More of Suwanee ›` after a like, and on the Explore page; a pushed deck with a back arrow, city → neighbourhood → homes.
+**Recommended to him**: 1 + 3. The rule answers "show me more like this" without a button; "only this place" is a statement the feed cannot infer, and a page keeps it out of the main feed — where he asked on 2026-09-09 (phase258) for the scope choice not to live.
+**Left out, and said so on the page**: a card that asks (the question cards went on 2026-08-15), a count on the offer, a strip of the city's neighbourhoods above the card (both listed in phase376 as already turned down).
+**Next steps**: his pick. 1 is the composer alone (`rerankTail` / the geo term); 3 is a route that renders the deck from a focused pool (phase404's params) and the line in the feed's `room`.
+
 ## 2026-11-26 08:05 UTC — phase404: the feed pool can be narrowed to one city or one community (server only)
 
 **Objective**: owner, 2026-11-25: 「作为一个用户 我应该可以在喜欢某一个city之后 选择或者被动地推荐 使得feed局限在这个city 同理 也应该可以在喜欢某个community之后 进一步看这个社区的房子 我们暂时没有上线房子的卡片 接下来两天我会和fmls签订合同 在此之前 后端应该准备完毕 如果需要 在本地测试可以用一些之前用过的房子的card」. Read as: the server side of both steps now; what the phone shows is proposed to him, not built.
