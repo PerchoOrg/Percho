@@ -18,7 +18,7 @@ on its own, with a button to see more in the app.
 
 ### 2026-11-26
 - **The feed follows what you like.** Like a city's film and the next cards are that city's neighbourhoods, one after another, before the feed moves on to other places. Pass two of them in a row and it stops. Nothing to tap. Arrives with the next app update.
-- **A city's neighbourhoods, all in one place.** Above a city's card on the feed there is now a line — "More of Suwanee", for example — and the same button sits under the city's name on its page. It opens a set of swipe cards with only that city's neighbourhoods, the ones you haven't seen first. The arrow at the top goes back, and the feed is where you left it. Arrives with the next app update.
+- **A city's neighbourhoods, all in one place.** Above a city's card on the feed, where the Map button was, there is now a button — "More of Suwanee", for example — and the same button sits under the city's name on its page. It opens a set of swipe cards with only that city's neighbourhoods, the ones you haven't seen first. "‹ Suwanee" above the card goes back, the tab bar stays at the bottom, and the feed is where you left it. Arrives with the next app update.
 
 ### 2026-11-25
 - **Comparing cities looks like comparing neighbourhoods.** Pick two or more saved cities and tap Compare: the page opens on their photos and "In short", then draws safety, schools, everyday places, how the city has grown and what a home costs, one colour a city. Two cities in the same county — Suwanee and Duluth — can now be compared; before, the comparison was by county and refused them.

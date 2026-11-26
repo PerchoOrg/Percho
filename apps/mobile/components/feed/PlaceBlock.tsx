@@ -100,6 +100,8 @@ const MAP_GAP = 6;
 const MAP_PAD = 12;
 /** Place line → Map. */
 const PLACE_MAP_GAP = 12;
+/** A place's page: "‹ Suwanee" → the rest of the line. */
+const BACK_GAP = 10;
 
 // ─── The pin (handoff §4: outlined, 18 tall) ─────────────────────────
 //
@@ -133,6 +135,20 @@ interface PlaceBlockProps {
 	onOpenPlace?: () => void;
 	/** Open the map on the card's place. Absent → no Map button at all. */
 	onOpenMap?: () => void;
+	/**
+	 * The way into the card's own deck — "More of Suwanee", "Homes in
+	 * Edinburgh" (phase404.5). Where a card has one it TAKES THE MAP BUTTON'S
+	 * PLACE (owner, 2026-11-26: 「字太小 把现在的map button替换掉吧」): the same
+	 * pill, the words instead of the pin. Such a card has no Map button; the
+	 * cards inside its deck that have no deck of their own still do.
+	 */
+	deck?: { label: string; onPress: () => void } | undefined;
+	/**
+	 * On a place's own page: the way back, leading the line — "‹ Suwanee". It
+	 * is also where the page says which place it is, so the page needs no bar
+	 * of its own and is laid out exactly as the feed is.
+	 */
+	back?: { label: string; onPress: () => void } | undefined;
 	/** Open the Explore page on a figure's part. Absent → figures are text. */
 	onOpenCell?: (cell: GlanceCell) => void;
 }
@@ -143,6 +159,8 @@ export function PlaceBlock({
 	onOpenPlace,
 	onOpenMap,
 	onOpenCell,
+	deck,
+	back,
 }: PlaceBlockProps) {
 	const { width } = useWindowDimensions();
 	const k = headerScale(width);
@@ -153,6 +171,19 @@ export function PlaceBlock({
 	return (
 		<View style={styles.wrap}>
 			<View style={styles.placeRow}>
+				{back !== undefined && (
+					<Pressable
+						onPress={back.onPress}
+						accessibilityRole="button"
+						accessibilityLabel={`Back from ${back.label}`}
+						hitSlop={{ top: TOUCH_SLOP, bottom: TOUCH_SLOP, left: EDGE * k }}
+						style={({ pressed }) => [styles.back, pressed && styles.dim]}
+					>
+						<Text style={styles.backLabel} numberOfLines={1}>
+							‹ {back.label}
+						</Text>
+					</Pressable>
+				)}
 				{onOpenPlace !== undefined ? (
 					<Pressable
 						onPress={onOpenPlace}
@@ -176,7 +207,20 @@ export function PlaceBlock({
 					</View>
 				)}
 
-				{onOpenMap !== undefined && (
+				{deck !== undefined ? (
+					<Pressable
+						onPress={deck.onPress}
+						accessible
+						accessibilityRole="button"
+						accessibilityLabel={deck.label}
+						hitSlop={{ top: TOUCH_SLOP, bottom: TOUCH_SLOP }}
+						style={({ pressed }) => [styles.map, pressed && styles.mapPressed]}
+					>
+						<Text style={styles.mapLabel} numberOfLines={1}>
+							{deck.label} ›
+						</Text>
+					</Pressable>
+				) : onOpenMap !== undefined ? (
 					<Pressable
 						onPress={onOpenMap}
 						accessible
@@ -193,7 +237,7 @@ export function PlaceBlock({
 							Map
 						</Text>
 					</Pressable>
-				)}
+				) : null}
 			</View>
 
 			{facts && (
@@ -312,6 +356,19 @@ function sheet(k: number) {
 			minHeight: PLACE_ROW * k,
 			flexDirection: "row",
 			alignItems: "center",
+		},
+		/** "‹ Suwanee": the row's height to press, the line's own size to read. */
+		back: {
+			minHeight: PLACE_ROW * k,
+			marginRight: BACK_GAP * k,
+			flexShrink: 0,
+			justifyContent: "center",
+		},
+		backLabel: {
+			fontFamily: fonts.ui,
+			fontSize: PLACE_SIZE * k,
+			fontWeight: "600",
+			color: feedHeader.accent,
 		},
 		/** Pressed feedback for the text controls. The Map pill darkens
 		 * instead — a filled control must not fade. */

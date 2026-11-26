@@ -48,6 +48,18 @@ export interface TabItem {
 	label: string;
 }
 
+/**
+ * The app's four tabs, in bar order — exactly 4 (§0.6 #6). Here rather than in the tabs layout
+ * because a place's own deck (`app/place.tsx`, phase404.5) is a pushed page
+ * and draws the same bar under itself.
+ */
+export const APP_TABS: readonly [TabItem, TabItem, TabItem, TabItem] = [
+	{ key: "feed", label: "Feed" },
+	{ key: "search", label: "Search" },
+	{ key: "saved", label: "Saved" },
+	{ key: "you", label: "You" },
+];
+
 interface TabBarProps {
 	/** Exactly 4 (§0.6 #6). */
 	tabs: readonly [TabItem, TabItem, TabItem, TabItem];
