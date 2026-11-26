@@ -173,6 +173,7 @@ import Animated, {
 } from "react-native-reanimated";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
 import {
+	DECK_TAP_TARGET,
 	SHARE_TAP_TARGET,
 	SOUND_TAP_TARGET,
 	type TapSlot,
@@ -248,7 +249,19 @@ interface CommunityFaceProps {
 	isTop: boolean;
 	/** The feed screen is not in front (see `CardVideoProps.suspended`). */
 	suspended?: boolean;
+	/**
+	 * Opens the place's Explore page. The NAME is the link (phase404.9; owner,
+	 * 2026-11-26: 「把卡片左下角的title做成链接button 功能替换explore」): it ends
+	 * in a `›` and the `Explore` pill is gone.
+	 */
 	onExplore?: () => void;
+	/**
+	 * The way into the place's own deck — a city's neighbourhoods, a
+	 * neighbourhood's homes — as the one pill at the bottom right, where
+	 * `Explore` was (same message: 「把新的communities或者homes 放到右下方」).
+	 * Absent for a card with nothing one level down: the corner is then empty.
+	 */
+	deck?: { label: string; accessibilityLabel: string; onPress: () => void };
 	/**
 	 * The stack's tap slots (see `lib/gesture/tap-slot.ts`), same contract as
 	 * `ListingFace`: the CTA writes its id into `tapSlot` on touch start and
@@ -285,6 +298,7 @@ export function CommunityFace({
 	isTop,
 	suspended,
 	onExplore,
+	deck,
 	tapSlot,
 	deckGesture,
 	tag = "COMMUNITY",
@@ -702,10 +716,12 @@ export function CommunityFace({
 				pointerEvents="none"
 			/>
 
-			{/* Bottom info — ONE line: the community name and `Explore` on the
-			    right, on a shared centre line (owner 2026-08-22: "community and
-			    explore should be aligned"). The signal glyphs that sat beside the
-			    name are gone (owner 2026-11-21).
+			{/* Bottom info — ONE line: the community name and, on its right, the
+			    pill into the place's own deck, on a shared centre line (owner
+			    2026-08-22: "community and explore should be aligned" — said of
+			    `Explore`, whose place the pill took in phase404.9; the name is
+			    the link to the Explore page now). The signal glyphs that sat
+			    beside the name are gone (owner 2026-11-21).
 
 			    The name is the only thing that gives when space runs out —
 			    `flexShrink: 0` on the link, `minWidth: 0` on the name. It gives
@@ -727,17 +743,38 @@ export function CommunityFace({
 					    2026-08-22: "if community name is long, it can be truncated,
 					    fix that"). Wrapping spends card height, which this card has;
 					    truncation spent the name, which it does not. */}
-						<Text style={styles.name} numberOfLines={2}>
-							{card.name}
-						</Text>
-					</View>
-					{!!onExplore && (
-						<Animated.View style={[styles.ctaRow, breathing]}>
+						{onExplore ? (
 							<Pressable
 								onTouchStart={arm(EXPLORE_TAP_TARGET)}
 								onPress={tapSlot ? undefined : onExplore}
 								accessibilityRole="link"
 								accessibilityLabel={`Explore ${card.name}`}
+								hitSlop={12}
+								style={({ pressed }) => [
+									styles.nameLink,
+									pressed && styles.ctaPressed,
+								]}
+							>
+								{/* The `›` is tied to the last word by a no-break space,
+								    so a name on two lines ends in it. */}
+								<Text style={styles.name} numberOfLines={2}>
+									{card.name}
+									<Text style={styles.nameChevron}>{"\u00A0›"}</Text>
+								</Text>
+							</Pressable>
+						) : (
+							<Text style={styles.name} numberOfLines={2}>
+								{card.name}
+							</Text>
+						)}
+					</View>
+					{!!deck && (
+						<Animated.View style={[styles.ctaRow, breathing]}>
+							<Pressable
+								onTouchStart={arm(DECK_TAP_TARGET)}
+								onPress={tapSlot ? undefined : deck.onPress}
+								accessibilityRole="link"
+								accessibilityLabel={deck.accessibilityLabel}
 								hitSlop={12}
 								style={({ pressed }) => [
 									styles.ctaLink,
@@ -749,7 +786,7 @@ export function CommunityFace({
 									style={[styles.ctaLabel, styles.ctaPillLabel]}
 									numberOfLines={1}
 								>
-									Explore
+									{deck.label} ›
 								</Text>
 							</Pressable>
 						</Animated.View>
@@ -1153,8 +1190,13 @@ const styles = StyleSheet.create({
 		flexShrink: 1,
 		minWidth: 0,
 	},
+	/** The name as a link: the name's own box, nothing drawn around it. */
+	nameLink: { flexShrink: 1, minWidth: 0 },
+	/** The `›` that says the name opens something: lighter than the name. */
+	nameChevron: { fontWeight: "300", color: "rgba(255,255,255,0.85)" },
 	/**
-	 * Explore → — the right zone of the info row, sized by its own content and
+	 * The pill at the right of the info row (Explore until phase404.9, the
+	 * place's deck since), sized by its own content and
 	 * never squeezed. `flexShrink: 0` because the left column is the one that
 	 * gives: a truncated community name is readable, a truncated CTA is not.
 	 */
@@ -1173,7 +1215,7 @@ const styles = StyleSheet.create({
 	},
 	ctaPressed: { opacity: 0.7 },
 	/**
-	 * Explore: a solid pill, the one white thing at the foot. City cards had it
+	 * The deck pill (Explore until phase404.9): a solid pill, the one white thing at the foot. City cards had it
 	 * since phase352; community cards too since phase366 (owner 2026-11-21:
 	 * "explore button和city card保持一致").
 	 */

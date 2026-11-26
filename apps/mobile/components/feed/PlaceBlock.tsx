@@ -32,9 +32,9 @@
  *     why the sizes cannot live in a module-level `StyleSheet`: `sheet` is a
  *     factory of one, memoised per scale.
  *   · **The place row is one size, always** (owner, 2026-11-26: 「字体不统一
- *     如果社区或者city名字长 前半部分就很小 想想办法」). The way back, the place
- *     line and the pill are all `PLACE_SIZE`, and none of them shrinks to
- *     fit: a line that shrank beside a pill read as a different face. What
+ *     如果社区或者city名字长 前半部分就很小 想想办法」). The place line and the
+ *     Map pill are both `PLACE_SIZE`, and neither shrinks to fit: a line
+ *     that shrank beside a pill read as a different face. What
  *     gives way instead is the line's second half ("· Fulton County"), which
  *     is left out whole when it does not fit — never cut mid-word; only a
  *     name too long for the row on its own ends in "…". This replaces, for
@@ -111,8 +111,14 @@ const MAP_GAP = 6;
 const MAP_PAD = 12;
 /** Place line → Map. */
 const PLACE_MAP_GAP = 12;
-/** A place's page: "‹ Suwanee" → the rest of the line. */
-const BACK_GAP = 10;
+
+// ─── A place's page: the header (phase404.9) ─────────────────────────
+const HEADER_NAME_SIZE = 18;
+const HEADER_SUB_SIZE = 12;
+/** A long place name gives up size before letters; it is alone on its line. */
+const HEADER_MIN_SCALE = 0.8;
+const BACK_ARM = 9;
+const BACK_STROKE = 2;
 
 // ─── The pin (handoff §4: outlined, 18 tall) ─────────────────────────
 //
@@ -147,21 +153,13 @@ interface PlaceBlockProps {
 	/** Open the map on the card's place. Absent → no Map button at all. */
 	onOpenMap?: () => void;
 	/**
-	 * The way into the card's own deck — "Communities ›", "Homes ›"
-	 * (phase404.5). Where a card has one it TAKES THE MAP BUTTON'S
-	 * PLACE (owner, 2026-11-26: 「字太小 把现在的map button替换掉吧」): the same
-	 * pill, the words instead of the pin. Such a card has no Map button; the
-	 * cards inside its deck that have no deck of their own still do.
+	 * On a place's own page (phase404.9, option 1 of `/demos/feed-focus-v3`):
+	 * the row is the page's header — a round way back, the place and what the
+	 * page holds ("Suwanee" over "Communities"), Map — and the per-card place
+	 * line is not drawn: every card on the page is in that place. One row at
+	 * the place row's height, so the page is laid out exactly as the feed is.
 	 */
-	deck?:
-		| { label: string; accessibilityLabel: string; onPress: () => void }
-		| undefined;
-	/**
-	 * On a place's own page: the way back, leading the line — "‹ Suwanee". It
-	 * is also where the page says which place it is, so the page needs no bar
-	 * of its own and is laid out exactly as the feed is.
-	 */
-	back?: { label: string; onPress: () => void } | undefined;
+	header?: { title: string; subtitle: string; onBack: () => void } | undefined;
 	/** Open the Explore page on a figure's part. Absent → figures are text. */
 	onOpenCell?: (cell: GlanceCell) => void;
 }
@@ -172,8 +170,7 @@ export function PlaceBlock({
 	onOpenPlace,
 	onOpenMap,
 	onOpenCell,
-	deck,
-	back,
+	header,
 }: PlaceBlockProps) {
 	const { width } = useWindowDimensions();
 	const k = headerScale(width);
@@ -184,20 +181,42 @@ export function PlaceBlock({
 	return (
 		<View style={styles.wrap}>
 			<View style={styles.placeRow}>
-				{back !== undefined && (
-					<Pressable
-						onPress={back.onPress}
-						accessibilityRole="button"
-						accessibilityLabel={`Back from ${back.label}`}
-						hitSlop={{ top: TOUCH_SLOP, bottom: TOUCH_SLOP, left: EDGE * k }}
-						style={({ pressed }) => [styles.back, pressed && styles.dim]}
-					>
-						<Text style={styles.backLabel} numberOfLines={1}>
-							‹ {back.label}
-						</Text>
-					</Pressable>
-				)}
-				{onOpenPlace !== undefined ? (
+				{header !== undefined ? (
+					<>
+						<Pressable
+							onPress={header.onBack}
+							accessibilityRole="button"
+							accessibilityLabel="Back"
+							hitSlop={{ top: TOUCH_SLOP, bottom: TOUCH_SLOP, left: EDGE * k }}
+							style={({ pressed }) => [
+								styles.backDisc,
+								pressed && styles.mapPressed,
+							]}
+						>
+							<View style={styles.backArm} />
+						</Pressable>
+						<View
+							style={styles.headerTitle}
+							pointerEvents="none"
+							accessible
+							accessibilityRole="header"
+							accessibilityLabel={`${header.title}, ${header.subtitle}`}
+						>
+							<Text
+								style={styles.headerName}
+								numberOfLines={1}
+								adjustsFontSizeToFit
+								minimumFontScale={HEADER_MIN_SCALE}
+							>
+								{header.title}
+							</Text>
+							<Text style={styles.headerSub} numberOfLines={1}>
+								{header.subtitle}
+							</Text>
+						</View>
+						<View style={styles.placeSlot} />
+					</>
+				) : onOpenPlace !== undefined ? (
 					<Pressable
 						onPress={onOpenPlace}
 						accessibilityRole="button"
@@ -220,20 +239,7 @@ export function PlaceBlock({
 					</View>
 				)}
 
-				{deck !== undefined ? (
-					<Pressable
-						onPress={deck.onPress}
-						accessible
-						accessibilityRole="button"
-						accessibilityLabel={deck.accessibilityLabel}
-						hitSlop={{ top: TOUCH_SLOP, bottom: TOUCH_SLOP }}
-						style={({ pressed }) => [styles.map, pressed && styles.mapPressed]}
-					>
-						<Text style={styles.mapLabel} numberOfLines={1}>
-							{deck.label} ›
-						</Text>
-					</Pressable>
-				) : onOpenMap !== undefined ? (
+				{onOpenMap !== undefined && (
 					<Pressable
 						onPress={onOpenMap}
 						accessible
@@ -250,7 +256,7 @@ export function PlaceBlock({
 							Map
 						</Text>
 					</Pressable>
-				) : null}
+				)}
 			</View>
 
 			{facts && (
@@ -394,18 +400,52 @@ function sheet(k: number) {
 			flexDirection: "row",
 			alignItems: "center",
 		},
-		/** "‹ Suwanee": the row's height to press, the line's own size to read. */
-		back: {
-			minHeight: PLACE_ROW * k,
-			marginRight: BACK_GAP * k,
-			flexShrink: 1,
+		/** A place's page: the way back, in the Map pill's material and height. */
+		backDisc: {
+			width: MAP_HEIGHT * k,
+			minHeight: MAP_HEIGHT * k,
+			borderRadius: MAP_RADIUS * k,
+			flexShrink: 0,
+			alignItems: "center",
+			justifyContent: "center",
+			backgroundColor: feedHeader.mapFill,
+		},
+		/** A chevron from two borders, pointing left; nudged to sit centred. */
+		backArm: {
+			width: BACK_ARM * k,
+			height: BACK_ARM * k,
+			marginLeft: (BACK_ARM / 3) * k,
+			borderLeftWidth: BACK_STROKE * k,
+			borderBottomWidth: BACK_STROKE * k,
+			borderColor: feedHeader.accent,
+			transform: [{ rotate: "45deg" }],
+		},
+		/**
+		 * Centred on the SCREEN, not between the two controls — the disc is
+		 * narrower than Map — so it lies over the row and keeps Map's width clear
+		 * on both sides.
+		 */
+		headerTitle: {
+			position: "absolute",
+			left: 0,
+			right: 0,
+			top: 0,
+			bottom: 0,
+			paddingHorizontal: (MAP_WIDTH + PLACE_MAP_GAP) * k,
+			alignItems: "center",
 			justifyContent: "center",
 		},
-		backLabel: {
-			fontFamily: fonts.ui,
-			fontSize: PLACE_SIZE * k,
+		headerName: {
+			fontFamily: fonts.display,
+			fontSize: HEADER_NAME_SIZE * k,
 			fontWeight: "600",
-			color: feedHeader.accent,
+			color: feedHeader.title,
+		},
+		headerSub: {
+			fontFamily: fonts.ui,
+			fontSize: HEADER_SUB_SIZE * k,
+			fontWeight: "400",
+			color: feedHeader.context,
 		},
 		/** Pressed feedback for the text controls. The Map pill darkens
 		 * instead — a filled control must not fade. */

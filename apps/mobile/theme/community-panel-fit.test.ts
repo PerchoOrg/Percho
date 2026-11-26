@@ -154,11 +154,28 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		expect(SRC).not.toContain("styles.blurb");
 	});
 
-	it("keeps the CTA label and routes it through the shared tap target", () => {
-		// Owner, 2026-08-16: CTA → "Explore →" (the old "Why people love it"
-		// text link is gone with the white block). The header's history note
-		// may still mention the old copy — the STYLES and the render must not.
-		expect(SRC).toContain("Explore");
+	it("makes the NAME the way to Explore, and the pill the way into the deck", () => {
+		// Owner, 2026-11-26 (phase404.9): 「把卡片左下角的title做成链接button 功能
+		// 替换explore … 把新的communities或者homes 放到右下方」. No pill says
+		// Explore any more; the name ends in a `›` tied to its last word.
+		expect(SRC).not.toMatch(/>\s*Explore\s*<\/Text>/);
+		expect(SRC).toContain("accessibilityLabel={`Explore ${card.name}`}");
+		expect(SRC).toContain('{"\\u00A0›"}');
+		const name = SRC.indexOf("arm(EXPLORE_TAP_TARGET)");
+		const pill = SRC.indexOf("arm(DECK_TAP_TARGET)");
+		expect(name).toBeGreaterThan(-1);
+		expect(pill).toBeGreaterThan(name);
+		// The name's link sits in the name's column; the pill outside it.
+		expect(name).toBeGreaterThan(SRC.indexOf("styles.infoLeft"));
+		expect(name).toBeLessThan(SRC.indexOf("styles.ctaRow"));
+		// A card with nothing one level down draws no pill at all.
+		expect(SRC).toContain("{!!deck && (");
+		// And the feed answers the pill's tap.
+		const screen = readFileSync("app/(tabs)/feed.tsx", "utf8");
+		expect(screen).toContain("target === DECK_TAP_TARGET");
+	});
+
+	it("keeps routing Explore through the shared tap target", () => {
 		expect(SRC).not.toContain('Why people love it">');
 		expect(SRC).toContain("arm(EXPLORE_TAP_TARGET)");
 		// The feed must actually send that target somewhere, or the link is dead

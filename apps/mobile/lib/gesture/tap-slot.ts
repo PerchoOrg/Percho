@@ -69,6 +69,13 @@ export const SOUND_TAP_TARGET = "sound";
 /** The card-corner share control's tap id (phase335); same reason to live here. */
 export const SHARE_TAP_TARGET = "share";
 
+/**
+ * The card's way into its own deck — "Communities ›", "Homes ›" at the bottom
+ * right (phase404.9). Here for the same reason: the face arms it, the feed
+ * screen answers it.
+ */
+export const DECK_TAP_TARGET = "deck";
+
 /** The exclusive-tap gesture's slot; never read by the card faces. */
 export interface TapSlot {
 	/** Latest tap-target id, or `null` when the last release was not a tap. */
