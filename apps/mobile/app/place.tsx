@@ -2,7 +2,8 @@
  * `/place` — one place's own deck (phase404.3): a city's neighbourhoods, or a
  * neighbourhood's homes, as the feed's own swipe cards and nothing else.
  *
- * Opened from the place's Explore page ("More of Suwanee ›"). Owner,
+ * Opened from the place's card on the feed and its Explore page
+ * ("Communities ›", "Homes ›"). Owner,
  * 2026-11-26, on `/demos/feed-focus-v2`: 「感觉放在explore page里比较好」 — the
  * way in is there, not on the feed.
  *

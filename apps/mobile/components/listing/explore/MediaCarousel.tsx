@@ -34,6 +34,7 @@ import type {
 	ListingVideoDTO,
 } from "../../../lib/listing/detail-dto";
 import type { RoomGroups } from "../../../lib/listing/rooms";
+import { letGo, takeOver } from "../../../lib/media/one-player";
 import { useSoundStore } from "../../../state/sound";
 import { explore, radii } from "../../../theme/tokens";
 import { fonts } from "../../../theme/tokens";
@@ -97,11 +98,15 @@ function HeroVideo({
 
 	useEffect(() => {
 		if (active) {
+			takeOver(player, "listing film");
 			player.play();
 		} else {
 			player.pause();
 		}
 	}, [player, active]);
+
+	// Let `one-player` forget it when `useVideoPlayer` releases it.
+	useEffect(() => () => letGo(player), [player]);
 
 	return (
 		<View style={{ width, height }}>

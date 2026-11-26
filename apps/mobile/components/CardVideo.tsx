@@ -50,6 +50,7 @@ import {
 	useAnimatedReaction,
 } from "react-native-reanimated";
 import { type MediaSize, mediaFit } from "../lib/media/fit";
+import { letGo, takeOver } from "../lib/media/one-player";
 import { useSoundStore } from "../state/sound";
 import { colors } from "../theme/tokens";
 
@@ -256,6 +257,7 @@ export function CardVideo({
 		if (isTop) {
 			player.currentTime = 0;
 			player.muted = !soundOn;
+			takeOver(player, "feed card");
 			player.play();
 		} else {
 			player.pause();
@@ -274,9 +276,13 @@ export function CardVideo({
 			player.muted = true;
 		} else {
 			player.muted = !soundOn;
+			takeOver(player, "feed card");
 			player.play();
 		}
 	}, [suspended, isTop, player]);
+
+	// Let `one-player` forget it when `useVideoPlayer` releases it.
+	useEffect(() => () => letGo(player), [player]);
 
 	// Live audio follow without disturbing playback position.
 	useEffect(() => {
