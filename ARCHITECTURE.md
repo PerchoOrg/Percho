@@ -147,7 +147,7 @@ copied per entity.
 |---|---|
 | `app/` | expo-router routes. `(tabs)/` is the tab bar; `listing/[id]`, `community/[slug]`, `city/[slug]` are detail screens. `place.tsx` is one place's own deck (phase404.3) — the feed screen itself over a pool the server narrowed to a city or a neighbourhood, opened from that place's Explore page. `+native-intent.tsx` turns a universal link's web path (`/c/<slug>`) into the app's route (phase335). |
 | `components/` | `cards/` are the swipeable feed faces, `feed/` the deck chrome, `listing/` the detail sheets, `charts/` the small marks (ring, donut, bar, pips, columns) the place pages and the compare draw figures with. |
-| `lib/feed/` | Feed generation, ordering, rhythm, behavioural signals. `follow.ts` is what a like does next: a liked city's neighbourhoods (a neighbourhood's homes) queued behind the card underneath, and the order of a place's own deck. |
+| `lib/feed/` | Feed generation, ordering, rhythm, behavioural signals. `follow.ts` is what a like does next: a liked city's neighbourhoods (a neighbourhood's homes) queued behind the card underneath, and the order of a place's own deck. `test-homes.ts` lets the six FMLS test listings stand in for a neighbourhood's homes in a development bundle only (`TEST_HOMES`). |
 | `lib/listing/` | Listing detail: hotspots, tours, section nav. |
 | `lib/gesture/` | Swipe physics and capability detection. |
 | `lib/share/` | Sharing a community or city (phase335): the link (`www.percho.co/watch/c/<slug>`, `/watch/city/<slug>` — the film alone on the web (phase336) and a universal link at once), the share sheet, and the path mapping `+native-intent.tsx` uses. |

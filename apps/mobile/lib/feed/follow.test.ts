@@ -16,6 +16,8 @@ import {
 	followStep,
 	parsePlaceFocus,
 	placeDeck,
+	placeLinkLabel,
+	placeWithin,
 	withoutSwipedAway,
 } from "./follow";
 import type { FeedPool } from "./generate-feed";
@@ -433,5 +435,39 @@ describe("parsePlaceFocus", () => {
 		expect(parsePlaceFocus({ kind: "county", id: "x" })).toBeNull();
 		expect(parsePlaceFocus({ kind: "city", id: "" })).toBeNull();
 		expect(parsePlaceFocus({ kind: "city", id: ["a", "b"] })).toBeNull();
+	});
+});
+
+describe("placeWithin — the place a card is the way into", () => {
+	it("a city with a neighbourhood in the pool, liked or not", () => {
+		expect(placeWithin(city(SUWANEE), pool)).toEqual({
+			kind: "city",
+			id: SUWANEE,
+			name: SUWANEE,
+		});
+	});
+
+	it("a neighbourhood with a home in the pool", () => {
+		expect(placeWithin(edinburgh, pool)).toEqual({
+			kind: "community",
+			id: "edinburgh",
+			name: "edinburgh",
+		});
+	});
+
+	it("no place for a card with nothing inside it", () => {
+		expect(placeWithin(city("city:nowhere-ga"), pool)).toBeNull();
+		// The store build's pool has no homes: no neighbourhood has a link.
+		expect(placeWithin(edinburgh, { ...pool, listings: [] })).toBeNull();
+		expect(placeWithin(home("h1", "edinburgh"), pool)).toBeNull();
+	});
+
+	it("says where the link goes", () => {
+		expect(placeLinkLabel({ kind: "city", id: SUWANEE, name: "Suwanee" })).toBe(
+			"More of Suwanee",
+		);
+		expect(
+			placeLinkLabel({ kind: "community", id: "edinburgh", name: "Edinburgh" }),
+		).toBe("Homes in Edinburgh");
 	});
 });

@@ -80,7 +80,7 @@ import {
 import { useRates } from "../../lib/listing/rates";
 import { buildRoomGroups } from "../../lib/listing/rooms";
 import { useListingSummaries } from "../../lib/listing/summaries";
-import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
+import { LISTINGS_IN_APP, TEST_HOMES } from "../../lib/listings-in-app";
 import { useAuthStore } from "../../state/auth";
 import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
@@ -109,7 +109,8 @@ function cityGeoUnitId(city: string, state: string): string {
  * the feed instead of opening one.
  */
 export default function ListingRoute() {
-	if (!LISTINGS_IN_APP) return <Redirect href="/feed" />;
+	// A development bundle's test homes (phase404.4) have a page to open.
+	if (!LISTINGS_IN_APP && !TEST_HOMES) return <Redirect href="/feed" />;
 	return <ListingExploreScreen />;
 }
 

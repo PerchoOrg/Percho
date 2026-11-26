@@ -157,6 +157,25 @@ const EMPTY: PlaceBlockModel = {
 	mapPoint: null,
 };
 
+/**
+ * The block on a place's own page (phase404.4): the page's bar already says
+ * the place's name, so a line that leads with it gives the rest instead
+ * (owner, 2026-11-26: 「进去了不用再重复city」) — and no longer opens the page
+ * the buyer is already inside.
+ */
+export function withoutPageName(
+	model: PlaceBlockModel,
+	pageName: string | undefined,
+): PlaceBlockModel {
+	if (pageName === undefined || pageName === "" || model.lead !== pageName) {
+		return model;
+	}
+	// A home's line reads "Edinburgh · Suwanee · Gwinnett County": what is
+	// left leads with the next level up.
+	const [lead = "", ...rest] = model.rest.split(" · ");
+	return { ...model, lead, rest: rest.join(" · "), placeSlug: null };
+}
+
 export function placeBlockModel({
 	card,
 	geoUnits,

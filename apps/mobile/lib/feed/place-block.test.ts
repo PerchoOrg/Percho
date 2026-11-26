@@ -23,6 +23,7 @@ import {
 	mapAccessibilityLabel,
 	placeAccessibilityLabel,
 	placeBlockModel,
+	withoutPageName,
 } from "./place-block";
 
 const CANTON: GeoUnit = {
@@ -283,6 +284,45 @@ describe("home tour", () => {
 		expect(m.mapPoint).toEqual({ lat: 34.21, lng: -84.49, kind: "home" });
 		// The unit stays — it is the fallback, not a competing destination.
 		expect(m.mapUnitId).toBe(CANTON.id);
+	});
+});
+
+/**
+ * On a place's own page the bar says the place (phase404.4; owner,
+ * 2026-11-26: 「进去了不用再重复city」).
+ */
+describe("on a place's own page", () => {
+	it("a city's page does not say the city again over each neighbourhood", () => {
+		const m = withoutPageName(
+			model({ card: { ...RIVER_GREEN, glance: GLANCE } }),
+			"Canton",
+		);
+		expect(m.lead).toBe("Cherokee County");
+		expect(m.rest).toBe("");
+	});
+
+	it("a neighbourhood's page leads a home's line with the next level up, and the line stops being a link", () => {
+		const m = withoutPageName(
+			model({
+				card: listing({
+					geoUnitId: CANTON.id,
+					communityId: "river-green",
+					communityName: "River Green",
+					communityCounty: "Cherokee",
+				}),
+				communities: [],
+			}),
+			"River Green",
+		);
+		expect(m.lead).toBe("Canton");
+		expect(m.rest).toBe("Cherokee County");
+		expect(m.placeSlug).toBeNull();
+	});
+
+	it("leaves the line alone on the feed, and when it leads with something else", () => {
+		const m = model({ card: { ...RIVER_GREEN, glance: GLANCE } });
+		expect(withoutPageName(m, undefined)).toBe(m);
+		expect(withoutPageName(m, "Woodstock")).toBe(m);
 	});
 });
 
