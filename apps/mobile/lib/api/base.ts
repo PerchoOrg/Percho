@@ -63,6 +63,12 @@ export function feedPoolUrl(params: {
 	 * hides §0.7's "no video is a first-class state".
 	 */
 	videoFirst?: boolean;
+	/**
+	 * Narrow the pool to one place (phase404): a city by its unit id
+	 * (`city:suwanee-ga`), a neighbourhood by slug. The server does the
+	 * narrowing — `apps/web/lib/feed/pool-focus.ts`.
+	 */
+	focus?: { kind: "city" | "community"; id: string };
 }): string {
 	const q = new URLSearchParams({
 		stage: String(params.stage),
@@ -75,6 +81,7 @@ export function feedPoolUrl(params: {
 	}
 	if (params.videosOnly) q.set("videosOnly", "1");
 	if (params.videoFirst) q.set("videoFirst", "1");
+	if (params.focus) q.set(params.focus.kind, params.focus.id);
 	if (!LISTINGS_IN_APP) q.set("listings", "0");
 	return `${apiBase()}/api/mobile/feed?${q.toString()}`;
 }

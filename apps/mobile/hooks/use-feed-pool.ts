@@ -34,6 +34,13 @@ interface UseFeedPoolArgs {
 	likedCommunityIds: readonly string[];
 	/** Hold off until the persisted stage has been read back (§1.7). */
 	enabled: boolean;
+	/**
+	 * One place to narrow the pool to (phase404) — a place's own deck, and the
+	 * Explore page asking whether there is one to open. A different place is a
+	 * different pool, so a change refetches from the start, as a stage change
+	 * does.
+	 */
+	focus?: { kind: "city" | "community"; id: string } | undefined;
 }
 
 interface UseFeedPoolResult {
@@ -76,6 +83,7 @@ export function useFeedPool({
 	cities,
 	likedCommunityIds,
 	enabled,
+	focus,
 }: UseFeedPoolArgs): UseFeedPoolResult {
 	const [pool, setPool] = useState<FeedPool>(EMPTY_POOL);
 	const [loading, setLoading] = useState(false);
@@ -117,6 +125,10 @@ export function useFeedPool({
 	citiesRef.current = citiesKey;
 	const likedRef = useRef(likedKey);
 	likedRef.current = likedKey;
+
+	// By value, for the same reason: the caller builds the object per render.
+	const focusKind = focus?.kind;
+	const focusId = focus?.id;
 
 	const load = useCallback(
 		async (reset: boolean) => {
@@ -166,6 +178,9 @@ export function useFeedPool({
 						// server has to FETCH them, sorting a page cannot surface a row it
 						// never read. See lib/feed/dev-sampler.ts.
 						...(samplerEnabled() ? { videoFirst: true } : {}),
+						...(focusKind && focusId
+							? { focus: { kind: focusKind, id: focusId } }
+							: {}),
 					}),
 				);
 				if (!res.ok) throw new Error(`feed pool: HTTP ${res.status}`);
@@ -190,12 +205,13 @@ export function useFeedPool({
 				inFlight.current = false;
 			}
 		},
-		[stage],
+		[stage, focusKind, focusId],
 	);
 
 	// ONLY a stage change rebuilds the pool: the server gates its listing rows by
 	// stage, so a stage-4 deck must not be composed from the stage-1 payload.
-	// Nothing else may reset — see the note on `citiesRef` above.
+	// Nothing else may reset — see the note on `citiesRef` above. (A different
+	// `focus` is a different pool altogether; no screen changes its own.)
 	useEffect(() => {
 		if (!enabled) return;
 		token.current += 1;

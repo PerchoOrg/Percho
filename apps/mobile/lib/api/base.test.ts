@@ -18,6 +18,34 @@ describe("the listings flag on listing-bearing requests", () => {
 		);
 	});
 
+	it("rides on a pool narrowed to one place too", () => {
+		const url = feedPoolUrl({
+			stage: 4,
+			offset: 0,
+			limit: 12,
+			focus: { kind: "city", id: "city:suwanee-ga" },
+		});
+		expect(new URL(url).searchParams.get("city")).toBe("city:suwanee-ga");
+		expect(flag(url)).toBe(expected);
+	});
+
+	it("names a neighbourhood by slug, and no place by default", () => {
+		const params = (focus?: { kind: "city" | "community"; id: string }) =>
+			new URL(
+				feedPoolUrl({
+					stage: 4,
+					offset: 0,
+					limit: 12,
+					...(focus ? { focus } : {}),
+				}),
+			).searchParams;
+		expect(
+			params({ kind: "community", id: "edinburgh" }).get("community"),
+		).toBe("edinburgh");
+		expect(params().has("city")).toBe(false);
+		expect(params().has("community")).toBe(false);
+	});
+
 	it("rides on text search, after the encoded query", () => {
 		const url = searchUrl("oak & pine");
 		expect(new URL(url).searchParams.get("q")).toBe("oak & pine");

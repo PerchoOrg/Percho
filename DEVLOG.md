@@ -23,6 +23,29 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-26 08:52 UTC — phase404.3: the feed follows a like; a city's own deck opens from its Explore page (iOS, the city half)
+
+**Objective**: owner, on `/demos/feed-focus-v2`: 「感觉放在explore page里比较好」 — after "1+3". Read as: the way into a place's own deck is on its Explore page, and the feed gets no line above the card. The feed's own part is the rule alone. Built without a further "go": the two picks settle the design, and what is left open has a default he can overrule on the phone.
+**What the phone does now** (dev client; the store build is 1.1.0 (19), in review, and has none of this):
+- **Like a city's film** → its neighbourhoods are the next cards, behind the one already underneath: at most 4, those never seen first, none that was passed, none swiped since the app opened. Two of them passed in a row and the rest go to the back of the deck.
+- **A city's Explore page** → under the name, `More of Suwanee ›` (the Map control's sage fill). Only when the city's pool has a card. It opens `/place`: back arrow and the city's name, then the feed's own cards — that city's neighbourhoods, unseen first, passed last — and at the end "That's all of Suwanee for now" with Back. No tab bar; nothing remembered.
+- Back on the feed, what was swiped on that page is taken out of the part of the deck not yet mounted, so it is not dealt again.
+**Actions** (`apps/mobile`):
+- `lib/feed/follow.ts` (new, 24 tests): `cardsWithin` (a city's neighbourhoods, a neighbourhood's homes), `followStep` (one swipe: settle the run, queue on a like), `withoutSwipedAway`, `placeDeck`, `parsePlaceFocus`.
+- `app/(tabs)/feed.tsx`: `FeedScreen({ focus })`. With a focus it reads the narrowed pool (phase404's `city=` / `community=`), composes with `placeDeck` instead of `generateFeed`, draws the back bar, ends on the place's own line, takes the bottom safe area, and skips `beginSession` and the swipe hint. On the tab: `followStep` in `onDecision`; `rerankTail` is skipped while a run is waiting; the stills a like would queue are prefetched while the card is on top.
+- `app/place.tsx` (new): the route — the feed screen with a focus from its params.
+- `components/community/PlaceDeckLink.tsx` (new) on `app/city/[slug].tsx`.
+- `hooks/use-feed-pool.ts`, `lib/api/base.ts`: `focus` → `city=` / `community=` (2 tests). `state/feed-session.ts`: `swipedThisRun`, not persisted. `components/feed/ExhaustedCard.tsx`: `headline`, `onBack`.
+**Decisions**:
+- **Where the queued cards sit.** `SwipeStack` mounts the top card and the one behind it (`RERANK_HOLD`'s note counts one more), so position +2 is unmounted when a like commits and the queue can start there without breaking `deckKey`'s contract. One card's wait, as the prototype showed; `RERANK_HOLD` itself is left as it was.
+- **One screen, not two.** The place's deck is the feed screen with a prop, not a copy: the faces, the tap targets, the swipe, the telemetry and the place block are 900 lines that would otherwise exist twice.
+- **A place's page shows all of the place** — a neighbourhood passed weeks ago is there, last. A page of three that shows two reads as broken. Following a like is stricter (nothing passed, nothing just swiped), because that is the app choosing.
+- **`swipedThisRun`** rather than the lifetime `seenIds` for "do not replay": on a deck of 27 films a returning buyer has seen everything, and a rule keyed on `seenIds` would never queue anything for them.
+**Verified**: mobile typecheck 0, biome 0 errors / 5 warnings (as main), vitest 965 (was 939), `expo export --platform ios` bundles. **Not run on a device** — no simulator on this host; the layout of the back bar and the button is unseen.
+**Not built — the homes half**: a liked neighbourhood queues its homes only where the pool carries homes, and no build's does (`listings=0`); the community page has no `Homes in … ›`. Owner: 「如果需要房子视频 你找之前的素材测试 不要在正式ios里显示就行 只测试」. Plan: a dev-only switch (`__DEV__` and an `EXPO_PUBLIC_` flag, as the dev sampler is gated), the six test listings' films standing in for a liked neighbourhood's homes, the link on the community page and the listing page reachable under the same switch. Metro (`expo start --lan --port 443`, running since Tuesday) has to be restarted with the flag.
+**Risks**: for a buyer who has passed a city's neighbourhoods before, a like on the city queues nothing (the You tab's reset clears it). The feed's CDN window is 60 s, so `PlaceDeckLink` can lag a newly filmed neighbourhood by that much.
+**Next steps**: owner on the phone (dev client): like a city; a city's Explore page → `More of …`. Then the homes half. Still open from phase404: `relink-listings.ts --apply`.
+
 ## 2026-11-26 08:27 UTC — phase404.2: the design for "1 + 3", as a page he can swipe (demo only)
 
 **Objective**: owner, on `/demos/feed-focus-v1`: 「1+3 给我出设计方案 在网页里也用中文 如果需要房子视频 你找之前的素材测试 不要在正式ios里显示就行 只测试」.
