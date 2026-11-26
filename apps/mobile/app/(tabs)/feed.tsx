@@ -79,6 +79,7 @@ import {
 	cardsWithin,
 	followStep,
 	placeDeck,
+	placeLinkAccessibilityLabel,
 	placeLinkLabel,
 	placeWithin,
 	withoutSwipedAway,
@@ -1181,6 +1182,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 							placeLink !== null
 								? {
 										label: placeLinkLabel(placeLink),
+										accessibilityLabel: placeLinkAccessibilityLabel(placeLink),
 										onPress: () =>
 											router.push({
 												pathname: "/place",

@@ -4,7 +4,7 @@
  * up to three figures the film cannot show.
  *
  *     Alpharetta · Fulton County                [◎ Map]   ← place   44 high
- *     $747K            Top 1–7%         25 mi             ← figures 48 high
+ *     $747K            Top 3%           25 mi             ← figures 48 high
  *     ZIP 30005 homes  schools nearby   north of Atlanta
  *                                                         14
  *     [card]
@@ -31,9 +31,16 @@
  *     the proportion approved at 390 holds on the mini and the Max. That is
  *     why the sizes cannot live in a module-level `StyleSheet`: `sheet` is a
  *     factory of one, memoised per scale.
- *   · **Text shrinks, it is not cut** (owner, 2026-09-07: 「Don't cut the
- *     community name if it is too long, use smaller size instead」). The same
- *     rule for a long place line or a long label.
+ *   · **The place row is one size, always** (owner, 2026-11-26: 「字体不统一
+ *     如果社区或者city名字长 前半部分就很小 想想办法」). The way back, the place
+ *     line and the pill are all `PLACE_SIZE`, and none of them shrinks to
+ *     fit: a line that shrank beside a pill read as a different face. What
+ *     gives way instead is the line's second half ("· Fulton County"), which
+ *     is left out whole when it does not fit — never cut mid-word; only a
+ *     name too long for the row on its own ends in "…". This replaces, for
+ *     this row, the 2026-09-07 rule that text shrinks rather than being cut
+ *     (said of the 36pt title the row used to sit under). The figures below
+ *     still shrink to fit, each one alone in its column.
  *   · **Rows carry `minHeight`, not `height`**: iOS text scaling stays on, and
  *     a row with no text yet is as tall as a full one, so the card does not
  *     move when the first one lands.
@@ -45,7 +52,7 @@
  * page (`onOpenCell` absent) it is text and nothing dims under a finger.
  */
 import type { GlanceCell } from "@percho/shared/glance";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
 	Pressable,
 	StyleSheet,
@@ -73,8 +80,13 @@ const EDGE = GUTTER + CARD_EDGE_INSET;
 
 // ─── Type ────────────────────────────────────────────────────────────
 const PLACE_SIZE = 16;
-/** The floor a long line may shrink to before it is cut. */
-const PLACE_MIN_SCALE = 0.8;
+/**
+ * How much faster the line's second half gives up room than anything else in
+ * the row: it is gone before a name loses a letter.
+ */
+const REST_GIVES_WAY = 1000;
+/** Wide enough to lay out any place line on one line, to learn its width. */
+const MEASURE_WIDTH = 1000;
 const FIGURE_SIZE = 26;
 const FIGURE_MIN_SCALE = 0.75;
 const LABEL_SIZE = 13;
@@ -94,7 +106,6 @@ const CELL_AFTER_RULE = 10;
 const MAP_WIDTH = 84;
 const MAP_HEIGHT = 44;
 const MAP_RADIUS = 22;
-const MAP_LABEL_SIZE = 14;
 /** Pin → "Map". */
 const MAP_GAP = 6;
 const MAP_PAD = 12;
@@ -136,13 +147,15 @@ interface PlaceBlockProps {
 	/** Open the map on the card's place. Absent → no Map button at all. */
 	onOpenMap?: () => void;
 	/**
-	 * The way into the card's own deck — "More of Suwanee", "Homes in
-	 * Edinburgh" (phase404.5). Where a card has one it TAKES THE MAP BUTTON'S
+	 * The way into the card's own deck — "Communities ›", "Homes ›"
+	 * (phase404.5). Where a card has one it TAKES THE MAP BUTTON'S
 	 * PLACE (owner, 2026-11-26: 「字太小 把现在的map button替换掉吧」): the same
 	 * pill, the words instead of the pin. Such a card has no Map button; the
 	 * cards inside its deck that have no deck of their own still do.
 	 */
-	deck?: { label: string; onPress: () => void } | undefined;
+	deck?:
+		| { label: string; accessibilityLabel: string; onPress: () => void }
+		| undefined;
 	/**
 	 * On a place's own page: the way back, leading the line — "‹ Suwanee". It
 	 * is also where the page says which place it is, so the page needs no bar
@@ -212,7 +225,7 @@ export function PlaceBlock({
 						onPress={deck.onPress}
 						accessible
 						accessibilityRole="button"
-						accessibilityLabel={deck.label}
+						accessibilityLabel={deck.accessibilityLabel}
 						hitSlop={{ top: TOUCH_SLOP, bottom: TOUCH_SLOP }}
 						style={({ pressed }) => [styles.map, pressed && styles.mapPressed]}
 					>
@@ -299,8 +312,9 @@ function Figure({ cell, styles }: { cell: GlanceCell; styles: BlockStyles }) {
 }
 
 /**
- * `Alpharetta · Fulton County` — one Text, so a long line scales as a whole
- * rather than its two halves separately.
+ * `Alpharetta · Fulton County`, at `PLACE_SIZE` whatever is beside it. The
+ * second half is shown whole or not at all: its width on its own line is
+ * measured off-screen, and it is drawn only when the row leaves it that much.
  */
 function PlaceLine({
 	model,
@@ -309,18 +323,41 @@ function PlaceLine({
 	model: PlaceBlockModel;
 	styles: BlockStyles;
 }) {
+	const rest = model.rest === "" ? "" : ` · ${model.rest}`;
+	/** The second half's own width, and the room the row leaves it. */
+	const [whole, setWhole] = useState(0);
+	const [room, setRoom] = useState(0);
+	const fits = whole > 0 && whole <= room + 0.5;
 	return (
-		<Text
-			style={styles.place}
-			numberOfLines={1}
-			adjustsFontSizeToFit
-			minimumFontScale={PLACE_MIN_SCALE}
-			ellipsizeMode="tail"
-			accessible={false}
-		>
-			<Text style={styles.placeLead}>{model.lead}</Text>
-			{model.rest !== "" && ` · ${model.rest}`}
-		</Text>
+		<View style={styles.line}>
+			<Text style={[styles.place, styles.placeLead]} numberOfLines={1}>
+				{model.lead}
+			</Text>
+			{rest !== "" && (
+				<View
+					style={styles.restSlot}
+					onLayout={(e) => setRoom(e.nativeEvent.layout.width)}
+				>
+					<Text
+						style={[styles.place, !fits && styles.unseen]}
+						numberOfLines={1}
+					>
+						{rest}
+					</Text>
+				</View>
+			)}
+			{rest !== "" && (
+				<View style={styles.measure} pointerEvents="none">
+					<Text
+						style={styles.place}
+						numberOfLines={1}
+						onLayout={(e) => setWhole(e.nativeEvent.layout.width)}
+					>
+						{rest}
+					</Text>
+				</View>
+			)}
+		</View>
 	);
 }
 
@@ -361,7 +398,7 @@ function sheet(k: number) {
 		back: {
 			minHeight: PLACE_ROW * k,
 			marginRight: BACK_GAP * k,
-			flexShrink: 0,
+			flexShrink: 1,
 			justifyContent: "center",
 		},
 		backLabel: {
@@ -373,14 +410,32 @@ function sheet(k: number) {
 		/** Pressed feedback for the text controls. The Map pill darkens
 		 * instead — a filled control must not fade. */
 		dim: { opacity: 0.6 },
-		place: {
+		/** The place line: its two halves side by side, not one run of text. */
+		line: {
 			flexShrink: 1,
+			minWidth: 0,
+			flexDirection: "row",
+			alignItems: "center",
+		},
+		place: {
 			fontFamily: fonts.ui,
 			fontSize: PLACE_SIZE * k,
 			fontWeight: "400",
 			color: feedHeader.context,
 		},
-		placeLead: { fontWeight: "600", color: feedHeader.title },
+		placeLead: { flexShrink: 1, fontWeight: "600", color: feedHeader.title },
+		restSlot: { flexShrink: REST_GIVES_WAY, minWidth: 0 },
+		/** Laid out, so the row does not move; not drawn. */
+		unseen: { opacity: 0 },
+		/** Off the row: where the second half is laid out at its own width. */
+		measure: {
+			position: "absolute",
+			left: 0,
+			top: 0,
+			width: MEASURE_WIDTH * k,
+			alignItems: "flex-start",
+			opacity: 0,
+		},
 		chevronBox: {
 			width: CHEVRON_BOX * k,
 			height: CHEVRON_BOX * k,
@@ -416,7 +471,7 @@ function sheet(k: number) {
 		mapPressed: { backgroundColor: feedHeader.mapPressed },
 		mapLabel: {
 			fontFamily: fonts.ui,
-			fontSize: MAP_LABEL_SIZE * k,
+			fontSize: PLACE_SIZE * k,
 			fontWeight: "600",
 			color: feedHeader.accent,
 		},

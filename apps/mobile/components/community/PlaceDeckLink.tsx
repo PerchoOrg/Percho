@@ -1,8 +1,8 @@
 /**
  * The way into a place's own deck, on its Explore page (phase404.3):
  *
- *     More of Suwanee ›        a city → its neighbourhoods
- *     Homes in Edinburgh ›     a neighbourhood → its homes
+ *     Communities ›     a city → its neighbourhoods
+ *     Homes ›           a neighbourhood → its homes
  *
  * Owner, 2026-11-26, on `/demos/feed-focus-v2`: 「感觉放在explore page里比较好」.
  * The feed itself gains no control — it follows a like on its own
@@ -27,6 +27,7 @@ import {
 	type PlaceFocus,
 	type SwipeHistory,
 	placeDeck,
+	placeLinkAccessibilityLabel,
 	placeLinkLabel,
 } from "../../lib/feed/follow";
 import { placePool } from "../../lib/feed/test-homes";
@@ -67,7 +68,7 @@ export function PlaceDeckLink({ focus }: { focus: PlaceFocus }) {
 			}
 			style={({ pressed }) => [styles.link, pressed && styles.pressed]}
 			accessibilityRole="button"
-			accessibilityLabel={label}
+			accessibilityLabel={placeLinkAccessibilityLabel(focus)}
 		>
 			<Text style={styles.label} numberOfLines={1}>
 				{label} ›

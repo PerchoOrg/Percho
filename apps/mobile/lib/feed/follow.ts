@@ -231,11 +231,20 @@ export function placeWithin(
 	return null;
 }
 
-/** What the link into a place's deck says, on the feed and on its Explore page. */
+/**
+ * What the link into a place's deck says, on the feed and on its Explore page:
+ * what is inside, not the place's name again. It shares the feed's place row
+ * with the place line, and "More of Johns Creek" left the line too little
+ * room (owner, 2026-11-26: 「如果社区或者city名字长 前半部分就很小」); the name
+ * is on the card right under it.
+ */
 export function placeLinkLabel(focus: PlaceFocus): string {
-	return focus.kind === "city"
-		? `More of ${focus.name}`
-		: `Homes in ${focus.name}`;
+	return focus.kind === "city" ? "Communities" : "Homes";
+}
+
+/** The same link read aloud, where there is no card to say whose. */
+export function placeLinkAccessibilityLabel(focus: PlaceFocus): string {
+	return `${placeLinkLabel(focus)} in ${focus.name}`;
 }
 
 /** A route's params as a focus, or null when they do not name a place. */

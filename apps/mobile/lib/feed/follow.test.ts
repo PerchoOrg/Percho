@@ -16,6 +16,7 @@ import {
 	followStep,
 	parsePlaceFocus,
 	placeDeck,
+	placeLinkAccessibilityLabel,
 	placeLinkLabel,
 	placeWithin,
 	withoutSwipedAway,
@@ -462,12 +463,19 @@ describe("placeWithin — the place a card is the way into", () => {
 		expect(placeWithin(home("h1", "edinburgh"), pool)).toBeNull();
 	});
 
-	it("says where the link goes", () => {
-		expect(placeLinkLabel({ kind: "city", id: SUWANEE, name: "Suwanee" })).toBe(
-			"More of Suwanee",
+	it("says what is inside, short — the name is on the card under it", () => {
+		const suwanee = { kind: "city", id: SUWANEE, name: "Suwanee" } as const;
+		const edinburghFocus = {
+			kind: "community",
+			id: "edinburgh",
+			name: "Edinburgh",
+		} as const;
+		expect(placeLinkLabel(suwanee)).toBe("Communities");
+		expect(placeLinkLabel(edinburghFocus)).toBe("Homes");
+		// Read aloud, it says whose.
+		expect(placeLinkAccessibilityLabel(suwanee)).toBe("Communities in Suwanee");
+		expect(placeLinkAccessibilityLabel(edinburghFocus)).toBe(
+			"Homes in Edinburgh",
 		);
-		expect(
-			placeLinkLabel({ kind: "community", id: "edinburgh", name: "Edinburgh" }),
-		).toBe("Homes in Edinburgh");
 	});
 });

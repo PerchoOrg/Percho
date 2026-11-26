@@ -114,13 +114,13 @@ describe("the block's rows", () => {
 	 * name if it is too long, use smaller size instead」). An explicit
 	 * `lineHeight` would defeat that — iOS clips auto-shrunk text against one.
 	 */
-	it("never wraps, and shrinks a long line before cutting it", () => {
-		const texts = CODE.match(/<Text\b[^>]*>/g) ?? [];
+	it("never wraps; only the figures shrink to fit", () => {
+		const texts = CODE.match(/<Text\b[\s\S]*?>/g) ?? [];
 		const lines = CODE.match(/numberOfLines=\{1\}/g) ?? [];
-		// The place line's inner run inherits its parent's one line.
-		expect(lines).toHaveLength(texts.length - 1);
-		expect(CODE.match(/adjustsFontSizeToFit/g) ?? []).toHaveLength(3);
-		expect(n("PLACE_MIN_SCALE")).toBeGreaterThanOrEqual(0.75);
+		expect(lines).toHaveLength(texts.length);
+		// The figure and its label — each alone in its column.
+		expect(CODE.match(/adjustsFontSizeToFit/g) ?? []).toHaveLength(2);
+		expect(n("FIGURE_MIN_SCALE")).toBeGreaterThanOrEqual(0.75);
 		expect(n("LABEL_MIN_SCALE")).toBeGreaterThanOrEqual(0.75);
 		expect(CODE.slice(CODE.indexOf("function sheet"))).not.toContain(
 			"lineHeight",
@@ -173,6 +173,30 @@ describe("map control B", () => {
  * Owner, 2026-11-26, on the one-line link above the block: 「字太小 把现在的map
  * button替换掉吧」.
  */
+/**
+ * Owner, 2026-11-26: 「字体不统一 如果社区或者city名字长 前半部分就很小 想想办法」.
+ * A place line that shrank beside the pill read as a different face.
+ */
+describe("the place row is one size", () => {
+	it("draws the way back, the line and the pill at PLACE_SIZE, with no other size", () => {
+		const body = CODE.slice(CODE.indexOf("function sheet(k: number)"));
+		const row = body.slice(0, body.indexOf("factsRow: {"));
+		const sizes = [...row.matchAll(/fontSize: (\w+) \* k/g)].map((m) => m[1]);
+		expect(sizes.length).toBeGreaterThanOrEqual(3);
+		expect(new Set(sizes)).toEqual(new Set(["PLACE_SIZE"]));
+	});
+
+	it("gives up the line's second half whole before a name loses a letter", () => {
+		expect(n("REST_GIVES_WAY")).toBeGreaterThanOrEqual(100);
+		expect(CODE).toContain(
+			"restSlot: { flexShrink: REST_GIVES_WAY, minWidth: 0 }",
+		);
+		// Hidden, not cut: drawn only when it fits whole.
+		expect(CODE).toContain("!fits && styles.unseen");
+		expect(CODE).toContain("unseen: { opacity: 0 }");
+	});
+});
+
 describe("the deck link takes the Map button's place", () => {
 	it("is the same pill — Map's box, fill and label — with the words for the pin", () => {
 		const pill = CODE.slice(CODE.indexOf("{deck !== undefined ? ("));

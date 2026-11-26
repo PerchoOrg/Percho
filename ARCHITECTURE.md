@@ -149,6 +149,7 @@ copied per entity.
 | `components/` | `cards/` are the swipeable feed faces, `feed/` the deck chrome, `listing/` the detail sheets, `charts/` the small marks (ring, donut, bar, pips, columns) the place pages and the compare draw figures with. |
 | `lib/feed/` | Feed generation, ordering, rhythm, behavioural signals. `follow.ts` is what a like does next: a liked city's neighbourhoods (a neighbourhood's homes) queued behind the card underneath, and the order of a place's own deck. `test-homes.ts` lets the six FMLS test listings stand in for a neighbourhood's homes in a development bundle only (`TEST_HOMES`). |
 | `lib/listing/` | Listing detail: hotspots, tours, section nav. |
+| `lib/media/` | Video on the phone: how a film is fitted to its frame, and `one-player.ts` — one film plays at a time, app-wide; every player takes over before it plays. |
 | `lib/gesture/` | Swipe physics and capability detection. |
 | `lib/share/` | Sharing a community or city (phase335): the link (`www.percho.co/watch/c/<slug>`, `/watch/city/<slug>` — the film alone on the web (phase336) and a universal link at once), the share sheet, and the path mapping `+native-intent.tsx` uses. |
 | `state/` | Zustand stores — funnel stage, sound, preferences. |

@@ -17,8 +17,11 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-26
+- **One number for each figure above a card.** The three figures over a neighbourhood or city card are now single numbers — "Top 3%" for the schools nearby, "96%" graduating, "68 min" to downtown — instead of ranges like "Top 1–7%". Each is the average of the values the place's page lists one by one.
+- **The line above a card stays the same size.** Next to a long name the place line used to shrink into smaller type. It now keeps one size, and when there is no room for the second half ("· Gwinnett County") that half is left out rather than everything getting smaller.
+- **Only one film plays at a time.** Opening a city's neighbourhoods could leave another film's sound playing underneath. Starting any film now stops the one before it.
 - **The feed follows what you like.** Like a city's film and the next cards are that city's neighbourhoods, one after another, before the feed moves on to other places. Pass two of them in a row and it stops. Nothing to tap. Arrives with the next app update.
-- **A city's neighbourhoods, all in one place.** Above a city's card on the feed, where the Map button was, there is now a button — "More of Suwanee", for example — and the same button sits under the city's name on its page. It opens a set of swipe cards with only that city's neighbourhoods, the ones you haven't seen first. "‹ Suwanee" above the card goes back, the tab bar stays at the bottom, and the feed is where you left it. Arrives with the next app update.
+- **A city's neighbourhoods, all in one place.** Above a city's card on the feed, where the Map button was, there is now a "Communities" button, and the same button sits under the city's name on its page. It opens a set of swipe cards with only that city's neighbourhoods, the ones you haven't seen first. "‹ Suwanee" above the card goes back, the tab bar stays at the bottom, and the feed is where you left it. Arrives with the next app update.
 
 ### 2026-11-25
 - **Comparing cities looks like comparing neighbourhoods.** Pick two or more saved cities and tap Compare: the page opens on their photos and "In short", then draws safety, schools, everyday places, how the city has grown and what a home costs, one colour a city. Two cities in the same county — Suwanee and Duluth — can now be compared; before, the comparison was by county and refused them.

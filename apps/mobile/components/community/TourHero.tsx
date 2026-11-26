@@ -42,6 +42,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { letGo, takeOver } from "../../lib/media/one-player";
 import { useSoundStore } from "../../state/sound";
 import { GUTTER } from "../../theme/feed-page";
 import { explore, fonts, radii, redline } from "../../theme/tokens";
@@ -113,6 +114,7 @@ function TourVideo({
 		p.loop = true;
 		p.muted = !soundOn;
 		p.timeUpdateEventInterval = TIME_UPDATE_INTERVAL_S;
+		takeOver(p, "explore film");
 		p.play();
 	});
 	const hold = useRef<{ index: number; until: number } | null>(null);
@@ -125,9 +127,16 @@ function TourVideo({
 	// plays at once; the film under it kept playing too (owner, 2026-11-26:
 	// 「点进去后音乐overlap了 旧的音乐要停止」). No rewind: back resumes it.
 	useEffect(() => {
-		if (suspended) player.pause();
-		else player.play();
+		if (suspended) {
+			player.pause();
+		} else {
+			takeOver(player, "explore film");
+			player.play();
+		}
 	}, [suspended, player]);
+
+	// Let `one-player` forget it when `useVideoPlayer` releases it.
+	useEffect(() => () => letGo(player), [player]);
 
 	// The strip's seek. `seekBy`, not `player.currentTime = …`: on an HLS
 	// source the setter seeks with zero tolerance and a slow seek is abandoned

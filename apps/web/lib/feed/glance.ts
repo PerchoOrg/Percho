@@ -12,6 +12,11 @@
  * without an app release. Real or absent: a place with no value for a slot
  * gets fewer cells.
  *
+ * One number a figure, never a range (owner, 2026-11-26: 「卡片上三个数字不要
+ * 区间 给一个数字平均值就行」): where the page has several values — a school
+ * at each level, a drive off-peak and at rush — the figure is their mean.
+ * The page itself still shows each one.
+ *
  * Pure — the callers hand in rows they have already read.
  */
 
@@ -59,6 +64,9 @@ const pointOf = (p: Point) => (p.lat != null && p.lng != null ? { lat: p.lat, ln
 
 const SCHOOLS_GROUP = 'Schools';
 
+const mean = (values: readonly number[]) =>
+  values.reduce((sum, v) => sum + v, 0) / values.length;
+
 /** "$747K" over the area it is the typical value of. */
 function homesCell(homeValue: CommunityProfile['homeValue'] | undefined): GlanceCell | null {
   if (!homeValue) return null;
@@ -67,16 +75,15 @@ function homesCell(homeValue: CommunityProfile['homeValue'] | undefined): Glance
 
 /**
  * Where the nearby schools stand among Georgia's, as the Explore tile words
- * each one: best to worst across the levels, "Top 1–7%".
+ * each one — "Top 1%", "Top 2%", "Top 7%" — averaged across the levels:
+ * "Top 3%". Never better than 1%, as no share is.
  */
 function schoolsCell(ranks: CommunityProfile['ranks'] | undefined): GlanceCell | null {
   const rows = (ranks?.rows ?? []).filter((r) => r.group === SCHOOLS_GROUP).slice(0, 3);
   if (rows.length === 0) return null;
-  const shares = rows.map(rankShare);
-  const best = Math.min(...shares);
-  const worst = Math.max(...shares);
+  const share = Math.max(1, Math.round(mean(rows.map(rankShare))));
   return {
-    value: best === worst ? `Top ${best}%` : `Top ${best}–${worst}%`,
+    value: `Top ${share}%`,
     label: rows.length === 1 ? 'school nearby' : 'schools nearby',
     topic: 'schools',
   };
@@ -143,7 +150,7 @@ function measureLabel(measure: string): string {
 /**
  * The city's own schools by its page's headline measure — the district and
  * state rows it is drawn against are left out. One school prints as the page
- * prints it; several print lowest to highest, so the figure is not the best
+ * prints it; several print as their mean, so the figure is not the best
  * school's alone.
  */
 function graduationCell(education: CityFundamentals['education']): GlanceCell | null {
@@ -152,15 +159,13 @@ function graduationCell(education: CityFundamentals['education']): GlanceCell | 
   const [only] = own;
   if (!only || !label) return null;
   if (own.length === 1) return { value: only.display, label, topic: 'schools' };
-  const pcts = own.map((r) => Math.round(r.pct));
-  const low = Math.min(...pcts);
-  const high = Math.max(...pcts);
-  return { value: low === high ? `${low}%` : `${low}–${high}%`, label, topic: 'schools' };
+  return { value: `${Math.round(mean(own.map((r) => r.pct)))}%`, label, topic: 'schools' };
 }
 
 /**
- * The drive to downtown as the city's Convenience tile prints it: off-peak to
- * rush hour. The off-peak figure alone would be the flattering half.
+ * The drive to downtown, between off-peak and rush hour as the city's
+ * Convenience tile prints them. The off-peak figure alone would be the
+ * flattering half.
  */
 function driveCell(gettingAround: CityFundamentals['gettingAround']): GlanceCell | null {
   const row = gettingAround.find((g) => /^downtown atlanta/i.test(g.label));
@@ -168,7 +173,7 @@ function driveCell(gettingAround: CityFundamentals['gettingAround']): GlanceCell
   const { min, max } = row.minutes;
   const miles = row.label.match(/(\d+)\s*mi\b/)?.[1];
   return {
-    value: min === max ? `${min} min` : `${min}–${max} min`,
+    value: `${Math.round(mean([min, max]))} min`,
     label: miles ? `${miles} mi to downtown` : 'to downtown Atlanta',
     topic: 'convenience',
   };

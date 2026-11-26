@@ -53,8 +53,9 @@ describe('communityGlance', () => {
       place: { lead: 'Alpharetta', rest: 'Fulton County' },
       cells: [
         { value: '$747K', label: 'ZIP 30005 homes', topic: 'potential' },
-        // #6 of 1,220 rounds up to 1%; #31 of 443 to 7% — the Explore tile's own rounding.
-        { value: 'Top 1–7%', label: 'schools nearby', topic: 'schools' },
+        // Each level as the Explore tile rounds it — #6 of 1,220 is 1%, #7 of
+        // 472 is 2%, #31 of 443 is 7% — and one figure for the three: their mean.
+        { value: 'Top 3%', label: 'schools nearby', topic: 'schools' },
         { value: '25 mi', label: 'north of Atlanta', topic: 'convenience' },
       ],
     });
@@ -65,7 +66,7 @@ describe('communityGlance', () => {
     expect(glance).toEqual({ place: { lead: 'Duluth' }, cells: [] });
   });
 
-  it('prints one share when every level stands the same, and one school in the singular', () => {
+  it('prints one school as it stands, in the singular', () => {
     const one = { ...windward, ranks: { rows: [school('High', '#31', 'of 443 in GA', 93.2)] } };
     expect(communityGlance({ city: 'Alpharetta', profile: one })?.cells[1]).toEqual({
       value: 'Top 7%',
@@ -141,8 +142,8 @@ describe('cityGlance', () => {
         // The page's first home value row, and whose it is.
         { value: '$550K', label: 'median home · county', topic: 'cost' },
         { value: '97.5%', label: 'graduate in 4 years', topic: 'schools' },
-        // Off-peak to rush, as the page's Convenience tile prints it.
-        { value: '52–83 min', label: '39 mi to downtown', topic: 'convenience' },
+        // Between off-peak (52) and rush (83): one number, not the range.
+        { value: '68 min', label: '39 mi to downtown', topic: 'convenience' },
       ],
     });
   });
@@ -161,7 +162,7 @@ describe('cityGlance', () => {
     });
   });
 
-  it('prints several high schools lowest to highest, not the best alone', () => {
+  it('prints several high schools as their mean, not the best alone', () => {
     const suwanee = cityProfile({
       education: {
         ...cityProfile().education,
@@ -173,7 +174,8 @@ describe('cityGlance', () => {
       },
     });
     expect(cityGlance({ ...place, profile: suwanee })?.cells[1]).toEqual({
-      value: '95–97%',
+      // (97.4 + 94.8) / 2
+      value: '96%',
       label: 'graduate in 4 years',
       topic: 'schools',
     });
