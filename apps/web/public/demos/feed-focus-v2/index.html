@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho feed — 喜欢一个地方之后（1 + 3 设计方案）</title>
+<style>
+:root{
+  --green:#086B5B;
+  --ink:#181B18;
+  --ink2:#5A4E40;
+  --paper:#F6F3EC;
+  --sage:#DDE9E3;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, "Songti SC", serif;
+  --ui: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+  --dark: rgba(14,13,11,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:24px 14px 80px}
+section,.nav{max-width:980px;margin:0 auto}
+.nav h1{font:600 26px var(--serif);color:var(--green);margin-bottom:8px}
+p,li{font:400 15px/1.65 var(--ui);color:var(--ink2)}
+p{margin:7px 0;max-width:780px}
+b{color:#2B2116}
+code{font:500 13px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.6);border-radius:5px;padding:1px 6px;color:var(--green);white-space:nowrap}
+section{margin-top:46px}
+h2{font:600 21px/1.3 var(--ui);margin-bottom:8px}
+h3{font:600 16px var(--ui);margin:18px 0 4px}
+ul{margin:4px 0 4px 20px;max-width:780px}
+.three{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px}
+.three div{flex:1 1 260px;background:rgba(255,255,255,.55);border-radius:14px;padding:14px 16px}
+.three h3{margin:0 0 4px;color:var(--green)}
+.three p{font-size:14px;margin:0}
+
+/* the prototype: phone + side panel */
+.proto{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;justify-content:center;margin-top:18px}
+.side{flex:1 1 320px;max-width:520px}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 14px}
+.btns button{height:44px;padding:0 20px;border-radius:22px;border:0;font:600 15px var(--ui);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.btns .pass{background:#fff;color:#2B2116}
+.btns .likeb{background:var(--green);color:#fff}
+.btns .plain{background:rgba(255,255,255,.55);color:#2B2116;font-weight:500}
+.switch{display:flex;align-items:center;gap:10px;font:500 14px var(--ui);color:#2B2116;margin:0 0 16px;cursor:pointer}
+.switch i{width:44px;height:26px;border-radius:13px;background:#B9B2A4;position:relative;flex:none;transition:background .15s}
+.switch i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.switch.on i{background:var(--green)}
+.switch.on i::after{left:21px}
+.switch small{display:block;font:400 12.5px var(--ui);color:var(--ink2)}
+.log{background:rgba(255,255,255,.55);border-radius:14px;padding:6px 16px;min-height:150px}
+.log p{font-size:14px;margin:10px 0;opacity:.5}
+.log p:first-child{opacity:1}
+.try{margin-top:16px}
+.try li{font-size:14px}
+
+/* the phone */
+.phone{width:320px;height:684px;border-radius:36px;background:var(--paper);overflow:hidden;position:relative;flex:none;box-shadow:0 3px 10px rgba(32,28,22,.06),0 16px 38px rgba(32,28,22,.18);user-select:none;-webkit-user-select:none}
+.status{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font:600 11.5px var(--ui);color:var(--ink)}
+.topbar{height:30px;display:flex;align-items:center;padding:0 12px}
+.topbar button{border:0;background:none;font:500 14px var(--ui);color:var(--green);width:96px;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar span{flex:1;text-align:center;font:600 17px var(--serif);color:var(--ink);padding-right:96px;white-space:nowrap}
+.strip{height:26px;display:flex;align-items:center;justify-content:center}
+.offer{border:0;background:none;cursor:pointer;font:600 13px var(--ui);color:var(--green);padding:4px 12px;animation:in .35s ease}
+@keyframes in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.placerow{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 14px}
+.where{font:600 13.5px var(--ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.where span{font-weight:400;color:var(--ink2)}
+.map{height:30px;padding:0 12px;border-radius:15px;background:var(--sage);color:var(--green);font:600 12px var(--ui);display:flex;align-items:center;gap:4px;flex:none}
+.figs{height:44px;display:flex;padding:0 14px;margin-top:6px}
+.figs div{flex:1;font:400 9.5px/1.3 var(--ui);color:var(--ink2)}
+.figs b{display:block;font:600 18px/1.15 var(--ui);color:var(--ink)}
+.stage{position:relative;height:450px;margin:10px 6px 0}
+.card{position:absolute;inset:0;border-radius:24px;overflow:hidden;background:#20262A;touch-action:pan-y}
+.card .pic{position:absolute;inset:0;background:center/cover}
+.card.top .pic{animation:film 14s ease-out forwards}
+@keyframes film{from{transform:scale(1)}to{transform:scale(1.12)}}
+.card.under{transform:scale(.96);filter:brightness(.75)}
+.card.out{transition:transform .28s ease-in,opacity .28s}
+.scrim{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 55%,rgba(0,0,0,.5) 78%,rgba(0,0,0,.92) 100%)}
+.stamp{position:absolute;top:30px;border:3px solid;border-radius:8px;padding:2px 10px;font:800 24px var(--ui);letter-spacing:1px;opacity:0}
+.stamp.l{left:22px;color:#37D39B;border-color:#37D39B;transform:rotate(-12deg)}
+.stamp.p{right:22px;color:#FF6B5E;border-color:#FF6B5E;transform:rotate(12deg)}
+.corner{position:absolute;top:11px;right:11px;display:flex;gap:7px}
+.corner i{width:31px;height:31px;border-radius:50%;background:var(--dark);display:flex;align-items:center;justify-content:center}
+.corner svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.test{position:absolute;top:14px;left:12px;background:#C86B3C;color:#fff;font:600 10.5px var(--ui);border-radius:10px;padding:3px 9px}
+.info{position:absolute;left:20px;right:20px;bottom:22px;color:#fff}
+.tag{font:700 9px var(--ui);letter-spacing:1px;color:rgba(255,255,255,.86);margin-bottom:5px}
+.row{display:flex;align-items:center;gap:10px}
+.name{font:600 24px/27px var(--serif);flex:1;min-width:0}
+.sub{font:400 12.5px var(--ui);color:rgba(255,255,255,.86);margin-top:4px}
+.explore{flex:none;height:30px;padding:0 13px;border-radius:15px;background:rgba(255,255,255,.92);color:var(--ink);font:600 12px/30px var(--ui)}
+.endcard{position:absolute;inset:0;border-radius:24px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:0 30px;text-align:center}
+.endcard div{font:600 22px/1.3 var(--serif);color:var(--ink)}
+.endcard button{height:44px;padding:0 22px;border-radius:22px;border:0;background:var(--green);color:#fff;font:600 14px var(--ui);cursor:pointer}
+.tabs{position:absolute;left:0;right:0;bottom:0;height:62px;background:var(--paper);border-top:1px solid rgba(0,0,0,.07);display:flex;justify-content:space-around;padding-top:10px;font:500 10px/1.5 var(--ui);color:#8A8478;text-align:center}
+.tabs b{color:var(--green);font-weight:600}
+
+/* the Explore page frames */
+.frames{display:flex;flex-wrap:wrap;gap:26px;justify-content:center;margin-top:16px}
+.frame{width:300px}
+.frame .cap{font:400 13.5px/1.5 var(--ui);color:var(--ink2);margin-top:10px}
+.ex{width:300px;height:560px;border-radius:32px;background:var(--paper);overflow:hidden;position:relative;box-shadow:0 3px 10px rgba(32,28,22,.06),0 16px 38px rgba(32,28,22,.16)}
+.ex .hero{height:250px;background:center/cover;position:relative}
+.ex .hero .corner{top:40px;right:18px}
+.ex .hero .backd{position:absolute;top:40px;left:18px;width:31px;height:31px;border-radius:50%;background:var(--dark);color:#fff;font:500 19px/29px var(--ui);text-align:center}
+.ex .head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:14px 16px 0}
+.ex .head b{font:600 22px var(--serif);color:var(--ink)}
+.ex .head span{font:400 12.5px var(--ui);color:var(--ink2);white-space:nowrap}
+.ex .go{margin:12px 16px 0;height:44px;border-radius:22px;background:var(--sage);color:var(--green);font:600 14px/44px var(--ui);text-align:center;outline:1.5px dashed #C86B3C;outline-offset:3px}
+.ex .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 16px}
+.ex .tiles div{height:74px;border-radius:14px;background:#fff;padding:10px 12px;font:600 11px var(--ui);color:var(--ink2)}
+table{border-collapse:collapse;margin-top:10px;max-width:860px;width:100%}
+td{font:400 14.5px/1.55 var(--ui);color:var(--ink2);padding:9px 12px 9px 0;border-top:1px solid rgba(0,0,0,.1);vertical-align:top}
+td:first-child{white-space:nowrap;color:#2B2116;font-weight:600;width:1%}
+.ask{background:rgba(255,255,255,.6);border-radius:14px;padding:14px 18px;margin-top:12px;max-width:820px}
+.ask p{margin:4px 0}
+</style>
+</head>
+<body>
+<div class="nav">
+  <h1>喜欢一个地方之后 —— 1 + 3 的设计方案</h1>
+  <p>你选了 <b>1 + 3</b>：feed 自己跟着你的喜欢走，再加上"这个地方自己的一页"。下面是具体怎么做。第一块是<b>可以直接操作的样机</b>，后面是规则、Explore 页上的入口、正式版和测试版的区别，最后是三件要你定的事。</p>
+  <div class="three">
+    <div><h3>① 规则</h3><p>喜欢一个城市，接下来出它的社区；喜欢一个社区，接下来出它的房子。出完回到平时的混排。屏幕上不加按钮。</p></div>
+    <div><h3>② 一行字</h3><p>喜欢之后，卡片上方那条空白处出现 <code>More of Suwanee ›</code>。不点，什么都不变。</p></div>
+    <div><h3>③ 一页</h3><p>点了那行字，打开 Suwanee 自己的一页：同样的滑动卡片，只有 Suwanee。左上角返回，主 feed 停在原处。</p></div>
+  </div>
+</div>
+
+<section>
+  <h2>样机：直接滑</h2>
+  <p>在手机上左右拖卡片，或者用右边的按钮。右边会用一句话说明刚才发生了什么。房子用的是之前那 6 条测试房源的影片（卡片左上角标了 TEST），只为了让你看到完整流程。</p>
+  <div class="proto">
+    <div class="phone" id="phone"></div>
+    <div class="side">
+      <div class="btns">
+        <button class="pass" id="bPass">← 划走</button>
+        <button class="likeb" id="bLike">喜欢 →</button>
+        <button class="plain" id="bReset">重新开始</button>
+      </div>
+      <div class="switch on" id="sw"><i></i><div>房子卡片：<span id="swText">开（测试版）</span><small id="swSub">关掉 = 正式 iOS 现在的样子，没有房子</small></div></div>
+      <div class="log" id="log"></div>
+      <div class="try">
+        <h3>可以这样走一遍</h3>
+        <ul>
+          <li>第一张是 Suwanee，<b>喜欢</b>它。</li>
+          <li>下一张照常出现；再往后是 Suwanee 的三个社区。上方多了一行字。</li>
+          <li>点 <code>More of Suwanee ›</code>，进入 Suwanee 页。</li>
+          <li>在里面<b>喜欢</b>一个社区，再点 <code>Homes in … ›</code>。</li>
+          <li>用左上角一层层返回。</li>
+          <li>关掉"房子卡片"，重新开始再走一遍：这是正式版用户会看到的。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>规则写清楚</h2>
+  <table>
+    <tr><td>从哪张开始</td><td>你喜欢的那张飞走时，下面那张已经露出来了，所以它照常出现；<b>从再下一张开始</b>是这个地方的内容。那行字则是喜欢之后<b>立刻</b>出现。</td></tr>
+    <tr><td>出什么</td><td>喜欢<b>城市</b> → 它的社区。喜欢<b>社区</b> → 它的房子。一次最多 4 张；没看过的优先，你划走过的不再出。</td></tr>
+    <tr><td>什么时候停</td><td>这几张出完；或者你<b>连续划走两张</b>，说明不感兴趣，剩下的放回后面，不再紧跟。</td></tr>
+    <tr><td>那行字</td><td>只在这个地方确实还有别的内容时出现，这几张出完（或提前停）就消失。不写数量。城市是 <code>More of Suwanee ›</code>，社区是 <code>Homes in Edinburgh ›</code>。</td></tr>
+    <tr><td>地方页</td><td>顶上是返回和地名，卡片的大小和主 feed 一样。城市页：它的社区（没看过的在前），以后接着是这个城市的房子；不再放一遍城市片。社区页：它的房子。</td></tr>
+    <tr><td>页里的规则</td><td>和主 feed 完全一样：在 Suwanee 页里喜欢 Edinburgh，同样接着出它的房子，同样出现 <code>Homes in Edinburgh ›</code>。喜欢和划走也都照常记录。</td></tr>
+    <tr><td>到底了</td><td>一张结束卡和一个返回按钮，不循环。</td></tr>
+    <tr><td>不记住</td><td>退出这一页就是退出。重开 app 永远回到主 feed，不会停在某个城市里。</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Explore 页上的同一个入口</h2>
+  <p>那行字只在喜欢之后出现一小会儿。过后想再进去，入口在这个地方的 Explore 页上：标题下面一个按钮（虚线框是新增的），文字和 feed 里那行一样。</p>
+  <div class="frames" id="frames"></div>
+</section>
+
+<section>
+  <h2>正式版和测试版</h2>
+  <table>
+    <tr><td>正式 iOS</td><td>没有房子，和现在一样。<b>城市这一半可以直接上</b>：喜欢城市 → 它的社区 → <code>More of Suwanee ›</code> → Suwanee 页。喜欢社区时什么都不出现，Explore 页上也没有 <code>Homes in … ›</code>。</td></tr>
+    <tr><td>测试版</td><td>只在你手机上的开发版里打开房子：6 条测试房源的影片，挂在你喜欢的社区下面，用来走通"社区 → 房子"。上架的包里这个开关是关死的，和现在一样。</td></tr>
+    <tr><td>FMLS 之后</td><td>房子数据进来后，同一套规则和页面直接生效，不用再改设计。</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>要你定的三件事</h2>
+  <div class="ask"><p><b>1. 那两句英文。</b> 现在是 <code>More of Suwanee ›</code> 和 <code>Homes in Edinburgh ›</code>。可以换，比如 <code>Stay in Suwanee ›</code>、<code>See homes here ›</code>。</p></div>
+  <div class="ask"><p><b>2. 样机里那一张的延迟。</b> 喜欢 Suwanee 后，中间会先出一张别处的卡片，再到 Suwanee 的社区。想要"下一张立刻就是"也做得到，代价是：每张城市卡下面都预先垫一张它自己的社区，所以划走一个城市后也会先看到它的一个社区。我建议保持现在这样。</p></div>
+  <div class="ask"><p><b>3. 先做哪一半。</b> 我建议城市这一半现在就做进主线，跟下一个版本上架；房子这一半同时做好，但只在测试版里开。</p></div>
+  <p style="margin-top:14px">回"好"就按这页做；要改的地方直接说第几条。</p>
+</section>
+
+<script>
+const still = (uid, t = 5) => `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg?time=${t}s&height=900`;
+const CITIES = [
+  ['suwanee','Suwanee','324ac35659ec5a6e0a5218620575a57a',6,['Gwinnett County','northeast of Atlanta'],[['$481K','median home value'],['95–97%','graduate in 4 years'],['49–74 min','33 mi to downtown']]],
+  ['alpharetta','Alpharetta','e4cf6820839a7e550f2a7f80b4de649e',6,['Fulton County','north of Atlanta'],[['$649K','median home value'],['98.4%','graduate in 4 years'],['45–65 min','26 mi to downtown']]],
+  ['cumming','Cumming','6f0a91c3ac197285efde591d72fced02',6,['Forsyth County','north of Atlanta'],[['$550K','median home · county'],['97.5%','graduate in 4 years'],['52–83 min','39 mi to downtown']]],
+  ['duluth','Duluth','471f8675de36b29b7eb3ae172d213668',6,['Gwinnett County','northeast of Atlanta'],[['$401K','median home value'],['94.8%','graduate in 4 years'],['48–72 min','30 mi to downtown']]],
+  ['johns-creek','Johns Creek','7b4661a5af1d96e939d2d310d6a075bf',6,['Fulton County','north-northeast of Atlanta'],[['$629K','median home value'],['97–98%','graduate in 4 years'],['50–73 min','30 mi to downtown']]],
+].map(([id, name, uid, t, where, figs]) => ({ id, kind:'city', name, img:still(uid, t), where, figs }));
+const cityName = Object.fromEntries(CITIES.map((c) => [c.id, c.name]));
+const COMMS = [
+  ['edinburgh','Edinburgh','suwanee','bbcc652c5781ea1227d705a6661fbe68','Gwinnett County','$589K','Suwanee homes','Top 1–7%','28 mi'],
+  ['harvest-park','Harvest Park','suwanee','748e5dfc8c83f5caf3a8719d7b7aaf5a','Gwinnett County','$589K','Suwanee homes','Top 2–7%','27 mi'],
+  ['aberdeen','Aberdeen','suwanee','60676602fa4cd8970706aa7a4e038e9f','Forsyth County','$589K','Suwanee homes','Top 1–4%','27 mi'],
+  ['windward','Windward','alpharetta','ddffd15040c57e3ef063ff45604e4605','Fulton County','$747K','ZIP 30005 homes','Top 1–7%','25 mi'],
+  ['white-columns','White Columns','alpharetta','c19695fefdf24a9e82993a5b8d6ad967','Fulton County','$711K','Alpharetta homes','Top 1–10%','28 mi'],
+  ['ashley-crossing','Ashley Crossing','alpharetta','95ad0de7ffb71ec60552ef348b144329','Fulton County','$711K','Alpharetta homes','Top 21–48%','18 mi'],
+  ['northbrooke','Northbrooke','cumming','d9aedd3423f83b37e69e60243e3a6937','Forsyth County','$586K','Cumming homes','Top 13–19%','41 mi'],
+  ['windermere','Windermere','cumming','f49d1a31b412b28c0a2cc2ad517124f3','Forsyth County','$586K','Cumming homes','Top 3–7%','31 mi'],
+  ['sawnee-village','Sawnee Village','cumming','a3cbfd977470fb1c9d6ed635adc598cf','Forsyth County','$586K','Cumming homes','Top 25–38%','35 mi'],
+  ['sugarloaf','Sugarloaf Country Club','duluth','9f820d812f4f4f1391225b6abdfdd901','Gwinnett County','$434K','Duluth homes','Top 10–27%','23 mi'],
+  ['st-marlo','St Marlo Country Club','duluth','58d3da8a79b30fe76ffa91764650b53d','Forsyth County','$434K','Duluth homes','Top 1–3%','26 mi'],
+  ['cardinal-lake','Cardinal Lake Estates','duluth','552c9b530d95220a60fd297e0bd3e630','Gwinnett County','$434K','Duluth homes','Top 38–56%','22 mi'],
+  ['bellmoore-park','Bellmoore Park','johns-creek','a524ee39daddf94c536e090ad208aca0','Fulton County','$690K','Johns Creek homes','Top 1–4%','25 mi'],
+  ['medlock-bridge','Medlock Bridge','johns-creek','0436a569bc50fcba010e51551324d35b','Fulton County','$690K','Johns Creek homes','Top 3–5%','22 mi'],
+  ['wards-crossing','Ward’s Crossing','johns-creek','809d31c3659cb2c81e7b86f9f70f7789','Fulton County','$690K','Johns Creek homes','Top 3–5%','22 mi'],
+].map(([id, name, city, uid, county, price, priceLabel, schools, miles]) => ({
+  id, kind:'community', name, city, img:still(uid), where:[cityName[city], county],
+  figs:[[price, priceLabel], [schools, 'schools nearby'], [miles, 'from Atlanta']] }));
+const byId = Object.fromEntries([...CITIES, ...COMMS].map((c) => [c.id, c]));
+/** The six FMLS test listings' films — test material, not these communities' homes. */
+const HOMES = [
+  ['b35ac84331d156485cbb8da2355ed79d','$299,900','4 · 3','2,910'],
+  ['d64a47df51f862425eedecc0ff70948d','$250,000','4 · 4','3,098'],
+  ['d7434ed79e1250f33ed35d3993d538f1','$280,000','3 · 2','1,899'],
+  ['3e31969b990d7ec0fd85d8babd9d32fe','$1,000,000','4 · 3','1,224'],
+  ['b6daec1eead245e72cd408ed82184ce2','$160,000','3 · 3','1,800'],
+  ['528ee2343dd9500fc304eadece47fa3c','$295,000','1 · 1','—'],
+];
+const homesOf = (c) => {
+  const start = COMMS.indexOf(c) % HOMES.length;
+  return [0, 1, 2, 3].map((k) => {
+    const [uid, price, beds, sqft] = HOMES[(start + k) % HOMES.length];
+    return { id:`home:${c.id}:${k}`, kind:'home', name:price, sub:`${beds.replace(' · ', ' bd · ')} ba · ${sqft} sqft`, community:c.id, img:still(uid, 3),
+      where:[c.name, cityName[c.city]], figs:[[price, 'list price'], [beds, 'beds · baths'], [sqft, 'sqft']] };
+  });
+};
+const FEED = ['suwanee','windward','northbrooke','sugarloaf','alpharetta','bellmoore-park','edinburgh','st-marlo','cumming','harvest-park','white-columns','medlock-bridge','duluth','aberdeen','windermere','ashley-crossing','johns-creek','cardinal-lake','sawnee-village','wards-crossing'];
+const RUN_MAX = 4;
+
+let S;
+function reset(homesOn = true) {
+  S = { homesOn, seen:new Set(), passed:new Set(), log:[],
+    screens:[{ type:'feed', deck:FEED.map((id) => byId[id]), i:0, run:null }] };
+  say('主 feed，和现在手机上一样。先<b>喜欢</b>第一张 Suwanee 试试。');
+}
+const scr = () => S.screens[S.screens.length - 1];
+function say(html) { S.log.unshift(html); S.log.length = Math.min(S.log.length, 5); }
+
+/** Rule 1: what a like queues up, behind the card already showing underneath. */
+function follow(s, card) {
+  let next;
+  if (card.kind === 'city') next = COMMS.filter((c) => c.city === card.id);
+  else if (card.kind === 'community') {
+    if (!S.homesOn) return say(`你喜欢了 <b>${card.name}</b>。房子没上线，所以什么都不出现 —— 正式 iOS 就是这样。`);
+    next = homesOf(card);
+  } else return say('你喜欢了这套房子。和现在一样记为喜欢，不触发别的。');
+  next = next.filter((c) => !S.seen.has(c.id)).slice(0, RUN_MAX);
+  const what = card.kind === 'city' ? '社区' : '房子';
+  if (next.length === 0) return say(`你喜欢了 <b>${card.name}</b>，但它的${what}你都看过了，所以不出现那行字。`);
+  // The card underneath is already on the glass: it stays where it is, and
+  // the place's cards are queued right behind it.
+  const under = s.deck[s.i + 1];
+  const underIsCard = !!under && !under.end;
+  const ids = new Set(next.map((c) => c.id));
+  const tail = s.deck.slice(s.i + 1).filter((c, k) => k === 0 || !ids.has(c.id));
+  tail.splice(underIsCard ? 1 : 0, 0, ...next.filter((c) => c.id !== under?.id));
+  s.deck = [...s.deck.slice(0, s.i + 1), ...tail];
+  s.run = { place:card, ids, passes:0 };
+  const waits = underIsCard && !ids.has(under.id);
+  const line = card.kind === 'city' ? `More of ${card.name} ›` : `Homes in ${card.name} ›`;
+  say(`你喜欢了 <b>${card.name}</b>。${waits ? '下面那张已经露出来了，照常出；再往后' : '接下来'}是它的${what}：${next.map((c) => c.name).join('、')}。上方出现 <code>${line}</code>，点它进入 ${card.name} 自己的一页。`);
+}
+
+function decide(dir) {
+  const s = scr(), card = s.deck[s.i];
+  if (!card || card.end) return;
+  S.seen.add(card.id);
+  if (dir === 'left') S.passed.add(card.id);
+  let said = false;
+  if (s.run?.ids.has(card.id)) {
+    s.run.ids.delete(card.id);
+    s.run.passes = dir === 'left' ? s.run.passes + 1 : 0;
+    if (s.run.ids.size === 0) { say(`${s.run.place.name} 的这几张出完了，那行字消失，回到平时的顺序。`); s.run = null; said = true; }
+    else if (s.run.passes >= 2) {
+      // Stop following: what is left goes to the back (the one already underneath still shows).
+      const left = s.run.ids, tail = s.deck.slice(s.i + 1);
+      const keep = tail.filter((c, k) => k === 0 || !left.has(c.id)), moved = tail.filter((c, k) => k > 0 && left.has(c.id));
+      const end = keep.findIndex((c) => c.end);
+      keep.splice(end === -1 ? keep.length : end, 0, ...moved);
+      s.deck = [...s.deck.slice(0, s.i + 1), ...keep];
+      say(`你连续划走了两张 ${s.run.place.name} 的卡片：不再紧跟，剩下的放回后面，那行字消失。`); s.run = null; said = true;
+    }
+  }
+  if (dir === 'right') follow(s, card);
+  else if (!said) say('划走。');
+  s.i += 1;
+  if (!s.deck[s.i] && s.type === 'feed') say('样机的卡片到头了。点"重新开始"。');
+  if (s.deck[s.i]?.end) say(`${s.place.name} 页到底了：一张结束卡，不循环。`);
+}
+
+function openPlace(place) {
+  const all = place.kind === 'city' ? COMMS.filter((c) => c.city === place.id) : homesOf(place);
+  const fresh = all.filter((c) => !S.seen.has(c.id)), again = all.filter((c) => S.seen.has(c.id) && !S.passed.has(c.id));
+  const parent = scr();
+  S.screens.push({ type:'place', place, deck:[...fresh, ...again, { end:true }], i:0, run:null,
+    back: parent.type === 'feed' ? 'Feed' : parent.place.name });
+  say(place.kind === 'city'
+    ? `进入 <b>${place.name}</b> 页：只有 ${place.name} 的社区，没看过的在前${S.homesOn ? '；以后后面接这个城市的房子' : ''}。左上角返回，主 feed 停在你离开的那一张。`
+    : `进入 <b>${place.name}</b> 页：只有这个社区的房子（测试素材）。`);
+}
+function back() {
+  const left = S.screens.pop();
+  say(`返回。${scr().type === 'feed' ? '主 feed' : `${scr().place.name} 页`}还在你离开的那一张；在 ${left.place.name} 页里的喜欢和划走都已经记下。`);
+}
+
+const ICON = {
+  sound:'<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 9a4 4 0 0 1 0 6"/></svg>',
+  heart:'<svg viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10A4 4 0 0 1 12 7.6 4 4 0 0 1 19.5 10C19.5 15.4 12 20 12 20z"/></svg>',
+  share:'<svg viewBox="0 0 24 24"><path d="M21 3 3 10.5l7 2.5 2.5 7L21 3z"/></svg>',
+};
+const corner = `<div class="corner"><i>${ICON.sound}</i><i>${ICON.heart}</i><i>${ICON.share}</i></div>`;
+const face = (c, cls) => `<div class="card ${cls}"><div class="pic" style="background-image:url('${c.img}')"></div><div class="scrim"></div>
+  ${c.kind === 'home' ? '<div class="test">TEST · 测试素材</div>' : ''}<div class="stamp l">LIKE</div><div class="stamp p">PASS</div>${corner}
+  <div class="info"><div class="tag">${c.kind.toUpperCase()}</div><div class="row"><div class="name">${c.name}</div><div class="explore">Explore</div></div>${c.sub ? `<div class="sub">${c.sub}</div>` : ''}</div></div>`;
+
+const phone = document.getElementById('phone');
+function render() {
+  const s = scr(), top = s.deck[s.i], under = s.deck[s.i + 1];
+  const shown = top && !top.end ? top : null;
+  const line = s.run ? (s.run.place.kind === 'city' ? `More of ${s.run.place.name} ›` : `Homes in ${s.run.place.name} ›`) : '';
+  phone.innerHTML = `<div class="status"><span>9:41</span><span>●●● ▮</span></div>
+    ${s.type === 'place' ? `<div class="topbar"><button id="back">‹ ${s.back}</button><span>${s.place.name}</span></div>` : ''}
+    <div class="strip">${line ? `<button class="offer" id="offer">${line}</button>` : ''}</div>
+    <div class="placerow"><div class="where">${shown ? `${shown.where[0]} <span>· ${shown.where[1]}</span>` : ''}</div>${shown ? '<div class="map">◎ Map</div>' : ''}</div>
+    <div class="figs">${shown ? shown.figs.map(([v, l]) => `<div><b>${v}</b>${l}</div>`).join('') : ''}</div>
+    <div class="stage">${under && !under.end ? face(under, 'under') : ''}${
+      shown ? face(shown, 'top')
+      : top?.end ? `<div class="endcard"><div>That’s all of ${s.place.name} for now</div><button id="endBack">Back to ${s.back === 'Feed' ? 'the feed' : s.back}</button></div>`
+      : '<div class="endcard"><div>样机到头了</div></div>'}</div>
+    ${s.type === 'feed' ? '<div class="tabs"><b>▶<br>Feed</b><span>⌕<br>Search</span><span>♡<br>Saved</span><span>☰<br>You</span></div>' : ''}`;
+  document.getElementById('log').innerHTML = S.log.map((l) => `<p>${l}</p>`).join('');
+  document.getElementById('offer')?.addEventListener('click', () => { openPlace(scr().run.place); render(); });
+  document.getElementById('back')?.addEventListener('click', () => { back(); render(); });
+  document.getElementById('endBack')?.addEventListener('click', () => { back(); render(); });
+  const el = phone.querySelector('.card.top');
+  if (el) drag(el);
+}
+
+/** Fly the top card off, then commit. `instant` is for the #s= script. */
+function swipe(dir, instant) {
+  const el = phone.querySelector('.card.top');
+  if (!el || instant) { decide(dir); return render(); }
+  el.classList.add('out');
+  el.style.transform = `translate(${dir === 'right' ? 420 : -420}px,30px) rotate(${dir === 'right' ? 16 : -16}deg)`;
+  el.querySelector(dir === 'right' ? '.stamp.l' : '.stamp.p').style.opacity = 1;
+  setTimeout(() => { decide(dir); render(); }, 260);
+}
+function drag(el) {
+  let x0 = null, dx = 0;
+  el.addEventListener('pointerdown', (e) => { x0 = e.clientX; dx = 0; el.setPointerCapture(e.pointerId); });
+  el.addEventListener('pointermove', (e) => {
+    if (x0 === null) return;
+    dx = e.clientX - x0;
+    el.style.transform = `translate(${dx}px,${Math.abs(dx) / 14}px) rotate(${dx / 22}deg)`;
+    el.querySelector('.stamp.l').style.opacity = Math.max(0, Math.min(1, dx / 70));
+    el.querySelector('.stamp.p').style.opacity = Math.max(0, Math.min(1, -dx / 70));
+  });
+  const up = () => {
+    if (x0 === null) return;
+    x0 = null;
+    if (Math.abs(dx) > 70) return swipe(dx > 0 ? 'right' : 'left');
+    el.style.transition = 'transform .2s'; el.style.transform = '';
+    for (const st of el.querySelectorAll('.stamp')) st.style.opacity = 0;
+    setTimeout(() => { el.style.transition = ''; }, 200);
+  };
+  el.addEventListener('pointerup', up);
+  el.addEventListener('pointercancel', up);
+}
+
+const sw = document.getElementById('sw');
+function setHomes(on) {
+  sw.classList.toggle('on', on);
+  document.getElementById('swText').textContent = on ? '开（测试版）' : '关（正式 iOS）';
+  reset(on); render();
+}
+sw.addEventListener('click', () => setHomes(!S.homesOn));
+document.getElementById('bPass').addEventListener('click', () => swipe('left'));
+document.getElementById('bLike').addEventListener('click', () => swipe('right'));
+document.getElementById('bReset').addEventListener('click', () => { reset(S.homesOn); render(); });
+
+// The Explore page's button, drawn once for a city and once for a community.
+const ex = (c, label) => `<div class="frame"><div class="ex"><div class="hero" style="background-image:url('${c.img}')"><div class="backd">‹</div>${corner}</div>
+  <div class="head"><b>${c.name}</b><span>${c.where[0]}</span></div><div class="go">${label}</div>
+  <div class="tiles"><div>Safety</div><div>Schools</div><div>Convenience</div><div>Potential</div></div></div>`;
+document.getElementById('frames').innerHTML =
+  `${ex(byId.suwanee, 'More of Suwanee ›')}<div class="cap"><b>城市的 Explore 页。</b>打开 Suwanee 页。正式版就有。</div></div>` +
+  `${ex(byId.edinburgh, 'Homes in Edinburgh ›')}<div class="cap"><b>社区的 Explore 页。</b>打开 Edinburgh 的房子。只在有房子的版本里出现；正式 iOS 现在没有这个按钮。</div></div>`;
+
+// `#s=RLO…` replays a path without animation: R like · L pass · O the line · B back · H homes off.
+reset(true);
+for (const ch of (location.hash.match(/s=([RLOBH]+)/)?.[1] ?? '')) {
+  if (ch === 'H') { sw.classList.remove('on'); document.getElementById('swText').textContent = '关（正式 iOS）'; reset(false); }
+  else if (ch === 'R' || ch === 'L') decide(ch === 'R' ? 'right' : 'left');
+  else if (ch === 'O' && scr().run) openPlace(scr().run.place);
+  else if (ch === 'B' && S.screens.length > 1) back();
+}
+render();
+</script>
+</body>
+</html>
