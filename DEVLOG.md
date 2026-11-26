@@ -23,6 +23,13 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-26 22:33 UTC — phase404.8: shared links stay film-only; the card's name becomes its link (demo)
+
+**Owner**: 「先不允许 增加app的下载可能性」 — a shared link keeps opening the film and the App Store button only; no web page one level down. Then, on A of `/demos/feed-focus-v3`: 「两个按钮都在卡片上的同一位置不好 你看能不能把卡片左下角的title做成链接button 功能替换explore 给我设计看看 把新的communities或者homes 放到右下方」.
+**Demo** — `apps/web/public/demos/feed-focus-v4/`, in Chinese, nothing in the app: the card's name opens the Explore page and the `Explore` pill goes; the pill's place at the bottom right holds the next level (`Communities ›` on a city, `Homes ›` on a neighbourhood with homes); the place row is county/city + Map again. Three ways to show the name is a link — **T1** a thin `›` after the last word (recommended), **T2** a small glass disc (the corner buttons' material), **T3** a faint capsule round the name — each on Suwanee, Johns Creek and Sugarloaf Country Club (a store-build neighbourhood card: nothing at the bottom right). Also drawn: a test-build neighbourhood card with `Homes ›`, and the inside page (option 1) with the new card.
+**Proposed in the page**: the 82% "breathe" moves from Explore to the bottom-right button; a store-build neighbourhood card keeps an empty bottom right rather than its Explore pill.
+**Asked**: T1/T2/T3; empty or Explore on store-build neighbourhood cards; the "schools nearby" label (still open from phase404.7).
+
 ## 2026-11-26 21:00 UTC — phase404.7: inside page decided (header bar); the entry waits on what a shared link may open
 
 **Owner**: 「页面里那个按照你推荐的」 — the inside page is option 1 of `/demos/feed-focus-v3` (header bar: round back · place and what the page is · Map; no per-card place line). Then, before the entry is chosen: 「如果没有提前下载app 这几个选项中哪些能让被分享的人直接进入下一个层级？」

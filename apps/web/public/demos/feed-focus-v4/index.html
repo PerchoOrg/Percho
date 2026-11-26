@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — 名字做成链接，右下角放 Communities（设计方案）</title>
+<style>
+:root{
+  --green:#086B5B;
+  --ink:#181B18;
+  --ink2:#5A4E40;
+  --paper:#F6F3EC;
+  --sage:#E0E9E3;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, "Songti SC", serif;
+  --ui: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+  --dark: rgba(14,13,11,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:24px 14px 80px}
+section,.nav{max-width:1000px;margin:0 auto}
+h1{font:600 26px var(--serif);color:var(--green);margin-bottom:8px}
+h2{font:600 21px/1.3 var(--ui);margin:0 0 6px}
+h3{font:600 17px/1.35 var(--ui);margin:34px 0 4px}
+h3 em{font-style:normal;font-weight:500;font-size:12px;color:#fff;background:var(--green);border-radius:9px;padding:2px 8px;margin-left:8px;vertical-align:2px}
+p,li{font:400 15px/1.65 var(--ui);color:var(--ink2)}
+p{margin:6px 0;max-width:800px}
+b{color:#2B2116}
+code{font:500 13px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.6);border-radius:5px;padding:1px 6px;color:var(--green);white-space:nowrap}
+section{margin-top:50px}
+ul{margin:4px 0 4px 20px;max-width:800px}
+.done{background:rgba(255,255,255,.55);border-radius:14px;padding:12px 18px;margin-top:14px;max-width:820px}
+.pros{display:flex;flex-wrap:wrap;gap:4px 28px;margin:6px 0 16px;max-width:880px}
+.pros div{flex:1 1 300px;font:400 14px/1.55 var(--ui);color:var(--ink2)}
+.phones{display:flex;flex-wrap:wrap;gap:24px 20px;justify-content:center}
+.cap{width:300px;font:400 13px/1.5 var(--ui);color:var(--ink2);margin-top:9px}
+.cap b{color:#2B2116}
+
+/* ── phone ─────────────────────────────────────────── */
+.phone{width:300px;height:640px;border-radius:34px;background:var(--paper);overflow:hidden;position:relative;box-shadow:0 3px 10px rgba(32,28,22,.06),0 16px 38px rgba(32,28,22,.16);display:flex;flex-direction:column}
+.status{height:32px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font:600 11px var(--ui);color:var(--ink)}
+.room{height:18px;flex:none}
+.row{height:40px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px}
+.line{flex:1;min-width:0;font:400 13.5px var(--ui);color:var(--ink2);white-space:nowrap;overflow:hidden}
+.line b{font-weight:600;color:var(--ink)}
+.pill{flex:none;height:34px;padding:0 13px;border-radius:17px;background:var(--sage);color:var(--green);font:600 13.5px/34px var(--ui);white-space:nowrap}
+.pill.wide{flex:1;text-align:center}
+.disc{flex:none;width:34px;height:34px;border-radius:17px;background:var(--sage);color:var(--green);font:600 17px/34px var(--ui);text-align:center}
+.figs{height:42px;flex:none;display:flex;padding:0 14px;margin-top:5px}
+.figs div{flex:1;font:400 8.5px/1.3 var(--ui);color:var(--ink2);padding-left:8px;border-left:1px solid rgba(0,0,0,.1)}
+.figs div:first-child{padding-left:0;border-left:0}
+.figs b{display:block;font:600 17px/1.2 var(--ui);color:var(--ink)}
+.stage{flex:1;margin:10px 6px 12px;position:relative}
+.card{position:absolute;inset:0;border-radius:22px;overflow:hidden;background:#20262A center/cover}
+.scrim{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 48%,rgba(0,0,0,.5) 72%,rgba(0,0,0,.92) 100%)}
+.city .scrim{background:linear-gradient(to left,rgba(0,0,0,.45) 0%,rgba(0,0,0,.18) 20%,transparent 38%),linear-gradient(to bottom,transparent 48%,rgba(0,0,0,.5) 72%,rgba(0,0,0,.92) 100%)}
+.fpill{position:absolute;top:10px;left:10px;height:22px;padding:0 9px;border-radius:11px;background:var(--dark);color:#fff;font:600 9.5px/22px var(--ui);white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.corner{position:absolute;top:8px;right:8px;display:flex;gap:6px}
+.corner i{width:27px;height:27px;border-radius:50%;background:var(--dark);display:block}
+.info{position:absolute;left:16px;right:16px;bottom:18px;color:#fff}
+.tag{font:700 8px var(--ui);letter-spacing:1px;color:rgba(255,255,255,.86);margin-bottom:4px}
+.nrow{display:flex;align-items:center;gap:8px}
+.name{font:600 22px/25px var(--serif);flex:1;min-width:0}
+.sub{font:400 11.5px var(--ui);color:rgba(255,255,255,.86);margin-top:3px}
+.btns{display:flex;gap:7px;margin-top:10px}
+.bx{height:30px;padding:0 12px;border-radius:15px;font:600 11.5px/30px var(--ui);white-space:nowrap}
+.bx.white{background:rgba(255,255,255,.92);color:var(--ink)}
+.bx.glass{background:rgba(255,255,255,.2);color:#fff}
+.dashes{position:absolute;left:16px;right:16px;bottom:8px;display:flex;gap:3px}
+.dashes u{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.3)}
+.dashes u.on{background:#fff}
+.rail{position:absolute;right:0;top:46px;width:92px}
+.rail span{display:block;text-align:right;padding-right:22px;height:26px;font:500 10px/26px var(--ui);color:rgba(255,255,255,.66);text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.rail span.on{color:#fff;font-weight:700}
+.rail::after{content:"";position:absolute;right:12px;top:4px;bottom:4px;width:2px;background:rgba(255,255,255,.3);border-radius:1px}
+.testtag{position:absolute;top:10px;left:10px;background:#C86B3C;color:#fff;font:600 9px/20px var(--ui);border-radius:10px;padding:0 8px}
+.tabs{height:58px;flex:none;border-top:1px solid rgba(0,0,0,.07);display:flex;justify-content:space-around;padding-top:9px;font:500 9px/1.5 var(--ui);color:#8A8478;text-align:center}
+.tabs b{color:var(--green);font-weight:600}
+.new{outline:2px dashed #C86B3C;outline-offset:2px}
+/* inside page header variants */
+.hbar{height:52px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px}
+.hbar .t{flex:1;text-align:center;line-height:1.15}
+.hbar .t b{display:block;font:600 18px var(--serif);color:var(--ink)}
+.hbar .t span{font:400 11px var(--ui);color:var(--ink2)}
+.big{flex:none;padding:6px 16px 2px}
+.big .back{font:500 13.5px var(--ui);color:var(--green)}
+.big .title{font:600 26px/1.15 var(--serif);color:var(--ink);margin-top:6px}
+.big .title span{font:400 14px var(--ui);color:var(--ink2);margin-left:6px}
+.ask{background:rgba(255,255,255,.6);border-radius:14px;padding:12px 18px;margin-top:12px;max-width:820px}
+.ask p{margin:3px 0}
+</style>
+
+<style>
+/* the title as a link, three ways */
+.tl{display:inline-block;max-width:100%;font:600 22px/25px var(--serif);color:#fff}
+.tl .chev{font:300 24px/22px var(--ui);color:rgba(255,255,255,.85)}
+.tl .dot{display:inline-block;vertical-align:3px;width:22px;height:22px;border-radius:11px;background:rgba(255,255,255,.22);color:#fff;font:600 13px/22px var(--ui);text-align:center}
+.tl.cap{background:rgba(255,255,255,.16);border-radius:16px;padding:3px 11px 4px 10px}
+.brow{display:flex;align-items:flex-end;gap:10px}
+.brow .left{flex:1;min-width:0}
+.tap{outline:2px dashed #C86B3C;outline-offset:3px;border-radius:10px}
+.var{display:flex;gap:10px;align-items:center;margin:4px 0 0}
+</style>
+</head>
+<body>
+<div class="nav">
+  <h1>名字做成链接，右下角放 Communities</h1>
+  <p>你的意思：卡片左下角的名字本身就是链接，点它打开 Explore 页，<code>Explore</code> 按钮去掉；右下角原来 Explore 的位置换成 <code>Communities ›</code>（社区卡是 <code>Homes ›</code>）。卡片上方那一行回到原来的样子：地点加 Map。</p>
+  <p>要定的主要是<b>名字怎么看起来像能点</b>。下面三种画法，每种画在三张卡上：短名字的城市、长名字的城市、正式版的社区卡（没有房子，所以右下角是空的）。<b>虚线框</b>是能点的地方，真实 app 里没有虚线。</p>
+  <div class="done">
+    <p><b>分享页面</b>：按你说的，先不给没装 app 的人往下走一层。分享出去仍然只有影片和下载按钮，想看社区就得下载 app。不改。</p>
+  </div>
+</div>
+
+<section>
+  <h2>一、名字怎么做成链接</h2>
+  <div id="title"></div>
+</section>
+
+<section>
+  <h2>二、测试版里社区卡上的 Homes，和点进去之后的那一页</h2>
+  <p>以下都用推荐的画法 <b>T1</b>。里面那一页是你选的方案 1（顶部一条：返回 · 地名 · Map）。在 Suwanee 页里，卡片的名字照样点进 Explore 页，右下角照样是下一层。</p>
+  <div class="phones" id="more"></div>
+</section>
+
+<section>
+  <h2>几个细节</h2>
+  <ul>
+    <li><b>点名字</b>打开 Explore 页；<b>点卡片其他地方</b>还是暂停或播放，和现在一样；左右滑照旧。</li>
+    <li><b>名字很长时</b>折成两行（和现在一样，不截断），右边的按钮跟名字的最后一行对齐。</li>
+    <li><b>影片放到 82% 时</b>原来 Explore 会"呼吸"一下提示点开。我建议改成右下角的 <code>Communities</code> 呼吸，它现在是卡上唯一的按钮。</li>
+    <li><b>正式版的社区卡</b>右下角是空的，只有名字能点。如果你觉得空，另一种做法是社区卡在没有房子之前保留 <code>Explore</code> 按钮，但这样城市卡和社区卡的按钮不一致。</li>
+  </ul>
+</section>
+
+<section>
+  <h2>要你回复的</h2>
+  <div class="ask"><p><b>1. 名字的画法</b>：T1、T2 或 T3。我推荐 <b>T1</b>。</p></div>
+  <div class="ask"><p><b>2. 正式版社区卡右下角</b>：空着，还是先保留 Explore。我推荐<b>空着</b>。</p></div>
+  <div class="ask"><p><b>3. 上次的小字</b>：学校数字下面写 "schools nearby" 还是改成 "best school nearby"。</p></div>
+  <p style="margin-top:14px">回一句比如"T1，空着，小字改"就行。</p>
+</section>
+
+<script>
+const still = (uid, t = 5) => `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg?time=${t}s&height=860`;
+const SUWANEE = { kind:'city', name:'Suwanee', img:still('324ac35659ec5a6e0a5218620575a57a', 6), fpill:'Suwanee Town Center',
+  where:['Gwinnett County','northeast of Atlanta'], figs:[['$481K','median home value'],['97.4%','graduate in 4 years'],['62 min','33 mi to downtown']] };
+const JOHNS = { kind:'city', name:'Johns Creek', img:still('7b4661a5af1d96e939d2d310d6a075bf', 6), fpill:'Autrey Mill Nature Preserve',
+  where:['Fulton County','north-northeast of Atlanta'], figs:[['$629K','median home value'],['98.0%','graduate in 4 years'],['62 min','30 mi to downtown']] };
+const SUGARLOAF = { kind:'community', name:'Sugarloaf Country Club', img:still('9f820d812f4f4f1391225b6abdfdd901'), fpill:'Sugarloaf Clubhouse',
+  where:['Duluth','Gwinnett County'], figs:[['$434K','Duluth homes'],['Top 10%','schools nearby'],['23 mi','northeast of Atlanta']] };
+const EDINBURGH = { kind:'community', name:'Edinburgh', img:still('bbcc652c5781ea1227d705a6661fbe68'), fpill:'Edinburgh Clubhouse',
+  where:['Suwanee','Gwinnett County'], figs:[['$589K','Suwanee homes'],['Top 1%','schools nearby'],['28 mi','northeast of Atlanta']] };
+const HARVEST = { kind:'community', name:'Harvest Park', img:still('748e5dfc8c83f5caf3a8719d7b7aaf5a'), fpill:'Harvest Park Pool',
+  where:['Suwanee','Gwinnett County'], figs:[['$589K','Suwanee homes'],['Top 2%','schools nearby'],['27 mi','northeast of Atlanta']] };
+const HOME = { kind:'home', name:'$299,900', sub:'4 bd · 3 ba · 2,910 sqft', img:still('b35ac84331d156485cbb8da2355ed79d', 3),
+  where:['Edinburgh','Suwanee'], figs:[['$299,900','list price'],['4 · 3','beds · baths'],['2,910','sqft']] };
+const RAIL = ['Overview','Schools','Life','Homes','Commute'];
+
+/** The name as a link, in style T1 (chevron), T2 (disc) or T3 (capsule). */
+function title(name, style) {
+  if (style === 'T3') return `<span class="tl cap tap">${name}</span>`;
+  // The mark stays with the LAST word, so a two-line name ends in it.
+  const words = name.split(' ');
+  const last = words.pop();
+  const mark = style === 'T2' ? '<span class="dot">›</span>' : '<span class="chev">›</span>';
+  const head = words.length ? `${words.join(' ')} ` : '';
+  return `<span class="tl tap">${head}<span style="white-space:nowrap">${last} ${mark}</span></span>`;
+}
+/** The button at the bottom right: the next level, where there is one. */
+function next(c, homes) {
+  if (c.kind === 'city') return '<span class="bx white tap">Communities ›</span>';
+  if (c.kind === 'community' && homes) return '<span class="bx white tap">Homes ›</span>';
+  return '';
+}
+function card(c, style, homes) {
+  const inner = c.kind === 'city' ? 'card city' : 'card';
+  const tag = c.kind === 'city' ? 'CITY' : c.kind === 'home' ? 'HOME' : 'COMMUNITY';
+  const top = c.kind === 'home' ? '<div class="testtag">TEST · 测试素材</div>' : `<div class="fpill">${c.fpill}</div>`;
+  const rail = c.kind === 'city' ? `<div class="rail">${RAIL.map((r, i) => `<span class="${i === 0 ? 'on' : ''}">${r}</span>`).join('')}</div>` : '';
+  const dashes = c.kind === 'community' ? `<div class="dashes">${Array.from({ length: 9 }, (_, i) => `<u class="${i < 3 ? 'on' : ''}"></u>`).join('')}</div>` : '';
+  const sub = c.sub ? `<div class="sub">${c.sub}</div>` : '';
+  return `<div class="${inner}" style="background-image:url('${c.img}')"><div class="scrim"></div>${top}<div class="corner"><i></i><i></i><i></i></div>${rail}
+    <div class="info"><div class="tag">${tag}</div><div class="brow"><div class="left">${title(c.name, style)}${sub}</div>${next(c, homes)}</div></div>${dashes}</div>`;
+}
+const figs = (c) => `<div class="figs">${c.figs.map(([v, l]) => `<div><b>${v}</b>${l}</div>`).join('')}</div>`;
+const line = (c) => `<div class="line"><b>${c.where[0]}</b><span class="rest"> · ${c.where[1]}</span></div>`;
+const tabs = '<div class="tabs"><b>▶<br>Feed</b><span>⌕<br>Search</span><span>♡<br>Saved</span><span>☰<br>You</span></div>';
+const feedPhone = (c, style, homes = false) =>
+  `<div class="phone"><div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="room"></div><div class="row">${line(c)}<div class="pill">◎ Map</div></div>${figs(c)}<div class="stage">${card(c, style, homes)}</div>${tabs}</div>`;
+const placePhone = (title_, sub_, c, style, homes = false) =>
+  `<div class="phone"><div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="hbar"><div class="disc">‹</div><div class="t"><b>${title_}</b><span>${sub_}</span></div><div class="pill">◎ Map</div></div>${figs(c)}<div class="stage">${card(c, style, homes)}</div>${tabs}</div>`;
+const shot = (html, cap) => `<div>${html}<div class="cap">${cap}</div></div>`;
+
+const STYLES = [
+  { id:'T1', title:'T1 · 名字后面一个 ›', rec:true,
+    what:'名字后面跟一个细的 <code>›</code>，和名字同色。iOS 里"这一行能点进去"的通用写法，不加任何底色。',
+    good:'最轻，卡片看起来几乎没变；一看就知道能点进去。',
+    bad:'<code>›</code> 比较细，在很亮的画面上不如按钮显眼。' },
+  { id:'T2', title:'T2 · 名字后面一个小圆点',
+    what:'名字后面一个半透明小圆，里面是 <code>›</code>，和右上角三个圆按钮同一种材质。',
+    good:'更像按钮，亮画面上也看得见。',
+    bad:'卡片上又多一个圆，和右上角的三个圆挤在同一种语言里，略显杂。' },
+  { id:'T3', title:'T3 · 名字外面一圈淡淡的胶囊',
+    what:'名字放在一个很淡的半透明胶囊里，整块就是按钮。',
+    good:'能点的范围最明确。',
+    bad:'大号衬线名字套一个底色，最"重"；长名字折两行时胶囊变成一大块。' },
+];
+
+document.getElementById('title').innerHTML = STYLES.map((s) => `
+  <h3>${s.title}${s.rec ? '<em>推荐</em>' : ''}</h3>
+  <p>${s.what}</p>
+  <div class="pros"><div><b>好处：</b>${s.good}</div><div><b>代价：</b>${s.bad}</div></div>
+  <div class="phones">
+    ${shot(feedPhone(SUWANEE, s.id), '<b>Suwanee</b>：点名字进 Explore 页，右下角 <code>Communities ›</code>。')}
+    ${shot(feedPhone(JOHNS, s.id), '<b>Johns Creek</b>：长名字。')}
+    ${shot(feedPhone(SUGARLOAF, s.id), '<b>正式版社区卡</b>：没有房子，右下角空着，只有名字能点。名字太长折成两行。')}
+  </div>`).join('');
+
+document.getElementById('more').innerHTML = [
+  shot(feedPhone(EDINBURGH, 'T1', true), '<b>测试版社区卡</b>：右下角 <code>Homes ›</code>。'),
+  shot(placePhone('Suwanee', 'Communities', HARVEST, 'T1', true), '<b>Suwanee 页</b>：顶部一条；卡片和 feed 上一样。'),
+  shot(placePhone('Edinburgh', 'Homes', HOME, 'T1'), '<b>Edinburgh 的房子页</b>（测试版）：房子卡点价格进房源页，右下角没有下一层。'),
+].join('');
+
+for (const el of document.querySelectorAll('.line')) {
+  const rest = el.querySelector('.rest');
+  if (rest && el.scrollWidth > el.clientWidth) rest.remove();
+}
+</script>
+</body>
+</html>
