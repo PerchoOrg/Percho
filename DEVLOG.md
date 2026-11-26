@@ -23,6 +23,17 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-26 18:40 UTC — phase404.7: inside page decided (header bar); the entry waits on what a shared link may open
+
+**Owner**: 「页面里那个按照你推荐的」 — the inside page is option 1 of `/demos/feed-focus-v3` (header bar: round back · place and what the page is · Map; no per-card place line). Then, before the entry is chosen: 「如果没有提前下载app 这几个选项中哪些能让被分享的人直接进入下一个层级？」
+**Found** (no code changed):
+- Today none of A/B/C lets a recipient without the app go down a level: `/watch/city/<slug>` and `/watch/c/<slug>` (`app/watch/_components/WatchFilm.tsx`) are the film and one App Store button, by his phase336 rule (「打开应该只有视频 然后想要看更多就go to or download app」). Whether they can is a property of that web page, not of the app's entry.
+- The options differ in how they carry over: A's button is on the card, and the watch page is that card full screen — the same `Communities ›` can sit in the same place. B and C put it in the feed's place row, which the watch page does not have.
+- Web parts that exist: `/city/<slug>` lists the city's filmed communities (`CommunityGrid`), but it is the full page he did not want links to open; `/c/[slug]/feed` is a vertical film feed (`CommunityVideoFeed`) a web next-level page could reuse. Homes: the FMLS Vendor System is percho.co, so the web may show live homes before iOS can (iOS needs the amendment); `LISTINGS_ON_WEB` is off (phase311).
+- `/watch/*` is in the association file, so a link one level down would open the app for those who have it — `appPathForSharedPath` would need to map it to `/place`. Someone who installs from the watch page lands on the feed, not the place; remembering it needs a deferred-deep-link service (a third party — his call).
+**Asked**: may a recipient without the app go one level down on the web? Yes → entry A and a design for the web page; no → the options do not differ for sharing.
+**Next**: the inside page is built together with the entry, since both decide where a card's button sits.
+
 ## 2026-11-26 18:22 UTC — phase404.7: school figures show the top end; the feed no longer follows a like; entry and inside-page designs (demo)
 
 **Objective**: owner, on phase404.6: 「学校给区间上段 top 不要平均 / 先不要默认喜欢city或者community后接着放这个社区或者房子的内容 这部分推荐等设计好了再做」, and two problems to design, not change: 「city卡上 按键左边显示county或者city 点击按钮有些反直觉 不知道看的是哪 / 点击之后 左边返回的按键和右边的homes大小格式有点乱 重新设计下innner page / 给我先design 不要直接改」.
