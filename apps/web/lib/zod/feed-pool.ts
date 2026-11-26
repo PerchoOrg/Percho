@@ -71,6 +71,29 @@ const feedPoolQuerySchema = z.object({
         .filter((s) => s.length > 0 && s.length <= 60 && /^[A-Za-z' -]+$/.test(s))
         .slice(0, 20),
     ),
+  /**
+   * FOCUS the pool on one city (phase404): a `city_geo_units` id,
+   * `city:suwanee-ga`. Unlike `cities` this is the buyer's own choice after
+   * liking the city, and it narrows everything — the city's communities and
+   * the homes in it, nothing else. See `lib/feed/pool-focus.ts`.
+   *
+   * Anything that is not an id reads as "no focus"; an id we do not have is
+   * the route's to refuse (an empty pool, never the whole one).
+   */
+  city: z
+    .string()
+    .regex(/^city:[a-z0-9-]{1,80}$/)
+    .optional()
+    .catch(undefined),
+  /**
+   * FOCUS the pool on one community, by slug: the homes in it. Wins over
+   * `city` when both are sent, being the narrower of the two.
+   */
+  community: z
+    .string()
+    .regex(/^[a-z0-9-]{1,120}$/)
+    .optional()
+    .catch(undefined),
 });
 
 export type FeedPoolQuery = z.infer<typeof feedPoolQuerySchema>;
@@ -84,5 +107,7 @@ export function parseFeedPoolQuery(url: URL): FeedPoolQuery {
     videoFirst: url.searchParams.get('videoFirst') ?? '0',
     likedCommunityIds: url.searchParams.get('likedCommunityIds') ?? undefined,
     cities: url.searchParams.get('cities') ?? undefined,
+    city: url.searchParams.get('city') ?? undefined,
+    community: url.searchParams.get('community') ?? undefined,
   });
 }

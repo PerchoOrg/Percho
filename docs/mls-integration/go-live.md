@@ -69,6 +69,14 @@ after each incremental sync. Column map:
 Then set `mls_listings.our_listing_id` back to the new `listings.id` — the
 detail page already joins on it for `daysOnMarket` / `mlsNumber`.
 
+**Community**: every projected row gets `community_id` from
+`match_community(lat, lng)` (containing subdivision, else the nearest within
+250 m, else none) with `community_match` / `community_distance_m` beside it —
+`scripts/admin/relink-listings.ts` is the shape, and can be run over the whole
+table after an import. This link is what "the homes in this community" reads
+(§3.4); a listing without it is in its city's feed and in no community's.
+Today's importer (`import-bridge-listings.ts`) does not set it.
+
 **Photos**: `listing_photos.storage_path` is `not null unique`, i.e. photos
 are expected in Supabase Storage, not hot-linked. The licence usually
 permits caching; copy each `mls_media.media_url` into
@@ -103,6 +111,19 @@ for `videosOnly=1`, and the mobile card renders `heroUrl` + carousel when
 there is no `videoUrl`. No change. The `videoFirst` flag reorders films to
 the top so the first swipe still lands on a tour when one exists.
 
+**A place's homes (phase404).** The pool can be narrowed on the server:
+`?city=city:suwanee-ga` is that city's communities and the homes whose
+`city`/`state` are the city's; `?community=<slug>` is the homes whose
+`community_id` is that community (`apps/web/lib/feed/pool-focus.ts`). This is
+how a licensed feed's homes are reached at all from a city or a community —
+the unfocused pool pages the whole metro newest-first. Nothing in the app
+sends either yet.
+
+Open before homes show on the phone: the app asks for `videosOnly=1`
+(owner, 2026-08-21), so a newly imported home is in no pool until its film
+is assembled. Either the focused deck takes photo cards, or §3.3's render
+runs ahead of display.
+
 ## 4. Pre-flight checklist
 
 - [ ] Licence signed; Bridge dataset id + server token in the sync host's env (never in the repo, never in Vercel — the worker does not run there).
@@ -110,5 +131,6 @@ the top so the first swipe still lands on a tour when one exists.
 - [ ] `sync-worker --mode=full --dry-run` counts rows; then full; then cron incremental.
 - [ ] `mirror-to-listings.ts` built and run with `--zips` for the launch area; spot-check three `/v/fmls/<key>` pages and the same three in the app.
 - [ ] `listingWebUrl` accepts `source = 'fmls_bridge'`.
+- [ ] Every imported listing linked to its community (`relink-listings.ts --apply`, or in the projection); spot-check `/api/mobile/feed?stage=4&community=<slug>` for three subdivisions.
 - [ ] Nightly full sync + archive-missing job in place.
 - [ ] Tag-step automation for new listings (optional for launch).

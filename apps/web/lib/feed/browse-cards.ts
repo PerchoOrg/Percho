@@ -470,15 +470,32 @@ async function assembleCards(
   return cards;
 }
 
-export async function fetchBrowseCards(offset = 0, limit = 1000): Promise<BrowseCard[]> {
+/**
+ * One place a listing page can be narrowed to — the mobile feed's focus
+ * (phase404, `lib/feed/pool-focus.ts`). A city is matched on the listing's own
+ * postal `city` + `state`, exactly as `city_geo_units` joins its listing
+ * count, so the homes a focused city returns are the homes its card counted;
+ * a community on `community_id`, which `match_community` fills.
+ */
+export type ListingPlaceFilter = { city: string; state: string } | { communityId: string };
+
+export async function fetchBrowseCards(
+  offset = 0,
+  limit = 1000,
+  place?: ListingPlaceFilter,
+): Promise<BrowseCard[]> {
   const supabase = await createClient();
 
-  const { data: rawListings } = (await supabase
+  let query = supabase
     .from('listings')
     .select(
       'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
     )
-    .eq('status', 'active')
+    .eq('status', 'active');
+  if (place && 'communityId' in place) query = query.eq('community_id', place.communityId);
+  else if (place) query = query.eq('city', place.city).eq('state', place.state);
+
+  const { data: rawListings } = (await query
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)) as { data: ListingRow[] | null };
 
@@ -495,7 +512,11 @@ export async function fetchBrowseCards(offset = 0, limit = 1000): Promise<Browse
  * this exists so Expo Go hitting a cloudflared tunnel can skip the ~200
  * newest listings whose render pipeline hasn't caught up.
  */
-export async function fetchBrowseCardsVideosOnly(offset = 0, limit = 1000): Promise<BrowseCard[]> {
+export async function fetchBrowseCardsVideosOnly(
+  offset = 0,
+  limit = 1000,
+  place?: ListingPlaceFilter,
+): Promise<BrowseCard[]> {
   const supabase = await createClient();
 
   const { data: vidRows } = (await supabase
@@ -513,13 +534,17 @@ export async function fetchBrowseCardsVideosOnly(offset = 0, limit = 1000): Prom
   const ids = Array.from(new Set((vidRows ?? []).map((r) => r.listing_id)));
   if (ids.length === 0) return [];
 
-  const { data: rawListings } = (await supabase
+  let query = supabase
     .from('listings')
     .select(
       'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, ai_style, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, mls_number, lat, lng, map_url',
     )
     .in('id', ids)
-    .eq('status', 'active')
+    .eq('status', 'active');
+  if (place && 'communityId' in place) query = query.eq('community_id', place.communityId);
+  else if (place) query = query.eq('city', place.city).eq('state', place.state);
+
+  const { data: rawListings } = (await query
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)) as { data: ListingRow[] | null };
 
