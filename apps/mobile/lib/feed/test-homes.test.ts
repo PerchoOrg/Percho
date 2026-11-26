@@ -6,8 +6,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { TEST_HOMES } from "../listings-in-app";
 import type { CommunityCardV3, ListingCardV3 } from "./card-types";
-import { cardsWithin, placeDeck } from "./follow";
 import type { FeedPool } from "./generate-feed";
+import { placeDeck, placeWithin } from "./place-deck";
 import {
 	placePool,
 	poolAround,
@@ -44,7 +44,6 @@ const pool: FeedPool = { geoUnits: [], listings: [], communities: [edinburgh] };
 const NOTHING = {
 	seenIds: new Set<string>(),
 	passedIds: new Set<string>(),
-	recentIds: new Set<string>(),
 };
 
 describe("the switch", () => {
@@ -91,11 +90,13 @@ describe("withTestHomes / poolAround / placePool", () => {
 		).toBe(pool);
 	});
 
-	it("gives a liked neighbourhood homes to follow with", () => {
+	it("gives a neighbourhood's card homes to open", () => {
 		const around = poolAround(pool, edinburgh, [sandbox]);
-		expect(cardsWithin(edinburgh, around, NOTHING).map((c) => c.id)).toEqual([
-			"l-1",
-		]);
+		expect(placeWithin(edinburgh, around)).toEqual({
+			kind: "community",
+			id: "edinburgh",
+			name: "Edinburgh",
+		});
 	});
 
 	it("gives no homes to a card that is not a neighbourhood", () => {

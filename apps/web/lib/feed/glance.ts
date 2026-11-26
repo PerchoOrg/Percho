@@ -13,9 +13,10 @@
  * gets fewer cells.
  *
  * One number a figure, never a range (owner, 2026-11-26: 「卡片上三个数字不要
- * 区间 给一个数字平均值就行」): where the page has several values — a school
- * at each level, a drive off-peak and at rush — the figure is their mean.
- * The page itself still shows each one.
+ * 区间 给一个数字平均值就行」). Schools are the range's top end, not the mean
+ * (the same day: 「学校给区间上段 top 不要平均」): the best-standing school
+ * nearby, the highest graduation rate. The drive is the mean of off-peak and
+ * rush. The page itself still shows each value.
  *
  * Pure — the callers hand in rows they have already read.
  */
@@ -64,9 +65,6 @@ const pointOf = (p: Point) => (p.lat != null && p.lng != null ? { lat: p.lat, ln
 
 const SCHOOLS_GROUP = 'Schools';
 
-const mean = (values: readonly number[]) =>
-  values.reduce((sum, v) => sum + v, 0) / values.length;
-
 /** "$747K" over the area it is the typical value of. */
 function homesCell(homeValue: CommunityProfile['homeValue'] | undefined): GlanceCell | null {
   if (!homeValue) return null;
@@ -75,15 +73,14 @@ function homesCell(homeValue: CommunityProfile['homeValue'] | undefined): Glance
 
 /**
  * Where the nearby schools stand among Georgia's, as the Explore tile words
- * each one — "Top 1%", "Top 2%", "Top 7%" — averaged across the levels:
- * "Top 3%". Never better than 1%, as no share is.
+ * each one — "Top 1%", "Top 2%", "Top 7%" — and the figure is the best of
+ * them: "Top 1%".
  */
 function schoolsCell(ranks: CommunityProfile['ranks'] | undefined): GlanceCell | null {
   const rows = (ranks?.rows ?? []).filter((r) => r.group === SCHOOLS_GROUP).slice(0, 3);
   if (rows.length === 0) return null;
-  const share = Math.max(1, Math.round(mean(rows.map(rankShare))));
   return {
-    value: `Top ${share}%`,
+    value: `Top ${Math.min(...rows.map(rankShare))}%`,
     label: rows.length === 1 ? 'school nearby' : 'schools nearby',
     topic: 'schools',
   };
@@ -149,17 +146,18 @@ function measureLabel(measure: string): string {
 
 /**
  * The city's own schools by its page's headline measure — the district and
- * state rows it is drawn against are left out. One school prints as the page
- * prints it; several print as their mean, so the figure is not the best
- * school's alone.
+ * state rows it is drawn against are left out. The figure is the highest
+ * school's, as the page prints it.
  */
 function graduationCell(education: CityFundamentals['education']): GlanceCell | null {
   const own = education.rows.filter((r) => !r.baseline);
   const label = measureLabel(education.measure);
-  const [only] = own;
-  if (!only || !label) return null;
-  if (own.length === 1) return { value: only.display, label, topic: 'schools' };
-  return { value: `${Math.round(mean(own.map((r) => r.pct)))}%`, label, topic: 'schools' };
+  const best = own.reduce<(typeof own)[number] | undefined>(
+    (top, r) => (top === undefined || r.pct > top.pct ? r : top),
+    undefined,
+  );
+  if (!best || !label) return null;
+  return { value: best.display, label, topic: 'schools' };
 }
 
 /**
@@ -173,7 +171,7 @@ function driveCell(gettingAround: CityFundamentals['gettingAround']): GlanceCell
   const { min, max } = row.minutes;
   const miles = row.label.match(/(\d+)\s*mi\b/)?.[1];
   return {
-    value: `${Math.round(mean([min, max]))} min`,
+    value: `${Math.round((min + max) / 2)} min`,
     label: miles ? `${miles} mi to downtown` : 'to downtown Atlanta',
     topic: 'convenience',
   };

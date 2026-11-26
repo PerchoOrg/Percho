@@ -54,8 +54,8 @@ describe('communityGlance', () => {
       cells: [
         { value: '$747K', label: 'ZIP 30005 homes', topic: 'potential' },
         // Each level as the Explore tile rounds it — #6 of 1,220 is 1%, #7 of
-        // 472 is 2%, #31 of 443 is 7% — and one figure for the three: their mean.
-        { value: 'Top 3%', label: 'schools nearby', topic: 'schools' },
+        // 472 is 2%, #31 of 443 is 7% — and the figure is the best of the three.
+        { value: 'Top 1%', label: 'schools nearby', topic: 'schools' },
         { value: '25 mi', label: 'north of Atlanta', topic: 'convenience' },
       ],
     });
@@ -162,7 +162,7 @@ describe('cityGlance', () => {
     });
   });
 
-  it('prints several high schools as their mean, not the best alone', () => {
+  it('prints the highest of several high schools, as its page does', () => {
     const suwanee = cityProfile({
       education: {
         ...cityProfile().education,
@@ -174,8 +174,7 @@ describe('cityGlance', () => {
       },
     });
     expect(cityGlance({ ...place, profile: suwanee })?.cells[1]).toEqual({
-      // (97.4 + 94.8) / 2
-      value: '96%',
+      value: '97.4%',
       label: 'graduate in 4 years',
       topic: 'schools',
     });

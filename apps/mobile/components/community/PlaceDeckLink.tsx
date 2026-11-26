@@ -4,10 +4,9 @@
  *     Communities ›     a city → its neighbourhoods
  *     Homes ›           a neighbourhood → its homes
  *
- * Owner, 2026-11-26, on `/demos/feed-focus-v2`: 「感觉放在explore page里比较好」.
- * The feed itself gains no control — it follows a like on its own
- * (`lib/feed/follow.ts`) — and "only this place" is asked for here, on the
- * page the buyer opened because the place interested them.
+ * Owner, 2026-11-26, on `/demos/feed-focus-v2`: 「感觉放在explore page里比较好」 —
+ * "only this place" is asked for here, on the page the buyer opened because
+ * the place interested them, as well as on the place's card in the feed.
  *
  * Drawn only when the deck has something in it: it asks for the place's pool
  * (the request the deck itself makes, so the answer is already cached when the
@@ -29,7 +28,7 @@ import {
 	placeDeck,
 	placeLinkAccessibilityLabel,
 	placeLinkLabel,
-} from "../../lib/feed/follow";
+} from "../../lib/feed/place-deck";
 import { placePool } from "../../lib/feed/test-homes";
 import { feedHeader } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
@@ -39,7 +38,6 @@ const NONE: readonly string[] = [];
 const NO_HISTORY: SwipeHistory = {
 	seenIds: new Set(),
 	passedIds: new Set(),
-	recentIds: new Set(),
 };
 
 export function PlaceDeckLink({ focus }: { focus: PlaceFocus }) {

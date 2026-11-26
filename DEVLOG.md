@@ -23,6 +23,16 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-26 18:22 UTC — phase404.7: school figures show the top end; the feed no longer follows a like; entry and inside-page designs (demo)
+
+**Objective**: owner, on phase404.6: 「学校给区间上段 top 不要平均 / 先不要默认喜欢city或者community后接着放这个社区或者房子的内容 这部分推荐等设计好了再做」, and two problems to design, not change: 「city卡上 按键左边显示county或者city 点击按钮有些反直觉 不知道看的是哪 / 点击之后 左边返回的按键和右边的homes大小格式有点乱 重新设计下innner page / 给我先design 不要直接改」.
+**Done**:
+- **Schools: the top end** (`apps/web/lib/feed/glance.ts`, live on deploy). A community card's school figure is the best-standing level (`Top 1%` for Windward, was `Top 3%` averaged); a city card's is its highest graduation rate as its page prints it (`97.4%` for Suwanee). Read "区间上段 top" as the best end; the other reading (the range's weakest school) was not taken — said so to him. Labels unchanged ("schools nearby") — asked whether to say "best school nearby". The drive stays the mean.
+- **The follow rule is off.** `onDecision` re-ranks the tail after every swipe again, as before phase404.3 (not on a place's own page). Removed with it: `followStep`, `cardsWithin`, the run and its two-pass stop, the prefetch of followed stills, `recentIds`. What is left of the module is the place's own deck, so it is `lib/feed/place-deck.ts` now (tests moved: `place-deck.test.ts`). Kept: `withoutSwipedAway` (back from a place's page, what was swiped there leaves the feed's unmounted tail) and `swipedThisRun`, which it reads.
+**Design, not built** — `apps/web/public/demos/feed-focus-v3/`, in Chinese: the entry on a city card three ways — **A** the button on the card beside Explore, the place row back to county + Map (recommended); **B** the row leads with the card's own name; **C** the row becomes one full-width "Communities in Suwanee ›" button with a round Map — each on Suwanee, Johns Creek and Edinburgh. The inside page two ways, both assuming A — **1** a header bar: round back, the place and what the page is ("Suwanee / Communities"), Map, and no per-card place line (recommended); **2** an iOS large title with "‹ Feed", which costs the card ~45pt.
+**Verified**: mobile typecheck 0, biome 0 errors / 5 warnings, vitest 972 (989 less the 17 follow tests); web tsc 0, glance tests 11.
+**Next steps**: his picks (entry, inside page, the school label), then build. The follow rule waits for its own design.
+
 ## 2026-11-26 16:52 UTC — phase404.6: one number per figure; one type size in the place row; one film at a time
 
 **Objective**: owner, on phase404.5: 「点进去第一个suwanee的feed声音颤抖 / 卡片上三个数字不要区间 给一个数字平均值就行 / 字体不统一 如果社区或者city名字长 前半部分就很小 想想办法」.
