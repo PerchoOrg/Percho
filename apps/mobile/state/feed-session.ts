@@ -59,6 +59,12 @@ interface FeedSessionState {
 	 * correction lives on a surface built for reviewing what Percho learned.
 	 */
 	recent: readonly RecentEntry[];
+	/**
+	 * Card ids swiped since the app was opened, oldest first. Not persisted:
+	 * `lib/feed/follow.ts` reads it so a like does not queue what the buyer
+	 * just went through, and so a deck drops what was swiped on another page.
+	 */
+	swipedThisRun: readonly string[];
 	/** Nth session for this install (§1.10 `session_n`). */
 	sessionN: number;
 	/** Epoch ms of the previous swipe, for §1.10 `dt_since_prev_swipe`. */
@@ -99,6 +105,7 @@ export const useFeedSession = create<FeedSessionState>()(
 			seenIds: [],
 			seenListingIds: [],
 			recent: [],
+			swipedThisRun: [],
 			sessionN: 0,
 			hydrated: false,
 
@@ -117,6 +124,7 @@ export const useFeedSession = create<FeedSessionState>()(
 				set((s) => ({
 					signals,
 					lastSwipeAt: at,
+					swipedThisRun: [...s.swipedThisRun, card.id],
 					...(entry ? { recent: pushRecent(s.recent, entry) } : {}),
 					seenIds: s.seenIds.includes(card.id)
 						? s.seenIds
@@ -181,6 +189,7 @@ export const useFeedSession = create<FeedSessionState>()(
 					seenIds: [],
 					seenListingIds: [],
 					recent: [],
+					swipedThisRun: [],
 					lastSwipeAt: undefined,
 				}),
 		}),

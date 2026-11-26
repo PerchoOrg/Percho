@@ -16,6 +16,10 @@ picture in the preview. If they have the Percho app, the link opens straight
 into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
+### 2026-11-26
+- **The feed follows what you like.** Like a city's film and the next cards are that city's neighbourhoods, one after another, before the feed moves on to other places. Pass two of them in a row and it stops. Nothing to tap. Arrives with the next app update.
+- **A city's neighbourhoods, all in one place.** A city's page has a new button under its name — "More of Suwanee", for example. It opens a set of swipe cards with only that city's neighbourhoods, the ones you haven't seen first. The arrow at the top goes back, and the feed is where you left it. Arrives with the next app update.
+
 ### 2026-11-25
 - **Comparing cities looks like comparing neighbourhoods.** Pick two or more saved cities and tap Compare: the page opens on their photos and "In short", then draws safety, schools, everyday places, how the city has grown and what a home costs, one colour a city. Two cities in the same county — Suwanee and Duluth — can now be compared; before, the comparison was by county and refused them.
 - **The same buttons on a neighbourhood's page as on its card.** At the top of a neighbourhood or city page, sound, save and share are now the same round dark buttons as on the feed card, with the same icons in the same order. The sound button no longer sits on its own under the back arrow.

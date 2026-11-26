@@ -11,6 +11,9 @@
  * to the Search/map tab at the owner's request — which is where "Browse map"
  * was already going. Whichever button is the only one takes the primary fill,
  * so the card never renders an outline-only call to action.
+ *
+ * A place's own deck (phase404.3) ends here too, with its own line and one
+ * way out: `headline` and `onBack`.
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radii } from "../../theme/tokens";
@@ -19,22 +22,37 @@ import { textStyles } from "../../theme/typography";
 const MIN_TOUCH = 44;
 
 interface ExhaustedCardProps {
+	/** Replaces the feed's own line. */
+	headline?: string;
 	onAdjustScope?: () => void;
 	onBrowseMap?: () => void;
+	onBack?: () => void;
 }
 
 export function ExhaustedCard({
+	headline,
 	onAdjustScope,
 	onBrowseMap,
+	onBack,
 }: ExhaustedCardProps) {
 	// The first button present is the primary one — see the file header.
 	const mapIsPrimary = onAdjustScope === undefined;
 	return (
 		<View style={styles.card}>
 			<Text style={styles.headline}>
-				You&rsquo;ve seen everything in your area — widen it?
+				{headline ?? "You’ve seen everything in your area — widen it?"}
 			</Text>
 			<View style={styles.actions}>
+				{onBack ? (
+					<Pressable
+						onPress={onBack}
+						style={[styles.btn, styles.primary]}
+						accessibilityRole="button"
+						hitSlop={8}
+					>
+						<Text style={styles.primaryLabel}>Back</Text>
+					</Pressable>
+				) : null}
 				{onAdjustScope ? (
 					<Pressable
 						onPress={onAdjustScope}

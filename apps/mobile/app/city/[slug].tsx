@@ -66,6 +66,7 @@ import {
 	parts,
 } from "../../components/community/ExploreParts";
 import { HoldingCost } from "../../components/community/ExploreSheets";
+import { PlaceDeckLink } from "../../components/community/PlaceDeckLink";
 import { ReviewsSection } from "../../components/community/ReviewsSection";
 import { TourHero } from "../../components/community/TourHero";
 import { apiBase } from "../../lib/api/base";
@@ -283,6 +284,13 @@ export default function CityScreen() {
 						<Text style={styles.name}>{data.name}</Text>
 						{!!where && <Text style={styles.place}>{where}</Text>}
 					</View>
+
+					{/* Into the city's own deck (phase404.3) — its neighbourhoods. */}
+					{!!data.geoUnitId && (
+						<PlaceDeckLink
+							focus={{ kind: "city", id: data.geoUnitId, name: data.name }}
+						/>
+					)}
 
 					{rankings.length > 0 && (
 						<View style={styles.badges}>

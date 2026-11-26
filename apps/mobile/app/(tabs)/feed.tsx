@@ -31,6 +31,7 @@ import {
 } from "react";
 import {
 	Image,
+	Pressable,
 	StyleSheet,
 	Text,
 	View,
@@ -70,6 +71,16 @@ import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
 import { cardPoster } from "../../lib/feed/first-poster";
 import {
+	FOLLOW_MAX,
+	type FollowRun,
+	type PlaceFocus,
+	type SwipeHistory,
+	cardsWithin,
+	followStep,
+	placeDeck,
+	withoutSwipedAway,
+} from "../../lib/feed/follow";
+import {
 	RERANK_HOLD,
 	generateFeed,
 	movedUpCount,
@@ -85,6 +96,7 @@ import {
 } from "../../lib/gesture/tap-slot";
 import { launchDone } from "../../lib/launch-ready";
 import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
+import { backOrFeed } from "../../lib/share/back-or-feed";
 import {
 	type SharedRef,
 	parseSharedParam,
@@ -190,8 +202,25 @@ import { textStyles } from "../../theme/typography";
  * cross-faded the frame height on every commit and the page visibly jumped.
  */
 
-export default function FeedScreen() {
+/** What `lib/feed/follow.ts` needs to know of the buyer's swipes, read now. */
+function swipeHistory(): SwipeHistory {
+	const s = useFeedSession.getState();
+	return {
+		seenIds: new Set(s.seenIds),
+		passedIds: new Set(s.signals.passedCommunityIds),
+		recentIds: new Set(s.swipedThisRun),
+	};
+}
+
+/**
+ * @param focus one place's own deck (phase404.3, `app/place.tsx`): the same
+ * screen over a pool the server narrowed to that place — its cards in order,
+ * a back bar, an end. Absent, this is the feed tab.
+ */
+export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	const { width } = useWindowDimensions();
+	const inPlace = focus !== undefined;
+	const placeKind = focus?.kind ?? "city";
 
 	const stage = useFunnelStore((s) => s.stage);
 	const stageHydrated = useFunnelStore((s) => s.hydrated);
@@ -242,6 +271,14 @@ export default function FeedScreen() {
 	 */
 	const [tabFocused, setFocused] = useState(true);
 	/**
+	 * A like's queued cards still to come (`lib/feed/follow.ts`). A ref: it
+	 * orders the deck, it draws nothing.
+	 */
+	const followRun = useRef<FollowRun | null>(null);
+	const activeIndexRef = useRef(0);
+	/** How much had been swiped when something covered this deck. */
+	const swipedWhenCovered = useRef<number | null>(null);
+	/**
 	 * The first film waits for the launch animation to start leaving
 	 * (`lib/launch-ready.ts`) — otherwise it plays, with its narration, under
 	 * the drawing and is two seconds in when the buyer first sees it.
@@ -251,7 +288,27 @@ export default function FeedScreen() {
 	useFocusEffect(
 		useCallback(() => {
 			setFocused(true);
-			return () => setFocused(false);
+			// Back from a place's page: what was swiped there leaves this deck.
+			const before = swipedWhenCovered.current;
+			swipedWhenCovered.current = null;
+			if (before !== null) {
+				const away = new Set(
+					useFeedSession.getState().swipedThisRun.slice(before),
+				);
+				const at = activeIndexRef.current;
+				followRun.current = withoutSwipedAway(
+					deckRef.current,
+					at,
+					followRun.current,
+					away,
+				).run;
+				setDeck((d) => withoutSwipedAway(d, at, null, away).deck);
+			}
+			return () => {
+				swipedWhenCovered.current =
+					useFeedSession.getState().swipedThisRun.length;
+				setFocused(false);
+			};
 		}, []),
 	);
 
@@ -299,11 +356,13 @@ export default function FeedScreen() {
 		cities,
 		likedCommunityIds: signals.likedCommunityIds,
 		enabled: hydrated,
+		focus,
 	});
 
+	// A place's page is the same visit to the app, not another one.
 	useEffect(() => {
-		if (hydrated) beginSession();
-	}, [hydrated, beginSession]);
+		if (hydrated && !inPlace) beginSession();
+	}, [hydrated, inPlace, beginSession]);
 
 	// §1.9: drain the telemetry queue once the network is back.
 	useEffect(() => {
@@ -401,6 +460,16 @@ export default function FeedScreen() {
 	useEffect(() => {
 		if (!hydrated) return;
 		const s = useFeedSession.getState();
+		// A place's own deck is its cards in order — nothing for the composer
+		// to ration, and nothing to loop.
+		if (inPlace) {
+			followRun.current = null;
+			setDeck(placeDeck(poolRef.current, placeKind, swipeHistory()));
+			setComposedPoolReady(poolReady);
+			setEngineExhausted(true);
+			setActiveIndex(0);
+			return;
+		}
 		/**
 		 * DEV SAMPLER (`EXPO_PUBLIC_DEV_SAMPLER=1`): replace the funnel mix with a
 		 * flat ~3-per-kind deck, video cards first.
@@ -446,7 +515,15 @@ export default function FeedScreen() {
 		// and the deck the buyer is holding was built from the old order. This is
 		// the one case where resetting `activeIndex` to 0 is correct — they just
 		// asked for a different place.
-	}, [hydrated, stage, samplerPoolSize, poolReady, scope?.unitId]);
+	}, [
+		hydrated,
+		stage,
+		samplerPoolSize,
+		poolReady,
+		scope?.unitId,
+		inPlace,
+		placeKind,
+	]);
 
 	/**
 	 * §1.7 pagination: append from the pool already held, deduped by the deck.
@@ -458,10 +535,20 @@ export default function FeedScreen() {
 	 */
 	const deckRef = useRef(deck);
 	deckRef.current = deck;
+	activeIndexRef.current = activeIndex;
 
 	const appendPage = useCallback(() => {
 		const s = useFeedSession.getState();
 		const current = deckRef.current;
+		if (inPlace) {
+			// A later page of the place's pool: whatever is not in the deck yet.
+			const have = new Set(current.map((c) => c.id));
+			const more = placeDeck(poolRef.current, placeKind, swipeHistory()).filter(
+				(c) => !have.has(c.id),
+			);
+			if (more.length > 0) setDeck((d) => [...d, ...more]);
+			return;
+		}
 		const result = generateFeed({
 			stage,
 			signals: s.signals,
@@ -476,7 +563,7 @@ export default function FeedScreen() {
 		setDeck((d) => [...d, ...result.cards]);
 
 		setEngineExhausted(result.exhausted);
-	}, [stage]);
+	}, [stage, inPlace, placeKind]);
 
 	/**
 	 * A shared link opened the app here (phase337, owner: "跳转到app的explore页面
@@ -603,9 +690,31 @@ export default function FeedScreen() {
 			 * slack) and reorders each kind only among its own slots, so the
 			 * deck-key invariant and the mix rhythm both hold by construction.
 			 */
-			setDeck((d) =>
-				rerankTail(d, index + 1 + RERANK_HOLD, fresh, poolRef.current),
-			);
+			/*
+			 * A like steps down a level first (`lib/feed/follow.ts`): the liked
+			 * city's neighbourhoods are queued behind the card underneath. While
+			 * such a run is waiting — and on a place's own page, whose order is
+			 * the place's — the tail is not re-ranked under it.
+			 *
+			 * The run is settled here, from the deck on screen; the deck itself
+			 * inside the updater, from whatever it holds by then (an appended
+			 * page may be queued ahead of this). Same inputs, so the two agree.
+			 */
+			const follow = {
+				index,
+				verdict: decision,
+				run: followRun.current,
+				pool: poolRef.current,
+				history: swipeHistory(),
+			};
+			const settled = followStep({ ...follow, deck: deckRef.current }).run;
+			followRun.current = settled;
+			setDeck((d) => {
+				const next = followStep({ ...follow, deck: d }).deck;
+				return settled !== null || inPlace
+					? next
+					: rerankTail(next, index + 1 + RERANK_HOLD, fresh, poolRef.current);
+			});
 
 			if (card.kind === "tradeoff") {
 				const moved = movedUpCount(pool.listings, card, decision);
@@ -632,8 +741,23 @@ export default function FeedScreen() {
 			// `movedUpCount` reads the loaded listings to count what the answer
 			// promoted. `geoUnits` was the stale entry it replaced.
 			pool.listings,
+			inPlace,
 		],
 	);
+
+	/**
+	 * The stills a like on this card would queue, fetched while the card is
+	 * still being watched: a followed card is seated directly behind the next
+	 * one, so it has one card's viewing — not the usual two — before it shows.
+	 */
+	useEffect(() => {
+		if (!topCard) return;
+		const within = cardsWithin(topCard, poolRef.current, swipeHistory());
+		for (const card of within.slice(0, FOLLOW_MAX)) {
+			const poster = cardPoster(card);
+			if (poster) Image.prefetch(poster).catch(() => {});
+		}
+	}, [topCard]);
 
 	const capability = useCallback(
 		(card: FeedCardV3) => cardBehavior(card).capability,
@@ -832,7 +956,8 @@ export default function FeedScreen() {
 	 * A deck is up, the buyer is on its first card, and the launch animation
 	 * is out of the way (the nudge would play unseen under it). Flips once.
 	 */
-	const hintEligible = launched && deck.length > 0 && activeIndex === 0;
+	const hintEligible =
+		!inPlace && launched && deck.length > 0 && activeIndex === 0;
 	useEffect(() => {
 		if (!hintHydrated || !hintEligible || hintRunOnce.current) return;
 		hintRunOnce.current = true;
@@ -951,8 +1076,27 @@ export default function FeedScreen() {
 	}, [deck.length, firstPoster, nothingToWaitFor]);
 
 	return (
-		<SafeAreaView style={styles.screen} edges={["top"]}>
+		// No tab bar under a place's page, so the home indicator is its own.
+		<SafeAreaView
+			style={styles.screen}
+			edges={inPlace ? ["top", "bottom"] : ["top"]}
+		>
 			{offline && <OfflineBar />}
+			{focus && (
+				<View style={styles.placeBar}>
+					<Pressable
+						onPress={backOrFeed}
+						hitSlop={12}
+						accessibilityRole="button"
+						accessibilityLabel="Back"
+					>
+						<Text style={styles.placeBack}>‹</Text>
+					</Pressable>
+					<Text style={styles.placeTitle} numberOfLines={1}>
+						{focus.name}
+					</Text>
+				</View>
+			)}
 			<View
 				style={styles.page}
 				onLayout={(e) => setContentHeight(e.nativeEvent.layout.height)}
@@ -1046,6 +1190,13 @@ export default function FeedScreen() {
 						<View style={styles.cardContainer}>
 							<CardSkeleton />
 						</View>
+					) : showExhausted && focus ? (
+						<View style={styles.cardContainer}>
+							<ExhaustedCard
+								headline={`That’s all of ${focus.name || "this place"} for now`}
+								onBack={backOrFeed}
+							/>
+						</View>
 					) : showExhausted ? (
 						<View style={styles.cardContainer}>
 							<ExhaustedCard
@@ -1096,6 +1247,16 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: colors.bg },
+	/** A place's page: back and its name, as the compare pages draw theirs. */
+	placeBar: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 12,
+		paddingHorizontal: 16,
+		paddingTop: 8,
+	},
+	placeBack: { ...textStyles.title1, fontWeight: "400", color: colors.accent },
+	placeTitle: { ...textStyles.title2, color: colors.ink, flexShrink: 1 },
 	/**
 	 * CardContainer (2026-08-13 redesign) — the card's only margin, now that
 	 * the card fills the available height. `flex: 1` + centering keeps the
