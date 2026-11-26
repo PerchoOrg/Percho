@@ -23,7 +23,7 @@ rotation, not on the way in.
 
 ---
 
-## 2026-11-26 18:40 UTC — phase404.7: inside page decided (header bar); the entry waits on what a shared link may open
+## 2026-11-26 21:00 UTC — phase404.7: inside page decided (header bar); the entry waits on what a shared link may open
 
 **Owner**: 「页面里那个按照你推荐的」 — the inside page is option 1 of `/demos/feed-focus-v3` (header bar: round back · place and what the page is · Map; no per-card place line). Then, before the entry is chosen: 「如果没有提前下载app 这几个选项中哪些能让被分享的人直接进入下一个层级？」
 **Found** (no code changed):
