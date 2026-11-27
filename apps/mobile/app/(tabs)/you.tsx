@@ -40,7 +40,6 @@ import { useMemo } from "react";
 import {
 	Alert,
 	Image,
-	Linking,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -54,6 +53,7 @@ import { familiarityFor } from "../../lib/area-familiarity";
 import { deleteAccount, signOut } from "../../lib/auth";
 import { DIM_LABELS, personaName, rankedDims } from "../../lib/feed/persona";
 import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
+import { openLink } from "../../lib/open-link";
 import { useAuthStore } from "../../state/auth";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
@@ -434,7 +434,7 @@ export default function YouTab() {
 							{i > 0 ? " · " : ""}
 							<Text
 								style={styles.footerLink}
-								onPress={() => void Linking.openURL(l.href)}
+								onPress={() => void openLink(l.href)}
 								accessibilityRole="link"
 							>
 								{l.label}

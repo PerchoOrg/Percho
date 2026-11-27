@@ -6,7 +6,6 @@
  */
 import {
 	Image,
-	Linking,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -14,6 +13,7 @@ import {
 	View,
 } from "react-native";
 import { logoFor } from "../../lib/community/explore";
+import { openLink } from "../../lib/open-link";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -91,7 +91,7 @@ export function Resources({
 										styles.pill,
 										pressed && styles.pressed,
 									]}
-									onPress={() => void Linking.openURL(l.url).catch(() => {})}
+									onPress={() => void openLink(l.url)}
 									accessibilityRole="link"
 								>
 									{!!logo && (

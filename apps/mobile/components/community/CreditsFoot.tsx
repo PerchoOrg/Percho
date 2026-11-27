@@ -12,7 +12,8 @@
  * 里的一致").
  */
 import { useState } from "react";
-import { Linking, Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text } from "react-native";
+import { openLink } from "../../lib/open-link";
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -54,7 +55,7 @@ export function CreditsFoot({
 								<Text
 									key={c.url}
 									style={styles.link}
-									onPress={() => void Linking.openURL(c.url).catch(() => {})}
+									onPress={() => void openLink(c.url)}
 								>
 									{i > 0 ? ", " : ""}
 									{c.author}

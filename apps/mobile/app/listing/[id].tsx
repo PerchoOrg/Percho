@@ -28,7 +28,6 @@ import type { InsightTheme } from "@percho/shared/insights";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-	Linking,
 	Pressable,
 	ScrollView,
 	Share,
@@ -81,6 +80,7 @@ import { useRates } from "../../lib/listing/rates";
 import { buildRoomGroups } from "../../lib/listing/rooms";
 import { useListingSummaries } from "../../lib/listing/summaries";
 import { LISTINGS_IN_APP, TEST_HOMES } from "../../lib/listings-in-app";
+import { openLink } from "../../lib/open-link";
 import { useAuthStore } from "../../state/auth";
 import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
@@ -530,7 +530,7 @@ function ListingExploreScreen() {
 										basisIndex,
 									}),
 								);
-								Linking.openURL(url).catch(() => {});
+								void openLink(url);
 							}}
 						/>
 					</View>
