@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { areaUnitId, communityFact, formatPrice, specsLine } from "./rows";
+import { areaUnitId, formatPrice, glanceFact, specsLine } from "./rows";
 
 describe("formatPrice", () => {
 	it("formats with grouping and a dollar sign", () => {
@@ -34,48 +34,33 @@ describe("areaUnitId", () => {
 	});
 });
 
-describe("communityFact", () => {
-	const school = (label: string, rank: string) => ({
-		group: "Schools",
-		label,
-		rank,
-		of: "of 1,000 in GA",
-		percentile: 50,
-	});
-	const profile = {
-		asOf: "2026-11-01",
-		verdict: { good: [], watch: [] },
-		sources: [],
-	};
+describe("glanceFact", () => {
+	const place = { lead: "Suwanee, GA" };
 
-	it("words the schools as a range and adds the home value", () => {
+	it("prints the card's figures in its order, each with its label but the price", () => {
 		expect(
-			communityFact({
-				...profile,
-				ranks: { rows: [school("Elementary", "#120"), school("High", "#452")] },
-				homeValue: {
-					area: "ZIP 30005",
-					display: "$747K",
-					change: "",
-					headline: "",
-					baseline: "",
-					series: [],
-				},
+			glanceFact({
+				place,
+				cells: [
+					{ value: "$685K", label: "est. home value", topic: "potential" },
+					{ value: "A+", label: "school grade", topic: "schools" },
+					{ value: "6 min", label: "to I-85", topic: "convenience" },
+				],
 			}),
-		).toBe("Schools Top 12–46% · $747K");
+		).toBe("$685K · A+ school grade · 6 min to I-85");
 	});
 
-	it("prints one share when the levels agree", () => {
+	it("keeps the label of a schools figure past the letters", () => {
 		expect(
-			communityFact({
-				...profile,
-				ranks: { rows: [school("Elementary", "#120")] },
+			glanceFact({
+				place,
+				cells: [{ value: "Top 62%", label: "school nearby", topic: "schools" }],
 			}),
-		).toBe("Schools Top 12%");
+		).toBe("Top 62% school nearby");
 	});
 
-	it("says nothing for a community with no findings", () => {
-		expect(communityFact(profile)).toBeUndefined();
-		expect(communityFact(undefined)).toBeUndefined();
+	it("says nothing when the server sent no figures", () => {
+		expect(glanceFact({ place, cells: [] })).toBeUndefined();
+		expect(glanceFact(undefined)).toBeUndefined();
 	});
 });

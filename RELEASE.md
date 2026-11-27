@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-27
+- **Saved speaks the same language as the cards.** The "Towns" view is now "City", the filter reads Communities and Cities, and every "neighbourhood" in Saved says "community". Under each saved place is the same line its card shows — "$685K · A+ school grade · 6 min to I-85" — in place of the older "Schools Top 12–46%". Arrives with the next app update.
 - **A neighbourhood's card says how far the highway is.** The third figure above a neighbourhood's card used to be its straight-line distance from Atlanta — the same on every neighbourhood of a city. It is now the drive to the nearest highway: "6 min · to I-85" for Harvest Park, "16 min" for Edinburgh, "3 min · to GA-400" for Windward. Minutes are without traffic. All twenty neighbourhoods with a film have it; the same figure on the neighbourhood's page arrives with the next app update.
 - **One drive figure on a city's card.** A city's card now reads "62 min · drive to downtown". It used to add the road miles ("33 mi to downtown"), which looked like a contradiction beside the miles on its neighbourhoods' cards.
 - **The schools letter sits centred.** The "A+" above a card is now centred over the words beneath it instead of sitting at the left edge of its column. Arrives with the next app update.

@@ -42,6 +42,7 @@ import { fetchFilmPhotoCredits } from '@/lib/communities/film-credits';
 import { dedupeLabels } from '@/lib/communities/labels';
 import { type CommunityReviewsDTO, fetchCommunityReviews } from '@/lib/communities/reviews';
 import { fetchPoiCounts } from '@/lib/feed/community-pool';
+import { communityGlance } from '@/lib/feed/glance';
 import type { TourSegment } from '@/lib/feed/tour-segments';
 import { fetchVerticalVideos, streamManifestUrl } from '@/lib/feed/vertical-videos';
 import {
@@ -52,6 +53,7 @@ import {
 } from '@/lib/supabase/server';
 import { parseCommunityProfile } from '@/lib/zod/community-profile';
 import type { CommunityProfile } from '@percho/shared/community-profile';
+import type { PlaceGlance } from '@percho/shared/glance';
 import {
   type CommunityReason,
   communityReasons,
@@ -160,6 +162,12 @@ export interface CommunityDetailDTO {
    * phone then draws the page it always drew.
    */
   profile?: CommunityProfile;
+  /**
+   * The figures the feed card prints above this community (phase404.23) —
+   * built by the same `communityGlance`, so the Saved tab's line and the card
+   * say the same thing. Absent when the row has no city.
+   */
+  glance?: PlaceGlance;
 }
 
 type DetailRow = {
@@ -168,6 +176,7 @@ type DetailRow = {
   name: string;
   city: string | null;
   state: string | null;
+  county?: string | null;
   description: string | null;
   cover_storage_path: string | null;
   attributes: string[] | null;
@@ -180,7 +189,7 @@ type DetailRow = {
 };
 
 const COLUMNS =
-  'id, slug, name, city, state, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age, lat, lng';
+  'id, slug, name, city, state, county, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct, avg_age, lat, lng';
 
 /**
  * One community by id or slug, or `null`.
@@ -222,10 +231,19 @@ export async function fetchCommunityDetail(idOrSlug: string): Promise<CommunityD
   const segments = uid ? videos.segmentsByCommunity.get(row.id) : undefined;
   const detail = projectCommunityDetail(row, poiCounts[row.id], videoUrl, segments);
   if (!detail) return detail;
+  const glance = communityGlance({
+    city: row.city ?? '',
+    state: row.state,
+    county: row.county,
+    lat: row.lat,
+    lng: row.lng,
+    profile,
+  });
   return {
     ...detail,
     ...(reviews ? { reviews } : {}),
     ...(profile ? { profile } : {}),
+    ...(glance ? { glance } : {}),
     // A credit with no film on the page would credit nothing the buyer sees.
     ...(detail.videoUrl && photoCredits.length > 0 ? { photoCredits } : {}),
   };

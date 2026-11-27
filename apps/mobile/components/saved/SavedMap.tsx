@@ -203,7 +203,7 @@ export function SavedMap(props: SavedViewProps) {
 									{[KIND_TAG[t.kind], t.sub].filter(Boolean).join(" · ")}
 								</Text>
 								{!!t.fact && (
-									<Text style={styles.cardFact} numberOfLines={1}>
+									<Text style={styles.cardFact} numberOfLines={2}>
 										{t.fact}
 									</Text>
 								)}

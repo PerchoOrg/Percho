@@ -16,7 +16,7 @@ export const SAVED_VIEWS = ["towns", "grid", "list", "map"] as const;
 export type SavedView = (typeof SAVED_VIEWS)[number];
 
 export const SAVED_VIEW_LABEL: Record<SavedView, string> = {
-	towns: "Towns",
+	towns: "City",
 	grid: "Grid",
 	list: "List",
 	map: "Map",

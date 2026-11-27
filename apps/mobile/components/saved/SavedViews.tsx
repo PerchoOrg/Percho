@@ -29,7 +29,7 @@ export interface SavedViewProps {
 /** What a tile is, said once on it: the flat views mix towns and what is in them. */
 export const KIND_TAG: Record<SavedTile["kind"], string> = {
 	area: "City",
-	community: "Neighbourhood",
+	community: "Community",
 	listing: "Home",
 };
 
@@ -148,7 +148,7 @@ export function SavedList(props: SavedViewProps) {
 								{[KIND_TAG[t.kind], t.sub].filter(Boolean).join(" · ")}
 							</Text>
 							{!!t.fact && (
-								<Text style={styles.rowFact} numberOfLines={1}>
+								<Text style={styles.rowFact} numberOfLines={2}>
 									{t.fact}
 								</Text>
 							)}
