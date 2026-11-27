@@ -666,6 +666,11 @@ export default function SearchTab() {
 		if (!hits || !searching) return;
 		setExpanded(true);
 		const coords = [
+			...hits.cities.flatMap((c) =>
+				c.lat !== undefined && c.lng !== undefined
+					? [{ latitude: c.lat, longitude: c.lng }]
+					: [],
+			),
 			...hits.listings.flatMap((l) =>
 				l.lat !== undefined && l.lng !== undefined
 					? [{ latitude: l.lat, longitude: l.lng }]
@@ -707,7 +712,10 @@ export default function SearchTab() {
 			: undefined;
 	const sheetH = expanded ? Math.min(height * 0.55, 480) : 110;
 	const hitCount = hits
-		? hits.communities.length + hits.listings.length + units.length
+		? hits.cities.length +
+			hits.communities.length +
+			hits.listings.length +
+			units.length
 		: units.length;
 
 	return (
@@ -926,13 +934,13 @@ export default function SearchTab() {
 					<TextInput
 						value={query}
 						onChangeText={setQuery}
-						// Names the levels the map itself walks, coarse to fine, so the
-						// box and the map read as one thing (owner, 2026-09-09). Zip
-						// still matches; the hint stays short rather than complete.
+						// What a buyer can actually find, in plain words (owner,
+						// 2026-11-27: the old "Area, city or community…" named an
+						// "area" nothing answers to).
 						placeholder={
 							LISTINGS_IN_APP
-								? "Area, city, community or address…"
-								: "Area, city or community…"
+								? "Search a city, community or address"
+								: "Search a city or community"
 						}
 						placeholderTextColor={colors.ink3}
 						style={styles.searchInput}
@@ -1112,9 +1120,33 @@ export default function SearchTab() {
 							)}
 							{hits && hitCount === 0 && (
 								<Text style={styles.empty}>
-									No match — try a street, community, city or zip.
+									{`No city or community matches "${query.trim()}".`}
 								</Text>
 							)}
+
+							{/* Cities first: a city's page is the widest answer to a
+							    name (phase409 — cities could not be found at all). */}
+							{hits && hits.cities.length > 0 && (
+								<Text style={styles.groupTitle}>Cities</Text>
+							)}
+							{hits?.cities.map((c) => (
+								<Pressable
+									key={`city-${c.slug}`}
+									style={styles.row}
+									onPress={() => router.push(`/city/${c.slug}`)}
+								>
+									<Image
+										source={c.posterUrl ? { uri: c.posterUrl } : undefined}
+										style={styles.rowThumb}
+									/>
+									<View style={styles.rowText}>
+										<Text style={styles.rowName}>{c.name}</Text>
+										<Text style={styles.rowSub}>
+											{c.county ? `${c.county} County, ${c.state}` : c.state}
+										</Text>
+									</View>
+								</Pressable>
+							))}
 
 							{hits && hits.communities.length > 0 && (
 								<Text style={styles.groupTitle}>Communities</Text>

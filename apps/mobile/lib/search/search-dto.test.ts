@@ -30,9 +30,25 @@ describe("parseSearchResult", () => {
 
 	it("tolerates a bare or empty body", () => {
 		expect(parseSearchResult(undefined)).toEqual({
+			cities: [],
 			listings: [],
 			communities: [],
 		});
 		expect(parseSearchResult({ listings: "x" }).listings).toEqual([]);
+	});
+
+	it("reads cities (phase409) and drops a city without a slug", () => {
+		const r = parseSearchResult({
+			cities: [
+				{
+					slug: "peachtree-corners-ga",
+					name: "Peachtree Corners",
+					county: "Gwinnett",
+				},
+				{ name: "No slug" },
+			],
+		});
+		expect(r.cities.map((c) => c.slug)).toEqual(["peachtree-corners-ga"]);
+		expect(r.cities[0]?.state).toBe("GA");
 	});
 });

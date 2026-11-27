@@ -23,6 +23,17 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 22:30 UTC — phase409: search finds cities; plainer search wording
+
+**Objective**: Owner 2026-11-27: 「search里搜不到city 并且那个提示词也不好 改一改」. Also: 「先不改学校这一栏」 — the B-on-a-card proposal (phase408) is declined for now.
+**Cause**: `/api/mobile/search` returns communities and homes only. Cities were matched in the app against the feed pool's `geoUnits` ("Areas" in the results), and the pool sends an empty `geoUnits` today — so no city could be found, and even when it could, a tap only moved the map.
+**Actions**:
+- `apps/web/lib/listings/search.ts`: `searchCities(q)` — cities with a film (`fetchCityFilms`, the feed's own set) whose name contains the query; `searchEntities` returns them as `cities` (slug, name, state, county, film poster, centre). The service client is the one `fetchCityFilms` already uses for the feed; it reads published films only.
+- `apps/mobile/lib/search/search-dto.ts`: parses `cities`; an older server without the field gives an empty group.
+- `apps/mobile/app/(tabs)/search.tsx`: a "Cities" group first in the results (poster, "Gwinnett County, GA"), tap opens `/city/[slug]`; cities count and are fitted on the map. Placeholder "Area, city or community…" → "Search a city or community" ("…, community or address" when homes are on). Empty result: `No city or community matches "…".` (it suggested streets and zips, which the communities-only app cannot find).
+- Left alone: the "Areas" group (pool `geoUnits`) — empty today; if the pool sends units again it may repeat a city.
+**Verified**: web typecheck, 75 search tests (two new: a city by part of its name, none for a non-match); mobile tsc, 988 tests (one new parser test); biome.
+
 ## 2026-11-27 21:06 UTC — phase408: Peachtree Corners opens on its name; every sheet and a search have a ✕; a B on a card (question answered, not built)
 
 **Objective**: Owner on phase407: 「第一张照片模糊 没有标志 没有信息量 换掉」; Explore's sheets (Schools etc.) close only by a tap on the dimmed space — add a ✕, check every other case, including how to leave a search; and whether a "B" schools letter on a feed card could give way to another strength.

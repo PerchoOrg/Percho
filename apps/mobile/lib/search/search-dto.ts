@@ -33,7 +33,19 @@ export interface SearchCommunity {
 	lng?: number;
 }
 
+/** A city with a film (phase409); tapping it opens `/city/[slug]`. */
+export interface SearchCity {
+	slug: string;
+	name: string;
+	state: string;
+	county?: string;
+	posterUrl?: string;
+	lat?: number;
+	lng?: number;
+}
+
 export interface SearchResult {
+	cities: SearchCity[];
 	listings: SearchListing[];
 	communities: SearchCommunity[];
 }
@@ -89,11 +101,31 @@ function parseCommunity(v: unknown): SearchCommunity | null {
 	};
 }
 
+function parseCity(v: unknown): SearchCity | null {
+	if (!v || typeof v !== "object") return null;
+	const o = v as Record<string, unknown>;
+	const slug = str(o.slug);
+	const name = str(o.name);
+	if (!slug || !name) return null;
+	return {
+		slug,
+		name,
+		state: str(o.state) ?? "GA",
+		county: str(o.county),
+		posterUrl: str(o.posterUrl),
+		lat: num(o.lat),
+		lng: num(o.lng),
+	};
+}
+
 export function parseSearchResult(json: unknown): SearchResult {
 	const o = (json ?? {}) as Record<string, unknown>;
 	const listings = Array.isArray(o.listings) ? o.listings : [];
 	const communities = Array.isArray(o.communities) ? o.communities : [];
+	// A server from before phase409 sends no `cities`: an empty group, not a crash.
+	const cities = Array.isArray(o.cities) ? o.cities : [];
 	return {
+		cities: cities.map(parseCity).filter((x): x is SearchCity => x !== null),
 		listings: listings
 			.map(parseListing)
 			.filter((x): x is SearchListing => x !== null),
