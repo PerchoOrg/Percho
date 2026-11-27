@@ -238,12 +238,12 @@
         }
       }
     ],
-    "measure": "Graduate in 4 years",
+    "measure": "Graduate in 4 years · class of 2025",
     "rows": [
       {
         "label": "Buford HS",
-        "pct": 95,
-        "display": "95%"
+        "pct": 93.3,
+        "display": "93.3%"
       },
       {
         "label": "Georgia",
@@ -252,7 +252,7 @@
         "baseline": true
       }
     ],
-    "note": "Buford City Schools serves only homes inside the city limits; a Buford address outside them is in Gwinnett or Hall County schools. Buford High's rate is as listed by U.S. News in its 2026–27 edition, which does not name the class; Georgia's is the class of 2025."
+    "note": "Buford City Schools serves only homes inside the city limits; a Buford address outside them is in Gwinnett or Hall County schools. Graduation rates: Governor's Office of Student Achievement, class of 2025."
   },
   "gettingAround": [
     {

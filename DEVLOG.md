@@ -23,6 +23,38 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 07:08 UTC — phase404.17: schools on a card are a letter; a city's is for its typical school, not its top graduation rate
+
+**Objective**: owner on the city card's figures: 「升学率我每个城市看都是很高」, asked whether that is the sample (「是因为样本数量太集中太少的原因吗」), then 「可不可以用学区评级抽象一点的」 and, on the proposal, 「用字母」.
+**What was found first** (GOSA's class-of-2025 file, `download.gosa.ga.gov/2025/Graduation_Rate_2024-25_…csv`, 369 high schools with a cohort of 100+): Georgia 87.2%; the median school 92.8%, two thirds at 90% or over. Our seven cities read 94.8%–98.4% because (a) all seven sit on the north Fulton / Forsyth / north Gwinnett line — DeKalb is 81.6%, Gwinnett as a whole 85.4%, Duluth High 86.9%, Norcross 85.3%; (b) the measure is bunched at the top for good suburbs everywhere (East Cobb 97–98%, Cherokee 95–97%); (c) the card printed the HIGHEST school of those a profile lists. It is also high schools only.
+**What a card says now** (server-sent, live on deploy):
+
+| city | was | is |
+|---|---|---|
+| Johns Creek | 98.0% top graduation rate | A+ · schools, top 4% in GA |
+| Alpharetta | 98.4% graduate in 4 years | A+ · schools, top 5% in GA |
+| Suwanee | 97.4% top graduation rate | A · schools, top 6% in GA |
+| Duluth | 94.8% graduate in 4 years | A · schools, top 10% in GA |
+| Cumming | 97.5% graduate in 4 years | A · schools, top 10% in GA |
+| Sugar Hill | 97.4% top graduation rate | A · schools, top 10% in GA |
+| Buford | 95% graduate in 4 years | A− · schools, top 14% in GA |
+
+A community's: `Top 1% · best school nearby` → `A+ · best school, top 1%`.
+**Actions**:
+- `packages/shared/src/school-grade.ts`: `schoolGrade(share)` (A+ ≤5, A ≤10, A− ≤20, B+ ≤30, B ≤40, B− ≤50, else none), `typicalShare(schools)` (the median of a city's school shares, all levels), `SCHOOL_GRADE_NOTE`.
+- `lib/feed/glance.ts`: `schoolsCell` prints the letter with the standing in the label; new `citySchoolsCell` from the city's `allSchools` (`citySchools(slug)`, passed through `CityFilm.place.schools`), falling back to the graduation rate for a city with no scored school.
+- Mobile (next build / Metro): the city's and the community's Schools sheets say which standing the letter is for and print the scale.
+- `city-profiles/duluth-ga.json`: Duluth HS 86.9% added beside Peachtree Ridge's 94.8% — the page listed only the better of the city's two clusters. `buford-ga.json`: Buford HS 95% (U.S. News, class unnamed) → 93.3%, the state's class-of-2025 figure, and the measure names the class. Both applied with `city:profile`.
+**Decisions**:
+- **Our own scale.** Georgia stopped its A–F school grades in 2022-23; GreatSchools' 1–10 needs an enterprise licence (its ratings-free API lists from $8,900 a month) and Niche has no public API. The letter is a rewording of the "Top N%" the pages already print (Georgia Milestones), and the sheets say so.
+- **Not the district's**, though he said 学区: the seven cities are in four districts, Suwanee and Duluth would share Gwinnett's, and Gwinnett's is pulled down by the south of the county.
+- **A city's typical school, not its best**: five of the seven have a school in Georgia's top 1%. A community's stays its best nearby (his earlier 「学校给区间上段」).
+- **The standing stays in the label.** Letters alone are 2 × A+, 4 × A, 1 × A− — the sameness he complained of; "top 4%" beside "top 10%" still separates them. He replied 「用字母」 to a proposal worded "用字母加排名"; read as approval of it. Dropping the label's number is a one-line change if he meant letters alone.
+- **No letter below B−.** A "C" on a place's schools is a verdict on the place (`profile-build.ts`'s rule). Past the top half the cell reads as before ("Top 61% · best school nearby"). None of the twenty filmed communities or seven cities is there (lowest: Cardinal Lake, top 38% → B). Flagged to the owner as his call when a city that needs it is added.
+**Corrected from what I told him**: Cumming's 97.5% is not an error — it is the Forsyth district's class of 2026, sourced (Appen Media) and newer than the state file; left as it is. Only its class year differs from the other cities'.
+**Not done**: the other two parts of the same proposal — a city's drive figure without its miles, and a community's third figure (it repeats the distance to Atlanta, straight-line, where the city's is by road) — he has not answered.
+**Risks**: the scale's cut-offs are mine. Duluth's film still calls out Peachtree Ridge's 94.8% (true of that school). The Saved and Compare pages print "Top N%" without the letter.
+
 ## 2026-11-27 04:06 UTC — phase404.16: every filmed community's card carries its own estimated home value
 
 **Objective**: owner, on phase404.15's finding that sold prices are public for only five of the twenty: 「先给一个估值 不要空着」. The first figure over a community's card was its CITY's home value (`$589K · Suwanee homes` on every Suwanee community).

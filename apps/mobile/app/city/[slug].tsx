@@ -27,6 +27,11 @@
  */
 import type { CityDetailDTO } from "@percho/shared/city";
 import { GLANCE_TOPICS } from "@percho/shared/glance";
+import {
+	SCHOOL_GRADE_NOTE,
+	schoolGrade,
+	typicalShare,
+} from "@percho/shared/school-grade";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -250,6 +255,8 @@ export default function CityScreen() {
 	const latest = data.growth.series[data.growth.series.length - 1];
 	const safetyLinks = (data.links ?? []).filter((l) => l.group === "Safety");
 	const allSchools = data.allSchools ?? [];
+	const typical = typicalShare(allSchools);
+	const typicalGrade = typical === null ? null : schoolGrade(typical);
 
 	return (
 		<View style={styles.root}>
@@ -676,6 +683,14 @@ export default function CityScreen() {
 										state test results. Miles are from the city's centre. Nearby
 										schools — not an attendance zone.
 									</Text>
+									{/* The feed card's schools letter (phase404.17), with what
+									    it is a letter for. */}
+									{typicalGrade && (
+										<Text style={styles.sheetCaption}>
+											The typical one is in the top {typical}% — {typicalGrade}.{" "}
+											{SCHOOL_GRADE_NOTE}
+										</Text>
+									)}
 									{schoolsByLevel(allSchools).map((g) => (
 										<View key={g.heading} style={styles.sheetGap}>
 											<Text style={styles.sheetRowKind}>{g.heading}</Text>

@@ -9,7 +9,8 @@ import type {
 	CommunityProfile,
 	CommunityRank,
 } from "@percho/shared/community-profile";
-import { topShare } from "@percho/shared/rank-share";
+import { rankShare, topShare } from "@percho/shared/rank-share";
+import { SCHOOL_GRADE_NOTE, schoolGrade } from "@percho/shared/school-grade";
 import { useState } from "react";
 import {
 	Linking,
@@ -88,6 +89,8 @@ function RankRows({
 function Schools({ ranks }: { ranks: NonNullable<CommunityProfile["ranks"]> }) {
 	const schools = schoolRanks(ranks);
 	const rest = rankGroups(otherRanks(ranks));
+	const best = Math.min(...schools.map(rankShare));
+	const bestGrade = schools.length > 0 ? schoolGrade(best) : null;
 	return (
 		<>
 			<Text style={styles.title}>Schools nearby</Text>
@@ -97,6 +100,14 @@ function Schools({ ranks }: { ranks: NonNullable<CommunityProfile["ranks"]> }) {
 					<Text style={styles.caption}>
 						Among Georgia schools at that level, by state test results.
 					</Text>
+					{/* The feed card's schools letter (phase404.17), with what it
+					    is a letter for. */}
+					{bestGrade && (
+						<Text style={styles.caption}>
+							The best of them is in the top {best}% — {bestGrade}.{" "}
+							{SCHOOL_GRADE_NOTE}
+						</Text>
+					)}
 				</View>
 			)}
 			{(ranks.schools?.length ?? 0) > 0 && (

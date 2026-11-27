@@ -19,6 +19,7 @@
     "./property-tax": "./src/property-tax.ts",
     "./rank-share": "./src/rank-share.ts",
     "./review-dimensions": "./src/review-dimensions.ts",
+    "./school-grade": "./src/school-grade.ts",
     "./tour-buckets": "./src/tour-buckets.ts",
     "./types": "./src/types.ts"
   },
