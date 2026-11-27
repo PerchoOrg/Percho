@@ -12,6 +12,10 @@
  * embed listings — search, Favorites, the community page and its feed — skip
  * the listing read. The agent dashboard is untouched: agents still manage
  * their own listings there.
+ *
+ * One page is outside this switch, on the owner's instruction (2026-11-27,
+ * 「加房子分享」): `/watch/home/<id>`, what a home shared from the app opens.
+ * Nothing links to it and it is not indexed; see its header.
  */
 export const LISTINGS_ON_WEB = false;
 

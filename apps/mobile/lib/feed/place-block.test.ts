@@ -127,7 +127,7 @@ describe("community tour", () => {
 	/** An older server: the place from the card's own fields, no figures. */
 	it("names the place from the card when no glance came", () => {
 		const m = model({ card: RIVER_GREEN });
-		expect(m.lead).toBe("Canton");
+		expect(m.lead).toBe("Canton, GA");
 		expect(m.rest).toBe("Cherokee County");
 		expect(m.cells).toEqual([]);
 	});
@@ -200,7 +200,7 @@ describe("city tour", () => {
 	 */
 	it("falls back to the city alone, and to text for a city with no page", () => {
 		const m = model({ card: area() });
-		expect(m.lead).toBe(CANTON.name);
+		expect(m.lead).toBe("Canton, GA");
 		expect(m.rest).toBe("");
 		expect(m.cells).toEqual([]);
 		expect(m.explore).toBeNull();
@@ -225,7 +225,7 @@ describe("home tour", () => {
 			communities: [],
 		});
 		expect(m.kind).toBe("home-tour");
-		expect(m.lead).toBe("Canton");
+		expect(m.lead).toBe("Canton, GA");
 		expect(m.rest).toBe("Cherokee County");
 		expect(m.mapUnitId).toBe(CANTON.id);
 	});
@@ -241,7 +241,7 @@ describe("home tour", () => {
 	/** No community: no county either — it comes off the community. */
 	it("is the city alone when no community resolves", () => {
 		const m = model({ card: listing({ geoUnitId: CANTON.id }) });
-		expect(m.lead).toBe("Canton");
+		expect(m.lead).toBe("Canton, GA");
 		expect(m.rest).toBe("");
 		expect(m.mapUnitId).toBe(CANTON.id);
 	});
@@ -325,8 +325,8 @@ describe("accessibility labels", () => {
 		expect(mapAccessibilityLabel(m)).toBe("Show River Green on the map");
 	});
 
-	it("drops the comma when the line has one part", () => {
-		expect(placeAccessibilityLabel(model({ card: area() }))).toBe(CANTON.name);
+	it("adds no comma of its own when the line has one part", () => {
+		expect(placeAccessibilityLabel(model({ card: area() }))).toBe("Canton, GA");
 	});
 
 	it("reads a figure with what it is a figure of", () => {

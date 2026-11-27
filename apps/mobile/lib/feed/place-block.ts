@@ -117,6 +117,19 @@ const joined = (...segments: readonly (string | undefined)[]): string =>
 
 /** The unit an id names, or undefined — an id the pool cannot resolve is no
  * more a map target than no id at all. */
+/**
+ * "Suwanee, GA" — the city as an address writes it (phase404.12, owner:
+ * 「加ga」). What the server's line leads with; these are the phone's own
+ * fallbacks saying the same.
+ */
+function cityState(
+	city: string | undefined,
+	state: string | undefined,
+): string | undefined {
+	if (city === undefined || city === "") return undefined;
+	return state ? `${city}, ${state}` : city;
+}
+
 function unitOf(
 	id: string | undefined,
 	units: readonly GeoUnit[],
@@ -170,7 +183,7 @@ export function placeBlockModel({
 				...EMPTY,
 				activeCardId: card.id,
 				kind: "city-tour",
-				lead: place?.lead ?? card.unit.name,
+				lead: place?.lead ?? cityState(card.unit.name, card.unit.state) ?? "",
 				rest: place?.rest ?? "",
 				cells: card.unit.glance?.cells ?? [],
 				explore: card.unit.citySlug
@@ -187,7 +200,7 @@ export function placeBlockModel({
 			// level is dropped, not printed as an empty segment.
 			const [lead = "", rest = ""] = card.glance
 				? [card.glance.place.lead, card.glance.place.rest]
-				: present(card.city, countySegment(card.county));
+				: present(cityState(card.city, card.state), countySegment(card.county));
 			return {
 				...EMPTY,
 				activeCardId: card.id,
@@ -228,7 +241,7 @@ export function placeBlockModel({
 				...EMPTY,
 				activeCardId: card.id,
 				kind: "home-tour",
-				lead: unit?.name ?? "",
+				lead: cityState(unit?.name, unit?.state) ?? "",
 				rest: unit === undefined ? "" : joined(county),
 				mapName: communityName ?? unit?.name ?? "this home",
 				mapUnitId: unit?.id ?? null,

@@ -331,6 +331,7 @@ export function projectCommunityPool(
     });
     const glance = communityGlance({
       city: r.city ?? '',
+      state: r.state,
       county: r.county,
       lat: r.lat,
       lng: r.lng,

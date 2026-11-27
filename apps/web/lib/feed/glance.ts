@@ -104,12 +104,27 @@ function usdShort(value: number): string {
 const present = (cells: Array<GlanceCell | null>): GlanceCell[] =>
   cells.filter((c): c is GlanceCell => c !== null);
 
+/**
+ * "Suwanee, GA" — the city as an address writes it (owner, 2026-11-27, on the
+ * line above a card: 「加ga」). The city alone for a row with no state.
+ */
+const cityState = (city: string, state: string | null | undefined) =>
+  state ? `${city}, ${state}` : city;
+
 export function communityGlance(
-  c: Point & { city: string; county?: string | null; profile: CommunityProfile | null },
+  c: Point & {
+    city: string;
+    state?: string | null;
+    county?: string | null;
+    profile: CommunityProfile | null;
+  },
 ): PlaceGlance | undefined {
   if (!c.city) return undefined;
   return {
-    place: { lead: c.city, ...(c.county ? { rest: `${c.county} County` } : {}) },
+    place: {
+      lead: cityState(c.city, c.state),
+      ...(c.county ? { rest: `${c.county} County` } : {}),
+    },
     cells: present([
       homesCell(c.profile?.homeValue),
       schoolsCell(c.profile?.ranks),
@@ -185,7 +200,7 @@ function driveCell(gettingAround: CityFundamentals['gettingAround']): GlanceCell
 }
 
 /**
- * A city's line is `City · County`, the same two things in the same order as
+ * A city's line is `City, ST · County`, the same things in the same order as
  * a community's (owner, 2026-11-26: 「左上角一会儿是county 一会儿是city很乱」).
  * It led with the county — a city's card already says the city — and that read
  * as a different line on every other card. How far and which way from Atlanta
@@ -193,12 +208,16 @@ function driveCell(gettingAround: CityFundamentals['gettingAround']): GlanceCell
  */
 export function cityGlance(c: {
   name: string;
+  state?: string | null;
   county?: string | null;
   profile: Pick<CityFundamentals, 'compare' | 'education' | 'gettingAround'> | null;
 }): PlaceGlance | undefined {
   if (!c.name) return undefined;
   return {
-    place: { lead: c.name, ...(c.county ? { rest: `${c.county} County` } : {}) },
+    place: {
+      lead: cityState(c.name, c.state),
+      ...(c.county ? { rest: `${c.county} County` } : {}),
+    },
     cells: c.profile
       ? present([
           medianHomeCell(c.profile.compare),

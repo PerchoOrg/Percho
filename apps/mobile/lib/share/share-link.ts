@@ -21,15 +21,20 @@ export const SHARE_HOST = "https://www.percho.co";
 
 export type ShareTarget =
 	| { kind: "community"; slug: string; name: string }
-	| { kind: "city"; slug: string; name: string };
+	| { kind: "city"; slug: string; name: string }
+	/** A home, by its listing id (phase404.12, owner: 「加房子分享」). */
+	| { kind: "home"; id: string; name: string };
 
 /**
- * What a deck card shares, or null when it has no page to open: a listing or
- * trade-off card, or a city unit with no city page behind it.
+ * What a deck card shares, or null when it has no page to open: a trade-off
+ * card, or a city unit with no city page behind it.
  */
 export function shareTargetForCard(card: FeedCardV3): ShareTarget | null {
 	if (card.kind === "community") {
 		return { kind: "community", slug: card.slug, name: card.name };
+	}
+	if (card.kind === "listing") {
+		return { kind: "home", id: card.id, name: card.priceLabel || card.address };
 	}
 	if (card.kind === "area" && card.unit.citySlug) {
 		return { kind: "city", slug: card.unit.citySlug, name: card.unit.name };
@@ -39,6 +44,9 @@ export function shareTargetForCard(card: FeedCardV3): ShareTarget | null {
 
 /** The page a shared card opens — on the web, and in the app when installed. */
 export function shareUrl(target: ShareTarget): string {
+	if (target.kind === "home") {
+		return `${SHARE_HOST}/watch/home/${encodeURIComponent(target.id)}`;
+	}
 	const slug = encodeURIComponent(target.slug);
 	return target.kind === "community"
 		? `${SHARE_HOST}/watch/c/${slug}`
@@ -79,6 +87,10 @@ export function appPathForSharedPath(path: string): string | null {
 	if (community?.[1]) return `/feed?shared=community:${community[1]}`;
 	const city = /^(?:\/watch)?\/city\/([^/]+)\/?$/.exec(bare);
 	if (city?.[1]) return `/feed?shared=city:${city[1]}`;
+	// A shared home opens its own page — which sends a build without homes
+	// on to the feed (`app/listing/[id].tsx`).
+	const home = /^\/watch\/home\/([^/]+)\/?$/.exec(bare);
+	if (home?.[1]) return `/listing/${home[1]}`;
 	return null;
 }
 

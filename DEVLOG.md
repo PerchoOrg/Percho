@@ -23,6 +23,18 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 00:42 UTC — phase404.12: GA in the place line, Map beside it, the name on one line, a home can be shared
+
+**Objective**: owner, with a capture of the Sugarloaf Country Club card (name on two lines, the disc at the row's far end, Map at the screen's edge): 「加ga 并且把map放到title后面 加房子分项 / 名字太长两行不好看 控制在一行」. "分项" read as 分享 — the card he asked about the turn before. "title" read as the line Map shares a row with, not the card's name.
+**1 · The state** (server, live for every build): the line leads with `City, ST` — `Duluth, GA · Gwinnett County` — on community and city cards (`cityState` in `apps/web/lib/feed/glance.ts`; `fetchCityFilms` now reads `cities.state`). The phone's own fallbacks say the same (`lib/feed/place-block.ts`). He had asked whether to; I had recommended waiting for a second state — he chose to add it.
+**2 · Map follows the line.** The line's box is as wide as its words (`placeSlot` no longer fills the row), so the pill sits `PLACE_MAP_GAP` after the last one. That changed how the county is fitted: the old way laid the county out invisibly when it did not fit, which would now leave a hole before Map — so both halves are measured off-screen and the county is drawn only when lead + county fit the row less Map (`room={rowWidth - mapRoom}`). On a place's own page the header keeps Map at the far edge.
+**3 · The name is one line**, shrinking to fit (`adjustsFontSizeToFit`, floor 0.6 → 16pt), then cut. Two lines dated from 2026-08-22 (a cut name: "fix that"); his 2026-09-07 rule — smaller size, not a cut — is what applies. The name's fixed line height is gone with it (iOS sets shrunk text against one), and the disc is centred on the line, directly after the name.
+**4 · Sharing a home.** The home card's corner has the share button; it sends `www.percho.co/watch/home/<listing id>`. With the app, the link opens the listing page (`appPathForSharedPath`; a build without homes goes on to the feed). Without it: `apps/web/app/watch/home/[id]/page.tsx` — `WatchFilm` with the home's film, price, specs and address, the App Store button, and under it the FMLS number, "Listing courtesy of …", the FMLS detail disclosure and the technical-entity statement (`FmlsDisclosure`), plus the import's own "FMLS test listing — status …, not for sale." line where a listing has one. `robots: noindex, nofollow`.
+**Said to the owner plainly**: this page is a home on the public web while `LISTINGS_ON_WEB` is off (his 2026-11-14 rule). It is reachable only by a link someone was sent, nothing links to it, and the six listings behind it are the FMLS sandbox rows the feed API has served all along — but it is an exception to that rule, and his to keep or remove. Recorded in `listings-on-web.ts` and `ARCHITECTURE.md`.
+**Verified**: mobile typecheck 0, biome 0 errors / 5 warnings, vitest 983, `expo export --platform ios`; web tsc 0, biome 0 errors / 180 warnings, vitest 1429 + the DEVLOG-order failure on main, `next build`. Local `next dev`: `/watch/home/90871e1e…` 200 — "$1,000,000 · Fairmount, GA", robots noindex, the FMLS number, brokerage and disclosure drawn (headless Chrome capture). **The app is not run on a device.**
+**Risks**: `adjustsFontSizeToFit` inside a shrinking row is iOS-reliable but unseen here; if a long name does not shrink it will end in "…". The first frame of a new card can show the previous card's county until the line re-measures.
+**Next steps**: owner on the phone; share a home to himself and open the link in Safari.
+
 ## 2026-11-27 00:20 UTC — phase404.11: a smaller Map pill; two questions answered, not built
 
 **Objective**: owner, on phase404.10: 「map 还是有点突兀可能是背景绿色太大？ / 左上角要加个state吗 GA？ / 房子卡片没有分享？」.

@@ -3,7 +3,7 @@
  * set down on the card in phase380): where the place is, the Map button, and
  * up to three figures the film cannot show.
  *
- *     Alpharetta · Fulton County                [◎ Map]   ← place   44 high
+ *     Alpharetta, GA · Fulton County  [◎ Map]             ← place   44 high
  *     $747K            Top 3%           25 mi             ← figures 48 high
  *     ZIP 30005 homes  schools nearby   north of Atlanta
  *                                                         14
@@ -39,7 +39,8 @@
  *     that shrank beside a pill read as a different face. What
  *     gives way instead is the line's second half ("· Fulton County"), which
  *     is left out whole when it does not fit — never cut mid-word; only a
- *     name too long for the row on its own ends in "…". This replaces, for
+ *     name too long for the row on its own ends in "…". Map follows the
+ *     line's last word rather than sitting at the row's far edge. This replaces, for
  *     this row, the 2026-09-07 rule that text shrinks rather than being cut
  *     (said of the 36pt title the row used to sit under). The figures below
  *     still shrink to fit, each one alone in its column.
@@ -82,11 +83,6 @@ const EDGE = GUTTER + CARD_EDGE_INSET;
 
 // ─── Type ────────────────────────────────────────────────────────────
 const PLACE_SIZE = 16;
-/**
- * How much faster the line's second half gives up room than anything else in
- * the row: it is gone before a name loses a letter.
- */
-const REST_GIVES_WAY = 1000;
 /** Wide enough to lay out any place line on one line, to learn its width. */
 const MEASURE_WIDTH = 1000;
 const FIGURE_SIZE = 26;
@@ -176,11 +172,20 @@ export function PlaceBlock({
 	const k = headerScale(width);
 	const styles = useMemo(() => sheet(k), [k]);
 
-	const line = <PlaceLine model={model} styles={styles} />;
+	// What the row is wide and what Map takes of it, so the line knows its room.
+	const [rowWidth, setRowWidth] = useState(0);
+	const [mapWidth, setMapWidth] = useState(0);
+	const mapRoom =
+		onOpenMap === undefined
+			? 0
+			: (mapWidth || MAP_WIDTH * k) + PLACE_MAP_GAP * k;
 
 	return (
 		<View style={styles.wrap}>
-			<View style={styles.placeRow}>
+			<View
+				style={styles.placeRow}
+				onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}
+			>
 				{header !== undefined ? (
 					<>
 						<Pressable
@@ -219,7 +224,7 @@ export function PlaceBlock({
 								{header.subtitle}
 							</Text>
 						</View>
-						<View style={styles.placeSlot} />
+						<View style={styles.fill} />
 					</>
 				) : (
 					<View
@@ -227,13 +232,18 @@ export function PlaceBlock({
 						accessible={model.lead !== ""}
 						accessibilityLabel={placeAccessibilityLabel(model)}
 					>
-						{line}
+						<PlaceLine
+							model={model}
+							styles={styles}
+							room={rowWidth - mapRoom}
+						/>
 					</View>
 				)}
 
 				{onOpenMap !== undefined && (
 					<Pressable
 						onPress={onOpenMap}
+						onLayout={(e) => setMapWidth(e.nativeEvent.layout.width)}
 						accessible
 						accessibilityRole="button"
 						accessibilityLabel={mapAccessibilityLabel(model)}
@@ -314,51 +324,56 @@ function Figure({ cell, styles }: { cell: GlanceCell; styles: BlockStyles }) {
 }
 
 /**
- * `Alpharetta · Fulton County`, at `PLACE_SIZE` whatever is beside it. The
- * second half is shown whole or not at all: its width on its own line is
- * measured off-screen, and it is drawn only when the row leaves it that much.
+ * `Alpharetta, GA · Fulton County`, at `PLACE_SIZE` whatever is beside it.
+ * The second half is shown whole or not at all: both halves are measured
+ * off-screen at their own widths, and the second is drawn only when the two
+ * fit the room the row has for the line. Nothing is laid out in its place
+ * when it is not, so Map sits right after whatever the line says.
  */
 function PlaceLine({
 	model,
 	styles,
+	room,
 }: {
 	model: PlaceBlockModel;
 	styles: BlockStyles;
+	/** The width the row has for the line, Map and its gap taken off. */
+	room: number;
 }) {
 	const rest = model.rest === "" ? "" : ` · ${model.rest}`;
-	/** The second half's own width, and the room the row leaves it. */
-	const [whole, setWhole] = useState(0);
-	const [room, setRoom] = useState(0);
-	const fits = whole > 0 && whole <= room + 0.5;
+	const [leadWidth, setLeadWidth] = useState(0);
+	const [restWidth, setRestWidth] = useState(0);
+	const fits =
+		rest !== "" &&
+		leadWidth > 0 &&
+		restWidth > 0 &&
+		leadWidth + restWidth <= room + 0.5;
 	return (
 		<View style={styles.line}>
 			<Text style={[styles.place, styles.placeLead]} numberOfLines={1}>
 				{model.lead}
 			</Text>
-			{rest !== "" && (
-				<View
-					style={styles.restSlot}
-					onLayout={(e) => setRoom(e.nativeEvent.layout.width)}
+			{fits && (
+				<Text style={styles.place} numberOfLines={1}>
+					{rest}
+				</Text>
+			)}
+			<View style={styles.measure} pointerEvents="none">
+				<Text
+					style={[styles.place, styles.placeLeadWeight]}
+					numberOfLines={1}
+					onLayout={(e) => setLeadWidth(e.nativeEvent.layout.width)}
 				>
-					<Text
-						style={[styles.place, !fits && styles.unseen]}
-						numberOfLines={1}
-					>
-						{rest}
-					</Text>
-				</View>
-			)}
-			{rest !== "" && (
-				<View style={styles.measure} pointerEvents="none">
-					<Text
-						style={styles.place}
-						numberOfLines={1}
-						onLayout={(e) => setWhole(e.nativeEvent.layout.width)}
-					>
-						{rest}
-					</Text>
-				</View>
-			)}
+					{model.lead}
+				</Text>
+				<Text
+					style={styles.place}
+					numberOfLines={1}
+					onLayout={(e) => setRestWidth(e.nativeEvent.layout.width)}
+				>
+					{rest}
+				</Text>
+			</View>
 		</View>
 	);
 }
@@ -388,14 +403,20 @@ function sheet(k: number) {
 			flexDirection: "row",
 			alignItems: "center",
 		},
-		/** The flexible half of the row: the Map pill is laid out first. */
+		/**
+		 * The line's box: as wide as what it says and no wider, so Map follows
+		 * the words (phase404.12; owner, 2026-11-27: 「把map放到title后面」) —
+		 * it used to fill the row and push Map to the far edge.
+		 */
 		placeSlot: {
-			flex: 1,
+			flexShrink: 1,
 			minWidth: 0,
 			minHeight: PLACE_ROW * k,
 			flexDirection: "row",
 			alignItems: "center",
 		},
+		/** A place's page: what keeps Map at the far edge of its header. */
+		fill: { flex: 1 },
 		/** A place's page: the way back, in the Map pill's material and height. */
 		backDisc: {
 			width: MAP_HEIGHT * k,
@@ -460,15 +481,15 @@ function sheet(k: number) {
 			color: feedHeader.context,
 		},
 		placeLead: { flexShrink: 1, fontWeight: "600", color: feedHeader.title },
-		restSlot: { flexShrink: REST_GIVES_WAY, minWidth: 0 },
-		/** Laid out, so the row does not move; not drawn. */
-		unseen: { opacity: 0 },
-		/** Off the row: where the second half is laid out at its own width. */
+		/** The lead's weight alone, for measuring it where nothing can shrink it. */
+		placeLeadWeight: { fontWeight: "600" },
+		/** Off the row: where each half is laid out at its own width. */
 		measure: {
 			position: "absolute",
 			left: 0,
 			top: 0,
 			width: MEASURE_WIDTH * k,
+			flexDirection: "row",
 			alignItems: "flex-start",
 			opacity: 0,
 		},

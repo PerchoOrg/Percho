@@ -916,6 +916,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 								emitGesture("explore_tap", card);
 								router.push(`/listing/${card.id}`);
 							}}
+							{...share}
 						/>
 					);
 				}

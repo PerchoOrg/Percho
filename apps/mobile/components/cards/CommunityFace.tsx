@@ -243,6 +243,12 @@ const PLACE_RIGHT = 12 + 3 * CORNER_DISC + 2 * CORNER_GAP + 8;
  * phase394: drop the distance before cutting the name).
  */
 const PLACE_NAME_WITH_DISTANCE = 22;
+/**
+ * How far a long name may shrink to stay on one line: 27pt → 16pt, which
+ * keeps "Sugarloaf Country Club" whole beside its disc and a pill on the
+ * narrowest phone. Past that it is cut.
+ */
+const NAME_MIN_SCALE = 0.6;
 
 interface CommunityFaceProps {
 	card: CommunityCardV3;
@@ -746,12 +752,13 @@ export function CommunityFace({
 				</View>
 				<View style={styles.infoRow}>
 					<View style={styles.infoLeft}>
-						{/* Two lines, not one. A name that did not fit used to ellipsize
-					    — "Hidden Lakes at Sug…" — which is the one thing on this
-					    card a buyer cannot afford to be guessing at (owner
-					    2026-08-22: "if community name is long, it can be truncated,
-					    fix that"). Wrapping spends card height, which this card has;
-					    truncation spent the name, which it does not. */}
+						{/* ONE line, and a long name gives up size before letters
+					    (phase404.12; owner, 2026-11-27, on "Sugarloaf Country /
+					    Club": 「名字太长两行不好看 控制在一行」). It wrapped to two
+					    lines from 2026-08-22, when a name that did not fit was cut
+					    — "Hidden Lakes at Sug…" — and his rule since 2026-09-07 is
+					    the one applied here: 「Don't cut the community name if it is
+					    too long, use smaller size instead」. */}
 						{onExplore ? (
 							<Pressable
 								onTouchStart={arm(EXPLORE_TAP_TARGET)}
@@ -764,7 +771,12 @@ export function CommunityFace({
 									pressed && styles.ctaPressed,
 								]}
 							>
-								<Text style={styles.name} numberOfLines={2}>
+								<Text
+									style={styles.name}
+									numberOfLines={1}
+									adjustsFontSizeToFit
+									minimumFontScale={NAME_MIN_SCALE}
+								>
 									{card.name}
 								</Text>
 								{/* With no pill beside it, this is what breathes at 82%. */}
@@ -773,7 +785,12 @@ export function CommunityFace({
 								</Animated.View>
 							</Pressable>
 						) : (
-							<Text style={styles.name} numberOfLines={2}>
+							<Text
+								style={styles.name}
+								numberOfLines={1}
+								adjustsFontSizeToFit
+								minimumFontScale={NAME_MIN_SCALE}
+							>
 								{card.name}
 							</Text>
 						)}
@@ -1201,31 +1218,32 @@ const styles = StyleSheet.create({
 	 * headline and it no longer shares its line with a pill row.
 	 */
 	name: {
-		...redlineText.place,
+		// `redlineText.place`'s face without its line height: iOS sets
+		// auto-shrunk text against a fixed one, and a shrunk name would sit low
+		// beside its disc and the pill.
+		fontFamily: redlineText.place.fontFamily,
+		letterSpacing: redlineText.place.letterSpacing,
 		fontSize: 27,
-		lineHeight: 30,
 		fontWeight: "600",
 		color: "#FFFFFF",
 		flexShrink: 1,
 		minWidth: 0,
 	},
 	/**
-	 * The name as a link: the name, then its disc — level with the name's last
-	 * line, so a name on two lines ends in it.
+	 * The name as a link: the name, then its disc, on the name's one line.
 	 */
 	nameLink: {
 		flexShrink: 1,
 		minWidth: 0,
 		flexDirection: "row",
-		alignItems: "flex-end",
+		alignItems: "center",
 		gap: 8,
 	},
-	/** The pill's white, as a 26pt disc; 2 up centres it on a 30pt line. */
+	/** The pill's white, as a 26pt disc. */
 	nameDisc: {
 		width: 26,
 		height: 26,
 		borderRadius: 13,
-		marginBottom: 2,
 		flexShrink: 0,
 		alignItems: "center",
 		justifyContent: "center",
