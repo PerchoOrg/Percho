@@ -23,6 +23,28 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 01:20 UTC — phase404.14: a community's own price — there is none yet; a public source found and tried on nine (investigation, nothing changed)
+
+**Objective**: owner, inside Suwanee's communities: 「上面也suanee homes price 不make sense 应该写的是这个小区的price」.
+**What the figure is**: `profile.homeValue` — Zillow's typical home value for the community's CITY (or ZIP, for Windward), the same number on every community in that city: `$589K · Suwanee homes` on Edinburgh, Harvest Park and Aberdeen alike. `communities.median_home_value` is NULL on every row. No community-level price exists in the database.
+**A source that does** (public record, free, no licence): Gwinnett County's parcel layer — `gis3.gwinnettcounty.com/mapvis/rest/services/GISDataBrowser/GC_Parcel/MapServer/6` — carries, per lot, the assessor's appraised value (`TOTVAL1`, with `DWLGVAL1` / `LANDVAL1`), the property class and the legal description that names the subdivision. Read-only queries, name-matched on `LEGAL1`, homes = residential class with a dwelling value:
+
+| community | card says today | homes | median appraised |
+|---|---|---|---|
+| Edinburgh | $589K Suwanee | 446 | $1,169,300 |
+| Harvest Park | $589K Suwanee | 94 | $722,500 |
+| Sugarloaf Country Club | $434K Duluth | 666 | $1,744,400 |
+| Cardinal Lake Estates | $434K Duluth | 558 | $426,800 |
+| Hedgerows | $465K Buford | 368 | $797,600 |
+| Wild Timber | $438K Sugar Hill | 418 | $845,700 |
+| Apremont - Highcroft | $537K Peachtree Corners | 133 | $666,600 |
+
+Two more came back WRONG by name and are the reason this cannot ship on a name match: "Arbors at Richland Creek" pulled the older Richland Creek #1/#2 (90 of 98 lots; the Arbors has 8 so far), and "Towne Village" pulled Olde Towne Village in Duluth (50 of 57). The build has to select lots by each community's boundary (PostGIS; the plat boundaries came from this same county) and each of the twenty has to be looked at.
+**Not found yet**: the same for Fulton (Alpharetta, Johns Creek — `Tax_Parcels_2026` has the subdivision but no value; the "CurrentDigest" layers are unread) and Forsyth (Cumming, Aberdeen, St Marlo — only subdivisions and zoning are public on `geo.forsythco.com`). Eleven of the twenty filmed communities are outside Gwinnett.
+**What it is and is not**: the county's appraisal for tax, not a sale price or an asking price — it trails the market and has to be labelled as what it is ("county-appraised"). FMLS list prices would be the buyer's number; they wait for the live feed.
+**Proposed to the owner, awaiting his word**: (1) build it for the filmed communities — lots by boundary, the median as a `profile` block of its own with its source and date, the card's first figure and the Explore page's Cost tile both reading it, each number shown to him before it is published; Gwinnett first, Fulton and Forsyth as their sources are found; (2) until a community has one, its card shows no price rather than its city's.
+**Next steps**: his answer.
+
 ## 2026-11-27 00:55 UTC — phase404.13: a place's page keeps the city and state in its header
 
 **Objective**: owner, on phase404.12: 「进了community和home 也保留这个city state 在title 里」. The feed's line says `Suwanee, GA · Gwinnett County`; a place's page has a header instead of that line, and the header said only `Suwanee` / `Edinburgh`.
