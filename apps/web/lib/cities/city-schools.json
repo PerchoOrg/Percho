@@ -743,6 +743,128 @@
         "miles": 3
       }
     ],
+    "peachtree-corners-ga": [
+      {
+        "name": "Barnwell Elementary School",
+        "level": "elementary",
+        "share": 1,
+        "miles": 2.8
+      },
+      {
+        "name": "Simpson Elementary School",
+        "level": "elementary",
+        "share": 2,
+        "miles": 1.4
+      },
+      {
+        "name": "State Bridge Crossing Elementary School",
+        "level": "elementary",
+        "share": 3,
+        "miles": 3.1
+      },
+      {
+        "name": "International Charter Academy of Georgia",
+        "level": "elementary",
+        "share": 20,
+        "miles": 1
+      },
+      {
+        "name": "Brookhaven Innovation Academy",
+        "level": "elementary",
+        "share": 22,
+        "miles": 2.8
+      },
+      {
+        "name": "Berkeley Lake Elementary School",
+        "level": "elementary",
+        "share": 38,
+        "miles": 1.8
+      },
+      {
+        "name": "New Life Academy of Excellence",
+        "level": "elementary",
+        "share": 41,
+        "miles": 3.5
+      },
+      {
+        "name": "North Metro Academy of Performing Arts",
+        "level": "elementary",
+        "share": 55,
+        "miles": 1.6
+      },
+      {
+        "name": "Peachtree Elementary School",
+        "level": "elementary",
+        "share": 64,
+        "miles": 1.6
+      },
+      {
+        "name": "Norcross Elementary School",
+        "level": "elementary",
+        "share": 71,
+        "miles": 2.5
+      },
+      {
+        "name": "Baldwin Elementary",
+        "level": "elementary",
+        "share": 82,
+        "miles": 3
+      },
+      {
+        "name": "Stripling Elementary School",
+        "level": "elementary",
+        "share": 88,
+        "miles": 2.6
+      },
+      {
+        "name": "Autrey Mill Middle School",
+        "level": "middle",
+        "share": 3,
+        "miles": 3
+      },
+      {
+        "name": "Pinckneyville Middle School",
+        "level": "middle",
+        "share": 30,
+        "miles": 0.7
+      },
+      {
+        "name": "Duluth Middle School",
+        "level": "middle",
+        "share": 49,
+        "miles": 3.4
+      },
+      {
+        "name": "Summerour Middle School",
+        "level": "middle",
+        "share": 59,
+        "miles": 2.8
+      },
+      {
+        "name": "Johns Creek High School",
+        "level": "high",
+        "share": 5,
+        "miles": 3.2
+      },
+      {
+        "name": "Paul Duke STEM High School",
+        "level": "high",
+        "share": 17,
+        "miles": 2
+      },
+      {
+        "name": "Norcross High School",
+        "level": "high",
+        "share": 63,
+        "miles": 1
+      },
+      {
+        "name": "Gwinnett Intervention Education Center (GIVE) West",
+        "level": "high",
+        "share": 96,
+        "miles": 1.7
+      }
+    ],
     "sugar-hill-ga": [
       {
         "name": "Level Creek Elementary School",
