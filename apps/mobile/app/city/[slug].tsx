@@ -29,6 +29,7 @@ import type { CityDetailDTO } from "@percho/shared/city";
 import { GLANCE_TOPICS } from "@percho/shared/glance";
 import {
 	SCHOOL_GRADE_NOTE,
+	gradeFigure,
 	schoolGrade,
 	typicalShare,
 } from "@percho/shared/school-grade";
@@ -687,8 +688,8 @@ export default function CityScreen() {
 									    it is a letter for. */}
 									{typicalGrade && (
 										<Text style={styles.sheetCaption}>
-											The typical one is in the top {typical}% — {typicalGrade}.{" "}
-											{SCHOOL_GRADE_NOTE}
+											The typical one is in the top {typical}% —{" "}
+											{gradeFigure(typicalGrade)}. {SCHOOL_GRADE_NOTE}
 										</Text>
 									)}
 									{schoolsByLevel(allSchools).map((g) => (
