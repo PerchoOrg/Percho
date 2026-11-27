@@ -23,6 +23,21 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 09:50 UTC — phase406: agents upload material and get their own film — design and demo only
+
+**Objective**: owner 2026-11-27: 「现在都是自动生成的视频 属于冷启动 之后要支持用户自己上传社区视频和照片生成定制的视频 才能丰富内容 形成飞轮 这一部分怎么做？」. Asked who uploads first, what "custom" means and whether video is in scope, he ruled: 「agents！/ 自己的版本 / 都支持 / 你出设计方案和demo先」. Nothing is built.
+**Actions**:
+- `docs/design/agent-films.md` — the proposal: a **My film** tab on the dashboard's community page; upload photos and video behind one rights checkbox; each item ends Ready or Not used with a plain reason; video is cut into up to four 3–5 s moments; the agent sees the shot list (theirs first, Percho's material filling in), renders, publishes and gets a link `percho.co/watch/c/<community>/<agent>` with their card on it. The app's public film is unchanged.
+- `apps/web/public/demos/agent-film-v1/index.html` — the four dashboard steps and the buyer's two views, drawn with stills from the live Harvest Park film (`videodelivery.net` thumbnails), prose in Chinese. Checked in headless Chrome at 1100 and 500 px.
+**What exists today** (read, not changed): agents already upload community photos and video in the dashboard (`community_photos`, `community_videos`, Cloudflare Stream via `/api/video/create-upload`), but the film pipeline reads neither; `poi_photos.source` admits four sources and no upload; `photo_clips.engine` is seedance / depthflow / kenburns, so footage has no place yet; `scripts/admin/ingest-community-photos.ts` is already the "files → synthetic POI → enhance → tag" path an upload would sit behind.
+**Decisions** (proposed, the owner has not ruled): the app keeps Percho's film and an agent's version lives on the agent's link (in-app placement is what the dark Community Partner seat would sell); agent material also feeds the public film, credited, but never another agent's version; one version per agent per community, one recut a day; no file download in v1 (a version is partly Google Places photographs, which carry their credits on percho.co and not on another platform); the first batch is watched by us before a link works.
+**Issues / risks**:
+- **`tour_assemblies` has no owner.** About ten readers take the newest ready assembly as the community's film (`lib/communities/detail.ts`, `lib/feed/community-pool.ts`, `tour-segments.ts`, `vertical-videos.ts`, `film-credits.ts`, admin pages, `reassemble-community-tours.ts`). Adding `agent_id` without filtering every one of them makes an agent's version the public film silently.
+- **The operator pass is not code.** No house opener, at most one group of homes, a school shot that shows the school, in-community footage required — partly in the tagger / scheduler / `guard.ts`, the rest in review notes. A self-serve film needs them as plan checks that refuse to render with a sentence the agent can act on. This is more work than the upload.
+- **Narration quota**: 100 lines a day across everything; "about ten lines a film" and "6–8 films a day" on the demo are estimates, not measured.
+- Agents will reach for MLS listing photos; the checkbox and terms refuse them (FMLS: percho.co listing display only, no AI on listing data).
+**Next steps**: the owner answers the four questions at the foot of the demo. Then build photos-only end to end (source, tab, automatic plan, agent end card, `agent_id` + reader filters, watch link, review queue), then the `footage` clip engine and the worker's moment picker. Residents on iOS are a separate proposal.
+
 ## 2026-11-27 09:15 UTC — phase405.2: 1.1.1 resubmitted with the nine new screenshots
 
 **Objective**: owner approved the phase405.1 preview as shown — 「ok」, all nine including the older Saved-map capture.

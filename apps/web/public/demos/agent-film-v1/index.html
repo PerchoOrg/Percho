@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — Agent 上传素材，生成自己的小区影片（设计方案）</title>
+<style>
+:root{
+  --green:#086B5B;
+  --ink:#181B18;
+  --ink2:#5A4E40;
+  --paper:#F6F3EC;
+  --sage:#E0E9E3;
+  --rust:#C86B3C;
+  --line:rgba(0,0,0,.09);
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, "Songti SC", serif;
+  --ui: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:24px 14px 80px}
+section,.nav{max-width:860px;margin:0 auto}
+h1{font:600 26px/1.25 var(--serif);color:var(--green);margin-bottom:8px}
+h2{font:600 21px/1.3 var(--ui);margin:0 0 6px}
+h2 em{font-style:normal;font-weight:600;font-size:13px;color:#fff;background:var(--green);border-radius:11px;padding:2px 10px;margin-right:8px;vertical-align:3px}
+p,li{font:400 15px/1.65 var(--ui);color:var(--ink2)}
+p{margin:6px 0}
+b{color:#2B2116}
+code{font:500 13px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.6);border-radius:5px;padding:1px 6px;color:var(--green);word-break:break-all}
+section{margin-top:46px}
+ul,ol{margin:4px 0 4px 22px}
+.note{background:rgba(255,255,255,.55);border-radius:14px;padding:12px 18px;margin-top:14px}
+.note p{margin:3px 0}
+
+/* ── the dashboard, drawn ─────────────────────────── */
+.win{background:var(--paper);border-radius:16px;margin-top:16px;overflow:hidden;box-shadow:0 3px 10px rgba(32,28,22,.06),0 14px 34px rgba(32,28,22,.13)}
+.bar{display:flex;align-items:center;gap:10px;padding:14px 18px 0}
+.bar .crumb{font:400 12px var(--ui);color:#8A8478}
+.title{font:600 21px var(--serif);color:var(--ink);padding:2px 18px 0}
+.tabs{display:flex;gap:22px;padding:10px 18px 0;border-bottom:1px solid var(--line);font:500 13.5px var(--ui);color:#8A8478}
+.tabs span{padding-bottom:9px}
+.tabs .on{color:var(--green);font-weight:600;border-bottom:2px solid var(--green)}
+.body{padding:16px 18px 20px}
+.drop{border:1.5px dashed rgba(8,107,91,.4);border-radius:14px;padding:18px;text-align:center;background:rgba(224,233,227,.45)}
+.drop b{display:block;font:600 15px var(--ui);color:var(--green)}
+.drop span{font:400 12.5px var(--ui);color:var(--ink2)}
+.check{display:flex;gap:9px;align-items:flex-start;margin-top:12px;font:400 13px/1.45 var(--ui);color:var(--ink)}
+.check i{flex:none;width:17px;height:17px;border-radius:5px;background:var(--green);color:#fff;font:700 11px/17px var(--ui);text-align:center;font-style:normal;margin-top:1px}
+.count{display:flex;justify-content:space-between;align-items:center;margin:18px 0 8px;font:600 13px var(--ui);color:var(--ink)}
+.count span{font-weight:400;color:var(--ink2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:9px}
+.it{position:relative;border-radius:10px;overflow:hidden;background:#20262A center/cover;aspect-ratio:3/4}
+.it .lab{position:absolute;left:0;right:0;bottom:0;padding:16px 8px 6px;font:600 11px var(--ui);color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.72))}
+.chip{position:absolute;top:6px;left:6px;height:19px;padding:0 7px;border-radius:10px;font:600 10px/19px var(--ui);color:#fff;background:var(--green)}
+.chip.no{background:#8A3A2A}
+.chip.vid{left:auto;right:6px;background:rgba(14,13,11,.62)}
+.it.off{filter:saturate(.25) brightness(.8)}
+.it.off .lab{font-weight:500}
+.btn{display:inline-block;height:38px;padding:0 18px;border-radius:19px;background:var(--green);color:#fff;font:600 14px/38px var(--ui);white-space:nowrap}
+.btn.ghost{background:var(--sage);color:var(--green)}
+.btn.dim{background:#CFCAC0;color:#fff}
+.foot{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-top:16px}
+.foot p{flex:1 1 220px;font-size:13px;margin:0}
+
+/* a video and its moments */
+.vrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.vname{font:600 13.5px var(--ui);color:var(--ink)}
+.vname span{font-weight:400;color:var(--ink2)}
+.strip{position:relative;display:flex;height:74px;border-radius:9px;overflow:hidden;margin-top:9px;background:#20262A}
+.strip div{flex:1;background:center/cover;filter:saturate(.3) brightness(.62)}
+.strip div.pick{filter:none;box-shadow:inset 0 0 0 2.5px #fff}
+.ticks{display:flex;margin-top:5px;font:500 11px var(--ui);color:var(--ink2)}
+.ticks span{flex:1;text-align:center}
+.ticks span.pick{color:var(--green);font-weight:600}
+
+/* the shot list */
+.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px}
+.sh{position:relative;border-radius:9px;overflow:hidden;background:#20262A center/cover;aspect-ratio:2/3}
+.sh u{position:absolute;top:5px;left:5px;text-decoration:none;height:17px;padding:0 6px;border-radius:9px;font:600 9.5px/17px var(--ui);color:#fff;background:rgba(14,13,11,.6)}
+.sh.mine{box-shadow:0 0 0 2.5px var(--green)}
+.sh.mine u{background:var(--green)}
+.sh s{position:absolute;right:5px;bottom:5px;text-decoration:none;font:600 9.5px var(--ui);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.sh.end{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:6px}
+.sh.end::before{content:"";position:absolute;inset:0;background:rgba(0,0,0,.58)}
+.sh.end *{position:relative}
+.sh.end b{font:600 12.5px/1.2 var(--serif);color:#fff}
+.sh.end small{font:400 8.5px/1.4 var(--ui);color:rgba(255,255,255,.9);margin-top:5px}
+.sh.end em{font:600 8.5px var(--ui);font-style:normal;color:rgba(255,255,255,.75);margin-top:7px;letter-spacing:.6px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 10px;font:400 12.5px var(--ui);color:var(--ink2)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+
+/* ready */
+.ready{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+.player{flex:none;width:168px;aspect-ratio:1080/1576;border-radius:14px;background:#20262A center/cover;position:relative;overflow:hidden}
+.player::after{content:"▶";position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px;border-radius:23px;background:rgba(14,13,11,.55);color:#fff;font:400 17px/46px var(--ui);text-align:center;padding-left:3px}
+.rinfo{flex:1 1 260px}
+.rinfo .state{font:600 13px var(--ui);color:var(--green)}
+.rinfo h5{font:600 19px var(--serif);color:var(--ink);margin:3px 0 2px}
+.rinfo .meta{font:400 13px var(--ui);color:var(--ink2)}
+.link{display:flex;gap:8px;align-items:center;margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 10px 9px 13px}
+.link span{flex:1;min-width:0;font:500 12.5px ui-monospace,Menlo,monospace;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.link b{flex:none;font:600 12.5px var(--ui);color:var(--green)}
+
+/* the buyer's phone */
+.phones{display:flex;flex-wrap:wrap;gap:22px;justify-content:center;margin-top:18px}
+.phone{width:290px;height:610px;border-radius:34px;background:#0E0D0B center/cover;overflow:hidden;position:relative;box-shadow:0 3px 10px rgba(32,28,22,.06),0 16px 38px rgba(32,28,22,.18)}
+.phone .scrim{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.28) 0%,transparent 16%,transparent 44%,rgba(0,0,0,.6) 66%,rgba(0,0,0,.94) 100%)}
+.phone .top{position:absolute;top:18px;left:18px;right:18px;display:flex;justify-content:space-between;font:600 13px var(--serif);color:#fff}
+.phone .info{position:absolute;left:16px;right:16px;bottom:18px;color:#fff}
+.phone .tag{font:700 8.5px var(--ui);letter-spacing:1px;color:rgba(255,255,255,.86);margin-bottom:4px}
+.phone .name{font:600 24px/1.15 var(--serif)}
+.phone .sub{font:400 12px var(--ui);color:rgba(255,255,255,.86);margin-top:3px}
+.agent{display:flex;align-items:center;gap:10px;margin-top:14px;background:rgba(255,255,255,.14);border-radius:16px;padding:9px 10px}
+.agent .face{flex:none;width:38px;height:38px;border-radius:19px;background:var(--sage);color:var(--green);font:600 14px/38px var(--ui);text-align:center}
+.agent .who{flex:1;min-width:0;font:600 13px/1.25 var(--ui)}
+.agent .who span{display:block;font:400 11px var(--ui);color:rgba(255,255,255,.8)}
+.agent .go{flex:none;height:30px;padding:0 12px;border-radius:15px;background:#fff;color:var(--ink);font:600 12px/30px var(--ui)}
+.get{margin-top:9px;height:42px;border-radius:21px;background:var(--green);color:#fff;font:600 14px/42px var(--ui);text-align:center}
+.cap{width:290px;font:400 13px/1.5 var(--ui);color:var(--ink2);margin-top:9px}
+.cap b{color:#2B2116}
+.new{outline:2px dashed var(--rust);outline-offset:3px}
+
+.ask{background:rgba(255,255,255,.62);border-radius:14px;padding:14px 20px;margin-top:12px}
+.ask li{margin:8px 0}
+.ask li span{display:block;font-size:13.5px;color:var(--ink2)}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>Agent 上传素材，生成自己的小区影片</h1>
+  <p>按你定的三条：<b>先做 agent</b>、<b>每人一部自己的版本</b>、<b>照片和视频都收</b>。下面是 agent 在网页后台会看到的四步，然后是买家看到什么，最后是四件要你定的事。</p>
+  <p>画面里的界面文字是英文（后台本来就是英文）。示意用的图取自现在这部 Harvest Park 影片，agent 的名字是编的。<b>橙色虚线框</b>是新增的东西，真实页面里没有虚线。</p>
+  <div class="note">
+    <p><b>入口在哪</b>：后台的小区页，现有的 <code>Media</code> 旁边多一个 <code>My film</code>。只改网页，不需要发新的 iOS 版本。</p>
+  </div>
+</div>
+
+<section>
+  <h2><em>1</em>上传素材</h2>
+  <p>Agent 把手机里的小区照片和视频拖进来，勾一次授权。每一件素材自动检查，结果只有两种：<b>Ready</b>（能用），或者 <b>Not used</b> 加一句大白话的原因。</p>
+  <div class="win">
+    <div class="bar"><span class="crumb">Communities ›</span></div>
+    <div class="title">Harvest Park</div>
+    <div class="tabs"><span>Details</span><span>Media</span><span>Nearby</span><span class="on new">My film</span></div>
+    <div class="body">
+      <div class="drop">
+        <b>Add photos and videos</b>
+        <span>The pool, the clubhouse, the entrance, the streets — what you would show a buyer on a drive through.</span>
+      </div>
+      <div class="check"><i>✓</i><span>I took these or have the right to use them. They are not MLS listing photos.</span></div>
+      <div class="count">Your material <span>7 ready · 1 not used</span></div>
+      <div class="grid" id="mat"></div>
+      <div class="foot">
+        <p>5 ready items, one of them inside Harvest Park, is enough for a film.</p>
+        <span class="btn">Make my film</span>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <p><b>会被拒的</b>：有人脸、宠物、单独一栋房子或室内、模糊、泳池盖着冬罩。这些就是现在我人工把关的那几条，这里改成自动判断。</p>
+    <p><b>MLS 挂牌照片不收</b>：FMLS 的许可只管 percho.co 上的房源展示，不包括做影片。</p>
+  </div>
+</section>
+
+<section>
+  <h2><em>2</em>视频怎么用</h2>
+  <p>Agent 传的是一整段手机视频。Percho 从里面挑最多四段稳的、3 到 5 秒的画面，亮着的就是挑中的。Agent 可以取消某一段，第一版不提供手动剪。视频原声不用，影片还是旁白加音乐。</p>
+  <div class="win">
+    <div class="body">
+      <div class="vrow"><div class="vname">Walk to the pool.mov <span>· 0:42 · 3 moments picked</span></div></div>
+      <div class="strip" id="strip"></div>
+      <div class="ticks" id="ticks"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><em>3</em>出片之前先看镜头表</h2>
+  <p>点 <code>Make my film</code> 之后先给 agent 看这部片会怎么排。<b>他的素材排在前面</b>，并且能占的位置都给他；周边的学校、公园、商店由 Percho 现有的素材补上。片尾是小区名、agent 的名字和公司、Percho。</p>
+  <div class="win">
+    <div class="body">
+      <div class="legend">
+        <span><i style="background:var(--green)"></i>Yours — agent 自己的素材</span>
+        <span><i style="background:rgba(14,13,11,.6)"></i>Percho — 我们补的</span>
+      </div>
+      <div class="shots" id="shots"></div>
+      <div class="foot">
+        <p>About 58 seconds · ready in roughly 15 minutes.</p>
+        <span class="btn ghost">Back</span><span class="btn">Render</span>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <p><b>别人的素材不会进他的版本</b>：A 传的东西不会出现在 B 的片子里。</p>
+    <p><b>素材不够时不出片</b>，而是告诉他缺什么，比如 "Add one more photo from inside Harvest Park"。</p>
+  </div>
+</section>
+
+<section>
+  <h2><em>4</em>看片、发布、拿链接</h2>
+  <p>片子好了 agent 先自己看，点 <code>Publish</code> 得到一个链接，发给买家或者贴到社交平台。第一版只给链接，不给下载文件。</p>
+  <div class="win">
+    <div class="body">
+      <div class="ready">
+        <div class="player" id="player"></div>
+        <div class="rinfo">
+          <div class="state">Ready</div>
+          <h5>Harvest Park — your film</h5>
+          <div class="meta">0:58 · 7 of 12 shots are yours</div>
+          <div class="link new"><span>percho.co/watch/c/harvest-park/dana-cole</span><b>Copy</b></div>
+          <div class="foot" style="margin-top:14px"><span class="btn">Publish</span><span class="btn ghost">Add material and recut</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <p><b>为什么不给下载</b>：片子里有一部分是 Percho 的素材（含 Google 的照片），放在 percho.co 上能带着署名，下载后发到别的平台就带不了。另外链接能把买家带到下载 app 的按钮上。</p>
+  </div>
+</section>
+
+<section>
+  <h2>买家看到什么</h2>
+  <p>左边是 agent 发出去的链接：放的是他的版本，影片下面多一张他的名片，点 <code>Contact</code> 就是一条留给他的线索；下载按钮还在。右边是 app 里：<b>不变</b>，小区仍然只有 Percho 的那一部公共影片。</p>
+  <div class="phones">
+    <div>
+      <div class="phone" id="ph1">
+        <div class="scrim"></div>
+        <div class="top"><span>percho</span></div>
+        <div class="info">
+          <div class="tag">COMMUNITY · SUWANEE, GA</div>
+          <div class="name">Harvest Park</div>
+          <div class="agent new">
+            <div class="face">DC</div>
+            <div class="who">Dana Cole<span>Keller Williams</span></div>
+            <div class="go">Contact</div>
+          </div>
+          <div class="get">Get the app</div>
+        </div>
+      </div>
+      <div class="cap"><b>Agent 的链接</b>。他的版本，加他的名片。</div>
+    </div>
+    <div>
+      <div class="phone" id="ph2">
+        <div class="scrim"></div>
+        <div class="top"><span>percho</span></div>
+        <div class="info">
+          <div class="tag">COMMUNITY · SUWANEE, GA</div>
+          <div class="name">Harvest Park</div>
+          <div class="sub">Percho 的公共影片，没有 agent 名片</div>
+        </div>
+      </div>
+      <div class="cap"><b>App 里</b>。和现在一样。把某个 agent 的版本或名片放进 app，留给以后的付费合作席位。</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>飞轮在哪</h2>
+  <p>Agent 传的素材除了进他自己的版本，也进 Percho 这个小区的素材库。所以每多一个 agent 上传，app 里那部公共影片也能重剪得更好，片尾署他的名。Agent 得到一部能获客的片子和线索，我们得到最缺的小区内部素材。</p>
+</section>
+
+<section>
+  <h2>需要你定四件事</h2>
+  <div class="ask">
+    <ol>
+      <li><b>App 里放谁的片</b><span>建议：app 保持 Percho 的公共影片，agent 的版本只在他自己的链接上。</span></li>
+      <li><b>Agent 的素材要不要也进公共影片</b><span>建议：要，并在片尾署名。上传时的授权条款会写明这一点。</span></li>
+      <li><b>免费给多少</b><span>建议：每个 agent 每个小区一部；补了新素材才能重剪，一天最多一次。旁白一天只有 100 句的额度，大约够 6 到 8 部片，所以要排队。</span></li>
+      <li><b>头一批要不要人工看</b><span>建议：要。素材能不能用由程序判断，但头一批成片在链接生效前由我们看一遍。</span></li>
+    </ol>
+    <p style="margin-top:8px">回 <b>「都按建议」</b>，或者告诉我哪一条要改。定了之后先做照片这条线，再做视频。</p>
+  </div>
+</section>
+
+<script>
+const UID = '748e5dfc8c83f5caf3a8719d7b7aaf5a';
+const still = (t, h = 420) => `https://videodelivery.net/${UID}/thumbnails/thumbnail.jpg?time=${t}s&height=${h}`;
+const bg = (el, t, h) => { el.style.backgroundImage = `url(${still(t, h)})`; return el; };
+const div = (cls, html = '') => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; return d; };
+
+// 1 — the agent's material
+const MAT = [
+  { t: 1, lab: 'Pool' },
+  { t: 5, lab: 'Pool', vid: '0:42' },
+  { t: 9, lab: 'The green' },
+  { t: 13, lab: 'Harvest Farm' },
+  { t: 17, lab: 'Boardwalk' },
+  { t: 21, lab: 'Pond', vid: '0:27' },
+  { t: 33, lab: 'Park lawn' },
+  { t: 53, lab: 'People in the shot', off: true },
+];
+const mat = document.getElementById('mat');
+for (const m of MAT) {
+  const it = bg(div('it' + (m.off ? ' off' : '')), m.t);
+  it.append(div('chip' + (m.off ? ' no' : ''), m.off ? 'Not used' : 'Ready'));
+  if (m.vid) it.append(div('chip vid', '▶ ' + m.vid));
+  it.append(div('lab', m.lab));
+  mat.append(it);
+}
+
+// 2 — one video, its picked moments
+const STRIP = [[2, 0], [3, 1], [4, 0], [5, 1], [6, 0], [7, 0], [8, 1], [9, 0]];
+const strip = document.getElementById('strip');
+const ticks = document.getElementById('ticks');
+const TIMES = ['0:00', '0:06', '0:11', '0:16', '0:21', '0:27', '0:32', '0:37'];
+STRIP.forEach(([t, pick], i) => {
+  strip.append(bg(div(pick ? 'pick' : ''), t, 200));
+  const s = document.createElement('span');
+  if (pick) s.className = 'pick';
+  s.textContent = pick ? `${TIMES[i]} ✓` : TIMES[i];
+  ticks.append(s);
+});
+
+// 3 — the shot list: theirs first, ours filling in
+const SHOTS = [
+  [1, 1], [9, 1], [5, 1], [17, 1], [21, 1], [13, 1], [33, 1],
+  [45, 0], [49, 0], [29, 0], [25, 0], [37, 0],
+];
+const shots = document.getElementById('shots');
+SHOTS.forEach(([t, mine], i) => {
+  const sh = bg(div('sh' + (mine ? ' mine' : '')), t, 300);
+  sh.innerHTML = `<u>${mine ? 'Yours' : 'Percho'}</u><s>${i + 1}</s>`;
+  shots.append(sh);
+});
+const end = bg(div('sh end new'), 1, 300);
+end.innerHTML = '<b>Harvest Park</b><small>with Dana Cole<br>Keller Williams</small><em>PERCHO</em>';
+shots.append(end);
+
+// 4 and the phones
+bg(document.getElementById('player'), 1, 520);
+bg(document.getElementById('ph1'), 1, 900);
+bg(document.getElementById('ph2'), 1, 900);
+</script>
+</body>
+</html>
