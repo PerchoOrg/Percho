@@ -62,6 +62,29 @@ export interface PlaceFocus {
 }
 
 /**
+ * The part of a pool that is one place's — what the server would answer for
+ * it (`apps/web/lib/feed/pool-focus.ts`), cut from a pool the phone already
+ * holds. A place's page opens on this instead of on a skeleton (phase404.10;
+ * owner, 2026-11-26: 「点击communities … 到下一层的时候有点慢 提前可以缓存」),
+ * and the server's own answer replaces it when it lands.
+ */
+export function narrowPool(pool: FeedPool, focus: PlaceFocus): FeedPool {
+	if (focus.kind === "city") {
+		return {
+			geoUnits: pool.geoUnits.filter((u) => u.id === focus.id),
+			communities: pool.communities.filter((c) => c.geoUnitId === focus.id),
+			listings: pool.listings.filter((l) => l.geoUnitId === focus.id),
+		};
+	}
+	const community = pool.communities.find((c) => c.slug === focus.id);
+	return {
+		geoUnits: pool.geoUnits.filter((u) => u.id === community?.geoUnitId),
+		communities: community ? [community] : [],
+		listings: pool.listings.filter((l) => l.communityId === focus.id),
+	};
+}
+
+/**
  * The place a card is the way into, when the pool holds something inside it:
  * a city with a neighbourhood, a neighbourhood with a home. Whatever the buyer
  * has seen or passed — the link to a place does not wait for a like, and its

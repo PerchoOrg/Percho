@@ -20,7 +20,7 @@
  */
 import { router } from "expo-router";
 import { Pressable, StyleSheet, Text } from "react-native";
-import { useFeedPool } from "../../hooks/use-feed-pool";
+import { primePlacePool, useFeedPool } from "../../hooks/use-feed-pool";
 import { useTestHomes } from "../../hooks/use-test-homes";
 import {
 	type PlaceFocus,
@@ -58,12 +58,14 @@ export function PlaceDeckLink({ focus }: { focus: PlaceFocus }) {
 	const label = placeLinkLabel(focus);
 	return (
 		<Pressable
-			onPress={() =>
+			onPress={() => {
+				// The answer this button was drawn from is the page's first pool.
+				primePlacePool(focus, pool);
 				router.push({
 					pathname: "/place",
 					params: { kind: focus.kind, id: focus.id, name: focus.name },
-				})
-			}
+				});
+			}}
 			style={({ pressed }) => [styles.link, pressed && styles.pressed]}
 			accessibilityRole="button"
 			accessibilityLabel={placeLinkAccessibilityLabel(focus)}

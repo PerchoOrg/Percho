@@ -122,8 +122,6 @@ describe("community tour", () => {
 			...m.cells.flatMap((c) => [c.value, c.label]),
 		];
 		expect(printed.join(" ")).not.toContain("River Green");
-		// And no second way to the page Explore opens.
-		expect(m.placeSlug).toBeNull();
 	});
 
 	/** An older server: the place from the card's own fields, no figures. */
@@ -164,12 +162,17 @@ describe("community tour", () => {
 });
 
 describe("city tour", () => {
-	it("says where the city is, not the city's name again", () => {
+	/**
+	 * `City · County`, the line every card has (phase404.10; owner,
+	 * 2026-11-26: 「左上角一会儿是county 一会儿是city很乱」). The line is the
+	 * server's; this prints it as sent.
+	 */
+	it("prints the server's line and figures as sent", () => {
 		const m = model({
 			card: area({
 				citySlug: "canton-ga",
 				glance: {
-					place: { lead: "Cherokee County", rest: "north of Atlanta" },
+					place: { lead: "Canton", rest: "Cherokee County" },
 					cells: [
 						{
 							value: "~48 min",
@@ -181,8 +184,8 @@ describe("city tour", () => {
 			}),
 		});
 		expect(m.kind).toBe("city-tour");
-		expect(m.lead).toBe("Cherokee County");
-		expect(m.rest).toBe("north of Atlanta");
+		expect(m.lead).toBe("Canton");
+		expect(m.rest).toBe("Cherokee County");
 		expect(m.cells).toHaveLength(1);
 		expect(m.explore).toEqual({ kind: "city", slug: "canton-ga" });
 		expect(m.mapUnitId).toBe(CANTON.id);
@@ -192,12 +195,12 @@ describe("city tour", () => {
 
 	/**
 	 * A city can straddle two counties (Atlanta is in Fulton and DeKalb) and
-	 * the unit says neither, so without the server's line this is the metro's
-	 * — and never the city's own name, which the card already carries.
+	 * the unit says neither, so without the server's line this is the city
+	 * alone — still the line's first half, as on every card.
 	 */
-	it("falls back to the metro, and to text for a city with no page", () => {
+	it("falls back to the city alone, and to text for a city with no page", () => {
 		const m = model({ card: area() });
-		expect(m.lead).toBe("Atlanta metro");
+		expect(m.lead).toBe(CANTON.name);
 		expect(m.rest).toBe("");
 		expect(m.cells).toEqual([]);
 		expect(m.explore).toBeNull();
@@ -206,12 +209,12 @@ describe("city tour", () => {
 
 describe("home tour", () => {
 	/**
-	 * The line leads with the COMMUNITY, deliberately: the card already says
-	 * which property this is, and the one thing it does not say is where that
-	 * property sits. The pool only carries communities with a cover photo, so
-	 * the card brings its own.
+	 * `City · County`, as on every other card. The community is on the card
+	 * (`lib/feed/home-film-card.ts`), not in the line, and the line is not a
+	 * link. The county comes off the community: the card's own, without
+	 * needing the community in the pool.
 	 */
-	it("reads the community off the card, without needing it in the pool", () => {
+	it("says the home's city and county, like every other card", () => {
 		const m = model({
 			card: listing({
 				geoUnitId: CANTON.id,
@@ -222,50 +225,33 @@ describe("home tour", () => {
 			communities: [],
 		});
 		expect(m.kind).toBe("home-tour");
-		expect(m.lead).toBe("River Green");
-		expect(m.rest).toBe("Canton · Cherokee County");
-		// A home is not its community, so here the line IS a way in.
-		expect(m.placeSlug).toBe("river-green");
+		expect(m.lead).toBe("Canton");
+		expect(m.rest).toBe("Cherokee County");
 		expect(m.mapUnitId).toBe(CANTON.id);
 	});
 
 	/** The wire sends the SLUG; a pool community's `id` is the row's uuid. */
-	it("resolves the community by slug OR by row id", () => {
-		expect(model({ card: listing({ communityId: RIVER_GREEN.id }) }).lead).toBe(
-			"River Green",
-		);
-		expect(
-			model({ card: listing({ communityId: RIVER_GREEN.slug }) }).lead,
-		).toBe("River Green");
+	it("takes the county from the pool's community, by slug OR by row id", () => {
+		for (const communityId of [RIVER_GREEN.id, RIVER_GREEN.slug]) {
+			const m = model({ card: listing({ geoUnitId: CANTON.id, communityId }) });
+			expect(m.rest).toBe("Cherokee County");
+		}
 	});
 
-	/** No community: the city leads, once. No county either — it comes off
-	 * the community, and there is none here to take it from. */
-	it("leads with the city when no community resolves", () => {
+	/** No community: no county either — it comes off the community. */
+	it("is the city alone when no community resolves", () => {
 		const m = model({ card: listing({ geoUnitId: CANTON.id }) });
 		expect(m.lead).toBe("Canton");
 		expect(m.rest).toBe("");
-		expect(m.placeSlug).toBeNull();
 		expect(m.mapUnitId).toBe(CANTON.id);
-	});
-
-	/** An id with no name behind it is a dangling reference: no way in,
-	 * because `/community/<slug>` would 404. */
-	it("opens nothing from an unresolvable community id", () => {
-		const m = model({
-			card: listing({ geoUnitId: CANTON.id, communityId: "not-in-pool" }),
-		});
-		expect(m.lead).toBe("Canton");
-		expect(m.placeSlug).toBeNull();
 	});
 
 	/** No place at all: no text and NO map button — a metadata failure must
 	 * not leave the previous card's destination live. */
-	it("says nothing with no place, and hides both actions", () => {
+	it("says nothing with no place, and hides Map", () => {
 		const m = model({ card: listing() });
 		expect(m.lead).toBe("");
 		expect(m.rest).toBe("");
-		expect(m.placeSlug).toBeNull();
 		expect(m.mapUnitId).toBeNull();
 	});
 
@@ -340,9 +326,7 @@ describe("accessibility labels", () => {
 	});
 
 	it("drops the comma when the line has one part", () => {
-		expect(placeAccessibilityLabel(model({ card: area() }))).toBe(
-			"Atlanta metro",
-		);
+		expect(placeAccessibilityLabel(model({ card: area() }))).toBe(CANTON.name);
 	});
 
 	it("reads a figure with what it is a figure of", () => {

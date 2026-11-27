@@ -55,6 +55,22 @@ interface UseFeedPoolResult {
 	retry: () => void;
 }
 
+/**
+ * Pools for places about to be opened, by `kind:id` (phase404.10). Whoever
+ * sends the buyer to a place's page already holds that place's cards — the
+ * feed in its own pool, the Explore page from the request it made to decide
+ * whether to draw its button — and hands them over here, so the page's first
+ * render has a deck instead of a skeleton and a round trip.
+ */
+const primed = new Map<string, FeedPool>();
+
+export function primePlacePool(
+	focus: { kind: "city" | "community"; id: string },
+	pool: FeedPool,
+): void {
+	primed.set(`${focus.kind}:${focus.id}`, pool);
+}
+
 function mergePool(prev: FeedPool, next: FeedPool): FeedPool {
 	const byId = <T extends { id: string }>(
 		a: readonly T[],
@@ -85,7 +101,11 @@ export function useFeedPool({
 	enabled,
 	focus,
 }: UseFeedPoolArgs): UseFeedPoolResult {
-	const [pool, setPool] = useState<FeedPool>(EMPTY_POOL);
+	// A place's page starts from what its opener handed over; the request
+	// below still runs and its answer takes over.
+	const [pool, setPool] = useState<FeedPool>(
+		() => (focus && primed.get(`${focus.kind}:${focus.id}`)) || EMPTY_POOL,
+	);
 	const [loading, setLoading] = useState(false);
 	const [offline, setOffline] = useState(false);
 	const [exhausted, setExhausted] = useState(false);

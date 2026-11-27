@@ -16,6 +16,12 @@ picture in the preview. If they have the Percho app, the link opens straight
 into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
+### 2026-11-27
+- **The line above a card always reads the same way.** It is now the city, then the county, on every card — "Suwanee · Gwinnett County" over a city's card and over each of its neighbourhoods. A city's card used to lead with the county instead.
+- **A clearer way into a place's page.** The name at the bottom of a card is now followed by a small white round button with an arrow, in place of the thin arrow of the day before. Tap the name or the button. Arrives with the next app update.
+- **A city's neighbourhoods open at once.** Tapping "Communities" no longer shows a blank card while the page loads: the cards and their first pictures are ready before you tap. Arrives with the next app update.
+- **A quieter Map button.** Its label is back to the smaller size it had before this week.
+
 ### 2026-11-26
 - **One number for each figure above a card.** The three figures over a neighbourhood or city card are now single numbers instead of ranges like "Top 1–7%". For schools it is the best one nearby — "Top 1%", labelled "best school nearby" — or a city's top graduation rate; the drive to downtown is the average of off-peak and rush hour. The place's page still lists each value.
 - **The line above a card stays the same size.** Next to a long name the place line used to shrink into smaller type. It now keeps one size, and when there is no room for the second half ("· Gwinnett County") that half is left out rather than everything getting smaller.

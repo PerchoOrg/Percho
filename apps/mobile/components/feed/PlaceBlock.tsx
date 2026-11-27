@@ -106,6 +106,12 @@ const CELL_AFTER_RULE = 10;
 const MAP_WIDTH = 84;
 const MAP_HEIGHT = 44;
 const MAP_RADIUS = 22;
+/**
+ * Smaller than the line beside it, as it was until phase404.6 made the two
+ * one size and the pill heavier than it had ever been (owner, 2026-11-26:
+ * 「感觉map按键太突兀了」).
+ */
+const MAP_LABEL_SIZE = 14;
 /** Pin → "Map". */
 const MAP_GAP = 6;
 const MAP_PAD = 12;
@@ -133,12 +139,6 @@ const PIN_HEAD = PIN_SIZE / PIN_TIP_RATIO;
 const PIN_STROKE = 1.6;
 const PIN_DOT = 3.75;
 
-/** The place line's chevron, when the line opens a home's community. */
-const CHEVRON_BOX = 12;
-const CHEVRON_ARM = 7;
-const CHEVRON_STROKE = 1.5;
-const CHEVRON_GAP = 6;
-
 /** Below 390 the 44pt place row scales under the touch floor; this gives it back. */
 const TOUCH_SLOP = 4;
 
@@ -148,8 +148,6 @@ interface PlaceBlockProps {
 	model: PlaceBlockModel;
 	/** The figures row. False on a screen with room for the place row only. */
 	facts: boolean;
-	/** Open a home's community. Absent → the line is text. */
-	onOpenPlace?: () => void;
 	/** Open the map on the card's place. Absent → no Map button at all. */
 	onOpenMap?: () => void;
 	/**
@@ -167,7 +165,6 @@ interface PlaceBlockProps {
 export function PlaceBlock({
 	model,
 	facts,
-	onOpenPlace,
 	onOpenMap,
 	onOpenCell,
 	header,
@@ -216,19 +213,6 @@ export function PlaceBlock({
 						</View>
 						<View style={styles.placeSlot} />
 					</>
-				) : onOpenPlace !== undefined ? (
-					<Pressable
-						onPress={onOpenPlace}
-						accessibilityRole="button"
-						accessibilityLabel={placeAccessibilityLabel(model)}
-						hitSlop={{ top: TOUCH_SLOP, bottom: TOUCH_SLOP }}
-						style={({ pressed }) => [styles.placeSlot, pressed && styles.dim]}
-					>
-						{line}
-						<View style={styles.chevronBox}>
-							<View style={styles.chevronArm} />
-						</View>
-					</Pressable>
 				) : (
 					<View
 						style={styles.placeSlot}
@@ -476,22 +460,6 @@ function sheet(k: number) {
 			alignItems: "flex-start",
 			opacity: 0,
 		},
-		chevronBox: {
-			width: CHEVRON_BOX * k,
-			height: CHEVRON_BOX * k,
-			marginLeft: CHEVRON_GAP * k,
-			flexShrink: 0,
-			alignItems: "center",
-			justifyContent: "center",
-		},
-		chevronArm: {
-			width: CHEVRON_ARM * k,
-			height: CHEVRON_ARM * k,
-			borderTopWidth: CHEVRON_STROKE * k,
-			borderRightWidth: CHEVRON_STROKE * k,
-			borderColor: feedHeader.context,
-			transform: [{ rotate: "45deg" }],
-		},
 
 		/** `minWidth` rather than `width`, so the pill widens for a scaled-up
 		 * label instead of clipping it. */
@@ -511,7 +479,7 @@ function sheet(k: number) {
 		mapPressed: { backgroundColor: feedHeader.mapPressed },
 		mapLabel: {
 			fontFamily: fonts.ui,
-			fontSize: PLACE_SIZE * k,
+			fontSize: MAP_LABEL_SIZE * k,
 			fontWeight: "600",
 			color: feedHeader.accent,
 		},
