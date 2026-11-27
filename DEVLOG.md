@@ -23,6 +23,39 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 07:22 UTC — phase404.19: a community card's third figure — lot size rejected; the drive to the nearest highway measured (investigation, nothing changed)
+
+**Objective**: owner on phase404.18's proposal: 「地方面积不好再想」.
+**Measured for the twenty filmed communities**: the drive from the community's point to the nearest interchange of I-85, I-985, I-285, GA-400 or GA-316 — interchanges from OpenStreetMap (`highway=motorway_junction`), the four nearest by straight line routed on OSRM's public demo server, the quickest kept. Free-flow minutes, no traffic.
+
+| city | community | drive | to |
+|---|---|---|---|
+| Alpharetta | Windward | 4 min | GA-400 |
+| Alpharetta | Ashley Crossing | 10 min | GA-400 |
+| Alpharetta | White Columns | 21 min | GA-400 |
+| Suwanee | Harvest Park | 6 min | I-85 |
+| Suwanee | Aberdeen | 16 min | GA-400 |
+| Suwanee | Edinburgh | 18 min | I-85 |
+| Cumming | Sawnee Village | 6 min | GA-400 |
+| Cumming | Northbrooke | 14 min | GA-400 |
+| Cumming | Windermere | 15 min | GA-400 |
+| Duluth | Cardinal Lake Estates | 10 min | I-85 |
+| Duluth | Sugarloaf Country Club | 11 min | I-85 |
+| Duluth | St Marlo Country Club | 14 min | I-85 |
+| Johns Creek | Ward's Crossing | 12 min | GA-400 |
+| Johns Creek | Medlock Bridge | 16 min | GA-400 |
+| Johns Creek | Bellmoore Park | 19 min | GA-400 |
+| Buford | Hedgerows | 8 min | I-85 |
+| Buford | Arbors at Richland Creek | 16 min | I-985 |
+| Sugar Hill | Towne Village | 16 min | I-85 |
+| Sugar Hill | Wild Timber | 19 min | GA-400 |
+| Peachtree Corners | Apremont - Highcroft | 11 min | I-85 |
+
+4 to 21 minutes, and it separates communities inside one city (Suwanee 6 / 16 / 18; Alpharetta 4 / 10 / 21) — which the distance to Atlanta (27 / 27 / 28 mi), the nearest supermarket and, to his eye, the lot size did not.
+**Caveats**: only the four nearest interchanges by straight line were routed, so a quicker one further off can be missed — Wild Timber's and Towne Village's want a wider look before anything ships. A junction node is where an off-ramp leaves, not where the on-ramp joins: good to a couple of minutes. OSRM's demo server is for light use; twenty one-off requests, not something to call from the app.
+**Also weighed**: HOA dues — what a subdivision's buyer asks first, but researched for Windward only; the FMLS feed carries the association fee per listing, so it can be computed once that is live. Year built — on Forsyth's parcel layer only.
+**Proposed to the owner, awaiting his word**: the community card's third figure becomes "6 min · to I-85"; the city card keeps "62 min · drive to downtown".
+
 ## 2026-11-27 07:17 UTC — phase404.18: a schools letter is centred over its label; what the distance figure could become (probed, not built)
 
 **Objective**: owner on phase404.17's cards: 「字母居中」, and 「距离那一栏怎么改？还要距离吗？」.
