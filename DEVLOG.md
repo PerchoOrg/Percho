@@ -23,6 +23,12 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 08:10 UTC — phase404.21: the schools figure reads "Grade A+", not "A+"
+
+**Objective**: owner on the cards: 「学校评级写grade a 不要只是a」.
+**Actions**: `gradeFigure` in `@percho/shared/school-grade` ("Grade A+"); `lib/feed/glance.ts` prints it for a city's and a community's schools cell (server-sent, live on deploy); the Schools sheets on the city and community pages say "Grade A+" too; `isLetterFigure` on the phone accepts the word, so the figure is still centred over its label (phase404.18). RELEASE's three bullets of the day reworded to match — no new bullet for a wording change.
+**Note**: eight characters where there were two — in a third of the row the figure may be set a little smaller (`FIGURE_MIN_SCALE` 0.75), as "Top 32–65%" was. Not seen on a device.
+
 ## 2026-11-27 08:00 UTC — phase404.20: a community's third figure is the drive to the highway; a city's drive loses its miles
 
 **Objective**: owner on phase404.19's measurement: 「好就写上高速时长」.

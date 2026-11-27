@@ -30,7 +30,7 @@ import type { CityFundamentals } from '@percho/shared/city';
 import type { CommunityProfile } from '@percho/shared/community-profile';
 import type { GlanceCell, PlaceGlance } from '@percho/shared/glance';
 import { rankShare } from '@percho/shared/rank-share';
-import { schoolGrade, typicalShare } from '@percho/shared/school-grade';
+import { gradeFigure, schoolGrade, typicalShare } from '@percho/shared/school-grade';
 
 /** Five Points — where "downtown Atlanta" is measured from. */
 const DOWNTOWN = { lat: 33.7537, lng: -84.3901 };
@@ -93,7 +93,7 @@ function homesCell(profile: CommunityProfile | null): GlanceCell | null {
  * Where the nearby schools stand among Georgia's, as the Explore tile words
  * each one — "Top 1%", "Top 2%", "Top 7%" — and the figure is for the best of
  * them, as a letter (owner 2026-11-27: 「用字母」; the scale is
- * `@percho/shared/school-grade`): "A+" over "best school, top 1%". The
+ * `@percho/shared/school-grade`): "Grade A+" over "best school, top 1%". The
  * standing stays in the label, so two A's can be told apart.
  *
  * Past the top half there is no letter, and the cell reads as it did before
@@ -106,7 +106,7 @@ function schoolsCell(ranks: CommunityProfile['ranks'] | undefined): GlanceCell |
   const which = rows.length === 1 ? 'school nearby' : 'best school';
   const grade = schoolGrade(best);
   return grade
-    ? { value: grade, label: `${which}, top ${best}%`, topic: 'schools' }
+    ? { value: gradeFigure(grade), label: `${which}, top ${best}%`, topic: 'schools' }
     : {
         value: `Top ${best}%`,
         label: rows.length === 1 ? which : `${which} nearby`,
@@ -226,7 +226,7 @@ function graduationCell(education: CityFundamentals['education']): GlanceCell | 
 /**
  * A city's schools as one letter: where its typical school stands among
  * Georgia's, every scored school in and around it counted (the list its page
- * prints under Schools) — "A+" over "schools, top 4% in GA".
+ * prints under Schools) — "Grade A+" over "schools, top 4% in GA".
  *
  * The typical one, not the best: five of the first seven cities have a school
  * in Georgia's top 1%, and a figure that is the same on every card is the
@@ -238,7 +238,7 @@ function citySchoolsCell(schools: ReadonlyArray<{ share: number }> | undefined):
   const typical = typicalShare(schools ?? []);
   const grade = typical === null ? null : schoolGrade(typical);
   if (typical === null || !grade) return null;
-  return { value: grade, label: `schools, top ${typical}% in GA`, topic: 'schools' };
+  return { value: gradeFigure(grade), label: `schools, top ${typical}% in GA`, topic: 'schools' };
 }
 
 /**

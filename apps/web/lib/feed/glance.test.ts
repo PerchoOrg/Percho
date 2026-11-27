@@ -63,7 +63,7 @@ describe('communityGlance', () => {
         // Each level as the Explore tile rounds it — #6 of 1,220 is 1%, #7 of
         // 472 is 2%, #31 of 443 is 7% — and the figure is the best of the
         // three as a letter, its standing kept beside it.
-        { value: 'A+', label: 'best school, top 1%', topic: 'schools' },
+        { value: 'Grade A+', label: 'best school, top 1%', topic: 'schools' },
         { value: '25 mi', label: 'north of Atlanta', topic: 'convenience' },
       ],
     });
@@ -114,7 +114,7 @@ describe('communityGlance', () => {
   it('prints one school as it stands, in the singular', () => {
     const one = { ...windward, ranks: { rows: [school('High', '#31', 'of 443 in GA', 93.2)] } };
     expect(communityGlance({ city: 'Alpharetta', profile: one })?.cells[1]).toEqual({
-      value: 'A',
+      value: 'Grade A',
       label: 'school nearby, top 7%',
       topic: 'schools',
     });
@@ -244,14 +244,14 @@ describe('cityGlance', () => {
     const shares = [1, 1, 1, 2, 3, 3, 3, 4, 4, 5, 5, 5, 5, 5, 6, 22, 41];
     const schools = shares.map((share) => ({ share }));
     expect(cityGlance({ ...place, profile: cityProfile(), schools })?.cells[1]).toEqual({
-      value: 'A+',
+      value: 'Grade A+',
       label: 'schools, top 4% in GA',
       topic: 'schools',
     });
     // Buford's thirteen: the middle one is in the top 14%.
     const buford = [6, 7, 7, 10, 10, 12, 14, 16, 18, 25, 29, 32, 47].map((share) => ({ share }));
     expect(cityGlance({ ...place, profile: cityProfile(), schools: buford })?.cells[1]).toEqual({
-      value: 'A−',
+      value: 'Grade A−',
       label: 'schools, top 14% in GA',
       topic: 'schools',
     });
