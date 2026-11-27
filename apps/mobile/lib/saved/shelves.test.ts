@@ -27,7 +27,7 @@ const area = (id: string, place: string, areaKey?: string): ShelfEntry => ({
 	id,
 	kind: "area",
 	place,
-	costLine: "Cherokee County · $691/mo on a $500k home",
+	placeLine: "Woodstock, GA · Cherokee County",
 	...(areaKey ? { areaKey } : {}),
 });
 
@@ -51,7 +51,7 @@ describe("buildShelves", () => {
 		expect(shelves).toHaveLength(1);
 		expect(shelves[0]?.area).toEqual({
 			id: "area-woodstock",
-			costLine: "Cherokee County · $691/mo on a $500k home",
+			placeLine: "Woodstock, GA · Cherokee County",
 			areaKey: "cherokee",
 		});
 		// The area contributes NO card — it is the header.
@@ -126,7 +126,7 @@ describe("buildTiles", () => {
 		]);
 		expect(tiles.map((t) => [t.kind, t.title, t.sub])).toEqual([
 			["community", "Ashley Crossing", "Cumming"],
-			["area", "Alpharetta", "Cherokee County · $691/mo on a $500k home"],
+			["area", "Alpharetta", "Woodstock, GA · Cherokee County"],
 			["listing", "$624,000 · 4 bd", "Cumming"],
 		]);
 		expect(tiles[0]?.fact).toBe("Schools Top 12%");

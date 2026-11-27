@@ -49,7 +49,6 @@ import {
 import { fmlsNumberLabel } from "@percho/shared/fmls";
 import type { PlaceGlance } from "@percho/shared/glance";
 import type { Area } from "@percho/shared/lenses";
-import { lensById, valuesFor } from "@percho/shared/lenses";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -286,26 +285,22 @@ export default function SavedTab() {
 	);
 
 	/**
-	 * "Cherokee County · $691/mo on a $500k home*" — or nothing, outside the
-	 * covered metro.
-	 *
-	 * The asterisk is not decoration. This header is the ONLY place in the app a
-	 * true-cost figure appears without a footnote explaining it, and water and
-	 * trash are still guesses in every county, so an unqualified dollar figure
-	 * here reads as more settled than the same number does on the map two taps
-	 * away. Tapping the header goes to that map, which says which part is which.
+	 * "Suwanee, GA · Gwinnett County" — the line above the city's feed card
+	 * (phase404.24, owner: 「和卡保持一致 不要显示生活成本」). A city with no
+	 * film has no card line; it is said the same way from the unit and the
+	 * county its centre falls in.
 	 */
-	const costLineFor = useCallback(
+	const placeLineFor = useCallback(
 		(unitId: string): string | undefined => {
-			const area = countyOf(unitId);
-			if (!area) return undefined;
-			const lens = lensById("true_cost");
-			const value = lens ? valuesFor(lens, [area])[0] : undefined;
-			if (!value || !lens) return `${area.name} County`;
-			const mark = value.estimated ? "*" : "";
-			return `${area.name} County · ${lens.format(value.value)}/mo on a $500k home${mark}`;
+			const geo = pool.geoUnits.find((u) => u.id === unitId);
+			const place = geo?.glance?.place;
+			if (place) return [place.lead, place.rest].filter(Boolean).join(" · ");
+			const county = countyOf(unitId)?.name;
+			const city = geo ? `${geo.name}, ${geo.state}` : undefined;
+			const line = [city, county && `${county} County`].filter(Boolean);
+			return line.length > 0 ? line.join(" · ") : undefined;
 		},
-		[countyOf],
+		[pool.geoUnits, countyOf],
 	);
 
 	const load = useCallback(async (item: SavedItem) => {
@@ -329,13 +324,13 @@ export default function SavedTab() {
 				const unit = areaUnitId(item.id);
 				const geo = pool.geoUnits.find((u) => u.id === unit);
 				const key = countyOf(unit)?.key;
-				const cost = costLineFor(unit);
+				const placeLine = placeLineFor(unit);
 				const fact = glanceFact(geo?.glance);
 				return {
 					id: item.id,
 					kind: "area",
 					...(geo ? { place: geo.name, center: geo.centroid } : {}),
-					...(cost ? { costLine: cost } : {}),
+					...(placeLine ? { placeLine } : {}),
 					...(key ? { areaKey: key } : {}),
 					...(fact ? { fact } : {}),
 					// The flat views draw an area as a tile: its photo, its page.
@@ -358,7 +353,7 @@ export default function SavedTab() {
 				...(r.center ? { center: r.center } : {}),
 			};
 		});
-	}, [items, rows, pool.geoUnits, countyOf, costLineFor]);
+	}, [items, rows, pool.geoUnits, countyOf, placeLineFor]);
 
 	const shownEntries = useMemo(
 		() =>
@@ -651,16 +646,6 @@ export default function SavedTab() {
 						</View>
 					)}
 
-					{/* A bare asterisk is a dangling mark. It costs one line to say what
-				    it means, and without it the header implies more certainty than
-				    the same figure carries on the map. */}
-					{shownEntries.some((e) => e.place && e.costLine?.includes("*")) && (
-						<Text style={styles.note}>
-							* water and trash are still our estimate. Tap a place for the
-							rest.
-						</Text>
-					)}
-
 					{/* IDX rule 13.7(e)i — under any list that shows an FMLS home. */}
 					{fmlsShown && (
 						<FmlsDisclosure variant="results" style={styles.fmls} />
@@ -775,7 +760,7 @@ function ShelfBlock({
 	const headerDim =
 		selecting && area ? lockedKind !== null && lockedKind !== "area" : false;
 
-	const meta = [area?.costLine, counts].filter(Boolean).join(" · ");
+	const meta = [area?.placeLine, counts].filter(Boolean).join(" · ");
 
 	return (
 		<View style={styles.shelf}>

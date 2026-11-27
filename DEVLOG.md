@@ -23,6 +23,13 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 08:45 UTC — phase404.24: a saved city's line is its card's place line, no living cost
+
+**Objective**: owner on phase404.23's open question (a saved city's sub-line was its county and true-cost figure): 「和卡保持一致 不要显示生活成本」.
+**Actions**: `apps/mobile/app/(tabs)/saved.tsx` — `costLineFor` → `placeLineFor`: the feed unit's `glance.place` ("Suwanee, GA · Gwinnett County"); a city with no film says the same from the unit's name and state and the county its centre falls in. Used as the tile's sub-line and on the City view's shelf header ("… · 2 communities"). The "$691/mo on a $500k home*" figure and its "* water and trash are still our estimate" note are gone from Saved. `costLine` → `placeLine` in `lib/saved/shelves.ts`.
+**Decisions**: the county lookup stays — it is still what a pick of cities without pages compares (`/compare-areas`). The true-cost figure stays on the Search map and the area page; only Saved stops printing it.
+**Risks**: on the shelf header the line repeats the city under its own name ("Suwanee" over "Suwanee, GA · Gwinnett County"), as the card does. Mobile only — Metro now, the store build with the next update.
+
 ## 2026-11-27 08:24 UTC — phase404.23: Saved says City and community, and its line is the card's figures
 
 **Objective**: owner: 「saved里 改叫city 里面的用语都改成community preview内容和最新的卡片保持一致 比如学区评级」.
