@@ -63,7 +63,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FmlsDisclosure } from "../../components/FmlsDisclosure";
 import { SavedMap } from "../../components/saved/SavedMap";
-import { SavedGrid, SavedList } from "../../components/saved/SavedViews";
+import {
+	KindTag,
+	SavedGrid,
+	SavedList,
+} from "../../components/saved/SavedViews";
 import { useAreas } from "../../hooks/use-areas";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { communityDetailUrl, listingDetailUrl } from "../../lib/api/base";
@@ -213,10 +217,14 @@ async function fetchRow(item: SavedItem): Promise<Row> {
 			glance?: PlaceGlance;
 		};
 		const fact = glanceFact(d.glance);
+		const place = d.glance?.place;
 		return {
 			status: "ready",
 			title: d.name,
-			sub: d.state,
+			// The line above its feed card, "Suwanee, GA · Forsyth County".
+			sub: place
+				? [place.lead, place.rest].filter(Boolean).join(" · ")
+				: [d.city, d.state].filter(Boolean).join(", "),
 			place: placeOf(d.city),
 			thumbUrl: d.heroUrl,
 			href: `/community/${d.slug}`,
@@ -760,8 +768,6 @@ function ShelfBlock({
 	const headerDim =
 		selecting && area ? lockedKind !== null && lockedKind !== "area" : false;
 
-	const meta = [area?.placeLine, counts].filter(Boolean).join(" · ");
-
 	return (
 		<View style={styles.shelf}>
 			{/* The name block and the Compare shortcut are SIBLINGS, never nested.
@@ -799,9 +805,9 @@ function ShelfBlock({
 						</Text>
 						{!!area && <Text style={styles.sSaved}>◆ saved</Text>}
 					</View>
-					{!!meta && (
+					{!!counts && (
 						<Text style={styles.sMeta} numberOfLines={2}>
-							{meta}
+							{counts}
 						</Text>
 					)}
 				</Pressable>
@@ -858,6 +864,7 @@ function ShelfBlock({
 									) : (
 										<View style={styles.ph} />
 									)}
+									<KindTag kind={c.kind} onPhoto style={styles.phTag} />
 									{selecting && (
 										<View style={[styles.tick, on && styles.tickOn]}>
 											{on && <Text style={styles.tickMark}>✓</Text>}
@@ -868,7 +875,7 @@ function ShelfBlock({
 									<Text style={styles.cardT} numberOfLines={1}>
 										{c.title}
 									</Text>
-									<Text style={styles.cardS} numberOfLines={1}>
+									<Text style={styles.cardS} numberOfLines={2}>
 										{c.sub}
 									</Text>
 									{!!fmlsNumberLabel(c.mlsNumber) && (
@@ -1002,6 +1009,7 @@ const styles = StyleSheet.create({
 	},
 	cardOn: { borderColor: colors.accent, borderWidth: 2 },
 	ph: { width: "100%", height: 104, backgroundColor: colors.surface2 },
+	phTag: { position: "absolute", left: 7, top: 7 },
 	cardBd: { paddingHorizontal: 9, paddingTop: 7, paddingBottom: 10 },
 	cardT: { ...textStyles.headline, color: colors.ink },
 	cardS: { ...textStyles.footnote, fontSize: 11.5, color: colors.ink2 },

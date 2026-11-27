@@ -20,7 +20,7 @@ const hood = (id: string, place: string): ShelfEntry => ({
 	kind: "community",
 	place,
 	title: "Ashley Crossing",
-	sub: "4.6 · 12 reviews",
+	sub: `${place}, GA · Forsyth County`,
 	href: `/community/${id}`,
 });
 const area = (id: string, place: string, areaKey?: string): ShelfEntry => ({
@@ -51,7 +51,6 @@ describe("buildShelves", () => {
 		expect(shelves).toHaveLength(1);
 		expect(shelves[0]?.area).toEqual({
 			id: "area-woodstock",
-			placeLine: "Woodstock, GA · Cherokee County",
 			areaKey: "cherokee",
 		});
 		// The area contributes NO card — it is the header.
@@ -125,7 +124,7 @@ describe("buildTiles", () => {
 			home("h1", "Cumming"),
 		]);
 		expect(tiles.map((t) => [t.kind, t.title, t.sub])).toEqual([
-			["community", "Ashley Crossing", "Cumming"],
+			["community", "Ashley Crossing", "Cumming, GA · Forsyth County"],
 			["area", "Alpharetta", "Woodstock, GA · Cherokee County"],
 			["listing", "$624,000 · 4 bd", "Cumming"],
 		]);

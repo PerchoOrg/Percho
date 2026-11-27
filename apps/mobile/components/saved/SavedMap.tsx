@@ -26,7 +26,7 @@ import MapView, { Marker } from "react-native-maps";
 import type { SavedTile } from "../../lib/saved/shelves";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
-import { KIND_TAG, type SavedViewProps } from "./SavedViews";
+import { KIND_TAG, KindTag, type SavedViewProps } from "./SavedViews";
 
 /** Metro Atlanta — what the map shows until the saves place it. */
 const METRO_REGION = {
@@ -196,12 +196,15 @@ export function SavedMap(props: SavedViewProps) {
 								<View style={styles.cardPh} />
 							)}
 							<View style={styles.cardBody}>
+								<KindTag kind={t.kind} />
 								<Text style={styles.cardTitle} numberOfLines={1}>
 									{t.title}
 								</Text>
-								<Text style={styles.cardSub} numberOfLines={1}>
-									{[KIND_TAG[t.kind], t.sub].filter(Boolean).join(" · ")}
-								</Text>
+								{!!t.sub && (
+									<Text style={styles.cardSub} numberOfLines={1}>
+										{t.sub}
+									</Text>
+								)}
 								{!!t.fact && (
 									<Text style={styles.cardFact} numberOfLines={2}>
 										{t.fact}
