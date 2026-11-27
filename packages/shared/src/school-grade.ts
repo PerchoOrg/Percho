@@ -52,15 +52,6 @@ export function typicalShare(schools: ReadonlyArray<{ share: number }>): number 
   return Math.min(100, Math.max(1, Math.round(median)));
 }
 
-/**
- * The letter as a card and a page print it: "Grade A+". The letter alone read
- * as a stray character over its label (owner 2026-11-27: 「学校评级写grade a
- * 不要只是a」).
- */
-export function gradeFigure(grade: string): string {
-  return `Grade ${grade}`;
-}
-
 /** How a page that prints a letter explains it. */
 export const SCHOOL_GRADE_NOTE =
   "Percho's letter for a standing among Georgia's schools: A+ is the top 5%, A the top 10%, A− the top 20%, B+ the top 30%.";

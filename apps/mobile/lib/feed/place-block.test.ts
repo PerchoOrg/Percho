@@ -331,16 +331,9 @@ describe("accessibility labels", () => {
 	});
 
 	it("knows a schools letter from a number", () => {
-		for (const letter of ["Grade A+", "Grade A−", "Grade B", "A+", "B−"])
+		for (const letter of ["A+", "A", "A−", "B+", "B−"])
 			expect(isLetterFigure(letter)).toBe(true);
-		for (const number of [
-			"$1.2M",
-			"Top 61%",
-			"62 min",
-			"28 mi",
-			"97.5%",
-			"Grade",
-		])
+		for (const number of ["$1.2M", "Top 61%", "62 min", "28 mi", "97.5%"])
 			expect(isLetterFigure(number)).toBe(false);
 	});
 

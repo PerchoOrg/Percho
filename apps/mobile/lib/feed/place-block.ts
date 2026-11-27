@@ -275,15 +275,14 @@ export function mapAccessibilityLabel(model: PlaceBlockModel): string {
 }
 
 /**
- * A figure that is a letter — a schools grade, "Grade A+" (phase404.17; the
- * word since phase404.21, the bare letter from a server before it). It sits
+ * A figure that is a letter — a schools grade, "A+" (phase404.17). It sits
  * centred over its label (owner, 2026-11-27: 「字母居中」): two characters at
  * the left edge of a column, over a label five times their width, read as
  * something left behind. A number stays at the left, where the columns of
  * digits line up.
  */
 export function isLetterFigure(value: string): boolean {
-	return /^(Grade )?[A-D][+−-]?$/.test(value);
+	return /^[A-D][+−-]?$/.test(value);
 }
 
 /** A figure and what it is a figure of, read as one phrase. */

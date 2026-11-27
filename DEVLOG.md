@@ -23,6 +23,13 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 08:16 UTC — phase404.22: the schools figure is the letter alone again, over "school grade"
+
+**Objective**: owner on phase404.21's "Grade A+": 「改回去 简单点 地下小字可以写school grade啥的」.
+**Actions**: phase404.21's code reverted (`gradeFigure` gone, `isLetterFigure` back to the bare letter, the sheets' sentences back to "— A+."). `lib/feed/glance.ts`: a city's and a community's schools cell is the letter over `school grade` — the label no longer carries the standing ("best school, top 1%", "schools, top 4% in GA"). Server-sent, live on deploy.
+**What is lost, knowingly**: the label's number was what told two A's apart (Suwanee top 6%, Duluth top 10%) — the reason I had kept it in phase404.17. Seven cities now read A+ ×2, A ×4, A− ×1; twenty communities A+ ×12. The standing is still one tap away, on the Schools sheet. Said to the owner.
+**Unchanged**: past the top half there is no letter and the cell reads "Top 61% · best school nearby".
+
 ## 2026-11-27 08:10 UTC — phase404.21: the schools figure reads "Grade A+", not "A+"
 
 **Objective**: owner on the cards: 「学校评级写grade a 不要只是a」.

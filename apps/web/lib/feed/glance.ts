@@ -30,7 +30,7 @@ import type { CityFundamentals } from '@percho/shared/city';
 import type { CommunityProfile } from '@percho/shared/community-profile';
 import type { GlanceCell, PlaceGlance } from '@percho/shared/glance';
 import { rankShare } from '@percho/shared/rank-share';
-import { gradeFigure, schoolGrade, typicalShare } from '@percho/shared/school-grade';
+import { schoolGrade, typicalShare } from '@percho/shared/school-grade';
 
 /** Five Points — where "downtown Atlanta" is measured from. */
 const DOWNTOWN = { lat: 33.7537, lng: -84.3901 };
@@ -89,12 +89,19 @@ function homesCell(profile: CommunityProfile | null): GlanceCell | null {
   return { value: homeValue.display, label: `${homeValue.area} homes`, topic: 'potential' };
 }
 
+/** What a schools letter is, under it — the same words on a city and a community. */
+const GRADE_LABEL = 'school grade';
+
 /**
  * Where the nearby schools stand among Georgia's, as the Explore tile words
  * each one — "Top 1%", "Top 2%", "Top 7%" — and the figure is for the best of
  * them, as a letter (owner 2026-11-27: 「用字母」; the scale is
- * `@percho/shared/school-grade`): "Grade A+" over "best school, top 1%". The
- * standing stays in the label, so two A's can be told apart.
+ * `@percho/shared/school-grade`): "A+" over "school grade".
+ *
+ * The letter alone and two plain words. The label carried the standing
+ * ("best school, top 1%") and for a day the figure carried the word
+ * ("Grade A+"); he took both back: 「改回去 简单点 地下小字可以写school grade
+ * 啥的」. Which school and where it stands are on the page the figure opens.
  *
  * Past the top half there is no letter, and the cell reads as it did before
  * the letters: "Top 62%" over "best school nearby".
@@ -103,13 +110,12 @@ function schoolsCell(ranks: CommunityProfile['ranks'] | undefined): GlanceCell |
   const rows = (ranks?.rows ?? []).filter((r) => r.group === SCHOOLS_GROUP).slice(0, 3);
   if (rows.length === 0) return null;
   const best = Math.min(...rows.map(rankShare));
-  const which = rows.length === 1 ? 'school nearby' : 'best school';
   const grade = schoolGrade(best);
   return grade
-    ? { value: gradeFigure(grade), label: `${which}, top ${best}%`, topic: 'schools' }
+    ? { value: grade, label: GRADE_LABEL, topic: 'schools' }
     : {
         value: `Top ${best}%`,
-        label: rows.length === 1 ? which : `${which} nearby`,
+        label: rows.length === 1 ? 'school nearby' : 'best school nearby',
         topic: 'schools',
       };
 }
@@ -226,7 +232,7 @@ function graduationCell(education: CityFundamentals['education']): GlanceCell | 
 /**
  * A city's schools as one letter: where its typical school stands among
  * Georgia's, every scored school in and around it counted (the list its page
- * prints under Schools) — "Grade A+" over "schools, top 4% in GA".
+ * prints under Schools) — "A+" over "school grade".
  *
  * The typical one, not the best: five of the first seven cities have a school
  * in Georgia's top 1%, and a figure that is the same on every card is the
@@ -237,8 +243,7 @@ function graduationCell(education: CityFundamentals['education']): GlanceCell | 
 function citySchoolsCell(schools: ReadonlyArray<{ share: number }> | undefined): GlanceCell | null {
   const typical = typicalShare(schools ?? []);
   const grade = typical === null ? null : schoolGrade(typical);
-  if (typical === null || !grade) return null;
-  return { value: gradeFigure(grade), label: `schools, top ${typical}% in GA`, topic: 'schools' };
+  return grade ? { value: grade, label: GRADE_LABEL, topic: 'schools' } : null;
 }
 
 /**
