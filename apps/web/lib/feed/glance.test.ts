@@ -61,8 +61,9 @@ describe('communityGlance', () => {
       cells: [
         { value: '$747K', label: 'ZIP 30005 homes', topic: 'potential' },
         // Each level as the Explore tile rounds it — #6 of 1,220 is 1%, #7 of
-        // 472 is 2%, #31 of 443 is 7% — and the figure is the best of the three.
-        { value: 'Top 1%', label: 'best school nearby', topic: 'schools' },
+        // 472 is 2%, #31 of 443 is 7% — and the figure is the best of the
+        // three as a letter, its standing kept beside it.
+        { value: 'A+', label: 'best school, top 1%', topic: 'schools' },
         { value: '25 mi', label: 'north of Atlanta', topic: 'convenience' },
       ],
     });
@@ -97,8 +98,21 @@ describe('communityGlance', () => {
   it('prints one school as it stands, in the singular', () => {
     const one = { ...windward, ranks: { rows: [school('High', '#31', 'of 443 in GA', 93.2)] } };
     expect(communityGlance({ city: 'Alpharetta', profile: one })?.cells[1]).toEqual({
-      value: 'Top 7%',
-      label: 'school nearby',
+      value: 'A',
+      label: 'school nearby, top 7%',
+      topic: 'schools',
+    });
+  });
+
+  it('gives no letter past the top half — the standing in words, as before', () => {
+    const rows = [
+      school('Elementary', '#800', 'of 1,220 in GA', 34.4),
+      school('High', '#270', 'of 443 in GA', 39),
+    ];
+    const lower = { ...windward, ranks: { rows } };
+    expect(communityGlance({ city: 'Alpharetta', profile: lower })?.cells[1]).toEqual({
+      value: 'Top 61%',
+      label: 'best school nearby',
       topic: 'schools',
     });
   });
@@ -206,6 +220,30 @@ describe('cityGlance', () => {
       label: 'top graduation rate',
       topic: 'schools',
     });
+  });
+
+  it("grades a city's schools by its typical one, over the graduation rate", () => {
+    // Johns Creek's seventeen, as its page lists them.
+    const shares = [1, 1, 1, 2, 3, 3, 3, 4, 4, 5, 5, 5, 5, 5, 6, 22, 41];
+    const schools = shares.map((share) => ({ share }));
+    expect(cityGlance({ ...place, profile: cityProfile(), schools })?.cells[1]).toEqual({
+      value: 'A+',
+      label: 'schools, top 4% in GA',
+      topic: 'schools',
+    });
+    // Buford's thirteen: the middle one is in the top 14%.
+    const buford = [6, 7, 7, 10, 10, 12, 14, 16, 18, 25, 29, 32, 47].map((share) => ({ share }));
+    expect(cityGlance({ ...place, profile: cityProfile(), schools: buford })?.cells[1]).toEqual({
+      value: 'A−',
+      label: 'schools, top 14% in GA',
+      topic: 'schools',
+    });
+    // No scored school, or a typical one past the scale: the graduation rate.
+    for (const none of [[], [{ share: 70 }]]) {
+      expect(cityGlance({ ...place, profile: cityProfile(), schools: none })?.cells[1]?.label).toBe(
+        'graduate in 4 years',
+      );
+    }
   });
 
   it('has two figures for a city whose page prices no home', () => {

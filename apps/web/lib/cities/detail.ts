@@ -66,6 +66,8 @@ export interface CityFilm {
       CityFundamentals,
       'compare' | 'education' | 'gettingAround' | 'locationNote'
     > | null;
+    /** Every scored school in and around the city — the card's schools letter. */
+    schools: CityDetailDTO['allSchools'];
   };
 }
 
@@ -167,6 +169,7 @@ export async function fetchCityFilms(
         lat: city.lat,
         lng: city.lng,
         profile: parseCityProfile(city.profile),
+        schools: citySchools(city.slug),
       },
     });
   }
