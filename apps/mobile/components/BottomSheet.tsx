@@ -1,8 +1,10 @@
 /**
  * BottomSheet (§0.6 #8) — minimal custom Reanimated sheet (owner-approved #5,
  * no @gorhom dependency). --surface base, 24pt top-corner radius, grabber, two
- * detents: medium (50%) / large (90%). Backdrop tap dismisses. Opening fires
- * the `cardSettle` impact (§0.5 "sheet 弹出").
+ * detents: medium (50%) / large (90%). Backdrop tap or the ✕ dismisses —
+ * the ✕ because a tap on the dimmed map behind is not something a buyer
+ * thinks to try (owner, 2026-11-27). Opening fires the `cardSettle` impact
+ * (§0.5 "sheet 弹出").
  *
  * Task-0 scope: present + dismiss at a fixed detent. Drag-to-resize between
  * detents is a later concern; the detent API is here so it can grow.
@@ -12,6 +14,7 @@ import {
 	Modal,
 	Pressable,
 	StyleSheet,
+	Text,
 	View,
 	useWindowDimensions,
 } from "react-native";
@@ -74,7 +77,18 @@ export function BottomSheet({
 			<View style={styles.root}>
 				<Pressable style={styles.backdrop} onPress={close} />
 				<Animated.View style={[styles.sheet, { height: sheetH }, sheetStyle]}>
-					<View style={styles.grabber} />
+					<View style={styles.head}>
+						<View style={styles.grabber} />
+						<Pressable
+							style={styles.close}
+							onPress={close}
+							hitSlop={12}
+							accessibilityRole="button"
+							accessibilityLabel="Close"
+						>
+							<Text style={styles.closeGlyph}>✕</Text>
+						</Pressable>
+					</View>
 					{children}
 				</Animated.View>
 			</View>
@@ -92,12 +106,27 @@ const styles = StyleSheet.create({
 		paddingTop: 8,
 		alignItems: "stretch",
 	},
+	head: {
+		height: 36,
+		alignItems: "center",
+		marginBottom: 4,
+	},
 	grabber: {
-		alignSelf: "center",
 		width: 36,
 		height: 5,
 		borderRadius: radii.pill,
 		backgroundColor: colors.ink3,
-		marginBottom: 8,
 	},
+	close: {
+		position: "absolute",
+		top: 2,
+		right: 14,
+		width: 30,
+		height: 30,
+		borderRadius: 15,
+		backgroundColor: colors.surface2,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	closeGlyph: { fontSize: 14, fontWeight: "600", color: colors.ink2 },
 });

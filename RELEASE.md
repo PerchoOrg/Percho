@@ -17,6 +17,8 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-27
+- **Every panel has a close button.** The panels that slide up — a neighbourhood's Schools or Safety, a city's details, "Where are you looking?" — now have an ✕ in the top corner instead of closing only when you tap the dimmed space above them. Search results have one too: it clears the search and puts the keyboard away. Arrives with the next app update.
+- **Peachtree Corners' film opens on its name** — the lit bridge over Peachtree Parkway — instead of an office building.
 - **Peachtree Corners is the eighth city.** It has its own film — an office park planned in the 1960s that voted itself into a city in 2012, with no city property tax, a street where driverless vehicles are tested, and seven miles of the Chattahoochee — and its own page with schools, commute times, home values and everyday places.
 - **The iPhone app update is out, and the next one is on its way.** Version 1.1.0 is now on the App Store — new icon, city films in five parts, the figures above every card, the five-box neighbourhood and city pages, comparisons and Saved in four layouts. Everything marked "arrives with the next app update" since then has gone to Apple for review as 1.1.1.
 - **Saved is tidier.** Saved now opens on the photo grid, and the views read Grid, List, City, Map. Each saved place carries a small "City" or "Community" tag, and under its name the same line as above its card — "Suwanee, GA · Forsyth County" — where some places showed only "GA" and others nothing. Arrives with the next app update.
