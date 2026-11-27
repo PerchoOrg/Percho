@@ -965,6 +965,200 @@
         "woodward mill elementary campus": "https://woodwardmilles.gcpsk12.org"
       }
     },
+    "peachtree-corners-ga": {
+      "everyday": [
+        {
+          "kind": "Groceries",
+          "places": [
+            {
+              "name": "Sprouts Farmers Market",
+              "miles": 0.2,
+              "site": "https://www.sprouts.com/store/ga/peachtree-corners/peachtree-corners/"
+            },
+            {
+              "name": "Trader Joe's",
+              "miles": 0.2,
+              "site": "https://locations.traderjoes.com/ga/norcross/734/"
+            },
+            {
+              "name": "Lidl",
+              "miles": 0.3
+            },
+            {
+              "name": "Ingles",
+              "miles": 0.4
+            },
+            {
+              "name": "Publix",
+              "miles": 2.1,
+              "site": "https://www.publix.com/locations/560"
+            }
+          ]
+        },
+        {
+          "kind": "Wholesale",
+          "places": [
+            {
+              "name": "Costco Wholesale",
+              "miles": 4.8,
+              "site": "https://www.costco.com/warehouse-locations/gwinnett-duluth-ga-187.html"
+            },
+            {
+              "name": "Sam's Club",
+              "miles": 5,
+              "site": "https://www.samsclub.com/club/duluth-ga-sams-club/8166"
+            }
+          ]
+        },
+        {
+          "kind": "Pharmacy",
+          "places": [
+            {
+              "name": "Walgreens",
+              "miles": 1.8
+            },
+            {
+              "name": "CVS Pharmacy",
+              "miles": 2.4,
+              "site": "https://www.cvs.com/store-locator/norcross-ga-pharmacies/5304-north-buford-highway-norcross-ga-30071/storeid=2228"
+            },
+            {
+              "name": "Kaiser Permanente Alpharetta Medical Center",
+              "miles": 6.6
+            },
+            {
+              "name": "Tracy's Medicine Center",
+              "miles": 6.8
+            },
+            {
+              "name": "Rite Aid",
+              "miles": 6.8
+            }
+          ]
+        },
+        {
+          "kind": "Park",
+          "places": [
+            {
+              "name": "Town Green",
+              "miles": 0.2
+            },
+            {
+              "name": "Peachtree Corners Baptist Church Park",
+              "miles": 0.7
+            },
+            {
+              "name": "CRNRA - Medlock Bridge Unit",
+              "miles": 1.1
+            },
+            {
+              "name": "Simpsonwood Park",
+              "miles": 1.6
+            },
+            {
+              "name": "Jones Bridge Park",
+              "miles": 1.7
+            }
+          ]
+        },
+        {
+          "kind": "Library",
+          "places": [
+            {
+              "name": "GCPL - Peachtree Corners Branch",
+              "miles": 0.9,
+              "site": "https://www.gwinnettpl.org/library-location/peachtree-corners-branch"
+            },
+            {
+              "name": "Northeast-Spruill Oak Regional Library",
+              "miles": 2.4
+            },
+            {
+              "name": "Gwinnett County Public Library Norcross Branch",
+              "miles": 2.8
+            },
+            {
+              "name": "Gwinnett County Public Library - Duluth Branch",
+              "miles": 4.2,
+              "site": "https://www.gwinnettpl.org/"
+            },
+            {
+              "name": "East Roswell Branch Library",
+              "miles": 4.7,
+              "site": "https://www.fulcolibrary.org/locations/EAST_ROS/#"
+            }
+          ]
+        },
+        {
+          "kind": "Hospital",
+          "places": [
+            {
+              "name": "Northside Hospital Duluth",
+              "miles": 3.3,
+              "site": "https://www.northside.com/locations/northside-hospital-duluth"
+            },
+            {
+              "name": "Emory Johns Creek Hospital",
+              "miles": 6.4,
+              "site": "https://www.emoryhealthcare.org/locations/hospitals/emory-johns-creek-hospital/"
+            }
+          ]
+        }
+      ],
+      "schoolSites": {
+        "alpharetta elementary": "https://alpharettaes.fultonschools.org/",
+        "amana academy": "https://amanaacademy.org/",
+        "benefield elementary": "https://schools.gcpsk12.org/BenefieldES",
+        "big creek elementary": "https://www.forsyth.k12.ga.us/bigcreek",
+        "blessed trinity catholic high": "https://btcatholic.org/",
+        "brandywine elementary": "https://www.forsyth.k12.ga.us/brandywine",
+        "brookwood high": "https://www.gcpsk12.org/BrookwoodHS",
+        "centennial high": "https://www.fultonschools.org/centennialhs",
+        "chamblee high": "https://www.chambleehs.dekalb.k12.ga.us/",
+        "chattahoochee high": "https://www.fultonschools.org/chattahoocheehs",
+        "chesnut": "https://chesnutes.dekalb.k12.ga.us/",
+        "collins hill high": "https://www.gcpsk12.org/CollinsHillHS",
+        "crabapple crossing elementary": "https://www.fultonschools.org/crabapplecrossinges",
+        "dickerson middle": "https://www.cobbk12.org/Dickerson/",
+        "dolvin elementary": "https://www.fultonschools.org/dolvines",
+        "dunwoody prep": "https://www.dunwoodyprep.com/",
+        "east cobb christian": "https://www.eccs.org/",
+        "five forks middle": "https://fiveforksms.gcpsk12.org/",
+        "fulton science academy": "https://fultonscienceacademy.org",
+        "hillside elementary": "https://www.fultonschools.org/Page/116",
+        "holcomb bridge middle": "https://www.fultonschools.org/holcombbridgems",
+        "hopewell middle": "https://hopewell.fultonschools.org/",
+        "ilm academy": "https://ilm-academy.com/",
+        "innovation academy": "https://www.fultonschools.org/innovationacademy",
+        "johns creek elementary": "https://www.forsyth.k12.ga.us/johnscreek",
+        "johns creek high": "https://www.fultonschools.org/johnscreekhs",
+        "lambert high": "https://www.forsyth.k12.ga.us/lhs",
+        "level creek elementary": "https://levelcreekes.gcpsk12.org/",
+        "lilburn middle": "https://lilburnms.gcpsk12.org/",
+        "midway elementary": "https://www.forsyth.k12.ga.us/midway",
+        "mount bethel christian academy lower and middle schools campus": "https://www.mtbethelchristian.org/",
+        "northwestern middle": "https://www.fultonschools.org/northwesternms",
+        "our lady of the assumption": "https://www.olaschool.org/",
+        "parkview high": "https://parkviewhs.gcpsk12.org/",
+        "peachtree charter middle": "https://www.peachtreems.dekalb.k12.ga.us/",
+        "peachtree ridge high": "https://peachtreeridgehs.gcpsk12.org/",
+        "phoenix high": "https://www.gcpsk12.org/phoenixhs",
+        "river eves elementary": "https://www.fultonschools.org/rivereveses",
+        "riverwatch middle": "https://www.forsyth.k12.ga.us/riverwatchms",
+        "roswell high": "https://roswell.fultonschools.org/",
+        "saint francis elementary and middle schools": "https://www.saintfrancisschools.com/",
+        "saint pius x catholic high": "https://spx.org/",
+        "settles bridge elementary": "https://www.forsyth.k12.ga.us/settlesbridge",
+        "sharon elementary": "https://www.forsyth.k12.ga.us/sharon",
+        "simpson elementary": "https://www.gcpsk12.org/simpsones",
+        "south forsyth middle": "https://www.forsyth.k12.ga.us/SFMS",
+        "taylor road middle": "https://www.fultonschools.org/taylorroadms",
+        "the globe academy": "https://www.theglobeacademy.org/",
+        "the wood acres": "https://woodacresschool.org/",
+        "vickery mill elementary": "https://vickerymill.fultonschools.org/",
+        "wesleyan": "https://www.wesleyanschool.org/"
+      }
+    },
     "sugar-hill-ga": {
       "everyday": [
         {

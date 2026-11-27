@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-27
+- **Peachtree Corners is the eighth city.** It has its own film — an office park planned in the 1960s that voted itself into a city in 2012, with no city property tax, a street where driverless vehicles are tested, and seven miles of the Chattahoochee — and its own page with schools, commute times, home values and everyday places.
 - **The iPhone app update is out, and the next one is on its way.** Version 1.1.0 is now on the App Store — new icon, city films in five parts, the figures above every card, the five-box neighbourhood and city pages, comparisons and Saved in four layouts. Everything marked "arrives with the next app update" since then has gone to Apple for review as 1.1.1.
 - **Saved is tidier.** Saved now opens on the photo grid, and the views read Grid, List, City, Map. Each saved place carries a small "City" or "Community" tag, and under its name the same line as above its card — "Suwanee, GA · Forsyth County" — where some places showed only "GA" and others nothing. Arrives with the next app update.
 - **A saved city reads like its card.** Under a saved city, Saved now shows the same line as above its card — "Suwanee, GA · Gwinnett County" — instead of the county and a monthly cost on a $500k home. The monthly cost is still on the Search map. Arrives with the next app update.

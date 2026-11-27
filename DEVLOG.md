@@ -23,6 +23,32 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 10:32 UTC — phase407: Peachtree Corners, the eighth city film — a plan, then a city; and where coverage stands
+
+**Objective**: The owner asked for the city/community distribution and an expansion plan (2026-11-27), then approved the first step: four cities, one at a time — Peachtree Corners → Roswell → Milton → Lawrenceville. This is the first. The second cluster (Cobb or DeKalb) is his to decide later.
+**Where coverage stands** (read from production): 7 cities with films, all on the north Fulton / Gwinnett / Forsyth corridor; 22,730 active communities, 20 with a film — 3 each in Alpharetta, Johns Creek, Suwanee, Duluth, Cumming, 2 each in Buford and Sugar Hill, and Apremont - Highcroft in Peachtree Corners, which had no city film. Cobb (4,840 rows) and DeKalb (4,004) have none. `communities.city` is the mailing city: Johns Creek has 55 rows and Milton 19, and 1,284 rows have no city — to fix from city boundaries before Milton.
+**Actions**:
+- `cities` row `peachtree-corners-ga` (Gwinnett; centre = Town Center), `inactive` until checked, now `active`. `scripts/admin/city-profiles/peachtree-corners-ga.json`: page and an 11-line film.
+- Pipeline: research → resolve (16 places; rejected at the place level: Buford Highway Farmers Market, Trader Joe's, two restaurants, a food hall); topup; 24 `place` searches (schools, City Hall, Technology Park and its lake, Simpsonwood, Holcomb Bridge Park, the bridge, the library, the Veterans Monument, two apartment communities, Waterside, MARTA Doraville); Commons for the Town Center, the bridge, City Hall, Technology Park, Peachtree Parkway, The Forum, Jones Bridge, Norcross High and Paul Duke STEM High; 336 photos tagged.
+- **Film — assembly `b6150e72`, stream `e046c008…`, 1:45**, 27 shots, 2 Seedance (new), 10 DepthFlow, 15 Ken Burns.
+- Page data: `city-schools.json`, `city-hazards.json`, `city-places.json` gain the city's entry only (the regenerated places of the other seven were not kept — unrelated to this change). No crime row: the city has no police department of its own.
+**Decisions — how this one differs**:
+- **Spine: a plan.** "Planned in the nineteen sixties as an office park with neighborhoods around it, and became a city in 2012." Opens on a Technology Park office across its pond (Seedance), then the bridge with the city's name, then City Hall at night carrying "2012".
+- `signature` = "Tech Park": 1967, 2,300 businesses, then Curiosity Lab's three miles of test track on a public street.
+- Order Overview → Commute → Homes → Schools → Life, ending on the Chattahoochee at dusk — new.
+- Homes leads with the fact only this city has: no city property tax (0 mills; county and school taxes apply), over $484,700.
+- Commute: downtown 39/53 min; then Perimeter Center 19 min, MARTA Doraville 18, average trip 26 (Georgia 28).
+- Schools: Paul Duke STEM High (#31, U.S. News 2026–27; 90.4%), Norcross High (IB), Pinckneyville Middle, Wesleyan.
+**Issues**:
+- Simpson Elementary (#14 in Georgia) has no photograph on Google or Commons — page only. On the owner's Atlanta shot list.
+- First plan ran 2:17 with Commute under 15%; cut from 246 to 204 words.
+- First assembly (`581f5d24`) put the "2012" callout over the lettering on the bridge; moved to City Hall, re-assembled.
+- A sign cropped to half its words in 9:16 ("NNOVATION AT URIOSITY") was swapped for the Georgia Tech Atrium front before planning.
+**Verified**: frames tiled every 2 s on both assemblies; 11 of 11 lines voiced; `percho.co/api/mobile/city/peachtree-corners-ga` serves the stream and the profile.
+**Cost**: two new Seedance clips (~$0.28). 22 TTS requests. Google Places ~24 searches; Routes 16 calls.
+**Not verified**: on a phone; the section shares on the card's rail.
+**Next steps**: owner watches Peachtree Corners; then Roswell. The city gets its second and third community films in the next community round.
+
 ## 2026-11-27 09:15 UTC — phase405.2: 1.1.1 resubmitted with the nine new screenshots
 
 **Objective**: owner approved the phase405.1 preview as shown — 「ok」, all nine including the older Saved-map capture.

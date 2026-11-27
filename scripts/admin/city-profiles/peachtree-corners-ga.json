@@ -1,0 +1,641 @@
+{
+  "tagline": "A planned community from the 1960s — an office park, then neighborhoods — that voted itself into a city in 2012.",
+  "summary": "Peachtree Corners was planned in the late 1960s by Paul Duke: Technology Park Atlanta for work, neighborhoods around it for home. Residents voted to incorporate in 2011, and the city that began in 2012 was at once the largest in Gwinnett County. It levies no property tax of its own. In 2019 it opened a Town Center across Peachtree Parkway from The Forum and Curiosity Lab, a test track for driverless vehicles on a public street. Seven miles of the Chattahoochee River form its northern and western edge. About 42,000 people live here; public schools are Gwinnett County's.",
+  "locationNote": "21 mi northeast of downtown Atlanta",
+  "rankings": [
+    {
+      "rank": "#31",
+      "scope": "in Georgia",
+      "title": "Paul Duke STEM High School",
+      "detail": "U.S. News Best High Schools, 2026–27 — #3 in Gwinnett County; 90.4% graduated in 2025.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "year": "2026–27",
+        "url": "https://www.gcpsk12.org/news-details/~board/news-releases/post/gcps-high-schools-rated-among-the-best-in-state-and-nation-for-2026"
+      }
+    },
+    {
+      "rank": "#14",
+      "scope": "in Georgia",
+      "title": "Simpson Elementary School",
+      "detail": "U.S. News Best Elementary Schools, of 1,260 ranked in Georgia, as listed on usnews.com in November 2026.",
+      "source": {
+        "name": "U.S. News & World Report",
+        "url": "https://www.usnews.com/education/k12/georgia/simpson-elementary-school-223330"
+      }
+    }
+  ],
+  "stats": [
+    {
+      "label": "Population",
+      "value": "42,373",
+      "note": "ACS 2020–24 · Gwinnett's largest city"
+    },
+    {
+      "label": "City property tax",
+      "value": "0 mills",
+      "note": "county and school taxes still apply"
+    },
+    {
+      "label": "Homes owner-occupied",
+      "value": "53%",
+      "note": "the rest rented"
+    },
+    {
+      "label": "Median rent",
+      "value": "$1,701",
+      "note": "a month · ACS 2020–24"
+    },
+    {
+      "label": "Businesses",
+      "value": "2,300+",
+      "note": "City of Peachtree Corners"
+    }
+  ],
+  "compare": {
+    "against": "Georgia",
+    "rows": [
+      {
+        "label": "Median household income",
+        "city": {
+          "value": 82139,
+          "display": "$82,139"
+        },
+        "state": {
+          "value": 77353,
+          "display": "$77,353"
+        },
+        "takeaway": "1.1× the state"
+      },
+      {
+        "label": "Adults with a bachelor's or higher",
+        "city": {
+          "value": 51.6,
+          "display": "51.6%"
+        },
+        "state": {
+          "value": 34.9,
+          "display": "34.9%"
+        },
+        "takeaway": "1.5× the state"
+      },
+      {
+        "label": "Median home value",
+        "city": {
+          "value": 484700,
+          "display": "$484,700"
+        },
+        "state": {
+          "value": 303300,
+          "display": "$303,300"
+        },
+        "takeaway": "1.6× the state"
+      }
+    ],
+    "source": {
+      "name": "U.S. Census Bureau, ACS 2020–2024",
+      "year": "2024",
+      "url": "https://mmcganalytics.com/georgia/gwinnett-county/peachtree-corners/"
+    }
+  },
+  "history": [
+    {
+      "year": "1820s",
+      "short": "Pinckneyville",
+      "text": "A farming settlement called Pinckneyville grows along the road from Buford to what becomes Atlanta."
+    },
+    {
+      "year": "1870",
+      "short": "The railroad",
+      "text": "The railroad is built through neighbouring Norcross, and Pinckneyville's businesses move to it."
+    },
+    {
+      "year": "1967",
+      "short": "Technology Park",
+      "text": "Paul Duke begins planning Technology Park Atlanta, a campus for technology firms hiring from Georgia Tech."
+    },
+    {
+      "year": "1968",
+      "short": "Peachtree Corners",
+      "text": "Duke founds Peachtree Corners, Inc. to build the homes; the first neighborhoods follow in the 1970s."
+    },
+    {
+      "year": "2011",
+      "short": "The vote",
+      "text": "Residents vote to incorporate as Gwinnett County's 16th city, and its largest."
+    },
+    {
+      "year": "2012",
+      "short": "A city",
+      "text": "The City of Peachtree Corners begins operating on July 1."
+    },
+    {
+      "year": "2019",
+      "short": "Town Center",
+      "text": "The 20-acre Town Center and its Town Green open; Curiosity Lab begins testing in Technology Park."
+    }
+  ],
+  "growth": {
+    "series": [
+      {
+        "label": "2011",
+        "value": 43059
+      },
+      {
+        "label": "2020",
+        "value": 42243
+      },
+      {
+        "label": "2024",
+        "value": 42373
+      }
+    ],
+    "takeaway": "about 42,000 since it became a city",
+    "source": {
+      "name": "U.S. Census Bureau; city at incorporation",
+      "url": "https://en.wikipedia.org/wiki/Peachtree_Corners,_Georgia"
+    }
+  },
+  "education": {
+    "schools": [
+      {
+        "level": "elementary",
+        "name": "Simpson Elementary",
+        "rank": "#14",
+        "scope": "in Georgia",
+        "detail": "Gwinnett County Public Schools, in the city. U.S. News, as listed in November 2026. Not in the film: no photograph of it exists.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "url": "https://www.usnews.com/education/k12/georgia/simpson-elementary-school-223330"
+        }
+      },
+      {
+        "level": "elementary",
+        "name": "Peachtree, Stripling, Norcross and Berkeley Lake Elementary",
+        "detail": "The other Gwinnett County elementaries whose zones reach into the city.",
+        "source": {
+          "name": "Gwinnett County Public Schools",
+          "url": "https://www.gcpsk12.org"
+        }
+      },
+      {
+        "level": "middle",
+        "name": "Pinckneyville Middle",
+        "rank": "#170",
+        "scope": "in Georgia",
+        "detail": "Gwinnett County Public Schools, in the city. U.S. News, of 597 ranked in Georgia, as listed in November 2026.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "url": "https://www.usnews.com/education/k12/georgia/pinckneyville-middle-school-267126"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Paul Duke STEM High",
+        "rank": "#31",
+        "scope": "in Georgia",
+        "detail": "Gwinnett County Public Schools; a choice school for the Norcross cluster. U.S. News, 2026–27 · 90.4% graduated in 2025.",
+        "source": {
+          "name": "U.S. News & World Report",
+          "year": "2026–27",
+          "url": "https://www.gcpsk12.org/news-details/~board/news-releases/post/gcps-high-schools-rated-among-the-best-in-state-and-nation-for-2026"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Norcross High",
+        "detail": "Gwinnett County Public Schools; the district's only International Baccalaureate diploma school. 85.4% graduated in 2025.",
+        "source": {
+          "name": "Gwinnett County Public Schools",
+          "url": "https://www.gcpsk12.org"
+        }
+      },
+      {
+        "level": "high",
+        "name": "Wesleyan School",
+        "detail": "Private, kindergarten to grade 12, in the city.",
+        "source": {
+          "name": "Wesleyan School",
+          "url": "https://www.wesleyanschool.org"
+        }
+      }
+    ],
+    "measure": "Graduate in 4 years · class of 2025",
+    "rows": [
+      {
+        "label": "Paul Duke STEM HS",
+        "pct": 90.4,
+        "display": "90.4%"
+      },
+      {
+        "label": "Norcross HS",
+        "pct": 85.4,
+        "display": "85.4%"
+      },
+      {
+        "label": "Gwinnett district",
+        "pct": 85.4,
+        "display": "85.4%",
+        "baseline": true
+      }
+    ],
+    "note": "Most of the city is in the Norcross cluster: Simpson, Peachtree or Stripling Elementary, Pinckneyville Middle, then Norcross High or Paul Duke STEM High. The eastern edge goes to Berkeley Lake Elementary, Duluth Middle and Duluth High. Graduation: Gwinnett County Public Schools, class of 2025."
+  },
+  "gettingAround": [
+    {
+      "label": "Downtown Atlanta · 22 mi",
+      "value": "~39 min · 53 at rush",
+      "minutes": {
+        "min": 39,
+        "max": 53
+      }
+    },
+    {
+      "label": "Hartsfield-Jackson · 33 mi",
+      "value": "48–62 min",
+      "minutes": {
+        "min": 48,
+        "max": 62
+      }
+    },
+    {
+      "label": "Buckhead · 16 mi",
+      "value": "26–40 min",
+      "minutes": {
+        "min": 26,
+        "max": 40
+      }
+    },
+    {
+      "label": "Perimeter Center · 10 mi",
+      "value": "19–31 min",
+      "minutes": {
+        "min": 19,
+        "max": 31
+      }
+    },
+    {
+      "label": "MARTA Doraville · 8 mi",
+      "value": "18–26 min",
+      "minutes": {
+        "min": 18,
+        "max": 26
+      }
+    },
+    {
+      "label": "Alpharetta · 10 mi",
+      "value": "23–28 min",
+      "minutes": {
+        "min": 23,
+        "max": 28
+      }
+    },
+    {
+      "label": "Peachtree Parkway · Peachtree Industrial",
+      "value": "the city's roads out"
+    }
+  ],
+  "planning": [
+    {
+      "title": "The Forum",
+      "text": "The shopping street was rebuilt in 2023–24 with a central plaza; its owners plan apartments and a boutique hotel as the next phases."
+    },
+    {
+      "title": "Intuitive Surgical campus",
+      "text": "The surgical-robot maker announced a $600 million, 750,000-square-foot campus in the city in 2021, with 1,200 jobs."
+    }
+  ],
+  "sources": [
+    {
+      "name": "U.S. Census Bureau ACS 2020–2024 — Peachtree Corners (MMCG Analytics)",
+      "url": "https://mmcganalytics.com/georgia/gwinnett-county/peachtree-corners/"
+    },
+    {
+      "name": "Data USA — Peachtree Corners, GA",
+      "url": "https://datausa.io/profile/geo/peachtree-corners-ga"
+    },
+    {
+      "name": "Wikipedia — Peachtree Corners, Georgia",
+      "url": "https://en.wikipedia.org/wiki/Peachtree_Corners,_Georgia"
+    },
+    {
+      "name": "City of Peachtree Corners — Economic Development (zero millage)",
+      "url": "https://peachtreecornersga.gov/335/Economic-Development"
+    },
+    {
+      "name": "City of Peachtree Corners — Curiosity Lab",
+      "url": "https://peachtreecornersga.gov/278/Curiosity-Lab-at-Peachtree-Corners"
+    },
+    {
+      "name": "GCPS — U.S. News 2026–27 high school rankings",
+      "url": "https://www.gcpsk12.org/news-details/~board/news-releases/post/gcps-high-schools-rated-among-the-best-in-state-and-nation-for-2026"
+    },
+    {
+      "name": "Gwinnett Daily Post — class of 2025 graduation rates",
+      "url": "https://www.gwinnettdailypost.com/local/gwinnett-schools-graduation-rate-rises-again-now-tops-85/article_aeaa8292-5f13-4d33-bc27-44b045dcb55e.html"
+    },
+    {
+      "name": "The Forum — owner's media deck, 2026",
+      "url": "https://jamestownlp.com/properties/the-forum"
+    },
+    {
+      "name": "Drive times: Google Routes, from Town Center, typical traffic on a Thursday",
+      "url": "https://maps.google.com"
+    }
+  ],
+  "film": {
+    "signature": "Tech Park",
+    "lines": [
+      {
+        "say": "Peachtree Corners, Georgia, was planned in the nineteen sixties as an office park with neighborhoods around it, and became a city in 2012.",
+        "chapter": "overview",
+        "shots": [
+          {
+            "photo": "2606ac50",
+            "weight": 7,
+            "seedance": true
+          },
+          {
+            "photo": "e031b2a8",
+            "weight": 6
+          },
+          {
+            "photo": "bc450340",
+            "weight": 6,
+            "label": "City Hall",
+            "callout": {
+              "type": "stat",
+              "big": "2012",
+              "label": "became a city · the largest in Gwinnett County",
+              "source": "42,373 residents · ACS 2020–24"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Technology Park came first, in 1967; some twenty-three hundred businesses are in the city now.",
+        "chapter": "signature",
+        "shots": [
+          {
+            "photo": "45f718cd",
+            "weight": 6,
+            "label": "Technology Park",
+            "callout": {
+              "type": "stat",
+              "big": "1967",
+              "label": "Technology Park Atlanta is planned"
+            }
+          },
+          {
+            "photo": "4d06cec1",
+            "weight": 6,
+            "label": "Technology Park",
+            "callout": {
+              "type": "stat",
+              "big": "2,300+",
+              "label": "businesses in the city",
+              "source": "City of Peachtree Corners"
+            }
+          }
+        ]
+      },
+      {
+        "say": "At the city's own Curiosity Lab, driverless vehicles are tested on three miles of public street.",
+        "chapter": "signature",
+        "shots": [
+          {
+            "photo": "5dcba6dc",
+            "weight": 6,
+            "label": "Curiosity Lab"
+          },
+          {
+            "photo": "3cd172c6",
+            "weight": 6,
+            "label": "Curiosity Lab",
+            "callout": {
+              "type": "stat",
+              "big": "3 miles",
+              "label": "of test track for driverless vehicles, on a public street",
+              "source": "City of Peachtree Corners"
+            }
+          }
+        ]
+      },
+      {
+        "say": "From Peachtree Corners, downtown Atlanta is twenty-two miles away: thirty-nine minutes, fifty-three at rush hour.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "5c1562ef",
+            "weight": 7,
+            "label": "Peachtree Parkway",
+            "callout": {
+              "type": "stat",
+              "big": "~39 min",
+              "label": "to downtown Atlanta · 53 at rush hour",
+              "source": "22 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "d9f74f74",
+            "weight": 5,
+            "label": "Peachtree Parkway"
+          }
+        ]
+      },
+      {
+        "say": "Perimeter Center is nineteen minutes down Peachtree Parkway, MARTA rail at Doraville eighteen, and the average trip to work is twenty-six.",
+        "chapter": "commute",
+        "shots": [
+          {
+            "photo": "3984ea53",
+            "weight": 5,
+            "callout": {
+              "type": "stat",
+              "big": "19 min",
+              "label": "to Perimeter Center · 31 at rush hour",
+              "source": "10 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "c895672d",
+            "weight": 5,
+            "label": "MARTA Doraville",
+            "callout": {
+              "type": "stat",
+              "big": "18 min",
+              "label": "to MARTA rail at Doraville · 26 at rush hour",
+              "source": "8 mi · Google Maps, typical traffic"
+            }
+          },
+          {
+            "photo": "4c7b51eb",
+            "weight": 5,
+            "label": "MARTA Doraville",
+            "callout": {
+              "type": "stat",
+              "big": "26 min",
+              "label": "average trip to work · Georgia 28",
+              "source": "ACS 2020–24 · Data USA"
+            }
+          }
+        ]
+      },
+      {
+        "say": "The median home is worth four hundred eighty-five thousand dollars, well above Georgia's, and the city charges no property tax of its own.",
+        "chapter": "homes",
+        "shots": [
+          {
+            "photo": "55222bac",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "$484,700",
+              "label": "median home value · 1.6× Georgia",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          },
+          {
+            "photo": "d02fc55b",
+            "weight": 6,
+            "callout": {
+              "type": "stat",
+              "big": "0 mills",
+              "label": "city property tax · county and school taxes apply",
+              "source": "City of Peachtree Corners"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Nearly half the homes are rented, at a median of seventeen hundred dollars a month.",
+        "chapter": "homes",
+        "shots": [
+          {
+            "photo": "c228a95e",
+            "weight": 7,
+            "callout": {
+              "type": "stat",
+              "big": "$1,701",
+              "label": "median rent a month · 47% of homes are rented",
+              "source": "U.S. Census Bureau, ACS 2020–24"
+            }
+          },
+          {
+            "photo": "bc853739",
+            "weight": 6
+          }
+        ]
+      },
+      {
+        "say": "Public schools are Gwinnett County's. Paul Duke STEM High, named for the man who planned the city, ranks thirty-first in Georgia.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "48b83085",
+            "weight": 7,
+            "label": "Paul Duke STEM High",
+            "callout": {
+              "type": "stat",
+              "big": "#31",
+              "label": "in Georgia · high school",
+              "source": "U.S. News, 2026–27"
+            }
+          },
+          {
+            "photo": "bf89663f",
+            "weight": 6,
+            "label": "Paul Duke STEM High",
+            "callout": {
+              "type": "stat",
+              "big": "90.4%",
+              "label": "graduate · district 85.4%",
+              "source": "Gwinnett County Public Schools, class of 2025"
+            }
+          }
+        ]
+      },
+      {
+        "say": "Norcross High is the district's only International Baccalaureate school; Pinckneyville Middle sits inside the city; Wesleyan is private.",
+        "chapter": "schools",
+        "shots": [
+          {
+            "photo": "d2ccae9b",
+            "weight": 6,
+            "label": "Norcross High"
+          },
+          {
+            "photo": "19d640d2",
+            "weight": 5,
+            "label": "Pinckneyville Middle"
+          },
+          {
+            "photo": "5d8ae6f4",
+            "weight": 5,
+            "label": "Wesleyan School"
+          }
+        ]
+      },
+      {
+        "say": "In 2019 the city built a Town Center, then bridged Peachtree Parkway to the shops at The Forum.",
+        "chapter": "downtown",
+        "shots": [
+          {
+            "photo": "4b2af7a8",
+            "weight": 5,
+            "label": "Town Center",
+            "callout": {
+              "type": "stat",
+              "big": "2019",
+              "label": "the Town Center opens · 20 acres",
+              "source": "City of Peachtree Corners"
+            }
+          },
+          {
+            "photo": "13753003",
+            "weight": 4,
+            "label": "Peachtree Corners Bridge"
+          },
+          {
+            "photo": "0f8953f1",
+            "weight": 4,
+            "label": "The Forum"
+          }
+        ]
+      },
+      {
+        "say": "Seven miles of the Chattahoochee River form its northern edge, past Jones Bridge Park and the woods of Simpsonwood.",
+        "chapter": "outdoor",
+        "shots": [
+          {
+            "photo": "2eaba167",
+            "weight": 6,
+            "label": "Jones Bridge Park",
+            "seedance": true,
+            "callout": {
+              "type": "stat",
+              "big": "7 miles",
+              "label": "of the Chattahoochee River along the city's edge"
+            }
+          },
+          {
+            "photo": "23bd27f7",
+            "weight": 5,
+            "label": "Simpsonwood Park",
+            "callout": {
+              "type": "stat",
+              "big": "227 acres",
+              "label": "Simpsonwood Park",
+              "source": "Gwinnett County Parks"
+            }
+          },
+          {
+            "photo": "71502543",
+            "weight": 4,
+            "label": "Jones Bridge Park"
+          }
+        ]
+      }
+    ]
+  }
+}

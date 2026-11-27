@@ -301,6 +301,66 @@
         }
       ]
     },
+    "peachtree-corners-ga": {
+      "overall": "Relatively Low",
+      "tracts": 30,
+      "miles": 3,
+      "version": "December 2025",
+      "rows": [
+        {
+          "label": "Flood",
+          "rating": "Relatively Moderate"
+        },
+        {
+          "label": "Tornado",
+          "rating": "Relatively Moderate"
+        },
+        {
+          "label": "Hail",
+          "rating": "Relatively Moderate"
+        },
+        {
+          "label": "Lightning",
+          "rating": "Relatively Moderate"
+        },
+        {
+          "label": "Strong wind",
+          "rating": "Relatively Low"
+        },
+        {
+          "label": "Winter weather",
+          "rating": "Relatively Low"
+        },
+        {
+          "label": "Ice storm",
+          "rating": "Relatively Low"
+        },
+        {
+          "label": "Earthquake",
+          "rating": "Relatively Low"
+        },
+        {
+          "label": "Heat wave",
+          "rating": "Relatively Low"
+        },
+        {
+          "label": "Cold wave",
+          "rating": "Relatively Low"
+        },
+        {
+          "label": "Hurricane",
+          "rating": "Very Low"
+        },
+        {
+          "label": "Wildfire",
+          "rating": "Very Low"
+        },
+        {
+          "label": "Landslide",
+          "rating": "Very Low"
+        }
+      ]
+    },
     "sugar-hill-ga": {
       "overall": "Relatively Low",
       "tracts": 17,
