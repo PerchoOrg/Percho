@@ -4,9 +4,7 @@
  *
  * PURE: no react / zustand / expo imports.
  */
-import type { CommunityProfile } from "@percho/shared/community-profile";
-import { rankShare } from "@percho/shared/rank-share";
-import { schoolRanks } from "../community/explore";
+import type { PlaceGlance } from "@percho/shared/glance";
 
 /** `685000` → `"$685,000"`. The detail DTO carries a number, the row a label. */
 export function formatPrice(price: number | undefined): string | undefined {
@@ -41,25 +39,21 @@ export function areaUnitId(cardId: string): string {
 }
 
 /**
- * A saved neighbourhood's one line of findings: "Schools Top 12–46% · $747K".
+ * A save's one line of figures, as its feed card prints them (phase404.23,
+ * owner: 「preview内容和最新的卡片保持一致 比如学区评级」): "$685K · A+ school
+ * grade · 6 min to I-85".
  *
- * The grid, list and map views (phase386) show a save with what its Explore
- * page found, so a shortlist can be scanned without opening each page. The
- * schools are worded as a range — best to worst of the levels nearby — so the
- * line never claims more than the weakest of them. Undefined for a community
- * nobody has researched.
+ * The server's `glance` cells, in the card's order — the community detail
+ * endpoint and the feed's city units both carry them — so the line and the
+ * card cannot disagree. A price says what it is on its own; any other figure
+ * keeps the label the card prints under it, because "A+" or "6 min" alone in
+ * a line is not a fact. Undefined when the server sent no figures.
  */
-export function communityFact(
-	profile: CommunityProfile | undefined,
+export function glanceFact(
+	glance: PlaceGlance | undefined,
 ): string | undefined {
-	const shares = schoolRanks(profile?.ranks).map(rankShare);
-	const best = Math.min(...shares);
-	const worst = Math.max(...shares);
-	const parts = [
-		shares.length === 0
-			? undefined
-			: `Schools Top ${best === worst ? best : `${best}–${worst}`}%`,
-		profile?.homeValue?.display,
-	].filter(Boolean);
+	const parts = (glance?.cells ?? []).map((c) =>
+		c.value.startsWith("$") ? c.value : `${c.value} ${c.label}`,
+	);
 	return parts.length > 0 ? parts.join(" · ") : undefined;
 }

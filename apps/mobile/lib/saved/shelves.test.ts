@@ -92,11 +92,9 @@ describe("shelfCountLine", () => {
 			home("h2", "Woodstock"),
 			hood("c1", "Woodstock"),
 		]);
-		expect(shelfCountLine(shelves[0] as never)).toBe(
-			"2 homes · 1 neighbourhood",
-		);
+		expect(shelfCountLine(shelves[0] as never)).toBe("2 homes · 1 community");
 		const only = buildShelves([hood("c1", "Marietta")]).shelves[0];
-		expect(shelfCountLine(only as never)).toBe("1 neighbourhood");
+		expect(shelfCountLine(only as never)).toBe("1 community");
 	});
 
 	it("is empty for a shelf that is only its header", () => {

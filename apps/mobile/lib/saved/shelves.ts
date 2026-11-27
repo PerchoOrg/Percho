@@ -128,13 +128,13 @@ export function buildShelves(entries: readonly ShelfEntry[]): Shelves {
 	return { shelves: [...byPlace.values()], unplaced };
 }
 
-/** "2 homes · 1 neighbourhood" — what is on the shelf, or "" when it is bare. */
+/** "2 homes · 1 community" — what is on the shelf, or "" when it is bare. */
 export function shelfCountLine(shelf: Shelf): string {
 	const homes = shelf.cards.filter((c) => c.kind === "listing").length;
 	const hoods = shelf.cards.filter((c) => c.kind === "community").length;
 	const parts: string[] = [];
 	if (homes) parts.push(`${homes} home${homes > 1 ? "s" : ""}`);
-	if (hoods) parts.push(`${hoods} neighbourhood${hoods > 1 ? "s" : ""}`);
+	if (hoods) parts.push(`${hoods} ${hoods > 1 ? "communities" : "community"}`);
 	return parts.join(" · ");
 }
 
@@ -155,7 +155,7 @@ export interface SavedTile {
 	id: string;
 	kind: ShelfEntry["kind"];
 	title: string;
-	/** The town for a home or a neighbourhood; the county line for an area. */
+	/** The city for a home or a community; the county line for a city. */
 	sub: string;
 	fact?: string;
 	thumbUrl?: string;

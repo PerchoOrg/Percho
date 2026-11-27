@@ -23,6 +23,20 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 08:24 UTC — phase404.23: Saved says City and community, and its line is the card's figures
+
+**Objective**: owner: 「saved里 改叫city 里面的用语都改成community preview内容和最新的卡片保持一致 比如学区评级」.
+**Actions**:
+- `apps/web/lib/communities/detail.ts`: `/api/mobile/community/<id>` carries `glance`, built by the feed's own `communityGlance` (`county` added to the select). Live on deploy.
+- `apps/mobile/lib/saved/rows.ts`: `glanceFact` replaces `communityFact` — the server's cells in the card's order, "$685K · A+ school grade · 6 min to I-85". A saved city's tile takes the same line from its feed unit's `glance` (it had none).
+- Wording: the Towns view is "City"; the filter reads Everything / Homes / Communities / Cities; "Neighbourhood(s)" → "Community/Communities" on tiles, the shelf count, the empty state and the compare bar; "across 2 towns" → "across 2 cities". The persisted view key stays `towns`, so nobody's saved choice resets.
+- The list row and the map rail give the line two lines, not one: a city's "62 min drive to downtown" did not fit.
+**Decisions**:
+- **Server-sent, not rebuilt on the phone.** The old line re-derived schools from the profile ("Schools Top 12–46%"), which is how it drifted from the card. Reading the card's own cells means the next rewording reaches Saved without a release.
+- A price stands alone; every other figure keeps the card's label under it ("A+ school grade", "6 min to I-85"), because "A+" or "6 min" alone in a line says nothing. Phase404.22 (another session, merged minutes before this) made the schools figure the bare letter over "school grade"; this line follows it.
+- A city tile's sub-line is still its county and true-cost figure — not on the card, but not asked about.
+**Risks**: the mobile half needs Metro / the next store build; an installed build keeps the old line until then. A community saved before its profile has an estimate or highway shows what its card shows — fewer figures.
+**Next steps**: none owed.
 ## 2026-11-27 08:16 UTC — phase404.22: the schools figure is the letter alone again, over "school grade"
 
 **Objective**: owner on phase404.21's "Grade A+": 「改回去 简单点 地下小字可以写school grade啥的」.

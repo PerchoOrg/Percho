@@ -13,7 +13,7 @@ import {
  * there rather than here.
  *
  * Two controls in the top right, both his ask:
- *   · FILTER — Everything / Homes / Neighbourhoods / Areas. Deliberately an
+ *   · FILTER — Everything / Homes / Communities / Cities. Deliberately an
  *     icon and a popover, not the segment chips deleted in phase187: those
  *     were a permanent bar that ate a row and forced you into one segment,
  *     this costs nothing until opened and defaults to Everything.
@@ -46,8 +46,8 @@ import {
  * Rows re-fetch from the detail endpoints on every mount — the store keeps
  * ids only, so a price change shows the moment the server knows it.
  */
-import type { CommunityProfile } from "@percho/shared/community-profile";
 import { fmlsNumberLabel } from "@percho/shared/fmls";
+import type { PlaceGlance } from "@percho/shared/glance";
 import type { Area } from "@percho/shared/lenses";
 import { lensById, valuesFor } from "@percho/shared/lenses";
 import { router } from "expo-router";
@@ -83,8 +83,8 @@ import { COMPARE_MAX, COMPARE_MIN } from "../../lib/listing/compare";
 import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
 import {
 	areaUnitId,
-	communityFact,
 	formatPrice,
+	glanceFact,
 	specsLine,
 } from "../../lib/saved/rows";
 import {
@@ -119,7 +119,7 @@ type Row =
 			thumbUrl?: string;
 			href: string;
 			mlsNumber?: string;
-			/** What its page found, for the flat views. Communities only. */
+			/** Its card's figures, for the flat views. Communities only. */
 			fact?: string;
 			center?: { lat: number; lng: number };
 	  }
@@ -132,8 +132,8 @@ type Filter = "all" | "listing" | "community" | "area";
 const FILTER_LABEL: Record<Filter, string> = {
 	all: "Everything",
 	listing: "Homes",
-	community: "Neighbourhoods",
-	area: "Areas",
+	community: "Communities",
+	area: "Cities",
 };
 
 /** The filter's rows. The communities-only build has no Homes row. */
@@ -142,7 +142,7 @@ const FILTERS: readonly Filter[] = LISTINGS_IN_APP
 	: ["all", "community", "area"];
 
 /** What the empty state promises to keep. */
-const SAVED_NOUN = LISTINGS_IN_APP ? "Homes" : "Neighbourhoods";
+const SAVED_NOUN = LISTINGS_IN_APP ? "Homes" : "Communities";
 
 /** Per-kind compare bounds, so the action bar can speak in the right units. */
 const BOUNDS = {
@@ -150,9 +150,9 @@ const BOUNDS = {
 	community: {
 		min: COMMUNITY_COMPARE_MIN,
 		max: COMMUNITY_COMPARE_MAX,
-		noun: "neighbourhoods",
+		noun: "communities",
 	},
-	area: { min: AREA_COMPARE_MIN, max: AREA_COMPARE_MAX, noun: "areas" },
+	area: { min: AREA_COMPARE_MIN, max: AREA_COMPARE_MAX, noun: "cities" },
 } as const;
 
 /**
@@ -211,9 +211,9 @@ async function fetchRow(item: SavedItem): Promise<Row> {
 			state: string;
 			heroUrl: string;
 			center?: { lat: number; lng: number };
-			profile?: CommunityProfile;
+			glance?: PlaceGlance;
 		};
-		const fact = communityFact(d.profile);
+		const fact = glanceFact(d.glance);
 		return {
 			status: "ready",
 			title: d.name,
@@ -330,12 +330,14 @@ export default function SavedTab() {
 				const geo = pool.geoUnits.find((u) => u.id === unit);
 				const key = countyOf(unit)?.key;
 				const cost = costLineFor(unit);
+				const fact = glanceFact(geo?.glance);
 				return {
 					id: item.id,
 					kind: "area",
 					...(geo ? { place: geo.name, center: geo.centroid } : {}),
 					...(cost ? { costLine: cost } : {}),
 					...(key ? { areaKey: key } : {}),
+					...(fact ? { fact } : {}),
 					// The flat views draw an area as a tile: its photo, its page.
 					...(geo?.heroUrl ? { thumbUrl: geo.heroUrl } : {}),
 					...(geo?.citySlug ? { href: `/city/${geo.citySlug}` } : {}),
@@ -723,8 +725,8 @@ export default function SavedTab() {
 							pickedAreaKeys.length < 2
 								? "Those are in the same county — pick one in another."
 								: bounds
-									? `Comparing ${bounds.noun}${pickedTowns > 1 ? ` across ${pickedTowns} towns` : ""}`
-									: "Tap what you’re torn between — different towns are fine"}
+									? `Comparing ${bounds.noun}${pickedTowns > 1 ? ` across ${pickedTowns} cities` : ""}`
+									: "Tap what you’re torn between — different cities are fine"}
 						</Text>
 					</View>
 					{picked.length > 0 && (
