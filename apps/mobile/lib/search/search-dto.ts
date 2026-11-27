@@ -44,8 +44,20 @@ export interface SearchCity {
 	lng?: number;
 }
 
+/** A school (phase410); tapping it flies the map to it. */
+export interface SearchSchool {
+	id: string;
+	name: string;
+	level?: string;
+	city?: string;
+	zip?: string;
+	lat: number;
+	lng: number;
+}
+
 export interface SearchResult {
 	cities: SearchCity[];
+	schools: SearchSchool[];
 	listings: SearchListing[];
 	communities: SearchCommunity[];
 }
@@ -118,13 +130,36 @@ function parseCity(v: unknown): SearchCity | null {
 	};
 }
 
+function parseSchool(v: unknown): SearchSchool | null {
+	if (!v || typeof v !== "object") return null;
+	const o = v as Record<string, unknown>;
+	const id = str(o.id);
+	const name = str(o.name);
+	const lat = num(o.lat);
+	const lng = num(o.lng);
+	if (!id || !name || lat === undefined || lng === undefined) return null;
+	return {
+		id,
+		name,
+		level: str(o.level),
+		city: str(o.city),
+		zip: str(o.zip),
+		lat,
+		lng,
+	};
+}
+
 export function parseSearchResult(json: unknown): SearchResult {
 	const o = (json ?? {}) as Record<string, unknown>;
 	const listings = Array.isArray(o.listings) ? o.listings : [];
 	const communities = Array.isArray(o.communities) ? o.communities : [];
 	// A server from before phase409 sends no `cities`: an empty group, not a crash.
 	const cities = Array.isArray(o.cities) ? o.cities : [];
+	const schools = Array.isArray(o.schools) ? o.schools : [];
 	return {
+		schools: schools
+			.map(parseSchool)
+			.filter((x): x is SearchSchool => x !== null),
 		cities: cities.map(parseCity).filter((x): x is SearchCity => x !== null),
 		listings: listings
 			.map(parseListing)

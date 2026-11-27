@@ -101,10 +101,23 @@ export interface SearchCityDTO {
   lng?: number;
 }
 
+/** A school (phase410); the app flies the map to it at street zoom. */
+export interface SearchSchoolDTO {
+  id: string;
+  name: string;
+  level?: string;
+  city?: string;
+  zip?: string;
+  lat: number;
+  lng: number;
+}
+
 export interface SearchResultDTO {
   q: string;
   /** Added 2026-11-27 (phase409): "search里搜不到city". */
   cities: SearchCityDTO[];
+  /** Added 2026-11-27 (phase410), by name or by ZIP. */
+  schools: SearchSchoolDTO[];
   listings: SearchListingDTO[];
   communities: SearchCommunityDTO[];
 }
@@ -198,6 +211,49 @@ export async function searchCities(q: string): Promise<SearchCityDTO[]> {
     }));
 }
 
+/** A five-digit query is a ZIP (phase410): it matches `zip` exactly, not names. */
+export function isZipQuery(q: string): boolean {
+  return /^\d{5}$/.test(q);
+}
+
+/** A school list is short when it answers a name, longer for a whole ZIP. */
+const SCHOOL_LIMIT = { name: 10, zip: 40 } as const;
+
+type SchoolRow = {
+  id: string;
+  name: string;
+  level: string | null;
+  city: string | null;
+  zip: string | null;
+  lat: number | null;
+  lng: number | null;
+};
+
+export function projectSearchSchools(rows: SchoolRow[]): SearchSchoolDTO[] {
+  return rows.flatMap((r) => {
+    const at = coord(r.lat, r.lng);
+    if (!at) return [];
+    return [
+      {
+        id: r.id,
+        name: r.name,
+        ...(r.level ? { level: r.level } : {}),
+        ...(r.city ? { city: r.city } : {}),
+        ...(r.zip ? { zip: r.zip } : {}),
+        ...at,
+      },
+    ];
+  });
+}
+
+function schoolSearch(supabase: ReturnType<typeof createUncachedAnonClient>, q: string) {
+  const read = supabase.from('k12_schools').select('id, name, level, city, zip, lat, lng');
+  return (isZipQuery(q) ? read.eq('zip', q) : read.ilike('name', `%${q}%`))
+    .not('lat', 'is', null)
+    .order('name', { ascending: true })
+    .limit(isZipQuery(q) ? SCHOOL_LIMIT.zip : SCHOOL_LIMIT.name);
+}
+
 /** Ids of the communities a buyer may see: those with a video — see the header. */
 async function videoCommunityIds(): Promise<string[]> {
   return (await fetchCommunityListCards()).map((c) => c.id);
@@ -251,18 +307,22 @@ export async function searchEntities(
   const like = `%${q}%`;
   const videoIds = await videoCommunityIds();
 
-  const [cities, listingRes, communityRes] = await Promise.all([
-    searchCities(q),
+  const zip = isZipQuery(q);
+  const communityRead = supabase
+    .from('communities')
+    .select('id, slug, name, city, state, cover_storage_path, lat, lng')
+    .eq('status', 'active')
+    // The content gate — see the header. Only communities with a video.
+    .in('id', videoIds);
+  const [cities, listingRes, communityRes, schoolRes] = await Promise.all([
+    zip ? Promise.resolve([] as SearchCityDTO[]) : searchCities(q),
     opts.listings ? listingSearch(supabase, like) : NO_LISTINGS,
-    supabase
-      .from('communities')
-      .select('id, slug, name, city, state, cover_storage_path, lat, lng')
-      .eq('status', 'active')
-      // The content gate — see the header. Only communities with a video.
-      .in('id', videoIds)
-      .or(`name.ilike.${like},city.ilike.${like}`)
+    // A ZIP is the community's own (`backfill-community-zip.ts`, from the
+    // Census's ZIP areas), so 30024 finds Suwanee's communities exactly.
+    (zip ? communityRead.eq('zip', q) : communityRead.or(`name.ilike.${like},city.ilike.${like}`))
       .order('name', { ascending: true })
       .limit(COMMUNITY_LIMIT),
+    schoolSearch(supabase, q),
   ]);
 
   if (listingRes.error)
@@ -270,10 +330,12 @@ export async function searchEntities(
   if (communityRes.error) {
     throw new Error(`search: communities read failed: ${communityRes.error.message}`);
   }
+  if (schoolRes.error) throw new Error(`search: schools read failed: ${schoolRes.error.message}`);
 
   return {
     q,
     cities,
+    schools: projectSearchSchools((schoolRes.data ?? []) as SchoolRow[]),
     listings: projectSearchListings((listingRes.data ?? []) as ListingRow[]),
     communities: projectSearchCommunities((communityRes.data ?? []) as CommunityRow[]),
   };
@@ -303,7 +365,7 @@ export async function mapEntities(
     maxLng: number;
   },
   opts: { listings: boolean } = { listings: true },
-): Promise<Omit<SearchResultDTO, 'q' | 'cities'>> {
+): Promise<Omit<SearchResultDTO, 'q' | 'cities' | 'schools'>> {
   const supabase = createUncachedAnonClient();
   const videoIds = await videoCommunityIds();
 
