@@ -23,7 +23,7 @@ rotation, not on the way in.
 
 ---
 
-## 2026-11-27 01:20 UTC — phase404.14: a community's own price — there is none yet; a public source found and tried on nine (investigation, nothing changed)
+## 2026-11-27 00:59 UTC — phase404.14: a community's own price — there is none yet; a public source found and tried on nine (investigation, nothing changed)
 
 **Objective**: owner, inside Suwanee's communities: 「上面也suanee homes price 不make sense 应该写的是这个小区的price」.
 **What the figure is**: `profile.homeValue` — Zillow's typical home value for the community's CITY (or ZIP, for Windward), the same number on every community in that city: `$589K · Suwanee homes` on Edinburgh, Harvest Park and Aberdeen alike. `communities.median_home_value` is NULL on every row. No community-level price exists in the database.
