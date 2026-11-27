@@ -15,6 +15,7 @@ import {
 	narrowPool,
 	parsePlaceFocus,
 	placeDeck,
+	placeHeader,
 	placeLinkAccessibilityLabel,
 	placeLinkLabel,
 	placeWithin,
@@ -261,5 +262,39 @@ describe("narrowPool — a place's part of a pool the phone already holds", () =
 			name: "Nowhere",
 		});
 		expect(out).toEqual({ geoUnits: [], communities: [], listings: [] });
+	});
+});
+
+describe("placeHeader — the top of a place's own page", () => {
+	const suwanee = { ...city(SUWANEE).unit, name: "Suwanee" };
+	const named = { ...edinburgh, name: "Edinburgh" };
+	const pool = { geoUnits: [suwanee], communities: [named] };
+
+	it("a city's page keeps the city and state, over what the page holds", () => {
+		expect(
+			placeHeader({ kind: "city", id: SUWANEE, name: "Suwanee" }, pool),
+		).toEqual({ title: "Suwanee, GA", subtitle: "Communities" });
+	});
+
+	it("a neighbourhood's page names it, and keeps its city and state beside what it holds", () => {
+		expect(
+			placeHeader(
+				{ kind: "community", id: "edinburgh", name: "Edinburgh" },
+				pool,
+			),
+		).toEqual({ title: "Edinburgh", subtitle: "Homes · Suwanee, GA" });
+	});
+
+	it("says the name alone until the page's pool has landed", () => {
+		const empty = { geoUnits: [], communities: [] };
+		expect(
+			placeHeader({ kind: "city", id: SUWANEE, name: "Suwanee" }, empty),
+		).toEqual({ title: "Suwanee", subtitle: "Communities" });
+		expect(
+			placeHeader(
+				{ kind: "community", id: "edinburgh", name: "Edinburgh" },
+				empty,
+			),
+		).toEqual({ title: "Edinburgh", subtitle: "Homes" });
 	});
 });

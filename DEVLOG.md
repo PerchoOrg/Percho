@@ -23,6 +23,13 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 00:55 UTC — phase404.13: a place's page keeps the city and state in its header
+
+**Objective**: owner, on phase404.12: 「进了community和home 也保留这个city state 在title 里」. The feed's line says `Suwanee, GA · Gwinnett County`; a place's page has a header instead of that line, and the header said only `Suwanee` / `Edinburgh`.
+**Now**: a city's page reads `Suwanee, GA` over `Communities`; a neighbourhood's reads `Edinburgh` over `Homes · Suwanee, GA`. `placeHeader` (`lib/feed/place-deck.ts`, 3 tests) reads the state and the neighbourhood's city from the page's own pool — there on the first frame since the pool is handed over (phase404.10) — and says the name alone if it is not.
+**Read as**: the city and state in the page's header ("title" being the row at the top, as in the turn before), not the per-card line back.
+**Verified**: mobile typecheck 0, biome 0 errors / 5 warnings, vitest 986. **Not run on a device.**
+
 ## 2026-11-27 00:42 UTC — phase404.12: GA in the place line, Map beside it, the name on one line, a home can be shared
 
 **Objective**: owner, with a capture of the Sugarloaf Country Club card (name on two lines, the disc at the row's far end, Map at the screen's edge): 「加ga 并且把map放到title后面 加房子分项 / 名字太长两行不好看 控制在一行」. "分项" read as 分享 — the card he asked about the turn before. "title" read as the line Map shares a row with, not the card's name.

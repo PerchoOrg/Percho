@@ -123,6 +123,45 @@ export function placeLinkAccessibilityLabel(focus: PlaceFocus): string {
 	return `${placeLinkLabel(focus)} in ${focus.name}`;
 }
 
+/**
+ * What a place's own page says at its top (phase404.13). The city and state
+ * stay in it — the line above every feed card says them, and the page has no
+ * such line (owner, 2026-11-27: 「进了community和home 也保留这个city state 在
+ * title 里」):
+ *
+ *     Suwanee, GA          a city's page
+ *     Communities
+ *
+ *     Edinburgh            a neighbourhood's page
+ *     Homes · Suwanee, GA
+ *
+ * Read from the page's own pool, which carries the city's unit and the
+ * neighbourhood's row; the place's name alone until it has landed.
+ */
+export function placeHeader(
+	focus: PlaceFocus,
+	pool: Pick<FeedPool, "geoUnits" | "communities">,
+): { title: string; subtitle: string } {
+	const holds = placeLinkLabel(focus);
+	if (focus.kind === "city") {
+		const unit = pool.geoUnits.find((u) => u.id === focus.id);
+		const name = unit?.name ?? focus.name;
+		return {
+			title: unit?.state ? `${name}, ${unit.state}` : name,
+			subtitle: holds,
+		};
+	}
+	const community = pool.communities.find((c) => c.slug === focus.id);
+	const where =
+		community?.city && community.state
+			? `${community.city}, ${community.state}`
+			: community?.city;
+	return {
+		title: community?.name ?? focus.name,
+		subtitle: where ? `${holds} · ${where}` : holds,
+	};
+}
+
 /** A route's params as a focus, or null when they do not name a place. */
 export function parsePlaceFocus(params: {
 	kind?: string | string[];
