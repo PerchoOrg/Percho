@@ -383,10 +383,25 @@ function Dues({ dues }: { dues: NonNullable<CommunityProfile["dues"]> }) {
 	);
 }
 
-function Nearby({ view }: { view: NearbyView }) {
+function Nearby({
+	view,
+	highway,
+}: {
+	view: NearbyView;
+	/** The drive to the highway, and how it was measured. */
+	highway: CommunityProfile["highway"];
+}) {
 	const [stop, setStop] = useState<NearbyStop | null>(null);
 	return (
 		<>
+			{highway && (
+				<View style={styles.block}>
+					<Text style={styles.big}>{highway.display}</Text>
+					<Text style={styles.caption}>
+						{highway.label} · {highway.basis}
+					</Text>
+				</View>
+			)}
 			<Text style={styles.title}>Places in the film, by distance</Text>
 			<View style={styles.block}>
 				<StopStrip view={view} selected={stop} onSelect={setStop} />
@@ -466,7 +481,9 @@ export function ExploreSheet({
 				<HoldingCost holding={profile.homeValue.holding} />
 			)}
 			{which === "dues" && profile.dues && <Dues dues={profile.dues} />}
-			{which === "nearby" && nearby && <Nearby view={nearby} />}
+			{which === "nearby" && nearby && (
+				<Nearby view={nearby} highway={profile.highway} />
+			)}
 			{which === "events" && <Events events={events} />}
 		</ScrollView>
 	);
