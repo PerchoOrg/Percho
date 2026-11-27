@@ -30,6 +30,21 @@ vi.mock('@/lib/supabase/server', () => ({
       return fakeQuery();
     },
   }),
+  createUncachedServiceClient: () => ({}),
+}));
+
+/** Two filmed cities, as `fetchCityFilms` keys them (by geo unit). */
+const film = (slug: string, name: string) => ({
+  slug,
+  posterUrl: `https://videodelivery.net/${slug}/thumbnails/thumbnail.jpg?time=1s`,
+  place: { name, state: 'GA', county: 'Gwinnett', lat: 34, lng: -84.1 },
+});
+vi.mock('@/lib/cities/detail', () => ({
+  fetchCityFilms: async () =>
+    new Map([
+      ['city:suwanee-ga', film('suwanee-ga', 'Suwanee')],
+      ['city:peachtree-corners-ga', film('peachtree-corners-ga', 'Peachtree Corners')],
+    ]),
 }));
 
 vi.mock('@/lib/communities/list', () => ({
@@ -78,5 +93,18 @@ describe('searchEntities / mapEntities — only communities with a video', () =>
   it('the map limits the community read to the same set', async () => {
     await mapEntities(BOUNDS, { listings: false });
     expect(inFilters).toEqual([['id', ['filmed-1', 'filmed-2']]]);
+  });
+});
+
+describe('searchEntities — cities (phase409)', () => {
+  it('finds a filmed city by part of its name', async () => {
+    const res = await searchEntities('peachtree', { listings: false });
+    expect(res.cities.map((c) => c.slug)).toEqual(['peachtree-corners-ga']);
+    expect(res.cities[0]?.posterUrl).toContain('thumbnail.jpg');
+  });
+
+  it('returns no city when none matches', async () => {
+    const res = await searchEntities('oak', { listings: false });
+    expect(res.cities).toEqual([]);
   });
 });

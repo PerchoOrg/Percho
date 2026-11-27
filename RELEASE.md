@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-27
+- **Search finds cities.** Typing a city's name — "Suwanee", "peachtree" — now lists the city first, with its film's picture; tap it to open the city. Before, only neighbourhoods came up. The search box now says "Search a city or community". Arrives with the next app update.
 - **Every panel has a close button.** The panels that slide up — a neighbourhood's Schools or Safety, a city's details, "Where are you looking?" — now have an ✕ in the top corner instead of closing only when you tap the dimmed space above them. Search results have one too: it clears the search and puts the keyboard away. Arrives with the next app update.
 - **Peachtree Corners' film opens on its name** — the lit bridge over Peachtree Parkway — instead of an office building.
 - **Peachtree Corners is the eighth city.** It has its own film — an office park planned in the 1960s that voted itself into a city in 2012, with no city property tax, a street where driverless vehicles are tested, and seven miles of the Chattahoochee — and its own page with schools, commute times, home values and everyday places.

@@ -47,9 +47,10 @@
  * rule as `detail.ts`: absent means the key is OMITTED.
  */
 
+import { fetchCityFilms } from '@/lib/cities/detail';
 import { publicCoverImageUrl } from '@/lib/communities/cover';
 import { fetchCommunityListCards } from '@/lib/communities/list';
-import { createUncachedAnonClient } from '@/lib/supabase/server';
+import { createUncachedAnonClient, createUncachedServiceClient } from '@/lib/supabase/server';
 
 const SEARCH_LIMIT = 24;
 /**
@@ -89,8 +90,21 @@ export interface SearchCommunityDTO {
   lng?: number;
 }
 
+/** A city with a film — what `/city/[slug]` opens. */
+export interface SearchCityDTO {
+  slug: string;
+  name: string;
+  state: string;
+  county?: string;
+  posterUrl: string;
+  lat?: number;
+  lng?: number;
+}
+
 export interface SearchResultDTO {
   q: string;
+  /** Added 2026-11-27 (phase409): "search里搜不到city". */
+  cities: SearchCityDTO[];
   listings: SearchListingDTO[];
   communities: SearchCommunityDTO[];
 }
@@ -159,6 +173,31 @@ export function projectSearchCommunities(rows: CommunityRow[]): SearchCommunityD
   }));
 }
 
+/**
+ * Cities whose name contains `q`: only cities with a film, the same set the
+ * feed shows, so a hit always opens a page. Until phase409 the app matched
+ * cities itself against the feed pool's `geoUnits`, which the pool stopped
+ * sending — so no city could be found by name. Eight rows; filtered here.
+ *
+ * The service client is the films' own (`fetchCityFilms`, as the feed route
+ * uses it): assemblies are not readable with the anon key. It reads only
+ * published films' ids and names — nothing a buyer cannot already see.
+ */
+export async function searchCities(q: string): Promise<SearchCityDTO[]> {
+  const films = await fetchCityFilms(createUncachedServiceClient());
+  return [...films.values()]
+    .filter((f) => f.place.name.toLowerCase().includes(q))
+    .sort((a, b) => a.place.name.localeCompare(b.place.name))
+    .map((f) => ({
+      slug: f.slug,
+      name: f.place.name,
+      state: f.place.state ?? 'GA',
+      ...(f.place.county ? { county: f.place.county } : {}),
+      posterUrl: f.posterUrl,
+      ...(coord(f.place.lat, f.place.lng) ?? {}),
+    }));
+}
+
 /** Ids of the communities a buyer may see: those with a video — see the header. */
 async function videoCommunityIds(): Promise<string[]> {
   return (await fetchCommunityListCards()).map((c) => c.id);
@@ -212,7 +251,8 @@ export async function searchEntities(
   const like = `%${q}%`;
   const videoIds = await videoCommunityIds();
 
-  const [listingRes, communityRes] = await Promise.all([
+  const [cities, listingRes, communityRes] = await Promise.all([
+    searchCities(q),
     opts.listings ? listingSearch(supabase, like) : NO_LISTINGS,
     supabase
       .from('communities')
@@ -233,6 +273,7 @@ export async function searchEntities(
 
   return {
     q,
+    cities,
     listings: projectSearchListings((listingRes.data ?? []) as ListingRow[]),
     communities: projectSearchCommunities((communityRes.data ?? []) as CommunityRow[]),
   };
@@ -262,7 +303,7 @@ export async function mapEntities(
     maxLng: number;
   },
   opts: { listings: boolean } = { listings: true },
-): Promise<Omit<SearchResultDTO, 'q'>> {
+): Promise<Omit<SearchResultDTO, 'q' | 'cities'>> {
   const supabase = createUncachedAnonClient();
   const videoIds = await videoCommunityIds();
 
