@@ -268,6 +268,43 @@ describe('buildProfile', () => {
     ]);
   });
 
+  it("estimates a home's worth from the county's appraisals, where they were read", () => {
+    expect(profile?.estimate).toBeUndefined();
+    const valued = (facts: { county: string; homes: number; median: number; taxYear?: number }) =>
+      buildProfile(subject, buildContext({ ...inputs, values: new Map([['windward', facts]]) }));
+
+    // A current file is printed as it is, to $10K.
+    const gwinnett = valued({ county: 'Gwinnett', homes: 393, median: 1_215_000 });
+    expect(gwinnett?.estimate).toEqual({
+      display: '$1.2M',
+      label: 'est. home value',
+      basis: 'Median county appraisal of 393 homes',
+    });
+    expect(gwinnett?.sources.map((s) => s.name)).toContain('Gwinnett County tax assessor');
+    expect(communityProfileSchema.safeParse(gwinnett).success).toBe(true);
+    expect(
+      valued({ county: 'Forsyth', homes: 110, median: 674_650, taxYear: 2026 })?.estimate,
+    ).toEqual({
+      display: '$670K',
+      label: 'est. home value',
+      basis: 'Median 2026 county appraisal of 110 homes',
+    });
+
+    // Fulton's file is three years behind the market, and is scaled to it.
+    const fulton = valued({ county: 'Fulton', homes: 1395, median: 545_400, taxYear: 2023 });
+    expect(fulton?.estimate).toEqual({
+      display: '$910K',
+      label: 'est. home value',
+      basis: 'Median 2023 county appraisal of 1,395 homes, scaled to recent sale prices',
+    });
+    expect(communityProfileSchema.safeParse(fulton).success).toBe(true);
+
+    // A handful of lots is not a community's value.
+    const few = valued({ county: 'Fulton', homes: 9, median: 1_008_600, taxYear: 2023 });
+    expect(few?.estimate).toBeUndefined();
+    expect(few?.sources.map((s) => s.name)).not.toContain('Fulton County tax assessor');
+  });
+
   it("links the community's own pages, https only, and carries its city's events", () => {
     expect(profile?.links?.slice(0, 2)).toEqual([
       { group: 'Community', label: 'Website', url: 'https://example.org/' },

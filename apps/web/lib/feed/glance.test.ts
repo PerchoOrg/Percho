@@ -68,6 +68,27 @@ describe('communityGlance', () => {
     });
   });
 
+  it("leads with the community's own estimate over its area's typical value", () => {
+    const estimated = {
+      ...windward,
+      estimate: {
+        display: '$910K',
+        label: 'est. home value',
+        basis: 'Median 2023 county appraisal of 1,395 homes, scaled to recent sale prices',
+      },
+    };
+    expect(communityGlance({ city: 'Alpharetta', profile: estimated })?.cells[0]).toEqual({
+      value: '$910K',
+      label: 'est. home value',
+      topic: 'potential',
+    });
+    // An estimate alone is enough: a new community's city may have no series.
+    const { homeValue: _, ...newBuild } = estimated;
+    expect(communityGlance({ city: 'Alpharetta', profile: newBuild })?.cells[0]?.value).toBe(
+      '$910K',
+    );
+  });
+
   it('leaves out what it has no figure for', () => {
     const glance = communityGlance({ city: 'Duluth', county: null, profile: null });
     expect(glance).toEqual({ place: { lead: 'Duluth' }, cells: [] });

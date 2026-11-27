@@ -131,9 +131,12 @@ function Schools({ ranks }: { ranks: NonNullable<CommunityProfile["ranks"]> }) {
 
 function HomeValue({
 	homeValue,
+	estimate,
 	standing,
 }: {
 	homeValue: NonNullable<CommunityProfile["homeValue"]>;
+	/** The community's own figure, and how it was arrived at. */
+	estimate: CommunityProfile["estimate"];
 	/** Where the value and its growth stand among their peers. */
 	standing: readonly CommunityRank[];
 }) {
@@ -148,6 +151,14 @@ function HomeValue({
 	const endAt = (v: number) => `${(1 - v / max) * 100}%` as const;
 	return (
 		<>
+			{estimate && (
+				<View style={styles.block}>
+					<Text style={styles.big}>{estimate.display}</Text>
+					<Text style={styles.caption}>
+						{estimate.label} · {estimate.basis}
+					</Text>
+				</View>
+			)}
 			<Text style={styles.title}>{homeValue.headline}</Text>
 			<View style={styles.block}>
 				<View style={styles.chart}>
@@ -430,6 +441,7 @@ export function ExploreSheet({
 			{which === "homeValue" && profile.homeValue && (
 				<HomeValue
 					homeValue={profile.homeValue}
+					estimate={profile.estimate}
 					standing={homeRanks(profile.ranks)}
 				/>
 			)}

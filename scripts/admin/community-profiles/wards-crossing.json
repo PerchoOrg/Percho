@@ -1,0 +1,13 @@
+{
+  "estimate": {
+    "display": "$675K",
+    "label": "new homes from",
+    "basis": "The Providence Group's starting price, November 2026"
+  },
+  "sources": [
+    {
+      "name": "The Providence Group",
+      "url": "https://www.theprovidencegroup.com/new-homes/ga/johns-creek/wards-crossing/"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "estimate": {
+    "display": "$525K",
+    "label": "new homes from",
+    "basis": "Ashton Woods' starting price, November 2026"
+  },
+  "sources": [
+    {
+      "name": "Ashton Woods",
+      "url": "https://ashtonwoods.com/atlanta/arbors-at-richland-creek"
+    }
+  ]
+}

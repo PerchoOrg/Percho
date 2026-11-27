@@ -1,0 +1,110 @@
+{
+  "asOf": "2026-11-27",
+  "communities": {
+    "aberdeen-2": {
+      "county": "Forsyth",
+      "homes": 416,
+      "median": 639555,
+      "taxYear": 2026
+    },
+    "apremont-highcroft": {
+      "county": "Gwinnett",
+      "homes": 55,
+      "median": 725600
+    },
+    "arbors-at-richland-creek": {
+      "county": "Gwinnett",
+      "homes": 8,
+      "median": 251400
+    },
+    "ashley-crossing": {
+      "county": "Fulton",
+      "homes": 61,
+      "median": 369100,
+      "taxYear": 2023
+    },
+    "bellmoore-park": {
+      "county": "Fulton",
+      "homes": 9,
+      "median": 1008600,
+      "taxYear": 2023
+    },
+    "cardinal-lake": {
+      "county": "Gwinnett",
+      "homes": 498,
+      "median": 426650
+    },
+    "edinburgh": {
+      "county": "Gwinnett",
+      "homes": 393,
+      "median": 1215000
+    },
+    "harvest-park": {
+      "county": "Gwinnett",
+      "homes": 94,
+      "median": 722500
+    },
+    "hedgerows": {
+      "county": "Gwinnett",
+      "homes": 368,
+      "median": 797600
+    },
+    "medlock-bridge": {
+      "county": "Fulton",
+      "homes": 637,
+      "median": 532000,
+      "taxYear": 2023
+    },
+    "northbrooke-cumming": {
+      "county": "Forsyth",
+      "homes": 77,
+      "median": 795010,
+      "taxYear": 2026
+    },
+    "sawnee-village": {
+      "county": "Forsyth",
+      "homes": 110,
+      "median": 674650,
+      "taxYear": 2026
+    },
+    "st-marlo": {
+      "county": "Forsyth",
+      "homes": 596,
+      "median": 1308770,
+      "taxYear": 2026
+    },
+    "sugarloaf-country-club": {
+      "county": "Gwinnett",
+      "homes": 886,
+      "median": 1712000
+    },
+    "towne-village-at-suwanee-dam": {
+      "county": "Gwinnett",
+      "homes": 7,
+      "median": 247800
+    },
+    "white-columns": {
+      "county": "Fulton",
+      "homes": 356,
+      "median": 828700,
+      "taxYear": 2023
+    },
+    "wild-timber": {
+      "county": "Gwinnett",
+      "homes": 418,
+      "median": 845700
+    },
+    "windermere": {
+      "county": "Forsyth",
+      "homes": 981,
+      "median": 811000,
+      "taxYear": 2026
+    },
+    "windward": {
+      "county": "Fulton",
+      "homes": 1395,
+      "median": 545400,
+      "taxYear": 2023
+    }
+  }
+}

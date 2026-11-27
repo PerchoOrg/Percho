@@ -1,0 +1,13 @@
+{
+  "estimate": {
+    "display": "$450K",
+    "label": "new homes from",
+    "basis": "Beazer Homes' starting price, November 2026"
+  },
+  "sources": [
+    {
+      "name": "Beazer Homes",
+      "url": "https://www.beazer.com/atlanta-ga/towne-village-at-suwanee-dam"
+    }
+  ]
+}
