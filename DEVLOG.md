@@ -23,7 +23,17 @@ rotation, not on the way in.
 
 ---
 
-## 2026-11-27 09:20 UTC — phase405.1: the 1.1.1 store screenshots, for the owner's review
+## 2026-11-27 09:15 UTC — phase405.2: 1.1.1 resubmitted with the nine new screenshots
+
+**Objective**: owner approved the phase405.1 preview as shown — 「ok」, all nine including the older Saved-map capture.
+**Actions** (App Store Connect API, version 1.1.1 `2c5ddbf4…`, localization `ad7ffa8c…`):
+- `reviewSubmissions` `c9c1281a…` cancelled (`canceled: true` → CANCELING → COMPLETE); version went `DEVELOPER_REJECTED` within ~10 s.
+- Both screenshot sets: the seven carried over from 1.1.0 deleted, the nine uploaded in order (`percho-65-01…09` to `APP_IPHONE_65`, `percho-67-01…09` to `APP_IPHONE_67`), all `COMPLETE`. 1.1.0's own sets untouched.
+- Build 20 still attached. New `reviewSubmissions` `8688f261-f806-4cce-ab09-a3cde7de5668` submitted 09:14:44 UTC; 1.1.1 `WAITING_FOR_REVIEW`, MANUAL.
+**Learnings**: a version in `WAITING_FOR_REVIEW` has its screenshots locked; cancelling the submission is cheap (seconds) but restarts the queue. Upload script kept outside the repo (`~/.asc-tools/shots-111.mjs`).
+**Next steps**: watch the review; on approval the owner picks the release day.
+
+## 2026-11-27 09:05 UTC — phase405.1: the 1.1.1 store screenshots, for the owner's review
 
 **Objective**: owner sent nine captures (「新的截图」) for 1.1.1; he reviews the finished images before upload (phase403).
 **Actions**: same treatment as phase403 — top 150 px cropped (165 on the Suwanee boxes capture, where the scrolled page title sat under the status bar), set at 1090 px wide with 64 px corners on the brand green under a cream New York caption; rendered with headless Chrome at 1290×2796 (`APP_IPHONE_67`) and 1284×2778 (`APP_IPHONE_65`), RGB, no alpha, kept in `/tmp/shots2` until approved. Preview: `apps/web/public/demos/store-screenshots-v2/` (645 px JPEGs).
