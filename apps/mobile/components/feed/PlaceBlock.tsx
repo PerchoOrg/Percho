@@ -66,6 +66,7 @@ import {
 import type { PlaceBlockModel } from "../../lib/feed/place-block";
 import {
 	cellAccessibilityLabel,
+	isLetterFigure,
 	mapAccessibilityLabel,
 	placeAccessibilityLabel,
 } from "../../lib/feed/place-block";
@@ -301,10 +302,12 @@ export function PlaceBlock({
 
 /** A figure over what it is a figure of. */
 function Figure({ cell, styles }: { cell: GlanceCell; styles: BlockStyles }) {
+	// A letter is centred over its label; a number keeps the column's left edge.
+	const centred = isLetterFigure(cell.value) && styles.centred;
 	return (
 		<>
 			<Text
-				style={styles.figure}
+				style={[styles.figure, centred]}
 				numberOfLines={1}
 				adjustsFontSizeToFit
 				minimumFontScale={FIGURE_MIN_SCALE}
@@ -312,7 +315,7 @@ function Figure({ cell, styles }: { cell: GlanceCell; styles: BlockStyles }) {
 				{cell.value}
 			</Text>
 			<Text
-				style={styles.label}
+				style={[styles.label, centred]}
 				numberOfLines={1}
 				adjustsFontSizeToFit
 				minimumFontScale={LABEL_MIN_SCALE}
@@ -585,5 +588,6 @@ function sheet(k: number) {
 			fontWeight: "400",
 			color: feedHeader.context,
 		},
+		centred: { textAlign: "center" },
 	});
 }
