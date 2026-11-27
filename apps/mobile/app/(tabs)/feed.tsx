@@ -84,6 +84,7 @@ import {
 	type SwipeHistory,
 	narrowPool,
 	placeDeck,
+	placeHeader,
 	placeLinkAccessibilityLabel,
 	placeLinkLabel,
 	placeWithin,
@@ -1181,11 +1182,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 						facts={page.rows === "both"}
 						header={
 							focus
-								? {
-										title: focus.name,
-										subtitle: placeLinkLabel(focus),
-										onBack: backOrFeed,
-									}
+								? { ...placeHeader(focus, pool), onBack: backOrFeed }
 								: undefined
 						}
 						onOpenMap={
