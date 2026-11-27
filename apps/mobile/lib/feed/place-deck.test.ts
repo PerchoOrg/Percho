@@ -12,6 +12,7 @@ import type {
 import type { FeedPool } from "./generate-feed";
 import {
 	type SwipeHistory,
+	narrowPool,
 	parsePlaceFocus,
 	placeDeck,
 	placeLinkAccessibilityLabel,
@@ -210,5 +211,55 @@ describe("placeWithin — the place a card is the way into", () => {
 		expect(placeLinkAccessibilityLabel(edinburghFocus)).toBe(
 			"Homes in Edinburgh",
 		);
+	});
+});
+
+describe("narrowPool — a place's part of a pool the phone already holds", () => {
+	const suwanee = city(SUWANEE).unit;
+	const alpharetta = city(ALPHARETTA).unit;
+	const whole: FeedPool = {
+		geoUnits: [alpharetta, suwanee],
+		communities: [edinburgh, windward, harvest, aberdeen],
+		listings: [home("h1", "edinburgh"), home("h3", "windward")],
+	};
+
+	it("a city's: its unit and its neighbourhoods, nobody else's", () => {
+		const out = narrowPool(whole, {
+			kind: "city",
+			id: SUWANEE,
+			name: "Suwanee",
+		});
+		expect(out.geoUnits.map((u) => u.id)).toEqual([SUWANEE]);
+		expect(ids(out.communities)).toEqual([
+			"edinburgh",
+			"harvest-park",
+			"aberdeen",
+		]);
+		// And so the deck its page opens on is the one the server would deal.
+		expect(ids(placeDeck(out, "city", NOTHING))).toEqual([
+			"edinburgh",
+			"harvest-park",
+			"aberdeen",
+		]);
+	});
+
+	it("a neighbourhood's: itself, its city, its homes", () => {
+		const out = narrowPool(whole, {
+			kind: "community",
+			id: "edinburgh",
+			name: "Edinburgh",
+		});
+		expect(out.geoUnits.map((u) => u.id)).toEqual([SUWANEE]);
+		expect(ids(out.communities)).toEqual(["edinburgh"]);
+		expect(ids(out.listings)).toEqual(["h1"]);
+	});
+
+	it("is empty for a place the pool does not hold", () => {
+		const out = narrowPool(whole, {
+			kind: "city",
+			id: "city:nowhere-ga",
+			name: "Nowhere",
+		});
+		expect(out).toEqual({ geoUnits: [], communities: [], listings: [] });
 	});
 });

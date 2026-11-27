@@ -179,14 +179,16 @@ describe("map control B", () => {
  * A place line that shrank beside the pill read as a different face.
  */
 describe("the place row is one size", () => {
-	it("draws the line and the Map pill at PLACE_SIZE", () => {
+	it("draws both halves of the line at PLACE_SIZE, and Map a size under it", () => {
 		const body = CODE.slice(CODE.indexOf("function sheet(k: number)"));
-		for (const name of ["place", "mapLabel"]) {
-			const rule = body.slice(body.indexOf(`\t\t${name}: {`));
-			expect(rule.slice(0, rule.indexOf("}")), name).toContain(
-				"fontSize: PLACE_SIZE * k",
-			);
-		}
+		const place = body.slice(body.indexOf("\t\tplace: {"));
+		expect(place.slice(0, place.indexOf("}"))).toContain(
+			"fontSize: PLACE_SIZE * k",
+		);
+		// Owner, 2026-11-26: 「感觉map按键太突兀了」 — the pill's word had been
+		// raised to the line's 16; it is the handoff's 14 again.
+		expect(n("MAP_LABEL_SIZE")).toBe(14);
+		expect(n("MAP_LABEL_SIZE")).toBeLessThan(n("PLACE_SIZE"));
 	});
 
 	it("gives up the line's second half whole before a name loses a letter", () => {
@@ -226,11 +228,10 @@ describe("a place's page: the row is its header", () => {
 
 	it("replaces the per-card place line, and keeps Map", () => {
 		const row = CODE.slice(CODE.indexOf("{header !== undefined ? ("));
-		const header = row.slice(
-			0,
-			row.indexOf(") : onOpenPlace !== undefined ? ("),
+		const header = row.slice(0, row.indexOf("{onOpenMap !== undefined && ("));
+		expect(header.slice(0, header.lastIndexOf(") : ("))).not.toContain(
+			"{line}",
 		);
-		expect(header).not.toContain("{line}");
 		expect(CODE).toContain("{onOpenMap !== undefined && (");
 	});
 });
@@ -261,12 +262,12 @@ describe("what the block must not become", () => {
 	});
 
 	/**
-	 * Separate controls, each its own target: the place line (a home's
-	 * community), Map, a figure — and, on a place's own page, the way back
-	 * (phase404.9). Never one button around the block.
+	 * Separate controls, each its own target: Map, a figure — and, on a
+	 * place's own page, the way back (phase404.9). The place line is text
+	 * since phase404.10. Never one button around the block.
 	 */
 	it("wraps no shared button around the block", () => {
-		expect(CODE.match(/<Pressable/g) ?? []).toHaveLength(4);
+		expect(CODE.match(/<Pressable/g) ?? []).toHaveLength(3);
 		const wrap = CODE.slice(CODE.indexOf("<View style={[styles.wrap"));
 		expect(wrap.slice(0, 80)).not.toContain("Pressable");
 	});

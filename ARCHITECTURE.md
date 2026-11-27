@@ -147,7 +147,7 @@ copied per entity.
 |---|---|
 | `app/` | expo-router routes. `(tabs)/` is the tab bar; `listing/[id]`, `community/[slug]`, `city/[slug]` are detail screens. `place.tsx` is one place's own deck (phase404.3) — the feed screen itself over a pool the server narrowed to a city or a neighbourhood, opened from that place's Explore page. `+native-intent.tsx` turns a universal link's web path (`/c/<slug>`) into the app's route (phase335). |
 | `components/` | `cards/` are the swipeable feed faces, `feed/` the deck chrome, `listing/` the detail sheets, `charts/` the small marks (ring, donut, bar, pips, columns) the place pages and the compare draw figures with. |
-| `lib/feed/` | Feed generation, ordering, rhythm, behavioural signals. `place-deck.ts` is a place's own deck — a city's neighbourhoods, a neighbourhood's homes — and the link into it. `test-homes.ts` lets the six FMLS test listings stand in for a neighbourhood's homes in a development bundle only (`TEST_HOMES`). |
+| `lib/feed/` | Feed generation, ordering, rhythm, behavioural signals. `place-deck.ts` is a place's own deck — a city's neighbourhoods, a neighbourhood's homes — and the link into it. `home-film-card.ts` puts a home on the community card's face, as `city-film-card.ts` does a city. `test-homes.ts` lets the six FMLS test listings stand in for a neighbourhood's homes in a development bundle only (`TEST_HOMES`). |
 | `lib/listing/` | Listing detail: hotspots, tours, section nav. |
 | `lib/media/` | Video on the phone: how a film is fitted to its frame, and `one-player.ts` — one film plays at a time, app-wide; every player takes over before it plays. |
 | `lib/gesture/` | Swipe physics and capability detection. |

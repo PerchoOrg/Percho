@@ -104,7 +104,6 @@ const graduation = (label: string, pct: number, baseline?: true) => ({
 /** Cumming's page, the parts a glance reads; `over` swaps a part. */
 function cityProfile(over: Partial<CityProfile> = {}): CityProfile {
   return {
-    locationNote: '39 mi north of downtown Atlanta',
     compare: {
       against: 'Georgia',
       rows: [
@@ -135,9 +134,9 @@ function cityProfile(over: Partial<CityProfile> = {}): CityProfile {
 describe('cityGlance', () => {
   const place = { name: 'Cumming', county: 'Forsyth', lat: 34.2073, lng: -84.1402 };
 
-  it("leads with the county and prints the figures the city's own page shows", () => {
+  it("says city then county, as a community's line does, and the figures the city's own page shows", () => {
     expect(cityGlance({ ...place, profile: cityProfile() })).toEqual({
-      place: { lead: 'Forsyth County', rest: 'north of Atlanta' },
+      place: { lead: 'Cumming', rest: 'Forsyth County' },
       cells: [
         // The page's first home value row, and whose it is.
         { value: '$550K', label: 'median home · county', topic: 'cost' },
@@ -186,11 +185,11 @@ describe('cityGlance', () => {
     expect(cityGlance({ ...place, profile: bare })?.cells).toHaveLength(2);
   });
 
-  it('measures the side itself for a city with no profile', () => {
-    // 24° east of north: the compass says northeast where the page says north.
+  it('has the line and no figures for a city with no profile, and the city alone without a county', () => {
     expect(cityGlance({ ...place, profile: null })).toEqual({
-      place: { lead: 'Forsyth County', rest: 'northeast of Atlanta' },
+      place: { lead: 'Cumming', rest: 'Forsyth County' },
       cells: [],
     });
+    expect(cityGlance({ name: 'Cumming', profile: null })?.place).toEqual({ lead: 'Cumming' });
   });
 });

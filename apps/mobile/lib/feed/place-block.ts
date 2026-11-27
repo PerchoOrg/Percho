@@ -48,7 +48,6 @@
 import type { GlanceCell } from "@percho/shared/glance";
 import type { CommunityCardV3, FeedCardV3 } from "./card-types";
 import type { GeoUnit } from "./geo-unit";
-import { SCOPE_ROOT_LABEL } from "./place-stats";
 
 /**
  * Which card the block is a read of. `empty` belongs to no card — the deck
@@ -81,11 +80,6 @@ export interface PlaceBlockModel {
 	cells: readonly GlanceCell[];
 	/** The page a figure opens, or null — then the figures are text. */
 	explore: { kind: "community" | "city"; slug: string } | null;
-	/**
-	 * A HOME's community overview, opened by the place line. Null on every
-	 * card that is its own place: Explore, on the card, already goes there.
-	 */
-	placeSlug: string | null;
 	/** What the Map button's label names. */
 	mapName: string;
 	/** Geo-unit id for `?focus=`, or null. The FALLBACK target — `mapPoint`
@@ -151,7 +145,6 @@ const EMPTY: PlaceBlockModel = {
 	rest: "",
 	cells: [],
 	explore: null,
-	placeSlug: null,
 	mapName: "",
 	mapUnitId: null,
 	mapPoint: null,
@@ -167,15 +160,17 @@ export function placeBlockModel({
 
 	switch (card.kind) {
 		case "area": {
-			// The card IS the city, so the line says where the city is. A city
-			// can straddle two counties and the unit says neither — the server
-			// names one from the city's own row, or the line is the metro's.
+			// `City · County` on every card (phase404.10; owner, 2026-11-26:
+			// 「左上角一会儿是county 一会儿是city很乱」) — so a city's own line
+			// leads with the city too. A city can straddle two counties and the
+			// unit says neither: the server names one from the city's own row,
+			// and without it the line is the city alone.
 			const place = card.unit.glance?.place;
 			return {
 				...EMPTY,
 				activeCardId: card.id,
 				kind: "city-tour",
-				lead: place?.lead ?? SCOPE_ROOT_LABEL,
+				lead: place?.lead ?? card.unit.name,
 				rest: place?.rest ?? "",
 				cells: card.unit.glance?.cells ?? [],
 				explore: card.unit.citySlug
@@ -214,9 +209,9 @@ export function placeBlockModel({
 			const unit = unitOf(card.geoUnitId, geoUnits);
 			const community = communityOf(card.communityId, communities);
 			/**
-			 * The line leads with the COMMUNITY, not the property: the card
-			 * already carries the address and the price, and what it does NOT
-			 * say is where the home sits.
+			 * `City · County`, as on every other card (phase404.10). The line
+			 * led with the home's COMMUNITY and opened its page; the community
+			 * is on the card now, over the price.
 			 *
 			 * The card's own community fields first. The pool only carries
 			 * communities with a cover photo — five of 16,504 under the phone's
@@ -233,19 +228,8 @@ export function placeBlockModel({
 				...EMPTY,
 				activeCardId: card.id,
 				kind: "home-tour",
-				lead: communityName ?? unit?.name ?? "",
-				rest:
-					unit === undefined
-						? ""
-						: communityName
-							? joined(unit.name, county)
-							: joined(county),
-				// Only where there is a community we can NAME. An id with no name
-				// behind it is a dangling reference, and `/community/<slug>`
-				// would 404.
-				placeSlug: communityName
-					? (card.communityId ?? community?.slug ?? null)
-					: null,
+				lead: unit?.name ?? "",
+				rest: unit === undefined ? "" : joined(county),
 				mapName: communityName ?? unit?.name ?? "this home",
 				mapUnitId: unit?.id ?? null,
 				mapPoint:

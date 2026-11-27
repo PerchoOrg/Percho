@@ -52,7 +52,6 @@ import {
 } from "../../components/cards/CommunityFace";
 import {
 	EXPLORE_TAP_TARGET,
-	ListingFace,
 	SAVE_TAP_TARGET,
 } from "../../components/cards/ListingFace";
 import { SwipeLabels } from "../../components/cards/SwipeLabels";
@@ -62,7 +61,7 @@ import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { OfflineBar } from "../../components/feed/OfflineBar";
 import { PlaceBlock } from "../../components/feed/PlaceBlock";
 import { useCfScores } from "../../hooks/use-cf-scores";
-import { useFeedPool } from "../../hooks/use-feed-pool";
+import { primePlacePool, useFeedPool } from "../../hooks/use-feed-pool";
 import { useTestHomes } from "../../hooks/use-test-homes";
 import { cardBehavior } from "../../lib/feed/behavior";
 import type { FeedCardV3 } from "../../lib/feed/card-types";
@@ -72,15 +71,18 @@ import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
 import { cardPoster } from "../../lib/feed/first-poster";
 import {
+	type FeedPool,
 	RERANK_HOLD,
 	generateFeed,
 	movedUpCount,
 	rerankTail,
 } from "../../lib/feed/generate-feed";
+import { homeFilmCard } from "../../lib/feed/home-film-card";
 import { placeBlockModel } from "../../lib/feed/place-block";
 import {
 	type PlaceFocus,
 	type SwipeHistory,
+	narrowPool,
 	placeDeck,
 	placeLinkAccessibilityLabel,
 	placeLinkLabel,
@@ -204,6 +206,9 @@ import { textStyles } from "../../theme/typography";
  * cross-faded the frame height on every commit and the page visibly jumped.
  */
 
+/** How many of a deck's first stills are fetched before it is opened. */
+const DECK_STILLS_AHEAD = 2;
+
 /** Where each tab of a place's own bar goes. */
 const TAB_HREF = {
 	feed: "/(tabs)/feed",
@@ -220,8 +225,12 @@ function leaveToTab(key: string): void {
 	router.navigate(href);
 }
 
-/** Onto a place's own deck (`app/place.tsx`). */
-function openPlace(place: PlaceFocus): void {
+/**
+ * Onto a place's own deck (`app/place.tsx`), handing it the place's part of
+ * `pool` so it opens on its first card rather than on a skeleton.
+ */
+function openPlace(place: PlaceFocus, pool: FeedPool): void {
+	primePlacePool(place, narrowPool(pool, place));
 	router.push({
 		pathname: "/place",
 		params: { kind: place.kind, id: place.id, name: place.name },
@@ -764,15 +773,37 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	 * 再显示」, then 「把新的communities或者homes 放到右下方」). The same words
 	 * as the Explore page's button; absent for a card with nothing inside.
 	 */
+	/**
+	 * The stills a card's deck opens on, fetched while the card is on top —
+	 * the other half of opening a place at once: the pool is handed over, and
+	 * its first pictures are already on the phone.
+	 */
+	useEffect(() => {
+		if (!topCard) return;
+		const around = poolAround(poolRef.current, topCard, testHomes);
+		const place = placeWithin(topCard, around);
+		if (place === null) return;
+		const first = placeDeck(
+			narrowPool(around, place),
+			place.kind,
+			swipeHistory(),
+		).slice(0, DECK_STILLS_AHEAD);
+		for (const card of first) {
+			const poster = cardPoster(card);
+			if (poster) Image.prefetch(poster).catch(() => {});
+		}
+	}, [topCard, testHomes]);
+
 	const deckOf = useCallback(
 		(card: FeedCardV3) => {
-			const place = placeWithin(card, poolAround(pool, card, testHomes));
+			const around = poolAround(pool, card, testHomes);
+			const place = placeWithin(card, around);
 			if (place === null) return {};
 			return {
 				deck: {
 					label: placeLinkLabel(place),
 					accessibilityLabel: placeLinkAccessibilityLabel(place),
-					onPress: () => openPlace(place),
+					onPress: () => openPlace(place, around),
 				},
 			};
 		},
@@ -867,26 +898,27 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 						/>
 					);
 				}
-				case "listing":
+				case "listing": {
+					// A home wears the community card's face too (phase404.10): the
+					// price where the name is, its community over it.
+					const home = homeFilmCard(card);
 					return (
-						<ListingFace
-							card={card}
+						<CommunityFace
+							card={home.card}
+							tag={home.tag}
+							lines={home.lines}
+							saveKind="listing"
 							isTop={isTop}
 							suspended={!focused || paused}
 							tapSlot={args.tapSlot}
-							/*
-							 * The owner's 2026-08-13 revision dropped the giant green
-							 * CTA pill for a quiet right-bottom link. The link fires
-							 * through the stack's exclusive-tap gesture
-							 * (`onTapTarget` → EXPLORE_TAP_TARGET); the `onExplore`
-							 * prop stays for callers outside the stack.
-							 */
+							deckGesture={args.deckGesture}
 							onExplore={() => {
 								emitGesture("explore_tap", card);
 								router.push(`/listing/${card.id}`);
 							}}
 						/>
 					);
+				}
 				case "community":
 					return (
 						<CommunityFace
@@ -1047,13 +1079,10 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 			}
 			if (target === DECK_TAP_TARGET) {
 				const top = deckRef.current[activeIndex];
-				const place = top
-					? placeWithin(
-							top,
-							poolAround(poolRef.current, top, testHomesRef.current),
-						)
-					: null;
-				if (place) openPlace(place);
+				if (!top) return;
+				const around = poolAround(poolRef.current, top, testHomesRef.current);
+				const place = placeWithin(top, around);
+				if (place) openPlace(place, around);
 				return;
 			}
 			if (target === EXPLORE_TAP_TARGET) {
@@ -1082,7 +1111,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 
 	// Destructured so the two handlers below narrow: TypeScript drops a
 	// property's narrowing inside a closure, but keeps a `const`'s.
-	const { placeSlug, explore, mapUnitId, mapPoint } = block;
+	const { explore, mapUnitId, mapPoint } = block;
 
 	const atEnd = activeIndex >= deck.length;
 	// §1.9's terminal card is for a genuinely dry pool, not for a momentary gap:
@@ -1156,11 +1185,6 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 										subtitle: placeLinkLabel(focus),
 										onBack: backOrFeed,
 									}
-								: undefined
-						}
-						onOpenPlace={
-							placeSlug !== null
-								? () => router.push(`/community/${placeSlug}`)
 								: undefined
 						}
 						onOpenMap={

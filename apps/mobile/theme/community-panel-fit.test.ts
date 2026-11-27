@@ -157,10 +157,15 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 	it("makes the NAME the way to Explore, and the pill the way into the deck", () => {
 		// Owner, 2026-11-26 (phase404.9): 「把卡片左下角的title做成链接button 功能
 		// 替换explore … 把新的communities或者homes 放到右下方」. No pill says
-		// Explore any more; the name ends in a `›` tied to its last word.
+		// Explore any more.
 		expect(SRC).not.toMatch(/>\s*Explore\s*<\/Text>/);
 		expect(SRC).toContain("accessibilityLabel={`Explore ${card.name}`}");
-		expect(SRC).toContain('{"\\u00A0›"}');
+		// A white disc after the name says it opens something (phase404.10:
+		// a thin `›` in the name's own ink did not).
+		expect(SRC).toContain("styles.nameDisc");
+		expect(SRC).toMatch(
+			/nameDisc: \{[^}]*backgroundColor: "rgba\(255,255,255,0\.92\)"/,
+		);
 		const name = SRC.indexOf("arm(EXPLORE_TAP_TARGET)");
 		const pill = SRC.indexOf("arm(DECK_TAP_TARGET)");
 		expect(name).toBeGreaterThan(-1);

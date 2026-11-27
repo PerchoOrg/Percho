@@ -184,33 +184,21 @@ function driveCell(gettingAround: CityFundamentals['gettingAround']): GlanceCell
   };
 }
 
-export function cityGlance(
-  c: Point & {
-    name: string;
-    county?: string | null;
-    profile: Pick<
-      CityFundamentals,
-      'compare' | 'education' | 'gettingAround' | 'locationNote'
-    > | null;
-  },
-): PlaceGlance | undefined {
-  // The side the city's own page gives ("39 mi north of downtown Atlanta"), so
-  // the card and the page say the same; measured only when that does not read.
-  const at = pointOf(c);
-  const noted = c.profile?.locationNote.match(/\bmi\s+(.+?)\s+of downtown Atlanta$/i)?.[1];
-  const side = noted
-    ? `${noted} of Atlanta`
-    : at
-      ? `${fromDowntown(at).side} of Atlanta`
-      : undefined;
-  const place = c.county
-    ? { lead: `${c.county} County`, ...(side ? { rest: side } : {}) }
-    : side
-      ? { lead: `${side.charAt(0).toUpperCase()}${side.slice(1)}` }
-      : null;
-  if (!place) return undefined;
+/**
+ * A city's line is `City · County`, the same two things in the same order as
+ * a community's (owner, 2026-11-26: 「左上角一会儿是county 一会儿是city很乱」).
+ * It led with the county — a city's card already says the city — and that read
+ * as a different line on every other card. How far and which way from Atlanta
+ * is the third figure's to say.
+ */
+export function cityGlance(c: {
+  name: string;
+  county?: string | null;
+  profile: Pick<CityFundamentals, 'compare' | 'education' | 'gettingAround'> | null;
+}): PlaceGlance | undefined {
+  if (!c.name) return undefined;
   return {
-    place,
+    place: { lead: c.name, ...(c.county ? { rest: `${c.county} County` } : {}) },
     cells: c.profile
       ? present([
           medianHomeCell(c.profile.compare),

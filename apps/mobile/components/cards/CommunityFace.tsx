@@ -251,8 +251,11 @@ interface CommunityFaceProps {
 	suspended?: boolean;
 	/**
 	 * Opens the place's Explore page. The NAME is the link (phase404.9; owner,
-	 * 2026-11-26: 「把卡片左下角的title做成链接button 功能替换explore」): it ends
-	 * in a `›` and the `Explore` pill is gone.
+	 * 2026-11-26: 「把卡片左下角的title做成链接button 功能替换explore」) and the
+	 * `Explore` pill is gone. It ends in a small white disc with a chevron
+	 * (phase404.10): a thin `›` in the name's own ink did not read as
+	 * something to press (「卡片左下角的链接有点不明显」), and white is what the
+	 * card's other button is made of.
 	 */
 	onExplore?: () => void;
 	/**
@@ -284,8 +287,13 @@ interface CommunityFaceProps {
 	 * 一致") — the place label, the progress bar and the bottom row are this
 	 * face's, and a second face kept drifting from it.
 	 */
-	tag?: "COMMUNITY" | "CITY";
+	tag?: string;
 	saveKind?: SavedKind;
+	/**
+	 * Lines under the name — a home's specs, then its address and FMLS number
+	 * (`lib/feed/home-film-card.ts`). A community and a city have none.
+	 */
+	lines?: readonly string[];
 	/**
 	 * Opens the share sheet (phase335). Absent for a card with no page to send
 	 * someone to; the corner then shows no share cell.
@@ -303,6 +311,7 @@ export function CommunityFace({
 	deckGesture,
 	tag = "COMMUNITY",
 	saveKind = "community",
+	lines,
 	onShare,
 }: CommunityFaceProps) {
 	const saved = useSavedStore((s) => s.isSaved(card.id));
@@ -755,12 +764,13 @@ export function CommunityFace({
 									pressed && styles.ctaPressed,
 								]}
 							>
-								{/* The `›` is tied to the last word by a no-break space,
-								    so a name on two lines ends in it. */}
 								<Text style={styles.name} numberOfLines={2}>
 									{card.name}
-									<Text style={styles.nameChevron}>{"\u00A0›"}</Text>
 								</Text>
+								{/* With no pill beside it, this is what breathes at 82%. */}
+								<Animated.View style={[styles.nameDisc, !deck && breathing]}>
+									<View style={styles.nameDiscArm} />
+								</Animated.View>
 							</Pressable>
 						) : (
 							<Text style={styles.name} numberOfLines={2}>
@@ -792,6 +802,15 @@ export function CommunityFace({
 						</Animated.View>
 					)}
 				</View>
+				{lines?.map((line, i) => (
+					<Text
+						key={line}
+						style={i === 0 ? styles.line : styles.lineQuiet}
+						numberOfLines={1}
+					>
+						{line}
+					</Text>
+				))}
 			</View>
 
 			{/* Tour progress — one dash per PLACE when the film's structure came
@@ -1190,10 +1209,51 @@ const styles = StyleSheet.create({
 		flexShrink: 1,
 		minWidth: 0,
 	},
-	/** The name as a link: the name's own box, nothing drawn around it. */
-	nameLink: { flexShrink: 1, minWidth: 0 },
-	/** The `›` that says the name opens something: lighter than the name. */
-	nameChevron: { fontWeight: "300", color: "rgba(255,255,255,0.85)" },
+	/**
+	 * The name as a link: the name, then its disc — level with the name's last
+	 * line, so a name on two lines ends in it.
+	 */
+	nameLink: {
+		flexShrink: 1,
+		minWidth: 0,
+		flexDirection: "row",
+		alignItems: "flex-end",
+		gap: 8,
+	},
+	/** The pill's white, as a 26pt disc; 2 up centres it on a 30pt line. */
+	nameDisc: {
+		width: 26,
+		height: 26,
+		borderRadius: 13,
+		marginBottom: 2,
+		flexShrink: 0,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: "rgba(255,255,255,0.92)",
+	},
+	/** A chevron from two borders, pointing right; nudged to sit centred. */
+	nameDiscArm: {
+		width: 7,
+		height: 7,
+		marginRight: 2,
+		borderTopWidth: 2,
+		borderRightWidth: 2,
+		borderColor: "#181B18",
+		transform: [{ rotate: "45deg" }],
+	},
+	/** A home's lines under its price: the specs, then the quieter address. */
+	line: {
+		marginTop: 5,
+		fontSize: 14,
+		fontWeight: "500",
+		color: "rgba(255,255,255,0.92)",
+	},
+	lineQuiet: {
+		marginTop: 3,
+		fontSize: 12,
+		fontWeight: "400",
+		color: "rgba(255,255,255,0.7)",
+	},
 	/**
 	 * The pill at the right of the info row (Explore until phase404.9, the
 	 * place's deck since), sized by its own content and
