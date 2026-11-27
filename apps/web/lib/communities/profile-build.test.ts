@@ -305,6 +305,34 @@ describe('buildProfile', () => {
     expect(few?.sources.map((s) => s.name)).not.toContain('Fulton County tax assessor');
   });
 
+  it('states the drive to the highway where it was measured', () => {
+    expect(profile?.highway).toBeUndefined();
+    const measured = buildProfile(
+      subject,
+      buildContext({
+        ...inputs,
+        highways: new Map([['windward', { road: 'GA-400', minutes: 2.8, miles: 0.94 }]]),
+      }),
+    );
+    expect(measured?.highway).toEqual({
+      display: '3 min',
+      label: 'to GA-400',
+      basis: 'Drive to the nearest GA-400 on-ramp, 0.9 mi, without traffic',
+    });
+    // OpenStreetMap is named once, with or without the safety block beside it.
+    expect(measured?.sources.filter((s) => s.name === 'OpenStreetMap')).toHaveLength(1);
+    expect(communityProfileSchema.safeParse(measured).success).toBe(true);
+    // Half a minute is still a minute's drive.
+    const next = buildProfile(
+      subject,
+      buildContext({
+        ...inputs,
+        highways: new Map([['windward', { road: 'I-85', minutes: 0.3, miles: 0.1 }]]),
+      }),
+    );
+    expect(next?.highway?.display).toBe('1 min');
+  });
+
   it("links the community's own pages, https only, and carries its city's events", () => {
     expect(profile?.links?.slice(0, 2)).toEqual([
       { group: 'Community', label: 'Website', url: 'https://example.org/' },

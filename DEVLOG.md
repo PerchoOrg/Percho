@@ -23,6 +23,49 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 08:00 UTC — phase404.20: a community's third figure is the drive to the highway; a city's drive loses its miles
+
+**Objective**: owner on phase404.19's measurement: 「好就写上高速时长」.
+**What a card says now** (server-sent, live on deploy): a community's third figure was `28 mi · northeast of Atlanta` and is `16 min · to I-85`; a city's was `62 min · 33 mi to downtown` and is `62 min · drive to downtown`.
+
+| community | card | by road |
+|---|---|---|
+| Windward | 3 min · to GA-400 | 0.9 mi |
+| Sawnee Village | 4 min · to GA-400 | 2.2 mi |
+| Harvest Park | 6 min · to I-85 | 2.7 mi |
+| Hedgerows | 6 min · to I-85 | 2 mi |
+| Cardinal Lake Estates | 8 min · to I-85 | 3.5 mi |
+| Ashley Crossing | 9 min · to GA-400 | 4.8 mi |
+| Apremont - Highcroft | 10 min · to I-85 | 5.3 mi |
+| Sugarloaf Country Club | 10 min · to I-85 | 4.4 mi |
+| Towne Village | 11 min · to I-985 | 6 mi |
+| Ward's Crossing | 11 min · to GA-400 | 5.9 mi |
+| Aberdeen | 11 min · to GA-400 | 6.3 mi |
+| Arbors at Richland Creek | 12 min · to I-985 | 5.5 mi |
+| Northbrooke | 12 min · to GA-400 | 6 mi |
+| Windermere | 13 min · to GA-400 | 6 mi |
+| St Marlo Country Club | 14 min · to I-85 | 6.8 mi |
+| Medlock Bridge | 15 min · to GA-400 | 7.5 mi |
+| Wild Timber | 15 min · to I-985 | 7.5 mi |
+| Edinburgh | 16 min · to I-85 | 8 mi |
+| Bellmoore Park | 17 min · to GA-400 | 8.2 mi |
+| White Columns | 20 min · to GA-400 | 8.4 mi |
+
+**Actions**:
+- `scripts/admin/import-community-highway.ts` (`pnpm --filter @percho/web community:highway <slug>…`) → `scripts/admin/data/community-highway.json` (road, minutes, road miles).
+- `profile-build.ts`: optional `highway` block (`display`, `label`, `basis`) — shared type, zod schema, `upsert-community-profile.ts` reads the file. `OpenStreetMap` is named once whether the safety block, this one or both drew on it.
+- `lib/feed/glance.ts`: `highwayCell` ahead of the distance to Atlanta, which stays for a community nobody has measured; `driveCell`'s label is `drive to downtown`.
+- Mobile (Metro now, the store build with the next update): the Convenience tile leads with a `Highway · I-85 · 16 min` row and its sheet opens on the figure and how it was measured.
+- The twenty profiles rebuilt and applied; the diff against production was the `highway` block alone.
+**Decisions**:
+- **On-ramps, not exits.** Phase404.19's probe routed to `motorway_junction` nodes — where an off-ramp LEAVES — which a driver can only reach by joining an exit earlier: Sawnee Village, 0.6 mi from GA-400, read 6 minutes. The script routes to where a `motorway_link` way's last node meets the motorway, and to the 30 nearest of those rather than 4. Most figures fell by one to five minutes (Edinburgh 18 → 16, Aberdeen 16 → 11, Windward 4 → 3, Sawnee Village 6 → 4); the two flagged for a wider look moved to I-985, which the narrow search had missed (Wild Timber 19 → 15, Towne Village 16 → 11).
+- **Interstates, GA-400 and GA-316 only.** The freeway stretch of GA-141 is in OpenStreetMap as a motorway and is not what anyone here means by the highway.
+- **Free-flow minutes**, and the page says "without traffic". OSRM's public demo server has no traffic model; rush hour needs a paid router (not asked for).
+- **OSRM's demo server is a new outside service**, free and keyless, called once per community from an admin script run by hand — the same footing as Overpass and FEMA in `community:safety`. It must not be called from the app or a route handler.
+- Measured from the community's stored point. Windward spans three miles; its far side is not three minutes from GA-400.
+**Risks / tech debt**: a snapshot — nothing refreshes it, and a newly filmed community shows the distance to Atlanta until `community:highway` and `community:profile` are run for it. The Saved and Compare pages do not carry the figure.
+**Next steps**: owner still owes the Redfin question (phase404.16). When the FMLS feed is live: sold prices replace the estimates, and HOA dues — what he and I both rated above this figure — can be computed from the association fee.
+
 ## 2026-11-27 07:22 UTC — phase404.19: a community card's third figure — lot size rejected; the drive to the nearest highway measured (investigation, nothing changed)
 
 **Objective**: owner on phase404.18's proposal: 「地方面积不好再想」.

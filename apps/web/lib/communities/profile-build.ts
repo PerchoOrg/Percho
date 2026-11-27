@@ -128,6 +128,18 @@ export interface ValueFacts {
   taxYear?: number;
 }
 
+/**
+ * What `scripts/admin/import-community-highway.ts` measured for one community:
+ * the drive from its point to the quickest highway on-ramp, without traffic.
+ */
+export interface HighwayFacts {
+  /** "I-85", "GA-400" */
+  road: string;
+  minutes: number;
+  /** By road. */
+  miles: number;
+}
+
 export interface BuildInputs {
   communities: readonly BuildCommunity[];
   schools: readonly BuildSchool[];
@@ -140,6 +152,8 @@ export interface BuildInputs {
   safety?: ReadonlyMap<string, SafetyFacts>;
   /** Keyed by slug. Only the communities someone ran the import for. */
   values?: ReadonlyMap<string, ValueFacts>;
+  /** Keyed by slug. Only the communities someone ran the import for. */
+  highways?: ReadonlyMap<string, HighwayFacts>;
   /** The day the figures were gathered, YYYY-MM-DD. */
   asOf: string;
 }
@@ -795,6 +809,21 @@ function estimate(c: BuildCommunity, ctx: BuildContext): Profile['estimate'] | u
   };
 }
 
+/**
+ * How long the drive to the highway is — never under a minute, and the miles
+ * and "without traffic" beside it on the page, since the figure is a quiet
+ * road's.
+ */
+function highway(c: BuildCommunity, ctx: BuildContext): Profile['highway'] | undefined {
+  const facts = ctx.inputs.highways?.get(c.slug);
+  if (!facts || !(facts.minutes > 0)) return undefined;
+  return {
+    display: `${Math.max(1, Math.round(facts.minutes))} min`,
+    label: `to ${facts.road}`,
+    basis: `Drive to the nearest ${facts.road} on-ramp, ${round1(facts.miles)} mi, without traffic`,
+  };
+}
+
 export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | null {
   const schools = schoolRows(c, ctx);
   const homes = homeRows(c, ctx);
@@ -807,6 +836,7 @@ export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | nu
   const links = profileLinks(c, nearestSchools(c, ctx));
   const safe = safety(c, ctx);
   const worth = estimate(c, ctx);
+  const ramp = highway(c, ctx);
 
   const sources: Profile['sources'] = [];
   if (schools.length > 0) sources.push({ name: 'Georgia Milestones' });
@@ -815,10 +845,8 @@ export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | nu
   if (value || homes.length > 0) sources.push({ name: 'Zillow Home Value Index' });
   if (value?.holding) sources.push({ name: 'Percho county estimates' });
   if (cityEvents) sources.push({ name: cityEvents.source });
-  if (safe) {
-    sources.push({ name: 'FEMA National Flood Hazard Layer' });
-    sources.push({ name: 'OpenStreetMap' });
-  }
+  if (safe) sources.push({ name: 'FEMA National Flood Hazard Layer' });
+  if (safe || ramp) sources.push({ name: 'OpenStreetMap' });
   if (worth)
     sources.push({ name: `${ctx.inputs.values?.get(c.slug)?.county} County tax assessor` });
 
@@ -837,6 +865,7 @@ export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | nu
       : {}),
     ...(value ? { homeValue: value } : {}),
     ...(worth ? { estimate: worth } : {}),
+    ...(ramp ? { highway: ramp } : {}),
     ...(said ? { words: said } : {}),
     ...(cityEvents ? { events: cityEvents.events } : {}),
     ...(safe ? { safety: safe } : {}),

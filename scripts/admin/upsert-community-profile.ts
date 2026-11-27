@@ -15,6 +15,7 @@
  *   zhvi-ga.json       Zillow's home value index per Georgia city (`import-zhvi.ts`)
  *   city-events.json   dated things per city; the phone drops what has passed
  *   community-values.json  county-appraised home values (`import-community-values.ts`)
+ *   community-highway.json the drive to the nearest highway (`import-community-highway.ts`)
  *
  * Idempotent: every profile is recomputed and only the ones that differ from
  * what is stored are written, so re-run it after a school-score import, a new
@@ -39,6 +40,7 @@ import {
   type BuildCommunity,
   type BuildSchool,
   type CountyCosts,
+  type HighwayFacts,
   type SafetyFacts,
   type ValueFacts,
   type ZhviExtract,
@@ -247,6 +249,15 @@ async function main() {
         ),
       )
     : undefined;
+  // Measured by `import-community-highway.ts`.
+  const highways = existsSync(join(here, 'data/community-highway.json'))
+    ? new Map(
+        Object.entries(
+          json<{ communities: Record<string, HighwayFacts> }>('data/community-highway.json')
+            .communities,
+        ),
+      )
+    : undefined;
   const ctx = buildContext({
     communities,
     schools,
@@ -255,6 +266,7 @@ async function main() {
     events,
     ...(safety ? { safety } : {}),
     ...(values ? { values } : {}),
+    ...(highways ? { highways } : {}),
     asOf: new Date().toISOString().slice(0, 10),
   });
   console.log(

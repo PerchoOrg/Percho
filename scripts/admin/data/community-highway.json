@@ -1,0 +1,105 @@
+{
+  "asOf": "2026-11-27",
+  "communities": {
+    "aberdeen-2": {
+      "road": "GA-400",
+      "minutes": 10.9,
+      "miles": 6.3
+    },
+    "apremont-highcroft": {
+      "road": "I-85",
+      "minutes": 10.5,
+      "miles": 5.3
+    },
+    "arbors-at-richland-creek": {
+      "road": "I-985",
+      "minutes": 11.5,
+      "miles": 5.5
+    },
+    "ashley-crossing": {
+      "road": "GA-400",
+      "minutes": 9,
+      "miles": 4.8
+    },
+    "bellmoore-park": {
+      "road": "GA-400",
+      "minutes": 17,
+      "miles": 8.2
+    },
+    "cardinal-lake": {
+      "road": "I-85",
+      "minutes": 8.2,
+      "miles": 3.5
+    },
+    "edinburgh": {
+      "road": "I-85",
+      "minutes": 16.1,
+      "miles": 8
+    },
+    "harvest-park": {
+      "road": "I-85",
+      "minutes": 5.5,
+      "miles": 2.7
+    },
+    "hedgerows": {
+      "road": "I-85",
+      "minutes": 6.3,
+      "miles": 2
+    },
+    "medlock-bridge": {
+      "road": "GA-400",
+      "minutes": 14.7,
+      "miles": 7.5
+    },
+    "northbrooke-cumming": {
+      "road": "GA-400",
+      "minutes": 12,
+      "miles": 6
+    },
+    "sawnee-village": {
+      "road": "GA-400",
+      "minutes": 4.3,
+      "miles": 2.2
+    },
+    "st-marlo": {
+      "road": "I-85",
+      "minutes": 13.7,
+      "miles": 6.8
+    },
+    "sugarloaf-country-club": {
+      "road": "I-85",
+      "minutes": 10.5,
+      "miles": 4.4
+    },
+    "towne-village-at-suwanee-dam": {
+      "road": "I-985",
+      "minutes": 10.7,
+      "miles": 6
+    },
+    "wards-crossing": {
+      "road": "GA-400",
+      "minutes": 10.7,
+      "miles": 5.9
+    },
+    "white-columns": {
+      "road": "GA-400",
+      "minutes": 20,
+      "miles": 8.4
+    },
+    "wild-timber": {
+      "road": "I-985",
+      "minutes": 15.2,
+      "miles": 7.5
+    },
+    "windermere": {
+      "road": "GA-400",
+      "minutes": 12.7,
+      "miles": 6
+    },
+    "windward": {
+      "road": "GA-400",
+      "minutes": 2.8,
+      "miles": 0.9
+    }
+  }
+}

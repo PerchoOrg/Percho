@@ -1,7 +1,7 @@
 /**
  * The place line and three figures the phone prints above a feed card
  * (phase378) — what a film cannot show: what homes cost, how the schools
- * stand, how far Atlanta is.
+ * stand, how far Atlanta is from a city and the highway from a community.
  *
  * Owner 2026-11-23, of the header that used to sit above the card: "感觉还是以
  * 填充为主 信息本身也和卡片有重合". It repeated the card's name; this says what the
@@ -15,8 +15,8 @@
  * One number a figure, never a range (owner, 2026-11-26: 「卡片上三个数字不要
  * 区间 给一个数字平均值就行」). A community's schools are the range's top end,
  * not the mean (the same day: 「学校给区间上段 top 不要平均」): the best-standing
- * school nearby. The drive is the mean of off-peak and rush. The page itself
- * still shows each value.
+ * school nearby. A city's drive is the mean of off-peak and rush. The page
+ * itself still shows each value.
  *
  * Schools are a letter since phase404.17 (owner 2026-11-27: 「用字母」) — the
  * scale and why it stops at B− are in `@percho/shared/school-grade`. A city's
@@ -114,7 +114,21 @@ function schoolsCell(ranks: CommunityProfile['ranks'] | undefined): GlanceCell |
       };
 }
 
-/** Nothing for a place in downtown itself: "0 mi north" says nothing. */
+/**
+ * The drive to the nearest highway on-ramp — "6 min" over "to I-85" — as the
+ * community's Convenience tile prints it. It took the straight-line distance
+ * to Atlanta's place (owner 2026-11-27: 「好就写上高速时长」): that figure was
+ * the same on every community of a city, and the city's card has said it.
+ */
+function highwayCell(highway: CommunityProfile['highway'] | undefined): GlanceCell | null {
+  if (!highway) return null;
+  return { value: highway.display, label: highway.label, topic: 'convenience' };
+}
+
+/**
+ * How far out a community nobody has measured the highway for is. Nothing for
+ * a place in downtown itself: "0 mi north" says nothing.
+ */
 function distanceCell(at: { lat: number; lng: number } | null): GlanceCell | null {
   if (!at) return null;
   const { miles, side } = fromDowntown(at);
@@ -152,7 +166,11 @@ export function communityGlance(
       lead: cityState(c.city, c.state),
       ...(c.county ? { rest: `${c.county} County` } : {}),
     },
-    cells: present([homesCell(c.profile), schoolsCell(c.profile?.ranks), distanceCell(pointOf(c))]),
+    cells: present([
+      homesCell(c.profile),
+      schoolsCell(c.profile?.ranks),
+      highwayCell(c.profile?.highway) ?? distanceCell(pointOf(c)),
+    ]),
   };
 }
 
@@ -227,15 +245,19 @@ function citySchoolsCell(schools: ReadonlyArray<{ share: number }> | undefined):
  * The drive to downtown, between off-peak and rush hour as the city's
  * Convenience tile prints them. The off-peak figure alone would be the
  * flattering half.
+ *
+ * One number and no second one: the label carried the road miles ("33 mi to
+ * downtown") until phase404.20, and beside a community's straight-line "28 mi"
+ * the two read as a contradiction (owner 2026-11-27: 「city card上的距离dt和进入
+ * community后的这个数字不一致」).
  */
 function driveCell(gettingAround: CityFundamentals['gettingAround']): GlanceCell | null {
   const row = gettingAround.find((g) => /^downtown atlanta/i.test(g.label));
   if (!row?.minutes) return null;
   const { min, max } = row.minutes;
-  const miles = row.label.match(/(\d+)\s*mi\b/)?.[1];
   return {
     value: `${Math.round((min + max) / 2)} min`,
-    label: miles ? `${miles} mi to downtown` : 'to downtown Atlanta',
+    label: 'drive to downtown',
     topic: 'convenience',
   };
 }

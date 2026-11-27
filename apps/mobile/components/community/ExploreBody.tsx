@@ -107,7 +107,7 @@ export function ExploreBody({
 	// drawn (owner 2026-11-22: "去掉 … explore下面的简介", "resident say没啥价值
 	// 去掉"). `profile.verdict` and `profile.words` are still stored: build 12
 	// reads them.
-	const { homeValue, estimate, dues, safety } = profile;
+	const { homeValue, estimate, highway, dues, safety } = profile;
 	const holding = homeValue?.holding;
 	const resources = useMemo(() => linkGroups(profile.links), [profile.links]);
 	const againstMetro = homeValue ? againstBaseline(homeValue) : null;
@@ -213,6 +213,20 @@ export function ExploreBody({
 						onPress={() => setSheet("nearby")}
 					>
 						<View style={parts.rows}>
+							{/* The drive to the highway — the figure the feed card
+							    prints (phase404.20). Minutes, so it has no bar: the
+							    bars below share a scale of miles. */}
+							{highway && (
+								<View style={parts.row}>
+									<Text style={parts.rowKind} numberOfLines={1}>
+										Highway
+									</Text>
+									<Text style={parts.rowName} numberOfLines={1}>
+										{highway.label.replace(/^to /, "")}
+									</Text>
+									<Text style={parts.rowFigure}>{highway.display}</Text>
+								</View>
+							)}
 							{close.map((s, i) => (
 								<View key={s.group}>
 									<View style={parts.row}>

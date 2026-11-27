@@ -102,6 +102,19 @@ export interface CommunityProfile {
     /** How it was arrived at: "Median county appraisal of 393 homes". */
     basis: string;
   };
+  /**
+   * The drive to the nearest highway on-ramp (phase404.20) — the third figure
+   * over the community's feed card, where the straight-line distance to
+   * Atlanta used to be: that was the same on every community of a city.
+   */
+  highway?: {
+    /** "6 min" */
+    display: string;
+    /** "to I-85" */
+    label: string;
+    /** "Drive to the nearest I-85 on-ramp, 3.4 mi, without traffic" */
+    basis: string;
+  };
   dues?: {
     /** "$824" */
     display: string;

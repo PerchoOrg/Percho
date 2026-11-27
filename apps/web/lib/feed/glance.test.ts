@@ -90,6 +90,22 @@ describe('communityGlance', () => {
     );
   });
 
+  it('says the drive to the highway where it was measured, over the distance to Atlanta', () => {
+    const measured = {
+      ...windward,
+      highway: {
+        display: '3 min',
+        label: 'to GA-400',
+        basis: 'Drive to the nearest GA-400 on-ramp, 0.9 mi, without traffic',
+      },
+    };
+    expect(communityGlance({ city: 'Alpharetta', ...at, profile: measured })?.cells[2]).toEqual({
+      value: '3 min',
+      label: 'to GA-400',
+      topic: 'convenience',
+    });
+  });
+
   it('leaves out what it has no figure for', () => {
     const glance = communityGlance({ city: 'Duluth', county: null, profile: null });
     expect(glance).toEqual({ place: { lead: 'Duluth' }, cells: [] });
@@ -183,8 +199,9 @@ describe('cityGlance', () => {
         // The page's first home value row, and whose it is.
         { value: '$550K', label: 'median home · county', topic: 'cost' },
         { value: '97.5%', label: 'graduate in 4 years', topic: 'schools' },
-        // Between off-peak (52) and rush (83): one number, not the range.
-        { value: '68 min', label: '39 mi to downtown', topic: 'convenience' },
+        // Between off-peak (52) and rush (83): one number, not the range —
+        // and no miles beside it.
+        { value: '68 min', label: 'drive to downtown', topic: 'convenience' },
       ],
     });
   });

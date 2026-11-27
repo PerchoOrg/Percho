@@ -95,6 +95,13 @@ export const communityProfileSchema = z.object({
       basis: z.string().min(1).max(80),
     })
     .optional(),
+  highway: z
+    .object({
+      display,
+      label: z.string().min(1).max(20),
+      basis: z.string().min(1).max(80),
+    })
+    .optional(),
   dues: z
     .object({
       display,
