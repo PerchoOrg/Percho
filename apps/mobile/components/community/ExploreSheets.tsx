@@ -12,14 +12,7 @@ import type {
 import { rankShare, topShare } from "@percho/shared/rank-share";
 import { SCHOOL_GRADE_NOTE, schoolGrade } from "@percho/shared/school-grade";
 import { useState } from "react";
-import {
-	Linking,
-	Pressable,
-	ScrollView,
-	StyleSheet,
-	Text,
-	View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
 	type EventView,
 	type NearbyStop,
@@ -31,6 +24,7 @@ import {
 	schoolRanks,
 	usdShort,
 } from "../../lib/community/explore";
+import { openLink } from "../../lib/open-link";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 import { Lines, StopStrip } from "./ExploreCharts";
@@ -44,7 +38,7 @@ export type ExploreSheetKey =
 	| "nearby"
 	| "events";
 
-const open = (url: string) => void Linking.openURL(url).catch(() => {});
+const open = (url: string) => void openLink(url);
 const LINK_MARK = " ↗";
 
 /**

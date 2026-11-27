@@ -87,34 +87,15 @@ import { fmlsNumberLabel } from "@percho/shared/fmls";
  * The only narrowing affordances are the search box and the viewport
  * (§4.1 铁律). There is no price/bed/bath picker on this screen.
  *
- * ── Lenses (phase196) ───────────────────────────────────────────────────────
- * The chip row under the search pill picks a LENS: the map colours its marks
- * by that one dimension. This is inside the no-filter rule rather than an
- * exception to it — a lens recolours, it never removes anything, and there is
- * no threshold that hides one. Selecting a lens changes what the map SHOWS,
- * not what exists. See `@percho/shared/lenses`, which also records why there
- * is deliberately no crime or safety lens.
- *
- * A lens does NOT fill the counties any more (owner, 2026-11-23: "县级涂色
- * 去掉"). The Schools fill was a district average laid over places it did not
- * describe: Fulton averages 54% and its schools run 1–87%, Gwinnett 48% and
- * 5–99%, so Johns Creek (schools 72–84%) and Suwanee (median 77%) were
- * shaded middling. The school dots carry the answer; the counties are
- * outlines whether or not a lens is on.
- *
- * The row offers Schools only (`MAP_LENSES`). Cost of living came off it by
- * owner decision (2026-11-23): the three counties with films sit $95 a month
- * apart, inside the fire/EMS levies the figure leaves out, so its fill ranked
- * noise. The lens itself stays in `@percho/shared/lenses` — the county page's
- * line-by-line breakdown, saved areas and area compare still price with it.
+ * ── No lens chips (phase411) ────────────────────────────────────────────────
+ * From phase196 a chip row under the search pill recoloured the map by one
+ * dimension; by 2026-11-23 it offered Schools only, and the owner took that
+ * off too (2026-11-27: 「去掉school filtering 在搜索tab里」). School pins still
+ * come out at street zoom, in their neutral colour. The lenses themselves stay
+ * in `@percho/shared/lenses` — the county page, saved areas and area compare
+ * still use them.
  */
-import {
-	type Area,
-	LENSES,
-	type LensId,
-	lensById,
-	rankedBy,
-} from "@percho/shared/lenses";
+import type { Area } from "@percho/shared/lenses";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -150,7 +131,6 @@ import type { GeoUnit } from "../../lib/feed/geo-unit";
 import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
 import {
 	type MapRegion,
-	PROFICIENCY_LEGEND,
 	type SchoolPin,
 	proficiencyStep,
 	schoolNote,
@@ -163,10 +143,6 @@ import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
-
-/** The lenses the chip row offers — see "Lenses" in the header for why the
- *  cost lens is not one of them. */
-const MAP_LENSES = LENSES.filter((l) => l.id !== "true_cost");
 
 /** How close (screen points) a tap must land to a mark for `claimTap` to
  *  open it. Generous on purpose: it has to cover the whole 26pt photo dot
@@ -213,9 +189,14 @@ const FOCUS_POINT_DELTA = {
  *  metro span down to a street span and needs the time to read as descent. */
 const FOCUS_FLY_DELAY_MS = 350;
 
-/** One of each thing the box finds — a city, a school, a community, a ZIP —
- *  shown under it before anything is typed (owner, 2026-11-27). */
-const SEARCH_EXAMPLES = ["Suwanee", "Lambert High", "Windermere", "30024"];
+/** One of each thing the box finds, shown under it before anything is typed
+ *  (owner, 2026-11-27) — each row searches its example. */
+const SEARCH_EXAMPLES = [
+	{ kind: "City", example: "Suwanee" },
+	{ kind: "Community", example: "Windermere" },
+	{ kind: "School", example: "Lambert High" },
+	{ kind: "ZIP code", example: "30024" },
+] as const;
 
 /** A school row's badge, from `k12_schools.level`. */
 const LEVEL_SHORT: Record<string, string> = {
@@ -289,14 +270,10 @@ export default function SearchTab() {
 
 	const mapRef = useRef<MapView>(null);
 
-	// ── Lenses ────────────────────────────────────────────────────────────────
+	// ── Counties ──────────────────────────────────────────────────────────────
 	// A failure is deliberately not surfaced: the tab's own job is searching,
-	// and it still works. The chips simply never appear.
+	// and it still works. The county pill simply never opens.
 	const { areas: areaData } = useAreas();
-	// NO lens until the buyer picks one (owner, 2026-09-09). The map opens as a
-	// map — photographs and county lines — and colour arrives only when someone
-	// asks a question with a chip. Tapping the live chip puts it away again.
-	const [lensId, setLensId] = useState<LensId | null>(null);
 	const [openArea, setOpenArea] = useState<string | null>(null);
 	/** What the map is currently showing — the whole tab keys off it now:
 	 *  the zoom bands, the viewport feed, the school layer, the labels. Only
@@ -320,7 +297,6 @@ export default function SearchTab() {
 	 *  hide the marks anyway. */
 	const mapContent = useMapContent(region, cityBand);
 
-	const lens = lensId ? lensById(lensId) : undefined;
 	const metricsByKey = useMemo(
 		() => areasByKey(areaData.areas),
 		[areaData.areas],
@@ -343,20 +319,6 @@ export default function SearchTab() {
 	);
 	const savedNoteFor = (key: string) => savedCityNote(savedByCounty.get(key));
 
-	const ranked = useMemo(
-		() => (lens ? rankedBy(lens, areaData.areas) : []),
-		[lens, areaData.areas],
-	);
-	/** Value per county key, for the county pill's figure. */
-	const valueByKey = useMemo(
-		() => new Map(ranked.map((v) => [v.area.key, v])),
-		[ranked],
-	);
-	/** The chips appear once the METRICS have landed, not once a lens is on —
-	 *  with no lens by default, keying this to `ranked` would hide the only
-	 *  control that can turn one on. */
-	const lensReady = areaData.areas.length > 0;
-
 	// ── The school layer ──────────────────────────────────────────────────────
 	// Icons for the schools themselves (owner,
 	// 2026-09-10: "School should be the top one, show school icons on map and
@@ -364,26 +326,18 @@ export default function SearchTab() {
 	// `attendance_zones` table has never been seeded, and a district outline is
 	// a different claim than a zone — see `lib/schools/school-pins.ts`.
 	//
-	// Under the Schools lens at any zoom, and at STREET zoom always (owner,
-	// 2026-09-13: schools are core map content, by zoom like everything
-	// else). Without the lens the pins are the NEUTRAL colour — the ramp is
-	// the lens's answer, and painting scores without its legend up would be
-	// a claim with no key.
+	// At STREET zoom (owner, 2026-09-13: schools are core map content, by
+	// zoom like everything else), in the NEUTRAL colour — scores without a
+	// legend would be a claim with no key, and the lens that carried one is
+	// gone (phase411).
 	const { schools: schoolData } = useSchools();
-	const schoolsOn = lensId === "schools" || marksLabelled;
+	const schoolsOn = marksLabelled;
 	const schoolPins = useMemo(
 		() => (schoolsOn ? visibleSchools(schoolData.schools, region) : []),
 		[schoolsOn, schoolData.schools, region],
 	);
-	/** The schools lens's own ramp, on the pins' own scale — see
-	 *  `PROFICIENCY_BANDS`. */
-	const schoolRamp = lensById("schools")?.ramp;
 	/** Names go on the pins only when they fit. See `shouldLabel`. */
 	const schoolsLabelled = shouldLabel(schoolPins.length);
-	/** The legend's ramp earns its space only when pins are actually on the
-	 *  map — under the schools lens zoomed out past 0.6 there are none, and a
-	 *  key for absent ink is just more ink. It says to zoom in instead. */
-	const showSchoolLegend = lensId === "schools" && schoolPins.length > 0;
 
 	const openedArea: Area | undefined = openArea
 		? metricsByKey.get(openArea)
@@ -730,13 +684,6 @@ export default function SearchTab() {
 		});
 	}, [hits]);
 
-	/** The county's figure under the ACTIVE lens. Absent with no lens on, and
-	 *  then the pill is just a name and a way in. */
-	const previewHit = openArea ? valueByKey.get(openArea) : undefined;
-	const previewValue =
-		previewHit && lens
-			? `${lens.format(previewHit.value)}${previewHit.estimated ? "*" : ""}`
-			: undefined;
 	const sheetH = expanded ? Math.min(height * 0.55, 480) : 110;
 	const hitCount = hits
 		? hits.cities.length +
@@ -826,10 +773,6 @@ export default function SearchTab() {
 							<SchoolMarker
 								key={`sch-${pin.id}`}
 								pin={pin}
-								// The ramp is the LENS's answer; at plain street zoom the
-								// pins wear the neutral colour instead — a score without
-								// its legend up would be a claim with no key.
-								ramp={lensId === "schools" ? schoolRamp : undefined}
 								labelled={schoolsLabelled}
 								onPress={() =>
 									claimTap({ latitude: pin.lat, longitude: pin.lng })
@@ -991,91 +934,32 @@ export default function SearchTab() {
 					)}
 				</View>
 
-				{/* What the box answers, as examples to tap — one of each kind it
-				    finds (owner, 2026-11-27). In the lens bar's place while the box
-				    is empty and has the keyboard. */}
+				{/* What the box finds, before anything is typed (owner 2026-11-27,
+				    on a "Try" chip row over the map: 「try看不清 重新设计」): a solid
+				    card under the box, one row per kind of answer with an example
+				    to tap. On the page's own surface, not floating over the map. */}
 				{focused && query.length === 0 && (
-					<View style={[styles.lensBar, { top: insets.top + 58 }]}>
-						<ScrollView
-							horizontal
-							showsHorizontalScrollIndicator={false}
-							contentContainerStyle={styles.lensChips}
-							keyboardShouldPersistTaps="handled"
-						>
-							<Text style={styles.tryLabel}>Try</Text>
-							{SEARCH_EXAMPLES.map((example) => (
-								<Pressable
-									key={example}
-									onPress={() => setQuery(example)}
-									style={styles.lensChip}
-								>
-									<Text style={styles.lensLabel}>{example}</Text>
-								</Pressable>
-							))}
-						</ScrollView>
-					</View>
-				)}
-
-				{/* Lens chips. Hidden until the metrics arrive — a chip that paints
-				    nothing is worse than no chip. */}
-				{lensReady && !(focused && query.length === 0) && (
-					<View style={[styles.lensBar, { top: insets.top + 58 }]}>
-						<ScrollView
-							horizontal
-							showsHorizontalScrollIndicator={false}
-							contentContainerStyle={styles.lensChips}
-							keyboardShouldPersistTaps="handled"
-						>
-							{MAP_LENSES.map((l) => {
-								const on = l.id === lensId;
-								return (
-									<Pressable
-										key={l.id}
-										// A chip RECOLOURS the map. It opens no list: the ranking
-										// is a page now, reached from a county (owner, 2026-09-09).
-										// Tapping the live one turns the colour back off.
-										onPress={() => setLensId(on ? null : l.id)}
-										style={[styles.lensChip, on && styles.lensChipOn]}
-									>
-										<View
-											style={[styles.lensDot, { backgroundColor: l.ramp[3] }]}
-										/>
-										<Text style={[styles.lensLabel, on && styles.lensLabelOn]}>
-											{l.label}
-										</Text>
-									</Pressable>
-								);
-							})}
-						</ScrollView>
-					</View>
-				)}
-
-				{/* What the colours MEAN. Absent until a lens is on, which is the
-				    distinction from the legend phase265 removed: that one was a
-				    permanent block of numerals over a surface that should be
-				    photographs. This appears only in the moment the buyer asked a
-				    question with a chip, and it sits directly under that chip so
-				    the two read as one control (owner, 2026-09-11: "I don't know
-				    the lens color meaning here, it is not very useful").
-
-				    One row: the school dots are the only thing a lens colours.
-				    Pinched out past where dots are drawn, the chip would light up
-				    and change nothing, so the slot says how to get an answer. */}
-				{lens && schoolRamp && (
-					<View style={[styles.legend, { top: insets.top + 100 }]}>
-						{showSchoolLegend ? (
-							<LegendRow
-								label="Schools"
-								ramp={schoolRamp}
-								low={PROFICIENCY_LEGEND.low}
-								high={PROFICIENCY_LEGEND.high}
-							/>
-						) : null}
-						<Text style={styles.legendUnit}>
-							{showSchoolLegend
-								? "% proficient on state tests"
-								: "Zoom in to see schools"}
-						</Text>
+					<View style={[styles.hintCard, { top: insets.top + 60 }]}>
+						<Text style={styles.hintHead}>You can look up</Text>
+						{SEARCH_EXAMPLES.map((e, i) => (
+							<Pressable
+								key={e.kind}
+								onPress={() => setQuery(e.example)}
+								style={({ pressed }) => [
+									styles.hintRow,
+									i > 0 && styles.hintRowRule,
+									pressed && styles.hintRowPressed,
+								]}
+								accessibilityRole="button"
+								accessibilityLabel={`Search ${e.example}`}
+							>
+								<Text style={styles.hintKind}>{e.kind}</Text>
+								<Text style={styles.hintExample} numberOfLines={1}>
+									{e.example}
+								</Text>
+								<Text style={styles.hintChevron}>›</Text>
+							</Pressable>
+						))}
 					</View>
 				)}
 
@@ -1091,15 +975,7 @@ export default function SearchTab() {
 							{openedArea ? (
 								<Pressable
 									style={styles.contextBody}
-									// With no lens on, the page picks its own default rather
-									// than being handed the string "null".
-									onPress={() =>
-										router.push(
-											lensId
-												? `/area/${openedArea.key}?lens=${lensId}`
-												: `/area/${openedArea.key}`,
-										)
-									}
+									onPress={() => router.push(`/area/${openedArea.key}`)}
 								>
 									<View style={styles.contextText}>
 										<Text style={styles.contextName} numberOfLines={1}>
@@ -1114,9 +990,6 @@ export default function SearchTab() {
 											</Text>
 										) : null}
 									</View>
-									{previewValue ? (
-										<Text style={styles.contextValue}>{previewValue}</Text>
-									) : null}
 									<Text style={styles.contextChevron}>›</Text>
 								</Pressable>
 							) : null}
@@ -1310,39 +1183,6 @@ export default function SearchTab() {
 					)}
 				</View>
 			)}
-		</View>
-	);
-}
-
-/**
- * One row of the legend: a name, the five ramp steps, and what each end means.
- *
- * The swatches are the lens's own `ramp` array in order, so this cannot drift
- * from the fill it describes — there is no second copy of the colours here.
- */
-function LegendRow({
-	label,
-	ramp,
-	low,
-	high,
-}: {
-	label: string;
-	ramp: readonly [string, string, string, string, string];
-	low: string;
-	high: string;
-}) {
-	return (
-		<View style={styles.legendRow}>
-			<Text style={styles.legendLabel} numberOfLines={1}>
-				{label}
-			</Text>
-			<Text style={styles.legendEnd}>{low}</Text>
-			<View style={styles.legendRamp}>
-				{ramp.map((c) => (
-					<View key={c} style={[styles.legendSwatch, { backgroundColor: c }]} />
-				))}
-			</View>
-			<Text style={styles.legendEnd}>{high}</Text>
 		</View>
 	);
 }
@@ -1690,32 +1530,6 @@ const styles = StyleSheet.create({
 		textShadowColor: withAlpha(colors.surface, 0.8),
 		textShadowRadius: 2,
 	},
-	// ── Legend ────────────────────────────────────────────────────────────────
-	legend: {
-		position: "absolute",
-		left: 16,
-		backgroundColor: colors.glass,
-		borderRadius: radii.tile,
-		paddingHorizontal: 10,
-		paddingVertical: 8,
-		gap: 5,
-		shadowColor: "#000",
-		shadowOpacity: 0.08,
-		shadowRadius: 8,
-		shadowOffset: { width: 0, height: 2 },
-	},
-	legendRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-	legendLabel: {
-		...textStyles.caption,
-		fontSize: 11,
-		fontWeight: "700",
-		color: colors.ink,
-		minWidth: 62,
-	},
-	legendEnd: { ...textStyles.caption, fontSize: 10, color: colors.ink2 },
-	legendRamp: { flexDirection: "row", borderRadius: 2, overflow: "hidden" },
-	legendSwatch: { width: 15, height: 8 },
-	legendUnit: { ...textStyles.caption, fontSize: 10, color: colors.ink3 },
 	mapWrap: { flex: 1, backgroundColor: colors.surface2 },
 	searchPill: {
 		position: "absolute",
@@ -1751,12 +1565,46 @@ const styles = StyleSheet.create({
 		borderRadius: 3,
 		backgroundColor: colors.border,
 	},
-	tryLabel: {
+	hintCard: {
+		position: "absolute",
+		left: 16,
+		right: 16,
+		backgroundColor: colors.surface,
+		borderRadius: radii.btn,
+		paddingTop: 12,
+		paddingBottom: 4,
+		shadowColor: "#000",
+		shadowOpacity: 0.12,
+		shadowRadius: 12,
+		shadowOffset: { width: 0, height: 4 },
+		elevation: 4,
+	},
+	hintHead: {
 		...textStyles.caption,
 		color: colors.ink2,
-		alignSelf: "center",
-		marginRight: 2,
+		paddingHorizontal: 16,
+		marginBottom: 2,
 	},
+	hintRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		minHeight: 48,
+		paddingHorizontal: 16,
+		gap: 12,
+	},
+	hintRowRule: {
+		borderTopWidth: StyleSheet.hairlineWidth,
+		borderTopColor: colors.border,
+	},
+	hintRowPressed: { backgroundColor: colors.surface2 },
+	hintKind: { ...textStyles.body, color: colors.ink2, width: 96 },
+	hintExample: {
+		...textStyles.body,
+		color: colors.ink,
+		flex: 1,
+		fontWeight: "600",
+	},
+	hintChevron: { ...textStyles.body, color: colors.ink3 },
 	schoolThumb: {
 		backgroundColor: colors.surface2,
 		alignItems: "center",
@@ -1828,24 +1676,6 @@ const styles = StyleSheet.create({
 	rowSub: { ...textStyles.footnote, color: colors.ink2 },
 	fmls: { paddingHorizontal: 16, paddingTop: 16 },
 
-	// ── Lens chips ────────────────────────────────────────────────────────────
-	lensBar: { position: "absolute", left: 0, right: 0 },
-	lensChips: { paddingHorizontal: 16, gap: 7 },
-	lensChip: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 6,
-		backgroundColor: colors.glass,
-		borderWidth: 1,
-		borderColor: colors.border,
-		borderRadius: radii.pill,
-		paddingHorizontal: 12,
-		paddingVertical: 7,
-	},
-	lensChipOn: { backgroundColor: colors.ink, borderColor: colors.ink },
-	lensDot: { width: 8, height: 8, borderRadius: 2 },
-	lensLabel: { ...textStyles.footnote, color: colors.ink, fontWeight: "600" },
-	lensLabelOn: { color: "#FFFFFF" },
 	// ── Context pill (floats ON the map) ──────────────────────────────────────
 	contextBar: { position: "absolute", left: 0, right: 0, alignItems: "center" },
 	contextPill: {
@@ -1875,6 +1705,5 @@ const styles = StyleSheet.create({
 	contextText: { flexShrink: 1 },
 	contextName: { ...textStyles.headline, color: colors.ink },
 	contextSaved: { ...textStyles.caption, color: colors.accent, marginTop: 1 },
-	contextValue: { ...textStyles.headline, color: colors.ink2 },
 	contextChevron: { ...textStyles.headline, color: colors.accent },
 });

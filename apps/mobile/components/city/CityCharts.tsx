@@ -8,14 +8,7 @@
  */
 import type { CityDetailDTO, CitySource } from "@percho/shared/city";
 import { useState } from "react";
-import {
-	Linking,
-	Pressable,
-	ScrollView,
-	StyleSheet,
-	Text,
-	View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
 	type GlanceTile,
 	driveTimes,
@@ -23,6 +16,7 @@ import {
 	schoolColumns,
 	stopLabel,
 } from "../../lib/city/page";
+import { openLink } from "../../lib/open-link";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -33,10 +27,10 @@ const RUSH_TINT = "#C9E2D9";
 const cite = (s: CitySource) => (s.year ? `${s.name} · ${s.year}` : s.name);
 /**
  * Open a figure's source (owner 2026-11-15: every ranking links to where it
- * came from). Safari, not an in-app view — the app ships no web-browser module.
+ * came from), in the in-app browser — `lib/open-link.ts`.
  */
 const openSource = (url?: string) => {
-	if (url) void Linking.openURL(url).catch(() => {});
+	if (url) void openLink(url);
 };
 /** The mark on a figure that links out. */
 const LINK_MARK = " ↗";

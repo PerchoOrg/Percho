@@ -17,13 +17,13 @@ import {
 	fmlsDetailDisclosure,
 } from "@percho/shared/fmls";
 import {
-	Linking,
 	type StyleProp,
 	StyleSheet,
 	Text,
 	View,
 	type ViewStyle,
 } from "react-native";
+import { openLink } from "../lib/open-link";
 import { colors } from "../theme/tokens";
 import { textStyles } from "../theme/typography";
 
@@ -46,7 +46,7 @@ export function FmlsDisclosure({
 					style={styles.link}
 					accessibilityRole="link"
 					onPress={() => {
-						Linking.openURL(FMLS_DMCA_URL).catch(() => {});
+						void openLink(FMLS_DMCA_URL);
 					}}
 				>
 					{text.link}

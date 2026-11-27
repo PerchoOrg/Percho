@@ -23,6 +23,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 23:12 UTC — phase411: no Schools chip on the map; a readable "what you can search" card; web links open inside the app
+
+**Objective**: Owner 2026-11-27: 「去掉school filtering 在搜索tab里」; 「那个try suwanee有点奇怪 try看不清 重新设计这块的ui」; 「能不能把一些网页链接做成站内的 不要跳出去？」.
+**Actions**:
+- `apps/mobile/app/(tabs)/search.tsx`: the lens chip row (Schools only since 2026-11-23) and its legend are gone, with what only they used — the lens state, county ranking under a lens, the county pill's figure, `LegendRow`, its styles. School pins still come out at street zoom, neutral colour. The county pill opens `/area/[key]` with no lens. Header rewritten to say so.
+- Same file: phase410's "Try" chip row (small grey word, glass chips over the map) replaced by a solid card under the box while it is focused and empty — "You can look up", then four rows: City · Suwanee, Community · Windermere, School · Lambert High, ZIP code · 30024, each a 48 pt row that searches its example.
+- `apps/mobile/lib/open-link.ts`: `openLink(url)` — a web page opens in the in-app Safari sheet (`expo-web-browser`, page sheet, Close button), anything else (`mailto:`) in its own app. Every `Linking.openURL` on a web page now goes through it: You-tab footer (privacy, terms, contact, credits), city page (places' sites, safety links, forecast source), charts' sources, community Explore (sheets, resource pills, photo credits), FMLS notice, a home's insight basis. The review "Report" mailto is unchanged.
+- `expo-web-browser@~57.0.3` added (SDK 57's pinned version; no config plugin). **A native module**: dev client 1.1.0 (15) and store builds to 1.1.1 (20) do not have it. `openLink` imports it lazily inside a try, so on those builds a link opens in Safari exactly as before — nothing breaks; in-app opening starts with the next native build.
+**Decisions**: SFSafariViewController rather than a WebView screen: it keeps Safari's own sign-ins and reader, needs no URL allow-list, and is Apple's standard for "show a page without leaving". A WebView would be the same native-build cost and more code.
+**Verified**: mobile tsc, 989 tests, biome (one pre-existing warning in `feed.tsx`).
+**Not verified**: the card's look on a phone; in-app links need a new build.
+**Next steps**: owner decides when to build — a new dev client (to see in-app links now) and/or fold it into the next store version (1.1.2).
+
 ## 2026-11-27 22:44 UTC — phase410: search finds schools and ZIPs; "I want to know about…" with examples
 
 **Objective**: Owner 2026-11-27, on phase409's wording: 「不要太具体 你可以 I want to know about... 应该多支持一些 比如学校等等」; on my proposal: 「ai搜索可以之后加 zip搜要支持 你的建议我同意 改吧」.
@@ -55,7 +68,7 @@ rotation, not on the way in.
 - Checked and left: Saved's filter menu (its button toggles it and every row closes it); the county pill on the map (its ‹ closes it); pushed pages (place pages, compare, area) all have a back control.
 **The B question**: of 8 cities only Peachtree Corners grades below A− (its typical school is in Georgia's top 40% → B; Simpson Elementary is top 2%, but the city letter is the typical school since phase404.17). No filmed community grades below A−. Proposed to the owner, not built: below A− the feed's middle figure shows the place's own standout ("$0 · city property tax" here) and Explore keeps the letter.
 **Verified**: mobile `tsc` clean, 987 tests pass, biome clean on the three files; new cut's first 16 s checked frame by frame.
-**Not verified**: the ✕s on a phone — needs the dev client (build 11), not the TestFlight build.
+**Not verified**: the ✕s on a phone — needs the dev client 1.1.0 (15), not a store build. (Corrected in phase411: this first said "build 11", which has been unable to load main since phase399.1.)
 
 ## 2026-11-27 10:32 UTC — phase407: Peachtree Corners, the eighth city film — a plan, then a city; and where coverage stands
 

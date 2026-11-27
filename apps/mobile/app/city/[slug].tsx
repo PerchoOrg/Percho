@@ -36,7 +36,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
-	Linking,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -89,6 +88,7 @@ import {
 	schoolsByLevel,
 } from "../../lib/city/page";
 import { linkGroups } from "../../lib/community/explore";
+import { openLink } from "../../lib/open-link";
 import { type ReviewStatus, fetchMyReview } from "../../lib/reviews/reviews";
 import { backOrFeed } from "../../lib/share/back-or-feed";
 import { openShareSheet } from "../../lib/share/share-sheet";
@@ -97,7 +97,7 @@ import { useSavedStore } from "../../state/saved";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
-const openSite = (url: string) => void Linking.openURL(url).catch(() => {});
+const openSite = (url: string) => void openLink(url);
 
 /**
  * A sheet's row for a place: its name, a quieter word, its figure — and the
@@ -657,7 +657,7 @@ export default function CityScreen() {
 								{safetyLinks.map((l) => (
 									<Pressable
 										key={l.url}
-										onPress={() => void Linking.openURL(l.url).catch(() => {})}
+										onPress={() => void openLink(l.url)}
 										accessibilityRole="link"
 										hitSlop={6}
 									>
@@ -776,9 +776,7 @@ export default function CityScreen() {
 									{!!data.forecast.source.url && (
 										<Pressable
 											onPress={() =>
-												void Linking.openURL(
-													data.forecast?.source.url ?? "",
-												).catch(() => {})
+												void openLink(data.forecast?.source.url ?? "")
 											}
 											accessibilityRole="link"
 											hitSlop={6}
