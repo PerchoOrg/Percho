@@ -23,7 +23,7 @@ rotation, not on the way in.
 
 ---
 
-## 2026-11-27 01:25 UTC — phase404.15: sold prices by community — what Redfin and Zillow publish, and what they do not (investigation, nothing changed)
+## 2026-11-27 01:06 UTC — phase404.15: sold prices by community — what Redfin and Zillow publish, and what they do not (investigation, nothing changed)
 
 **Objective**: owner, on phase404.14's county appraisals: 「要用成交价 就是redfine 或者zillow上给的价格 想办法拿到这个数据」.
 **Redfin publishes sold prices by neighbourhood** — its Data Center download hub (`redfin.com/news/data-center/downloads/`), files on a public bucket: `https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_data_center/housing_market/monthly/nbhds_in_top_50_metros.csv` (1.25 GB, newest period first, updated 2026-11-12; the old `redfin_market_tracker/*.tsv000.gz` paths now answer 403). Rolling 3 months; columns include REGION ID, REGION NAME, METRO, HOMES SOLD, MEDIAN SALE PRICE NSA, MEDIAN NEW LISTING PRICE — no city column. The first 110 MB hold the last fifteen periods; 554 Atlanta-metro neighbourhoods.
