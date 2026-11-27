@@ -10,11 +10,7 @@ import type {
 	CommunityRank,
 } from "@percho/shared/community-profile";
 import { rankShare, topShare } from "@percho/shared/rank-share";
-import {
-	SCHOOL_GRADE_NOTE,
-	gradeFigure,
-	schoolGrade,
-} from "@percho/shared/school-grade";
+import { SCHOOL_GRADE_NOTE, schoolGrade } from "@percho/shared/school-grade";
 import { useState } from "react";
 import {
 	Linking,
@@ -108,7 +104,7 @@ function Schools({ ranks }: { ranks: NonNullable<CommunityProfile["ranks"]> }) {
 					    is a letter for. */}
 					{bestGrade && (
 						<Text style={styles.caption}>
-							The best of them is in the top {best}% — {gradeFigure(bestGrade)}.{" "}
+							The best of them is in the top {best}% — {bestGrade}.{" "}
 							{SCHOOL_GRADE_NOTE}
 						</Text>
 					)}
