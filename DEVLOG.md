@@ -23,7 +23,7 @@ rotation, not on the way in.
 
 ---
 
-## 2026-11-27 08:45 UTC — phase404.24: a saved city's line is its card's place line, no living cost
+## 2026-11-27 08:29 UTC — phase404.24: a saved city's line is its card's place line, no living cost
 
 **Objective**: owner on phase404.23's open question (a saved city's sub-line was its county and true-cost figure): 「和卡保持一致 不要显示生活成本」.
 **Actions**: `apps/mobile/app/(tabs)/saved.tsx` — `costLineFor` → `placeLineFor`: the feed unit's `glance.place` ("Suwanee, GA · Gwinnett County"); a city with no film says the same from the unit's name and state and the county its centre falls in. Used as the tile's sub-line and on the City view's shelf header ("… · 2 communities"). The "$691/mo on a $500k home*" figure and its "* water and trash are still our estimate" note are gone from Saved. `costLine` → `placeLine` in `lib/saved/shelves.ts`.
