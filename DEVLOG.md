@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 09:20 UTC — phase405.1: the 1.1.1 store screenshots, for the owner's review
+
+**Objective**: owner sent nine captures (「新的截图」) for 1.1.1; he reviews the finished images before upload (phase403).
+**Actions**: same treatment as phase403 — top 150 px cropped (165 on the Suwanee boxes capture, where the scrolled page title sat under the status bar), set at 1090 px wide with 64 px corners on the brand green under a cream New York caption; rendered with headless Chrome at 1290×2796 (`APP_IPHONE_67`) and 1284×2778 (`APP_IPHONE_65`), RGB, no alpha, kept in `/tmp/shots2` until approved. Preview: `apps/web/public/demos/store-screenshots-v2/` (645 px JPEGs).
+Order and captions: 1 Every neighbourhood, on film (Windward card) · 2 A whole city in five short parts (Suwanee card) · 3 See what's nearby before you drive there (Windward page, film) · 4 Schools, safety and cost at a glance (Windward boxes) · 5 Know the city before you visit (Suwanee page, film) · 6 Safety, schools and errands, city by city (Suwanee boxes, new) · 7 Compare places side by side · 8 Keep the places you like (Saved grid) · 9 See your saved places on a map (new).
+**Noticed**: captures 7 (Compare) and 9 (Saved map) are from the 1.1.0 build (11:12–11:13, the phase403 set). 9 still shows the switch as Towns / Grid / List / Map and the old "Neighbourhood · Schools Top…" line — not what 1.1.1 shows. Raised; the compare header still breaks "Northbrook / e" (shipped as is in 1.1.0).
+**Next steps**: owner approves → cancel 1.1.1's review submission (`c9c1281a…`; metadata is locked while waiting for review), replace both screenshot sets on version `2c5ddbf4…`, resubmit.
+
 ## 2026-11-27 08:56 UTC — phase405: iOS 1.1.0 live; 1.1.1 (20) submitted to App Review
 
 **Objective**: owner: 「打包最新的版本发布到ios 之前有一版review完了还没有release可以一起」. Asked which "together" he meant (Apple allows one unreleased version at a time): fold everything into a re-reviewed 1.1.0, or release 1.1.0 now and send the latest as its own version. He picked the second.
