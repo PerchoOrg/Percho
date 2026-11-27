@@ -23,6 +23,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 21:06 UTC — phase408: Peachtree Corners opens on its name; every sheet and a search have a ✕; a B on a card (question answered, not built)
+
+**Objective**: Owner on phase407: 「第一张照片模糊 没有标志 没有信息量 换掉」; Explore's sheets (Schools etc.) close only by a tap on the dimmed space — add a ✕, check every other case, including how to leave a search; and whether a "B" schools letter on a feed card could give way to another strength.
+**Actions**:
+- Film: the opening shot (Technology Park office across its pond, Seedance) replaced by the Peachtree Corners bridge at night with the city's name lit; City Hall with "2012" follows. Assembly `77ba3b40`, stream `2e526995…`, 1:45. The bridge's lettering rules out Seedance, so the film has one Seedance shot (the river); the paid pond clip stays cached, unused.
+- `apps/mobile/components/BottomSheet.tsx`: a ✕ (30 pt, `surface2`) at the top right of every sheet, beside the grabber. Covers all three callers — a community's Explore sheets (Schools, Safety…), a city page's sheets, the feed's "Where are you looking?".
+- `components/listing/explore/TourRequestSheet.tsx`: the same ✕ (homes are test-only, but it had the same gap).
+- `app/(tabs)/search.tsx`: the results sheet's header carries a ✕ that clears the words, collapses the sheet and puts the keyboard down; the × inside the search box now does the same (it used to clear the words and leave the keyboard up).
+- Checked and left: Saved's filter menu (its button toggles it and every row closes it); the county pill on the map (its ‹ closes it); pushed pages (place pages, compare, area) all have a back control.
+**The B question**: of 8 cities only Peachtree Corners grades below A− (its typical school is in Georgia's top 40% → B; Simpson Elementary is top 2%, but the city letter is the typical school since phase404.17). No filmed community grades below A−. Proposed to the owner, not built: below A− the feed's middle figure shows the place's own standout ("$0 · city property tax" here) and Explore keeps the letter.
+**Verified**: mobile `tsc` clean, 987 tests pass, biome clean on the three files; new cut's first 16 s checked frame by frame.
+**Not verified**: the ✕s on a phone — needs the dev client (build 11), not the TestFlight build.
+
 ## 2026-11-27 10:32 UTC — phase407: Peachtree Corners, the eighth city film — a plan, then a city; and where coverage stands
 
 **Objective**: The owner asked for the city/community distribution and an expansion plan (2026-11-27), then approved the first step: four cities, one at a time — Peachtree Corners → Roswell → Milton → Lawrenceville. This is the first. The second cluster (Cobb or DeKalb) is his to decide later.

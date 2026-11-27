@@ -94,6 +94,15 @@ export function TourRequestSheet(props: TourRequestSheetProps) {
 				pointerEvents="box-none"
 			>
 				<View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+					<Pressable
+						style={styles.close}
+						onPress={phase === "sending" ? undefined : onClose}
+						hitSlop={12}
+						accessibilityRole="button"
+						accessibilityLabel="Close"
+					>
+						<Text style={styles.closeGlyph}>✕</Text>
+					</Pressable>
 					{phase === "sent" ? (
 						<>
 							<Text style={styles.title}>Request sent</Text>
@@ -186,6 +195,19 @@ const styles = StyleSheet.create({
 		paddingTop: 20,
 		gap: 10,
 	},
+	close: {
+		position: "absolute",
+		top: 14,
+		right: 14,
+		zIndex: 1,
+		width: 30,
+		height: 30,
+		borderRadius: 15,
+		backgroundColor: explore.chip,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	closeGlyph: { fontSize: 14, fontWeight: "600", color: explore.ink2 },
 	title: { fontSize: 20, fontWeight: "700", color: explore.ink },
 	sub: { fontSize: 15, color: explore.ink2, marginBottom: 6 },
 	input: {

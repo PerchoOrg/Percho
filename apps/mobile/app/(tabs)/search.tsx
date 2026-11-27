@@ -120,6 +120,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Image,
+	Keyboard,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -265,6 +266,11 @@ export default function SearchTab() {
 	const [expanded, setExpanded] = useState(false);
 
 	const searching = query.trim().length >= MIN_QUERY_LEN;
+	const closeSearch = () => {
+		setQuery("");
+		setExpanded(false);
+		Keyboard.dismiss();
+	};
 	// The search endpoint answers TYPED questions only — browsing is the
 	// viewport feed (`useMapContent` below), not a hidden query.
 	const search = useSearch(searching ? query : "");
@@ -939,7 +945,12 @@ export default function SearchTab() {
 						<ActivityIndicator size="small" color={colors.ink2} />
 					)}
 					{query.length > 0 && (
-						<Pressable onPress={() => setQuery("")} hitSlop={12}>
+						<Pressable
+							onPress={closeSearch}
+							hitSlop={12}
+							accessibilityRole="button"
+							accessibilityLabel="Clear search"
+						>
 							<Text style={styles.searchClear}>×</Text>
 						</Pressable>
 					)}
@@ -1069,10 +1080,23 @@ export default function SearchTab() {
 					>
 						<View style={styles.grabber} />
 					</Pressable>
-					<Text style={styles.sheetTitle} numberOfLines={1}>
-						{`"${query.trim()}"`}
-						{poolLoading || search.loading ? "" : ` · ${hitCount}`}
-					</Text>
+					<View style={styles.sheetHead}>
+						<Text style={styles.sheetTitle} numberOfLines={1}>
+							{`"${query.trim()}"`}
+							{poolLoading || search.loading ? "" : ` · ${hitCount}`}
+						</Text>
+						{/* The way out of a search (owner, 2026-11-27): clears the words,
+						    which takes the sheet away, and puts the keyboard down. */}
+						<Pressable
+							style={styles.sheetClose}
+							onPress={closeSearch}
+							hitSlop={12}
+							accessibilityRole="button"
+							accessibilityLabel="Close search"
+						>
+							<Text style={styles.sheetCloseGlyph}>✕</Text>
+						</Pressable>
+					</View>
 					{expanded && (
 						<ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
 							{search.error && (
@@ -1618,12 +1642,28 @@ const styles = StyleSheet.create({
 		borderRadius: 3,
 		backgroundColor: colors.border,
 	},
+	sheetHead: {
+		flexDirection: "row",
+		alignItems: "center",
+		paddingLeft: 20,
+		paddingRight: 14,
+		marginBottom: 6,
+		gap: 8,
+	},
 	sheetTitle: {
 		...textStyles.caption,
 		color: colors.ink2,
-		paddingHorizontal: 20,
-		marginBottom: 6,
+		flex: 1,
 	},
+	sheetClose: {
+		width: 30,
+		height: 30,
+		borderRadius: 15,
+		backgroundColor: colors.surface2,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	sheetCloseGlyph: { fontSize: 14, fontWeight: "600", color: colors.ink2 },
 	list: { flex: 1, paddingHorizontal: 12 },
 	groupTitle: {
 		...textStyles.caption,
