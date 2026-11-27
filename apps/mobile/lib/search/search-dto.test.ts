@@ -31,6 +31,7 @@ describe("parseSearchResult", () => {
 	it("tolerates a bare or empty body", () => {
 		expect(parseSearchResult(undefined)).toEqual({
 			cities: [],
+			schools: [],
 			listings: [],
 			communities: [],
 		});
@@ -50,5 +51,23 @@ describe("parseSearchResult", () => {
 		});
 		expect(r.cities.map((c) => c.slug)).toEqual(["peachtree-corners-ga"]);
 		expect(r.cities[0]?.state).toBe("GA");
+	});
+
+	it("reads schools (phase410) and drops one without a point", () => {
+		const r = parseSearchResult({
+			schools: [
+				{
+					id: "s1",
+					name: "Lambert High School",
+					level: "high",
+					zip: "30024",
+					lat: 34.1,
+					lng: -84.1,
+				},
+				{ id: "s2", name: "No point" },
+			],
+		});
+		expect(r.schools.map((x) => x.id)).toEqual(["s1"]);
+		expect(r.schools[0]?.zip).toBe("30024");
 	});
 });

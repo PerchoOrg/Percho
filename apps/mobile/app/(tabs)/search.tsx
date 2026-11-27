@@ -147,7 +147,6 @@ import { familiarityFor } from "../../lib/area-familiarity";
 import { areasByKey } from "../../lib/areas/areas-dto";
 import { savedCitiesByCounty, savedCityNote } from "../../lib/areas/locate";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
-import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
 import { areaUnitId, formatPrice, specsLine } from "../../lib/saved/rows";
 import {
 	type MapRegion,
@@ -213,6 +212,17 @@ const FOCUS_POINT_DELTA = {
  *  longer run than `flyTo`'s 500ms, because this flight crosses from the
  *  metro span down to a street span and needs the time to read as descent. */
 const FOCUS_FLY_DELAY_MS = 350;
+
+/** One of each thing the box finds — a city, a school, a community, a ZIP —
+ *  shown under it before anything is typed (owner, 2026-11-27). */
+const SEARCH_EXAMPLES = ["Suwanee", "Lambert High", "Windermere", "30024"];
+
+/** A school row's badge, from `k12_schools.level`. */
+const LEVEL_SHORT: Record<string, string> = {
+	elementary: "Elem",
+	middle: "Middle",
+	high: "High",
+};
 const FOCUS_FLY_MS = 900;
 
 /** The metro at rest — the map's opening frame, and where "back" returns to. */
@@ -264,6 +274,8 @@ export default function SearchTab() {
 	const [query, setQuery] = useState("");
 	// v1: the sheet is one expanded panel (half) or collapsed (peek).
 	const [expanded, setExpanded] = useState(false);
+	/** The box has the keyboard: with nothing typed, the examples show. */
+	const [focused, setFocused] = useState(false);
 
 	const searching = query.trim().length >= MIN_QUERY_LEN;
 	const closeSearch = () => {
@@ -400,6 +412,20 @@ export default function SearchTab() {
 		// Same guard as the point deep link below: `onRegionChangeComplete` is
 		// not guaranteed after a programmatic animation, and the bands + the
 		// viewport fetch key off `region` — write the known destination now.
+		setRegion(target);
+	};
+
+	/** Fly to a school found by name or ZIP (phase410): street zoom, where the
+	 *  school pins are drawn and the communities around it show by name. */
+	const flyToSchool = (school: { lat: number; lng: number }) => {
+		setExpanded(false);
+		Keyboard.dismiss();
+		const target = {
+			latitude: school.lat,
+			longitude: school.lng,
+			...FOCUS_POINT_DELTA.community,
+		};
+		mapRef.current?.animateToRegion(target, 500);
 		setRegion(target);
 	};
 
@@ -666,6 +692,7 @@ export default function SearchTab() {
 		if (!hits || !searching) return;
 		setExpanded(true);
 		const coords = [
+			...hits.schools.map((x) => ({ latitude: x.lat, longitude: x.lng })),
 			...hits.cities.flatMap((c) =>
 				c.lat !== undefined && c.lng !== undefined
 					? [{ latitude: c.lat, longitude: c.lng }]
@@ -713,6 +740,7 @@ export default function SearchTab() {
 	const sheetH = expanded ? Math.min(height * 0.55, 480) : 110;
 	const hitCount = hits
 		? hits.cities.length +
+			hits.schools.length +
 			hits.communities.length +
 			hits.listings.length +
 			units.length
@@ -934,20 +962,19 @@ export default function SearchTab() {
 					<TextInput
 						value={query}
 						onChangeText={setQuery}
-						// What a buyer can actually find, in plain words (owner,
-						// 2026-11-27: the old "Area, city or community…" named an
-						// "area" nothing answers to).
-						placeholder={
-							LISTINGS_IN_APP
-								? "Search a city, community or address"
-								: "Search a city or community"
-						}
+						// Open wording (owner, 2026-11-27: 「不要太具体」); what it
+						// can actually find is shown under the box as examples.
+						placeholder="I want to know about…"
 						placeholderTextColor={colors.ink3}
 						style={styles.searchInput}
 						autoCorrect={false}
 						autoCapitalize="words"
 						returnKeyType="search"
-						onFocus={() => setExpanded(true)}
+						onFocus={() => {
+							setExpanded(true);
+							setFocused(true);
+						}}
+						onBlur={() => setFocused(false)}
 					/>
 					{search.loading && (
 						<ActivityIndicator size="small" color={colors.ink2} />
@@ -964,9 +991,34 @@ export default function SearchTab() {
 					)}
 				</View>
 
+				{/* What the box answers, as examples to tap — one of each kind it
+				    finds (owner, 2026-11-27). In the lens bar's place while the box
+				    is empty and has the keyboard. */}
+				{focused && query.length === 0 && (
+					<View style={[styles.lensBar, { top: insets.top + 58 }]}>
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							contentContainerStyle={styles.lensChips}
+							keyboardShouldPersistTaps="handled"
+						>
+							<Text style={styles.tryLabel}>Try</Text>
+							{SEARCH_EXAMPLES.map((example) => (
+								<Pressable
+									key={example}
+									onPress={() => setQuery(example)}
+									style={styles.lensChip}
+								>
+									<Text style={styles.lensLabel}>{example}</Text>
+								</Pressable>
+							))}
+						</ScrollView>
+					</View>
+				)}
+
 				{/* Lens chips. Hidden until the metrics arrive — a chip that paints
 				    nothing is worse than no chip. */}
-				{lensReady && (
+				{lensReady && !(focused && query.length === 0) && (
 					<View style={[styles.lensBar, { top: insets.top + 58 }]}>
 						<ScrollView
 							horizontal
@@ -1120,7 +1172,7 @@ export default function SearchTab() {
 							)}
 							{hits && hitCount === 0 && (
 								<Text style={styles.empty}>
-									{`No city or community matches "${query.trim()}".`}
+									{`Nothing matches "${query.trim()}" yet.`}
 								</Text>
 							)}
 
@@ -1165,6 +1217,31 @@ export default function SearchTab() {
 										<Text style={styles.rowName}>{c.name}</Text>
 										<Text style={styles.rowSub}>
 											{c.city}, {c.state}
+										</Text>
+									</View>
+								</Pressable>
+							))}
+
+							{hits && hits.schools.length > 0 && (
+								<Text style={styles.groupTitle}>Schools</Text>
+							)}
+							{hits?.schools.map((school) => (
+								<Pressable
+									key={`s-${school.id}`}
+									style={styles.row}
+									onPress={() => flyToSchool(school)}
+								>
+									<View style={[styles.rowThumb, styles.schoolThumb]}>
+										<Text style={styles.schoolThumbTxt}>
+											{school.level ? (LEVEL_SHORT[school.level] ?? "") : ""}
+										</Text>
+									</View>
+									<View style={styles.rowText}>
+										<Text style={styles.rowName} numberOfLines={1}>
+											{school.name}
+										</Text>
+										<Text style={styles.rowSub} numberOfLines={1}>
+											{[school.city, school.zip].filter(Boolean).join(" ")}
 										</Text>
 									</View>
 								</Pressable>
@@ -1674,6 +1751,18 @@ const styles = StyleSheet.create({
 		borderRadius: 3,
 		backgroundColor: colors.border,
 	},
+	tryLabel: {
+		...textStyles.caption,
+		color: colors.ink2,
+		alignSelf: "center",
+		marginRight: 2,
+	},
+	schoolThumb: {
+		backgroundColor: colors.surface2,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	schoolThumbTxt: { ...textStyles.caption, color: colors.ink2 },
 	sheetHead: {
 		flexDirection: "row",
 		alignItems: "center",

@@ -8,13 +8,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const tables: string[] = [];
 /** Every `.in()` filter, as `[column, values]`. */
 const inFilters: Array<[string, unknown]> = [];
+/** Every `.eq()` filter, as `table.column=value`. */
+const eqFilters: string[] = [];
 
 /** Every read in `search.ts` ends in `.limit()`, so that is where it resolves. */
-function fakeQuery(): unknown {
+function fakeQuery(table: string): unknown {
   const chain: Record<string, unknown> = {};
-  for (const m of ['select', 'eq', 'not', 'or', 'gte', 'lte', 'order']) {
+  for (const m of ['select', 'not', 'or', 'ilike', 'gte', 'lte', 'order']) {
     chain[m] = () => chain;
   }
+  chain.eq = (column: string, value: unknown) => {
+    eqFilters.push(`${table}.${column}=${String(value)}`);
+    return chain;
+  };
   chain.in = (column: string, values: unknown) => {
     inFilters.push([column, values]);
     return chain;
@@ -27,7 +33,7 @@ vi.mock('@/lib/supabase/server', () => ({
   createUncachedAnonClient: () => ({
     from: (table: string) => {
       tables.push(table);
-      return fakeQuery();
+      return fakeQuery(table);
     },
   }),
   createUncachedServiceClient: () => ({}),
@@ -58,17 +64,18 @@ const BOUNDS = { minLat: 33.6, maxLat: 34.1, minLng: -84.6, maxLng: -84.1 };
 beforeEach(() => {
   tables.length = 0;
   inFilters.length = 0;
+  eqFilters.length = 0;
 });
 
 describe('searchEntities / mapEntities — the listings option', () => {
   it('reads listings and communities by default', async () => {
     await searchEntities('oak');
-    expect(tables.sort()).toEqual(['communities', 'listings']);
+    expect(tables.sort()).toEqual(['communities', 'k12_schools', 'listings']);
   });
 
   it('search with listings off never touches the listings table', async () => {
     const res = await searchEntities('oak', { listings: false });
-    expect(tables).toEqual(['communities']);
+    expect(tables.sort()).toEqual(['communities', 'k12_schools']);
     expect(res.listings).toEqual([]);
   });
 
@@ -106,5 +113,19 @@ describe('searchEntities — cities (phase409)', () => {
   it('returns no city when none matches', async () => {
     const res = await searchEntities('oak', { listings: false });
     expect(res.cities).toEqual([]);
+  });
+});
+
+describe('searchEntities — a ZIP (phase410)', () => {
+  it('matches communities and schools by ZIP, and no city by name', async () => {
+    const res = await searchEntities('30024', { listings: false });
+    expect(eqFilters).toContain('communities.zip=30024');
+    expect(eqFilters).toContain('k12_schools.zip=30024');
+    expect(res.cities).toEqual([]);
+  });
+
+  it('a name never filters by ZIP', async () => {
+    await searchEntities('lambert', { listings: false });
+    expect(eqFilters.some((f) => f.endsWith('.zip=lambert'))).toBe(false);
   });
 });

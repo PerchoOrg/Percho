@@ -23,6 +23,16 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 22:44 UTC — phase410: search finds schools and ZIPs; "I want to know about…" with examples
+
+**Objective**: Owner 2026-11-27, on phase409's wording: 「不要太具体 你可以 I want to know about... 应该多支持一些 比如学校等等」; on my proposal: 「ai搜索可以之后加 zip搜要支持 你的建议我同意 改吧」.
+**Actions**:
+- Data: `communities.zip` was empty on every row. `scripts/admin/backfill-community-zip.ts` places each community's point in the Census's 2020 ZIP Code Tabulation Areas (TIGERweb, free, no key) and writes the ZIP where none is set. Run once: 22,730 of 22,731 active rows now carry a ZIP across 208 ZIPs; one row has no point. Spot-checked the 20 filmed communities (Aberdeen, Edinburgh, Harvest Park 30024; Windward 30005; Medlock Bridge 30022; Wild Timber 30518 …). Re-run it after new communities are added — it only fills empty rows.
+- `apps/web/lib/listings/search.ts`: `schools` from `k12_schools` (name contains the query, 10 at most; or a five-digit ZIP, 40 at most); a ZIP also matches communities by `zip` exactly and skips the city name match.
+- `apps/mobile/app/(tabs)/search.tsx`: placeholder "I want to know about…"; with the box focused and empty, a row under it in the lens bar's place — "Try  Suwanee · Lambert High · Windermere · 30024", each a tap that searches it. Results: Cities → Communities → Schools → Homes; a school row (level badge, city and ZIP) flies the map to the school at street zoom, where the school pins and the communities around it are drawn. Empty result: `Nothing matches "…" yet.`
+- Not done, by the owner's word: AI search that reads a question ("good schools near Duluth") — later.
+**Verified**: web typecheck, 77 search tests (two new for ZIP); mobile tsc, 989 tests (one new parser test); biome.
+
 ## 2026-11-27 22:30 UTC — phase409: search finds cities; plainer search wording
 
 **Objective**: Owner 2026-11-27: 「search里搜不到city 并且那个提示词也不好 改一改」. Also: 「先不改学校这一栏」 — the B-on-a-card proposal (phase408) is declined for now.
