@@ -3,16 +3,16 @@
  * 一下 支持多种视图"). Kept on the device, so the tab reopens the way it was
  * left.
  *
- *   · towns — a shelf per town (phase272), the default
- *   · grid  — photographs, two across
+ *   · grid  — photographs, two across, the default (phase404.25)
  *   · list  — one compact row a save, with what its page found
+ *   · towns — a shelf per city (phase272), labelled "City"
  *   · map   — where the saves are, with a rail of them underneath
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-export const SAVED_VIEWS = ["towns", "grid", "list", "map"] as const;
+export const SAVED_VIEWS = ["grid", "list", "towns", "map"] as const;
 export type SavedView = (typeof SAVED_VIEWS)[number];
 
 export const SAVED_VIEW_LABEL: Record<SavedView, string> = {
@@ -30,11 +30,13 @@ interface SavedViewState {
 export const useSavedViewStore = create<SavedViewState>()(
 	persist(
 		(set) => ({
-			view: "towns",
+			view: "grid",
 			setView: (view) => set({ view }),
 		}),
 		{
-			name: "percho-v3:saved-view:v1",
+			// v2 (phase404.25): Grid became the default, and everyone starts on
+			// it once rather than keeping the City view v1 defaulted them to.
+			name: "percho-v3:saved-view:v2",
 			storage: createJSONStorage(() => AsyncStorage),
 			partialize: (s) => ({ view: s.view }),
 		},

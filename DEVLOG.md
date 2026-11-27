@@ -23,6 +23,17 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 08:35 UTC — phase404.25: Saved — one place line everywhere, kind tags, Grid first
+
+**Objective**: owner: 「city view里 为啥有的地址ga啥的 有的不显示？ list还有别的view里city和community可以变成tag之类的吗 默认grid view 把city放到list后面 map前面」.
+**Why some showed GA**: in the City view a saved city's header carried its card line ("Suwanee, GA · Gwinnett County", phase404.24), a community's card under it printed the bare `state` ("GA"), and a city nobody saved had no line at all.
+**Actions** (mobile only):
+- A community's sub-line is the line above its feed card, from the detail endpoint's `glance.place` ("Suwanee, GA · Forsyth County"; "City, GA" without one) — in the City view's rail (two lines at 150 pt) and in Grid, List and Map. A city's is its own card line, as since phase404.24.
+- City view headers: the name, "◆ saved" when saved, and the counts — the same for every city. The place line left the header (`Shelf.area.placeLine` removed): a city's communities can sit in two counties (Suwanee: Aberdeen is Forsyth, Edinburgh Gwinnett), so a header has no one county to name.
+- `KindTag` (`components/saved/SavedViews.tsx`): "City" / "Community" / "Home" as a pill — on the photo's top left in Grid and the City rail (glass fill), above the name in List and the Map rail. The kind is no longer joined into the sub-line.
+- Views read Grid · List · City · Map, Grid the default. The persisted key is `percho-v3:saved-view:v2`, so everyone opens on Grid once.
+**Risks**: not seen on a device. Metro now, the store build with the next update.
+
 ## 2026-11-27 08:29 UTC — phase404.24: a saved city's line is its card's place line, no living cost
 
 **Objective**: owner on phase404.23's open question (a saved city's sub-line was its county and true-cost figure): 「和卡保持一致 不要显示生活成本」.

@@ -8,9 +8,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import {
 	Image,
 	Pressable,
+	type StyleProp,
 	StyleSheet,
 	Text,
 	View,
+	type ViewStyle,
 	useWindowDimensions,
 } from "react-native";
 import type { SavedTile } from "../../lib/saved/shelves";
@@ -32,6 +34,27 @@ export const KIND_TAG: Record<SavedTile["kind"], string> = {
 	community: "Community",
 	listing: "Home",
 };
+
+/**
+ * What a save is, as a tag (phase404.25, owner: 「city和community可以变成tag
+ * 之类的吗」) — the same pill in every view. On a photograph it takes the
+ * light glass fill a chip over a picture always has.
+ */
+export function KindTag({
+	kind,
+	onPhoto = false,
+	style,
+}: {
+	kind: SavedTile["kind"];
+	onPhoto?: boolean;
+	style?: StyleProp<ViewStyle>;
+}) {
+	return (
+		<View style={[styles.tag, onPhoto && styles.tagOnPhoto, style]}>
+			<Text style={styles.tagTxt}>{KIND_TAG[kind]}</Text>
+		</View>
+	);
+}
 
 const PAGE_PAD = 20;
 const GRID_GAP = 10;
@@ -83,8 +106,8 @@ export function SavedGrid(props: SavedViewProps) {
 							colors={[colors.cardGradFrom, colors.cardGradTo]}
 							style={styles.gridShade}
 						/>
+						<KindTag kind={t.kind} onPhoto style={styles.gridTag} />
 						<View style={styles.gridText}>
-							<Text style={styles.gridKind}>{KIND_TAG[t.kind]}</Text>
 							<Text style={styles.gridTitle} numberOfLines={2}>
 								{t.title}
 							</Text>
@@ -141,12 +164,15 @@ export function SavedList(props: SavedViewProps) {
 							<View style={styles.rowPh} />
 						)}
 						<View style={styles.rowBody}>
+							<KindTag kind={t.kind} />
 							<Text style={styles.rowTitle} numberOfLines={1}>
 								{t.title}
 							</Text>
-							<Text style={styles.rowSub} numberOfLines={1}>
-								{[KIND_TAG[t.kind], t.sub].filter(Boolean).join(" · ")}
-							</Text>
+							{!!t.sub && (
+								<Text style={styles.rowSub} numberOfLines={1}>
+									{t.sub}
+								</Text>
+							)}
 							{!!t.fact && (
 								<Text style={styles.rowFact} numberOfLines={2}>
 									{t.fact}
@@ -175,6 +201,16 @@ export function SavedList(props: SavedViewProps) {
 const styles = StyleSheet.create({
 	dim: { opacity: 0.34 },
 
+	tag: {
+		alignSelf: "flex-start",
+		paddingHorizontal: 7,
+		paddingVertical: 2,
+		borderRadius: 999,
+		backgroundColor: colors.surface2,
+	},
+	tagOnPhoto: { backgroundColor: colors.glass },
+	tagTxt: { ...textStyles.caption, fontSize: 10, color: colors.ink2 },
+
 	grid: {
 		flexDirection: "row",
 		flexWrap: "wrap",
@@ -195,7 +231,7 @@ const styles = StyleSheet.create({
 		height: "72%",
 	},
 	gridText: { padding: 10, gap: 2 },
-	gridKind: { ...textStyles.caption, fontSize: 9.5, color: colors.onCardDim },
+	gridTag: { position: "absolute", left: 8, top: 8 },
 	gridTitle: { ...textStyles.title2, fontSize: 17, color: colors.onCard },
 	gridSub: { ...textStyles.note, color: colors.onCardDim },
 	gridFact: {
