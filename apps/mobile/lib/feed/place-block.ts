@@ -274,6 +274,17 @@ export function mapAccessibilityLabel(model: PlaceBlockModel): string {
 	return `Show ${model.mapName} on the map`;
 }
 
+/**
+ * A figure that is a letter — a schools grade, "A+" (phase404.17). It sits
+ * centred over its label (owner, 2026-11-27: 「字母居中」): two characters at
+ * the left edge of a column, over a label five times their width, read as
+ * something left behind. A number stays at the left, where the columns of
+ * digits line up.
+ */
+export function isLetterFigure(value: string): boolean {
+	return /^[A-D][+−-]?$/.test(value);
+}
+
 /** A figure and what it is a figure of, read as one phrase. */
 export function cellAccessibilityLabel(cell: GlanceCell): string {
 	return `${cell.value}, ${cell.label}`;

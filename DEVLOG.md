@@ -23,6 +23,16 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 07:17 UTC — phase404.18: a schools letter is centred over its label; what the distance figure could become (probed, not built)
+
+**Objective**: owner on phase404.17's cards: 「字母居中」, and 「距离那一栏怎么改？还要距离吗？」.
+**Built**: `PlaceBlock`'s `Figure` centres a cell whose figure is a letter (`isLetterFigure` in `lib/feed/place-block.ts`: `A+`, `A−`, `B` …) — both lines, so the letter sits over the middle of its label. A number keeps its column's left edge. App-side: Metro now, the store build with the next update. Not seen on a device (tsc, biome, vitest, expo export only).
+**The distance figure — two candidates measured for the twenty filmed communities, nothing changed**:
+- *Nearest supermarket* (OpenStreetMap, straight line) — what I proposed on 2026-11-27. It does not separate them: 17 of 20 are between 0.7 and 1.7 mi (Towne Village 0.3, Edinburgh 2.3). Withdrawn.
+- *Typical lot* (median acreage of the homes inside the boundary, the same county parcel services as phase404.16): 0.02 ac (Towne Village, townhomes) · 0.10 (Harvest Park, Arbors) · 0.16 (Sawnee Village) · 0.30–0.40 (Aberdeen, Hedgerows, Northbrooke, Ashley Crossing, Medlock Bridge, Windward, Windermere, Apremont, Wild Timber) · 0.44 (St Marlo) · 0.50 (Edinburgh, Cardinal Lake) · 0.70 (Sugarloaf) · 1.04 (White Columns). It differs inside one city (Suwanee: 0.10 / 0.39 / 0.50). Gaps: Ward's Crossing (its lots are not platted in Fulton's 2023 file) and Bellmoore Park (the stored boundary holds 9 homes). Gwinnett's acreage reads as rounded to a tenth.
+- Year built and floor area are on Forsyth's layer only; Forsyth's `RESFLRAREA` medians (1,435 sq ft for Aberdeen) look like one floor, not the house.
+**Proposed to the owner, awaiting his word**: a city's card keeps the drive as one figure ("62 min · drive to downtown", no miles); a community's card drops the distance to Atlanta — its city's card has said it, and inside a city it is the same on every card — for the typical lot.
+
 ## 2026-11-27 07:08 UTC — phase404.17: schools on a card are a letter; a city's is for its typical school, not its top graduation rate
 
 **Objective**: owner on the city card's figures: 「升学率我每个城市看都是很高」, asked whether that is the sample (「是因为样本数量太集中太少的原因吗」), then 「可不可以用学区评级抽象一点的」 and, on the proposal, 「用字母」.

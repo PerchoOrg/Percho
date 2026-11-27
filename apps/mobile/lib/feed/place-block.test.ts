@@ -20,6 +20,7 @@ import type { GeoUnit } from "./geo-unit";
 import {
 	type PlaceBlockInput,
 	cellAccessibilityLabel,
+	isLetterFigure,
 	mapAccessibilityLabel,
 	placeAccessibilityLabel,
 	placeBlockModel,
@@ -327,6 +328,13 @@ describe("accessibility labels", () => {
 
 	it("adds no comma of its own when the line has one part", () => {
 		expect(placeAccessibilityLabel(model({ card: area() }))).toBe("Canton, GA");
+	});
+
+	it("knows a schools letter from a number", () => {
+		for (const letter of ["A+", "A", "A−", "B+", "B−"])
+			expect(isLetterFigure(letter)).toBe(true);
+		for (const number of ["$1.2M", "Top 61%", "62 min", "28 mi", "97.5%"])
+			expect(isLetterFigure(number)).toBe(false);
 	});
 
 	it("reads a figure with what it is a figure of", () => {
