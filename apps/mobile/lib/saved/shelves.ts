@@ -16,7 +16,7 @@
  * The load-bearing idea. A bookmarked city card was always the odd row out: it
  * has no photograph, and what it names is not a thing beside the homes but the
  * place those homes are IN. Here it stops being a row and becomes the shelf's
- * own header — the county and the true-cost line ride along it, and the homes
+ * own header — the line above its card rides along it, and the homes
  * and communities saved in that town sit underneath.
  *
  * ── Ordering ────────────────────────────────────────────────────────────────
@@ -43,8 +43,8 @@ export interface ShelfEntry {
 	href?: string;
 	/** FMLS listing number, FMLS homes only (IDX rule 13.7.b). */
 	mlsNumber?: string;
-	/** `area` only: the county line the shelf header carries. */
-	costLine?: string;
+	/** `area` only: "Suwanee, GA · Gwinnett County", as above its card. */
+	placeLine?: string;
 	/** `area` only: the lens key, for `/compare-areas`. Absent outside metro. */
 	areaKey?: string;
 	/** What the place's own page found, in a line — see `communityFact`. */
@@ -67,7 +67,7 @@ export interface Shelf {
 	/** The town. Also the React key — one shelf per place, by construction. */
 	place: string;
 	/** Set when this town is ALSO saved as an area; it becomes the header. */
-	area?: { id: string; costLine?: string; areaKey?: string };
+	area?: { id: string; placeLine?: string; areaKey?: string };
 	cards: ShelfCard[];
 }
 
@@ -114,7 +114,7 @@ export function buildShelves(entries: readonly ShelfEntry[]): Shelves {
 			if (!shelf.area) {
 				shelf.area = {
 					id: e.id,
-					...(e.costLine ? { costLine: e.costLine } : {}),
+					...(e.placeLine ? { placeLine: e.placeLine } : {}),
 					...(e.areaKey ? { areaKey: e.areaKey } : {}),
 				};
 			}
@@ -155,7 +155,7 @@ export interface SavedTile {
 	id: string;
 	kind: ShelfEntry["kind"];
 	title: string;
-	/** The city for a home or a community; the county line for a city. */
+	/** The city for a home or a community; the line above its card for a city. */
 	sub: string;
 	fact?: string;
 	thumbUrl?: string;
@@ -170,7 +170,7 @@ export function buildTiles(entries: readonly ShelfEntry[]): SavedTile[] {
 	return entries.flatMap((e): SavedTile[] => {
 		const title = e.kind === "area" ? e.place : e.title;
 		if (!e.place || !title) return [];
-		const sub = e.kind === "area" ? (e.costLine ?? "") : e.place;
+		const sub = e.kind === "area" ? (e.placeLine ?? "") : e.place;
 		return [
 			{
 				id: e.id,
