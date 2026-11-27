@@ -17,7 +17,7 @@
  * on the full pages, `/c/<slug>` and `/city/<slug>`.
  */
 import { attachHls } from '@/app/(public)/_components/feed/attach-hls';
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 export type WatchFilmProps = {
   /** "COMMUNITY" / "CITY", then where it is. */
@@ -26,9 +26,15 @@ export type WatchFilmProps = {
   line: string | null;
   film: { url: string; poster: string | null } | null;
   appStoreUrl: string;
+  /**
+   * Small print under the button — a shared HOME's listing brokerage, FMLS
+   * number and the FMLS disclosures (`/watch/home/[id]`). Neighbourhood and
+   * city films have none.
+   */
+  footnote?: ReactNode;
 };
 
-export function WatchFilm({ eyebrow, name, line, film, appStoreUrl }: WatchFilmProps) {
+export function WatchFilm({ eyebrow, name, line, film, appStoreUrl, footnote }: WatchFilmProps) {
   const ref = useRef<HTMLVideoElement | null>(null);
   const [muted, setMuted] = useState(true);
   /**
@@ -163,6 +169,7 @@ export function WatchFilm({ eyebrow, name, line, film, appStoreUrl }: WatchFilmP
         >
           See more in the Percho app
         </a>
+        {footnote ? <div className="mt-3">{footnote}</div> : null}
       </div>
     </div>
   );

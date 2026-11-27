@@ -73,7 +73,7 @@ no URL segment) or underscored (private, never routed).
 |---|---|
 | `(public)/` | Anything an unauthenticated visitor can reach — the browse feed, community pages `c/[slug]`, city pages `city/[slug]` (phase335), listing pages `v/[agentSlug]/[listingSlug]`, saved, search, profile, legal. |
 | `(auth)/` | Login, signup, password reset. Its own layout. |
-| `watch/` | What a link shared from the iOS app opens (phase336): `watch/c/[slug]`, `watch/city/[slug]` — the film alone, full screen, and one button to the app. No site chrome. |
+| `watch/` | What a link shared from the iOS app opens (phase336): `watch/c/[slug]`, `watch/city/[slug]` — the film alone, full screen, and one button to the app. No site chrome. `watch/home/[id]` (phase404.12) is the same for a shared home, with the FMLS number, brokerage and disclosure under the button; unlisted and not indexed — the one page that shows a home while `LISTINGS_ON_WEB` is off. |
 | `dashboard/` | The agent's workspace. Listing and community editors, leads, analytics. Everything here assumes an authenticated agent. |
 | `admin/` | Internal pipeline console — POI review, video jobs, BGM, tour runs. Gated by `is_admin`; not a customer surface. |
 | `api/` | Route handlers. `api/mobile/*` is the mobile app's contract; `api/admin/*` requires `requireAdmin()`; webhooks verify signatures before doing anything. |

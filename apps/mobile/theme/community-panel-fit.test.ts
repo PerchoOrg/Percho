@@ -122,9 +122,12 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		expect(SRC).not.toContain("signalIcons");
 		expect(SRC).not.toContain("RedlineIcon key");
 		expect(SRC).not.toContain("onNameLayout");
-		// The name still wraps to two lines rather than truncating (2026-08-22),
-		// and `Explore` sits outside the name's column.
-		expect(SRC).toContain("numberOfLines={2}");
+		// One line, and a long name gives up size before letters (owner,
+		// 2026-11-27: 「名字太长两行不好看 控制在一行」; 2026-09-07: smaller
+		// size, not a cut). It wrapped to two lines from 2026-08-22.
+		expect(SRC).not.toContain("numberOfLines={2}");
+		expect(SRC).toContain("minimumFontScale={NAME_MIN_SCALE}");
+		// The pill sits outside the name's column.
 		const left = SRC.indexOf("styles.infoLeft");
 		const cta = SRC.indexOf("styles.ctaRow");
 		expect(left).toBeGreaterThan(-1);

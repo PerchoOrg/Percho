@@ -58,6 +58,7 @@ export interface CityFilm {
   /** What the card's glance is built from (`lib/feed/glance.ts`, phase378). */
   place: {
     name: string;
+    state: string | null;
     county: string | null;
     lat: number | null;
     lng: number | null;
@@ -122,7 +123,7 @@ export async function fetchCityFilms(
   const [cities, assemblies] = await Promise.all([
     supabase
       .from('cities')
-      .select('id, slug, geo_unit_id, name, county, lat, lng, profile')
+      .select('id, slug, geo_unit_id, name, state, county, lat, lng, profile')
       .eq('status', 'active')
       .not('geo_unit_id', 'is', null),
     supabase
@@ -161,6 +162,7 @@ export async function fetchCityFilms(
       })),
       place: {
         name: city.name,
+        state: city.state,
         county: city.county,
         lat: city.lat,
         lng: city.lng,

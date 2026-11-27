@@ -48,9 +48,16 @@ describe('fromDowntown', () => {
 describe('communityGlance', () => {
   it('names the place and prints the three figures the Explore page holds', () => {
     expect(
-      communityGlance({ city: 'Alpharetta', county: 'Fulton', ...at, profile: windward }),
+      communityGlance({
+        city: 'Alpharetta',
+        state: 'GA',
+        county: 'Fulton',
+        ...at,
+        profile: windward,
+      }),
     ).toEqual({
-      place: { lead: 'Alpharetta', rest: 'Fulton County' },
+      // The city as an address writes it, then the county.
+      place: { lead: 'Alpharetta, GA', rest: 'Fulton County' },
       cells: [
         { value: '$747K', label: 'ZIP 30005 homes', topic: 'potential' },
         // Each level as the Explore tile rounds it — #6 of 1,220 is 1%, #7 of
@@ -132,11 +139,11 @@ function cityProfile(over: Partial<CityProfile> = {}): CityProfile {
 }
 
 describe('cityGlance', () => {
-  const place = { name: 'Cumming', county: 'Forsyth', lat: 34.2073, lng: -84.1402 };
+  const place = { name: 'Cumming', state: 'GA', county: 'Forsyth', lat: 34.2073, lng: -84.1402 };
 
   it("says city then county, as a community's line does, and the figures the city's own page shows", () => {
     expect(cityGlance({ ...place, profile: cityProfile() })).toEqual({
-      place: { lead: 'Cumming', rest: 'Forsyth County' },
+      place: { lead: 'Cumming, GA', rest: 'Forsyth County' },
       cells: [
         // The page's first home value row, and whose it is.
         { value: '$550K', label: 'median home · county', topic: 'cost' },
@@ -187,7 +194,7 @@ describe('cityGlance', () => {
 
   it('has the line and no figures for a city with no profile, and the city alone without a county', () => {
     expect(cityGlance({ ...place, profile: null })).toEqual({
-      place: { lead: 'Cumming', rest: 'Forsyth County' },
+      place: { lead: 'Cumming, GA', rest: 'Forsyth County' },
       cells: [],
     });
     expect(cityGlance({ name: 'Cumming', profile: null })?.place).toEqual({ lead: 'Cumming' });

@@ -18,6 +18,12 @@ describe("shareUrl", () => {
 		).toBe("https://www.percho.co/watch/c/northbrooke");
 	});
 
+	it("sends a home to its film page, by id", () => {
+		expect(shareUrl({ kind: "home", id: "l-1", name: "$685,000" })).toBe(
+			"https://www.percho.co/watch/home/l-1",
+		);
+	});
+
 	it("sends a city to its film page", () => {
 		expect(
 			shareUrl({ kind: "city", slug: "suwanee-ga", name: "Suwanee" }),
@@ -66,6 +72,13 @@ describe("appPathForSharedPath", () => {
 			appPathForSharedPath("https://www.percho.co/watch/c/northbrooke?x=1#t"),
 		).toBe("/feed?shared=community:northbrooke");
 		expect(appPathForSharedPath("percho://feed")).toBeNull();
+	});
+
+	it("opens a shared home on its own page", () => {
+		expect(appPathForSharedPath("/watch/home/l-1")).toBe("/listing/l-1");
+		expect(
+			appPathForSharedPath("https://www.percho.co/watch/home/l-1?x=1"),
+		).toBe("/listing/l-1");
 	});
 
 	it("leaves every other path to the router", () => {
@@ -125,6 +138,20 @@ describe("shareTargetForCard", () => {
 
 	it("shares nothing for a city with no page", () => {
 		expect(shareTargetForCard(city())).toBeNull();
+	});
+
+	it("shares a home by its listing id, named by its price", () => {
+		expect(
+			shareTargetForCard({
+				kind: "listing",
+				id: "l-1",
+				slug: "355-morgans-creek-ct",
+				address: "355 Morgans Creek Ct",
+				priceLabel: "$685,000",
+				bedBathSqft: "4 bd · 3 ba",
+				heroUrl: "https://example.test/l.jpg",
+			}),
+		).toEqual({ kind: "home", id: "l-1", name: "$685,000" });
 	});
 });
 

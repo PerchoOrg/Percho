@@ -198,14 +198,22 @@ describe("the place row is one size", () => {
 		expect(n("MAP_LABEL_SIZE")).toBeLessThan(n("PLACE_SIZE"));
 	});
 
-	it("gives up the line's second half whole before a name loses a letter", () => {
-		expect(n("REST_GIVES_WAY")).toBeGreaterThanOrEqual(100);
-		expect(CODE).toContain(
-			"restSlot: { flexShrink: REST_GIVES_WAY, minWidth: 0 }",
-		);
-		// Hidden, not cut: drawn only when it fits whole.
-		expect(CODE).toContain("!fits && styles.unseen");
-		expect(CODE).toContain("unseen: { opacity: 0 }");
+	it("shows the line's second half whole or not at all", () => {
+		// Measured off-screen at its own width; drawn only when both halves
+		// fit the room the row has left — never laid out and hidden.
+		expect(CODE).toContain("leadWidth + restWidth <= room + 0.5");
+		expect(CODE).toContain("{fits && (");
+		expect(CODE).not.toContain("opacity: 0 }");
+	});
+
+	/** Owner, 2026-11-27: 「把map放到title后面」. */
+	it("seats Map right after the line, not at the row's far edge", () => {
+		const body = CODE.slice(CODE.indexOf("\t\tplaceSlot: {"));
+		const slot = body.slice(0, body.indexOf("},"));
+		expect(slot).toContain("flexShrink: 1");
+		expect(slot).not.toMatch(/\bflex: 1\b/);
+		// The line is told the room Map leaves it.
+		expect(CODE).toContain("room={rowWidth - mapRoom}");
 	});
 });
 
