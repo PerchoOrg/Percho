@@ -24,9 +24,11 @@
  *
  * ── Carried over from the header, on purpose ────────────────────────────────
  *
- *   · **Map control B**, the handoff's 84 × 44: the pale sage fill, an
- *     outlined pin and the word, no border and no shadow. With a 16pt line
- *     beside it there is room for it again (phase379 had it at 72 × 32).
+ *   · **Map control B**: the pale sage fill, an outlined pin and the word,
+ *     no border and no shadow — at 64 × 30 since phase404.11. The handoff's
+ *     84 × 44 was the row's whole height in green, the largest thing above
+ *     the card (owner, 2026-11-27: 「map 还是有点突兀可能是背景绿色太大？」;
+ *     phase379 had it at 72 × 32). The touch area is still the row's.
  *   · **Every number scales with the screen** (`theme/header-scale.ts`), so
  *     the proportion approved at 390 holds on the mini and the Max. That is
  *     why the sizes cannot live in a module-level `StyleSheet`: `sheet` is a
@@ -103,18 +105,19 @@ const CELL_BEFORE_RULE = 6;
 const CELL_AFTER_RULE = 10;
 
 // ─── Map control B (handoff §4) ──────────────────────────────────────
-const MAP_WIDTH = 84;
-const MAP_HEIGHT = 44;
-const MAP_RADIUS = 22;
+const MAP_WIDTH = 64;
+const MAP_HEIGHT = 30;
+const MAP_RADIUS = 15;
 /**
- * Smaller than the line beside it, as it was until phase404.6 made the two
- * one size and the pill heavier than it had ever been (owner, 2026-11-26:
- * 「感觉map按键太突兀了」).
+ * Smaller than the line beside it (owner, 2026-11-26: 「感觉map按键太突兀了」
+ * — phase404.6 had made the two one size).
  */
-const MAP_LABEL_SIZE = 14;
+const MAP_LABEL_SIZE = 13;
 /** Pin → "Map". */
-const MAP_GAP = 6;
-const MAP_PAD = 12;
+const MAP_GAP = 5;
+const MAP_PAD = 10;
+/** What the pill no longer covers of the row, given back to the finger. */
+const MAP_SLOP = (PLACE_ROW - MAP_HEIGHT) / 2;
 /** Place line → Map. */
 const PLACE_MAP_GAP = 12;
 
@@ -126,18 +129,18 @@ const HEADER_MIN_SCALE = 0.8;
 const BACK_ARM = 9;
 const BACK_STROKE = 2;
 
-// ─── The pin (handoff §4: outlined, 18 tall) ─────────────────────────
+// ─── The pin (handoff §4: outlined; 14 tall since phase404.11) ───────
 //
 // Composed from `View`s: the app bundles no SVG renderer and the icon-font
 // subset carries no pin. ONE box — a square with three corners rounded and
 // the fourth left sharp, rotated 45° so the sharp corner points down. Sized
 // by the whole icon (owner, 2026-09-07: 「Map icon is too big」), so the head
 // is derived from it and the stroke comes down with it.
-const PIN_SIZE = 18;
+const PIN_SIZE = 14;
 const PIN_TIP_RATIO = 1.207;
 const PIN_HEAD = PIN_SIZE / PIN_TIP_RATIO;
-const PIN_STROKE = 1.6;
-const PIN_DOT = 3.75;
+const PIN_STROKE = 1.4;
+const PIN_DOT = 3;
 
 /** Below 390 the 44pt place row scales under the touch floor; this gives it back. */
 const TOUCH_SLOP = 4;
@@ -184,7 +187,12 @@ export function PlaceBlock({
 							onPress={header.onBack}
 							accessibilityRole="button"
 							accessibilityLabel="Back"
-							hitSlop={{ top: TOUCH_SLOP, bottom: TOUCH_SLOP, left: EDGE * k }}
+							hitSlop={{
+								top: MAP_SLOP + TOUCH_SLOP,
+								bottom: MAP_SLOP + TOUCH_SLOP,
+								left: EDGE * k,
+								right: MAP_SLOP,
+							}}
 							style={({ pressed }) => [
 								styles.backDisc,
 								pressed && styles.mapPressed,
@@ -229,7 +237,11 @@ export function PlaceBlock({
 						accessible
 						accessibilityRole="button"
 						accessibilityLabel={mapAccessibilityLabel(model)}
-						hitSlop={{ top: TOUCH_SLOP, bottom: TOUCH_SLOP }}
+						hitSlop={{
+							top: MAP_SLOP + TOUCH_SLOP,
+							bottom: MAP_SLOP + TOUCH_SLOP,
+							left: MAP_SLOP,
+						}}
 						style={({ pressed }) => [styles.map, pressed && styles.mapPressed]}
 					>
 						<View style={styles.pinBox}>

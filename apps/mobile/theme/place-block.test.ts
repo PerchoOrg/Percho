@@ -130,13 +130,18 @@ describe("the block's rows", () => {
 });
 
 describe("map control B", () => {
-	/** The handoff's control, back at its own size beside a 16pt line. */
-	it("is 84 x 44 at radius 22, and darkens when pressed", () => {
-		expect(n("MAP_WIDTH")).toBe(84);
-		expect(n("MAP_HEIGHT")).toBe(44);
-		expect(n("MAP_HEIGHT")).toBe(PLACE_ROW);
-		expect(n("MAP_RADIUS")).toBe(22);
-		expect(n("MAP_GAP")).toBe(6);
+	/**
+	 * The handoff's control was 84 x 44 — the row's whole height in green
+	 * (owner, 2026-11-27: 「map 还是有点突兀可能是背景绿色太大？」). About half
+	 * that area now, and the row's height is still what a finger gets.
+	 */
+	it("is 64 x 30 at radius 15, a pill inside the row, and darkens when pressed", () => {
+		expect(n("MAP_WIDTH")).toBe(64);
+		expect(n("MAP_HEIGHT")).toBe(30);
+		expect(n("MAP_HEIGHT")).toBeLessThan(PLACE_ROW);
+		expect(n("MAP_RADIUS")).toBe(n("MAP_HEIGHT") / 2);
+		expect(CODE).toContain("const MAP_SLOP = (PLACE_ROW - MAP_HEIGHT) / 2;");
+		expect(CODE).toContain("top: MAP_SLOP + TOUCH_SLOP");
 		// A floor, not a fixed frame: the pill widens for a scaled label.
 		expect(CODE).toContain("minWidth: MAP_WIDTH");
 		expect(CODE).toContain("minHeight: MAP_HEIGHT");
@@ -145,11 +150,12 @@ describe("map control B", () => {
 
 	/**
 	 * The pin is a teardrop: one box, three corners rounded to half its width
-	 * and the fourth sharp, turned 45° so the sharp one points down. 18 is
-	 * the whole icon, not its head (owner, 2026-09-07: too big at 21.7).
+	 * and the fourth sharp, turned 45° so the sharp one points down. The size
+	 * is the whole icon, not its head (owner, 2026-09-07: too big at 21.7;
+	 * 18 until the pill itself was made smaller in phase404.11).
 	 */
-	it("draws an 18-TALL teardrop pin", () => {
-		expect(n("PIN_SIZE")).toBe(18);
+	it("draws a 14-TALL teardrop pin", () => {
+		expect(n("PIN_SIZE")).toBe(14);
 		expect(CODE).toContain("const PIN_HEAD = PIN_SIZE / PIN_TIP_RATIO;");
 		expect(CODE).toContain("height: PIN_SIZE * k");
 		expect(n("PIN_STROKE")).toBeLessThan(1.75);
@@ -186,8 +192,9 @@ describe("the place row is one size", () => {
 			"fontSize: PLACE_SIZE * k",
 		);
 		// Owner, 2026-11-26: 「感觉map按键太突兀了」 — the pill's word had been
-		// raised to the line's 16; it is the handoff's 14 again.
-		expect(n("MAP_LABEL_SIZE")).toBe(14);
+		// raised to the line's 16; 14 again in phase404.10, 13 in the smaller
+		// pill of phase404.11.
+		expect(n("MAP_LABEL_SIZE")).toBe(13);
 		expect(n("MAP_LABEL_SIZE")).toBeLessThan(n("PLACE_SIZE"));
 	});
 

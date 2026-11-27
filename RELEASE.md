@@ -20,7 +20,7 @@ on its own, with a button to see more in the app.
 - **The line above a card always reads the same way.** It is now the city, then the county, on every card — "Suwanee · Gwinnett County" over a city's card and over each of its neighbourhoods. A city's card used to lead with the county instead.
 - **A clearer way into a place's page.** The name at the bottom of a card is now followed by a small white round button with an arrow, in place of the thin arrow of the day before. Tap the name or the button. Arrives with the next app update.
 - **A city's neighbourhoods open at once.** Tapping "Communities" no longer shows a blank card while the page loads: the cards and their first pictures are ready before you tap. Arrives with the next app update.
-- **A quieter Map button.** Its label is back to the smaller size it had before this week.
+- **A smaller Map button.** The green Map button above each card is about half the size it was, so it no longer competes with the card. It is as easy to tap as before.
 
 ### 2026-11-26
 - **One number for each figure above a card.** The three figures over a neighbourhood or city card are now single numbers instead of ranges like "Top 1–7%". For schools it is the best one nearby — "Top 1%", labelled "best school nearby" — or a city's top graduation rate; the drive to downtown is the average of off-peak and rush hour. The place's page still lists each value.
