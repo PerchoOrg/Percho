@@ -98,7 +98,8 @@ A community's: `Top 1% · best school nearby` → `A+ · best school, top 1%`.
 - Rounded to $10K: it is an estimate and should not read to the dollar.
 **Issues**: Forsyth's layer was reloading while the import ran (7,501 lots of ~100,000 at 03:59 UTC, 14,000 at 04:04): Aberdeen read as 48 homes, then none. The five Forsyth entries in `community-values.json` are the full read taken at 00:53 UTC with the same logic (then a scratch script); the import now keeps an entry when a new read finds under four fifths of its homes.
 **Risks / tech debt**: an appraisal is not a sale — these are stand-ins. Fulton's factor (above). `community-values.json` is a snapshot; nothing refreshes it. The Saved list and the Compare page still read `homeValue.display` (the city's value) for a community — not changed here.
-**Next steps**: re-run `community:values` for the five Forsyth slugs once the layer is whole, to confirm. When the FMLS feed is live, replace every estimate with a 12-month median `ClosePrice` by boundary and drop "est.". Owner still owes: whether Redfin's five sold medians may be shown (cited) in the meantime.
+**Confirmed 2026-11-27 07:10 UTC**: Forsyth's layer was whole again (105,620 lots); `community:values` re-run for the five Forsyth slugs returned the same homes and medians to the dollar (416 / $639,555 · 77 / $795,010 · 110 / $674,650 · 596 / $1,308,770 · 981 / $811,000) — `community-values.json` unchanged.
+**Next steps**: ~~re-run `community:values` for the five Forsyth slugs once the layer is whole, to confirm~~ (done, above). When the FMLS feed is live, replace every estimate with a 12-month median `ClosePrice` by boundary and drop "est.". Owner still owes: whether Redfin's five sold medians may be shown (cited) in the meantime.
 
 ## 2026-11-27 01:06 UTC — phase404.15: sold prices by community — what Redfin and Zillow publish, and what they do not (investigation, nothing changed)
 
