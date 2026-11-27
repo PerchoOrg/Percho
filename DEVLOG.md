@@ -23,6 +23,19 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 08:56 UTC — phase405: iOS 1.1.0 live; 1.1.1 (20) submitted to App Review
+
+**Objective**: owner: 「打包最新的版本发布到ios 之前有一版review完了还没有release可以一起」. Asked which "together" he meant (Apple allows one unreleased version at a time): fold everything into a re-reviewed 1.1.0, or release 1.1.0 now and send the latest as its own version. He picked the second.
+**Actions**:
+- 1.1.0 (19), `PENDING_DEVELOPER_RELEASE` at session start. `POST /v1/appStoreVersionReleaseRequests` answered 409 ("cannot send the latest version live in the current state"); re-read straight after, the version was already `READY_FOR_SALE` / `READY_FOR_DISTRIBUTION`. It had evidently been released just before (by hand in App Store Connect, or the request raced) — either way 1.1.0 is live.
+- `app.json` version 1.1.0 → **1.1.1** (`bc9f469b`). Pre-flight on main `4e2cc24f` + the bump: mobile typecheck 0, biome clean, vitest 987. No native-dependency or entitlement change since build 19 (`package.json` / `app.json` / `eas.json` untouched), so dev client 1.1.0 (15) still loads current JS. `TEST_HOMES` is `__DEV__`-gated — off in this build.
+- `eas build --platform ios --profile production --non-interactive` → `a8a6d011-72c7-46d6-a6ea-5591d9c9c7bd`, FINISHED, **1.1.1 (20)**. `eas submit --id a8a6d011… --profile production` (ASC key in `eas.json` locally, reverted; the `EXPO_ASC_*` env alone is refused in non-interactive submit) → ASC build `d7760127-c85a-4d4a-b9b4-0d0ca54cd30f` `VALID`, `usesNonExemptEncryption: false`; added to `Internal` (204). `app.json` buildNumber 20 committed here.
+- ASC version **1.1.1** created (`2c5ddbf4-b8ae-430f-aeed-29ddd651130e`, MANUAL); description, keywords, screenshots and review contact carried over from 1.1.0. What's New (513 chars, features only): a city's Communities deck, tap the name to open a page, the card figures (own home-value estimate, school letter, highway drive), Saved on Grid with City/Community tags, one film at a time / one-line names / smaller Map. Review notes: version number, "New in 1.1.1" (name opens the page in place of Explore; Communities; single-number figures; Saved layouts Grid/List/City/Map), the school letter as Percho's published scale, the neighbourhood home-value estimate from county records.
+- Build 20 attached; `reviewSubmissions` `c9c1281a-2601-4251-9161-b37fe98760d6` submitted 08:55:58 UTC; version 1.1.1 `WAITING_FOR_REVIEW`.
+**Not changed**: the seven store screenshots are 1.1.0's (captured on build 18) — card figures and Saved look slightly different now. New ones need captures from his phone on 20.
+**Issues**: installing 1.1.1 (20) from TestFlight replaces dev client 15 — new UI from Metro stops arriving until 15 is reinstalled from Previous Builds.
+**Next steps**: watch the review; on approval nothing goes live (MANUAL) — owner picks the day. Screenshots refreshed only if he asks.
+
 ## 2026-11-27 08:35 UTC — phase404.25: Saved — one place line everywhere, kind tags, Grid first
 
 **Objective**: owner: 「city view里 为啥有的地址ga啥的 有的不显示？ list还有别的view里city和community可以变成tag之类的吗 默认grid view 把city放到list后面 map前面」.

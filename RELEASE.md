@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-27
+- **The iPhone app update is out, and the next one is on its way.** Version 1.1.0 is now on the App Store — new icon, city films in five parts, the figures above every card, the five-box neighbourhood and city pages, comparisons and Saved in four layouts. Everything marked "arrives with the next app update" since then has gone to Apple for review as 1.1.1.
 - **Saved is tidier.** Saved now opens on the photo grid, and the views read Grid, List, City, Map. Each saved place carries a small "City" or "Community" tag, and under its name the same line as above its card — "Suwanee, GA · Forsyth County" — where some places showed only "GA" and others nothing. Arrives with the next app update.
 - **A saved city reads like its card.** Under a saved city, Saved now shows the same line as above its card — "Suwanee, GA · Gwinnett County" — instead of the county and a monthly cost on a $500k home. The monthly cost is still on the Search map. Arrives with the next app update.
 - **Saved speaks the same language as the cards.** The "Towns" view is now "City", the filter reads Communities and Cities, and every "neighbourhood" in Saved says "community". Under each saved place is the same line its card shows — "$685K · A+ school grade · 6 min to I-85" — in place of the older "Schools Top 12–46%". Arrives with the next app update.
