@@ -87,6 +87,21 @@ export interface CommunityProfile {
       rows: Array<{ label: string; usd: number; note?: string }>;
     };
   };
+  /**
+   * What a home in THIS community is worth, until sold prices arrive with the
+   * listing feed (phase404.16). `homeValue` above is its city's or ZIP's; a
+   * card for one community must not print its city's figure as its own
+   * (owner 2026-11-27: 「应该写的是这个小区的price」, then 「先给一个估值 不要
+   * 空着」). An estimate, and worded as one.
+   */
+  estimate?: {
+    /** "$1.2M" */
+    display: string;
+    /** What the figure is, under it: "est. home value", "new homes from". */
+    label: string;
+    /** How it was arrived at: "Median county appraisal of 393 homes". */
+    basis: string;
+  };
   dues?: {
     /** "$824" */
     display: string;

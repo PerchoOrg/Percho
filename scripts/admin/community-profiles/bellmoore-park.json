@@ -1,0 +1,12 @@
+{
+  "estimate": {
+    "display": "$1.7M",
+    "label": "est. home value",
+    "basis": "Median 2023 county appraisal of 9 homes, scaled to recent sale prices"
+  },
+  "sources": [
+    {
+      "name": "Fulton County tax assessor"
+    }
+  ]
+}

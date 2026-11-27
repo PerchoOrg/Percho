@@ -107,7 +107,7 @@ export function ExploreBody({
 	// drawn (owner 2026-11-22: "去掉 … explore下面的简介", "resident say没啥价值
 	// 去掉"). `profile.verdict` and `profile.words` are still stored: build 12
 	// reads them.
-	const { homeValue, dues, safety } = profile;
+	const { homeValue, estimate, dues, safety } = profile;
 	const holding = homeValue?.holding;
 	const resources = useMemo(() => linkGroups(profile.links), [profile.links]);
 	const againstMetro = homeValue ? againstBaseline(homeValue) : null;
@@ -244,7 +244,17 @@ export function ExploreBody({
 						width={half}
 						onPress={() => setSheet("homeValue")}
 					>
-						<Text style={parts.figure}>{homeValue.display}</Text>
+						{/* The community's own estimate where there is one — the figure
+						    its feed card prints (phase404.16); the line and the notes
+						    under it are still its city's or ZIP's, and say so. */}
+						{estimate ? (
+							<Text style={parts.figure}>
+								{estimate.display}
+								<Text style={parts.figureUnit}>{`  ${estimate.label}`}</Text>
+							</Text>
+						) : (
+							<Text style={parts.figure}>{homeValue.display}</Text>
+						)}
 						<View style={styles.spark}>
 							<Lines
 								height={34}
@@ -264,7 +274,11 @@ export function ExploreBody({
 								]}
 							/>
 						</View>
-						<Text style={parts.foot}>{homeValue.change}</Text>
+						<Text style={parts.foot}>
+							{estimate
+								? `${homeValue.area} homes ${homeValue.change}`
+								: homeValue.change}
+						</Text>
 						{againstMetro && (
 							<Text
 								style={parts.footSecond}

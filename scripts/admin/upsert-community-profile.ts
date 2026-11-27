@@ -14,6 +14,7 @@
  * Inputs beside the database, all in `scripts/admin/data/`:
  *   zhvi-ga.json       Zillow's home value index per Georgia city (`import-zhvi.ts`)
  *   city-events.json   dated things per city; the phone drops what has passed
+ *   community-values.json  county-appraised home values (`import-community-values.ts`)
  *
  * Idempotent: every profile is recomputed and only the ones that differ from
  * what is stored are written, so re-run it after a school-score import, a new
@@ -39,6 +40,7 @@ import {
   type BuildSchool,
   type CountyCosts,
   type SafetyFacts,
+  type ValueFacts,
   type ZhviExtract,
   buildContext,
   buildProfile,
@@ -236,6 +238,15 @@ async function main() {
         ),
       )
     : undefined;
+  // Read from the counties' parcel records by `import-community-values.ts`.
+  const values = existsSync(join(here, 'data/community-values.json'))
+    ? new Map(
+        Object.entries(
+          json<{ communities: Record<string, ValueFacts> }>('data/community-values.json')
+            .communities,
+        ),
+      )
+    : undefined;
   const ctx = buildContext({
     communities,
     schools,
@@ -243,6 +254,7 @@ async function main() {
     costs,
     events,
     ...(safety ? { safety } : {}),
+    ...(values ? { values } : {}),
     asOf: new Date().toISOString().slice(0, 10),
   });
   console.log(

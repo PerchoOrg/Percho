@@ -23,6 +23,51 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 04:06 UTC — phase404.16: every filmed community's card carries its own estimated home value
+
+**Objective**: owner, on phase404.15's finding that sold prices are public for only five of the twenty: 「先给一个估值 不要空着」. The first figure over a community's card was its CITY's home value (`$589K · Suwanee homes` on every Suwanee community).
+**What it says now**: the community's own figure under what it is — `$1.2M · est. home value`, or `$450K · new homes from` where the community is still being built.
+
+| community | card said | card says | from |
+|---|---|---|---|
+| Edinburgh | $589K Suwanee | $1.2M | Gwinnett, 393 homes |
+| Harvest Park | $589K Suwanee | $720K | Gwinnett, 94 |
+| Sugarloaf Country Club | Duluth | $1.7M | Gwinnett, 886 |
+| Cardinal Lake Estates | Duluth | $430K | Gwinnett, 498 |
+| Hedgerows | Buford | $800K | Gwinnett, 368 |
+| Wild Timber | Sugar Hill | $850K | Gwinnett, 418 |
+| Apremont - Highcroft | Peachtree Corners | $730K | Gwinnett, 55 |
+| Aberdeen | $589K Suwanee | $640K | Forsyth 2026, 416 |
+| Northbrooke | Cumming | $800K | Forsyth 2026, 77 |
+| Sawnee Village | Cumming | $670K | Forsyth 2026, 110 |
+| St Marlo Country Club | Duluth | $1.3M | Forsyth 2026, 596 |
+| Windermere | Cumming | $810K | Forsyth 2026, 981 |
+| Windward | $747K ZIP 30005 | $910K | Fulton 2023 × 1.67, 1,395 |
+| Medlock Bridge | $690K Johns Creek | $890K | Fulton 2023 × 1.67, 637 |
+| White Columns | Alpharetta | $1.4M | Fulton 2023 × 1.67, 356 |
+| Ashley Crossing | Alpharetta | $620K | Fulton 2023 × 1.67, 61 |
+| Bellmoore Park | Johns Creek | $1.7M | Fulton 2023 × 1.67, **9 homes** (by hand) |
+| Towne Village | Sugar Hill | $450K new homes from | Beazer Homes' page |
+| Arbors at Richland Creek | Buford | $525K new homes from | Ashton Woods' page |
+| Ward's Crossing | Johns Creek | $675K new homes from | The Providence Group's page |
+
+**Method**: the county assessor's public parcel service (phase404.14 found Gwinnett's; Forsyth's is `geo.forsythco.com/gis/rest/services/Public/Tax_Parcel/MapServer/0`, Fulton's `services1.arcgis.com/AQDHTHDrZzfsFsB5/…/Tyler_TaxParcels/FeatureServer/0`). Homes are the residential lots with a building whose outline's middle falls inside the community's stored boundary — by boundary, not by name (phase404.14's name match is what mis-hit Richland Creek). The figure is the median of the county's appraised value, rounded to $10K.
+**Actions**:
+- `scripts/admin/import-community-values.ts` (`pnpm --filter @percho/web community:values <slug>…`) → `scripts/admin/data/community-values.json` (homes, median, tax year per community) — the same shape of pipeline as `community:safety`.
+- `profile-build.ts`: a new optional `estimate` block (`display`, `label`, `basis`) on the profile, built from that file; shared type + zod schema; `upsert-community-profile.ts` reads the file.
+- `lib/feed/glance.ts`: a community's first cell is `profile.estimate` when it has one, else the city/ZIP value as before — so the 22,710 communities nobody has estimated are unchanged.
+- Mobile Explore page: the Potential tile's figure is the estimate with its label beside it, the note under the line names whose line it is ("Suwanee homes +60% since 2020"), and the sheet opens on the estimate and how it was arrived at. In the next app build; the card's figure is server-sent and live at once.
+- Four research files under `scripts/admin/community-profiles/`: the three builders' starting prices, and Bellmoore Park.
+**Decisions**:
+- **County record, not Redfin, for all twenty** — one method and one label across the deck, and no open question of Redfin's reuse terms (phase404.15). Where both exist they agree for Gwinnett and Forsyth: Edinburgh $1.215M appraised vs $1.19M median sale; St Marlo $1.31M vs $1.39M; Windermere $811K vs Zillow's $786K. Sugarloaf is the outlier ($1.71M vs $2.09M over 8 sales).
+- **Fulton is scaled.** Its open file is tax year 2023 and far under the market: Windward $545K appraised vs $900K median sale (×1.65), Medlock Bridge $532K vs $906K (×1.70). `APPRAISAL_TO_MARKET.fulton = 1.67`, and the basis line says "scaled to recent sale prices". Two calibration points, both near $900K — the weakest part of this; White Columns ($1.4M) and Ashley Crossing ($620K) lean on it at prices it was not calibrated at.
+- **New construction shows the builder's starting price**, labelled "new homes from": the county holds seven or eight half-built lots there, appraised at a quarter of the sale price. Each was read on the builder's own page (a search summary had Beazer's at $549,990; the page says $449,990).
+- **Under 20 homes, no computed estimate** (`MIN_VALUED_HOMES`). Bellmoore Park's stored boundary holds 31 lots, 9 of them homes — one section of the community — so its figure is in a research file by hand, with "9 homes" in its basis. Its boundary should be fixed rather than the threshold lowered.
+- Rounded to $10K: it is an estimate and should not read to the dollar.
+**Issues**: Forsyth's layer was reloading while the import ran (7,501 lots of ~100,000 at 03:59 UTC, 14,000 at 04:04): Aberdeen read as 48 homes, then none. The five Forsyth entries in `community-values.json` are the full read taken at 00:53 UTC with the same logic (then a scratch script); the import now keeps an entry when a new read finds under four fifths of its homes.
+**Risks / tech debt**: an appraisal is not a sale — these are stand-ins. Fulton's factor (above). `community-values.json` is a snapshot; nothing refreshes it. The Saved list and the Compare page still read `homeValue.display` (the city's value) for a community — not changed here.
+**Next steps**: re-run `community:values` for the five Forsyth slugs once the layer is whole, to confirm. When the FMLS feed is live, replace every estimate with a 12-month median `ClosePrice` by boundary and drop "est.". Owner still owes: whether Redfin's five sold medians may be shown (cited) in the meantime.
+
 ## 2026-11-27 01:06 UTC — phase404.15: sold prices by community — what Redfin and Zillow publish, and what they do not (investigation, nothing changed)
 
 **Objective**: owner, on phase404.14's county appraisals: 「要用成交价 就是redfine 或者zillow上给的价格 想办法拿到这个数据」.

@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-27
+- **A neighbourhood's card shows what homes there are worth.** The first figure above a neighbourhood's card used to be its city's typical home value — the same number on every neighbourhood in Suwanee. It is now that neighbourhood's own: "$1.2M · est. home value" for Edinburgh, "$720K" for Harvest Park. These are estimates from county property records until sold prices arrive; a neighbourhood still being built shows the builder's starting price instead ("new homes from"). All twenty neighbourhoods with a film have one. The same figure on the neighbourhood's page arrives with the next app update.
 - **The line above a card names the state, and Map sits beside it.** The line now reads "Suwanee, GA · Gwinnett County", and the Map button follows it directly instead of sitting at the far edge of the screen. The Map part arrives with the next app update.
 - **A place's name always fits on one line.** A long name on a card — "Sugarloaf Country Club" — used to break onto a second line. It now stays on one, in slightly smaller type when it has to. Arrives with the next app update.
 - **The line above a card always reads the same way.** It is now the city, then the county, on every card — "Suwanee · Gwinnett County" over a city's card and over each of its neighbourhoods. A city's card used to lead with the county instead.

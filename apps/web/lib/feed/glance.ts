@@ -65,8 +65,20 @@ const pointOf = (p: Point) => (p.lat != null && p.lng != null ? { lat: p.lat, ln
 
 const SCHOOLS_GROUP = 'Schools';
 
-/** "$747K" over the area it is the typical value of. */
-function homesCell(homeValue: CommunityProfile['homeValue'] | undefined): GlanceCell | null {
+/**
+ * What a home HERE is worth: the community's own estimate, under what it is
+ * ("est. home value", "new homes from"). Owner 2026-11-27, of the city's value
+ * on every card of a city's communities: 「应该写的是这个小区的price」, and of
+ * the ones with no sold prices to read: 「先给一个估值 不要空着」.
+ *
+ * A community nobody has estimated still gets its city's or ZIP's typical
+ * value, named as that: "$747K" over "Suwanee homes".
+ */
+function homesCell(profile: CommunityProfile | null): GlanceCell | null {
+  if (profile?.estimate) {
+    return { value: profile.estimate.display, label: profile.estimate.label, topic: 'potential' };
+  }
+  const homeValue = profile?.homeValue;
   if (!homeValue) return null;
   return { value: homeValue.display, label: `${homeValue.area} homes`, topic: 'potential' };
 }
@@ -125,11 +137,7 @@ export function communityGlance(
       lead: cityState(c.city, c.state),
       ...(c.county ? { rest: `${c.county} County` } : {}),
     },
-    cells: present([
-      homesCell(c.profile?.homeValue),
-      schoolsCell(c.profile?.ranks),
-      distanceCell(pointOf(c)),
-    ]),
+    cells: present([homesCell(c.profile), schoolsCell(c.profile?.ranks), distanceCell(pointOf(c))]),
   };
 }
 

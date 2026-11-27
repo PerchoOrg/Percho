@@ -112,6 +112,22 @@ export interface SafetyFacts {
   flood?: { zone: string; subtype: string; sfha: boolean };
 }
 
+/**
+ * What `scripts/admin/import-community-values.ts` read from a county's public
+ * parcel records for one community: the homes whose lots sit inside its
+ * boundary, and the median of what the county appraises them at.
+ */
+export interface ValueFacts {
+  /** "Gwinnett" — whose appraisal it is. */
+  county: string;
+  /** Homes inside the boundary that the median is of. */
+  homes: number;
+  /** USD, the county's appraised value of the median home. */
+  median: number;
+  /** The tax year the county's file carries, where it says. */
+  taxYear?: number;
+}
+
 export interface BuildInputs {
   communities: readonly BuildCommunity[];
   schools: readonly BuildSchool[];
@@ -122,6 +138,8 @@ export interface BuildInputs {
   events: ReadonlyMap<string, { source: string; events: Events }>;
   /** Keyed by slug. Only the communities someone ran the import for. */
   safety?: ReadonlyMap<string, SafetyFacts>;
+  /** Keyed by slug. Only the communities someone ran the import for. */
+  values?: ReadonlyMap<string, ValueFacts>;
   /** The day the figures were gathered, YYYY-MM-DD. */
   asOf: string;
 }
@@ -743,6 +761,40 @@ function safety(c: BuildCommunity, ctx: BuildContext): Profile['safety'] | undef
   return rows.length > 0 ? { rows } : undefined;
 }
 
+/** Fewer homes than this inside a boundary is a sample, not a community. */
+const MIN_VALUED_HOMES = 20;
+/**
+ * What a county's appraisal has to be multiplied by to stand for a sale price.
+ * Gwinnett's and Forsyth's current files already sit within a few percent of
+ * what homes sell for (Edinburgh: $1.215M appraised, $1.19M median sale;
+ * St Marlo: $1.31M against $1.39M), so they are printed as they are. Fulton's
+ * open parcel file is tax year 2023 and well under the market: Windward's
+ * median appraisal is $545K against a $900K median sale, Medlock Bridge's
+ * $532K against $906K (Redfin, August–October 2026) — 1.65 and 1.70.
+ */
+const APPRAISAL_TO_MARKET: Record<string, number> = { fulton: 1.67 };
+
+/**
+ * What a home in this community is worth, from the county's own records —
+ * an estimate until the listing feed brings sold prices, and rounded like
+ * one: to $10K, never to the dollar.
+ */
+function estimate(c: BuildCommunity, ctx: BuildContext): Profile['estimate'] | undefined {
+  const facts = ctx.inputs.values?.get(c.slug);
+  if (!facts || facts.homes < MIN_VALUED_HOMES || !(facts.median > 0)) return undefined;
+  const scale = APPRAISAL_TO_MARKET[key(facts.county)];
+  const value = Math.round((facts.median * (scale ?? 1)) / 10_000) * 10_000;
+  const year = facts.taxYear ? ` ${facts.taxYear}` : '';
+  const count = facts.homes.toLocaleString('en-US');
+  return {
+    display: usdShort(value),
+    label: 'est. home value',
+    basis: scale
+      ? `Median${year} county appraisal of ${count} homes, scaled to recent sale prices`
+      : `Median${year} county appraisal of ${count} homes`,
+  };
+}
+
 export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | null {
   const schools = schoolRows(c, ctx);
   const homes = homeRows(c, ctx);
@@ -754,6 +806,7 @@ export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | nu
   const cityEvents = ctx.inputs.events.get(key(c.city));
   const links = profileLinks(c, nearestSchools(c, ctx));
   const safe = safety(c, ctx);
+  const worth = estimate(c, ctx);
 
   const sources: Profile['sources'] = [];
   if (schools.length > 0) sources.push({ name: 'Georgia Milestones' });
@@ -766,6 +819,8 @@ export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | nu
     sources.push({ name: 'FEMA National Flood Hazard Layer' });
     sources.push({ name: 'OpenStreetMap' });
   }
+  if (worth)
+    sources.push({ name: `${ctx.inputs.values?.get(c.slug)?.county} County tax assessor` });
 
   return {
     asOf: ctx.inputs.asOf,
@@ -781,6 +836,7 @@ export function buildProfile(c: BuildCommunity, ctx: BuildContext): Profile | nu
         }
       : {}),
     ...(value ? { homeValue: value } : {}),
+    ...(worth ? { estimate: worth } : {}),
     ...(said ? { words: said } : {}),
     ...(cityEvents ? { events: cityEvents.events } : {}),
     ...(safe ? { safety: safe } : {}),

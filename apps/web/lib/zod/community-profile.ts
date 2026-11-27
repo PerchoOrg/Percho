@@ -88,6 +88,13 @@ export const communityProfileSchema = z.object({
         .optional(),
     })
     .optional(),
+  estimate: z
+    .object({
+      display,
+      label: z.string().min(1).max(20),
+      basis: z.string().min(1).max(80),
+    })
+    .optional(),
   dues: z
     .object({
       display,
