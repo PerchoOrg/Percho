@@ -23,6 +23,14 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 00:20 UTC — phase404.11: a smaller Map pill; two questions answered, not built
+
+**Objective**: owner, on phase404.10: 「map 还是有点突兀可能是背景绿色太大？ / 左上角要加个state吗 GA？ / 房子卡片没有分享？」.
+**Map** (`components/feed/PlaceBlock.tsx`): 84 × 44 → 64 × 30 (radius 15), label 13, pin 14 — about half the green. The row keeps its 44 and the pill's touch area reaches it (`MAP_SLOP`), so the card does not move and the target is no smaller. The round back button on a place's page is the pill's height, 30, with the same reach. `theme/place-block.test.ts` follows.
+**State in the place line — recommended against, not built.** Every place in the app is in Georgia, so ", GA" would be on all 27 cards and tell a buyer nothing; it lengthens the line, and the county is what gets left out when the line does not fit. It belongs there the day a second state does — one line in `glance.ts`, no release.
+**Share on a home card — none, by construction.** A shared link opens `/watch/c/…` or `/watch/city/…`; there is no page for a home, the web has homes switched off (`LISTINGS_ON_WEB`, phase311), and the homes on the phone are test stand-ins. Share comes with homes: a `/watch/…` page for one, once the web shows them.
+**Verified**: mobile typecheck 0, biome 0 errors / 5 warnings, vitest 979. **Not run on a device.**
+
 ## 2026-11-27 00:02 UTC — phase404.10: one place line, a quieter Map, a visible name link, decks that open at once, the home card on the shared face
 
 **Objective**: owner, on the dev client with phase404.9: 「1）感觉map按键太突兀了 2）左上角一会儿是county 一会儿是city很乱能不能再user friendly一点 3）卡片左下角的链接有点不明显 如何解？4）点击communities和cities 到下一层的时候有点慢 提前可以缓存 5）房子card 样式还是老的 更新一下」. Built directly — five remarks from the phone, none asking for options first; said so to him with the one alternative each for 1–3.
