@@ -3,14 +3,14 @@
     "name": "Percho",
     "slug": "percho",
     "scheme": "percho",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "co.percho.app",
-      "buildNumber": "19",
+      "buildNumber": "20",
       "usesAppleSignIn": true,
       "associatedDomains": ["applinks:www.percho.co"],
       "infoPlist": {
