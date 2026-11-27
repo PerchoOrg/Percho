@@ -23,6 +23,28 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-27 01:25 UTC — phase404.15: sold prices by community — what Redfin and Zillow publish, and what they do not (investigation, nothing changed)
+
+**Objective**: owner, on phase404.14's county appraisals: 「要用成交价 就是redfine 或者zillow上给的价格 想办法拿到这个数据」.
+**Redfin publishes sold prices by neighbourhood** — its Data Center download hub (`redfin.com/news/data-center/downloads/`), files on a public bucket: `https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_data_center/housing_market/monthly/nbhds_in_top_50_metros.csv` (1.25 GB, newest period first, updated 2026-11-12; the old `redfin_market_tracker/*.tsv000.gz` paths now answer 403). Rolling 3 months; columns include REGION ID, REGION NAME, METRO, HOMES SOLD, MEDIAN SALE PRICE NSA, MEDIAN NEW LISTING PRICE — no city column. The first 110 MB hold the last fifteen periods; 554 Atlanta-metro neighbourhoods.
+**Of the twenty filmed communities, five are in it** (Aug–Oct 2026):
+
+| community | Redfin region | homes sold | median sale | card says today |
+|---|---|---|---|---|
+| Edinburgh | 258804 | 4 | $1,189,431 | $589K Suwanee |
+| Sugarloaf Country Club | 267670 | 8 | $2,086,502 | $434K Duluth |
+| St. Marlo Country Club | 347411 | 8 | $1,391,834 | $434K Duluth |
+| Windward | 548260 | 11 | $899,570 | $747K ZIP 30005 |
+| Medlock Bridge | 147010 | 6 | $905,567 | $690K Johns Creek |
+
+"Aberdeen" is in the file too — region 768278, $370,723 — and it is the Aberdeen in Peachtree City, not ours in Suwanee (its Redfin URL says so). A name is not an identity here either: each region id has to be checked against its city once.
+**Zillow** publishes no sold price below the metro; its neighbourhood file is the home-value index (`Neighborhood_zhvi_…csv`, 690 Georgia neighbourhoods, 176 of them Cumming subdivisions). One of ours is in it: Windermere, $786K — an estimate of value, not a sale.
+**The other fourteen** (Harvest Park, Aberdeen, White Columns, Ashley Crossing, Northbrooke, Sawnee Village, Cardinal Lake Estates, Bellmoore Park, Ward's Crossing, Hedgerows, Arbors at Richland Creek, Towne Village, Wild Timber, Apremont - Highcroft) are in neither file. Their sold prices exist on Redfin's and Zillow's sites only as individual listings — MLS data both sites license for personal use and bar automated collection of. Not taken.
+**Where the same numbers come from**: FMLS. Redfin's Georgia sold data is the MLS's closed listings; the licensed feed carries `ClosePrice` and `SubdivisionName`, so once it is live a 12-month median sale price can be computed for every community by its boundary.
+**Not confirmed**: the Data Center's reuse terms. Its pages did not show the citation wording in what was fetched; Redfin's site terms are personal-use and no-automation in general. The project already uses Zillow's research files on Zillow's stated attribution terms.
+**Noise**: a 3-month median over 4–11 sales moves a lot (Sugarloaf: $1.76M → $2.09M between two consecutive windows).
+**Asked of the owner**: publish the five now, cited to Redfin; what the other fourteen show until FMLS; whether Windermere takes Zillow's value.
+
 ## 2026-11-27 00:59 UTC — phase404.14: a community's own price — there is none yet; a public source found and tried on nine (investigation, nothing changed)
 
 **Objective**: owner, inside Suwanee's communities: 「上面也suanee homes price 不make sense 应该写的是这个小区的price」.
