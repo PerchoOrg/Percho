@@ -17,6 +17,7 @@ into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
 ### 2026-11-27
+- **A county's page is easier to read.** Tapping a county on the map now opens a page that starts with the cities and neighbourhoods Percho has filmed there, then shows the monthly cost as a ring chart, the schools' test results, and where the county sits among the metro's on cost and on schools. The full figures and the county-by-county ranking are one tap away instead of filling the page. Arrives with the next app update.
 - **The map is simpler.** The Schools button above the map is gone; schools still appear on the map when you zoom in to street level. Tapping the search box now shows a clear card of what you can look up — a city, a community, a school or a ZIP code — each with an example you can tap. Arrives with the next app update.
 - **Web pages open inside the app.** Sources, school and park websites, photo credits and the privacy and terms pages will open in a page over the app with a Close button, instead of switching to Safari. Arrives with the next app version (it needs a new build).
 - **Search finds schools and ZIP codes.** The search box now reads "I want to know about…", and when you tap it, a row of examples shows what it can find — a city, a school, a neighbourhood, a ZIP code. Typing a school's name lists it; tapping it moves the map to the school and the neighbourhoods around it. Typing a ZIP code such as 30024 lists the neighbourhoods and schools in it. Arrives with the next app update.
