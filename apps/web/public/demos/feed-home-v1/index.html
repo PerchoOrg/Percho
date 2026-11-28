@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — 首页：滑动只管翻，喜欢点爱心（设计方案）</title>
+<style>
+:root{
+  --green:#086B5B;
+  --ink:#181B18;
+  --ink2:#5A4E40;
+  --paper:#F6F3EC;
+  --sage:#E0E9E3;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, "Songti SC", serif;
+  --ui: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+  --dark: rgba(14,13,11,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:24px 14px 80px}
+section,.nav{max-width:1000px;margin:0 auto}
+h1{font:600 26px var(--serif);color:var(--green);margin-bottom:8px}
+h2{font:600 21px/1.3 var(--ui);margin:0 0 6px}
+p,li{font:400 15px/1.65 var(--ui);color:var(--ink2)}
+p{margin:6px 0;max-width:800px}
+b{color:#2B2116}
+code{font:500 13px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.6);border-radius:5px;padding:1px 6px;color:var(--green);white-space:nowrap}
+section{margin-top:50px}
+ul,ol{margin:4px 0 4px 22px;max-width:800px}
+.box{background:rgba(255,255,255,.55);border-radius:14px;padding:12px 18px;margin-top:14px;max-width:820px}
+.box p{margin:3px 0}
+.phones{display:flex;flex-wrap:wrap;gap:24px 28px;justify-content:center;margin-top:16px}
+.cap{width:300px;font:400 13px/1.5 var(--ui);color:var(--ink2);margin-top:9px}
+.cap b{color:#2B2116}
+.try{display:flex;flex-wrap:wrap;gap:22px 34px;align-items:flex-start;justify-content:center;margin-top:16px}
+.try .notes{flex:1 1 300px;max-width:440px}
+.try .notes li{margin:7px 0}
+.seg{display:inline-flex;background:rgba(255,255,255,.6);border-radius:12px;padding:3px;margin:10px 0 2px}
+.seg button{font:600 14px var(--ui);color:var(--ink2);background:none;border:0;border-radius:9px;padding:8px 14px;cursor:pointer}
+.seg button.on{background:var(--green);color:#fff}
+.again{font:500 13.5px var(--ui);color:var(--green);background:none;border:0;text-decoration:underline;cursor:pointer;margin-top:10px;padding:4px 0}
+table{border-collapse:collapse;width:100%;max-width:820px;margin-top:10px}
+td{font:400 14.5px/1.55 var(--ui);color:var(--ink2);padding:9px 14px 9px 0;border-top:1px solid rgba(0,0,0,.1);vertical-align:top}
+td:first-child{width:34%;color:#2B2116;font-weight:600}
+
+/* ── phone ─────────────────────────────────────────── */
+.phone{width:300px;height:640px;border-radius:34px;background:var(--paper);overflow:hidden;position:relative;box-shadow:0 3px 10px rgba(32,28,22,.06),0 16px 38px rgba(32,28,22,.16);display:flex;flex-direction:column;flex:none}
+.phone.live{width:min(340px,calc(100vw - 28px));height:min(700px,calc(100svh - 20px))}
+.status{height:32px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font:600 11px var(--ui);color:var(--ink)}
+.row{height:40px;flex:none;display:flex;align-items:center;gap:8px;padding:0 14px;margin-top:10px}
+.line{min-width:0;font:400 14px var(--ui);color:var(--ink2);white-space:nowrap;overflow:hidden}
+.line b{font-weight:600;color:var(--ink)}
+.pill{flex:none;height:28px;padding:0 11px;border-radius:14px;background:var(--sage);color:var(--green);font:600 12.5px/28px var(--ui);white-space:nowrap}
+.figs{height:42px;flex:none;display:flex;padding:0 14px;margin-top:5px}
+.figs div{flex:1;font:400 8.5px/1.3 var(--ui);color:var(--ink2);padding-left:8px;border-left:1px solid rgba(0,0,0,.1)}
+.figs div:first-child{padding-left:0;border-left:0}
+.figs b{display:block;font:600 17px/1.2 var(--ui);color:var(--ink)}
+.stage{flex:1;margin:10px 6px 12px;position:relative;overflow:hidden}
+.live .stage{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.slot{position:absolute;inset:0}
+/* the next card shows a strip: 14 of it, after a gap of 8 */
+.stage[data-mode="v"] .slot{bottom:22px}
+.stage[data-mode="h"] .slot{right:22px}
+.card{position:absolute;inset:0;border-radius:22px;overflow:hidden;background:#20262A center/cover}
+.vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scrim{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 48%,rgba(0,0,0,.5) 72%,rgba(0,0,0,.92) 100%)}
+.city .scrim{background:linear-gradient(to left,rgba(0,0,0,.45) 0%,rgba(0,0,0,.18) 20%,transparent 38%),linear-gradient(to bottom,transparent 48%,rgba(0,0,0,.5) 72%,rgba(0,0,0,.92) 100%)}
+.corner{position:absolute;top:8px;right:8px;display:flex;gap:6px}
+.corner i{width:30px;height:30px;border-radius:50%;background:var(--dark);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.corner svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.info{position:absolute;left:16px;right:14px;bottom:18px;color:#fff}
+.tag{font:700 8px var(--ui);letter-spacing:1px;color:rgba(255,255,255,.86);margin-bottom:4px}
+.brow{display:flex;align-items:flex-end;gap:10px}
+.name{flex:1;min-width:0;font:600 22px/25px var(--serif)}
+.name .dot{display:inline-block;vertical-align:3px;width:20px;height:20px;border-radius:10px;background:#fff;color:var(--ink);font:700 13px/20px var(--ui);text-align:center;margin-left:2px}
+.bx{flex:none;height:30px;padding:0 12px;border-radius:15px;font:600 11.5px/30px var(--ui);white-space:nowrap;background:rgba(255,255,255,.92);color:var(--ink)}
+.dashes{position:absolute;left:16px;right:16px;bottom:8px;display:flex;gap:3px}
+.dashes u{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.3)}
+.dashes u.on{background:#fff}
+.rail{position:absolute;right:0;top:50px;width:92px}
+.rail span{display:block;text-align:right;padding-right:22px;height:26px;font:500 10px/26px var(--ui);color:rgba(255,255,255,.66);text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.rail span.on{color:#fff;font-weight:700}
+.rail::after{content:"";position:absolute;right:12px;top:4px;bottom:4px;width:2px;background:rgba(255,255,255,.3);border-radius:1px}
+/* the heart: like and save in one */
+.heart{position:absolute;right:14px;bottom:64px;width:48px;height:48px;border-radius:24px;border:0;background:var(--dark);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s}
+.heart svg{width:25px;height:25px;stroke:#fff;fill:none;stroke-width:2;stroke-linejoin:round}
+.heart.on{background:#fff;box-shadow:none}
+.heart.on svg{stroke:var(--green);fill:var(--green)}
+.heart.pop{animation:pop .28s ease-out}
+@keyframes pop{40%{transform:scale(1.22)}100%{transform:scale(1)}}
+/* shown once, on the first card of the first visit */
+.hint{position:absolute;left:0;right:0;bottom:128px;text-align:center;pointer-events:none}
+.hint span{display:inline-block;background:rgba(255,255,255,.94);color:var(--ink);font:600 12.5px/32px var(--ui);height:32px;padding:0 14px;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.hint.v span{animation:up 1.3s ease-in-out infinite}
+.hint.h span{animation:left 1.3s ease-in-out infinite}
+@keyframes up{50%{transform:translateY(-10px)}}
+@keyframes left{50%{transform:translateX(-10px)}}
+.toast{position:absolute;left:12px;right:12px;bottom:150px;height:40px;border-radius:12px;background:rgba(24,27,24,.94);color:#fff;font:500 12.5px/40px var(--ui);padding:0 14px;display:none;justify-content:space-between}
+.stage[data-mode="h"] .toast{right:34px;bottom:128px}
+.toast.on{display:flex}
+.toast button{background:none;border:0;color:#9FE0CF;font:700 12.5px var(--ui);cursor:pointer;padding:0 2px}
+.tabs{height:58px;flex:none;border-top:1px solid rgba(0,0,0,.07);display:flex;justify-content:space-around;padding-top:9px;font:500 9px/1.5 var(--ui);color:#8A8478;text-align:center}
+.tabs b{color:var(--green);font-weight:600}
+.tabs span.bump{animation:bump .6s ease-out}
+@keyframes bump{35%{transform:scale(1.5);color:var(--green)}70%{color:var(--green)}}
+.new{outline:2px dashed #C86B3C;outline-offset:3px}
+.num{position:absolute;width:20px;height:20px;border-radius:10px;background:#C86B3C;color:#fff;font:700 11px/20px var(--ui);text-align:center}
+/* what a swipe means today, drawn over the "now" phone */
+.verdicts{position:absolute;left:0;right:0;top:42%;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none}
+.verdicts span{background:rgba(255,255,255,.92);color:var(--ink);font:600 11px/26px var(--ui);height:26px;padding:0 10px;border-radius:13px}
+/* the four-up home */
+.gtitle{flex:none;padding:8px 16px 6px;font:600 20px var(--serif);color:var(--ink)}
+.grid{flex:1;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 10px 0;align-content:start}
+.tile .pic{height:176px;border-radius:14px;background:#20262A center/cover;position:relative;overflow:hidden}
+.tile .pic::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,transparent 55%,rgba(0,0,0,.75))}
+.tile .pic em{position:absolute;left:9px;bottom:8px;right:8px;z-index:1;font:600 15px/1.2 var(--serif);font-style:normal;color:#fff}
+.tile .pic u{position:absolute;left:9px;top:8px;z-index:1;text-decoration:none;font:700 7.5px var(--ui);letter-spacing:.8px;color:#fff;background:var(--dark);border-radius:8px;padding:3px 6px}
+.tile .meta{font:400 10.5px/1.4 var(--ui);color:var(--ink2);padding:5px 3px 6px;white-space:nowrap;overflow:hidden}
+</style>
+</head>
+<body>
+<div class="nav">
+  <h1>首页：滑动只管翻，喜欢点爱心</h1>
+  <p>你提了两件事：一是新买家看到第一张卡不知道要干嘛，要不要像小红书那样排四个让他选，或者加一个演示动画；二是左右滑当"喜欢 / 不喜欢"不好使，滑走不一定是不喜欢。</p>
+  <p><b>我的看法：把第二件事改了，第一件事就基本解决了。</b>买家不知所措，主要是因为"左右滑 = 表态"在看影片的 app 里没人见过。演示动画现在其实已经有一个（第一次打开时卡片自己往右、往左各晃一下），它没起作用，说明问题不在缺少演示，而在手势本身要人教。换成人人都会的"往上滑看下一个"，再让下一张露一条边，就不用教了。</p>
+  <p>所以我建议：<b>首页仍然一次放一部影片，不改成四宫格</b>；滑动只负责翻，可以翻回去；喜欢用爱心；不喜欢用一个小的 ✕。下面第一部分是一台能真滑的手机，可以直接试。</p>
+</div>
+
+<section>
+  <h2>一、先试一下（这台手机能滑）</h2>
+  <div class="seg" id="seg">
+    <button data-mode="v" class="on">上下滑（我推荐）</button>
+    <button data-mode="h">左右滑（你提的）</button>
+  </div>
+  <div class="try">
+    <div class="phone live">
+      <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="row" id="lrow"></div>
+      <div class="figs" id="lfigs"></div>
+      <div class="stage" id="stage" data-mode="v">
+        <div class="slot"></div><div class="slot"></div><div class="slot"></div>
+        <div class="toast" id="toast"><span>Hidden. You'll see less like this.</span><button id="undo">Undo</button></div>
+      </div>
+      <div class="tabs"><b>▶<br>Feed</b><span>⌕<br>Search</span><span id="savedtab">♡<br>Saved</span><span>☰<br>You</span></div>
+    </div>
+    <div class="notes">
+      <ul>
+        <li><b>在卡片上滑</b>：<span id="how">往上滑是下一个地方，往下滑回到上一个</span>。滑动不代表喜欢或不喜欢，滑过去的还能翻回来。</li>
+        <li><b>点右下角的爱心</b>：亮了就是喜欢，同时存进 Saved（底部的 Saved 会跳一下）。再点一次取消。</li>
+        <li><b>点右上角的 ✕</b>：这张收起来，以后不再出现。底下有 Undo，点了可以反悔。</li>
+        <li><b>第一张卡上那行白底小字</b>只在第一次打开时出现，滑过一次就不再出现。</li>
+        <li>卡片底下露出的那一条，就是<b>下一张卡的边</b>。</li>
+      </ul>
+      <p style="font-size:13.5px">想往下看这个网页，请滑手机画面以外的地方。用 iPhone 或 Mac 的 Safari 打开时卡片里的影片会播放，其他浏览器只显示静止画面。</p>
+      <button class="again" id="again">回到第一次打开的样子，再来一遍</button>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>二、和现在比，变了五处</h2>
+  <p>右边手机上的<b>虚线框和数字</b>是标注，真实 app 里没有。</p>
+  <div class="phones" id="compare"></div>
+  <ol style="margin-top:14px">
+    <li><b>滑动</b>。现在：右滑是喜欢，左滑是不喜欢，滑走就回不来。改后：滑动只是翻到下一个或上一个，不算任何态度。</li>
+    <li><b>爱心</b>。现在：右上角的小书签负责"存起来"，右滑负责"喜欢"，是两件事。改后：合成一个爱心，放大，放到右下角拇指够得着的地方。点亮 = 喜欢 = 存进 Saved。</li>
+    <li><b>✕</b>。右上角书签原来的位置换成 ✕，意思是"这个不用再给我看"。卡片上的按钮数量没有变多。</li>
+    <li><b>下一张露一条边</b>。现在首页只看得到一张卡，看不出后面还有。改后卡片底下露出下一张的边。</li>
+    <li><b>第一次打开的提示</b>。现在：卡片自己往右、往左各晃一下。改后：一行字 <code>Swipe up for the next place</code>，滑过一次就消失。</li>
+  </ol>
+  <div class="box"><p><b>不变的</b>：点名字进 Explore 页、右下角的 <code>Communities ›</code>、上面的 Map、点画面暂停，都和现在一样。从 <code>Communities ›</code> 点进去的那一页用同一套手势。</p></div>
+</section>
+
+<section>
+  <h2>三、为什么我推荐上下滑，而不是左右滑</h2>
+  <ul>
+    <li><b>往上滑看下一个</b>是抖音、Instagram、YouTube 短视频和小红书视频共同的手势，买家手上已经会了，不用学。</li>
+    <li><b>左右滑一张卡</b>在很多人印象里是交友 app："左滑 = 不要"。你想去掉的正是这层意思，换成上下就没有了。</li>
+    <li><b>"向上滑表示不喜欢"我不建议</b>：往上滑是所有人下意识的"下一个"，会记下大量并不是真心的不喜欢，等于把现在的问题换个方向留下来。不喜欢应该是一个要特意去点的按钮。</li>
+  </ul>
+  <p>左右滑也能做，上面那台手机切到"左右滑"可以对比手感。</p>
+</section>
+
+<section>
+  <h2>四、如果首页改成四宫格，会是这样</h2>
+  <div class="try">
+    <div id="gridphone"></div>
+    <div class="notes">
+      <p><b>它的好处</b>：一看就知道点哪里，买家自己挑。</p>
+      <p><b>我不建议用它做首页，三个原因：</b></p>
+      <ol>
+        <li>Percho 最打动人的是一打开影片就在放。四宫格里影片变成四张小图，第一眼和别的找房 app 没有区别。</li>
+        <li>现在一共 28 部影片（8 个城市、20 个社区）。四宫格滑三四下就到底，会显得内容很少；一次一部不会。</li>
+        <li>刚要搬来亚特兰大的买家不认识这些地名，光看名字和封面选不出来，影片放起来他才知道这是个什么地方。小红书的封面和标题本身就是内容，我们的封面只是一个地名。</li>
+      </ol>
+      <p>"让买家自己选"这个好处，改后的首页也有：可以往回翻，可以点 <code>Communities ›</code> 往下一层，也可以在 Search 里直接搜。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>五、每个动作，Percho 记下什么</h2>
+  <table>
+    <tr><td>点亮爱心</td><td>存进 Saved；以后多推相似的地方。</td></tr>
+    <tr><td>点 ✕</td><td>这张不再出现；相似的少推。在 Search 和地图里仍然找得到。</td></tr>
+    <tr><td>只是滑过去</td><td>不算喜欢，也不算不喜欢。其他的都看过之后，这张还会再出现。</td></tr>
+    <tr><td>看完整部影片、点名字进 Explore、点 Communities</td><td>算"有点兴趣"，比爱心轻。</td></tr>
+  </table>
+  <div class="box"><p><b>代价</b>：特意点爱心的人会比顺手滑一下的人少得多，推荐会比现在学得慢。所以最后一行（看了多久、有没有点进去）要一起做，这是新增的工作。以前右滑喜欢过的记录都保留。</p></div>
+</section>
+
+<section>
+  <h2>要你回复的</h2>
+  <div class="box"><p><b>1. 滑动方向</b>：上下，还是左右。我推荐<b>上下</b>。</p></div>
+  <div class="box"><p><b>2. 首页</b>：一次一部影片，还是四宫格。我推荐<b>一次一部</b>。</p></div>
+  <div class="box"><p><b>3. ✕ 按钮</b>：要，还是不要（不要的话卡上只有爱心）。我推荐<b>要</b>。</p></div>
+  <p style="margin-top:14px">回一句"按推荐的"，或者比如"左右，一次一部，不要 ✕"就行。你回复之前我不改 app。</p>
+</section>
+
+<script>
+const still = (uid, t) => `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg?time=${t}s&height=860`;
+const film = (uid) => `https://videodelivery.net/${uid}/manifest/video.m3u8`;
+const P = (kind, name, uid, lead, rest, figs) => ({ kind, name, uid, lead, rest, figs, img: still(uid, kind === 'city' ? 6 : 5) });
+// What production's feed sends for these places (2026-11-27).
+const ALL = [
+  P('city', 'Suwanee', '324ac35659ec5a6e0a5218620575a57a', 'Suwanee, GA', 'Gwinnett County', [['$481K', 'median home value'], ['A', 'school grade'], ['62 min', 'drive to downtown']]),
+  P('city', 'Johns Creek', '7b4661a5af1d96e939d2d310d6a075bf', 'Johns Creek, GA', 'Fulton County', [['$629K', 'median home value'], ['A+', 'school grade'], ['62 min', 'drive to downtown']]),
+  P('community', 'Edinburgh', 'bbcc652c5781ea1227d705a6661fbe68', 'Suwanee, GA', 'Gwinnett County', [['$1.2M', 'est. home value'], ['A+', 'school grade'], ['16 min', 'to I-85']]),
+  P('city', 'Alpharetta', 'e4cf6820839a7e550f2a7f80b4de649e', 'Alpharetta, GA', 'Fulton County', [['$649K', 'median home value'], ['A+', 'school grade'], ['55 min', 'drive to downtown']]),
+  P('community', 'Windward', 'ddffd15040c57e3ef063ff45604e4605', 'Alpharetta, GA', 'Fulton County', [['$910K', 'est. home value'], ['A+', 'school grade'], ['3 min', 'to GA-400']]),
+  P('city', 'Duluth', '471f8675de36b29b7eb3ae172d213668', 'Duluth, GA', 'Gwinnett County', [['$401K', 'median home value'], ['A', 'school grade'], ['60 min', 'drive to downtown']]),
+  P('community', 'Sugarloaf Country Club', '9f820d812f4f4f1391225b6abdfdd901', 'Duluth, GA', 'Gwinnett County', [['$1.7M', 'est. home value'], ['A', 'school grade'], ['11 min', 'to I-85']]),
+  P('community', 'Harvest Park', '748e5dfc8c83f5caf3a8719d7b7aaf5a', 'Suwanee, GA', 'Gwinnett County', [['$720K', 'est. home value'], ['A+', 'school grade'], ['6 min', 'to I-85']]),
+];
+const RAIL = ['Overview', 'Schools', 'Homes', 'Commute', 'Life'];
+const svg = (d) => `<svg viewBox="0 0 24 24"><path d="${d}"/></svg>`;
+const IC = {
+  sound: svg('M4 9.5v5h3.5L12 18V6L7.5 9.5H4zM16 9a4.2 4.2 0 0 1 0 6'),
+  bookmark: svg('M6.5 3.5h11v17L12 16.6l-5.5 3.9z'),
+  share: svg('M12 15V3.5M8 7.2l4-3.7 4 3.7M5.5 11.5v8.5h13v-8.5'),
+  x: svg('M6 6l12 12M18 6L6 18'),
+  heart: svg('M12 20.3s-7.6-4.6-7.6-10.2A4.3 4.3 0 0 1 12 7.5a4.3 4.3 0 0 1 7.6 2.6c0 5.6-7.6 10.2-7.6 10.2z'),
+};
+const HINT = { v: '↑ Swipe up for the next place', h: '← Swipe for the next place' };
+
+/**
+ * One card. `ver` 'now' is the card as the app draws it today; anything else is
+ * the proposal. `mark` outlines and numbers what the proposal changes.
+ */
+function card(c, o = {}) {
+  const now = o.ver === 'now';
+  const mk = o.mark ? ' new' : '';
+  const corner = now
+    ? `<i>${IC.sound}</i><i>${IC.bookmark}</i><i>${IC.share}</i>`
+    : `<i>${IC.sound}</i><i>${IC.share}</i><i class="${mk}" data-act="hide">${IC.x}</i>`;
+  const rail = c.kind === 'city' ? `<div class="rail">${RAIL.map((r, i) => `<span class="${i === 0 ? 'on' : ''}">${r}</span>`).join('')}</div>` : '';
+  const dashes = c.kind === 'community' ? `<div class="dashes">${Array.from({ length: 9 }, (_, i) => `<u class="${i < 3 ? 'on' : ''}"></u>`).join('')}</div>` : '';
+  const next = c.kind === 'city' ? '<span class="bx">Communities ›</span>' : '';
+  const heart = now ? '' : `<button class="heart${o.liked ? ' on' : ''}${mk}" data-act="like" aria-label="Like">${IC.heart}</button>`;
+  const hint = o.hint ? `<div class="hint ${o.hint}"><span class="${mk}">${HINT[o.hint]}</span></div>` : '';
+  const verdicts = o.verdicts ? '<div class="verdicts"><span>← 左滑 = 不喜欢</span><span>右滑 = 喜欢 →</span></div>' : '';
+  const nums = o.mark
+    ? '<b class="num" style="right:46px;top:44px">3</b><b class="num" style="right:68px;bottom:78px">2</b><b class="num" style="left:22px;bottom:166px">5</b>'
+    : '';
+  return `<div class="card ${c.kind}" style="background-image:url('${c.img}')"><div class="scrim"></div><div class="corner">${corner}</div>${rail}${verdicts}${hint}
+    <div class="info"><div class="tag">${c.kind === 'city' ? 'CITY' : 'COMMUNITY'}</div><div class="brow"><div class="name">${c.name} <span class="dot">›</span></div>${next}</div></div>${heart}${dashes}${nums}</div>`;
+}
+const figs = (c) => c.figs.map(([v, l]) => `<div><b>${v}</b>${l}</div>`).join('');
+const line = (c) => `<div class="line"><b>${c.lead}</b><span class="rest"> · ${c.rest}</span></div><div class="pill">◎ Map</div>`;
+const tabs = '<div class="tabs"><b>▶<br>Feed</b><span>⌕<br>Search</span><span>♡<br>Saved</span><span>☰<br>You</span></div>';
+const head = (c) => `<div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="row">${line(c)}</div><div class="figs">${figs(c)}</div>`;
+const shot = (html, cap) => `<div>${html}<div class="cap">${cap}</div></div>`;
+
+/* ── 二：now and after, side by side ─────────────────── */
+const nowPhone = `<div class="phone">${head(ALL[0])}<div class="stage"><div class="slot">${card(ALL[0], { ver: 'now', verdicts: true })}</div></div>${tabs}</div>`;
+const newPhone = `<div class="phone">${head(ALL[0])}<div class="stage" data-mode="v"><div class="slot">${card(ALL[0], { mark: true, hint: 'v' })}</div>
+  <div class="slot new" style="transform:translateY(calc(100% + 8px))">${card(ALL[1])}</div><b class="num" style="left:40%;bottom:18px">4</b></div>${tabs}</div>`;
+document.getElementById('compare').innerHTML =
+  shot(nowPhone, '<b>现在</b>：只看得到一张卡。左右滑就是表态，滑走回不来。右上角中间是小书签。') +
+  shot(newPhone, '<b>改后</b>：② 爱心在右下角，③ ✕ 在右上角，④ 底下露出下一张，⑤ 第一次打开时的那行提示。① 是滑动本身，画不出来，请在上面那台手机上试。');
+
+/* ── 四：the four-up home ────────────────────────────── */
+const tile = (c) => `<div class="tile"><div class="pic" style="background-image:url('${c.img}')"><u>${c.kind === 'city' ? 'CITY' : 'COMMUNITY'}</u><em>${c.name}</em></div><div class="meta">${c.figs.map((f) => f[0]).join(' · ')}</div></div>`;
+document.getElementById('gridphone').innerHTML =
+  shot(`<div class="phone"><div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="gtitle">Places around Atlanta</div><div class="grid">${ALL.slice(0, 6).map(tile).join('')}</div>${tabs}</div>`,
+    '<b>四宫格首页</b>：一屏四张封面，往下滚是更多。点一张才开始放影片。');
+
+/** As in the app: a place line's second half is left out whole when it does not fit. */
+function fitLines() {
+  for (const el of document.querySelectorAll('.line')) {
+    const rest = el.querySelector('.rest');
+    if (rest && el.scrollWidth > el.clientWidth) rest.remove();
+  }
+}
+
+/* ── 一：the phone that swipes ───────────────────────── */
+const stage = document.getElementById('stage');
+const slots = [...stage.querySelectorAll('.slot')];
+const toast = document.getElementById('toast');
+const live = {};
+function reset(mode) {
+  Object.assign(live, { mode, order: ALL.map((_, i) => i), idx: 0, steps: 0, liked: new Set(), hintDone: false, busy: false, hidden: null });
+  toast.classList.remove('on');
+  stage.dataset.mode = mode;
+  document.getElementById('how').textContent = mode === 'v' ? '往上滑是下一个地方，往下滑回到上一个' : '往左滑是下一个地方，往右滑回到上一个';
+  for (const b of document.querySelectorAll('#seg button')) b.classList.toggle('on', b.dataset.mode === mode);
+  render();
+}
+const at = (k) => { const n = live.order.length; return ALL[live.order[(((live.idx + k) % n) + n) % n]]; };
+/** Card to card: the card's own length plus the gap, so 14 of the next one shows. */
+const span = () => (live.mode === 'v' ? stage.clientHeight : stage.clientWidth) - 14;
+function place(d, animated) {
+  const s = span();
+  slots.forEach((el, i) => {
+    el.style.transition = animated ? 'transform .3s cubic-bezier(.2,.8,.2,1), opacity .25s' : 'none';
+    el.style.transform = `translate${live.mode === 'v' ? 'Y' : 'X'}(${(i - 1) * s + d}px)`;
+  });
+}
+function render() {
+  slots.forEach((el, i) => {
+    const k = i - 1;
+    // Nothing comes before the first card of a visit.
+    const shown = k !== -1 || live.steps > 0;
+    const c = at(k);
+    el.style.opacity = 1;
+    el.style.visibility = shown ? 'visible' : 'hidden';
+    el.innerHTML = shown ? card(c, { liked: live.liked.has(c.uid), hint: k === 0 && !live.hintDone ? live.mode : null }) : '';
+  });
+  place(0, false);
+  const c = at(0);
+  document.getElementById('lrow').innerHTML = line(c);
+  document.getElementById('lfigs').innerHTML = figs(c);
+  fitLines();
+  play();
+}
+/** The film itself, where the browser plays HLS on its own (Safari). */
+function play() {
+  const el = slots[1].querySelector('.card');
+  const v = document.createElement('video');
+  if (!el || !v.canPlayType('application/vnd.apple.mpegurl')) return;
+  Object.assign(v, { muted: true, playsInline: true, autoplay: true, loop: true, className: 'vid', src: film(at(0).uid) });
+  v.setAttribute('playsinline', '');
+  el.prepend(v);
+  v.play().catch(() => {});
+}
+/** Move one card on (+1) or back (-1); `hide` takes the current card out of the deck as it goes. */
+function go(dir, hide) {
+  if (live.busy) return;
+  live.busy = true;
+  place(-dir * span(), true);
+  if (hide) slots[1].style.opacity = 0;
+  setTimeout(() => {
+    const n = live.order.length;
+    if (hide) {
+      const pos = live.idx % n;
+      live.hidden = { pos, id: live.order[pos] };
+      live.order.splice(pos, 1);
+      live.idx = pos % live.order.length;
+      toast.classList.add('on');
+      clearTimeout(live.toastTimer);
+      live.toastTimer = setTimeout(() => toast.classList.remove('on'), 5000);
+    } else {
+      live.idx = (live.idx + dir + n) % n;
+      live.steps += dir;
+    }
+    live.hintDone = true;
+    live.busy = false;
+    render();
+  }, 310);
+}
+let drag = null;
+let swallowClick = false;
+stage.addEventListener('pointerdown', (e) => {
+  if (!live.busy) drag = { x: e.clientX, y: e.clientY, t: performance.now(), on: false, d: 0 };
+});
+stage.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x;
+  const dy = e.clientY - drag.y;
+  const along = live.mode === 'v' ? dy : dx;
+  const across = live.mode === 'v' ? dx : dy;
+  if (!drag.on) {
+    if (Math.abs(along) < 8 || Math.abs(along) < Math.abs(across)) return;
+    drag.on = true;
+    stage.setPointerCapture(e.pointerId);
+  }
+  // Pulling back past the first card resists.
+  drag.d = along > 0 && live.steps <= 0 ? along * 0.25 : along;
+  place(drag.d, false);
+});
+function release() {
+  if (!drag) return;
+  const g = drag;
+  drag = null;
+  if (!g.on) return;
+  swallowClick = true;
+  setTimeout(() => { swallowClick = false; }, 60);
+  const speed = g.d / Math.max(1, performance.now() - g.t);
+  if (g.d < -70 || speed < -0.45) go(1);
+  else if ((g.d > 70 || speed > 0.45) && live.steps > 0) go(-1);
+  else place(0, true);
+}
+stage.addEventListener('pointerup', release);
+stage.addEventListener('pointercancel', release);
+stage.addEventListener('click', (e) => {
+  if (swallowClick || live.busy) return;
+  const el = e.target.closest('[data-act]');
+  if (!el || !slots[1].contains(el)) return;
+  const c = at(0);
+  if (el.dataset.act === 'like') {
+    const on = !live.liked.has(c.uid);
+    if (on) live.liked.add(c.uid); else live.liked.delete(c.uid);
+    el.classList.toggle('on', on);
+    el.classList.remove('pop');
+    void el.offsetWidth;
+    el.classList.add('pop');
+    if (on) {
+      const tab = document.getElementById('savedtab');
+      tab.classList.remove('bump');
+      void tab.offsetWidth;
+      tab.classList.add('bump');
+    }
+  }
+  if (el.dataset.act === 'hide' && live.order.length > 1) go(1, true);
+});
+document.getElementById('undo').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!live.hidden || live.busy) return;
+  live.order.splice(live.hidden.pos, 0, live.hidden.id);
+  live.idx = live.hidden.pos;
+  live.hidden = null;
+  toast.classList.remove('on');
+  render();
+});
+for (const b of document.querySelectorAll('#seg button')) b.addEventListener('click', () => reset(b.dataset.mode));
+document.getElementById('again').addEventListener('click', () => reset(live.mode));
+window.addEventListener('resize', () => place(0, false));
+reset('v');
+</script>
+</body>
+</html>
