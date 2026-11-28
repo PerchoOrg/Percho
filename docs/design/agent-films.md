@@ -1,7 +1,48 @@
 # Agent films — an agent's own version of a community film
 
-**Status**: proposal, 2026-11-27 (phase406). Nothing is built.
-**Demo**: `https://www.percho.co/demos/agent-film-v1`
+**Status**: proposal, 2026-11-27 (phase406), revised 2026-11-28 (phase420).
+Nothing is built.
+**Demos**: `https://www.percho.co/demos/agent-film-v1` (the four upload
+steps), `https://www.percho.co/demos/agent-film-v2` (the revision).
+
+## Revision, 2026-11-28
+
+Re-read against phase407–419. Where this section and the text below
+disagree, this section holds.
+
+1. **The job is the first film of an unfilmed community.** 20 of 22,730
+   active communities have a film; the county page says "No films in this
+   county yet" and search (cities, schools, ZIPs since phase409–410) mostly
+   finds places with none. An agent's film of a community that has no film
+   is, once reviewed, that community's film in the app, with one credit line
+   under the name on the card ("with Dana Cole · Keller Williams", a tap
+   opens the agent's card). First agent in holds it; a second agent's
+   version lives on their own link. For the 20 filmed communities nothing
+   changes: Percho's film stays, the agent's is another version.
+2. **An agent's link must work in the app.** `/watch/*` is a universal link
+   (`lib/share/app-links.ts`), so a buyer with the app never sees the web
+   page the first draft put the agent's version and card on. The link opens
+   the community in the app playing that agent's version, the agent's card
+   under the name. This needs an iOS release — the first draft's "no app
+   release" is withdrawn.
+3. **The agent sees numbers.** My film shows buyers who watched, watched to
+   the end, hearts, contacts. Hearts are saves (`saved_communities`) and
+   contacts are leads, both on the server already; the app posts its event
+   queue to `/api/mobile/events` (a card's verdict, Explore taps). Whether a
+   film's plays and watch-through are in that stream was not confirmed —
+   count on adding those two events with the iOS release item 2 needs.
+4. **The thumbs-down is the safety net.** An agent film hidden clearly more
+   often than the others is pulled from the app back to review. Not shown to
+   the agent.
+5. **Material is framed for the card.** The place label (top left, about 24
+   characters), the four corner buttons and the name block cover parts of
+   the frame; moment picking and photo crops keep the subject clear of
+   them, and an item's name is capped at what the label fits.
+
+New cost: an unfilmed community has no nearby pool, so the research and
+photo steps run for it automatically (Google Places, Gemini). Not priced —
+run one community and measure before any batch. The page must work in a
+phone browser; the material is on the agent's phone.
 
 ## Why
 

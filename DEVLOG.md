@@ -23,6 +23,21 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-28 09:40 UTC — phase420: agent films re-thought against phase407–419 — design and demo only
+
+**Objective**: owner 2026-11-28: 「根据最新的改动 重新想想这个功能应该怎么做」, then 「出demo」. Read as: the app changes merged since the phase406 proposal. Nothing is built; the four questions of phase406 were not answered and are folded into the new list.
+**Actions**: `docs/design/agent-films.md` gains a "Revision, 2026-11-28" section that overrides the text under it; `apps/web/public/demos/agent-film-v2/index.html` (Chinese, noindex; stills from the Edinburgh film; "Laurel Springs", the agents and the figures are invented and the page says so). Checked in headless Chrome at 1100 and 500 px.
+**What changed in the proposal**:
+- **The job is the first film of an unfilmed community** — 20 of 22,730 have one (phase407), the county page says "No films in this county yet", search now finds places that mostly have none. An agent's film of an unfilmed community becomes, after review, the app's film for it, with one credit line on the card. First agent holds it. The 20 filmed communities are unchanged.
+- **A mistake in phase406**: it kept the agent's version on a web link and said no app release was needed. `/watch/*` is a universal link (`lib/share/app-links.ts`), so a buyer with the app would land on Percho's film and never see the agent's version or card. The link must open the community in the app playing that agent's version with their card — an iOS release.
+- **Numbers for the agent** (watched, watched to the end, hearts, contacts) and **the thumbs-down as a safety net** (a film hidden clearly more than the others goes back to review).
+- **Material framed for the card**: the place label (~24 characters), the four corner buttons and the name block cover parts of the frame.
+**Issues**:
+- Whether a film's plays and watch-through reach the server was **not confirmed**. The event queue posts to `/api/mobile/events` (`app/_layout.tsx` wires `createEventsTransport`; `lib/feed/events.ts` has `swipe`, `explore_tap`, `datapoint_tap`, `persona_change`), and hearts are `saved_communities`. Treat "watched" and "watched to the end" as two events to add.
+- An unfilmed community has no nearby pool: research and photo steps must run for it unattended (Google Places, Gemini). **Not priced.** Run one and measure before any batch.
+- The operator pass as plan checks (phase406) matters more: these films have no Percho film to fall back on.
+**Next steps**: owner answers the four points at the foot of `/demos/agent-film-v2`. Then: photos end to end on one unfilmed community with the cost measured, the iOS side (agent version by link, credit line, the two events), then video moments.
+
 ## 2026-11-28 09:06 UTC — phase419: no "Hidden…" bar; Recent's name on one line; "Your areas" removed
 
 **Objective**: Owner on the phone after phase418 (2026-11-28): 「hidden you 。。。 感觉很跳脱还有别的方案吗」 · 「you recent图下面的地方有些乱 能不能一行」 · 「you your area是啥 为啥要这个」.
