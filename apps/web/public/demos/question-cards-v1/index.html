@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — 问题卡片：样子、怎么答、问哪几个（设计方案）</title>
+<style>
+:root{--green:#0E6B57;--greenDeep:#0A5343;--ink:#181B18;--ink2:#5A4E40;--paper:#F6F3EC;--sage:#E0E9E3;--clay:#C86B3C;
+  --serif: ui-serif,"New York","Iowan Old Style",Georgia,"Songti SC",serif;
+  --ui:-apple-system,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:24px 14px 90px}
+section,header{max-width:1000px;margin:0 auto}
+h1{font:600 26px/1.25 var(--serif);color:var(--green);margin-bottom:10px}
+h2{font:600 21px/1.3 var(--ui);margin:0 0 8px}
+h2 i{font-style:normal;color:var(--green);margin-right:8px}
+p,li{font:400 15px/1.7 var(--ui);color:var(--ink2)}
+p{margin:6px 0;max-width:800px}
+b{color:#2B2116}
+section{margin-top:52px}
+ul,ol{margin:4px 0 4px 22px;max-width:800px}
+.box{background:rgba(255,255,255,.55);border-radius:14px;padding:12px 18px;margin-top:14px;max-width:820px}
+table{border-collapse:collapse;margin-top:12px;max-width:860px;width:100%;background:rgba(255,255,255,.55);border-radius:12px;overflow:hidden}
+th,td{font:400 14px/1.55 var(--ui);color:var(--ink2);text-align:left;padding:8px 12px;border-bottom:1px solid rgba(0,0,0,.06);vertical-align:top}
+th{font-weight:600;color:#2B2116;background:rgba(255,255,255,.5)}
+tr:last-child td{border-bottom:0}
+.en{font:500 14px/1.5 var(--ui);color:var(--ink)}
+.tagn{display:inline-block;font:600 11px/18px var(--ui);padding:0 8px;border-radius:9px;color:#fff;background:var(--green)}
+.tago{display:inline-block;font:600 11px/18px var(--ui);padding:0 8px;border-radius:9px;color:#fff;background:#8A8478}
+
+.sim{display:flex;flex-wrap:wrap;gap:22px 30px;margin-top:16px;align-items:flex-start}
+.left{width:300px;flex:none}
+.right{flex:1;min-width:290px;max-width:560px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.chips button{font:500 12.5px var(--ui);padding:6px 11px;border-radius:14px;border:1px solid rgba(0,0,0,.15);background:rgba(255,255,255,.6);color:var(--ink2);cursor:pointer}
+.chips button.on{background:var(--green);border-color:var(--green);color:#fff}
+.phone{width:300px;height:600px;border-radius:34px;background:var(--paper);overflow:hidden;position:relative;box-shadow:0 3px 10px rgba(32,28,22,.06),0 16px 38px rgba(32,28,22,.16);display:flex;flex-direction:column}
+.status{height:30px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font:600 11px var(--ui);color:var(--ink)}
+.head{height:84px;flex:none;padding:8px 16px 0;transition:opacity .25s}
+.head .row{font:400 13.5px/22px var(--ui);color:var(--ink2);white-space:nowrap;overflow:hidden}
+.head .row b{font-weight:600;color:var(--ink)}
+.figs{display:flex;margin-top:8px}
+.figs div{flex:1;font:400 8.5px/1.3 var(--ui);color:var(--ink2);padding-left:8px;border-left:1px solid rgba(0,0,0,.1)}
+.figs div:first-child{padding-left:0;border-left:0}
+.figs b{display:block;font:600 17px/1.2 var(--ui);color:var(--ink)}
+.stage{flex:1;margin:6px 9px 10px;position:relative;overflow:hidden;border-radius:22px}
+.card{position:absolute;inset:0;border-radius:22px;overflow:hidden;background:#20262A center/cover;transition:transform .36s cubic-bezier(.2,.8,.2,1)}
+.card.off{transform:translateX(calc(100% + 8px))}
+.card.gone{transform:translateX(calc(-100% - 8px))}
+.tabs{height:52px;flex:none;border-top:1px solid rgba(0,0,0,.07);display:flex;justify-content:space-around;padding-top:9px;font:500 9px/1.5 var(--ui);color:#8A8478;text-align:center}
+.tabs b{color:var(--green);font-weight:600}
+/* the two doors */
+.doors{position:absolute;inset:0;display:flex}
+.door{position:relative;overflow:hidden;cursor:pointer;width:50%;transition:width .3s cubic-bezier(.2,.8,.2,1)}
+.door.r{flex:1;width:auto}
+.field{position:absolute;inset:0}
+.door.l .field{background:radial-gradient(120% 70% at 0 0,rgba(255,196,130,.16),transparent 58%),linear-gradient(135deg,#5A4230,#2E2118)}
+.door.r .field{background:radial-gradient(120% 70% at 0 0,rgba(150,205,255,.14),transparent 58%),linear-gradient(135deg,#2C4351,#17262E)}
+.wm{position:absolute;right:-46px;top:38%;opacity:.09}
+.wm svg{width:146px;height:146px;stroke:#fff;fill:none;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+.green{position:absolute;inset:0;background:linear-gradient(135deg,var(--green),var(--greenDeep));opacity:0;transition:opacity .25s}
+.scrimb{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 45%,rgba(0,0,0,.35) 78%,rgba(0,0,0,.72))}
+.veil{position:absolute;inset:0;background:rgb(9,8,7);opacity:0;transition:opacity .25s;z-index:3}
+.foot{position:absolute;top:92px;left:11px;right:11px;bottom:26px;z-index:4;display:flex;flex-direction:column;gap:5px;justify-content:flex-end}
+.plates{flex:1;display:flex;flex-direction:column;gap:5px;margin-bottom:2px;min-height:0}
+.plate{flex:1;border-radius:9px;overflow:hidden;background:rgba(0,0,0,.35) center/cover;border:1px solid rgba(255,255,255,.18)}
+.gl svg{width:17px;height:17px;stroke:#fff;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;display:block}
+.lab{height:36px;display:flex;align-items:flex-end}
+.lab span{font:500 16px/18px var(--serif);letter-spacing:-.2px;color:#fff}
+.lab i{flex:none;width:16px;height:16px;border-radius:8px;background:var(--green);margin:0 0 1px 6px;opacity:0;transform:scale(.6);transition:all .25s;display:flex;align-items:center;justify-content:center}
+.lab i svg{width:10px;height:10px;stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.sup{height:24px;font:400 9px/12px var(--ui);color:rgba(255,255,255,.78)}
+.seam{position:absolute;top:0;bottom:0;left:50%;width:1px;background:rgba(255,255,255,.26);z-index:5;transition:left .3s cubic-bezier(.2,.8,.2,1)}
+.or{position:absolute;top:50%;left:50%;width:25px;height:25px;margin:-12px 0 0 -12px;border-radius:13px;background:rgba(18,16,14,.78);border:1px solid rgba(255,255,255,.34);z-index:6;font:600 8px/23px var(--ui);color:rgba(255,255,255,.7);text-align:center;transition:left .3s cubic-bezier(.2,.8,.2,1)}
+.tops{position:absolute;top:0;left:0;right:0;height:114px;background:linear-gradient(to bottom,rgba(0,0,0,.46),transparent);z-index:5;pointer-events:none}
+.badge{position:absolute;top:9px;left:9px;z-index:7;background:rgba(255,255,255,.92);border-radius:6px;padding:5px 8px;font:700 8px var(--ui);letter-spacing:.9px;color:#181B18}
+.ask{position:absolute;top:37px;left:17px;right:17px;z-index:7;font:500 21px/23px var(--serif);letter-spacing:-.4px;color:#fff;pointer-events:none}
+.hint{position:absolute;left:0;right:0;bottom:9px;z-index:7;font:400 8.5px var(--ui);color:rgba(255,255,255,.6);text-align:center;pointer-events:none}
+.pick-l .door.l{width:66%}.pick-r .door.l{width:34%}
+.pick-l .seam,.pick-l .or{left:66%}.pick-r .seam,.pick-r .or{left:34%}
+.pick-l .door.l .green,.pick-r .door.r .green{opacity:.9}
+.pick-l .door.r .veil,.pick-r .door.l .veil{opacity:.62}
+.pick-l .door.l .lab i,.pick-r .door.r .lab i{opacity:1;transform:none}
+/* a place card */
+.scrim{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 48%,rgba(0,0,0,.5) 72%,rgba(0,0,0,.92))}
+.info{position:absolute;left:16px;right:14px;bottom:16px;color:#fff}
+.info small{display:block;font:700 8px var(--ui);letter-spacing:1px;color:rgba(255,255,255,.86);margin-bottom:4px}
+.info b{font:600 22px/25px var(--serif);color:#fff}
+.under{margin-top:12px;font:400 13.5px/1.6 var(--ui);color:var(--ink2);min-height:66px}
+.under b{color:var(--green)}
+.btns{display:flex;gap:8px;margin-top:6px}
+.btns button{flex:1;font:500 13px var(--ui);padding:9px 6px;border-radius:12px;border:1px solid rgba(0,0,0,.14);background:#fff;color:var(--ink);cursor:pointer}
+.btns button.go{background:var(--green);border-color:var(--green);color:#fff}
+.note{background:rgba(255,255,255,.6);border-radius:14px;padding:12px 16px;margin-bottom:12px}
+.note h4{font:600 14px var(--ui);margin-bottom:4px;color:#2B2116}
+.note p{font-size:14px;margin:0}
+@media (max-width:700px){.left{margin:0 auto}}
+</style>
+</head>
+<body>
+
+<header>
+<h1>问题卡片 — 样子、怎么答、问哪几个</h1>
+<p>这是上一页第 1 条你要看的 demo。App 里还没改。卡片还是原来那张“两扇门”，变的只有三处；另外我要更正一个数：先上线的是 <b>7 个问题</b>，不是我上次说的 12 个，原因在第二节。</p>
+</header>
+
+<section>
+<h2><i>一</i>点一点看</h2>
+<p>手机里是问题卡。<b>点左边或右边的门</b>，看它怎么变；然后会翻到下一张——一个符合你选择的真实社区。上面一排是 7 个问题，可以直接跳。</p>
+<div class="chips" id="chips"></div>
+<div class="sim">
+  <div class="left">
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●●</span></div>
+      <div class="head" id="head"></div>
+      <div class="stage" id="stage"></div>
+      <div class="tabs"><span><b>●<br>Home</b></span><span>○<br>Search</span><span>○<br>Saved</span><span>○<br>You</span></div>
+    </div>
+    <div class="under" id="under"></div>
+    <div class="btns"><button id="skip">不答，划走</button><button class="go" id="next">下一个问题</button></div>
+  </div>
+  <div class="right">
+    <div class="note"><h4>1　改成“点一扇门”</h4><p>以前是往左往右滑来选。现在滑是翻页，所以改成点。点了以后那扇门变宽、变绿、打勾，另一扇变暗，半秒后自己翻到下一张。底部的小字从 swipe either way 改成 <span class="en">tap one</span>。</p></div>
+    <div class="note"><h4>2　划走就是不答</h4><p>什么都不记。过一阵同一个问题会再出现一次；划走两次就不再问。点手机下面的“不答，划走”可以看。</p></div>
+    <div class="note"><h4>3　门上的照片换成我们自己片子里的画面</h4><p>原来用的是房源照片。现在每扇门三张，来自不同社区的片子——三张叠着是你 8 月定的，为的是问“这一类地方”，不是问某一张照片。</p></div>
+    <div class="note"><h4>4　拍不出来的那一边不放照片</h4><p>“没有俱乐部”“离高速近”、预算的两个数——没有一张照片能说明它，就只有底色、一个图标和字。这是原来就有的规矩：宁可空着，不放一张不相干的图。第 1、2、5、7 题能看到。</p></div>
+    <div class="note"><h4>5　答完以后</h4><p>推荐流里符合的地方加分，另一边减一半；You 页“From the places you liked”下面多一行你答过的。卡片上面那一行字不加任何提示。</p></div>
+  </div>
+</div>
+</section>
+
+<section>
+<h2><i>二</i>更正：先上线 7 个，不是 12 个</h2>
+<p>上一页我说“7 个旧问题 + 5 个新问题”。真正给每一题配数据和照片的时候发现三件事：</p>
+<ul>
+<li>我新写的“新盘还是成熟社区”，旧问题里已经有了（<span class="en">Grown in, or brand new?</span>），重复，删掉。</li>
+<li>我新写的预算题，和旧的 <span class="en">Spend it all, or keep some back?</span> 问的是一件事。旧题说的是“你的预算上限”，可我们不知道买家的预算；新题直接给两个数，先用新的。</li>
+<li>旧问题里有 3 个现在没有数据能判断，问了也排不动。</li>
+</ul>
+<p>所以现在能上线的是这 7 个——3 个旧的，4 个新的。<b>4 个新的英文需要你过目。</b></p>
+<table>
+<tr><th></th><th>问题</th><th>两边</th><th>靠什么判断</th></tr>
+<tr><td><span class="tagn">新</span></td><td class="en">Where does your budget sit?</td><td class="en">Around $675K · Around $1.2M</td><td>卡片上的价位。两个数随买家变：先把剩下的地方对半分，答完在那一半里再分一次</td></tr>
+<tr><td><span class="tagn">新</span></td><td class="en">On the highway, or tucked away?</td><td class="en">Minutes from the highway · Tucked further back</td><td>卡片上“到高速几分钟”</td></tr>
+<tr><td><span class="tago">旧</span></td><td class="en">Quiet, or in the middle of it?</td><td class="en">A quiet street · Walk to everything</td><td>社区档案里的“安静”“能走路”</td></tr>
+<tr><td><span class="tago">旧</span></td><td class="en">Grown in, or brand new?</td><td class="en">Mature trees · Brand-new streets</td><td>是不是在售新盘</td></tr>
+<tr><td><span class="tagn">新</span></td><td class="en">A club, or no club?</td><td class="en">Golf, pool and tennis · No club, lower dues</td><td>社区有没有球场俱乐部</td></tr>
+<tr><td><span class="tagn">新</span></td><td class="en">What's outside the gate?</td><td class="en">Trails and water · Restaurants nearby</td><td>周边的步道、湖、餐馆数量</td></tr>
+<tr><td><span class="tago">旧</span></td><td class="en">Closer in, or more house?</td><td class="en">Closer in · More house for it</td><td>所在城市开到市中心的时间，对价位</td></tr>
+</table>
+<p style="margin-top:16px">先放着的 4 个旧问题：</p>
+<table>
+<tr><th>问题</th><th>为什么先不问</th><th>什么时候放出来</th></tr>
+<tr><td class="en">Shared amenities, or no dues?</td><td>我们没有 HOA 费用的数据，而且 20 个有片子的社区几乎都有泳池和球场，两边分不开</td><td>FMLS 上线，有 HOA 费用以后</td></tr>
+<tr><td class="en">Near the train, or away from it?</td><td>现在这 8 个城市都不通轨道交通，没有“靠近”的那一边</td><td>做到有 MARTA 的城市以后</td></tr>
+<tr><td class="en">A dead end, or a way through?</td><td>没有“是不是尽头路”的数据；能用的只有安静／能走路，和第 3 题重复</td><td>房源上线，按街道判断</td></tr>
+<tr><td class="en">Spend it all, or keep some back?</td><td>被新的预算题代替</td><td>知道买家预算上限以后可以换回来</td></tr>
+</table>
+<p>另外 25 个问房子里面的问题（书房、洗衣房、地下室……）不变，等房源。</p>
+</section>
+
+<section>
+<h2><i>三</i>什么时候出现</h2>
+<ul>
+<li>新用户的<b>第 4 张</b>是第一张问题卡，之后大约<b>每 9 张一张</b>。</li>
+<li>每次挑“两边能把剩下的地方分得最均匀”的那一题。已经从喜欢里看出来的不再问。</li>
+<li>答过 3 题，或者喜欢过 5 个地方之后，一天最多一张；没有哪题还能改变顺序，就不问。</li>
+</ul>
+<div class="box"><p><b>老实说：</b>现在只有 28 个片子，答完一题，后面的顺序变化有限。它真正起作用是房源上线以后。</p></div>
+</section>
+
+<section>
+<h2><i>四</i>需要你回的 3 件事</h2>
+<ol>
+<li><b>卡片</b>：点一扇门来选、划走不答——这样行吗？</li>
+<li><b>4 个新问题的英文</b>（第二节表里标“新”的）：有要改的直接说哪一题、改成什么。</li>
+<li><b>一边有照片一边没有</b>（第 2、5 题）：就这样，还是这种题两边都不放照片？</li>
+</ol>
+<p>都行就回“<b>都行</b>”，我就把问题卡接进推荐流。</p>
+</section>
+
+<script>
+const P = {"quiet": ["https://videodelivery.net/0436a569bc50fcba010e51551324d35b/thumbnails/thumbnail.jpg?time=13.7s&height=640", "https://videodelivery.net/809d31c3659cb2c81e7b86f9f70f7789/thumbnails/thumbnail.jpg?time=9.5s&height=640", "https://videodelivery.net/bbcc652c5781ea1227d705a6661fbe68/thumbnails/thumbnail.jpg?time=1.4s&height=640"], "walk": ["https://videodelivery.net/77b494902ef288d8f59c20dc3a41ddfc/thumbnails/thumbnail.jpg?time=54.6s&height=640", "https://videodelivery.net/60676602fa4cd8970706aa7a4e038e9f/thumbnails/thumbnail.jpg?time=31.1s&height=640", "https://videodelivery.net/77b494902ef288d8f59c20dc3a41ddfc/thumbnails/thumbnail.jpg?time=58.8s&height=640"], "mature": ["https://videodelivery.net/c19695fefdf24a9e82993a5b8d6ad967/thumbnails/thumbnail.jpg?time=1.2s&height=640", "https://videodelivery.net/bbcc652c5781ea1227d705a6661fbe68/thumbnails/thumbnail.jpg?time=0.7s&height=640", "https://videodelivery.net/ddffd15040c57e3ef063ff45604e4605/thumbnails/thumbnail.jpg?time=16.5s&height=640"], "new": ["https://videodelivery.net/c915f7d7a26a42ae6a21e8a8a067df97/thumbnails/thumbnail.jpg?time=31.1s&height=640", "https://videodelivery.net/748e5dfc8c83f5caf3a8719d7b7aaf5a/thumbnails/thumbnail.jpg?time=7.7s&height=640", "https://videodelivery.net/06bb18d584112a38291afb354049198c/thumbnails/thumbnail.jpg?time=1.2s&height=640"], "club": ["https://videodelivery.net/9f820d812f4f4f1391225b6abdfdd901/thumbnails/thumbnail.jpg?time=12.3s&height=640", "https://videodelivery.net/9f820d812f4f4f1391225b6abdfdd901/thumbnails/thumbnail.jpg?time=8.6s&height=640", "https://videodelivery.net/9f820d812f4f4f1391225b6abdfdd901/thumbnails/thumbnail.jpg?time=1.4s&height=640"], "trails": ["https://videodelivery.net/748e5dfc8c83f5caf3a8719d7b7aaf5a/thumbnails/thumbnail.jpg?time=17.8s&height=640", "https://videodelivery.net/77b494902ef288d8f59c20dc3a41ddfc/thumbnails/thumbnail.jpg?time=5.3s&height=640", "https://videodelivery.net/61122ebdf4bf454433573fdd06549913/thumbnails/thumbnail.jpg?time=9.2s&height=640"], "dining": ["https://videodelivery.net/06bb18d584112a38291afb354049198c/thumbnails/thumbnail.jpg?time=40.5s&height=640", "https://videodelivery.net/748e5dfc8c83f5caf3a8719d7b7aaf5a/thumbnails/thumbnail.jpg?time=47.1s&height=640", "https://videodelivery.net/748e5dfc8c83f5caf3a8719d7b7aaf5a/thumbnails/thumbnail.jpg?time=36.8s&height=640"], "tucked": ["https://videodelivery.net/58d3da8a79b30fe76ffa91764650b53d/thumbnails/thumbnail.jpg?time=20.8s&height=640", "https://videodelivery.net/0436a569bc50fcba010e51551324d35b/thumbnails/thumbnail.jpg?time=10.5s&height=640", "https://videodelivery.net/c19695fefdf24a9e82993a5b8d6ad967/thumbnails/thumbnail.jpg?time=19.8s&height=640"]};
+const PLACES = [{"n": "White Columns", "city": "Alpharetta", "pl": "$1.4M", "grade": "A+", "min": 20, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/white-columns.jpg"}, {"n": "Ward's Crossing", "city": "Johns Creek", "pl": "$675K", "grade": "A+", "min": 11, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/4583437f-c06d-42e7-8f40-e36d48dfba2f/5c66a991-bbfd-40aa-b52c-5691b6c8ab9c.jpg"}, {"n": "Towne Village", "city": "Sugar Hill", "pl": "$450K", "grade": "A+", "min": 11, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/5d804909-6571-4c56-9ad7-15e21037f41a/a43b190e-c578-46dc-bf83-9b63ae85c03a.jpg"}, {"n": "Apremont - Highcroft", "city": "Peachtree Corners", "pl": "$730K", "grade": "B+", "min": 11, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/apremont-highcroft.jpg"}, {"n": "Sugarloaf Country Club", "city": "Duluth", "pl": "$1.7M", "grade": "A", "min": 11, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/sugarloaf-country-club.jpg"}, {"n": "Edinburgh", "city": "Suwanee", "pl": "$1.2M", "grade": "A+", "min": 16, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/edinburgh.jpg"}, {"n": "Hedgerows", "city": "Buford", "pl": "$800K", "grade": "A", "min": 6, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/hedgerows.jpg"}, {"n": "Harvest Park", "city": "Suwanee", "pl": "$720K", "grade": "A+", "min": 6, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/7a649128-15d6-4231-bb26-ef78b9730c8a/d3a47cbe-20e6-48c0-b804-30090ae81673.jpg"}, {"n": "Wild Timber", "city": "Sugar Hill", "pl": "$850K", "grade": "A+", "min": 15, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/wild-timber.jpg"}, {"n": "Arbors at Richland Creek", "city": "Buford", "pl": "$525K", "grade": "A−", "min": 12, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/8827a428-2a12-454e-a569-ea497ed01503/7949b680-2e57-49ac-a66e-5119b98966db.jpg"}, {"n": "Northbrooke", "city": "Cumming", "pl": "$800K", "grade": "A−", "min": 12, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/c7e84b7c-d8ab-445d-9832-abc6be6e7f79/9efb59ac-1efe-46cb-87f8-b897c77e740d.jpg"}, {"n": "Sawnee Village", "city": "Cumming", "pl": "$670K", "grade": "B+", "min": 4, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/cbcdb3ac-696f-48c2-8806-12c52415bf3e/cd59756a-ec8e-4cf6-8169-e19d5c79d9a8.jpg"}, {"n": "Aberdeen", "city": "Suwanee", "pl": "$640K", "grade": "A+", "min": 11, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/aberdeen-2.jpg"}, {"n": "Ashley Crossing", "city": "Alpharetta", "pl": "$620K", "grade": "B+", "min": 9, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/ashley-crossing.jpg"}, {"n": "Windermere", "city": "Cumming", "pl": "$810K", "grade": "A+", "min": 13, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/windermere.jpg"}, {"n": "St Marlo Country Club", "city": "Duluth", "pl": "$1.3M", "grade": "A+", "min": 14, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/st-marlo.jpg"}, {"n": "Windward", "city": "Alpharetta", "pl": "$910K", "grade": "A+", "min": 3, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/windward.jpg"}, {"n": "Bellmoore Park", "city": "Johns Creek", "pl": "$1.7M", "grade": "A+", "min": 17, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/bellmoore-park.jpg"}, {"n": "Medlock Bridge", "city": "Johns Creek", "pl": "$890K", "grade": "A+", "min": 15, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/medlock-bridge.jpg"}, {"n": "Cardinal Lake Estates", "city": "Duluth", "pl": "$430K", "grade": "B", "min": 8, "hero": "https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/cardinal-lake.jpg"}];
+const IC = {
+  car:'<path d="M3 13l2-5h14l2 5v5H3z"/><circle cx="7.5" cy="18" r="1.6"/><circle cx="16.5" cy="18" r="1.6"/>',
+  tree:'<path d="M12 3l6 9h-4l4 6H6l4-6H6z"/><path d="M12 18v3"/>',
+  dollar:'<path d="M12 3v18"/><path d="M16.5 7.5c0-1.7-2-3-4.5-3s-4.5 1.3-4.5 3 2 3 4.5 3 4.5 1.3 4.5 3-2 3-4.5 3-4.5-1.3-4.5-3"/>',
+  leaf:'<path d="M5 19c0-9 5-14 14-14 0 9-5 14-14 14z"/><path d="M5 19l8-8"/>',
+  expand:'<path d="M4 10V4h6"/><path d="M20 14v6h-6"/><path d="M4 4l7 7"/><path d="M20 20l-7-7"/>',
+};
+const by = n => PLACES.find(p => p.n === n);
+const Q = [
+ {q:'Where does your budget sit?', l:{t:'Around $675K',s:'Most of what you liked sits here',ic:'dollar'}, r:{t:'Around $1.2M',s:'The top of what you have seen',ic:'dollar'},
+  nl:["Ward's Crossing",'新房起价 $675K'], nr:['Edinburgh','估价 $1.2M 左右']},
+ {q:'On the highway, or tucked away?', l:{t:'Minutes from the highway',s:'On the road in five',ic:'car'}, r:{t:'Tucked further back',s:'Past the last traffic light',ph:P.tucked},
+  nl:['Windward','到 GA-400 只要 3 分钟'], nr:['White Columns','离 GA-400 有 20 分钟，躲在里面']},
+ {q:'Quiet, or in the middle of it?', l:{t:'A quiet street',s:'Nobody drives past',ph:P.quiet}, r:{t:'Walk to everything',s:'Coffee without the car',ph:P.walk},
+  nl:['Edinburgh','安静'], nr:['Ashley Crossing','能走路，周边 34 家餐馆']},
+ {q:'Grown in, or brand new?', l:{t:'Mature trees',s:'Forty years of shade',ph:P.mature}, r:{t:'Brand-new streets',s:'Nothing has worn out yet',ph:P.new},
+  nl:['White Columns','成熟社区'], nr:['Towne Village','在售新盘，$450K 起']},
+ {q:'A club, or no club?', l:{t:'Golf, pool and tennis',s:'The course is the back yard',ph:P.club}, r:{t:'No club, lower dues',s:'Pay for the house, not the fairway',ic:'leaf'},
+  nl:['Sugarloaf Country Club','带高尔夫球场俱乐部'], nr:['Harvest Park','没有俱乐部']},
+ {q:"What's outside the gate?", l:{t:'Trails and water',s:'A lake loop before work',ph:P.trails}, r:{t:'Restaurants nearby',s:'Dinner five minutes away',ph:P.dining},
+  nl:['Wild Timber','社区里有湖和步道'], nr:['Apremont - Highcroft','周边 39 家餐馆']},
+ {q:'Closer in, or more house?', l:{t:'Closer in',s:'Twenty minutes back every day',ic:'car'}, r:{t:'More house for it',s:'The same money goes further out',ic:'expand'},
+  nl:['Apremont - Highcroft','Peachtree Corners 开到市中心 46 分钟，8 个城市里最近'], nr:['Arbors at Richland Creek','Buford 更远，$525K 起']},
+];
+const $ = id => document.getElementById(id);
+let at = 0, busy = false, timer = null;
+function door(side, d){
+  const body = d.ph
+    ? '<div class="plates">'+d.ph.map(u=>'<div class="plate" style="background-image:url(\''+u+'\')"></div>').join('')+'</div>'
+    : '<div class="gl"><svg viewBox="0 0 24 24">'+IC[d.ic]+'</svg></div>';
+  return '<div class="door '+side+'" data-side="'+side+'"><div class="field"></div>'+(d.ph?'':'<div class="wm"><svg viewBox="0 0 24 24">'+IC[d.ic]+'</svg></div>')+
+    '<div class="green"></div><div class="scrimb"></div><div class="veil"></div><div class="foot">'+body+
+    '<div class="lab"><span>'+d.t+'</span><i><svg viewBox="0 0 12 12"><path d="M2.5 6.3l2.3 2.3 4.7-5"/></svg></i></div><div class="sup">'+d.s+'</div></div></div>';
+}
+function show(i){
+  clearTimeout(timer); busy = false; at = i; const q = Q[i];
+  $('head').style.opacity = 0; $('head').innerHTML = '';
+  $('stage').innerHTML = '<div class="card" id="qc"><div class="doors">'+door('l',q.l)+door('r',q.r)+'</div><div class="seam"></div><div class="or">or</div><div class="tops"></div><div class="badge">TRADE-OFF</div><div class="ask">'+q.q+'</div><div class="hint">tap one</div></div><div class="card off" id="nc"></div>';
+  $('under').innerHTML = '第 '+(i+1)+' 题，共 7 题。点左边或右边的门。';
+  document.querySelectorAll('#chips button').forEach((b,j)=>b.className = j===i?'on':'');
+  document.querySelectorAll('.door').forEach(d => d.onclick = () => pick(d.dataset.side));
+}
+function place(n){
+  const p = by(n);
+  $('nc').style.backgroundImage = 'url("'+p.hero+'")';
+  $('nc').innerHTML = '<div class="scrim"></div><div class="info"><small>COMMUNITY</small><b>'+p.n+'</b></div>';
+  $('head').innerHTML = '<div class="row"><b>'+p.city+'</b>, GA</div><div class="figs"><div><b>'+p.pl+'</b>home value</div><div><b>'+p.grade+'</b>school grade</div><div><b>'+p.min+' min</b>to the highway</div></div>';
+}
+function turn(){ $('qc').classList.add('gone'); $('nc').classList.remove('off'); $('head').style.opacity = 1; }
+function pick(side){
+  if (busy) return; busy = true; const q = Q[at], d = side==='l'?q.l:q.r, n = side==='l'?q.nl:q.nr;
+  $('qc').classList.add('pick-'+side); place(n[0]);
+  $('under').innerHTML = '记下了：<b>'+d.t+'</b>。符合的地方加分，另一边减一半。';
+  timer = setTimeout(()=>{ turn(); $('under').innerHTML = '记下了：<b>'+d.t+'</b>。<br>接下来先放：<b>'+n[0]+'</b> —— '+n[1]+'。'; }, 850);
+}
+$('skip').onclick = () => {
+  if (busy) return; busy = true; const other = Q[(at+3)%7].nl[0]; place(other); turn();
+  $('under').innerHTML = '划走了，什么都没记。下一张是照常排的 <b>'+other+'</b>。这一题过一阵再问一次；再划走就不问了。';
+};
+$('next').onclick = () => show((at+1)%7);
+$('chips').innerHTML = Q.map((q,i)=>'<button>'+(i+1)+'　'+q.q.replace(/\?$/,'')+'</button>').join('');
+document.querySelectorAll('#chips button').forEach((b,i)=>b.onclick=()=>show(i));
+show(2);
+</script>
+</body>
+</html>

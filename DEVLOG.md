@@ -23,6 +23,24 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-28 10:08 UTC — phase424: the owner's five answers on recommendation; a demo of the question card
+
+**Objective**: Owner's answers to phase421's five points (2026-11-28): 「给我看demo」 (question cards) · 「行」 (a liked city lifts its communities) · 「同意」 (schools rank only when stated) · 「加分」 (paid content) · 「好」 (start phase A).
+**Actions**:
+- `/demos/question-cards-v1` (Chinese, noindex): the Two Doors card as the app draws it, playable, for seven questions; a table of what launches and what is parked; three things for him to answer.
+- `docs/design/recommendation.md`: status to approved; §6 rewritten around the seven; §9.3 and §11 record his answers.
+**Findings**:
+- **A question card cannot be answered today.** Its answer was the swipe and phase414 made a swipe a page turn (phase414's own note says so). The demo's answer is a tap on a door — it opens to 66 %, goes green, takes its check, and the deck moves on by itself; a swipe past records nothing, the question returns once, a second swipe past retires it. The foot's "swipe either way" becomes "tap one".
+- **Seven questions launch, not the twelve I told him.** Fitting each to data and frames: my "new-build or established" is the bank's `to-trees-vs-new-streets`; my budget question and `to-topofbudget-vs-room` ask one thing, and the bank's needs a ceiling we do not know; `to-hoa` has no dues data and nearly every filmed community has a pool and courts; `to-transit-vs-quiet` has no rail in these eight cities; `to-culdesac-vs-sidewalks` has no street-shape data. Left: three old (`to-quiet-vs-walkable`, `to-trees-vs-new-streets`, `to-closer-vs-more`) and four new (budget, highway, club, trails-or-restaurants). Said to him as a correction at the top of the page.
+- **Door photos**: frames of Percho's own community films, by Cloudflare thumbnail at a place's segment (`tourSegments`), three to a door. City-film frames cannot be used — every one carries a burned-in figure. A side no frame depicts (a budget figure, "No club", "Minutes from the highway") stays unlit, the bank's existing rule; two questions therefore have one lit door and one unlit, which I put to him.
+**Decisions**:
+- 「加分」 overrules my proposal that payment change no score. Recorded in the spec; nothing to build, the billing backend is dark. Two things to settle when it is not: the size of the lift, and how the card says it is paid — the second is a disclosure matter, not a taste one.
+- Phase A starts without the question cards; they join when he has answered this demo, and their new copy is his to review (CLAUDE.md §6).
+**Verified**: headless Chrome — all fourteen doors chosen in turn, the skip, the next-question button; 24 plates load; no script errors.
+**Next steps**: his three answers on the demo. Phase A (signals, the score, 7 + 3 + 2, the dev score sheet) — next entry.
+
+---
+
 ## 2026-11-28 09:51 UTC — phase423: agent films move into the iOS app — no web (demo only)
 
 **Objective**: owner on `/demos/agent-film-v3` (2026-11-28): 「你所有的设计都是在web上 no！没人用web 全部管理操作都应该在手机上完成」. Three demos had put the agent on the web — the dashboard, then a phone-browser page. Read as: in the Percho iOS app.
