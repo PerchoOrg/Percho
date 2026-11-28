@@ -23,6 +23,25 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-28 00:26 UTC — phase412: the county page redrawn as tiles; dev client 1.1.1 (21) with the in-app browser
+
+**Objective**: Owner 2026-11-27: 「出新版本」, and of the page a county's pill opens on the Search map: 「点击后会看到county的数据 … 这个页面全是数字陈列很不好 重新设计一下」.
+**Build**: read as a new dev client, so the in-app browser (phase411) can be tried now; the store version waits for 1.1.1 (20)'s review and will carry this page too. `app.json` buildNumber 20 → **21** (version stays 1.1.1). `eas build --platform ios --profile development-testflight --non-interactive` with the `EXPO_ASC_*` / `EXPO_APPLE_TEAM_*` env → EAS `5993be37-0c43-4128-9930-f9f2b2ba9e29`. No new entitlement (expo-web-browser has none), so no App ID capability change. Never attach 21 to a store version; the next store build must be 22 or higher.
+**Actions — the county page** (`apps/mobile/app/area/[key].tsx`, rewritten):
+- Before: a cost total, six bars each with its figure, two chips, and every metro county ranked with a figure on every row.
+- Now built from the Explore page's parts (`Tile`, `parts`, `Donut`, `Ring`, `Bar`, `BottomSheet`):
+  - title + "Georgia · 5 cities and 9 communities on Percho";
+  - **On Percho here** (full width, first): poster cards of the county's filmed cities and communities, a tap opens them. Communities from `/api/mobile/map` over the county's box, kept only if their point is inside the county's outline; cities from `/api/mobile/search` by each community's city name, kept only if the city's own centre is in the county (St Marlo has a Duluth address and sits in Forsyth; without the check Forsyth listed Duluth and Suwanee);
+  - **Monthly cost** (half): a donut of the cost lines, the total inside;
+  - **Schools** (half): a ring of the share proficient on the state's tests;
+  - **Among 29 metro counties** (full width): cost and schools each a dot on a track, best at the right; words ("Top 17% for low cost") only in the top half — no verdict below it, as with the schools letter.
+  - Sheets: the cost lines with suppliers and which are estimates; what the schools figure measures; and the full metro ranking — one measure at a time (Monthly cost / Schools switch), bars instead of swatches, this county highlighted, a tap moves to another county.
+- `apps/mobile/lib/areas/county-page.ts` (+ tests): `standingOf`, `standingWords`, `shapeBox`, `insideCounty`.
+- `?lens=` is no longer read (phase411 removed the only caller that sent it).
+**Checked against production data**: Gwinnett 9 communities + Buford, Duluth, Peachtree Corners, Sugar Hill, Suwanee; Fulton 6 + Alpharetta, Johns Creek; Forsyth 5 + Cumming; Cobb none ("No films in this county yet").
+**Verified**: mobile tsc, 992 tests, biome.
+**Not verified**: the page's look — no simulator on this machine; owner sees it on the dev client.
+
 ## 2026-11-27 23:12 UTC — phase411: no Schools chip on the map; a readable "what you can search" card; web links open inside the app
 
 **Objective**: Owner 2026-11-27: 「去掉school filtering 在搜索tab里」; 「那个try suwanee有点奇怪 try看不清 重新设计这块的ui」; 「能不能把一些网页链接做成站内的 不要跳出去？」.
