@@ -1,8 +1,7 @@
 # Recommendation — Design
 
-> Status: **Proposed, 2026-11-28 (phase421). Nothing here is built.** The owner
-> approved the direction ("这个方向可以") and asked for the whole system
-> designed; five decisions in §11 are still his. The owner-facing version, in
+> Status: **Approved 2026-11-28, phase A to build** (designed in phase421; the
+> owner's answers are in §11). The owner-facing version, in
 > Chinese with a playable simulator, is `/demos/recommendation-v1`
 > (`apps/web/public/demos/recommendation-v1/index.html`) — the simulator's
 > script is a working sketch of §4–§6 over the 28 live films.
@@ -150,20 +149,41 @@ card is the first question.
 The Two Doors card, its gesture, its six authoring rules (`content.ts`) and its
 record of a choice as a fact (`TradeoffAnswer`) are reused as they are.
 
-Of the bank's 32 questions, 7 are about a place and usable now —
-`to-quiet-vs-walkable`, `to-closer-vs-more`, `to-trees-vs-new-streets`,
-`to-culdesac-vs-sidewalks`, `to-hoa`, `to-topofbudget-vs-room`,
-`to-transit-vs-quiet`. The other 25 are about the inside of a house and wait
-for listings: asked now they would reorder nothing (rule 3).
+Its answer was the swipe, and since phase414 a swipe only turns the page — so
+the card is answered by **tapping a door**: the door opens to 66 %, goes green,
+takes its check, and the deck moves on by itself. A swipe past records
+nothing; the question returns once, and a second swipe past retires it.
+(`/demos/question-cards-v1`, phase424 — awaiting the owner.)
+
+Of the bank's 32 questions, 7 are about a place. Fitting each to data and
+photographs (phase424) left **seven to launch with — three old, four new**:
+
+| | Question | Decided by |
+|---|---|---|
+| new | budget — two figures, the remaining pool split at its median, then again inside the chosen half | the card's price |
+| new | highway minutes vs tucked away | the card's highway minutes |
+| old | `to-quiet-vs-walkable` | `quiet` / `walkable` |
+| old | `to-trees-vs-new-streets` | the new-build flag |
+| new | a club vs none | the community has a golf club |
+| new | trails-and-water vs restaurants | nearby counts |
+| old | `to-closer-vs-more` | the city's drive downtown, against price |
+
+Parked: `to-hoa` (no dues data; nearly every filmed community has a pool and
+courts), `to-transit-vs-quiet` (no rail in these eight cities),
+`to-culdesac-vs-sidewalks` (no street-shape data; it would repeat the quiet /
+walkable question), `to-topofbudget-vs-room` (replaced by the budget question
+until a buyer's ceiling is known). The other 25 are about the inside of a
+house and wait for listings: asked now they would reorder nothing (rule 3).
+Two questions first drafted in phase421 were dropped as duplicates of bank
+questions on the same axis.
 
 Needed:
 
-- **Five new place questions the data can decide** — budget (adaptive: split
-  the remaining pool at its median, then again inside the chosen half),
-  highway minutes, new-build vs established, club vs none, trails-and-water vs
-  restaurants. Draft wording is on the demo page; **the owner reviews the copy
-  before it is committed** (CLAUDE.md §6).
-- **Door photos from Percho's own films** — they were listing photos.
+- **The four new questions' copy reviewed by the owner** before it is
+  committed (CLAUDE.md §6) — the drafts are on the demo page.
+- **Door photos from Percho's own films** — they were listing photos. A side
+  no frame depicts ("No club", a budget figure) stays unlit, as the bank's
+  rule already has it.
 - **A slot in the communities-only mix.**
 
 No schools question, now or later: rule 6 of the bank stands. School grade
@@ -225,11 +245,16 @@ lets the owner judge on his phone.
    repo's existing rules, not legal advice; a fair-housing lawyer should read
    this section before listings launch.
 2. **Run FMLS data through AI** (§4).
-3. **Let payment change a score.** The owner's own study: 8 of 10 buyers named
-   commercial bias as what would stop them trusting such a tool. Proposed:
-   agent films and Community Partner places score like any other; a paid
-   placement, if ever wanted, is its own labelled slot outside the 12. Owner's
-   call — §11.
+3. ~~Let payment change a score.~~ **Overruled — paid content earns score**
+   (owner, 2026-11-28: 「加分」, against the proposal here that agent films and
+   Community Partner places score like any other). Nothing to build yet: the
+   billing backend is dark and no paid content exists. When it does, two
+   things are still to settle with him — how large the lift is (proposed: no
+   more than one stated priority is worth, so it cannot outrank fit), and how
+   the card says it is paid. The second is not optional: US advertising rules
+   (the FTC's on native advertising and paid ranking) expect a paid placement
+   to be disclosed, and his own study had 8 of 10 buyers
+   naming commercial bias as what would stop them trusting such a tool.
 4. Reward swiping; add a paid service; add a line of text to the card (the
    "why" lives on the You tab).
 
@@ -244,12 +269,12 @@ lets the owner judge on his phone.
 | `/api/mobile/feed` `offset`/`limit` | a ranked request (§7), phase B |
 | `/api/mobile/similar` | extended to places, phase C |
 
-## 11. Open — the owner's
+## 11. The owner's answers (2026-11-28)
 
-1. Question cards: the old card, the 7 old place questions and the 5 new ones
-   — and the new copy.
-2. After a liked city: four or five of its communities in the next batch, not
-   a switch.
-3. School grade ranks only when the buyer states it.
-4. Paid content earns no score.
-5. Start phase A.
+1. Question cards — 「给我看demo」: `/demos/question-cards-v1`. **Open** until he
+   answers it; question cards are the one part of phase A that waits.
+2. After a liked city, four or five of its communities in the next batch, not
+   a switch — 「行」.
+3. School grade ranks only when the buyer states it — 「同意」.
+4. Paid content — 「加分」: it earns score. See §9.3.
+5. Start phase A — 「好」.
