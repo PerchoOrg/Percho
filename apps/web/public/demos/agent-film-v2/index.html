@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — Agent 的小区影片，第二版（设计方案）</title>
+<style>
+:root{
+  --green:#086B5B;
+  --ink:#181B18;
+  --ink2:#5A4E40;
+  --paper:#F6F3EC;
+  --sage:#E0E9E3;
+  --rust:#C86B3C;
+  --line:rgba(0,0,0,.09);
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, "Songti SC", serif;
+  --ui: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+  --dark: rgba(14,13,11,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:24px 14px 80px}
+section,.nav{max-width:860px;margin:0 auto}
+h1{font:600 26px/1.25 var(--serif);color:var(--green);margin-bottom:8px}
+h2{font:600 21px/1.3 var(--ui);margin:0 0 6px}
+h2 em{font-style:normal;font-weight:600;font-size:13px;color:#fff;background:var(--green);border-radius:11px;padding:2px 10px;margin-right:8px;vertical-align:3px}
+p,li{font:400 15px/1.65 var(--ui);color:var(--ink2)}
+p{margin:6px 0}
+b{color:#2B2116}
+a{color:var(--green)}
+code{font:500 13px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.6);border-radius:5px;padding:1px 6px;color:var(--green);word-break:break-all}
+section{margin-top:48px}
+ul,ol{margin:4px 0 4px 22px}
+.note{background:rgba(255,255,255,.55);border-radius:14px;padding:12px 18px;margin-top:14px}
+.note p{margin:3px 0}
+.new{outline:2px dashed var(--rust);outline-offset:3px}
+
+/* ── the dashboard, drawn ─────────────────────────── */
+.win{background:var(--paper);border-radius:16px;margin-top:16px;overflow:hidden;box-shadow:0 3px 10px rgba(32,28,22,.06),0 14px 34px rgba(32,28,22,.13)}
+.crumb{font:400 12px var(--ui);color:#8A8478;padding:14px 18px 0}
+.title{font:600 21px var(--serif);color:var(--ink);padding:2px 18px 0}
+.wtabs{display:flex;gap:22px;padding:10px 18px 0;border-bottom:1px solid var(--line);font:500 13.5px var(--ui);color:#8A8478}
+.wtabs span{padding-bottom:9px}
+.wtabs .on{color:var(--green);font-weight:600;border-bottom:2px solid var(--green)}
+.body{padding:16px 18px 20px}
+.banner{background:var(--sage);border-radius:12px;padding:12px 15px;font:400 13.5px/1.5 var(--ui);color:var(--ink)}
+.banner b{display:block;font:600 15px var(--ui);color:var(--green);margin-bottom:2px}
+.count{display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px;font:600 13px var(--ui);color:var(--ink)}
+.count span{font-weight:400;color:var(--ink2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px}
+.it{position:relative;border-radius:10px;overflow:hidden;background:#20262A center/cover;aspect-ratio:3/4}
+.it .lab{position:absolute;left:0;right:0;bottom:0;padding:16px 8px 6px;font:600 11px var(--ui);color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.72))}
+.chip{position:absolute;top:6px;left:6px;height:19px;padding:0 7px;border-radius:10px;font:600 10px/19px var(--ui);color:#fff;background:var(--green)}
+.chip.vid{left:auto;right:6px;background:rgba(14,13,11,.62)}
+.btn{display:inline-block;height:38px;padding:0 18px;border-radius:19px;background:var(--green);color:#fff;font:600 14px/38px var(--ui);white-space:nowrap}
+.foot{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-top:16px}
+.foot p{flex:1 1 220px;font-size:13px;margin:0}
+
+/* numbers */
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.num{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.num b{display:block;font:600 26px/1.1 var(--ui);color:var(--ink)}
+.num span{font:400 12.5px var(--ui);color:var(--ink2)}
+.num.warn b{color:#8A3A2A}
+.live{display:flex;gap:10px;align-items:center;margin-bottom:14px;font:400 13px var(--ui);color:var(--ink2)}
+.live i{flex:none;height:22px;padding:0 9px;border-radius:11px;background:var(--green);color:#fff;font:600 11px/22px var(--ui);font-style:normal}
+
+/* ── phone ─────────────────────────────────────────── */
+.phones{display:flex;flex-wrap:wrap;gap:26px 28px;justify-content:center;margin-top:18px}
+.cap{width:300px;font:400 13px/1.5 var(--ui);color:var(--ink2);margin-top:9px}
+.cap b{color:#2B2116}
+.phone{width:300px;height:640px;border-radius:34px;background:var(--paper);overflow:hidden;position:relative;box-shadow:0 3px 10px rgba(32,28,22,.06),0 16px 38px rgba(32,28,22,.16);display:flex;flex-direction:column;flex:none}
+.status{height:32px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font:600 11px var(--ui);color:var(--ink)}
+.row{height:40px;flex:none;display:flex;align-items:center;gap:8px;padding:0 14px;margin-top:10px}
+.line{flex:1;min-width:0;font:400 12.5px var(--ui);color:var(--ink2);white-space:nowrap;overflow:hidden}
+.line b{font-weight:600;color:var(--ink)}
+.pill{flex:none;height:28px;padding:0 11px;border-radius:14px;background:var(--sage);color:var(--green);font:600 12.5px/28px var(--ui);white-space:nowrap}
+.figs{height:42px;flex:none;display:flex;padding:0 14px;margin-top:5px}
+.figs div{flex:1;font:400 8.5px/1.3 var(--ui);color:var(--ink2);padding-left:8px;border-left:1px solid rgba(0,0,0,.1)}
+.figs div:first-child{padding-left:0;border-left:0}
+.figs b{display:block;font:600 17px/1.2 var(--ui);color:var(--ink)}
+.stage{flex:1;margin:10px 9px 12px;position:relative}
+.card{position:absolute;inset:0;border-radius:22px;overflow:hidden;background:#20262A center/cover}
+.scrim{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 44%,rgba(0,0,0,.5) 68%,rgba(0,0,0,.92) 100%)}
+.corner{position:absolute;top:10px;right:10px;display:flex;gap:6px}
+.corner i{width:29px;height:29px;border-radius:50%;background:var(--dark);display:flex;align-items:center;justify-content:center}
+.corner svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.place{position:absolute;top:10px;left:10px;max-width:118px;background:var(--dark);border-radius:10px;padding:5px 9px;color:#fff}
+.place b{display:block;color:#fff;font:600 9px/1.3 var(--ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.info{position:absolute;left:16px;right:14px;bottom:18px;color:#fff}
+.tag{font:700 8px var(--ui);letter-spacing:1px;color:rgba(255,255,255,.86);margin-bottom:4px}
+.name{font:600 22px/25px var(--serif)}
+.name .dot{display:inline-block;vertical-align:3px;width:20px;height:20px;border-radius:10px;background:#fff;color:var(--ink);font:700 13px/20px var(--ui);text-align:center;margin-left:2px}
+.by{display:inline-block;margin-top:7px;font:500 11.5px var(--ui);color:rgba(255,255,255,.92);border-radius:8px}
+.by b{color:#fff;font-weight:600}
+.agent{display:flex;align-items:center;gap:9px;margin-top:10px;background:rgba(255,255,255,.16);border-radius:15px;padding:8px 9px}
+.agent .face{flex:none;width:34px;height:34px;border-radius:17px;background:var(--sage);color:var(--green);font:600 13px/34px var(--ui);text-align:center}
+.agent .who{flex:1;min-width:0;font:600 12.5px/1.25 var(--ui)}
+.agent .who span{display:block;font:400 10.5px var(--ui);color:rgba(255,255,255,.82)}
+.agent .go{flex:none;height:28px;padding:0 12px;border-radius:14px;background:#fff;color:var(--ink);font:600 11.5px/28px var(--ui)}
+.tabs{height:58px;flex:none;border-top:1px solid rgba(0,0,0,.07);display:flex;justify-content:space-around;padding-top:9px;font:500 9px/1.5 var(--ui);color:#8A8478;text-align:center}
+.tabs b{color:var(--green);font-weight:600}
+/* county page, simplified */
+.page{flex:1;padding:6px 16px 0;overflow:hidden}
+.page h5{font:600 24px var(--serif);color:var(--ink)}
+.page .sub{font:400 12px var(--ui);color:var(--ink2);margin-bottom:12px}
+.tile{background:#fff;border-radius:16px;padding:12px;margin-bottom:10px}
+.tile h6{font:600 12.5px var(--ui);color:var(--ink);margin-bottom:8px}
+.tile .empty{font:400 12.5px var(--ui);color:#8A8478;padding:14px 0}
+.posters{display:flex;gap:8px}
+.poster{flex:none;width:92px;height:128px;border-radius:11px;background:#20262A center/cover;position:relative;overflow:hidden}
+.poster span{position:absolute;left:0;right:0;bottom:0;padding:14px 7px 6px;font:600 10px/1.25 var(--ui);color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.78))}
+.poster span small{display:block;font:400 8.5px var(--ui);color:rgba(255,255,255,.85)}
+.arrow{align-self:center;font:300 34px var(--ui);color:var(--rust)}
+/* the frame */
+.zone{position:absolute;background:repeating-linear-gradient(45deg,rgba(200,107,60,.55) 0 6px,rgba(200,107,60,.25) 6px 12px);border:1.5px solid var(--rust);border-radius:8px;color:#fff;font:600 9.5px/1.3 var(--ui);display:flex;align-items:center;justify-content:center;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.keep{position:absolute;left:9%;right:9%;top:21%;bottom:33%;border:2px dashed #fff;border-radius:12px;color:#fff;font:600 11px var(--ui);display:flex;align-items:flex-end;justify-content:center;padding-bottom:7px;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+
+.ask{background:rgba(255,255,255,.62);border-radius:14px;padding:14px 20px;margin-top:12px}
+.ask li{margin:8px 0}
+.ask li span{display:block;font-size:13.5px;color:var(--ink2)}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>Agent 的小区影片 · 第二版</h1>
+  <p>对着这两天 app 的改动重想之后，和<a href="/demos/agent-film-v1">第一版</a>比，变了五处。Agent 上传素材的那四步（拖进照片视频、勾授权、看镜头表、发布）不变，这里不再重画。</p>
+  <p>画面里的界面文字是英文。图取自现在 Edinburgh 的影片，小区名 Laurel Springs、agent 的名字和卡上的数字都只是示意。<b>橙色虚线框</b>是新增的东西，真实页面里没有虚线。</p>
+  <div class="note">
+    <p><b>第一版哪里错了</b>：我说 agent 的版本只放在他的链接上、app 不用动。但分享链接会直接打开 app，装了 app 的买家点进来看到的是 Percho 的片，agent 的版本和名片都不见了。见下面第二节。</p>
+  </div>
+</div>
+
+<section>
+  <h2><em>1</em>没有片的小区，agent 的片就是 app 里的片</h2>
+  <p>22,730 个小区里现在只有 20 个有片。Agent 给一个没片的小区做出来的那部，我们看过之后，就是 app 里这个小区的片，名字下面署他的名。county 页、搜索、首页都会自动出现它。</p>
+  <div class="phones">
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="page">
+          <h5>Cobb County</h5>
+          <div class="sub">Georgia</div>
+          <div class="tile"><h6>On Percho here</h6><div class="empty">No films in this county yet.</div></div>
+          <div class="tile"><h6>Schools</h6><div class="empty">…</div></div>
+          <div class="tile"><h6>Cost</h6><div class="empty">…</div></div>
+        </div>
+        <div class="tabs"><span>▶<br>Feed</span><b>⌕<br>Search</b><span>♡<br>Saved</span><span>☰<br>You</span></div>
+      </div>
+      <div class="cap"><b>现在</b>。一个没有片的 county。</div>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="page">
+          <h5>Cobb County</h5>
+          <div class="sub">Georgia</div>
+          <div class="tile new"><h6>On Percho here</h6>
+            <div class="posters">
+              <div class="poster" data-t="9"><span>Laurel Springs<small>with Dana Cole</small></span></div>
+              <div class="poster" data-t="13"><span>Vinings Glen<small>with Sam Ortiz</small></span></div>
+            </div>
+          </div>
+          <div class="tile"><h6>Schools</h6><div class="empty">…</div></div>
+        </div>
+        <div class="tabs"><span>▶<br>Feed</span><b>⌕<br>Search</b><span>♡<br>Saved</span><span>☰<br>You</span></div>
+      </div>
+      <div class="cap"><b>Agent 做了片之后</b>。同一页有内容了，每部写着是谁做的。</div>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="row"><div class="line"><b>Marietta, GA</b> · Cobb County</div><div class="pill">◎ Map</div></div>
+        <div class="figs"><div><b>$612K</b>est. home value</div><div><b>A</b>school grade</div><div><b>7 min</b>to I-75</div></div>
+        <div class="stage"><div class="card" data-t="9"><div class="scrim"></div>
+          <div class="place"><b>Laurel Springs Pool</b></div><div class="corner" data-corner></div>
+          <div class="info"><div class="tag">COMMUNITY</div><div class="name">Laurel Springs <span class="dot">›</span></div>
+            <div class="by new">with <b>Dana Cole</b> · Keller Williams</div></div>
+        </div></div>
+        <div class="tabs"><b>▶<br>Feed</b><span>⌕<br>Search</span><span>♡<br>Saved</span><span>☰<br>You</span></div>
+      </div>
+      <div class="cap"><b>首页的卡</b>。和别的小区卡一样，只多一行署名；点署名出他的名片。</div>
+    </div>
+  </div>
+  <div class="note">
+    <p><b>后台里 agent 看到的</b>：打开一个没片的小区，<code>My film</code> 最上面写着 "This neighbourhood has no film yet. Yours will be the one buyers see in the app."</p>
+    <p><b>已经有 Percho 片的 20 个小区</b>不变：app 里还是 Percho 的片，他的版本是另外一部。</p>
+    <p><b>同一个小区来了第二个 agent</b>：先到先得，第二位的版本只在他自己的链接上。</p>
+    <p><b>周边的学校、公园、商店</b>：没片的小区我们手里没有现成素材，要自动找一遍。每个小区花多少钱我还没有数，先跑一个量出来再报给你。</p>
+  </div>
+</section>
+
+<section>
+  <h2><em>2</em>Agent 的链接在 app 里打开，放的是他的版本</h2>
+  <p>买家点 agent 发来的链接：有 app 的直接进 app 的这个小区，放这位 agent 的版本，影片下面是他的名片，点 <code>Contact</code> 就是留给他的一条线索。没装 app 的还是网页，和第一版画的一样。<b>这一条要发一个 iOS 新版本。</b></p>
+  <div class="phones">
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="row"><div class="line"><b>Suwanee, GA</b> · Gwinnett County</div><div class="pill">◎ Map</div></div>
+        <div class="figs"><div><b>$641K</b>est. home value</div><div><b>A</b>school grade</div><div><b>6 min</b>to I-85</div></div>
+        <div class="stage"><div class="card" data-t="5"><div class="scrim"></div>
+          <div class="place"><b>Edinburgh Clubhouse</b></div><div class="corner" data-corner></div>
+          <div class="info"><div class="tag">COMMUNITY</div><div class="name">Edinburgh <span class="dot">›</span></div>
+            <div class="agent new"><div class="face">DC</div><div class="who">Dana Cole<span>Keller Williams</span></div><div class="go">Contact</div></div></div>
+        </div></div>
+        <div class="tabs"><b>▶<br>Feed</b><span>⌕<br>Search</span><span>♡<br>Saved</span><span>☰<br>You</span></div>
+      </div>
+      <div class="cap"><b>从 agent 的链接进来</b>。一个已有 Percho 片的小区，这里放的是他的版本，带名片。</div>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="row"><div class="line"><b>Suwanee, GA</b> · Gwinnett County</div><div class="pill">◎ Map</div></div>
+        <div class="figs"><div><b>$641K</b>est. home value</div><div><b>A</b>school grade</div><div><b>6 min</b>to I-85</div></div>
+        <div class="stage"><div class="card" data-t="1"><div class="scrim"></div>
+          <div class="place"><b>Edinburgh</b></div><div class="corner" data-corner></div>
+          <div class="info"><div class="tag">COMMUNITY</div><div class="name">Edinburgh <span class="dot">›</span></div></div>
+        </div></div>
+        <div class="tabs"><b>▶<br>Feed</b><span>⌕<br>Search</span><span>♡<br>Saved</span><span>☰<br>You</span></div>
+      </div>
+      <div class="cap"><b>自己刷到的</b>。同一个小区，还是 Percho 的片，没有名片。</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><em>3</em>给 agent 看他的片有多少人看</h2>
+  <p>爱心和大拇指朝下现在是明确的按键，app 也已经在往服务器回传操作记录。所以 <code>My film</code> 里可以给他一排数字，这是他继续补素材、继续转发的理由。其中"看了"和"看完"两项要跟着第二节那个 iOS 版本一起加上记录。下面的数字是示意。</p>
+  <div class="win">
+    <div class="crumb">Communities ›</div>
+    <div class="title">Laurel Springs</div>
+    <div class="wtabs"><span>Details</span><span>Media</span><span>Nearby</span><span class="on">My film</span></div>
+    <div class="body">
+      <div class="live"><i>Live in the app</i><span>since Dec 2 · percho.co/watch/c/laurel-springs/dana-cole</span></div>
+      <div class="nums new">
+        <div class="num"><b>214</b><span>buyers watched</span></div>
+        <div class="num"><b>96</b><span>watched to the end</span></div>
+        <div class="num"><b>31</b><span>hearts</span></div>
+        <div class="num"><b>4</b><span>contacted you</span></div>
+      </div>
+      <div class="foot"><p>Films with more of the neighbourhood itself are watched longer. Add material and recut.</p><span class="btn">Add material</span></div>
+    </div>
+  </div>
+  <div class="note">
+    <p><b>质量保险</b>：一部 agent 的片被点"不喜欢"的比例明显比别的片高，就自动从 app 里撤下来，回到我们这里人工看。这个数字不给 agent 看。</p>
+  </div>
+</section>
+
+<section>
+  <h2><em>4</em>素材按卡片的框来挑和裁</h2>
+  <p>卡片左上角是地名，右上角四个按键，下面是小区名和署名。Agent 拍的东西如果主体正好在这些位置，就会被盖住。所以挑视频片段和裁照片时，主体要落在中间的白框里；每件素材的名字限制在左上角放得下的长度（大约 24 个字符）。</p>
+  <div class="phones">
+    <div>
+      <div class="phone" style="height:520px">
+        <div class="stage" style="margin:12px 9px"><div class="card" data-t="9">
+          <div class="zone" style="left:8px;top:8px;width:124px;height:32px">place name</div>
+          <div class="zone" style="right:8px;top:8px;width:140px;height:36px">four buttons</div>
+          <div class="zone" style="left:8px;right:8px;bottom:8px;height:27%">name · agent · pill</div>
+          <div class="keep">the subject stays in here</div>
+        </div></div>
+      </div>
+      <div class="cap"><b>斜线</b>是会被盖住的地方，<b>白框</b>是主体该在的地方。</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><em>5</em>后台里：没片的小区会明说</h2>
+  <div class="win">
+    <div class="crumb">Communities ›</div>
+    <div class="title">Laurel Springs</div>
+    <div class="wtabs"><span>Details</span><span>Media</span><span>Nearby</span><span class="on">My film</span></div>
+    <div class="body">
+      <div class="banner new"><b>This neighbourhood has no film yet.</b>Yours will be the one buyers see in the app, with your name on it.</div>
+      <div class="count">Your material <span>5 ready</span></div>
+      <div class="grid" id="mat"></div>
+      <div class="foot"><p>5 ready items, one of them inside Laurel Springs, is enough for a film.</p><span class="btn">Make my film</span></div>
+    </div>
+  </div>
+  <p style="margin-top:12px">这一页要在手机浏览器里也好用，因为素材都在 agent 的手机上。</p>
+</section>
+
+<section>
+  <h2>需要你定</h2>
+  <div class="ask">
+    <ol>
+      <li><b>没片的小区，agent 的片看过之后直接当 app 里的片</b><span>建议：是。这是补覆盖率最快的路。</span></li>
+      <li><b>Agent 的链接在 app 里打开时放他的版本和名片</b><span>建议：是。要发一个 iOS 版本。</span></li>
+      <li><b>首页卡上那行署名（with Dana Cole · Keller Williams）</b><span>建议：要。这是 agent 肯做的原因，也只有一行。</span></li>
+      <li><b>第一版里另外三条不变</b><span>素材也进 Percho 素材库并署名；每个 agent 每个小区一部，一天最多重剪一次；头一批人工看过才生效。</span></li>
+    </ol>
+    <p style="margin-top:8px">回 <b>「都按建议」</b>，或者告诉我哪一条要改。</p>
+  </div>
+</section>
+
+<script>
+const UID = 'bbcc652c5781ea1227d705a6661fbe68';
+const still = (t, h = 860) => `https://videodelivery.net/${UID}/thumbnails/thumbnail.jpg?time=${t}s&height=${h}`;
+for (const el of document.querySelectorAll('[data-t]')) el.style.backgroundImage = `url(${still(el.dataset.t, el.classList.contains('poster') ? 300 : 860)})`;
+
+const svg = (d) => `<svg viewBox="0 0 24 24"><path d="${d}"/></svg>`;
+const CORNER = [
+  'M4 9.5v5h3.5L12 18V6L7.5 9.5H4zM16 9a4.2 4.2 0 0 1 0 6',
+  'M20 4L3.5 9.6l6.7 3.2 3.2 6.7zM10.2 12.8L14.5 8.5',
+  'M8 4.5h8.4a1.8 1.8 0 0 1 1.8 1.5l.9 6a1.8 1.8 0 0 1-1.8 2.1h-3.6l.7 3.3a1.9 1.9 0 0 1-3.5 1.4L8 13.6zM8 4.5H4.6v9.1H8',
+  'M12 20.3s-7.6-4.6-7.6-10.2A4.3 4.3 0 0 1 12 7.5a4.3 4.3 0 0 1 7.6 2.6c0 5.6-7.6 10.2-7.6 10.2z',
+].map((d) => `<i>${svg(d)}</i>`).join('');
+for (const el of document.querySelectorAll('[data-corner]')) el.innerHTML = CORNER;
+
+const MAT = [[1, 'Entrance'], [5, 'Clubhouse'], [9, 'Pool', '0:38'], [13, 'Tennis courts'], [25, 'Trail', '0:21']];
+const mat = document.getElementById('mat');
+for (const [t, lab, vid] of MAT) {
+  const it = document.createElement('div');
+  it.className = 'it';
+  it.style.backgroundImage = `url(${still(t, 420)})`;
+  it.innerHTML = `<div class="chip">Ready</div>${vid ? `<div class="chip vid">▶ ${vid}</div>` : ''}<div class="lab">${lab}</div>`;
+  mat.append(it);
+}
+</script>
+</body>
+</html>
