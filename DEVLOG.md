@@ -23,7 +23,7 @@ rotation, not on the way in.
 
 ---
 
-## 2026-11-28 07:40 UTC — phase415: a strip on both sides; a hidden card leaves the deck; thumbs-down, heart last
+## 2026-11-28 07:21 UTC — phase415: a strip on both sides; a hidden card leaves the deck; thumbs-down, heart last
 
 **Objective**: Owner on the phone, after phase414 (2026-11-28): 「左边也露出一点这样知道可以回看？」 · 「点击x之后就不能向回看了」 · 「点击x的动画效果和滑动应该区分开」 · 「爱心放到最右边 x有没有别的替代让人一看就知道是不喜欢 而不是关闭」.
 **Actions** (`apps/mobile`):
