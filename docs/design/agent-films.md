@@ -44,6 +44,48 @@ photo steps run for it automatically (Google Places, Gemini). Not priced —
 run one community and measure before any batch. The page must work in a
 phone browser; the material is on the agent's phone.
 
+## Decided, and the way in — 2026-11-28 (phase422)
+
+Owner's answers to the revision's four points: yes; yes — and more than a
+card: **a photo, a moving portrait, the agent's own voice, as paid
+features**; yes; ok. Then: 「我还是不明白入口在哪里 管理界面长什么样子 如何快速
+定义并且上传一个社区 而不是找现有的社区」. Demo:
+`https://www.percho.co/demos/agent-film-v3`. Proposed, not yet ruled:
+
+- **One address**, `percho.co/film` (name open), phone browser first — the
+  material is on the agent's phone and a web page needs no App Review. It
+  signs in with the existing agent account. Three ways to it: the address
+  itself; a row at the foot of the app's You tab ("Are you an agent?",
+  opened in the in-app browser of phase411); a line under every agent
+  film's shared page. This replaces the "My film tab on the dashboard's
+  community page" of the first draft as the way in; the dashboard can link
+  to it.
+- **Management is one list**: My films — a row per film with its state
+  (needs material / being checked / live) and, when live, its numbers — and
+  one button, New film.
+- **New film is material first, place second.** The agent picks photos and
+  video; the place is read from where they were taken and matched with the
+  `match_community` RPC (containing boundary, else nearest within 250 m);
+  one tap confirms. Otherwise the agent types a name, picks a suggestion,
+  or adds a new community with a name and a pin. A new community stays
+  `inactive` until its film is approved; `lib/communities/naming.ts`
+  de-duplicates. The same coordinates settle "one item from inside the
+  community". **Unverified**: whether iOS Safari hands a picked photo's
+  location to the page — test on a device; the fallback is the phone's
+  current position.
+- **A film's own page**: watch, copy link, numbers, add material; under it
+  Your card — name and brokerage free; photo, moving portrait and own voice
+  marked Partner.
+- **The three paid things, as proposed**: the photo on the card and the end
+  card; the moving portrait a few seconds the agent records of themself,
+  looped on the card — not a generated avatar; the voice the agent reading
+  the film's script line by line on the phone, replacing the synthetic
+  narration — not a cloned voice. Neither needs a new service, and a read
+  narration spends none of the 100-lines-a-day quota. A generated avatar or
+  a cloned voice would be a new paid service and is priced before it is
+  proposed. Payment is the Community Partner plan of phase341 (dark; needs
+  the owner's Stripe account).
+
 ## Why
 
 Every film today is cut by Percho from photos Percho found. That is the cold
