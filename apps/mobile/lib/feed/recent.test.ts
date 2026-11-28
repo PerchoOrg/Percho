@@ -62,6 +62,39 @@ describe("recentEntryFor", () => {
 		expect(e?.geoUnitId).toBeUndefined();
 	});
 
+	it("snapshots a city, crediting its own unit", () => {
+		const e = recentEntryFor(
+			{
+				kind: "area",
+				id: "area-city:suwanee-ga",
+				unit: {
+					id: "city:suwanee-ga",
+					level: "city",
+					name: "Suwanee",
+					state: "GA",
+					centroid: { lat: 34.05, lng: -84.07 },
+					heroUrl: "https://example.test/suwanee.jpg",
+					communityCount: 127,
+					sampleCommunityNames: [],
+					stats: {},
+				},
+			},
+			"left",
+			7,
+			1.5,
+		);
+		expect(e).toMatchObject({
+			id: "area-city:suwanee-ga",
+			kind: "area",
+			verdict: "left",
+			title: "Suwanee",
+			subtitle: "GA",
+			thumbUrl: "https://example.test/suwanee.jpg",
+			geoUnitId: "city:suwanee-ga",
+			weight: 1.5,
+		});
+	});
+
 	it("returns null for a trade-off — an answer is not revertible (§1.8)", () => {
 		const tradeoff: TradeoffCardV3 = {
 			kind: "tradeoff",

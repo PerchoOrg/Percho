@@ -4,11 +4,11 @@
  * out — three quarters above the block, a quarter under the card (phase381).
  *
  *     status bar
- *     ── room: ¾ of what is left (15–35pt on the shipping phones) ──
+ *     ── room: ¾ of what is left (22–41pt on the shipping phones) ──
  *     place row · 8 · figures row        ← `PlaceBlock`
  *     14
  *     card, the film's own shape
- *     12 + ¼ of what is left (17–24pt)
+ *     12 + ¼ of what is left (19–26pt)
  *     tab bar
  *
  * ── Why ─────────────────────────────────────────────────────────────────────
@@ -54,6 +54,20 @@ import { headerScale } from "./header-scale";
  * `theme/card-aspect.test.ts` holds the ceiling.
  */
 export const GUTTER = 8;
+/**
+ * The paper between two cards, and how much of the NEXT card shows past it at
+ * the screen's right edge (phase414). The deck pages sideways now, and with
+ * the card a gutter from both edges nothing on the page said there was a
+ * second one. The card gives up 6pt of width for that strip — 9pt of height,
+ * which the room above the block and the foot take 3 : 1. A wider strip costs
+ * the film more than it tells the buyer.
+ *
+ * The gap equals `GUTTER` on purpose: the card BEFORE then ends exactly at the
+ * screen's left edge, so the strip is only ever the next card — a 2pt sliver
+ * of the last one on the left would read as a fault.
+ */
+export const CARD_GAP = 8;
+export const NEXT_PEEK = 6;
 /** Card → tab bar, at least; a share of the leftover is added to it. */
 export const CARD_FOOT = 12;
 /** How the leftover is shared: above the block : under the card. */
@@ -93,8 +107,13 @@ export function blockHeight(width: number, rows: BlockRows): number {
  *                       the offline bar, when shown) and the tab bar; 0
  *                       before it is measured
  */
+/** The card: a gutter on its left, the gap and the next card's strip on its right. */
+export function cardWidthFor(width: number): number {
+	return Math.max(0, width - GUTTER - CARD_GAP - NEXT_PEEK);
+}
+
 export function feedPage(width: number, contentHeight: number): FeedPage {
-	const cardWidth = Math.max(0, width - GUTTER * 2);
+	const cardWidth = cardWidthFor(width);
 	if (!(contentHeight > 0) || cardWidth === 0) {
 		return { cardWidth, cardHeight: 0, rows: "both" };
 	}

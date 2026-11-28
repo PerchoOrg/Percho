@@ -5,7 +5,6 @@ import {
 	SWIPE_THRESHOLD_RATIO,
 	SWIPE_VELOCITY_PTS,
 	decideSwipe,
-	stepThresholdLatch,
 } from "./decide-swipe";
 
 const CARD_W = 400;
@@ -215,57 +214,5 @@ describe("decideSwipe — degenerate input", () => {
 				cardWidth: 0,
 			}),
 		).toBe("none");
-	});
-});
-
-describe("stepThresholdLatch — §0.5 threshold haptic", () => {
-	const step = (translationX: number, latched: boolean) =>
-		stepThresholdLatch({ translationX, cardWidth: CARD_W, latched });
-
-	it("a left swipe never fires", () => {
-		let latched = false;
-		for (const x of [-20, -THRESHOLD, -THRESHOLD * 2]) {
-			const r = step(x, latched);
-			expect(r.fire).toBe(false);
-			latched = r.latched;
-		}
-		expect(latched).toBe(false);
-	});
-
-	it("a right swipe fires exactly once while held past the threshold", () => {
-		let latched = false;
-		let fires = 0;
-		for (const x of [10, THRESHOLD, THRESHOLD + 5, THRESHOLD + 40]) {
-			const r = step(x, latched);
-			if (r.fire) fires++;
-			latched = r.latched;
-		}
-		expect(fires).toBe(1);
-	});
-
-	it("fires once per crossing when the finger crosses back and forth", () => {
-		let latched = false;
-		let fires = 0;
-		const path = [
-			THRESHOLD, // cross
-			THRESHOLD + 20,
-			THRESHOLD - 1, // retreat
-			THRESHOLD, // cross again
-			THRESHOLD + 30,
-			0, // retreat
-			THRESHOLD, // cross again
-		];
-		for (const x of path) {
-			const r = step(x, latched);
-			if (r.fire) fires++;
-			latched = r.latched;
-		}
-		expect(fires).toBe(3);
-	});
-
-	it("never fires on an unmeasured card", () => {
-		expect(
-			stepThresholdLatch({ translationX: 1, cardWidth: 0, latched: false }),
-		).toEqual({ fire: false, latched: false });
 	});
 });

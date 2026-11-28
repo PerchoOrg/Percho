@@ -34,6 +34,7 @@ import {
 	type SignalState,
 	type SwipeEngagement,
 	applyDimRemoval,
+	applyInterest,
 	applyScope,
 	applySkipLayer,
 	applySwipe,
@@ -65,19 +66,40 @@ interface FeedSessionState {
 	 * (`withoutSwipedAway`, `lib/feed/place-deck.ts`).
 	 */
 	swipedThisRun: readonly string[];
+	/**
+	 * Cards the buyer hid with the card's cross (phase414). A deck is never
+	 * dealt one again (`lib/feed/hidden.ts`) until its verdict is taken back.
+	 */
+	hiddenIds: readonly string[];
 	/** Nth session for this install (§1.10 `session_n`). */
 	sessionN: number;
 	/** Epoch ms of the previous swipe, for §1.10 `dt_since_prev_swipe`. */
 	lastSwipeAt?: number;
 	hydrated: boolean;
 
-	/** Record a swipe. Returns the resulting signals. */
+	/**
+	 * Record a verdict on a card. Returns the resulting signals.
+	 *
+	 * Until phase414 every swipe was one. A swipe only turns the page now
+	 * (`recordView`), and the verdicts are the heart ("right") and the cross
+	 * ("left", through `hide`) — the name stayed with what it records.
+	 */
 	recordSwipe: (
 		card: FeedCardV3,
 		verdict: SwipeVerdict,
 		at: number,
 		engagement?: SwipeEngagement,
 	) => SignalState;
+	/** The buyer turned the page past a card: seen, and nothing said about it. */
+	recordView: (card: FeedCardV3) => void;
+	/** The card's cross: a "left" verdict, and the card leaves every deck. */
+	hide: (
+		card: FeedCardV3,
+		at: number,
+		engagement?: SwipeEngagement,
+	) => SignalState;
+	/** Interest short of a like — see `applyInterest`. */
+	recordInterest: (card: FeedCardV3) => void;
 	skipLayer: (layer: FunnelLayer) => void;
 	/**
 	 * The buyer picked a community scope in the feed's scope sheet, or cleared
@@ -86,7 +108,8 @@ interface FeedSessionState {
 	setScope: (pick: { unitId: string; name: string } | null) => void;
 	/**
 	 * You-tab "Bring back": undo one recorded verdict and let the card be
-	 * composed into the deck again. A no-op for an id the list no longer holds.
+	 * composed into the deck again — a hidden card is no longer hidden. The
+	 * verdict itself can only be undone while the list still holds it.
 	 */
 	bringBack: (id: string) => void;
 	/** You-tab evidence correction: "No, remove" on one preference dim. */
@@ -106,6 +129,7 @@ export const useFeedSession = create<FeedSessionState>()(
 			seenListingIds: [],
 			recent: [],
 			swipedThisRun: [],
+			hiddenIds: [],
 			sessionN: 0,
 			hydrated: false,
 
@@ -136,6 +160,30 @@ export const useFeedSession = create<FeedSessionState>()(
 				return signals;
 			},
 
+			recordView: (card) =>
+				set((s) => ({
+					swipedThisRun: [...s.swipedThisRun, card.id],
+					seenIds: s.seenIds.includes(card.id)
+						? s.seenIds
+						: [...s.seenIds, card.id],
+					...(card.kind === "listing" && !s.seenListingIds.includes(card.id)
+						? { seenListingIds: [...s.seenListingIds, card.id] }
+						: {}),
+				})),
+
+			hide: (card, at, engagement) => {
+				const signals = get().recordSwipe(card, "left", at, engagement);
+				set((s) => ({
+					hiddenIds: s.hiddenIds.includes(card.id)
+						? s.hiddenIds
+						: [...s.hiddenIds, card.id],
+				}));
+				return signals;
+			},
+
+			recordInterest: (card) =>
+				set((s) => ({ signals: applyInterest(s.signals, card) })),
+
 			skipLayer: (layer) =>
 				set((s) => ({ signals: applySkipLayer(s.signals, layer) })),
 
@@ -144,9 +192,13 @@ export const useFeedSession = create<FeedSessionState>()(
 
 			bringBack: (id) =>
 				set((s) => {
+					const hiddenIds = s.hiddenIds.filter((x) => x !== id);
 					const entry = s.recent.find((e) => e.id === id);
-					if (!entry) return s;
+					if (!entry) {
+						return hiddenIds.length === s.hiddenIds.length ? s : { hiddenIds };
+					}
 					return {
+						hiddenIds,
 						signals: revertSwipe(s.signals, {
 							id: entry.id,
 							kind: entry.kind,
@@ -190,6 +242,7 @@ export const useFeedSession = create<FeedSessionState>()(
 					seenListingIds: [],
 					recent: [],
 					swipedThisRun: [],
+					hiddenIds: [],
 					lastSwipeAt: undefined,
 				}),
 		}),
@@ -203,6 +256,7 @@ export const useFeedSession = create<FeedSessionState>()(
 				seenIds: s.seenIds,
 				seenListingIds: s.seenListingIds,
 				recent: s.recent,
+				hiddenIds: s.hiddenIds,
 				sessionN: s.sessionN,
 			}),
 			onRehydrateStorage: () => () => {

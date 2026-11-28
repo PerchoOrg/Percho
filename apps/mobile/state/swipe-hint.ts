@@ -1,10 +1,10 @@
 /**
  * The swipe-hint state (owner spec, 2026-08-13).
  *
- * On the FIRST entry to the feed (after the card settles ~500-800ms) the top
- * card shows itself being liked, then passed, and comes back — the motion hint
- * that the cards swipe and what each side means (a 14-18pt nudge to the left
- * until phase365).
+ * On the FIRST entry to the feed the first card carries one line — "Swipe for
+ * the next place" (`components/feed/SwipeHintChip.tsx`, phase414). Until then
+ * the card moved by itself: a nudge to the left, and from phase365 a show of
+ * being liked and then passed, which is what a swipe meant.
  * It must never nag:
  *
  *   - `hasDiscoveredSwipe` — set the moment the buyer completes ANY real
@@ -54,7 +54,10 @@ export const useSwipeHintStore = create<SwipeHintState>()(
 			},
 		}),
 		{
-			name: "percho-v3:swipe-hint:v1",
+			// v2 (phase414): a swipe turns the page now instead of judging the
+			// card, so a buyer who had "discovered" the old swipe is shown the
+			// new line once.
+			name: "percho-v3:swipe-hint:v2",
 			storage: createJSONStorage(() => AsyncStorage),
 			partialize: (s) => ({
 				hasDiscoveredSwipe: s.hasDiscoveredSwipe,

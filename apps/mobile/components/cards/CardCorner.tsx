@@ -75,6 +75,18 @@
  * the same control in two places on two kinds of card read as inconsistent.
  * The cost is the place pill in the other corner, which loses ~75pt — the
  * community face drops the pill's distance first when the name is long.
+ *
+ * ── A fourth disc: the cross (phase414) ─────────────────────────────────────
+ *
+ * A swipe stopped being a verdict (owner, 2026-11-27: 「滑走不一定不喜欢」), so
+ * "not for me" needs a control of its own, and he asked for one (「要x」). It
+ * is the last disc in the row — the corner a dismiss sits in everywhere, and
+ * the far side of the card from the thumb, which a control that takes a card
+ * away should be. The heart stays where it is and is the like now as well as
+ * the save. Only the feed's cards pass `hide`; the explore page's hero has
+ * nothing to dismiss.
+ *
+ * The cross is two bars: neither weight of the icon font carries one.
  */
 import { Pressable, StyleSheet, View } from "react-native";
 import { redline } from "../../theme/tokens";
@@ -91,6 +103,9 @@ export const CORNER_INSET = 12;
 export const CORNER_GAP = 8;
 /** Glyph size — a little over half the disc. */
 const GLYPH = 19;
+/** The cross's box, and its bars' weight — the outline glyphs' own stroke. */
+const CROSS = 13;
+const CROSS_STROKE = 1.75;
 const SLOP = {
 	top: 8,
 	bottom: 8,
@@ -118,6 +133,8 @@ interface CardCornerProps {
 	save?: CornerControl & { saved: boolean };
 	/** Present when the card has a page to send someone to (phase335). */
 	share?: CornerControl;
+	/** Present when the card can be hidden from the deck (phase414). */
+	hide?: CornerControl;
 	/**
 	 * Lay the row out in place instead of pinning it to the card's top-right.
 	 * The explore page's hero puts the same row in its own nav bar
@@ -135,7 +152,8 @@ function Disc({
 }: {
 	control: CornerControl;
 	label: string;
-	name: RedlineIconName;
+	/** The glyph, or absent for the one control the font has no glyph for. */
+	name?: RedlineIconName;
 	weight?: "outline" | "fill";
 	color?: string;
 }) {
@@ -148,26 +166,34 @@ function Disc({
 			hitSlop={SLOP}
 			style={({ pressed }) => [styles.disc, pressed && styles.pressed]}
 		>
-			<RedlineIcon
-				name={name}
-				size={GLYPH}
-				color={color}
-				weight={weight}
-				// Every glyph here sits beside, or swaps with, an outline one.
-				matchOutline
-			/>
+			{name ? (
+				<RedlineIcon
+					name={name}
+					size={GLYPH}
+					color={color}
+					weight={weight}
+					// Every glyph here sits beside, or swaps with, an outline one.
+					matchOutline
+				/>
+			) : (
+				<View style={styles.cross}>
+					<View style={[styles.crossBar, styles.crossDown]} />
+					<View style={[styles.crossBar, styles.crossUp]} />
+				</View>
+			)}
 		</Pressable>
 	);
 }
 
-/** The top-right corner: mute, save and share, each its own disc, in a row. */
+/** The top-right corner: mute, save, share and hide, each its own disc, in a row. */
 export function CardCorner({
 	sound,
 	save,
 	share,
+	hide,
 	inline = false,
 }: CardCornerProps) {
-	if (!sound && !save && !share) return null;
+	if (!sound && !save && !share && !hide) return null;
 	return (
 		<View style={[styles.row, !inline && styles.pinned]}>
 			{sound && (
@@ -192,6 +218,7 @@ export function CardCorner({
 				/>
 			)}
 			{share && <Disc control={share} label="Share" name="share" />}
+			{hide && <Disc control={hide} label="Not for me" />}
 		</View>
 	);
 }
@@ -224,4 +251,20 @@ const styles = StyleSheet.create({
 	 */
 	disc: CORNER_DISC_STYLE,
 	pressed: { opacity: 0.7 },
+	/** The cross: two bars across a box a little smaller than the glyphs. */
+	cross: {
+		width: CROSS,
+		height: CROSS,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	crossBar: {
+		position: "absolute",
+		width: CROSS * Math.SQRT2 - 2,
+		height: CROSS_STROKE,
+		borderRadius: CROSS_STROKE / 2,
+		backgroundColor: INK,
+	},
+	crossDown: { transform: [{ rotate: "45deg" }] },
+	crossUp: { transform: [{ rotate: "-45deg" }] },
 });
