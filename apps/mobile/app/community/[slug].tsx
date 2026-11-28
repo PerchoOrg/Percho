@@ -71,12 +71,15 @@ import type {
 	CommunityDetailDTO,
 	CommunityReasonDTO,
 } from "../../lib/community/detail-dto";
+import type { RecentPlace } from "../../lib/feed/recent";
 import { LISTINGS_IN_APP, TEST_HOMES } from "../../lib/listings-in-app";
 import { type ReviewStatus, fetchMyReview } from "../../lib/reviews/reviews";
 import { backOrFeed } from "../../lib/share/back-or-feed";
 import { openShareSheet } from "../../lib/share/share-sheet";
 import { useAuthStore } from "../../state/auth";
+import { useFeedSession } from "../../state/feed-session";
 import { useSavedStore } from "../../state/saved";
+import { toggleDislike, toggleLike } from "../../state/verdict";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -124,7 +127,9 @@ export default function CommunityWhyScreen() {
 	// card's top-right corner belongs to the tour video's place/distance label
 	// (owner 2026-08-20: "remove the save button on the top right for cards").
 	const saved = useSavedStore((s) => (data ? s.isSaved(data.id) : false));
-	const toggleSaved = useSavedStore((s) => s.toggle);
+	const hidden = useFeedSession((s) =>
+		data ? s.hiddenIds.includes(data.id) : false,
+	);
 
 	// The signed-in user's own review, in any status — so the CTA can read
 	// "Edit your review" and a pending one can say so. Anon sees only approved
@@ -207,6 +212,14 @@ export default function CommunityWhyScreen() {
 	}
 
 	const place = [data.city, data.state].filter(Boolean).join(", ");
+	/** This community as a verdict knows it — the row RECENT will show. */
+	const verdictPlace: RecentPlace = {
+		id: data.id,
+		kind: "community",
+		title: data.name,
+		subtitle: place,
+		...(data.heroUrl ? { thumbUrl: data.heroUrl } : {}),
+	};
 	// A researched community gets the one-screen page (phase339); the rest keep
 	// the sections below, which need nothing but the row.
 	const profile = data.profile;
@@ -241,8 +254,13 @@ export default function CommunityWhyScreen() {
 					initial={data.name.trim().charAt(0).toUpperCase()}
 					segments={data.tourSegments ?? []}
 					saved={saved}
+					hidden={hidden}
 					onBack={backOrFeed}
-					onToggleSave={() => toggleSaved(data.id, "community")}
+					// The card's two verdicts, with the card's rules: the heart is
+					// a like and a save, the thumbs-down hides the place from the
+					// feed and takes a heart with it.
+					onToggleSave={() => toggleLike(verdictPlace)}
+					onToggleHide={() => toggleDislike(verdictPlace)}
 					// Share (phase D) — the public web page for this community,
 					// which opens here when the buyer has the app (phase335).
 					onShare={() =>

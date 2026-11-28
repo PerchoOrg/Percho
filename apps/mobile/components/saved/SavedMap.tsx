@@ -2,10 +2,17 @@
  * The Saved tab's map view (phase386): where the saves are, relative to each
  * other — the one thing the shelves, the grid and the list cannot show.
  *
- * A map above, a rail of the same saves below. The RAIL is how a save is
- * opened or picked; swiping it flies the map to that save, and tapping a mark
- * brings its card up. Opening never depends on a tap landing on a small
- * marker — `(tabs)/search.tsx` records how unreliable that is.
+ * A map above, a rail of the same saves below. Swiping the rail flies the map
+ * to that save. Tapping a mark OPENS the save, as tapping its card does, and
+ * brings its card up behind the page it opens.
+ *
+ * Until phase416 a mark only brought its card up, so with one save — its card
+ * already up — a tap did nothing at all (owner, 2026-11-28: 「map里看到有视频的
+ * 社区点击没有反应」). And the tap itself often never arrived: a marker's own
+ * `onPress` is the wire `(tabs)/search.tsx` records failing on small custom
+ * marks six times. So the tap is taken the way that screen takes it — a
+ * gesture-handler Tap over the map, resolved to the nearest mark — with the
+ * marker's `onPress` kept as a second wire into the same door.
  *
  * A save with no point (a community read from an API older than phase386)
  * keeps its card and simply has no mark.
@@ -22,7 +29,8 @@ import {
 	Text,
 	View,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import MapView, { Marker, type Region } from "react-native-maps";
 import type { SavedTile } from "../../lib/saved/shelves";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
@@ -40,6 +48,10 @@ const CARD_W = 248;
 const CARD_GAP = 10;
 const RAIL_PAD = 20;
 const FLY_MS = 450;
+/** How near a mark a tap has to land, in points — the Search map's radius. */
+const MARK_TAP_RADIUS = 36;
+/** One tap can arrive on both wires; the second inside this is dropped. */
+const TAP_DEDUPE_MS = 800;
 
 const coordOf = (t: SavedTile) =>
 	t.center ? { latitude: t.center.lat, longitude: t.center.lng } : null;
@@ -50,6 +62,10 @@ export function SavedMap(props: SavedViewProps) {
 	const railRef = useRef<ScrollView>(null);
 	const [mapReady, setMapReady] = useState(false);
 	const [active, setActive] = useState<string | null>(tiles[0]?.id ?? null);
+	/** What the map shows and how big it is: a tap is turned into a distance with both. */
+	const [region, setRegion] = useState<Region>(METRO_REGION);
+	const [mapSize, setMapSize] = useState({ w: 0, h: 0 });
+	const lastOpen = useRef(0);
 
 	const marks = useMemo(
 		() =>
@@ -105,54 +121,111 @@ export function SavedMap(props: SavedViewProps) {
 		railRef.current?.scrollTo({ x: i * (CARD_W + CARD_GAP), animated: true });
 	};
 
+	/** A tap on a mark: its card comes up, and the save opens (or is picked). */
+	const openMark = (tile: SavedTile) => {
+		const locked =
+			props.selecting &&
+			props.lockedKind !== null &&
+			props.lockedKind !== tile.kind;
+		if (locked) return;
+		const now = Date.now();
+		if (now - lastOpen.current < TAP_DEDUPE_MS) return;
+		lastOpen.current = now;
+		onMark(tile);
+		props.onPress(tile);
+	};
+
+	// Not memoised, for the reason the Search map gives: it closes over
+	// `marks` and `region`, and a stale one resolves a tap against marks that
+	// are no longer where it thinks.
+	const tap = Gesture.Tap()
+		// On the JS thread: it reads React state and opens a page.
+		.runOnJS(true)
+		.maxDuration(400)
+		.onEnd((e) => {
+			mapRef.current
+				?.coordinateForPoint({ x: e.x, y: e.y })
+				.then((at) => {
+					if (mapSize.w === 0 || mapSize.h === 0) return;
+					let best: { tile: SavedTile; d: number } | undefined;
+					for (const { tile, coordinate } of marks) {
+						const dx =
+							((coordinate.longitude - at.longitude) / region.longitudeDelta) *
+							mapSize.w;
+						const dy =
+							((coordinate.latitude - at.latitude) / region.latitudeDelta) *
+							mapSize.h;
+						const d = Math.hypot(dx, dy);
+						if (d <= MARK_TAP_RADIUS && (!best || d < best.d)) {
+							best = { tile, d };
+						}
+					}
+					if (best) openMark(best.tile);
+				})
+				.catch(() => {});
+		});
+
 	return (
 		<View style={styles.wrap}>
-			<View style={styles.mapBox}>
-				<MapView
-					ref={mapRef}
-					style={StyleSheet.absoluteFill}
-					mapType="mutedStandard"
-					showsPointsOfInterests={false}
-					showsCompass={false}
-					initialRegion={METRO_REGION}
-					onMapReady={() => setMapReady(true)}
-				>
-					{marks.map(({ tile, coordinate }) => {
-						const on = tile.id === active;
-						const picked = props.picked.includes(tile.id);
-						return (
-							<Marker
-								key={tile.id}
-								coordinate={coordinate}
-								anchor={{ x: 0.5, y: 0.5 }}
-								// The save the rail is on is drawn over its neighbours.
-								zIndex={on ? 2 : 1}
-								onPress={() => onMark(tile)}
-							>
-								<View style={styles.markPad} accessibilityLabel={tile.title}>
-									<View
-										style={[
-											styles.mark,
-											on && styles.markOn,
-											picked && styles.markPicked,
-										]}
-									>
-										{tile.thumbUrl ? (
-											<Image
-												source={{ uri: tile.thumbUrl }}
-												style={styles.markPhoto}
-											/>
-										) : (
-											<Text style={styles.markInitial}>
-												{tile.title.trim().charAt(0).toUpperCase()}
-											</Text>
-										)}
+			<View
+				style={styles.mapBox}
+				onLayout={(e) =>
+					setMapSize({
+						w: e.nativeEvent.layout.width,
+						h: e.nativeEvent.layout.height,
+					})
+				}
+			>
+				{/* The Tap wraps the MAP, not a view over it: an overlay would take
+				    the touches the map needs for pan and pinch. */}
+				<GestureDetector gesture={tap}>
+					<MapView
+						ref={mapRef}
+						style={StyleSheet.absoluteFill}
+						mapType="mutedStandard"
+						showsPointsOfInterests={false}
+						showsCompass={false}
+						initialRegion={METRO_REGION}
+						onMapReady={() => setMapReady(true)}
+						onRegionChangeComplete={setRegion}
+					>
+						{marks.map(({ tile, coordinate }) => {
+							const on = tile.id === active;
+							const picked = props.picked.includes(tile.id);
+							return (
+								<Marker
+									key={tile.id}
+									coordinate={coordinate}
+									anchor={{ x: 0.5, y: 0.5 }}
+									// The save the rail is on is drawn over its neighbours.
+									zIndex={on ? 2 : 1}
+									onPress={() => openMark(tile)}
+								>
+									<View style={styles.markPad} accessibilityLabel={tile.title}>
+										<View
+											style={[
+												styles.mark,
+												on && styles.markOn,
+												picked && styles.markPicked,
+											]}
+										>
+											{tile.thumbUrl ? (
+												<Image
+													source={{ uri: tile.thumbUrl }}
+													style={styles.markPhoto}
+												/>
+											) : (
+												<Text style={styles.markInitial}>
+													{tile.title.trim().charAt(0).toUpperCase()}
+												</Text>
+											)}
+										</View>
 									</View>
-								</View>
-							</Marker>
-						);
-					})}
-				</MapView>
+								</Marker>
+							);
+						})}
+					</MapView>
+				</GestureDetector>
 			</View>
 
 			<ScrollView

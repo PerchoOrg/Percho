@@ -65,8 +65,13 @@ export interface TourHeroProps {
 	initial: string;
 	segments: readonly TourSegment[];
 	saved: boolean;
+	/** The place is hidden from the feed (the thumbs-down is on). */
+	hidden: boolean;
 	onBack: () => void;
+	/** The heart: a like and a save (`state/verdict.ts`). */
 	onToggleSave: () => void;
+	/** The thumbs-down: hide the place from the feed, or take that back. */
+	onToggleHide: () => void;
 	/** Absent for a page with no public link to share. Every page has one since phase335. */
 	onShare?: () => void;
 }
@@ -190,8 +195,10 @@ export function TourHero(props: TourHeroProps) {
 		initial,
 		segments,
 		saved,
+		hidden,
 		onBack,
 		onToggleSave,
+		onToggleHide,
 		onShare,
 	} = props;
 	const insets = useSafeAreaInsets();
@@ -296,6 +303,7 @@ export function TourHero(props: TourHeroProps) {
 						: {})}
 					save={{ saved, onPress: onToggleSave }}
 					{...(onShare ? { share: { onPress: onShare } } : {})}
+					hide={{ on: hidden, onPress: onToggleHide }}
 				/>
 			</View>
 

@@ -6,11 +6,13 @@
  *   · Persona card — always named (`lib/feed/persona.ts`), name only (owner,
  *     2026-09-12: "remove details from persona section, just high level").
  *     No "Stage X of 5": the funnel collapsed on 2026-08-15.
- *   · Recent — the swipe history as a horizontal strip, verdict on the thumb
- *     and "Change my mind" under it (phase140's undo — the label is the
- *     buyer's intent, not the mechanism; owner 2026-09-11).
- *     The owner rejected the §1.8 Undo toast on the feed; a correction belongs
- *     on the surface that explains what Percho concluded.
+ *   · Recent — the verdicts as a horizontal strip. Each picture carries the
+ *     card's own two controls, the thumbs-down and the heart, with the one
+ *     the buyer chose lit: tap the other to choose again, tap the lit one to
+ *     take the verdict back (phase416; owner, 2026-11-28: 「可以用统一的手势来
+ *     重新选择」). Until then the verdict was a word on the picture and the way
+ *     back a "Change my mind" link under it (phase140's undo). The name under
+ *     the picture is printed whole.
  *   · YOUR AREAS — `familiarityFor`, the SAME source the Search tab's
  *     familiar-first sort reads (§5.3 hard rule: the two faces cannot
  *     disagree). Horizontal chips so a buyer who has seen twenty areas gets one
@@ -48,10 +50,12 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CardCorner } from "../../components/cards/CardCorner";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { familiarityFor } from "../../lib/area-familiarity";
 import { deleteAccount, signOut } from "../../lib/auth";
 import { DIM_LABELS, personaName, rankedDims } from "../../lib/feed/persona";
+import type { RecentEntry, RecentPlace } from "../../lib/feed/recent";
 import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
 import { openLink } from "../../lib/open-link";
 import { useAuthStore } from "../../state/auth";
@@ -59,8 +63,71 @@ import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
 import { usePriorityStore } from "../../state/priorities";
 import { useSoundStore } from "../../state/sound";
+import { clearLike, toggleDislike, toggleLike } from "../../state/verdict";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
+
+/**
+ * One verdict of RECENT: the place's picture with the card's two controls on
+ * it, and its name underneath.
+ *
+ * The lit control is the verdict the buyer gave. The rules are the card's
+ * (`state/verdict.ts`): the heart is a like and a save, the thumbs-down hides
+ * the place and takes a heart with it, and tapping the lit one takes the
+ * verdict back — the place then leaves this strip and can be dealt again.
+ *
+ * Lit is read off the ROW, not off Saved or the hidden list: a like or a pass
+ * swiped before phase414 saved and hid nothing, and it is still the verdict
+ * this row is showing.
+ */
+function RecentTile({ entry }: { entry: RecentEntry }) {
+	const bringBack = useFeedSession((s) => s.bringBack);
+	const liked = entry.verdict === "right";
+	const place: RecentPlace = {
+		id: entry.id,
+		kind: entry.kind,
+		title: entry.title,
+		subtitle: entry.subtitle,
+		...(entry.thumbUrl ? { thumbUrl: entry.thumbUrl } : {}),
+		...(entry.geoUnitId ? { geoUnitId: entry.geoUnitId } : {}),
+	};
+	return (
+		<View style={styles.recentCard}>
+			<View style={styles.recentThumb}>
+				{entry.thumbUrl ? (
+					<Image
+						source={{ uri: entry.thumbUrl }}
+						style={StyleSheet.absoluteFill}
+					/>
+				) : null}
+				<View style={styles.recentControls}>
+					<CardCorner
+						inline
+						hide={{
+							on: !liked,
+							onPress: () =>
+								liked ? toggleDislike(place) : bringBack(entry.id),
+						}}
+						save={{
+							saved: liked,
+							onPress: () => {
+								if (!liked) toggleLike(place);
+								// Out of Saved if it is there; the like goes either way.
+								else if (!clearLike(entry.id, entry.kind)) bringBack(entry.id);
+							},
+						}}
+					/>
+				</View>
+			</View>
+			<Text style={styles.recentTitle}>{entry.title}</Text>
+			{entry.subtitle ? (
+				<Text style={styles.recentSub} numberOfLines={1}>
+					{entry.subtitle}
+				</Text>
+			) : null}
+		</View>
+	);
+}
 
 export default function YouTab() {
 	const insets = useSafeAreaInsets();
@@ -77,7 +144,6 @@ export default function YouTab() {
 				: allRecent.filter((e) => e.kind !== "listing"),
 		[allRecent],
 	);
-	const bringBack = useFeedSession((s) => s.bringBack);
 
 	const weights = usePriorityStore((s) => s.weights);
 	const setWeight = usePriorityStore((s) => s.setWeight);
@@ -176,7 +242,7 @@ export default function YouTab() {
 			</View>
 
 			{/*
-			 * RECENT — what the buyer just did, and the one way to take it back.
+			 * RECENT — what the buyer just did, and where to choose again.
 			 * Rows are SNAPSHOTS taken at swipe time (`lib/feed/recent.ts`), so
 			 * the strip paints instantly and shows the price the buyer actually
 			 * saw. Trade-off answers are absent by construction: §1.8 rules them
@@ -192,46 +258,7 @@ export default function YouTab() {
 						contentContainerStyle={styles.stripContent}
 					>
 						{recent.slice(0, RECENT_SHOWN).map((e) => (
-							<View key={e.id} style={styles.recentCard}>
-								<View style={styles.recentThumb}>
-									{e.thumbUrl ? (
-										<Image
-											source={{ uri: e.thumbUrl }}
-											style={StyleSheet.absoluteFill}
-										/>
-									) : null}
-									<Text
-										style={[
-											styles.verdict,
-											e.verdict === "right"
-												? styles.verdictYes
-												: styles.verdictNo,
-										]}
-									>
-										{e.verdict === "right" ? "LIKED" : "PASSED"}
-									</Text>
-								</View>
-								<Text style={styles.recentTitle} numberOfLines={1}>
-									{e.title}
-								</Text>
-								{e.subtitle ? (
-									<Text style={styles.recentSub} numberOfLines={1}>
-										{e.subtitle}
-									</Text>
-								) : null}
-								<Pressable
-									onPress={() => bringBack(e.id)}
-									accessibilityRole="button"
-									accessibilityLabel={`Change my mind about ${e.title}`}
-									hitSlop={8}
-									style={({ pressed }) => [
-										styles.bringBack,
-										pressed && styles.bringBackPressed,
-									]}
-								>
-									<Text style={styles.bringBackTxt}>Change my mind</Text>
-								</Pressable>
-							</View>
+							<RecentTile key={e.id} entry={e} />
 						))}
 					</ScrollView>
 				</>
@@ -526,36 +553,21 @@ const styles = StyleSheet.create({
 	/** A horizontal strip bleeds to the screen edge, past the page padding. */
 	strip: { marginHorizontal: -20 },
 	stripContent: { paddingHorizontal: 20, gap: 10 },
-	recentCard: { width: 124, gap: 4 },
+	// Wide enough for the two 36pt controls over the picture with air around
+	// them, and for most names on two lines.
+	recentCard: { width: 140, gap: 4 },
 	recentThumb: {
-		width: 124,
-		height: 96,
+		width: 140,
+		height: 104,
 		borderRadius: radii.tile,
 		backgroundColor: colors.surface2,
 		overflow: "hidden",
 		marginBottom: 2,
 	},
-	verdict: {
-		...textStyles.caption,
-		fontSize: 10,
-		position: "absolute",
-		top: 8,
-		left: 8,
-		backgroundColor: colors.glass,
-		borderRadius: radii.pill,
-		paddingHorizontal: 7,
-		paddingVertical: 3,
-		overflow: "hidden",
-	},
-	verdictYes: { color: colors.pos },
-	verdictNo: { color: colors.neg },
+	/** The card's row of controls, where the card has it: the picture's top right. */
+	recentControls: { position: "absolute", top: 6, right: 6 },
 	recentTitle: { ...textStyles.footnote, fontWeight: "600", color: colors.ink },
 	recentSub: { ...textStyles.footnote, fontSize: 12, color: colors.ink2 },
-	/** A link, not a button: undoing is a quiet correction, not a CTA. */
-	bringBack: { paddingVertical: 6, minHeight: 32, justifyContent: "center" },
-	bringBackPressed: { opacity: 0.6 },
-	/** Regular weight: one under every card, it must not outweigh the names. */
-	bringBackTxt: { ...textStyles.footnote, color: colors.accent },
 	areaChip: {
 		backgroundColor: colors.surface,
 		borderRadius: radii.btn,

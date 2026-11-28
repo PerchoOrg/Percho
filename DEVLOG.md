@@ -23,6 +23,24 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-28 08:44 UTC — phase416: a tutorial; the thumbs-down wins over the heart and is on Explore; Recent re-chooses; Saved's map opens; the rail lets swipes through
+
+**Objective**: Owner on the phone after phase415 (2026-11-28), six points: 「第一次使用应该给一套教程」 · 「有爱心的情况选择大拇指应该尊重大拇指 自动清除爱心」 · 「explore 里也应该有大拇指」 · 「city卡的进度条应该放到左侧 在右侧经常影响滑动 可能要改一些视频里的字幕避免重复 改就是了 做对的事情」 · 「map里看到有视频的社区点击没有反应」 · 「you里recent里可以用统一的手势来重新选择 并且在照片下要显示完整的名字」.
+**Actions** (`apps/mobile`):
+- **Tutorial.** `lib/feed/tutorial.ts` (steps as data, tested), `components/feed/FeedTutorial.tsx`, `state/tutorial.ts`. Five steps over the first card — swipe, heart, thumbs-down, the name, and the card's pill when it has one — each lighting its control through a window (four dark views around a hole; no SVG). Skip or finish marks it done for good. The film in front waits while it is up. It replaces phase414's one-line hint: `SwipeHintChip` and the `swipe-hint` store are deleted. Every install sees it once, the owner's included.
+- **One place for the two verdicts.** `state/verdict.ts` (tested against a stand-in saved store): `toggleLike`, `toggleDislike`, `clearLike`. The thumbs-down takes a heart with it — out of Saved, the like reverted — on a card (`hideCard` → `clearLike`; Undo gives the heart back), on an Explore page and in Recent. `useFeedSession.setVerdict(place, verdict, at)` records a verdict from a place's SNAPSHOT (`RecentPlace`) for screens that hold no card; it replaces the place's old verdict. `signals.applyRecorded` is `revertSwipe`'s inverse.
+- **Explore.** `TourHero` → `CardCorner` gets `hide` with an `on` state (filled glyph): the page stays up, so it shows that the place IS hidden and a second tap takes it back. The hero's heart now records the like as well as the save. A community's page has no city unit in its DTO, so its verdict credits no city tally — only the liked/passed list. When the feed is next in front, hidden cards leave its deck (the one in front included).
+- **Recent** (`you.tsx` `RecentTile`): the card's two discs on each picture, the chosen one lit; the other re-chooses, the lit one takes the verdict back. "LIKED / PASSED" and "Change my mind" are gone. The name is printed whole; tiles are 140 pt wide.
+- **Saved's map** (`components/saved/SavedMap.tsx`) — my reading of "map": a mark only brought its card up, so with one save a tap did nothing, and `Marker.onPress` is the wire Search's map records failing on small custom marks. A tap now opens the save, taken by a gesture-handler Tap resolved to the nearest mark (Search's method), with `Marker.onPress` as a second wire and an 800 ms dedupe. If he meant the Search tab's map: nothing there has changed since phase377 in the tap path, Metro's log shows no error, and I need the steps.
+- **The rail.** `CommunityFace`: a city card's rail pan claimed every touch on its 112 pt column (`minDistance(0)`) and blocked the deck's pan — the column a swipe to the next card starts in. It now activates only on an up-and-down drag, fails at 6 pt sideways, blocks nothing, and starts a part when the touch ENDS as a tap rather than on touch-down (which would seek the film under every swipe). `community-panel-fit.test.ts` reads the bar's pan, not the first pan in the file.
+**Not done — the rail on the left.** The city films have their figures burned in on the left: `scripts/render-worker/callouts.py` draws them from 8.5% to `RIGHT_EDGE` 72.5% precisely because the rail is on the right (checked on Suwanee's and Johns Creek's frames). Moving the rail means re-assembling all eight films with the figures mirrored — and a re-cut film is live at once for every build, including the App Store's 1.1.0 and 1.1.1, whose rail stays on the right. So it needs films per layout (a column on `city_tour_assemblies`, a parameter from the app), not a re-cut in place. Next phase.
+**Decisions**: the tutorial is an overlay on the real first card rather than separate pages — it points at the controls where they are. A tap on a Saved mark opens directly rather than "first tap selects, second opens": one tap is what he expected.
+**Verified**: mobile tsc; 983 tests; biome (the one pre-existing warning); `expo export --platform ios`.
+**Not verified**: on a device — no simulator here. Unseen: the tutorial's windows landing on the controls (computed from the card's own constants, not measured), a rail tap still starting its part now that it fires on the touch's end, the Saved map tap.
+**Next steps**: phase417 — the rail on the left with films per layout. Owner confirms which map he meant.
+
+---
+
 ## 2026-11-28 07:21 UTC — phase415: a strip on both sides; a hidden card leaves the deck; thumbs-down, heart last
 
 **Objective**: Owner on the phone, after phase414 (2026-11-28): 「左边也露出一点这样知道可以回看？」 · 「点击x之后就不能向回看了」 · 「点击x的动画效果和滑动应该区分开」 · 「爱心放到最右边 x有没有别的替代让人一看就知道是不喜欢 而不是关闭」.

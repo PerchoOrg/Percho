@@ -436,6 +436,60 @@ export function revertSwipe(
 	return next;
 }
 
+/**
+ * `revertSwipe`'s inverse: a verdict given AWAY from the deck (phase416) — the
+ * thumbs-down on an Explore page, a heart in the You tab's RECENT — on a place
+ * known only by its snapshot, not by a card.
+ *
+ * It writes what `applySwipe` writes for the same card and verdict — the liked
+ * and passed lists, the place's tally — and none of the deck's bookkeeping
+ * (`swipesInStage`, the fatigue streaks): nothing was dealt, so nothing was
+ * swiped.
+ */
+export function applyRecorded(
+	signals: SignalState,
+	swipe: RevertibleSwipe,
+): SignalState {
+	let next: SignalState = signals;
+
+	if (swipe.kind === "community") {
+		const liked = withoutId(next.likedCommunityIds, swipe.id);
+		const passed = withoutId(next.passedCommunityIds, swipe.id);
+		next =
+			swipe.verdict === "right"
+				? {
+						...next,
+						likedCommunityIds: [...liked, swipe.id],
+						passedCommunityIds: passed,
+					}
+				: {
+						...next,
+						likedCommunityIds: liked,
+						passedCommunityIds: [...passed, swipe.id],
+					};
+	} else if (swipe.kind === "listing") {
+		const liked = withoutId(next.likedListingIds, swipe.id);
+		next = {
+			...next,
+			likedListingIds: swipe.verdict === "right" ? [...liked, swipe.id] : liked,
+		};
+	}
+
+	if (swipe.geoUnitId !== undefined) {
+		next = {
+			...next,
+			geo: addGeo(
+				next.geo,
+				swipe.geoUnitId,
+				"city",
+				swipe.verdict,
+				swipe.weight ?? 1,
+			),
+		};
+	}
+	return next;
+}
+
 /** What `revertSwipe` needs to invert one swipe. */
 export interface RevertibleSwipe {
 	id: string;
