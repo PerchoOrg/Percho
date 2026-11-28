@@ -23,6 +23,20 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-28 09:06 UTC — phase419: no "Hidden…" bar; Recent's name on one line; "Your areas" removed
+
+**Objective**: Owner on the phone after phase418 (2026-11-28): 「hidden you 。。。 感觉很跳脱还有别的方案吗」 · 「you recent图下面的地方有些乱 能不能一行」 · 「you your area是啥 为啥要这个」.
+**Actions** (`apps/mobile`):
+- **The bar is gone.** After a disliked card fell, a dark bar came up under the next one: "Hidden. You'll see less like this. Undo". The mark on the card has already said NOT FOR ME; the bar said it again in a different voice, on a different card. `HiddenToast.tsx` deleted; `feed.tsx` loses `hiddenNote`, `undoHide`, the `leaving` ref and the bar's style. The way back is You → Recent (the place, thumbs-down lit) — where phase140 put undo when he turned down an Undo toast for the swipe. The thumbs-down still takes a heart with it; getting the heart back is now the heart on that Recent tile.
+- **Recent** (`you.tsx` `RecentTile`): one line under the picture — the name, whole, shrinking to 0.75 before it would cut. The city line under it is removed: phase416 let the name wrap, so a two-line name sat beside a one-line one, each over a second line.
+- **"Your areas" removed.** A chip per city, "Suwanee 12%" over a meter: `familiarityFor`'s score, 40 of its 100 points from how many of the city's cards the buyer had given a verdict by swiping. Since phase414 a swipe gives none, so it read low single digits that meant nothing, under an empty state that still said "Swipe a few cards and your map starts filling in". `lib/area-familiarity.ts` stays — the Search tab's list sorts by it.
+**Decisions**: removed the bar rather than restyling it. The two other ways I put to him: let a tap on the card during the half-second the mark is on it cancel the dislike; or keep only a small "Undo" with no sentence. Neither is built.
+**Verified**: mobile tsc; 997 tests; biome (the one pre-existing warning); `expo export --platform ios`.
+**Not verified**: on a device.
+**Next steps**: still owed by the owner — a few taps on Search-map marks so `tap from the nearest point` can be read (see phase418).
+
+---
+
 ## 2026-11-28 08:55 UTC — phase418: the dislike exit "A"; preferences as the pages' five + facts from liked places; the map's tap reach, from the log
 
 **Objective**: Owner's answers to phase417 (2026-11-28): 「点了 非常不敏感 需要放到最大 点很多下」 · 「留在右边」 · 「a」 · 「按这个做」. The rail stays on the right — nothing to build, no film is re-cut.
