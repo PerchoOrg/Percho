@@ -19,6 +19,7 @@ import {
 	INTEREST_WEIGHT,
 	applyDimRemoval,
 	applyInterest,
+	applyRecorded,
 	applyScope,
 	applySkipLayer,
 	applySwipe,
@@ -449,5 +450,61 @@ describe("applyInterest — a look inside a card, short of a like (phase414)", (
 		const { geoUnitId: _none, ...nowhere } = community;
 		expect(applyInterest(EMPTY_SIGNALS, nowhere)).toBe(EMPTY_SIGNALS);
 		expect(applyInterest(EMPTY_SIGNALS, tradeoff)).toBe(EMPTY_SIGNALS);
+	});
+});
+
+describe("applyRecorded — a verdict given away from the deck (phase416)", () => {
+	const place = {
+		id: "c-oakhurst",
+		kind: "community" as const,
+		geoUnitId: "city:decatur-ga",
+	};
+
+	it("writes what a swipe on the card would: the list and the place's tally", () => {
+		const fromCard = applySwipe(EMPTY_SIGNALS, community, "right");
+		const fromPlace = applyRecorded(EMPTY_SIGNALS, {
+			...place,
+			verdict: "right",
+		});
+		expect(fromPlace.likedCommunityIds).toEqual(fromCard.likedCommunityIds);
+		expect(fromPlace.geo).toEqual(fromCard.geo);
+	});
+
+	it("is not a swipe: no count, no fatigue streak", () => {
+		const s = applyRecorded(EMPTY_SIGNALS, { ...place, verdict: "left" });
+		expect(s.passedCommunityIds).toEqual(["c-oakhurst"]);
+		expect(s.swipesInStage).toBe(0);
+		expect(s.dryStreak).toEqual({});
+	});
+
+	it("moves a place from liked to passed, never both", () => {
+		const liked = applyRecorded(EMPTY_SIGNALS, { ...place, verdict: "right" });
+		const s = applyRecorded(liked, { ...place, verdict: "left" });
+		expect(s.likedCommunityIds).toEqual([]);
+		expect(s.passedCommunityIds).toEqual(["c-oakhurst"]);
+	});
+
+	it("is undone exactly by revertSwipe", () => {
+		for (const verdict of ["left", "right"] as const) {
+			const swipe = { ...place, verdict, weight: 1.5 };
+			const back = revertSwipe(applyRecorded(EMPTY_SIGNALS, swipe), swipe);
+			expect(back.likedCommunityIds).toEqual([]);
+			expect(back.passedCommunityIds).toEqual([]);
+			expect(back.geo).toEqual([]);
+		}
+	});
+
+	it("credits a city's own unit and keeps no list for it", () => {
+		const s = applyRecorded(EMPTY_SIGNALS, {
+			id: "area-city:decatur-ga",
+			kind: "area",
+			verdict: "left",
+			geoUnitId: "city:decatur-ga",
+		});
+		expect(geoSignalFor(s, "city:decatur-ga")).toMatchObject({
+			left: 1,
+			right: 0,
+		});
+		expect(s.passedCommunityIds).toEqual([]);
 	});
 });

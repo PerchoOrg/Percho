@@ -220,6 +220,12 @@ const SCRUB_TAP_TARGET = "scrub";
 /** How far a finger may drift on a part before the touch is a slide, in points. */
 const CHAPTER_TAP_SLOP = 8;
 /**
+ * Sideways travel past which a touch on the rail is a swipe of the deck, not a
+ * tap. Under the deck pan's own 10pt: the rail has to know the touch is not
+ * its own BEFORE the deck takes it, or the cancel that follows reads as a tap.
+ */
+const RAIL_SWIPE_SLOP = 6;
+/**
  * Armed into `tapSlot` by a touch on a city card's rail of parts. The rail
  * seeks the film itself; the feed's only part is to un-pause — a jump into a
  * paused film would look like nothing happened.
@@ -378,6 +384,8 @@ export function CommunityFace({
 	const seekTo = useSharedValue(-1);
 	/** Which dash the finger is over, or -1. Drives the floating label. */
 	const scrubIndex = useSharedValue(-1);
+	/** Where a touch on a city card's rail began, and whether it can still be a tap. */
+	const railTouch = useSharedValue({ x: 0, y: 0, live: false });
 	const [scrubbedName, setScrubbedName] = useState<string | null>(null);
 
 	/**
@@ -553,6 +561,68 @@ export function CommunityFace({
 			scrubbing.value = false;
 			scrubIndex.value = -1;
 		};
+		/*
+		 * The RAIL runs up and down and the deck pages sideways, so the two do
+		 * not have to contend — and since phase414 they must not: the rail is a
+		 * 112pt column down the card's right side, which is where a swipe to the
+		 * next card starts, and while its pan claimed every touch that landed on
+		 * it and blocked the deck's, those swipes went nowhere (owner,
+		 * 2026-11-28: 「在右侧经常影响滑动」).
+		 *
+		 * It claims only an up-and-down drag now, gives up the moment a touch
+		 * travels sideways, and blocks nothing. A tap still starts the part under
+		 * the finger, but when the touch ENDS: seeking on touch-down, as the bar
+		 * below does, would move the film under every swipe that began here.
+		 */
+		if (byChapter) {
+			/**
+			 * The touch is over. Lifted — or let go of by the gesture system, which
+			 * is how a still tap usually ends here: the deck's own tap wins it —
+			 * without a drag and without going sideways, it was a tap, and the part
+			 * under the finger starts. All three endings call this; the first lands.
+			 */
+			const finish = () => {
+				"worklet";
+				if (!scrubbing.value && railTouch.value.live) {
+					scrubbing.value = true;
+					snap(railTouch.value.y);
+				}
+				railTouch.value = { x: 0, y: 0, live: false };
+				commit();
+			};
+			return Gesture.Pan()
+				.enabled(isTop && !!card.videoUrl)
+				.activeOffsetY([-CHAPTER_TAP_SLOP, CHAPTER_TAP_SLOP])
+				.failOffsetX([-RAIL_SWIPE_SLOP, RAIL_SWIPE_SLOP])
+				.onBegin((e) => {
+					// A still tap here also reaches the deck as a card tap, which
+					// would pause the film it just sought: arm the target that only
+					// makes it play.
+					if (tapSlot) tapSlot.value = { target: CHAPTER_TAP_TARGET };
+					railTouch.value = { x: e.x, y: e.y, live: true };
+				})
+				.onTouchesMove((e) => {
+					const touch = e.allTouches[0];
+					const began = railTouch.value;
+					if (
+						touch &&
+						began.live &&
+						Math.abs(touch.x - began.x) > RAIL_SWIPE_SLOP
+					) {
+						railTouch.value = { x: began.x, y: began.y, live: false };
+					}
+				})
+				.onStart((e) => {
+					scrubbing.value = true;
+					track(e.y);
+				})
+				.onUpdate((e) => {
+					track(e.y);
+				})
+				.onTouchesUp(finish)
+				.onTouchesCancelled(finish)
+				.onFinalize(finish);
+		}
 		let gesture = Gesture.Pan()
 			.enabled(isTop && !!card.videoUrl)
 			// A scrub starts where the finger lands, so the bar jumps under it on
@@ -565,13 +635,10 @@ export function CommunityFace({
 				// Arm a target the feed does not handle — or, on a city card's
 				// rail, one that only makes it play.
 				if (tapSlot) {
-					tapSlot.value = {
-						target: byChapter ? CHAPTER_TAP_TARGET : SCRUB_TAP_TARGET,
-					};
+					tapSlot.value = { target: SCRUB_TAP_TARGET };
 				}
 				scrubbing.value = true;
-				if (byChapter) snap(e.y);
-				else track(e.x);
+				track(e.x);
 				// Seek from touch-DOWN, not only from the release. This is the one
 				// callback a tap is guaranteed to reach — it is what draws the fill
 				// and names the place, both of which the owner sees on a tap that
@@ -581,11 +648,7 @@ export function CommunityFace({
 				seekTo.value = progress.value;
 			})
 			.onUpdate((e) => {
-				// On the rail a tap that wobbles a few points is still a tap, and
-				// stays on the part's first frame; past that it is a drag, and a
-				// drag goes where it is dragged.
-				if (byChapter && Math.abs(e.translationY) < CHAPTER_TAP_SLOP) return;
-				track(byChapter ? e.y : e.x);
+				track(e.x);
 			})
 			// The pointer lift, ahead of any gesture-state decision.
 			.onTouchesUp(commit)
@@ -609,6 +672,7 @@ export function CommunityFace({
 		scrubbing,
 		seekTo,
 		scrubIndex,
+		railTouch,
 	]);
 
 	const onBarLayout = (e: LayoutChangeEvent) => {

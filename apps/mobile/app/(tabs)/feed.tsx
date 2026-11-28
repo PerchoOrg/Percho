@@ -56,10 +56,10 @@ import {
 import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
+import { FeedTutorial } from "../../components/feed/FeedTutorial";
 import { HiddenToast } from "../../components/feed/HiddenToast";
 import { OfflineBar } from "../../components/feed/OfflineBar";
 import { PlaceBlock } from "../../components/feed/PlaceBlock";
-import { SwipeHintChip } from "../../components/feed/SwipeHintChip";
 import { useCfScores } from "../../hooks/use-cf-scores";
 import { primePlacePool, useFeedPool } from "../../hooks/use-feed-pool";
 import { useTestHomes } from "../../hooks/use-test-homes";
@@ -119,7 +119,8 @@ import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
-import { useSwipeHintStore } from "../../state/swipe-hint";
+import { useTutorialStore } from "../../state/tutorial";
+import { clearLike } from "../../state/verdict";
 import {
 	BLOCK_GAP,
 	CARD_FOOT,
@@ -289,12 +290,10 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	// Saved state — the card heart toggles it; nothing else reads it yet
 	// (the Saved tab is still the task-5 placeholder).
 	const toggleSaved = useSavedStore((s) => s.toggle);
-	// Swipe-hint state — the motion hint's never-nag contract. Deliberately NOT
-	// subscribed to `hasDiscoveredSwipe` / `hintSessionsShown`: the hint effect
-	// below WRITES both, and a subscription would re-run it. See there.
-	const hintHydrated = useSwipeHintStore((s) => s.hydrated);
-	const recordSwipeHint = useSwipeHintStore((s) => s.recordSwipe);
-	const recordHintShown = useSwipeHintStore((s) => s.recordHintShown);
+	// The first-visit tutorial (`FeedTutorial`): owed once, then never again.
+	const tutorialHydrated = useTutorialStore((s) => s.hydrated);
+	const tutorialDone = useTutorialStore((s) => s.done);
+	const finishTutorial = useTutorialStore((s) => s.finish);
 
 	// BOTH stores must be read back before a deck is built, or the first render
 	// composes a stage-0 deck for a returning stage-3 buyer (§1.7).
@@ -334,6 +333,18 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				);
 				const at = activeIndexRef.current;
 				setDeck((d) => withoutSwipedAway(d, at, away));
+			}
+			// Back from anywhere a place can be hidden — its Explore page, the
+			// You tab: a card hidden there leaves this deck, the one in front
+			// included, and the cursor comes back by those that sat before it.
+			const hidden = new Set(useFeedSession.getState().hiddenIds);
+			if (deckRef.current.some((c) => hidden.has(c.id))) {
+				const at = activeIndexRef.current;
+				const before = deckRef.current
+					.slice(0, at)
+					.filter((c) => hidden.has(c.id)).length;
+				setDeck((d) => d.filter((c) => !hidden.has(c.id)));
+				setActiveIndex(at - before);
 			}
 			return () => {
 				swipedWhenCovered.current =
@@ -768,25 +779,15 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		[recordInterest],
 	);
 
-	/**
-	 * The first-visit line (`SwipeHintChip`): shown on the first card until the
-	 * buyer turns a page. `state/swipe-hint.ts` keeps the never-nag rules — a
-	 * real swipe ends it for good; without one it shows on at most
-	 * MAX_HINT_SESSIONS app opens.
-	 */
-	const [hint, setHint] = useState(false);
-
 	/** The page turned, by a swipe or by `pager`. `card` was in front. */
 	const onPage = useCallback(
 		(step: PageStep, card: FeedCardV3) => {
 			// Going on from a card is having seen it. Nothing more: a swipe is not
 			// a verdict (phase414), and going back says nothing at all.
 			if (step === 1) recordView(card);
-			recordSwipeHint();
-			setHint(false);
 			setActiveIndex(activeIndex + step);
 		},
-		[activeIndex, recordView, recordSwipeHint],
+		[activeIndex, recordView],
 	);
 
 	/** Turns the page, or takes the card in front out, for a control (`SwipeStack`). */
@@ -806,7 +807,11 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	 * out of the deck now (`onDismissed`), so a swipe back goes to the card
 	 * before it.
 	 */
-	const [hiddenNote, setHiddenNote] = useState<FeedCardV3 | null>(null);
+	const [hiddenNote, setHiddenNote] = useState<{
+		card: FeedCardV3;
+		/** It had a heart, which the thumbs-down took (`clearLike`). */
+		wasLiked: boolean;
+	} | null>(null);
 	useEffect(() => {
 		if (hiddenNote === null) return;
 		const t = setTimeout(() => setHiddenNote(null), 5000);
@@ -815,8 +820,12 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 
 	const hideCard = useCallback(
 		(card: FeedCardV3) => {
+			// The thumbs-down wins over a heart the card already has (owner,
+			// 2026-11-28): the heart, the save and the like all go.
+			const wasLiked =
+				card.kind !== "tradeoff" && clearLike(card.id, card.kind);
 			recordVerdict(card, "left");
-			setHiddenNote(card);
+			setHiddenNote({ card, wasLiked });
 			pager.current?.dismiss();
 		},
 		[recordVerdict],
@@ -839,11 +848,20 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 
 	const undoHide = useCallback(() => {
 		if (hiddenNote === null) return;
+		const { card, wasLiked } = hiddenNote;
 		setHiddenNote(null);
-		bringBack(hiddenNote.id);
-		// Back in front, wherever the buyer has got to since.
-		setDeck((d) => putOnTop(d, activeIndexRef.current, hiddenNote));
-	}, [hiddenNote, bringBack]);
+		bringBack(card.id);
+		// Back in front, wherever the buyer has got to since — and with the
+		// heart it had, if the thumbs-down took one.
+		setDeck((d) => putOnTop(d, activeIndexRef.current, card));
+		if (
+			wasLiked &&
+			card.kind !== "tradeoff" &&
+			toggleSaved(card.id, card.kind)
+		) {
+			recordVerdict(card, "right");
+		}
+	}, [hiddenNote, bringBack, toggleSaved, recordVerdict]);
 
 	const canGoBack = activeIndex > 0;
 
@@ -898,6 +916,9 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		[pool, testHomes],
 	);
 
+	/** The pill on the card in front, for the tutorial's last step. */
+	const tutorialDeck = topCard ? deckOf(topCard).deck?.label : undefined;
+
 	const capability = useCallback(
 		(card: FeedCardV3) => cardBehavior(card).capability,
 		[],
@@ -919,6 +940,25 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		},
 		[enqueue, takeSeq, stage, sessionN, noteInterest],
 	);
+
+	/**
+	 * Where the card stage sits on the page, measured: the tutorial lights the
+	 * card's own controls and has to know where the card is.
+	 */
+	const [stageY, setStageY] = useState<number | null>(null);
+	/**
+	 * The tutorial is up: a first visit to the feed tab, once there is a card
+	 * to show it on and the launch animation is out of the way.
+	 */
+	const showTutorial =
+		!inPlace &&
+		launched &&
+		tutorialHydrated &&
+		!tutorialDone &&
+		stageY !== null &&
+		deck[activeIndex] !== undefined;
+	/** The film in front waits: something covers it, the buyer paused it, or the tutorial is talking. */
+	const held = !focused || paused || showTutorial;
 
 	const renderCard = useCallback(
 		(card: FeedCardV3, args: CardRenderArgs) => {
@@ -947,7 +987,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 								tag="CITY"
 								saveKind="area"
 								isTop={isTop}
-								suspended={!focused || paused}
+								suspended={held}
 								tapSlot={args.tapSlot}
 								deckGesture={args.deckGesture}
 								{...(toCity ? { onExplore: toCity } : {})}
@@ -962,7 +1002,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 						<AreaFace
 							card={card}
 							isTop={isTop}
-							suspended={!focused || paused}
+							suspended={held}
 							tapSlot={args.tapSlot}
 							{...(toCity ? { onExplore: toCity } : {})}
 							{...share}
@@ -980,7 +1020,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 							lines={home.lines}
 							saveKind="listing"
 							isTop={isTop}
-							suspended={!focused || paused}
+							suspended={held}
 							tapSlot={args.tapSlot}
 							deckGesture={args.deckGesture}
 							onExplore={() => {
@@ -998,7 +1038,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 						<CommunityFace
 							card={card}
 							isTop={isTop}
-							suspended={!focused || paused}
+							suspended={held}
 							tapSlot={args.tapSlot}
 							/* Lets the progress bar's drag block the deck's swipe —
 							   without it the two race for the same gesture. */
@@ -1043,38 +1083,12 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 			emitGesture,
 			enqueue,
 			takeSeq,
-			focused,
-			paused,
+			held,
 			deckOf,
 			hideCard,
 			noteInterest,
 		],
 	);
-
-	/**
-	 * When the first-visit line may show (see `hint` above): a deck is up, the
-	 * buyer is on its first card, and the launch animation is out of the way.
-	 *
-	 * ── Why the deps are this narrow (2026-08-14) ───────────────────────────
-	 *
-	 * `recordHintShown()` WRITES the hint store. An effect that also subscribed
-	 * to what it writes (`hintSessionsShown`), or to `deck.length`, re-ran on
-	 * its own write and hit the `hintRunOnce` latch — having already counted
-	 * the session — so three feed opens burned the whole never-nag budget
-	 * without the buyer ever seeing a hint. `hintEligible` is a BOOLEAN that
-	 * flips once, and the never-nag rules are enforced inside
-	 * `recordHintShown` against fresh store state.
-	 */
-	const hintRunOnce = useRef(false);
-	const hintEligible =
-		!inPlace && launched && deck.length > 0 && activeIndex === 0;
-	useEffect(() => {
-		if (!hintHydrated || !hintEligible || hintRunOnce.current) return;
-		hintRunOnce.current = true;
-		// False when the buyer has already turned a page, or the
-		// MAX_HINT_SESSIONS budget is spent.
-		if (recordHintShown()) setHint(true);
-	}, [hintHydrated, hintEligible, recordHintShown]);
 
 	const onTapTarget = useCallback(
 		(target: string) => {
@@ -1304,6 +1318,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 							marginTop: page.rows === "none" ? 0 : BLOCK_GAP,
 						},
 					]}
+					onLayout={(e) => setStageY(e.nativeEvent.layout.y)}
 				>
 					{deck.length === 0 && (loading || composing) ? (
 						<View style={styles.cardContainer}>
@@ -1329,27 +1344,20 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 							/>
 						</View>
 					) : (
-						<>
-							<SwipeStack
-								items={deck}
-								activeIndex={activeIndex}
-								onPage={onPage}
-								canGoBack={canGoBack}
-								onDismissed={onDismissed}
-								onTapTarget={onTapTarget}
-								onPagerReady={onPagerReady}
-								renderCard={renderCard}
-								keyExtractor={keyOf}
-								cardWidth={cardWidth}
-								cardGap={CARD_GAP}
-								capability={capability}
-							/>
-							{hint && activeIndex === 0 && (
-								<View style={styles.hintWrap} pointerEvents="none">
-									<SwipeHintChip />
-								</View>
-							)}
-						</>
+						<SwipeStack
+							items={deck}
+							activeIndex={activeIndex}
+							onPage={onPage}
+							canGoBack={canGoBack}
+							onDismissed={onDismissed}
+							onTapTarget={onTapTarget}
+							onPagerReady={onPagerReady}
+							renderCard={renderCard}
+							keyExtractor={keyOf}
+							cardWidth={cardWidth}
+							cardGap={CARD_GAP}
+							capability={capability}
+						/>
 					)}
 					{/* Over whatever the stage holds: hiding a deck's last card leaves
 					    its end card up, and the way back has to be there too. */}
@@ -1375,6 +1383,18 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				</View>
 				{/* The other quarter, under the card. */}
 				<View style={styles.foot} />
+				{showTutorial && stageY !== null && (
+					<FeedTutorial
+						card={{
+							x: GUTTER,
+							y: stageY,
+							width: cardWidth,
+							height: page.cardHeight,
+						}}
+						{...(tutorialDeck ? { deckLabel: tutorialDeck } : {})}
+						onDone={finishTutorial}
+					/>
+				)}
 			</View>
 			{/*
 			 * A place's page is pushed over the tabs, which would take the bar
@@ -1426,14 +1446,6 @@ const styles = StyleSheet.create({
 		right: GUTTER,
 		alignItems: "center",
 		justifyContent: "center",
-	},
-	/** The first-visit line: across the card, over the picture, clear of the name. */
-	hintWrap: {
-		position: "absolute",
-		left: GUTTER,
-		right: GUTTER,
-		bottom: 132,
-		alignItems: "center",
 	},
 	/** The hidden card's bar: inside the card's sides, above its name row. */
 	toastWrap: {

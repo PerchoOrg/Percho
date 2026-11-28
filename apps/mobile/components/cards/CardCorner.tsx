@@ -85,9 +85,10 @@
  * CLOSE. It is a thumbs-down now, and the heart is the last disc: the two
  * verdicts sit together at the row's end, the like in the corner.
  *
- * The heart is the like as well as the save. Only the feed's cards pass
- * `hide`; the explore page's hero has nothing to dismiss, and its row is
- * mute, share, heart.
+ * The heart is the like as well as the save. The explore page's hero carries
+ * the same four since phase416 (owner: 「explore 里也应该有大拇指」); there the
+ * thumbs-down is a switch — filled while the place is hidden — because the
+ * page does not go anywhere when it is tapped.
  */
 import { Pressable, StyleSheet, View } from "react-native";
 import { redline } from "../../theme/tokens";
@@ -131,8 +132,12 @@ interface CardCornerProps {
 	save?: CornerControl & { saved: boolean };
 	/** Present when the card has a page to send someone to (phase335). */
 	share?: CornerControl;
-	/** Present when the card can be hidden from the deck — "not for me" (phase414). */
-	hide?: CornerControl;
+	/**
+	 * Present when the place can be hidden from the deck — "not for me"
+	 * (phase414). `on` fills the glyph: an Explore page stays up after the tap,
+	 * so it has to show that the place IS hidden; a feed card just leaves.
+	 */
+	hide?: CornerControl & { on?: boolean };
 	/**
 	 * Lay the row out in place instead of pinning it to the card's top-right.
 	 * The explore page's hero puts the same row in its own nav bar
@@ -194,7 +199,14 @@ export function CardCorner({
 				/>
 			)}
 			{share && <Disc control={share} label="Share" name="share" />}
-			{hide && <Disc control={hide} label="Not for me" name="thumbsDown" />}
+			{hide && (
+				<Disc
+					control={hide}
+					label={hide.on ? "Hidden — tap to undo" : "Not for me"}
+					name="thumbsDown"
+					weight={hide.on ? "fill" : "outline"}
+				/>
+			)}
 			{/* Saved fills the heart — outline → fill is the bit `SaveGlyph`
 			    signals with everywhere else — and turns it red (gold until the
 			    owner's 「爱心是红色」). Heart and the

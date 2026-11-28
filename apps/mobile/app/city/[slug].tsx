@@ -88,12 +88,15 @@ import {
 	schoolsByLevel,
 } from "../../lib/city/page";
 import { linkGroups } from "../../lib/community/explore";
+import type { RecentPlace } from "../../lib/feed/recent";
 import { openLink } from "../../lib/open-link";
 import { type ReviewStatus, fetchMyReview } from "../../lib/reviews/reviews";
 import { backOrFeed } from "../../lib/share/back-or-feed";
 import { openShareSheet } from "../../lib/share/share-sheet";
 import { useAuthStore } from "../../state/auth";
+import { useFeedSession } from "../../state/feed-session";
 import { useSavedStore } from "../../state/saved";
+import { toggleDislike, toggleLike } from "../../state/verdict";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -187,7 +190,9 @@ export default function CityScreen() {
 	// bookmark and this page's are one save.
 	const savedId = data?.geoUnitId ? `area-${data.geoUnitId}` : null;
 	const saved = useSavedStore((s) => (savedId ? s.isSaved(savedId) : false));
-	const toggleSaved = useSavedStore((s) => s.toggle);
+	const hidden = useFeedSession((s) =>
+		savedId ? s.hiddenIds.includes(savedId) : false,
+	);
 
 	useEffect(() => {
 		if (!slug) return;
@@ -239,6 +244,22 @@ export default function CityScreen() {
 	const where = [data.county ? `${data.county} County` : null, data.state]
 		.filter(Boolean)
 		.join(", ");
+	/**
+	 * This city as a verdict knows it — the row RECENT will show. Under the
+	 * feed card's own id (`area-<unit>`), so the card and the page are one
+	 * place; a city with no unit has no card and takes no verdict.
+	 */
+	const verdictPlace: RecentPlace | null =
+		savedId && data.geoUnitId
+			? {
+					id: savedId,
+					kind: "area",
+					title: data.name,
+					subtitle: data.state,
+					...(data.posterUrl ? { thumbUrl: data.posterUrl } : {}),
+					geoUnitId: data.geoUnitId,
+				}
+			: null;
 	// Floored, so two halves and their gap never round up past the row.
 	const half = Math.floor((width - PAGE_PAD * 2 - GAP) / 2);
 	const rankings = otherRankings(data);
@@ -275,9 +296,16 @@ export default function CityScreen() {
 					initial={data.name.trim().charAt(0).toUpperCase()}
 					segments={data.tourSegments ?? []}
 					saved={saved}
+					hidden={hidden}
 					onBack={backOrFeed}
+					// The card's two verdicts, with the card's rules: the heart is
+					// a like and a save, the thumbs-down hides the city from the
+					// feed and takes a heart with it.
 					onToggleSave={() => {
-						if (savedId) toggleSaved(savedId, "area");
+						if (verdictPlace) toggleLike(verdictPlace);
+					}}
+					onToggleHide={() => {
+						if (verdictPlace) toggleDislike(verdictPlace);
 					}}
 					// Share (phase335) — the city's web page, which opens here
 					// when the buyer has the app.

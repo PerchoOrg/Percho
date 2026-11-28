@@ -26,15 +26,18 @@ import type {
 } from "../lib/feed/card-types";
 import {
 	type RecentEntry,
+	type RecentPlace,
 	pushRecent,
 	recentEntryFor,
 } from "../lib/feed/recent";
 import {
 	EMPTY_SIGNALS,
+	type RevertibleSwipe,
 	type SignalState,
 	type SwipeEngagement,
 	applyDimRemoval,
 	applyInterest,
+	applyRecorded,
 	applyScope,
 	applySkipLayer,
 	applySwipe,
@@ -100,6 +103,13 @@ interface FeedSessionState {
 	) => SignalState;
 	/** Interest short of a like — see `applyInterest`. */
 	recordInterest: (card: FeedCardV3) => void;
+	/**
+	 * A verdict given away from the deck (phase416) — an Explore page's
+	 * thumbs-down, a heart in the You tab — on a place known by its snapshot.
+	 * It REPLACES whatever verdict the place had: a like becomes a hide and the
+	 * other way round, never both.
+	 */
+	setVerdict: (place: RecentPlace, verdict: SwipeVerdict, at: number) => void;
 	skipLayer: (layer: FunnelLayer) => void;
 	/**
 	 * The buyer picked a community scope in the feed's scope sheet, or cleared
@@ -119,6 +129,17 @@ interface FeedSessionState {
 	beginSession: () => void;
 	/** Explicit user scope reset (You-tab). Clears evidence, not the stage. */
 	clearSignals: () => void;
+}
+
+/** A RECENT row, as the reducers that undo it want it. */
+function recorded(entry: RecentEntry): RevertibleSwipe {
+	return {
+		id: entry.id,
+		kind: entry.kind,
+		verdict: entry.verdict,
+		...(entry.geoUnitId ? { geoUnitId: entry.geoUnitId } : {}),
+		...(entry.weight !== undefined ? { weight: entry.weight } : {}),
+	};
 }
 
 export const useFeedSession = create<FeedSessionState>()(
@@ -184,6 +205,24 @@ export const useFeedSession = create<FeedSessionState>()(
 			recordInterest: (card) =>
 				set((s) => ({ signals: applyInterest(s.signals, card) })),
 
+			setVerdict: (place, verdict, at) =>
+				set((s) => {
+					const before = s.recent.find((e) => e.id === place.id);
+					const cleared = before
+						? revertSwipe(s.signals, recorded(before))
+						: s.signals;
+					const entry: RecentEntry = { ...place, verdict, at };
+					const hidden = s.hiddenIds.filter((x) => x !== place.id);
+					return {
+						signals: applyRecorded(cleared, recorded(entry)),
+						recent: pushRecent(s.recent, entry),
+						hiddenIds: verdict === "left" ? [...hidden, place.id] : hidden,
+						seenIds: s.seenIds.includes(place.id)
+							? s.seenIds
+							: [...s.seenIds, place.id],
+					};
+				}),
+
 			skipLayer: (layer) =>
 				set((s) => ({ signals: applySkipLayer(s.signals, layer) })),
 
@@ -199,13 +238,7 @@ export const useFeedSession = create<FeedSessionState>()(
 					}
 					return {
 						hiddenIds,
-						signals: revertSwipe(s.signals, {
-							id: entry.id,
-							kind: entry.kind,
-							verdict: entry.verdict,
-							...(entry.geoUnitId ? { geoUnitId: entry.geoUnitId } : {}),
-							...(entry.weight !== undefined ? { weight: entry.weight } : {}),
-						}),
+						signals: revertSwipe(s.signals, recorded(entry)),
 						// Dropping the id from `seenIds` is what actually brings the
 						// card back: the composer dedupes against it, so until it is
 						// gone the engine will not emit the card again.

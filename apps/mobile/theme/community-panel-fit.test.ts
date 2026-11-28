@@ -206,7 +206,10 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		// 2. The release has to come off `onTouchesUp` (the raw pointer lift) as
 		//    well, or `scrubbing` stays true after a tap: the bar freezes and the
 		//    place label never goes away.
-		const scrub = SRC.slice(SRC.indexOf("Gesture.Pan()"));
+		// The BAR's pan. A city card's rail has its own, ahead of it in the file,
+		// which seeks when the touch ends instead — it shares its column with
+		// the deck's swipe (phase416).
+		const scrub = SRC.slice(SRC.indexOf("let gesture = Gesture.Pan()"));
 		expect(scrub).toContain(".onTouchesUp(commit)");
 		expect(scrub).toContain(".onFinalize(commit)");
 		const begin = scrub.slice(

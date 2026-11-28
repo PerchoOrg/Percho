@@ -233,3 +233,53 @@ describe("recordInterest", () => {
 		expect(s().recent).toEqual([]);
 	});
 });
+
+describe("setVerdict — a verdict given away from the deck (phase416)", () => {
+	const place = {
+		id: "c1",
+		kind: "community" as const,
+		title: "Bellmoore Park",
+		subtitle: "Johns Creek, GA",
+		geoUnitId: "city:johns-creek-ga",
+	};
+
+	it("records a like with its row in RECENT", () => {
+		s().setVerdict(place, "right", 5);
+		expect(s().signals.likedCommunityIds).toEqual(["c1"]);
+		expect(s().recent[0]).toMatchObject({ id: "c1", verdict: "right", at: 5 });
+		expect(s().hiddenIds).toEqual([]);
+		expect(s().seenIds).toEqual(["c1"]);
+	});
+
+	it("a thumbs-down hides the place", () => {
+		s().setVerdict(place, "left", 5);
+		expect(s().hiddenIds).toEqual(["c1"]);
+		expect(s().signals.passedCommunityIds).toEqual(["c1"]);
+	});
+
+	it("replaces the verdict the place had — never both", () => {
+		s().setVerdict(place, "right", 5);
+		s().setVerdict(place, "left", 6);
+		expect(s().signals.likedCommunityIds).toEqual([]);
+		expect(s().signals.passedCommunityIds).toEqual(["c1"]);
+		// The like's credit to the city is taken back before the hide's is added.
+		expect(s().signals.geo).toEqual([
+			{ unitId: "city:johns-creek-ga", level: "city", right: 0, left: 1 },
+		]);
+		expect(s().recent).toHaveLength(1);
+		expect(s().recent[0]?.verdict).toBe("left");
+
+		s().setVerdict(place, "right", 7);
+		expect(s().hiddenIds).toEqual([]);
+		expect(s().signals.passedCommunityIds).toEqual([]);
+		expect(s().signals.likedCommunityIds).toEqual(["c1"]);
+	});
+
+	it("is undone whole by bringBack", () => {
+		s().setVerdict(place, "left", 5);
+		s().bringBack("c1");
+		expect(s().hiddenIds).toEqual([]);
+		expect(s().signals.geo).toEqual([]);
+		expect(s().recent).toEqual([]);
+	});
+});

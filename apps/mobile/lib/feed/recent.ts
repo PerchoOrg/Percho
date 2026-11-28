@@ -55,6 +55,12 @@ export interface RecentEntry {
 }
 
 /**
+ * A place as RECENT knows it, before any verdict: what a screen that is not
+ * the deck hands over to record one (`useFeedSession.setVerdict`).
+ */
+export type RecentPlace = Omit<RecentEntry, "verdict" | "at" | "weight">;
+
+/**
  * Snapshot one swipe, or `null` when the card is not one the You tab lists.
  */
 export function recentEntryFor(
