@@ -338,6 +338,7 @@ a §-numbered principle in this doc:
 
 - `docs/design/discovery-feed.md` — the swipe feed itself (§2, §3.1–3.6)
 - `docs/design/listing-explore.md` — Listing Detail Experience (§4)
+- `docs/design/recommendation.md` — how the feed picks and orders cards (§1, §3.4)
 - `docs/pipelines/README.md` + `pipelines/poi-content.md` — video content
   generation for listing / community cards (§3.2, §3.3)
 

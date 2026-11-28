@@ -23,6 +23,30 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-28 09:42 UTC — phase421: the recommendation system, designed — nothing built
+
+**Objective**: Owner (2026-11-28): 「推荐到底怎么做 … 如果有10000个视频 用户最感兴趣的是第10000个怎么办 永远刷不到 浏览时长 点击按键 选择喜欢 或者不喜欢 如何影响下一组推荐 多少个一组？」, then, to a first outline: 「这个方向可以 先设计一个完整的Percho推荐系统给我 我们之前的问题卡片可以用吗」.
+**Actions**:
+- `docs/design/recommendation.md` — the spec: what is optimised, item features, the signal table, the score, how a batch of 12 is composed, question cards, where ranking runs, three phases, what it will not do, and the code each part replaces.
+- `/demos/recommendation-v1` (Chinese, noindex) — the same design in plain terms, with a simulator over the 28 live films (20 communities, 8 cities, read from `/api/mobile/feed`): like / dislike / open Explore / watch through / leave in 2 s / swipe past, and the next 12 re-rank beside the phone with each card's reason and its position in the catalogue. A switch adds 10,000 made-up homes, labelled as made up, to show a batch drawing from position 23 and position 8,802 at once.
+- `docs/design/preference-learning.md` — one line under its downstream docs.
+**What the code does today** (read, not changed):
+- `/api/mobile/feed` pages a fixed order by `offset`/`limit`; the phone ranks only what it has been sent. The route's own comment records the August case — the one filmed community ~280th alphabetically, never reaching the phone. His worry is that hole at scale.
+- A like moves its city's tally; dwell scales that weight 0.5–2× (`swipeWeight`). Watching a film through, opening Explore, `Communities ›`, Map, a figure, or sharing moves nothing. My first reply said dwell was unused in ranking — wrong, and corrected on the page.
+- Trade-off cards are out of both communities-only mixes.
+**Decisions** (proposed — the owner's to confirm):
+- Each batch is picked from the whole catalogue by score, on the server; the phone re-ranks the batch at once with the same function. 12 per request, the next 2 fixed, the rest re-ranked on every signal, 7 fit + 3 near + 2 explore.
+- A hand-written additive score, not a model: no data to train on, and the FMLS agreement forbids Licensed Data with AI.
+- My outline had said "filter first, then rank". Withdrawn: `discovery-feed.md` §1.3 already rules that scope ranks and never filters, and it is right — the coarse pass is a ranking cut, and explore slots draw from outside it.
+- Question cards: the card, its rules and its record are reused; 7 of the 32 questions are about a place and usable now, 25 are about a house's inside and wait for listings; five new place questions drafted on the page for his review. No schools question.
+- The follow rule he removed in phase404.7 is designed here as a lift, not a switch: four or five of a liked city's communities in the next batch.
+- Not used, ever: who lives somewhere, app language, device locale. School grade ranks only when the buyer states it. Flagged for a fair-housing lawyer before listings launch.
+**Verified**: the demo in headless Chrome — 9 actions on the 28 films and 12 on the 10,028, the pool run to its end card, no script errors; 10,000 homes build in ~35 ms and 12 actions take ~80 ms; no sideways overflow at 390 pt.
+**Not verified**: nothing here is in the app.
+**Next steps**: his five answers (question cards and their copy; the lift after a liked city; schools only when stated; paid content earns no score; start phase A). Phase A needs no listings and no migration.
+
+---
+
 ## 2026-11-28 09:40 UTC — phase420: agent films re-thought against phase407–419 — design and demo only
 
 **Objective**: owner 2026-11-28: 「根据最新的改动 重新想想这个功能应该怎么做」, then 「出demo」. Read as: the app changes merged since the phase406 proposal. Nothing is built; the four questions of phase406 were not answered and are folded into the new list.
