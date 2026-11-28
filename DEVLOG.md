@@ -23,6 +23,15 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-28 09:51 UTC — phase423: agent films move into the iOS app — no web (demo only)
+
+**Objective**: owner on `/demos/agent-film-v3` (2026-11-28): 「你所有的设计都是在web上 no！没人用web 全部管理操作都应该在手机上完成」. Three demos had put the agent on the web — the dashboard, then a phone-browser page. Read as: in the Percho iOS app.
+**Actions**: `apps/web/public/demos/agent-film-v4/index.html` (Chinese, noindex): the You-tab row and one-screen sign-up as an agent; MY FILMS at the top of the You tab; New film through the photo library with the place read from the assets; shot list, push notification, the film's page with the share sheet; the card with photo / moving portrait / own voice recorded on the phone. `docs/design/agent-films.md` gains "In the app, not on the web", which overrides the web parts above it. Nothing built.
+**What the move adds** (on the demo, plainly): payment inside the app generally has to be Apple's in-app purchase, so phase341's Stripe checkout cannot be the in-app path — Apple's current rules **not yet checked**, no rate quoted; the app has no picker, camera, microphone, upload or push modules today (`apps/mobile/package.json`), so this is a native build with four new permissions; an agent identity on an app account is an auth-model change (CLAUDE.md §8).
+**Still assumed, unconfirmed**: moving portrait = a clip the agent films; voice = the agent reading the script. He has not answered either.
+**Learnings**: he had said "入口在哪里 管理界面长什么样子" and I answered with a different web page. For this owner "on the phone" means in the app; agents are app users, not dashboard users.
+**Next steps**: owner answers the four points at the foot of v4. Before any build: Apple's purchase rules and a priced option; one unfilmed community end to end with the research cost measured.
+
 ## 2026-11-28 09:46 UTC — phase422: agent films — the way in, the management page, and defining a community by uploading (demo only)
 
 **Objective**: owner on `/demos/agent-film-v2` (2026-11-28): 「是 / 是 不仅名片 而且照片甚至动态头像视频 还可以选择用agent自己的声音 这些应该是付费功能 / 要 / 好」 — the four points of phase420 are decided, with three paid extras added. Then: 「我还是不明白入口在哪里 管理界面长什么样子 如何快速定义并且上传一个社区 而不是找现有的社区」. Both earlier demos drew what happens after an upload and assumed the community was already a row.

@@ -86,6 +86,43 @@ features**; yes; ok. Then: 「我还是不明白入口在哪里 管理界面长�
   proposed. Payment is the Community Partner plan of phase341 (dark; needs
   the owner's Stripe account).
 
+## In the app, not on the web — 2026-11-28 (phase423)
+
+Owner on v3: 「你所有的设计都是在web上 no！没人用web 全部管理操作都应该在手机上
+完成」. Everything an agent does happens in the iOS app. This overrides every
+mention above of the dashboard, a My film tab on the web, `percho.co/film`
+and a phone browser. Demo: `https://www.percho.co/demos/agent-film-v4`.
+Proposed, not yet ruled:
+
+- **Way in**: a row under Account on the You tab, "I'm an agent". One
+  screen — name, brokerage, Georgia licence number, phone — adds the agent
+  identity to the signed-in account (an `agents` row; iOS sign-ups are
+  buyers today). The licence number is what lets us check the person.
+- **Management**: a MY FILMS section at the top of that account's You tab —
+  New film, then a row per film with its state and numbers. No fifth tab.
+- **New film**: the system photo picker (photos and video together, the
+  rights box), then "Where is this?" from the assets' own locations through
+  `match_community`; else a typed name with suggestions, or a new community
+  from a name and a pin. In the app the location comes with the library
+  permission, so v3's open question about Safari is gone.
+- **Making it**: the shot list, Make my film, rendered server-side; a push
+  notification when it is live. The film's page: watch, numbers, the system
+  share sheet, add and recut, the buyers who made contact.
+- **Card and paid extras** on the same page: photo, a moving portrait
+  filmed with the front camera, the agent's voice recorded line by line.
+
+What moving into the app adds:
+1. **Payment.** Stripe checkout (phase341) cannot simply be used inside the
+   app for a digital feature; Apple generally requires in-app purchase and
+   takes a commission. Check Apple's current rules and price the options
+   before building — not done.
+2. **A larger release.** The app has no photo picker, camera or microphone
+   capture, upload, or push notifications today (`apps/mobile/package.json`
+   has none of the modules). Four new permissions, a new native build,
+   App Review.
+3. **An agent identity in the app** — a change to the auth model, which
+   CLAUDE.md §8 puts to the owner.
+
 ## Why
 
 Every film today is cut by Percho from photos Percho found. That is the cold

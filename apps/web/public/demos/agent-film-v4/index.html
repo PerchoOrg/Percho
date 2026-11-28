@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — Agent 影片，全部在 app 里完成（设计方案）</title>
+<style>
+:root{
+  --green:#086B5B;
+  --ink:#181B18;
+  --ink2:#5A4E40;
+  --paper:#F6F3EC;
+  --sage:#E0E9E3;
+  --rust:#C86B3C;
+  --gold:#A9781C;
+  --red:#C8402F;
+  --line:rgba(0,0,0,.09);
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, "Songti SC", serif;
+  --ui: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:24px 14px 80px}
+section,.nav{max-width:960px;margin:0 auto}
+h1{font:600 26px/1.25 var(--serif);color:var(--green);margin-bottom:8px}
+h2{font:600 21px/1.3 var(--ui);margin:0 0 6px}
+h2 em{font-style:normal;font-weight:600;font-size:13px;color:#fff;background:var(--green);border-radius:11px;padding:2px 10px;margin-right:8px;vertical-align:3px}
+p,li{font:400 15px/1.65 var(--ui);color:var(--ink2)}
+p{margin:6px 0;max-width:820px}
+b{color:#2B2116}
+code{font:500 13px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.6);border-radius:5px;padding:1px 6px;color:var(--green);word-break:break-all}
+section{margin-top:48px}
+ol,ul{margin:4px 0 4px 22px;max-width:820px}
+.note{background:rgba(255,255,255,.55);border-radius:14px;padding:12px 18px;margin-top:14px;max-width:860px}
+.note p{margin:3px 0}
+.new{outline:2px dashed var(--rust);outline-offset:3px}
+.phones{display:flex;flex-wrap:wrap;gap:26px 24px;justify-content:center;margin-top:18px}
+.cap{width:280px;font:400 13px/1.5 var(--ui);color:var(--ink2);margin-top:9px}
+.cap b{color:#2B2116}
+
+/* ── the app ──────────────────────────────────────── */
+.phone{width:280px;height:600px;border-radius:32px;background:var(--paper);overflow:hidden;position:relative;box-shadow:0 3px 10px rgba(32,28,22,.06),0 16px 38px rgba(32,28,22,.16);display:flex;flex-direction:column;flex:none}
+.status{height:30px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font:600 11px var(--ui);color:var(--ink)}
+.bar{height:38px;flex:none;display:flex;align-items:center;padding:0 14px;font:500 13.5px var(--ui);color:var(--green)}
+.bar b{flex:1;text-align:center;font:600 14px var(--ui);color:var(--ink);margin-right:34px}
+.pg{flex:1;padding:4px 16px 14px;overflow:hidden;display:flex;flex-direction:column}
+.pg h5{font:600 22px/1.2 var(--serif);color:var(--ink)}
+.pg .lead{font:400 12.5px/1.5 var(--ui);color:var(--ink2);margin-top:5px}
+.head{font:600 10.5px var(--ui);letter-spacing:.7px;color:#8A8478;margin:14px 0 2px}
+.btn{display:block;height:42px;border-radius:21px;background:var(--green);color:#fff;font:600 14px/42px var(--ui);text-align:center;margin-top:10px}
+.btn.ghost{background:var(--sage);color:var(--green)}
+.btn.sm{display:inline-block;height:30px;line-height:30px;padding:0 13px;font-size:12px;margin-top:0}
+.sp{flex:1}
+.tabs{height:54px;flex:none;border-top:1px solid rgba(0,0,0,.07);display:flex;justify-content:space-around;padding-top:8px;font:500 9px/1.5 var(--ui);color:#8A8478;text-align:center}
+.tabs b{color:var(--green);font-weight:600}
+.yrow{display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;padding:11px 13px;margin-top:7px;font:500 13px var(--ui);color:var(--ink)}
+.yrow span{flex:1}
+.yrow i{font-style:normal;color:#8A8478}
+.yrow small{display:block;font:400 11px var(--ui);color:var(--ink2)}
+.field{height:40px;border-radius:11px;background:#fff;border:1px solid var(--line);padding:0 12px;font:500 13.5px/40px var(--ui);color:var(--ink);margin-top:8px}
+.field small{font:400 11px var(--ui);color:#8A8478;margin-right:8px}
+
+.film{display:flex;gap:10px;background:#fff;border-radius:14px;padding:9px;margin-top:7px}
+.film .th{flex:none;width:50px;height:70px;border-radius:9px;background:#20262A center/cover}
+.film .tx{flex:1;min-width:0}
+.film b{display:block;font:600 14px var(--serif);color:var(--ink)}
+.film .st{display:inline-block;height:18px;padding:0 7px;border-radius:9px;font:600 9.5px/18px var(--ui);color:#fff;background:var(--green);margin-top:4px}
+.film .st.wait{background:#8A8478}
+.film .st.work{background:var(--gold)}
+.film small{display:block;font:400 11px/1.4 var(--ui);color:var(--ink2);margin-top:4px}
+
+/* the photo library */
+.lib{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin:8px -16px 0}
+.lib div{aspect-ratio:1;background:#20262A center/cover;position:relative}
+.lib div.on::after{content:"✓";position:absolute;right:5px;bottom:5px;width:19px;height:19px;border-radius:10px;background:var(--green);color:#fff;font:700 11px/19px var(--ui);text-align:center;box-shadow:0 0 0 1.5px #fff}
+.lib div.off{filter:saturate(.4) brightness(.85)}
+.lib u{position:absolute;left:5px;bottom:5px;text-decoration:none;font:600 9px var(--ui);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.check{display:flex;gap:8px;margin-top:10px;font:400 11.5px/1.4 var(--ui);color:var(--ink)}
+.check i{flex:none;width:16px;height:16px;border-radius:5px;background:var(--green);color:#fff;font:700 10px/16px var(--ui);text-align:center;font-style:normal}
+
+.found{background:#fff;border-radius:14px;padding:12px 13px;margin-top:12px}
+.found b{display:block;font:600 17px var(--serif);color:var(--ink)}
+.found small{font:400 11.5px var(--ui);color:var(--ink2)}
+.found .two{display:flex;gap:8px;margin-top:10px}
+.found .two .btn{flex:1;margin-top:0;height:36px;line-height:36px;font-size:13px}
+.sug{font:400 12.5px var(--ui);color:var(--ink2);padding:9px 2px;border-bottom:1px solid var(--line)}
+.sug b{font-weight:600}
+.sug.add{color:var(--green);font-weight:600;border-bottom:0}
+.map{height:140px;border-radius:14px;margin-top:10px;position:relative;overflow:hidden;background:
+  linear-gradient(115deg,transparent 46%,#fff 46% 49%,transparent 49%),
+  linear-gradient(20deg,transparent 58%,#fff 58% 60.5%,transparent 60.5%),
+  radial-gradient(circle at 78% 30%,#BFD8C2 0 16%,transparent 17%),
+  radial-gradient(circle at 22% 78%,#B9D3E0 0 13%,transparent 14%),#E6E2D6}
+.map::after{content:"";position:absolute;left:50%;top:44%;width:18px;height:18px;margin:-9px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--rust);box-shadow:0 2px 5px rgba(0,0,0,.3)}
+.map span{position:absolute;left:8px;bottom:7px;font:500 10px var(--ui);color:var(--ink2);background:rgba(255,255,255,.8);border-radius:6px;padding:2px 6px}
+
+.shots{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:10px}
+.shots div{aspect-ratio:2/3;border-radius:7px;background:#20262A center/cover;position:relative}
+.shots div.mine{box-shadow:0 0 0 2px var(--green)}
+.shots u{position:absolute;left:3px;top:3px;text-decoration:none;font:600 8px/13px var(--ui);height:13px;padding:0 4px;border-radius:7px;background:rgba(14,13,11,.6);color:#fff}
+.shots .mine u{background:var(--green)}
+.push{position:absolute;left:10px;right:10px;top:36px;background:rgba(255,255,255,.96);border-radius:16px;padding:10px 12px;box-shadow:0 6px 20px rgba(0,0,0,.18);font:400 11.5px/1.4 var(--ui);color:var(--ink)}
+.push b{display:block;font:600 12px var(--ui)}
+
+.hero{height:96px;border-radius:14px;background:#20262A center/cover;position:relative;margin-top:8px;flex:none}
+.hero::after{content:"▶";position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px;border-radius:17px;background:rgba(14,13,11,.55);color:#fff;font:400 13px/34px var(--ui);text-align:center;padding-left:2px}
+.nums{display:flex;gap:6px;margin-top:8px}
+.nums div{flex:1;background:#fff;border-radius:10px;padding:7px 4px;text-align:center;font:400 9.5px var(--ui);color:var(--ink2)}
+.nums b{display:block;font:600 16px var(--ui);color:var(--ink)}
+.opt{display:flex;align-items:center;gap:9px;background:#fff;border-radius:12px;padding:9px 11px;margin-top:6px;font:500 12.5px var(--ui);color:var(--ink)}
+.opt span{flex:1}
+.opt small{display:block;font:400 10.5px var(--ui);color:var(--ink2)}
+.opt .on{flex:none;font:600 11px var(--ui);color:var(--green)}
+.opt .pro{flex:none;height:19px;padding:0 8px;border-radius:10px;background:var(--gold);color:#fff;font:600 10px/19px var(--ui)}
+.face{flex:none;width:30px;height:30px;border-radius:15px;background:var(--sage);color:var(--green);font:600 11px/30px var(--ui);text-align:center}
+
+/* recording */
+.dark{background:#141614}
+.dark .status,.dark .bar,.dark .bar b{color:#fff}
+.say{font:600 21px/1.4 var(--serif);color:#fff;margin-top:26px}
+.of{font:600 10.5px var(--ui);letter-spacing:.7px;color:rgba(255,255,255,.6);margin-top:10px}
+.wave{display:flex;align-items:center;gap:3px;height:54px;margin-top:26px}
+.wave i{flex:1;background:rgba(255,255,255,.75);border-radius:2px}
+.rec{width:68px;height:68px;border-radius:34px;border:3px solid #fff;margin:0 auto;display:flex;align-items:center;justify-content:center}
+.rec::after{content:"";width:26px;height:26px;border-radius:6px;background:var(--red)}
+.rec.idle::after{width:52px;height:52px;border-radius:26px}
+.hint{font:400 11.5px var(--ui);color:rgba(255,255,255,.7);text-align:center;margin-top:10px}
+.cam{flex:1;margin:6px -16px 0;background:#2A2F2C center/cover;position:relative}
+.cam::before{content:"";position:absolute;left:50%;top:42%;width:150px;height:150px;margin:-75px;border-radius:75px;border:2px dashed rgba(255,255,255,.85)}
+.cam span{position:absolute;left:0;right:0;top:12px;text-align:center;font:500 12px var(--ui);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+
+.ask{background:rgba(255,255,255,.62);border-radius:14px;padding:14px 20px;margin-top:12px;max-width:860px}
+.ask li{margin:8px 0}
+.ask li span{display:block;font-size:13.5px;color:var(--ink2)}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>全部在 Percho app 里完成</h1>
+  <p>前三版都画在网页上，错了。这一版：<b>agent 从开通、新建小区、传素材、看片、发布、看数字，到录头像和录旁白，全在 iPhone 的 Percho app 里</b>，不需要打开任何网页。</p>
+  <p>界面文字是英文。图取自 Edinburgh 的影片，小区名、人名、数字都是示意。<b>橙色虚线框</b>是新增的东西。</p>
+  <div class="note">
+    <p><b>买家看到的 app 不变</b>。Agent 的东西都在 You 页里，只有开通了 agent 的账号才看得到。</p>
+  </div>
+</div>
+
+<section>
+  <h2><em>1</em>入口：You 页里一行，开通一次</h2>
+  <p>You 页的 Account 下面多一行 <code>I’m an agent</code>。点进去填名字、公司、执照号，一次就好。之后这个账号的 You 页最上面多出 <code>My films</code>。</p>
+  <div class="phones">
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="pg">
+          <h5>You</h5>
+          <div class="head">YOUR PREFERENCES</div>
+          <div class="yrow"><span>Schools · Cost · Convenience</span><i>›</i></div>
+          <div class="head">SETTINGS</div>
+          <div class="yrow"><span>Sound</span><i>›</i></div>
+          <div class="head">ACCOUNT</div>
+          <div class="yrow"><span>dana@example.com</span><i>›</i></div>
+          <div class="yrow new"><span>I’m an agent<small>Make a film of a neighbourhood you know</small></span><i>›</i></div>
+        </div>
+        <div class="tabs"><span>▶<br>Feed</span><span>⌕<br>Search</span><span>♡<br>Saved</span><b>☰<br>You</b></div>
+      </div>
+      <div class="cap"><b>入口</b>。任何登录了的人都看得到这一行，在最下面，不打扰买家。</div>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="bar">‹ You<b>Agent</b></div>
+        <div class="pg">
+          <h5>Tell buyers who you are</h5>
+          <div class="lead">This is the card under your films.</div>
+          <div class="field"><small>Name</small>Dana Cole</div>
+          <div class="field"><small>Brokerage</small>Keller Williams</div>
+          <div class="field"><small>GA licence</small>412 388</div>
+          <div class="field"><small>Phone</small>(770) 555-0142</div>
+          <div class="sp"></div>
+          <div class="btn">Continue</div>
+        </div>
+      </div>
+      <div class="cap"><b>开通</b>。四栏，填一次。执照号是为了让我们能核对他真的是 agent。</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><em>2</em>管理界面：You 页最上面的 My films</h2>
+  <p>开通后，You 页最上面就是他的影片：一个 <code>New film</code>，下面每部片一行，写着到哪一步了。这就是全部的管理界面，不加新的底部标签。</p>
+  <div class="phones">
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="pg">
+          <h5>You</h5>
+          <div class="head">MY FILMS</div>
+          <div class="new" style="border-radius:16px">
+            <div class="btn" style="margin-top:4px">＋ New film</div>
+            <div class="film"><div class="th" data-t="9"></div><div class="tx"><b>Laurel Springs</b><span class="st">Live</span><small>214 watched · 31 hearts · 4 contacts</small></div></div>
+            <div class="film"><div class="th" data-t="13"></div><div class="tx"><b>Vinings Glen</b><span class="st work">Percho is checking it</span><small>Usually within a day</small></div></div>
+            <div class="film"><div class="th" data-t="25"></div><div class="tx"><b>Brookstone</b><span class="st wait">Needs 2 more photos</span><small>Add the pool or the entrance</small></div></div>
+          </div>
+          <div class="head">RECENT</div>
+          <div class="yrow"><span>…</span></div>
+        </div>
+        <div class="tabs"><span>▶<br>Feed</span><span>⌕<br>Search</span><span>♡<br>Saved</span><b>☰<br>You</b></div>
+      </div>
+      <div class="cap"><b>Agent 的 You 页</b>。三种状态：上线了、我们在看、素材不够。下面还是原来的 You 页。</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><em>3</em>新建：选相册里的照片视频，小区由 app 认出来</h2>
+  <p>点 <code>New film</code> 直接打开手机相册，勾照片和视频。App 读得到每张照片的拍摄地点，所以<b>不用他找小区</b>：我们告诉他"这是 Laurel Springs，对吗"，点 Yes 就行。认不出或者库里没有，打个名字、在地图上放个点，小区就建好了。</p>
+  <div class="phones">
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="bar">Cancel<b>5 selected</b></div>
+        <div class="pg">
+          <div class="lib"><div class="on" data-t="1"></div><div class="on" data-t="5"></div><div class="on" data-t="9"><u>0:38</u></div><div class="off" data-t="37"></div><div class="on" data-t="13"></div><div class="off" data-t="41"></div><div class="on" data-t="25"><u>0:21</u></div><div class="off" data-t="45"></div><div class="off" data-t="49"></div></div>
+          <div class="check"><i>✓</i><span>I took these or have the right to use them. They are not MLS listing photos.</span></div>
+          <div class="sp"></div>
+          <div class="btn">Next</div>
+        </div>
+      </div>
+      <div class="cap"><b>第一步</b>：手机自己的相册，照片视频一起勾。</div>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="bar">‹ Back<b>New film</b></div>
+        <div class="pg">
+          <h5>Where is this?</h5>
+          <div class="found new"><small>4 of your 5 were taken here</small><b>Laurel Springs</b><small>Marietta, GA · no film yet — yours will be the one buyers see</small>
+            <div class="two"><div class="btn">Yes</div><div class="btn ghost">Somewhere else</div></div></div>
+          <div class="map"><span>where your photos were taken</span></div>
+        </div>
+      </div>
+      <div class="cap"><b>第二步，大多数情况</b>：认出来了，点 Yes。</div>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="bar">‹ Back<b>New film</b></div>
+        <div class="pg">
+          <h5>Where is this?</h5>
+          <div class="field">Brooksto|</div>
+          <div class="sug"><b>Brookstone</b> · Acworth, GA</div>
+          <div class="sug"><b>Brookstone Manor</b> · Kennesaw, GA</div>
+          <div class="sug add new">＋ Add “Brookstone” as new</div>
+          <div class="map"><span>drag the pin to the entrance</span></div>
+          <div class="sp"></div>
+          <div class="btn">Use this place</div>
+        </div>
+      </div>
+      <div class="cap"><b>第二步，认不出时</b>：打名字选建议；没有就新建，只要名字和一个点。</div>
+    </div>
+  </div>
+  <div class="note">
+    <p><b>比网页好的地方</b>：app 向他要一次相册权限后，拍摄地点是稳定读得到的。上一版我说网页上这一点没验证，在 app 里不存在这个问题。</p>
+    <p><b>新建的小区</b>要等他的片子我们看过才一起出现在 app 里。</p>
+  </div>
+</section>
+
+<section>
+  <h2><em>4</em>出片、通知、分享</h2>
+  <p>选完地方，先看镜头表（他的排前面，周边我们补），点 <code>Make my film</code>。片子在我们这边做，他可以关掉 app；好了手机收到通知。打开就能看、能用手机自带的分享发出去。</p>
+  <div class="phones">
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="bar">‹ Back<b>Laurel Springs</b></div>
+        <div class="pg">
+          <h5>Your film</h5>
+          <div class="lead">About 58 seconds. Yours first; Percho adds the schools and parks nearby.</div>
+          <div class="shots"><div class="mine" data-t="1"><u>Yours</u></div><div class="mine" data-t="5"><u>Yours</u></div><div class="mine" data-t="9"><u>Yours</u></div><div class="mine" data-t="13"><u>Yours</u></div><div class="mine" data-t="25"><u>Yours</u></div><div data-t="37"><u>Percho</u></div><div data-t="41"><u>Percho</u></div><div data-t="45"><u>Percho</u></div></div>
+          <div class="sp"></div>
+          <div class="btn">Make my film</div>
+        </div>
+      </div>
+      <div class="cap"><b>镜头表</b>。出片之前看一眼。</div>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="push new"><b>Percho</b>Your film of Laurel Springs is live. 12 buyers have watched it.</div>
+        <div class="bar" style="margin-top:76px">‹ You<b>Laurel Springs</b></div>
+        <div class="pg">
+          <div class="hero" data-t="9" style="height:150px"></div>
+          <div class="nums"><div><b>214</b>watched</div><div><b>96</b>to the end</div><div><b>31</b>hearts</div><div><b>4</b>contacts</div></div>
+          <div class="btn">Share</div>
+          <div class="btn ghost">Add photos and recut</div>
+          <div class="yrow"><span>Buyers who contacted you<small>4 new</small></span><i>›</i></div>
+        </div>
+      </div>
+      <div class="cap"><b>一部片的页面</b>。通知、数字、分享、补素材、联系他的买家，都在这里。</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><em>5</em>名片和付费的三样，也在手机上录</h2>
+  <p>同一页往下是 <code>Your card</code>。名字和公司免费。照片、动态头像、自己的声音是付费的 <code>Partner</code>，开通后直接用手机的相机和麦克风录。</p>
+  <div class="phones">
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="bar">‹ You<b>Laurel Springs</b></div>
+        <div class="pg">
+          <div class="head" style="margin-top:2px">YOUR CARD</div>
+          <div class="opt"><div class="face">DC</div><span>Dana Cole<small>Keller Williams</small></span><div class="on">Free</div></div>
+          <div class="opt new"><span>Your photo<small>On the card and the film’s last frame</small></span><div class="pro">Partner</div></div>
+          <div class="opt new"><span>A moving portrait<small>A few seconds of you, filmed here</small></span><div class="pro">Partner</div></div>
+          <div class="opt new"><span>Your own voice<small>Read the film’s lines, recorded here</small></span><div class="pro">Partner</div></div>
+          <div class="sp"></div>
+          <div class="btn">Become a Partner</div>
+        </div>
+      </div>
+      <div class="cap"><b>名片</b>。三样付费的在这里开。</div>
+    </div>
+    <div>
+      <div class="phone dark">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="bar" style="color:#fff">Cancel<b>Moving portrait</b></div>
+        <div class="pg">
+          <div class="cam"><span>Look at the camera and smile · 3 seconds</span></div>
+          <div style="padding-top:14px"><div class="rec idle"></div><div class="hint">Tap to record</div></div>
+        </div>
+      </div>
+      <div class="cap"><b>动态头像</b>：前置摄像头录三秒，在名片上循环。</div>
+    </div>
+    <div>
+      <div class="phone dark">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="bar" style="color:#fff">Cancel<b>Your voice</b></div>
+        <div class="pg">
+          <div class="of">LINE 3 OF 11</div>
+          <div class="say">“The pool opens in May, and the clubhouse sits right beside it.”</div>
+          <div class="wave" id="wave"></div>
+          <div class="sp"></div>
+          <div class="rec"></div><div class="hint">Recording · tap to stop, swipe for the next line</div>
+        </div>
+      </div>
+      <div class="cap"><b>自己的声音</b>：旁白稿一句一句给他念，录完替换掉合成的旁白。</div>
+    </div>
+  </div>
+  <div class="note">
+    <p>这两样我仍然按"真人自己录"画的：不是 AI 数字人，也不是 AI 克隆声音。你要 AI 版本的话告诉我，那要另外接付费服务，我先报价。</p>
+  </div>
+</section>
+
+<section>
+  <h2>放进 app 之后，多出来的三件事</h2>
+  <div class="note">
+    <p><b>1. 付费要过苹果这一关。</b>在 app 里卖数字功能，苹果一般要求走它的内购，要抽成。之前做好的 Stripe 那套不能直接在 app 里用。具体走内购还是别的方式，动手前我会把苹果现在的规则核对清楚再给你方案和费率。</p>
+    <p><b>2. 要发新版本，而且比平时大。</b>App 现在没有选相册、录音、录像、推送通知这几样能力，都要新加，要向用户要相册、相机、麦克风、通知四个权限，苹果会审。</p>
+    <p><b>3. 账号里要有"agent"这个身份。</b>现在 app 里注册的都是买家。开通 agent 是在现有账号上加身份，不用重新注册。</p>
+  </div>
+</section>
+
+<section>
+  <h2>需要你定</h2>
+  <div class="ask">
+    <ol>
+      <li><b>入口和管理都在 You 页</b>（Account 下一行开通；开通后最上面是 My films）<span>建议：是。不加第五个底部标签。</span></li>
+      <li><b>新建方式：先选相册，由拍摄地点认小区，认不出再打名字</b><span>建议：是。</span></li>
+      <li><b>开通时要执照号</b><span>建议：要。不然任何人都能自称 agent 把片子放进 app。</span></li>
+      <li><b>付费三样按"真人自己录"做</b><span>建议：是。</span></li>
+    </ol>
+    <p style="margin-top:8px">回 <b>「都按建议」</b>，或者告诉我哪一条要改。</p>
+  </div>
+</section>
+
+<script>
+const UID = 'bbcc652c5781ea1227d705a6661fbe68';
+for (const el of document.querySelectorAll('[data-t]'))
+  el.style.backgroundImage = `url(https://videodelivery.net/${UID}/thumbnails/thumbnail.jpg?time=${el.dataset.t}s&height=${el.classList.contains('hero') ? 700 : 300})`;
+const wave = document.getElementById('wave');
+[18, 34, 52, 30, 44, 60, 38, 22, 48, 66, 40, 28, 54, 36, 20, 46, 62, 32, 24, 50, 38, 26, 42, 30].forEach((h) => {
+  const i = document.createElement('i'); i.style.height = h + '%'; wave.append(i);
+});
+</script>
+</body>
+</html>
