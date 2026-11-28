@@ -16,12 +16,15 @@
  * the buyer actually saw when they passed — which is the honest thing for a
  * history to say.
  *
- * ── Only the two inventory kinds ────────────────────────────────────────────
+ * ── Not a trade-off ─────────────────────────────────────────────────────────
  *
  * A trade-off answer is a preference statement, and §1.8 already rules those
- * out of undo ("信号已入 scope"). An area card is revertible in principle but
- * has not been in the deck since 2026-08-22. `recentEntryFor` returns `null`
- * for both, so nothing unrevertible can reach the list.
+ * out of undo ("信号已入 scope"). `recentEntryFor` returns `null` for it, so
+ * nothing unrevertible can reach the list.
+ *
+ * A city's card is listed since phase414. It had been left out while no area
+ * card was in the deck (2026-08-22); city films put it back (phase327), and
+ * the card's hide button needs somewhere its verdict can be taken back from.
  *
  * Pure: no react, no store, no clock — `at` is supplied by the caller.
  */
@@ -32,11 +35,11 @@ export const RECENT_CAP = 30;
 
 export interface RecentEntry {
 	id: string;
-	kind: "listing" | "community";
+	kind: "listing" | "community" | "area";
 	verdict: SwipeVerdict;
 	/** Epoch ms of the swipe. */
 	at: number;
-	/** The card's own headline — an address, or a community name. */
+	/** The card's own headline — an address, or a community's or city's name. */
 	title: string;
 	/** One supporting line, built only from fields the card really had. */
 	subtitle: string;
@@ -86,6 +89,19 @@ export function recentEntryFor(
 			subtitle: `${card.city}, ${card.state}`,
 			...(card.heroUrl ? { thumbUrl: card.heroUrl } : {}),
 			...(card.geoUnitId ? { geoUnitId: card.geoUnitId } : {}),
+			...(weight !== undefined ? { weight } : {}),
+		};
+	}
+	if (card.kind === "area") {
+		return {
+			id: card.id,
+			kind: "area",
+			verdict,
+			at,
+			title: card.unit.name,
+			subtitle: card.unit.state,
+			...(card.unit.heroUrl ? { thumbUrl: card.unit.heroUrl } : {}),
+			geoUnitId: card.unit.id,
 			...(weight !== undefined ? { weight } : {}),
 		};
 	}

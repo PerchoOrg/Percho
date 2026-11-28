@@ -1,27 +1,28 @@
 /**
- * SwipeStack (§0.6 #7) — the top card plus the two behind it at the spec resting
- * values (next = 0.94/0.5, after = 0.88/0.25), and the card that just left,
- * still mounted while it finishes flying out.
+ * SwipeStack — the deck as a row of cards paged sideways: the card in front,
+ * the one before it parked off the left edge, and the next one a gap to its
+ * right, where the screen shows a strip of it.
+ *
+ * Until phase414 this was a STACK: the top card flew out on a swipe, which
+ * was its verdict, and the next rose from behind it. A swipe only browses now
+ * (`lib/gesture/page-layer.ts`), so the cards sit side by side and a turned
+ * page can be turned back. The name stayed with the file.
  *
  * Only the top card responds to the pan/tap gesture and, through the caller's
- * `renderCard(role)`, plays video. As the top card is dragged the next card rises
- * toward scale 1 / opacity 1.
+ * `renderCard(role)`, plays video.
  *
  * ## Why each card owns its own animated style
  *
- * Cards are keyed by item identity so that promoting the next card to top
- * preserves its subtree — the CardVideo player and its buffer survive the swipe.
- * The GestureDetector sits on the card-sized frame rather than on the top card,
- * for the same reason.
+ * Cards are keyed by item identity so that paging keeps a card's subtree —
+ * the CardVideo player and its buffer survive the turn. The GestureDetector
+ * sits on the card-sized frame rather than on the top card, for the same
+ * reason.
  *
  * That identity-keying is in direct tension with per-POSITION animated styles,
- * and two device bugs came out of the tension:
+ * and two device bugs came out of the tension in the stack's day:
  *
  *   1. *Ghosting.* A view's animated style was swapped as it was promoted, and
  *      Reanimated does not revert native props a detached style already wrote.
- *      The old top style set only `transform`, so the `opacity: 0.5` written by
- *      the style it replaced stayed on the promoted card and the cards behind
- *      bled through it — two or three titles legible at once.
  *
  *   2. *Post-swipe jump.* Position was measured from React's `activeIndex` while
  *      the swipe itself resolved on the UI thread. The index advance and the drag
@@ -29,94 +30,56 @@
  *      card sat in the top slot at offset 0 — snapping back to centre and
  *      flashing before it was replaced.
  *
- * The fix for both is the same: geometry is a pure function of the card's
- * ABSOLUTE index (`StackCard`, one `useAnimatedStyle` per card, created once and
- * never swapped) measured against a UI-thread `topAbs` cursor. React's
- * `activeIndex` now decides only WHICH cards are mounted, never where they are
- * drawn — so a late re-render changes the mounted window without moving a single
- * pixel, and there is no frame in which any card's transform is inconsistent.
+ * The fix for both is the same and is kept: geometry is a pure function of the
+ * card's ABSOLUTE index (`StackCard`, one `useAnimatedStyle` per card, created
+ * once and never swapped) measured against a UI-thread `topAbs` cursor. React's
+ * `activeIndex` decides only WHICH cards are mounted, never where they are
+ * drawn — so a late re-render changes the mounted window without moving a
+ * single pixel.
  *
  * There is exactly ONE face per card. A tap used to crossfade to a §0.5 data
- * face (`renderBack`, `flipProgress`, `faceOpacity`, `canFlipCard`); the owner
- * cut that mechanic on 2026-07-30 ("砍掉flip back的功能"), so a card renders its
- * front and nothing else, and the only gesture on the stack is the pan.
+ * face; the owner cut that mechanic on 2026-07-30 ("砍掉flip back的功能").
  *
- * Generic over the card data type — task-0 knows nothing about feed semantics;
- * it reports the raw `'left' | 'right'` decision and the item to the caller.
- * What each item may DO arrives through `capability(item)`, resolved by the
- * caller (§1.3), so nothing in here branches on a card kind.
+ * Generic over the card data type — it knows nothing about feed semantics; it
+ * reports the step and the item that was in front to the caller. What each
+ * item may DO arrives through `capability(item)`, resolved by the caller
+ * (§1.3), so nothing in here branches on a card kind.
  *
- * `tx` — the live drag offset — is handed to the render callbacks because two
- * §1.6/§1.8 faces are defined in terms of it: the trade-off card's halves
- * brighten with the finger and the direction labels fade in with it. Without it
- * exposed, those faces cannot be built at all.
+ * `tx` — the live drag offset — is handed to the render callbacks because the
+ * trade-off card's halves brighten with the finger.
  */
-import {
-	useCallback,
-	useEffect,
-	useLayoutEffect,
-	useRef,
-	useState,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import {
 	GestureDetector,
 	type GestureType,
 } from "react-native-gesture-handler";
 import Animated, {
-	runOnUI,
 	type SharedValue,
 	useAnimatedStyle,
-	withDelay,
-	withSequence,
-	withTiming,
 } from "react-native-reanimated";
 import { useSwipeCard } from "../hooks/use-swipe-card";
 import {
 	type CardCapability,
 	INERT_CAPABILITY,
 } from "../lib/gesture/capability";
-import { hintReach } from "../lib/gesture/label-reveal";
-import { advanceFromDrag, cardStackVisual } from "../lib/gesture/stack-layer";
+import { type PageStep, cardPageX } from "../lib/gesture/page-layer";
 import type { TapSlot, TapStatus } from "../lib/gesture/tap-slot";
 import { cardFrameHeight } from "../theme/card-frame";
 import { colors, radii } from "../theme/tokens";
 
-/** Cards visible at rest: top + 1 behind (owner cut the third, 2026-08-15). */
 /**
- * How many already-swiped cards stay mounted. Exactly one: the card that just
- * committed has to remain in the tree to finish its flyout, and to stay parked
- * off-screen for the frame or two before React drops it.
+ * How many cards stay mounted either side of the one in front. One: the card
+ * before it, to turn back to, and the next, whose edge shows.
  */
-const TRAIL = 1;
-
-/**
- * How much of the NEXT card's lower edge peeks below the top card (owner:
- * 「应该只能peek下一张」 — a sliver, not a card). Points.
- */
-const PEEK_PT = 0;
-/**
- * How far the paper clip extends ABOVE the stage. Generous on purpose — the
- * 纸带负责把后方卡片(以及它超过自身顶边的 ~22pt 提升光晕)在顶卡上方完全遮住。
- */
-const CLIP_OVERFLOW_PT = 120;
-
-/** The swipe-hint's timing: out to one side, hold there, back. Twice. */
-const HINT_OUT_MS = 380;
-const HINT_HOLD_MS = 340;
-const HINT_BACK_MS = 260;
+const AROUND = 1;
 
 type CardRole = "top" | "next" | "after";
 
-/** The imperative swipe-hint handle passed to `onHintReady`. */
-export interface SwipeHintHandle {
-	/**
-	 * The swipe-hint: the top card shows itself being liked, comes back, shows
-	 * itself being passed, comes back — the drag's own wash and mark appear
-	 * with each (see `hintReach`). Nothing commits. Runs on the UI thread; safe
-	 * to call after mount (no-op if the stack is gone).
-	 */
-	nudge: () => void;
+/** The imperative handle passed to `onPagerReady`. */
+export interface PagerHandle {
+	/** Turn the page without a drag — on (1) or back (-1) — with the same slide. */
+	page: (step: PageStep) => void;
 }
 
 /** What a face needs to animate with the drag. `tx` is live on the UI thread. */
@@ -141,7 +104,7 @@ export interface CardRenderArgs {
 	 * it is a horizontal drag, which is also the swipe, and without an explicit
 	 * relation the two race. Whoever activates first wins, and the deck's pan
 	 * needs 10pt of travel while a scrub wants to start immediately — so the
-	 * scrub usually wins, and "usually" is how a buyer loses a card they were
+	 * scrub usually wins, and "usually" is how a buyer loses the card they were
 	 * trying to rewind.
 	 *
 	 * Handed down rather than looked up: the gesture is built in `useSwipeCard`
@@ -151,20 +114,12 @@ export interface CardRenderArgs {
 }
 
 /**
- * Role from stack depth.
+ * Role from the card's distance to the one in front.
  *
- * `depth < 0` is a card that has ALREADY been swiped and is only still mounted
- * to finish its flyout (see `TRAIL`). It must NOT be "top".
- *
- * It used to be: `depth <= 0` returned "top", which meant the outgoing card kept
- * the top role for as long as it stayed in the tree — and `renderCard` maps the
- * top role to `isTop`, which is what `CardVideo` uses to decide whether to play.
- * So a swiped-away listing kept playing, with sound, underneath the new card.
- * Owner on device (2026-07-28): "ios上面划走listing视频后音乐没有停止".
- *
- * Only the card at depth 0 is top. Geometry does not read the role at all (it is
- * a pure function of the absolute index), so narrowing this cannot move a pixel —
- * it only changes what the card is told it is.
+ * Only the card at depth 0 is top: `renderCard` maps the top role to `isTop`,
+ * which is what `CardVideo` uses to decide whether to play, and a card that is
+ * not in front must not (owner on device, 2026-07-28: "ios上面划走listing视频后
+ * 音乐没有停止"). Geometry does not read the role at all.
  */
 function roleFor(depth: number): CardRole {
 	if (depth === 0) return "top";
@@ -175,7 +130,13 @@ function roleFor(depth: number): CardRole {
 export interface SwipeStackProps<T> {
 	items: readonly T[];
 	activeIndex: number;
-	onDecision: (decision: "left" | "right", item: T) => void;
+	/** The page turned: `item` is the card that was in front when it did. */
+	onPage: (step: PageStep, item: T) => void;
+	/**
+	 * Whether a swipe may turn back. False on the first card of a visit, and
+	 * wherever the caller will not have the card before shown again.
+	 */
+	canGoBack: boolean;
 
 	/**
 	 * Called when a release was a TAP on an interactive card target (the save
@@ -187,19 +148,12 @@ export interface SwipeStackProps<T> {
 	onTapTarget?: (target: string) => void;
 
 	/**
-	 * Optional imperative nudge — the swipe-hint (owner 2026-08-13). Called
-	 * ONCE on mount with a stable handle whose methods run the nudge on the
-	 * UI thread via `runOnUI` on the stack's own shared values (never capture
-	 * a plain object with `runOnUI` — Reanimated serializes closure
-	 * captures, and a shared-value-backed object is not serializable).
-	 * The feed plays it once when the first card settles; other callers
-	 * (dev-foundation) simply omit it.
+	 * Called ONCE on mount with a stable handle that turns the page for the
+	 * caller — the card's hide button moves on without a drag.
 	 */
-	onHintReady?: (hint: SwipeHintHandle) => void;
+	onPagerReady?: (pager: PagerHandle) => void;
 
 	renderCard: (item: T, args: CardRenderArgs) => React.ReactNode;
-	/** Overlay above the top card only — §1.8 direction labels live here. */
-	renderOverlay?: (item: T, args: CardRenderArgs) => React.ReactNode;
 	/**
 	 * React key per mounted card. MUST be unique across the whole `items` array,
 	 * which is why the absolute index is passed in.
@@ -213,10 +167,12 @@ export interface SwipeStackProps<T> {
 	 */
 	keyExtractor: (item: T, index: number) => string;
 	cardWidth: number;
+	/** The paper between two cards. */
+	cardGap: number;
 	/**
 	 * Explicit card height. 2026-08-13: the feed no longer passes one — the
 	 * card fills the container (`flex: 1`), so height is derived from the
-	 * available space. `dev-foundation` still passes a fixed height.
+	 * available space.
 	 */
 	cardHeight?: number;
 	/** §1.3 per-item gesture capability. Resolved before the gesture is built. */
@@ -226,119 +182,57 @@ export interface SwipeStackProps<T> {
 interface StackCardProps {
 	/** This card's index in `items`. Fixed for the card's whole lifetime. */
 	absIndex: number;
-	/** UI-thread absolute index of the current top card. */
+	/** UI-thread absolute index of the card in front. */
 	topAbs: SharedValue<number>;
-	advance: SharedValue<number>;
 	dragX: SharedValue<number>;
-	exitX: SharedValue<number>;
 	cardWidth: number;
-	/** The y of the top card at rest (see `restTop` in `SwipeStack`). */
+	/** Card to card: a card's width plus the gap. */
+	pitch: number;
+	/** The y every card rests at (see `restTop` in `SwipeStack`). */
 	restTop: number;
 	/** The card frame's height in points (see `cardFrameHeight`). */
 	frameHeight: number;
-	/**
-	 * The y position of a behind card's BOTTOM — aligned with the top card's
-	 * bottom edge (PEEK_PT = 0), so no next-card sliver shows under the top card.
-	 */
-	peekAnchor: number;
-	zIndex: number;
 	/** The card's only face. */
 	front: React.ReactNode;
-	/** §1.8 labels — above both faces, outside the crossfade. */
-	overlay: React.ReactNode;
 }
 
 /**
- * One card's frame. Its animated styles are created once, with `absIndex`
- * captured as a constant, and are never swapped for another — which is what makes
- * the stale-prop ghosting and the handoff jump structurally impossible rather
- * than merely fixed.
+ * One card's frame. Its animated style is created once, with `absIndex`
+ * captured as a constant, and is never swapped for another — which is what
+ * makes the stale-prop ghosting and the handoff jump structurally impossible
+ * rather than merely fixed.
  */
 function StackCard({
 	absIndex,
 	topAbs,
-	advance,
 	dragX,
-	exitX,
 	cardWidth,
+	pitch,
 	restTop,
 	frameHeight,
-	peekAnchor,
-	zIndex,
 	front,
-	overlay,
 }: StackCardProps) {
-	// `frameHeight` is read straight, with no tween: every card kind is the
-	// same box now (`cardFrameHeight`), so the only thing that can change it
-	// is the stage itself resizing. The 240ms height cross-fade that used to
-	// live here existed to soften a KIND change, and softening it is exactly
-	// what the owner saw as the page jumping (2026-08-17).
-	//
-	// Vertical position by stack depth:
-	//   depth ≤ 0 (top, or flying out) — at `restTop` (the stage's top edge
-	//     since 2026-09-05; it was centred before, see `SwipeStack`).
-	//   depth = 1 (the behind card) — its BOTTOM sits AT the top card's bottom
-	//     (PEEK_PT = 0, Tia 2026-08-19), so its edge hides exactly behind the
-	//     top card's lower edge.
-	// Between depths the position interpolates with `advance`, in lockstep
-	// with the card's scale — so a card rising to top eases from peeked to
-	// rest, no jump.
-	const cardStyle = useAnimatedStyle(() => {
-		const height = frameHeight;
-		const rel = absIndex - topAbs.value;
-		const depth = rel - advance.value;
-		const peeked = peekAnchor - height;
-		const t = Math.max(0, Math.min(1, 1 - depth));
-		return {
-			width: cardWidth,
-			height,
-			top: peeked + (restTop - peeked) * t,
-		};
-	});
-	const style = useAnimatedStyle(() => {
-		const v = cardStackVisual({
-			rel: absIndex - topAbs.value,
-			advance: advance.value,
-			dragX: dragX.value,
-			exitX: exitX.value,
-			cardWidth,
-		});
-		return {
-			transform: [
-				{ translateX: v.translateX },
-				{ rotate: `${v.rotateDeg}deg` },
-				{ scale: v.scale },
-			],
-			opacity: v.opacity,
-		};
-	});
-	// The WIDE half of the two-shadow elevation (owner 2026-08-14:
-	// `0 16px 38px rgba(32,28,22,.085)`), on a shadow-only view BEHIND the
-	// card so it follows the card's real bounds (a short card gets a short
-	// glow, not a band from the full-stage frame). Same animated box as the
-	// card, no touch handling.
-	const glowStyle = useAnimatedStyle(() => {
-		const height = frameHeight;
-		const rel = absIndex - topAbs.value;
-		const depth = rel - advance.value;
-		const peeked = peekAnchor - height;
-		const t = Math.max(0, Math.min(1, 1 - depth));
-		return {
-			width: cardWidth,
-			height,
-			top: peeked + (restTop - peeked) * t,
-		};
-	});
+	// Every card is the same box (`cardFrameHeight`) at the same height on the
+	// page; the only thing that moves one is the page turning.
+	const box = { width: cardWidth, height: frameHeight, top: restTop };
+	const style = useAnimatedStyle(() => ({
+		transform: [
+			{ translateX: cardPageX(absIndex - topAbs.value, dragX.value, pitch) },
+		],
+	}));
 
 	return (
 		<>
+			{/* The WIDE half of the two-shadow elevation (owner 2026-08-14:
+			    `0 16px 38px rgba(32,28,22,.085)`), on a shadow-only view BEHIND
+			    the card so it follows the card's real bounds. Same box and the
+			    same animated x as the card, no touch handling. */}
 			<Animated.View
 				pointerEvents="none"
-				style={[styles.cardGlow, glowStyle, { zIndex }]}
+				style={[styles.cardGlow, box, style]}
 			/>
-			<Animated.View style={[styles.card, cardStyle, { zIndex }, style]}>
+			<Animated.View style={[styles.card, box, style]}>
 				<View style={StyleSheet.absoluteFill}>{front}</View>
-				{overlay}
 			</Animated.View>
 		</>
 	);
@@ -347,103 +241,65 @@ function StackCard({
 export function SwipeStack<T>({
 	items,
 	activeIndex,
-	onDecision,
+	onPage,
+	canGoBack,
 	onTapTarget,
-	onHintReady,
+	onPagerReady,
 
 	renderCard,
-	renderOverlay,
 	keyExtractor,
 	cardWidth,
+	cardGap,
 	cardHeight,
 	capability,
 }: SwipeStackProps<T>) {
 	const top = items[activeIndex];
+	const pitch = cardWidth + cardGap;
 
 	const topCapability: CardCapability =
 		top === undefined ? INERT_CAPABILITY : capability(top);
 
-	const {
-		gesture,
-		panGesture,
-		tx,
-		topAbs,
-		exitX,
-		advance,
-		tapSlot,
-		tapStatus,
-	} = useSwipeCard({
-		cardWidth,
-		capability: topCapability,
-		onDecision: (decision) => {
-			if (top) onDecision(decision, top);
-		},
-		onTapTarget: (target) => {
-			if (target === "__touchdown__") return;
-			if (top) onTapTarget?.(target);
-		},
-	});
+	const { gesture, panGesture, tx, topAbs, tapSlot, tapStatus, page } =
+		useSwipeCard({
+			cardWidth,
+			pitch,
+			capability: topCapability,
+			canGoBack,
+			onPage: (step) => {
+				if (top) onPage(step, top);
+			},
+			onTapTarget: (target) => {
+				if (target === "__touchdown__") return;
+				if (top) onTapTarget?.(target);
+			},
+		});
 
 	/**
 	 * Keep the UI-thread cursor in step with React.
 	 *
-	 * For a SWIPE this is idempotent: the handoff worklet already advanced
+	 * For a page turn this is idempotent: the handoff worklet already moved
 	 * `topAbs` to exactly this value one or two frames ago, so the write changes
-	 * nothing and the late re-render cannot move a card. For a TAP-driven advance
-	 * (ask skip / "Not sure" / milestone CTA) no worklet ran, so this is what
-	 * moves the stack — a layout effect rather than a passive one so it lands in
-	 * the same commit and the promoted card is never painted at 0.94.
+	 * nothing and the late re-render cannot move a card. For an index the
+	 * caller set itself (a recomposed deck starts again at 0) no worklet ran,
+	 * so this is what moves the cards — a layout effect rather than a passive
+	 * one so it lands in the same commit.
 	 */
 	useLayoutEffect(() => {
 		topAbs.value = activeIndex;
 	}, [activeIndex, topAbs]);
 
-	const widthRef = useRef(cardWidth);
-	widthRef.current = cardWidth;
-
-	// Hand the live shared values to the caller ONCE (the swipe-hint needs
-	// them to run its nudge on the UI thread; it must not re-fire on every
-	// render, which would reset the hint's run-once latch).
-	// biome-ignore lint/correctness/useExhaustiveDependencies: deliver once on mount; `tx`/`advance` are stable shared values.
+	// Handed over ONCE: `page` is stable until the card's width changes, and
+	// the caller keeps it in a ref.
 	useEffect(() => {
-		const handle: SwipeHintHandle = {
-			nudge: () => {
-				// Read on the JS thread at call time: the effect runs once, on mount,
-				// and must not pin the width the stack happened to have then.
-				const reach = hintReach(widthRef.current);
-				const lift = advanceFromDrag(reach, widthRef.current);
-				// Run the animation on the UI thread. `runOnUI` serializes the
-				// closure — capturing `tx`/`advance` (SharedValues) directly is
-				// safe; capturing the handle itself is not.
-				runOnUI(() => {
-					"worklet";
-					const out = { duration: HINT_OUT_MS };
-					const back = { duration: HINT_BACK_MS };
-					tx.value = withSequence(
-						withTiming(reach, out),
-						withDelay(HINT_HOLD_MS, withTiming(0, back)),
-						withTiming(-reach, out),
-						withDelay(HINT_HOLD_MS, withTiming(0, back)),
-					);
-					advance.value = withSequence(
-						withTiming(lift, out),
-						withDelay(HINT_HOLD_MS, withTiming(0, back)),
-						withTiming(lift, out),
-						withDelay(HINT_HOLD_MS, withTiming(0, back)),
-					);
-				})();
-			},
-		};
-		if (onHintReady) onHintReady(handle);
-	}, [onHintReady]);
+		onPagerReady?.({ page });
+	}, [onPagerReady, page]);
 
 	/**
 	 * The FIXED stage (owner spec 2026-08-15: 「页面骨架固定, card 可以不同
 	 * 高度」). `flex: 1` inside the padded container makes it deterministic —
-	 * page height minus the wordmark row, the tab bar and the container's own
-	 * padding — and it is the SAME box for every card kind, so nothing a card
-	 * does can move the page skeleton. Every card is the FILM's shape inside
-	 * it (`cardFrameHeight`), capped by the stage.
+	 * and it is the SAME box for every card kind, so nothing a card does can
+	 * move the page skeleton. Every card is the FILM's shape inside it
+	 * (`cardFrameHeight`), capped by the stage.
 	 */
 	const [stageHeight, setStageHeight] = useState(0);
 	const onStageLayout = useCallback((e: LayoutChangeEvent) => {
@@ -451,54 +307,25 @@ export function SwipeStack<T>({
 	}, []);
 
 	// EVERY card is the same box (owner 2026-08-17 — one frame height for all
-	// four kinds): the tour canvas's own aspect, capped by the stage, or the
-	// caller's fixed `cardHeight` (dev-foundation). One number for the whole
-	// deck, not a per-kind lookup, so a swipe cannot change the frame height —
-	// which is the jump the owner reported.
+	// kinds): the tour canvas's own aspect, capped by the stage, or the
+	// caller's fixed `cardHeight`. One number for the whole deck, not a
+	// per-kind lookup, so a page turn cannot change the frame height.
 	//
 	// Since 2026-09-05 this is derived from the card's WIDTH rather than as a
-	// share of the stage: the header above the stage now carries the place and
-	// varies in height, and a share-of-stage rule shrank the card instead of
-	// closing the gap under it (see `theme/card-frame.ts`).
+	// share of the stage (see `theme/card-frame.ts`).
 	const frameHeight =
 		cardHeight !== undefined
 			? cardHeight
 			: // Pre-layout there is no stage yet, so no height either; the cards
 				// land the frame they will keep as soon as it arrives.
 				cardFrameHeight(stageHeight, cardWidth);
-	const topHeight = top === undefined || stageHeight === 0 ? 0 : frameHeight;
 	/**
-	 * Where the top card rests: a THIRD of the stage's slack above it, two
-	 * thirds below.
-	 *
-	 * ── The three positions this has had, and why ──────────────────────────
-	 *
-	 * `0` (2026-09-05): the card hung off the stage's top edge and every spare
-	 * point pooled underneath — 128pt of it on the owner's phone, which is
-	 * what he reported.
-	 *
-	 * `/ 2` (2026-09-06, phase182): centred, 「balance the empty space above
-	 * and under card」. That was decided when the header was ONE line; the
-	 * three-row header made half the slack above the card read as a gap
-	 * between two unrelated things (owner, 2026-09-07: 「the empty space
-	 * between card and header is too big」).
-	 *
-	 * `/ 3` (now): the compromise the arithmetic forces. The card is capped at
-	 * the film's own shape (`cardFrameHeight`), so the stage has ~80pt spare on
-	 * a Pro Max no matter what the header does — the only question is where it
-	 * goes. A third above keeps the card near the header it belongs to, and the
-	 * two thirds below sit against the tab bar, which is where a page's
-	 * leftover paper belongs. Neither end can be zero without the other
-	 * looking broken.
+	 * Where the cards rest: a THIRD of the stage's slack above them, two thirds
+	 * below (2026-09-07). The feed's stage has been the card's own box since
+	 * phase380, so this is 0 there.
 	 */
 	const restTop =
 		stageHeight === 0 ? 0 : Math.max(0, (stageHeight - frameHeight) / 3);
-	// The peeked card's bottom sits just below the top card's bottom (clamped
-	// to the stage so a behind card never spills past the stage's bottom edge).
-	const peekAnchor =
-		stageHeight === 0
-			? 0
-			: Math.min(stageHeight, restTop + topHeight + PEEK_PT);
 
 	const argsFor = (role: CardRole): CardRenderArgs => ({
 		role,
@@ -509,16 +336,10 @@ export function SwipeStack<T>({
 		deckGesture: panGesture,
 	});
 
-	// The mounted window trails one card behind `activeIndex` so a committed card
-	// can finish flying out. Geometry does not depend on this range — only on
-	// each card's absolute index — so widening or narrowing it cannot move
-	// anything the buyer sees.
-	// Two live cards: the top and the one behind it. The third (after) used to
-	// stack behind the next at 0.88/0.25 — through the 0.5-opacity next card it
-	// reads as "two cards peeking", which the owner cut (Tia 2026-08-15: 「应该
-	// 只能peek下一张」). The next card rising to top is the only peek.
-	const from = Math.max(0, activeIndex - TRAIL);
-	const to = Math.min(items.length, activeIndex + 2);
+	// Geometry does not depend on this range — only on each card's absolute
+	// index — so widening or narrowing it cannot move anything the buyer sees.
+	const from = Math.max(0, activeIndex - AROUND);
+	const to = Math.min(items.length, activeIndex + AROUND + 1);
 	const mounted: { item: T; absIndex: number }[] = [];
 	for (let i = from; i < to; i++) {
 		const item = items[i];
@@ -529,45 +350,19 @@ export function SwipeStack<T>({
 		<View style={styles.stack} onLayout={onStageLayout}>
 			<GestureDetector gesture={gesture}>
 				<View style={[styles.frame, { width: cardWidth }]}>
-					{/* Paper band over the region above the top card (zIndex 3,
-					 * same as top, earlier in the tree so the top card wins) —
-					 * the behind card is bottom-anchored at `peekAnchor`, so
-					 * this is what keeps its top edge and its elevation glow
-					 * off the paper above the top card. */}
-					<View
-						style={[styles.stageClip, { height: restTop + CLIP_OVERFLOW_PT }]}
-						pointerEvents="none"
-					/>
-					{mounted.map(({ item, absIndex }) => {
-						const depth = absIndex - activeIndex;
-						const isTop = depth === 0;
-						const role = roleFor(depth);
-						return (
-							<StackCard
-								key={keyExtractor(item, absIndex)}
-								absIndex={absIndex}
-								topAbs={topAbs}
-								advance={advance}
-								dragX={tx}
-								exitX={exitX}
-								cardWidth={cardWidth}
-								restTop={restTop}
-								frameHeight={frameHeight}
-								peekAnchor={peekAnchor}
-								// A card that has already been swiped must stay UNDER the
-								// live stack while it flies out, or it would slide across
-								// the face of the card that replaced it.
-								zIndex={depth < 0 ? 0 : 2 + TRAIL - depth}
-								front={renderCard(item, argsFor(role))}
-								// §1.8 labels sit above the face.
-								overlay={
-									isTop && renderOverlay
-										? renderOverlay(item, argsFor(role))
-										: null
-								}
-							/>
-						);
-					})}
+					{mounted.map(({ item, absIndex }) => (
+						<StackCard
+							key={keyExtractor(item, absIndex)}
+							absIndex={absIndex}
+							topAbs={topAbs}
+							dragX={tx}
+							cardWidth={cardWidth}
+							pitch={pitch}
+							restTop={restTop}
+							frameHeight={frameHeight}
+							front={renderCard(item, argsFor(roleFor(absIndex - activeIndex)))}
+						/>
+					))}
 				</View>
 			</GestureDetector>
 		</View>
@@ -577,11 +372,10 @@ export function SwipeStack<T>({
 const styles = StyleSheet.create({
 	/**
 	 * The STAGE (owner spec 2026-08-15). `flex: 1` inside the padded container
-	 * makes it deterministic — page height minus the wordmark row, the tab bar
-	 * and the container's own padding — and it is the SAME box for every card
-	 * kind, so nothing a card does can move the page skeleton.
+	 * makes it deterministic, and it is the SAME box for every card kind, so
+	 * nothing a card does can move the page skeleton.
 	 *
-	 * Where the card sits inside it is `restTop`, not this box's alignment —
+	 * Where the cards sit inside it is `restTop`, not this box's alignment —
 	 * the frame stretches to the whole stage and the cards are absolutely
 	 * positioned within it.
 	 */
@@ -589,38 +383,23 @@ const styles = StyleSheet.create({
 	/**
 	 * The card frame — the fixed stage box (width from `cardWidth`, height
 	 * from `flex: 1` inside the padded container) and positioning context for
-	 * the absolutely-placed cards. No shadow here: cards are individually
-	 * sized, so a wide glow on the full-height frame would read as a dark
-	 * band behind a short card. Both elevation layers live on the card view.
+	 * the absolutely-placed cards. Nothing clips it: the card before and the
+	 * card after are drawn outside it, and the screen's own edge is what cuts
+	 * them. No shadow here — both elevation layers live on the card view.
 	 */
 	frame: {
 		flex: 1,
 		alignSelf: "stretch",
 	},
 	/**
-	 * The paper band over the region above the top card (the stage's own
-	 * background colour, painted as a view). Starts ABOVE the stage so it also
-	 * hides the part of a taller behind card that sticks out past the stage's
-	 * top edge when bottom-anchored at `peekAnchor`. Sits behind the top card
-	 * (same zIndex 3, earlier in the tree) and above the behind card (2).
-	 */
-	stageClip: {
-		position: "absolute",
-		top: -CLIP_OVERFLOW_PT,
-		left: 0,
-		right: 0,
-		backgroundColor: colors.bg,
-		zIndex: 3,
-	},
-	/**
 	 * The WIDE elevation layer behind each card (owner 2026-08-14:
-	 * `0 16px 38px rgba(32,28,22,.085)`). A shadow-only view — same animated
-	 * bounds as the card it backs, `pointerEvents: none`, no background —
-	 * because RN supports exactly ONE shadow per view and the frame is no
-	 * longer card-sized. Sits behind the card via zIndex.
+	 * `0 16px 38px rgba(32,28,22,.085)`). A shadow-only view — same box as the
+	 * card it backs, `pointerEvents: none`, no background — because RN
+	 * supports exactly ONE shadow per view.
 	 */
 	cardGlow: {
 		position: "absolute",
+		left: 0,
 		borderRadius: radii.card,
 		shadowColor: "rgba(32,28,22,0.085)",
 		shadowOffset: { width: 0, height: 16 },
@@ -628,7 +407,8 @@ const styles = StyleSheet.create({
 		shadowOpacity: 1,
 	},
 	card: {
-		...StyleSheet.absoluteFill,
+		position: "absolute",
+		left: 0,
 		borderRadius: radii.card,
 		overflow: "hidden",
 		backgroundColor: colors.ink, // card face is always dark (§0.3)

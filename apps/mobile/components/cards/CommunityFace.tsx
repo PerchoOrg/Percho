@@ -174,6 +174,7 @@ import Animated, {
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
 import {
 	DECK_TAP_TARGET,
+	HIDE_TAP_TARGET,
 	SHARE_TAP_TARGET,
 	SOUND_TAP_TARGET,
 	type TapSlot,
@@ -231,18 +232,27 @@ export const CHAPTER_TAP_TARGET = "chapter";
 const RAIL_TOP = 58;
 const RAIL_BOTTOM = 92;
 /**
- * The place pill's right edge: clear of three corner discs and 8pt of air.
- * A card with fewer controls keeps the same edge, so the pill does not change
- * width from one card to the next.
+ * The place pill's right edge: clear of the corner discs and 8pt of air.
+ * A card with fewer controls than its kind allows keeps the same edge, so the
+ * pill does not change width from one card to the next.
  */
-const PLACE_RIGHT = 12 + 3 * CORNER_DISC + 2 * CORNER_GAP + 8;
+const placeRight = (discs: number) =>
+	12 + discs * CORNER_DISC + (discs - 1) * CORNER_GAP + 8;
+const PLACE_RIGHT = placeRight(3);
+/** With the feed's fourth disc, the cross (phase414). */
+const PLACE_RIGHT_WITH_HIDE = placeRight(4);
 /**
  * Longest place name that still shows its distance. The pill has ~205pt on a
  * 361pt card; past ~22 characters of 10.5pt label the name and the distance
  * do not both fit, and the name is the one a buyer needs (owner pick "C",
  * phase394: drop the distance before cutting the name).
+ *
+ * The cross takes 44pt of that — about eight characters — so a feed card's
+ * pill gives up the distance sooner, and a name past ~24 characters ends in
+ * an ellipsis there.
  */
 const PLACE_NAME_WITH_DISTANCE = 22;
+const PLACE_NAME_WITH_DISTANCE_AND_HIDE = 14;
 /**
  * How far a long name may shrink to stay on one line: 27pt → 16pt, which
  * keeps "Sugarloaf Country Club" whole beside its disc and a pill on the
@@ -305,6 +315,13 @@ interface CommunityFaceProps {
 	 * someone to; the corner then shows no share cell.
 	 */
 	onShare?: () => void;
+	/**
+	 * The corner's cross (phase414): this card is not for the buyer. Only the
+	 * feed's decks pass it.
+	 */
+	onHide?: () => void;
+	/** The film passed `CardVideo`'s 82% mark — the buyer watched it through. */
+	onWatched?: () => void;
 }
 
 export function CommunityFace({
@@ -319,6 +336,8 @@ export function CommunityFace({
 	saveKind = "community",
 	lines,
 	onShare,
+	onHide,
+	onWatched,
 }: CommunityFaceProps) {
 	const saved = useSavedStore((s) => s.isSaved(card.id));
 	const toggleSaved = useSavedStore((s) => s.toggle);
@@ -645,7 +664,10 @@ export function CommunityFace({
 					progress={progress}
 					scrubbing={scrubbing}
 					seekTo={seekTo}
-					onNearEnd={() => setNearEnd(true)}
+					onNearEnd={() => {
+						setNearEnd(true);
+						onWatched?.();
+					}}
 					/*
 					 * `cover`, unconditionally. NOT the measured `frameAspect` path:
 					 * that makes the fit a RUNTIME decision, and `mediaFit` returns
@@ -674,14 +696,22 @@ export function CommunityFace({
 			    tour whose clip list could not be read, shows nothing — an empty
 			    corner, not a placeholder. */}
 			{place && !!place.name && (
-				<View style={styles.badgeSlot}>
+				<View
+					style={[
+						styles.badgeSlot,
+						!!onHide && { right: PLACE_RIGHT_WITH_HIDE },
+					]}
+				>
 					<View style={styles.placePill}>
 						<PinIcon />
 						<Text style={styles.placeName} numberOfLines={1}>
 							{place.name}
 						</Text>
 						{!!place.distance &&
-							place.name.length <= PLACE_NAME_WITH_DISTANCE && (
+							place.name.length <=
+								(onHide
+									? PLACE_NAME_WITH_DISTANCE_AND_HIDE
+									: PLACE_NAME_WITH_DISTANCE) && (
 								<>
 									<View style={styles.placeRule} />
 									<Text style={styles.placeDistance}>{place.distance}</Text>
@@ -692,8 +722,9 @@ export function CommunityFace({
 			)}
 
 			{/* Top-RIGHT: mute, save and share, three discs in one row
-			    (phase394, owner pick "C" off `/demos/card-actions-v1`). A
-			    community with no film passes no `sound`. */}
+			    (phase394, owner pick "C" off `/demos/card-actions-v1`), and in
+			    the feed a fourth, the cross (phase414). A community with no
+			    film passes no `sound`. */}
 			<CardCorner
 				{...(card.videoUrl
 					? {
@@ -714,6 +745,14 @@ export function CommunityFace({
 							share: {
 								onPress: onShare,
 								...(tapSlot ? { onTouchStart: arm(SHARE_TAP_TARGET) } : {}),
+							},
+						}
+					: {})}
+				{...(onHide
+					? {
+							hide: {
+								onPress: onHide,
+								...(tapSlot ? { onTouchStart: arm(HIDE_TAP_TARGET) } : {}),
 							},
 						}
 					: {})}

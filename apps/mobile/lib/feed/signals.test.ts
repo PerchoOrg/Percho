@@ -16,7 +16,9 @@ import {
 	DWELL_SATURATION_MS,
 	EMPTY_SIGNALS,
 	FATIGUE_WINDOW,
+	INTEREST_WEIGHT,
 	applyDimRemoval,
+	applyInterest,
 	applyScope,
 	applySkipLayer,
 	applySwipe,
@@ -413,5 +415,39 @@ describe("swipeWeight — attention scales the tally (§1.7)", () => {
 			weight: 2,
 		});
 		expect(back.geo).toEqual([]);
+	});
+});
+
+describe("applyInterest — a look inside a card, short of a like (phase414)", () => {
+	it("credits a city's own unit with half a like", () => {
+		const s = applyInterest(EMPTY_SIGNALS, city);
+		expect(geoSignalFor(s, "city:decatur-ga")).toMatchObject({
+			right: INTEREST_WEIGHT,
+			left: 0,
+		});
+	});
+
+	it("credits the city a community sits in, and likes nothing", () => {
+		const s = applyInterest(EMPTY_SIGNALS, community);
+		expect(geoSignalFor(s, "city:decatur-ga")?.right).toBe(INTEREST_WEIGHT);
+		expect(s.likedCommunityIds).toEqual([]);
+	});
+
+	it("is not a swipe: no count, no fatigue streak", () => {
+		const s = applyInterest(EMPTY_SIGNALS, community);
+		expect(s.swipesInStage).toBe(0);
+		expect(s.dryStreak).toEqual({});
+	});
+
+	it("adds to what a like already said", () => {
+		const liked = applySwipe(EMPTY_SIGNALS, community, "right");
+		const s = applyInterest(liked, community);
+		expect(geoSignalFor(s, "city:decatur-ga")?.right).toBe(1 + INTEREST_WEIGHT);
+	});
+
+	it("leaves a card with no place, and a trade-off, alone", () => {
+		const { geoUnitId: _none, ...nowhere } = community;
+		expect(applyInterest(EMPTY_SIGNALS, nowhere)).toBe(EMPTY_SIGNALS);
+		expect(applyInterest(EMPTY_SIGNALS, tradeoff)).toBe(EMPTY_SIGNALS);
 	});
 });

@@ -322,6 +322,38 @@ export function applySwipe(
 }
 
 /**
+ * What a look inside a card adds to its place's tally: half a like.
+ */
+export const INTEREST_WEIGHT = 0.5;
+
+/**
+ * Interest short of a like (phase414): the buyer watched a film to its end,
+ * opened the card's Explore page, or went into the place's own deck.
+ *
+ * Since phase414 a swipe only turns the page, so the heart and the cross are
+ * the only verdicts — and a buyer taps those far less often than they used to
+ * swipe. Without this the ranking would hear almost nothing. It credits the
+ * card's PLACE only: the liked lists stay what the buyer said with the heart,
+ * and nothing here counts as a swipe (`swipesInStage`, the fatigue streaks).
+ */
+export function applyInterest(
+	signals: SignalState,
+	card: FeedCardV3,
+): SignalState {
+	const unit =
+		card.kind === "area"
+			? { id: card.unit.id, level: card.unit.level }
+			: (card.kind === "community" || card.kind === "listing") && card.geoUnitId
+				? { id: card.geoUnitId, level: "city" as const }
+				: null;
+	if (unit === null) return signals;
+	return {
+		...signals,
+		geo: addGeo(signals.geo, unit.id, unit.level, "right", INTEREST_WEIGHT),
+	};
+}
+
+/**
  * The You tab's evidence correction (05 §5.3): "Still true? → No, remove"
  * drops the dim's accumulated weight outright. Removal, not decrement — the
  * buyer said the observation is wrong, and a wrong observation at half

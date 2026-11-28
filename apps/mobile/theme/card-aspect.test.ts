@@ -38,11 +38,11 @@ import { CANVAS_ASPECT, cardAspect, cardFrameHeight } from "./card-frame";
 import {
 	BLOCK_GAP,
 	CARD_FOOT,
-	GUTTER,
 	MIN_ROOM,
 	ROOM_ABOVE,
 	ROOM_BELOW,
 	blockHeight,
+	cardWidthFor,
 	feedPage,
 } from "./feed-page";
 
@@ -135,7 +135,9 @@ describe("the shipping lineup", () => {
 			const above = share * ROOM_ABOVE;
 			const under = CARD_FOOT + share * ROOM_BELOW;
 			expect(above, `${name}: room above the block`).toBeGreaterThan(12);
-			expect(above, `${name}: room above the block`).toBeLessThan(40);
+			// 40 until phase414: the next card's strip took 6pt off the card's
+			// width, 9 off its height, and the 14 Plus now has 41 above the block.
+			expect(above, `${name}: room above the block`).toBeLessThan(42);
 			expect(under, `${name}: gap under the card`).toBeLessThan(26);
 		}
 	});
@@ -154,7 +156,7 @@ describe("the shipping lineup", () => {
 	/** The figures row goes first, the film is cut only when it does not fit
 	 * on its own. */
 	it("gives up the block before it cuts the film", () => {
-		const film = (390 - GUTTER * 2) / CANVAS_ASPECT;
+		const film = cardWidthFor(390) / CANVAS_ASPECT;
 		const placeOnly =
 			CARD_FOOT + film + BLOCK_GAP + MIN_ROOM + blockHeight(390, "place");
 		expect(feedPage(390, placeOnly).rows).toBe("place");
@@ -181,7 +183,7 @@ describe("the shipping lineup", () => {
 	it("gives the stage the card's own height and the room above the block", () => {
 		expect(FEED).toContain("height: page.cardHeight");
 		expect(FEED).toContain("paddingBottom: CARD_FOOT");
-		expect(FEED.indexOf("<View style={styles.room}>")).toBeLessThan(
+		expect(FEED.indexOf("<View style={styles.room} />")).toBeLessThan(
 			FEED.indexOf("<PlaceBlock"),
 		);
 		expect(FEED.indexOf("<View style={styles.foot} />")).toBeGreaterThan(
@@ -202,7 +204,7 @@ describe("the shipping lineup", () => {
 	 */
 	it("does not outrun the 1080px source by more than ~18%", () => {
 		for (const [name, w, , ,] of DEVICES) {
-			const k = ((w - GUTTER * 2) * 3) / 1080;
+			const k = (cardWidthFor(w) * 3) / 1080;
 			expect(
 				k,
 				`${name}: card is ${k.toFixed(2)}x the source width`,

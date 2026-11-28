@@ -30,6 +30,8 @@ beforeEach(() => {
 		signals: EMPTY_SIGNALS,
 		seenIds: [],
 		recent: [],
+		swipedThisRun: [],
+		hiddenIds: [],
 		sessionN: 0,
 		lastSwipeAt: undefined,
 		hydrated: false,
@@ -166,6 +168,68 @@ describe("recent + bringBack", () => {
 	it("is cleared by the You-tab reset", () => {
 		s().recordSwipe(listing("l1"), "left", 1_000);
 		s().clearSignals();
+		expect(s().recent).toEqual([]);
+	});
+});
+
+describe("recordView — the page turned past a card (phase414)", () => {
+	it("marks the card seen and says nothing about it", () => {
+		s().recordView(listing("l1"));
+		expect(s().seenIds).toEqual(["l1"]);
+		expect(s().seenListingIds).toEqual(["l1"]);
+		expect(s().swipedThisRun).toEqual(["l1"]);
+		expect(s().signals).toBe(EMPTY_SIGNALS);
+		expect(s().recent).toEqual([]);
+	});
+
+	it("does not duplicate a card paged past twice", () => {
+		s().recordView(listing("l1"));
+		s().recordView(listing("l1"));
+		expect(s().seenIds).toEqual(["l1"]);
+	});
+});
+
+describe("hide — the card's cross (phase414)", () => {
+	it("records a left verdict and hides the card", () => {
+		s().hide(listing("l1"), 1_000);
+		expect(s().hiddenIds).toEqual(["l1"]);
+		expect(s().recent[0]).toMatchObject({ id: "l1", verdict: "left" });
+		expect(s().signals.geo[0]).toMatchObject({
+			unitId: "city:marietta-ga",
+			left: 1,
+		});
+	});
+
+	it("is undone whole by bringBack", () => {
+		s().hide(listing("l1"), 1_000);
+		s().bringBack("l1");
+		expect(s().hiddenIds).toEqual([]);
+		expect(s().signals.geo).toEqual([]);
+		expect(s().recent).toEqual([]);
+	});
+
+	it("un-hides a card whose verdict has fallen off the recent list", () => {
+		s().hide(listing("l1"), 1_000);
+		useFeedSession.setState({ recent: [] });
+		s().bringBack("l1");
+		expect(s().hiddenIds).toEqual([]);
+	});
+
+	it("is cleared by the You-tab reset", () => {
+		s().hide(listing("l1"), 1_000);
+		s().clearSignals();
+		expect(s().hiddenIds).toEqual([]);
+	});
+});
+
+describe("recordInterest", () => {
+	it("credits the card's city without a verdict", () => {
+		s().recordInterest(listing("l1"));
+		expect(s().signals.geo[0]).toMatchObject({
+			unitId: "city:marietta-ga",
+			right: 0.5,
+		});
+		expect(s().signals.likedListingIds).toEqual([]);
 		expect(s().recent).toEqual([]);
 	});
 });

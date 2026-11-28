@@ -78,34 +78,3 @@ export function decideSwipe(input: SwipeInput): SwipeDecision {
 	if (translationX === 0) return "none";
 	return translationX > 0 ? "right" : "left";
 }
-
-export interface ThresholdLatchInput {
-	translationX: number;
-	cardWidth: number;
-	/** Whether the threshold crossing has already fired for this drag. */
-	latched: boolean;
-}
-
-export interface ThresholdLatchResult {
-	/** Fire `haptics.swipeThreshold` (selectionAsync) now. */
-	fire: boolean;
-	/** New latch value to carry into the next frame. */
-	latched: boolean;
-}
-
-/**
- * Threshold-haptic latch (§0.5): `selectionAsync` fires the instant a swipe
- * crosses the commit threshold, but only rightward — pass (left) is silent.
- * Re-crossing after a retreat fires again; holding past the threshold does not.
- */
-export function stepThresholdLatch(
-	input: ThresholdLatchInput,
-): ThresholdLatchResult {
-	"worklet";
-	const { translationX, cardWidth, latched } = input;
-	const pastRight =
-		cardWidth > 0 && translationX >= cardWidth * SWIPE_THRESHOLD_RATIO;
-	if (pastRight && !latched) return { fire: true, latched: true };
-	if (!pastRight && latched) return { fire: false, latched: false };
-	return { fire: false, latched };
-}

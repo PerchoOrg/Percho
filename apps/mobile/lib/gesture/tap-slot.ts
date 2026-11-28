@@ -70,6 +70,12 @@ export const SOUND_TAP_TARGET = "sound";
 export const SHARE_TAP_TARGET = "share";
 
 /**
+ * The card-corner cross (phase414): this card is not for the buyer. Here for
+ * the same reason as the other corner controls.
+ */
+export const HIDE_TAP_TARGET = "hide";
+
+/**
  * The card's way into its own deck — "Communities ›", "Homes ›" at the bottom
  * right (phase404.9). Here for the same reason: the face arms it, the feed
  * screen answers it.

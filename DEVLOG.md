@@ -23,6 +23,37 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-28 06:58 UTC — phase414: a swipe turns the page; the heart is the like; a cross hides a card
+
+**Objective**: Owner's answers to phase413's three questions (2026-11-27): 「左右 / 一次一部 / 要x 但是爱心按键有点突兀 为啥」. So: the deck pages left/right (his direction, not the vertical one I recommended), the home page stays one film at a time, and "not for me" is a button.
+**The heart — a correction to phase413**: the demo drew today's card with a bookmark in the corner and proposed a 48 pt heart at the bottom right. Both were wrong against the app. The corner's save control has BEEN a heart since phase395 (red when saved, his 「爱心是红色」), and he already turned down moving save to the bottom right once (phase393 → 394, pick "C" off `/demos/card-actions-v1`: it ran into the city film's rail and sat in two places on two kinds of card). That is why it looked out of place to him. The heart is not moved or redrawn: it gains the meaning "like". My first reply to him proposed the name row's right end; that is withdrawn too. The demo page carries a note saying so.
+**Actions** (`apps/mobile`):
+- `lib/gesture/page-layer.ts` (+ tests) replaces `stack-layer.ts`: a card's x is `(index − cursor) × pitch + drag`; `pageDrag` gives a quarter of a pull back when there is no card to go back to; `pageStep` maps a release to +1 / −1 / 0. The handoff identity (cursor moves by the step in the frame the drag is zeroed, nothing moves) is the one `stack-layer` was built on, and is tested.
+- `hooks/use-swipe-card.ts`: the pan turns the page instead of flying the card out. No `advance`, `exitX`, threshold haptic or settle haptic. `canGoBack` is mirrored into a shared value rather than captured — it flips when the page turns, and a memo input rebuilds the gesture mid-touch. New `page(step)`: the same slide without a drag. A tap is ignored while a page is turning.
+- `components/SwipeStack.tsx`: cards side by side — the one before parked off the left edge, the next a gap to the right. Mounted window is one card either side. The paper band (`stageClip`) that hid the old behind-card is gone, and with it `theme/feed-chrome-layout.test.ts`, which said of itself that it should be deleted when the band was. `onDecision` → `onPage(step, item)`, `onHintReady` → `onPagerReady`, `renderOverlay` removed.
+- `theme/feed-page.ts`: `CARD_GAP` 8 and `NEXT_PEEK` 6. The card keeps its 8 pt gutter on the left and gives up 6 pt of width on the right, so a 6 pt strip of the next card shows at the screen's edge. The gap equals the gutter so the card before ends exactly at the left edge. Cost: the card is ~9 pt shorter; room above the block 22–41 pt (was 15–35), under the card 19–26 (was 17–24). One pin in `card-aspect.test.ts` moved from 40 to 42 for the 14 Plus. I tried 12 pt first: 48 pt above the block on the Plus phones.
+- `CardCorner` / `CommunityFace`: a fourth disc, the cross, last in the row (two bars — the icon font has none); `HIDE_TAP_TARGET`. Only the feed's cards pass it. `onWatched` fires at `CardVideo`'s 82% mark.
+- Verdicts (`feed.tsx` `recordVerdict`): the heart = `toggleSaved` + `recordSwipe(card, "right")` when the save took; un-hearting = `bringBack`. The cross = `useFeedSession.hide` (a "left" verdict + `hiddenIds`) → `pager.page(1)` → `HiddenToast` with Undo for 5 s. Telemetry's swipe event is emitted for a verdict, not for a page turn, so "L/R" still means what it says.
+- `lib/feed/hidden.ts` (+ tests): `withoutHidden(pool, ids)`, applied only where a deck is DEALT (compose, append, a place's deck). A hidden card keeps its slot in the current deck and `canGoBack` is false on the card after it — removing a card from under the mounted window would re-key every card behind it.
+- `lib/feed/signals.ts` `applyInterest` (+ tests): half a like to the card's place, no liked id, not a swipe. Called once per card per visit when the film is watched through, Explore or a figure is opened, or the card's own deck is entered.
+- `lib/feed/recent.ts`: a city's verdict is listed too (it returned `null` for `area`), so a hidden city can be brought back from the You tab.
+- `state/feed-session.ts`: `hiddenIds` (persisted), `recordView`, `hide`, `recordInterest`; `bringBack` un-hides even when the recent list no longer holds the verdict. `state/swipe-hint.ts` storage key v1 → v2 so everyone sees the new line once.
+- `components/feed/SwipeHintChip.tsx`: "←  Swipe for the next place" on the first card, leaning left; replaces the like-then-pass nudge. `components/feed/HiddenToast.tsx`.
+- Removed with what used them: `SwipeLabels.tsx`, `label-reveal.ts`, `stack-layer.ts`, `stepThresholdLatch`, the trade-off echo line in `feed.tsx`.
+**Decisions**:
+- The cross is a fourth disc in the corner row, not a control near the thumb: it takes a card away for good, and the name row has no width to give (a 34 pt disc beside `Communities ›` would shrink "Peachtree Corners" to ~13 pt).
+- An Undo bar in the feed, although phase140 chose the You tab's RECENT list over an Undo toast: that was for a swipe. The cross is one tap that removes a card for good, so its undo is where the tap was. RECENT still works for it.
+- Signed out, a heart tap opens sign-in and records nothing — `toggle` already did that for save. So "lit = in Saved" always holds, and liking now needs an account where a right swipe did not.
+**Costs the owner should know** (told in chat):
+- The place label in the card's top-left has 44 pt less room. Of the 604 place labels in today's films, about a quarter are longer than the ~24 characters that now fit and end in an ellipsis ("Autrey Mill Nature Pres…"); before, about 33 fit. The distance is dropped past 14 characters instead of 22.
+- Trade-off cards can no longer be answered: their answer WAS the swipe. None is dealt in the build without homes (`CITY_FILM_MIX`), so nothing on the phone changes; they need a tap-to-choose before homes return.
+- The strip of the next card arrives a frame or two after a page turn (the card two ahead mounts when React catches up with the cursor).
+**Verified**: mobile tsc; 964 tests (992 before: three test files went with their modules, new ones added); biome (the one pre-existing warning in `feed.tsx`, and `scripts/probe-session.ts`); `expo export --platform ios` builds the bundle.
+**Not verified**: anything on a device — there is no simulator on this machine. The page turn, the strip, the cross, the Undo bar and the hint line have not been seen running; the gesture code is new and the owner's phone is the first place it runs.
+**Next steps**: owner tries it on the dev client (JS only — no native build needed). Likely adjustments: the strip's width (`NEXT_PEEK`), the cross's place if the cut place labels bother him. Store builds carry it from the next one (≥ 22).
+
+---
+
 ## 2026-11-28 03:34 UTC — phase413: design — the home feed's gestures (swipe to browse, a heart to like); demo only
 
 **Objective**: Owner 2026-11-27: should the home page show four at a time like Rednote so a buyer can choose ("现在买家看到第一个有点不知所措"), or get a demo animation; and "左右滑不好使 … 滑走不一定不喜欢" — could left/right move to the previous/next card, a heart mean like, and another button or an upward swipe mean dislike. "你怎么想，给我设计方案". Design only; the app is not changed.

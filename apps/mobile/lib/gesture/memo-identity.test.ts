@@ -43,7 +43,7 @@ function gestureDeps(handlerIdentity: unknown, stable: symbol): unknown[] {
 		true, // commits
 		1, // maxDisplacementRatio
 		handlerIdentity,
-		stable, // handoff, tx, advance, crossedRight, committed
+		stable, // turn, tx, topAbs, backOpen, committed
 	];
 }
 
@@ -122,5 +122,8 @@ describe("the swipe gesture's memo identity", () => {
 		// render, so depending on either rebuilds the gesture mid-touch.
 		expect(listed).not.toContain("onCommit");
 		expect(listed).not.toContain("onDecision");
+		expect(listed).not.toContain("onPage");
+		// Flips when the page turns: mirrored into a shared value instead.
+		expect(listed).not.toContain("canGoBack");
 	});
 });

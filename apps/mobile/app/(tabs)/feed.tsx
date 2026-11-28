@@ -3,11 +3,16 @@
  * surface, and deliberately THIN.
  *
  * Every decision this screen appears to make is made somewhere pure and tested:
- * what to show is `generateFeed`, what a swipe means is `applySwipe`, whether the
+ * what to show is `generateFeed`, what a verdict means is `applySwipe`, whether the
  * funnel advances is `evaluateStageAdvance`, what a gesture may do is
  * `cardBehavior(card).capability`, what a card says is `content.ts`. What is left
  * here is wiring: fetch → compose → render → dispatch. Nothing below picks a
  * threshold, authors a string a card shows, or computes a statistic.
+ *
+ * A swipe turns the page and decides nothing (phase414; owner, 2026-11-27:
+ * 「滑走不一定不喜欢」). The verdicts are two controls in the card's corner: the
+ * heart — a like, and the save it always was — and the cross, which hides the
+ * card. Both land in `recordVerdict`.
  *
  * The §1.1 red line is satisfied structurally, not by null checks: the gesture
  * layer never sees a card kind at all (capability is data resolved before the
@@ -29,19 +34,13 @@ import {
 	useState,
 	useSyncExternalStore,
 } from "react";
-import {
-	Image,
-	StyleSheet,
-	Text,
-	View,
-	useWindowDimensions,
-} from "react-native";
+import { Image, StyleSheet, View, useWindowDimensions } from "react-native";
 
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
 	type CardRenderArgs,
-	type SwipeHintHandle,
+	type PagerHandle,
 	SwipeStack,
 } from "../../components/SwipeStack";
 import { APP_TABS, TabBar } from "../../components/TabBar";
@@ -54,12 +53,13 @@ import {
 	EXPLORE_TAP_TARGET,
 	SAVE_TAP_TARGET,
 } from "../../components/cards/ListingFace";
-import { SwipeLabels } from "../../components/cards/SwipeLabels";
 import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
+import { HiddenToast } from "../../components/feed/HiddenToast";
 import { OfflineBar } from "../../components/feed/OfflineBar";
 import { PlaceBlock } from "../../components/feed/PlaceBlock";
+import { SwipeHintChip } from "../../components/feed/SwipeHintChip";
 import { useCfScores } from "../../hooks/use-cf-scores";
 import { primePlacePool, useFeedPool } from "../../hooks/use-feed-pool";
 import { useTestHomes } from "../../hooks/use-test-homes";
@@ -74,9 +74,9 @@ import {
 	type FeedPool,
 	RERANK_HOLD,
 	generateFeed,
-	movedUpCount,
 	rerankTail,
 } from "../../lib/feed/generate-feed";
+import { withoutHidden } from "../../lib/feed/hidden";
 import { homeFilmCard } from "../../lib/feed/home-film-card";
 import { placeBlockModel } from "../../lib/feed/place-block";
 import {
@@ -93,12 +93,15 @@ import {
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
 import { preferScope } from "../../lib/feed/scope";
 import { placePool, poolAround } from "../../lib/feed/test-homes";
+import type { PageStep } from "../../lib/gesture/page-layer";
 import {
 	CARD_TAP_TARGET,
 	DECK_TAP_TARGET,
+	HIDE_TAP_TARGET,
 	SHARE_TAP_TARGET,
 	SOUND_TAP_TARGET,
 } from "../../lib/gesture/tap-slot";
+import { haptics } from "../../lib/haptics";
 import { launchDone } from "../../lib/launch-ready";
 import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
 import { backOrFeed } from "../../lib/share/back-or-feed";
@@ -120,7 +123,9 @@ import { useSwipeHintStore } from "../../state/swipe-hint";
 import {
 	BLOCK_GAP,
 	CARD_FOOT,
+	CARD_GAP,
 	GUTTER,
+	NEXT_PEEK,
 	ROOM_ABOVE,
 	ROOM_BELOW,
 	feedPage,
@@ -263,6 +268,11 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	const sessionN = useFeedSession((s) => s.sessionN);
 	const sessionHydrated = useFeedSession((s) => s.hydrated);
 	const recordSwipe = useFeedSession((s) => s.recordSwipe);
+	const recordView = useFeedSession((s) => s.recordView);
+	const hideForGood = useFeedSession((s) => s.hide);
+	const recordInterest = useFeedSession((s) => s.recordInterest);
+	const bringBack = useFeedSession((s) => s.bringBack);
+	const hiddenIds = useFeedSession((s) => s.hiddenIds);
 	const beginSession = useFeedSession((s) => s.beginSession);
 
 	/**
@@ -344,9 +354,15 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	 * not inherit a pause either.
 	 */
 	const [paused, setPaused] = useState(false);
+	/**
+	 * When the card in front came to the front. A verdict's weight is how long
+	 * the buyer had been looking at it (`swipeWeight`).
+	 */
+	const shownAt = useRef(Date.now());
 	// biome-ignore lint/correctness/useExhaustiveDependencies: activeIndex is the trigger, not a read
 	useEffect(() => {
 		setPaused(false);
+		shownAt.current = Date.now();
 	}, [activeIndex]);
 
 	const [engineExhausted, setEngineExhausted] = useState(false);
@@ -447,6 +463,15 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 
 	const poolRef = useRef(scopedPool);
 	poolRef.current = scopedPool;
+	/**
+	 * The pool a deck is DEALT from: without the cards the buyer hid
+	 * (`lib/feed/hidden.ts`). Read at composition time, like the signals — a
+	 * card hidden mid-session must not rebuild the deck it was hidden from.
+	 */
+	const dealPool = useCallback(
+		() => withoutHidden(poolRef.current, useFeedSession.getState().hiddenIds),
+		[],
+	);
 
 	/**
 	 * A development bundle's stand-in homes (`lib/feed/test-homes.ts`); none in
@@ -497,7 +522,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		if (focus) {
 			setDeck(
 				placeDeck(
-					placePool(poolRef.current, focus, testHomesRef.current),
+					placePool(dealPool(), focus, testHomesRef.current),
 					focus.kind,
 					swipeHistory(),
 				),
@@ -517,7 +542,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		 * server did not already gate as visible.
 		 */
 		if (samplerEnabled()) {
-			const sampled = buildSamplerDeck({ pool: poolRef.current, stage });
+			const sampled = buildSamplerDeck({ pool: dealPool(), stage });
 			if (sampled.length > 0) {
 				rotate.current = 0;
 				setDeck(sampled);
@@ -532,7 +557,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		const result = generateFeed({
 			stage,
 			signals: s.signals,
-			pool: poolRef.current,
+			pool: dealPool(),
 			seenIds: s.seenIds,
 			count: FIRST_PAGE_SIZE,
 			rotate: 0,
@@ -583,7 +608,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 			// A later page of the place's pool: whatever is not in the deck yet.
 			const have = new Set(current.map((c) => c.id));
 			const more = placeDeck(
-				placePool(poolRef.current, focus, testHomesRef.current),
+				placePool(dealPool(), focus, testHomesRef.current),
 				focus.kind,
 				swipeHistory(),
 			).filter((c) => !have.has(c.id));
@@ -593,7 +618,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		const result = generateFeed({
 			stage,
 			signals: s.signals,
-			pool: poolRef.current,
+			pool: dealPool(),
 			seenIds: [...s.seenIds, ...current.map((c) => c.id)],
 			count: FIRST_PAGE_SIZE,
 			rotate: rotate.current,
@@ -604,7 +629,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		setDeck((d) => [...d, ...result.cards]);
 
 		setEngineExhausted(result.exhausted);
-	}, [stage, focus]);
+	}, [stage, focus, dealPool]);
 
 	/**
 	 * A shared link opened the app here (phase337, owner: "跳转到app的explore页面
@@ -679,28 +704,15 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	);
 
 	/**
-	 * The one line a trade-off answer earns back.
+	 * A VERDICT on a card: the heart ("right") or the cross ("left").
 	 *
-	 * 32 questions ask a great deal of a buyer, and until now a vote landed in
-	 * `signals` and produced nothing they could see. This says what actually
-	 * changed, with the real count — never "we'll remember that", which is the
-	 * kind of reassurance an app says when nothing happened.
-	 *
-	 * Shown ONLY when homes really moved. A question whose field the mirror has
-	 * not landed yet reorders nothing, and claiming otherwise would be the lie
-	 * this line exists to avoid.
+	 * Until phase414 this ran on every swipe. What it does is unchanged — the
+	 * telemetry event, the signals, the re-ranked tail — only what calls it.
 	 */
-	const [echo, setEcho] = useState<string | null>(null);
-	useEffect(() => {
-		if (echo === null) return;
-		const t = setTimeout(() => setEcho(null), 3200);
-		return () => clearTimeout(t);
-	}, [echo]);
-
-	const onDecision = useCallback(
-		(decision: "left" | "right", card: FeedCardV3) => {
+	const recordVerdict = useCallback(
+		(card: FeedCardV3, verdict: "left" | "right") => {
 			const at = Date.now();
-			const index = activeIndex;
+			const index = activeIndexRef.current;
 			const prevSwipeAt = useFeedSession.getState().lastSwipeAt;
 
 			enqueue(
@@ -708,7 +720,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 					seq: takeSeq(),
 					at,
 					card,
-					verdict: decision,
+					verdict,
 					funnelStage: stage,
 					sessionN,
 					activeIndex: index,
@@ -716,56 +728,122 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				}),
 			);
 
-			// Time-on-card, approximated by the gap since the previous swipe (the
-			// same figure telemetry ships as `dtSincePrevSwipe`). It scales the
-			// swipe's geo-tally weight — see `swipeWeight`.
-			const fresh = recordSwipe(card, decision, at, {
-				...(prevSwipeAt !== undefined ? { dwellMs: at - prevSwipeAt } : {}),
-			});
+			// Time on the card scales the verdict's geo-tally weight — see
+			// `swipeWeight`. Measured from when the card came to the front.
+			const engagement = { dwellMs: at - shownAt.current };
+			const fresh =
+				verdict === "right"
+					? recordSwipe(card, "right", at, engagement)
+					: hideForGood(card, at, engagement);
 
 			/*
-			 * Re-rank the deck's unswiped tail with the signals this swipe just
-			 * produced, so the NEXT cards follow the buyer's thumb card-by-card
-			 * instead of waiting for the next appended page. `rerankTail` never
-			 * touches the mounted window (the new activeIndex ±2 plus one card of
-			 * slack) and reorders each kind only among its own slots, so the
-			 * deck-key invariant and the mix rhythm both hold by construction.
+			 * Re-rank the deck's unseen tail with the signals this verdict just
+			 * produced, so the NEXT cards follow it instead of waiting for the next
+			 * appended page. `rerankTail` never touches the mounted window (the
+			 * card in front, its neighbours and some slack) and reorders each kind
+			 * only among its own slots, so the deck-key invariant and the mix
+			 * rhythm both hold by construction.
+			 *
+			 * A hidden card's later copies go too — the composer repeats a card
+			 * once fresh ones run out. Its place IN FRONT is kept: taking a card
+			 * out from under the window would re-key every card after it.
 			 */
-			// Not on a place's own page: its order is the place's.
-			if (!inPlace) {
-				setDeck((d) =>
-					rerankTail(d, index + 1 + RERANK_HOLD, fresh, poolRef.current),
-				);
-			}
-
-			if (card.kind === "tradeoff") {
-				const moved = movedUpCount(pool.listings, card, decision);
-				const side = decision === "right" ? card.right : card.left;
-				setEcho(
-					moved > 0
-						? `${side.label} · ${moved} ${moved === 1 ? "home" : "homes"} moved up your feed`
-						: null,
-				);
-			}
-			// A real swipe IS the discovery — the hint never plays again. Only
-			// reached by a committed PAN; every surviving kind commits.
-			recordSwipeHint();
-			setActiveIndex(index + 1);
+			setDeck((d) => {
+				const kept =
+					verdict === "left"
+						? d.filter((c, i) => i <= index + 1 || c.id !== card.id)
+						: d;
+				// Not on a place's own page: its order is the place's.
+				return inPlace
+					? kept
+					: rerankTail(kept, index + 1 + RERANK_HOLD, fresh, poolRef.current);
+			});
 		},
-		[
-			activeIndex,
-			enqueue,
-			takeSeq,
-			stage,
-			sessionN,
-			recordSwipe,
-			recordSwipeHint,
-			// `movedUpCount` reads the loaded listings to count what the answer
-			// promoted. `geoUnits` was the stale entry it replaced.
-			pool.listings,
-			inPlace,
-		],
+		[enqueue, takeSeq, stage, sessionN, recordSwipe, hideForGood, inPlace],
 	);
+
+	/**
+	 * Interest short of a like (`applyInterest`): the film watched through, the
+	 * card's Explore page or one of its figures opened, its own deck entered.
+	 * Once per card per visit, so a buyer going in and out of a page is not
+	 * counted as liking it more each time.
+	 */
+	const interested = useRef(new Set<string>());
+	const noteInterest = useCallback(
+		(card: FeedCardV3) => {
+			if (interested.current.has(card.id)) return;
+			interested.current.add(card.id);
+			recordInterest(card);
+		},
+		[recordInterest],
+	);
+
+	/**
+	 * The first-visit line (`SwipeHintChip`): shown on the first card until the
+	 * buyer turns a page. `state/swipe-hint.ts` keeps the never-nag rules — a
+	 * real swipe ends it for good; without one it shows on at most
+	 * MAX_HINT_SESSIONS app opens.
+	 */
+	const [hint, setHint] = useState(false);
+
+	/** The page turned, by a swipe or by `pager`. `card` was in front. */
+	const onPage = useCallback(
+		(step: PageStep, card: FeedCardV3) => {
+			// Going on from a card is having seen it. Nothing more: a swipe is not
+			// a verdict (phase414), and going back says nothing at all.
+			if (step === 1) recordView(card);
+			recordSwipeHint();
+			setHint(false);
+			setActiveIndex(activeIndex + step);
+		},
+		[activeIndex, recordView, recordSwipeHint],
+	);
+
+	/** Turns the page for a control rather than a drag (`SwipeStack`). */
+	const pager = useRef<PagerHandle | null>(null);
+	const onPagerReady = useCallback((handle: PagerHandle) => {
+		pager.current = handle;
+	}, []);
+
+	/**
+	 * The card's cross. The card is hidden for good, the deck moves on, and a
+	 * bar offers the way back for a few seconds (`HiddenToast`).
+	 *
+	 * The hidden card keeps its slot in this deck, so a swipe back stops at the
+	 * card after it (`canGoBack`): what the buyer just dismissed is not one
+	 * swipe away from being in front again.
+	 */
+	const [hiddenNote, setHiddenNote] = useState<string | null>(null);
+	useEffect(() => {
+		if (hiddenNote === null) return;
+		const t = setTimeout(() => setHiddenNote(null), 5000);
+		return () => clearTimeout(t);
+	}, [hiddenNote]);
+
+	const hideCard = useCallback(
+		(card: FeedCardV3) => {
+			recordVerdict(card, "left");
+			setHiddenNote(card.id);
+			pager.current?.page(1);
+		},
+		[recordVerdict],
+	);
+
+	const undoHide = useCallback(() => {
+		if (hiddenNote === null) return;
+		setHiddenNote(null);
+		bringBack(hiddenNote);
+		// Turn back to it — unless the buyer has gone further on since, and
+		// then it simply comes round again.
+		const at = activeIndexRef.current;
+		if (deckRef.current[at - 1]?.id !== hiddenNote) return;
+		// Hidden off the end of a deck, there is no stack mounted to turn.
+		if (at >= deckRef.current.length) setActiveIndex(at - 1);
+		else pager.current?.page(-1);
+	}, [hiddenNote, bringBack]);
+
+	const before = deck[activeIndex - 1];
+	const canGoBack = before !== undefined && !hiddenIds.includes(before.id);
 
 	/**
 	 * The pill at a card's bottom right: the way into its own deck — a city's
@@ -816,28 +894,9 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		[],
 	);
 
-	/**
-	 * §1.8's direction labels (owner pick "D2"), finally mounted. The component
-	 * has existed since task-0 and the feed never passed a `renderOverlay`, so a
-	 * drag has had no directional feedback at all: the card tilted and the buyer
-	 * learned what it meant only after letting go.
-	 *
-	 * Only for `decide` cards. A trade-off is `either-or` and already shows the
-	 * drag on its own terms — the chosen door widens and a green check lands by
-	 * its label — so a red PASS badge over the losing door would contradict the
-	 * face rather than annotate it. `cardBehavior` knows the difference, so
-	 * nothing here branches on a card kind.
-	 */
-	const renderOverlay = useCallback(
-		(card: FeedCardV3, args: CardRenderArgs) =>
-			cardBehavior(card).mode === "decide" ? (
-				<SwipeLabels card={card} tx={args.tx} cardWidth={args.cardWidth} />
-			) : null,
-		[],
-	);
-
 	const emitGesture = useCallback(
 		(type: "explore_tap" | "datapoint_tap", card: FeedCardV3) => {
+			noteInterest(card);
 			enqueue(
 				buildGestureEvent({
 					seq: takeSeq(),
@@ -849,7 +908,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				}),
 			);
 		},
-		[enqueue, takeSeq, stage, sessionN],
+		[enqueue, takeSeq, stage, sessionN, noteInterest],
 	);
 
 	const renderCard = useCallback(
@@ -885,6 +944,8 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 								{...(toCity ? { onExplore: toCity } : {})}
 								{...deckOf(card)}
 								{...share}
+								onHide={() => hideCard(card)}
+								onWatched={() => noteInterest(card)}
 							/>
 						);
 					}
@@ -918,6 +979,8 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 								router.push(`/listing/${card.id}`);
 							}}
 							{...share}
+							onHide={() => hideCard(card)}
+							onWatched={() => noteInterest(card)}
 						/>
 					);
 				}
@@ -933,6 +996,8 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 							deckGesture={args.deckGesture}
 							{...deckOf(card)}
 							{...share}
+							onHide={() => hideCard(card)}
+							onWatched={() => noteInterest(card)}
 							/*
 							 * "Why people love it →" now has a destination (owner,
 							 * 2026-08-02: 「最后还有why people love it的跳转button」).
@@ -972,59 +1037,34 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 			focused,
 			paused,
 			deckOf,
+			hideCard,
+			noteInterest,
 		],
 	);
 
 	/**
-	 * The swipe-hint (owner spec, 2026-08-13; redrawn phase365): once the
-	 * first card has settled (~500-800ms), it shows itself being liked and
-	 * then passed — out to the right with the green wash and the LIKE mark,
-	 * back, out to the left with PASS, back — so the buyer sees both that the
-	 * cards swipe and what each side means. It was a 16pt nudge to the left
-	 * until the owner's "好改" on 2026-11-20. Never nags:
-	 * a real swipe (recordSwipe in `onDecision`) disables it forever; without
-	 * a swipe it plays at most MAX_HINT_SESSIONS app opens.
+	 * When the first-visit line may show (see `hint` above): a deck is up, the
+	 * buyer is on its first card, and the launch animation is out of the way.
 	 *
 	 * ── Why the deps are this narrow (2026-08-14) ───────────────────────────
 	 *
-	 * The hint never played on device, and the reason was in this effect rather
-	 * than in the animation. `recordHintShown()` WRITES the hint store, and the
-	 * effect used to subscribe to the value it writes (`hintSessionsShown`) and
-	 * to `deck.length`. So the set() it makes re-rendered the screen with a
-	 * changed dep, React ran the CLEANUP first — `clearTimeout(t)` — and the
-	 * 600ms timer died a few milliseconds after being scheduled. The re-run
-	 * then hit the `hintRunOnce` latch and returned. Worse, the session had
-	 * already been counted, so three feed opens silently burned the entire
-	 * never-nag budget without the buyer ever seeing a nudge. A `deck.length`
-	 * append inside the 600ms window killed it the same way.
-	 *
-	 * The fix is to depend only on values this effect does not write:
-	 * `hintEligible` is a BOOLEAN, so a deck that keeps growing does not
-	 * re-trigger it, and the never-nag rules (discovered? budget left?) are
-	 * already enforced inside `recordHintShown` against fresh store state —
-	 * they never needed a subscription here.
+	 * `recordHintShown()` WRITES the hint store. An effect that also subscribed
+	 * to what it writes (`hintSessionsShown`), or to `deck.length`, re-ran on
+	 * its own write and hit the `hintRunOnce` latch — having already counted
+	 * the session — so three feed opens burned the whole never-nag budget
+	 * without the buyer ever seeing a hint. `hintEligible` is a BOOLEAN that
+	 * flips once, and the never-nag rules are enforced inside
+	 * `recordHintShown` against fresh store state.
 	 */
-	const hintRef = useRef<SwipeHintHandle | null>(null);
 	const hintRunOnce = useRef(false);
-	const onHintReady = useCallback((hint: SwipeHintHandle) => {
-		hintRef.current = hint;
-	}, []);
-	/**
-	 * A deck is up, the buyer is on its first card, and the launch animation
-	 * is out of the way (the nudge would play unseen under it). Flips once.
-	 */
 	const hintEligible =
 		!inPlace && launched && deck.length > 0 && activeIndex === 0;
 	useEffect(() => {
 		if (!hintHydrated || !hintEligible || hintRunOnce.current) return;
 		hintRunOnce.current = true;
-		// Returns false when the buyer has already discovered the swipe or the
+		// False when the buyer has already turned a page, or the
 		// MAX_HINT_SESSIONS budget is spent.
-		if (!recordHintShown()) return;
-		const t = setTimeout(() => {
-			hintRef.current?.nudge();
-		}, 600);
-		return () => clearTimeout(t);
+		if (recordHintShown()) setHint(true);
 	}, [hintHydrated, hintEligible, recordHintShown]);
 
 	const onTapTarget = useCallback(
@@ -1068,9 +1108,27 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				// enumerating the ones that have it. That makes the compiler the
 				// thing keeping the two in step: a new card kind is a `SavedKind`
 				// or it fails to typecheck here, and neither can be forgotten.
+				//
+				// The heart is the LIKE as well as the save since phase414, when a
+				// swipe stopped being one. A buyer who is not signed in is sent to
+				// sign in and nothing is saved (`toggle` hands back the old state),
+				// so nothing is liked either: a lit heart is always in Saved.
 				if (top && top.kind !== "tradeoff") {
-					toggleSaved(top.id, top.kind);
+					const was = useSavedStore.getState().isSaved(top.id);
+					const now = toggleSaved(top.id, top.kind);
+					if (now && !was) {
+						haptics.cardSettle();
+						recordVerdict(top, "right");
+					} else if (was && !now) {
+						// Taking the heart back takes the like back.
+						bringBack(top.id);
+					}
 				}
+				return;
+			}
+			if (target === HIDE_TAP_TARGET) {
+				const top = deckRef.current[activeIndex];
+				if (top && top.kind !== "tradeoff") hideCard(top);
 				return;
 			}
 			if (target === SHARE_TAP_TARGET) {
@@ -1084,7 +1142,10 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				if (!top) return;
 				const around = poolAround(poolRef.current, top, testHomesRef.current);
 				const place = placeWithin(top, around);
-				if (place) openPlace(place, around);
+				if (place) {
+					noteInterest(top);
+					openPlace(place, around);
+				}
 				return;
 			}
 			if (target === EXPLORE_TAP_TARGET) {
@@ -1108,7 +1169,16 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				}
 			}
 		},
-		[activeIndex, toggleSaved, toggleSound, emitGesture],
+		[
+			activeIndex,
+			toggleSaved,
+			toggleSound,
+			emitGesture,
+			recordVerdict,
+			bringBack,
+			hideCard,
+			noteInterest,
+		],
 	);
 
 	// Destructured so the two handlers below narrow: TypeScript drops a
@@ -1151,17 +1221,8 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 				 * Three quarters of the room the screen has left over, above the
 				 * block — the card and the block sit low on the page (owner,
 				 * 2026-11-24: "card下方空隙多了 整体向下", then "整体向上再一点点").
-				 * The trade-off answer's echo is said here.
 				 */}
-				<View style={styles.room}>
-					{echo !== null && (
-						<View style={styles.echo} pointerEvents="none">
-							<Text style={styles.echoText} numberOfLines={2}>
-								{echo}
-							</Text>
-						</View>
-					)}
-				</View>
+				<View style={styles.room} />
 				{/*
 				 * The place block (phase378; above the card since phase379; set down
 				 * on it in phase380): where the place is, Map, and three figures the
@@ -1259,18 +1320,33 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 							/>
 						</View>
 					) : (
-						<SwipeStack
-							items={deck}
-							activeIndex={activeIndex}
-							onDecision={onDecision}
-							onTapTarget={onTapTarget}
-							onHintReady={onHintReady}
-							renderCard={renderCard}
-							renderOverlay={renderOverlay}
-							keyExtractor={deckKey}
-							cardWidth={cardWidth}
-							capability={capability}
-						/>
+						<>
+							<SwipeStack
+								items={deck}
+								activeIndex={activeIndex}
+								onPage={onPage}
+								canGoBack={canGoBack}
+								onTapTarget={onTapTarget}
+								onPagerReady={onPagerReady}
+								renderCard={renderCard}
+								keyExtractor={deckKey}
+								cardWidth={cardWidth}
+								cardGap={CARD_GAP}
+								capability={capability}
+							/>
+							{hint && activeIndex === 0 && (
+								<View style={styles.hintWrap} pointerEvents="none">
+									<SwipeHintChip />
+								</View>
+							)}
+						</>
+					)}
+					{/* Over whatever the stage holds: hiding a deck's last card leaves
+					    its end card up, and the way back has to be there too. */}
+					{hiddenNote !== null && (
+						<View style={styles.toastWrap} pointerEvents="box-none">
+							<HiddenToast onUndo={undoHide} />
+						</View>
 					)}
 					{/*
 					 * Paused glyph, centred on the card. Drawn here rather than in the
@@ -1311,25 +1387,12 @@ const styles = StyleSheet.create({
 	 * stack vertically centred and the card stretching edge to edge.
 	 */
 	/**
-	 * The answer echo, in the room above the place block — the one stretch of
-	 * the page that is paper since the card sat down on the tab bar (phase380).
-	 */
-	echo: {
-		paddingHorizontal: 24,
-		alignItems: "center",
-	},
-	echoText: {
-		...textStyles.footnote,
-		color: colors.ink2,
-		textAlign: "center",
-	},
-	/**
 	 * Everything between the status bar (and the offline bar) and the tab bar,
 	 * the card `CARD_FOOT` above the bar. Measured: `feedPage` decides what fits.
 	 */
 	page: { flex: 1, paddingBottom: CARD_FOOT },
 	/** The leftover, shared out: above the block, and under the card. */
-	room: { flex: ROOM_ABOVE, justifyContent: "center" },
+	room: { flex: ROOM_ABOVE },
 	foot: { flex: ROOM_BELOW },
 	/**
 	 * The stage: the card's own box and nothing more, so `SwipeStack` finds no
@@ -1338,7 +1401,10 @@ const styles = StyleSheet.create({
 	stackWrap: {
 		alignItems: "center",
 		justifyContent: "center",
-		paddingHorizontal: GUTTER,
+		// The card a gutter from the left edge; on its right the gap, then the
+		// strip of the next card (`theme/feed-page.ts`).
+		paddingLeft: GUTTER,
+		paddingRight: CARD_GAP + NEXT_PEEK,
 	},
 	/**
 	 * Placeholder frame for skeleton / exhausted states — fills the same box
@@ -1347,8 +1413,26 @@ const styles = StyleSheet.create({
 	cardContainer: { flex: 1, alignSelf: "stretch" },
 	pausedWrap: {
 		...StyleSheet.absoluteFill,
+		// The card's own box, not the stage's: the strip beside it is not it.
+		left: GUTTER,
+		right: CARD_GAP + NEXT_PEEK,
 		alignItems: "center",
 		justifyContent: "center",
+	},
+	/** The first-visit line: across the card, over the picture, clear of the name. */
+	hintWrap: {
+		position: "absolute",
+		left: GUTTER,
+		right: CARD_GAP + NEXT_PEEK,
+		bottom: 132,
+		alignItems: "center",
+	},
+	/** The hidden card's bar: inside the card's sides, above its name row. */
+	toastWrap: {
+		position: "absolute",
+		left: GUTTER + 12,
+		right: CARD_GAP + NEXT_PEEK + 12,
+		bottom: 104,
 	},
 	pausedDisc: {
 		width: 64,
