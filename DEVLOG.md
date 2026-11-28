@@ -23,6 +23,25 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-28 03:34 UTC — phase413: design — the home feed's gestures (swipe to browse, a heart to like); demo only
+
+**Objective**: Owner 2026-11-27: should the home page show four at a time like Rednote so a buyer can choose ("现在买家看到第一个有点不知所措"), or get a demo animation; and "左右滑不好使 … 滑走不一定不喜欢" — could left/right move to the previous/next card, a heart mean like, and another button or an upward swipe mean dislike. "你怎么想，给我设计方案". Design only; the app is not changed.
+**Actions**: `apps/web/public/demos/feed-home-v1/index.html` (Chinese, noindex) → `https://www.percho.co/demos/feed-home-v1`. A phone that really swipes (pointer events; stills from Cloudflare Stream, the film itself where the browser plays HLS natively), switchable between vertical and horizontal paging; now/after phones with the five changes numbered; a four-up home drawn for comparison; what each action records; three questions. Card names and figures are what `/api/mobile/feed` sent that day.
+**The proposal**:
+- A swipe only browses: up = next, down = back, no verdict, a passed card can be returned to. The next card shows 14 pt of its top edge under the current one (`PEEK_PT` has been 0 since 2026-08-19, so nothing on the home page says there is a second card).
+- The bookmark (save) and the right swipe (like) become one heart, 48 pt, bottom right above the `Communities ›` pill: lit = liked = in Saved. Green fill, the Saved tab's colour — the card redline allows no second accent.
+- The bookmark's old slot in the top-right row becomes a cross: hide this card, show fewer like it, with Undo. Three discs before, three after.
+- First visit: one line, "Swipe up for the next place", gone after the first swipe; it replaces the like-then-pass nudge of phase365.
+**Decisions**:
+- Vertical rather than the owner's left/right: it is the gesture every short-video app has taught, it carries no verdict, and a horizontal card swipe reads as accept/reject to anyone who has used a dating app. An upward swipe as "dislike" is argued against for the same reason — it is everyone's "next", so it would record dislikes nobody meant. Horizontal is in the demo to feel.
+- Not a four-up home: the film playing on open is the pitch and a grid turns it into thumbnails; 28 films (8 cities, 20 communities) reach the bottom of a grid in three or four flicks; a buyer new to Atlanta cannot choose between place names. Drawn anyway so he can judge.
+- The swipe hint already exists (`state/swipe-hint.ts`, up to three sessions) — said so on the page, since he asked for "a demo animation" as if there were none.
+**Risks named on the page**: far fewer buyers will tap a heart than swipe, so the feed learns more slowly; watching a film through, opening Explore and opening Communities have to count as mild interest, which is new work (today `SignalState` moves only on a swipe, and the event queue's transport is still a no-op).
+**Verified**: headless Chrome over the file — vertical and horizontal paging, the pull-back resistance on the first card, heart kept across leaving and returning, hide + Undo, a cross-axis drag ignored, no console errors, no sideways overflow at 390 pt.
+**Next steps**: owner answers direction (up/down or left/right), home (one film or four-up), cross (yes/no). Build only after that. If built: `SwipeStack` pages on one axis instead of deciding, `applySwipe` loses its left/right meaning for film cards, `SwipeLabels` and the swipe hint go, the bookmark disc becomes the heart, and the Saved tab keeps reading `state/saved`.
+
+---
+
 ## 2026-11-28 00:26 UTC — phase412: the county page redrawn as tiles; dev client 1.1.1 (21) with the in-app browser
 
 **Objective**: Owner 2026-11-27: 「出新版本」, and of the page a county's pill opens on the Search map: 「点击后会看到county的数据 … 这个页面全是数字陈列很不好 重新设计一下」.
