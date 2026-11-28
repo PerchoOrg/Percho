@@ -160,6 +160,20 @@ const CITY_DELTA = 0.3;
 const HOME_DELTA = 0.12;
 const MARK_LABEL_DELTA = 0.06;
 
+/**
+ * What a tap on the map did, to Metro, in a development bundle only.
+ *
+ * A community that will not open has been reported seven times (six in
+ * September, once on 2026-11-28) and has never been reproduced off the
+ * owner's phone; every earlier fix was a guess at which of the five tap wires
+ * was failing. This says which wires fired for a tap, what the resolver
+ * measured, and where it stopped — so the next fix is read off the log.
+ */
+function tapLog(what: string, detail?: unknown): void {
+	if (!__DEV__) return;
+	console.warn(`[map-tap] ${what}`, detail === undefined ? "" : detail);
+}
+
 /** Landing spans for the `?focusLat=` deep link — the feed header's Map
  *  button on a community / home card (owner, 2026-09-14: land on the card's
  *  subject, "not just the county area").
@@ -424,8 +438,12 @@ export default function SearchTab() {
 	const lastNav = useRef(0);
 	const navigateTo = (path: string) => {
 		const now = Date.now();
-		if (now - lastNav.current < 800) return;
+		if (now - lastNav.current < 800) {
+			tapLog("dropped as a repeat", path);
+			return;
+		}
 		lastNav.current = now;
+		tapLog("open", path);
 		router.push(path);
 	};
 	const openCommunity = (slug: string) => navigateTo(`/community/${slug}`);
@@ -452,7 +470,10 @@ export default function SearchTab() {
 	 * zoom flipped a mark between working and not.
 	 */
 	const claimTap = (tap: LatLng | undefined, fallbackSlug?: string) => {
-		if (!shown || !(searching || cityBand)) return;
+		if (!shown || !(searching || cityBand)) {
+			tapLog("ignored", { marks: !!shown, searching, cityBand });
+			return;
+		}
 		if (!tap) {
 			// Apple Maps always sends the coordinate; this is the Google-Maps-
 			// on-iOS shape, where a polygon press names only its own id. Then
@@ -481,10 +502,30 @@ export default function SearchTab() {
 				consider(`/listing/${l.id}`, px(l.lat, l.lng), MARK_TAP_RADIUS_PX);
 			}
 		}
-		if (best) navigateTo(best.path);
+		if (!best) {
+			// What the nearest mark was, and how far: a tap that opens nothing
+			// is either far from every mark or measured against the wrong map.
+			let nearest = Number.POSITIVE_INFINITY;
+			for (const c of shown.communities) {
+				if (c.lat === undefined || c.lng === undefined) continue;
+				nearest = Math.min(nearest, px(c.lat, c.lng));
+			}
+			tapLog("no mark in reach", {
+				communities: shown.communities.length,
+				nearestPt: Math.round(nearest),
+				radiusPt: MARK_TAP_RADIUS_PX,
+				latDelta: region.latitudeDelta,
+				map: mapSize,
+			});
+			return;
+		}
+		navigateTo(best.path);
 	};
 
-	const onMapPress = (e: MapPressEvent) => claimTap(e.nativeEvent.coordinate);
+	const onMapPress = (e: MapPressEvent) => {
+		tapLog("wire: map press");
+		claimTap(e.nativeEvent.coordinate);
+	};
 
 	/**
 	 * Finger-sized in DEGREES — the half-width of a community's invisible hit
@@ -631,11 +672,17 @@ export default function SearchTab() {
 		// router, none of which is worklet-safe.
 		.runOnJS(true)
 		.maxDuration(400)
-		.onEnd((e) => {
+		.onEnd((e, success) => {
+			tapLog("wire: gesture tap", {
+				success,
+				x: Math.round(e.x),
+				y: Math.round(e.y),
+				map: mapRef.current !== null,
+			});
 			mapRef.current
 				?.coordinateForPoint({ x: e.x, y: e.y })
 				.then((coord) => claimTap(coord))
-				.catch(() => {});
+				.catch((err) => tapLog("point to coordinate failed", String(err)));
 		});
 
 	// A fresh TYPED result opens the sheet and fits the map to whatever has
@@ -726,6 +773,7 @@ export default function SearchTab() {
 						// BOTH fire, and small custom markers often catch nothing).
 						onMarkerPress={(e) => {
 							const id = e.nativeEvent.id;
+							tapLog("wire: marker press (map level)", id);
 							if (id?.startsWith("community:")) {
 								openCommunity(id.slice("community:".length));
 							}
@@ -853,9 +901,10 @@ export default function SearchTab() {
 											strokeColor="rgba(0,0,0,0)"
 											strokeWidth={0}
 											tappable
-											onPress={(e) =>
-												claimTap(e.nativeEvent.coordinate, c.slug)
-											}
+											onPress={(e) => {
+												tapLog("wire: hit square", c.slug);
+												claimTap(e.nativeEvent.coordinate, c.slug);
+											}}
 										/>
 									) : null,
 								)
@@ -876,7 +925,10 @@ export default function SearchTab() {
 											name={c.name}
 											{...(c.heroUrl ? { heroUrl: c.heroUrl } : {})}
 											labelled={marksLabelled}
-											onPress={() => openCommunity(c.slug)}
+											onPress={() => {
+												tapLog("wire: marker press", c.slug);
+												openCommunity(c.slug);
+											}}
 										/>
 									) : null,
 								)

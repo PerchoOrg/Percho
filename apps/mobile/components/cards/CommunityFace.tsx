@@ -253,12 +253,14 @@ const PLACE_RIGHT_WITH_HIDE = placeRight(4);
  * do not both fit, and the name is the one a buyer needs (owner pick "C",
  * phase394: drop the distance before cutting the name).
  *
- * The fourth disc takes 44pt of that — about eight characters — so a feed card's
- * pill gives up the distance sooner, and a name past ~24 characters ends in
- * an ellipsis there.
+ * That is the three-disc pill. The feed's fourth disc takes 44pt of it — about
+ * eight characters — which left room for the distance beside only one name in
+ * five (phase414 dropped it past 14 characters; owner, 2026-11-28: 「左上角的
+ * 地址为啥没有距离了？加上」). A feed card therefore sets the distance UNDER
+ * the name, always: every place says how far it is, and the name keeps the
+ * whole line. A name past ~24 characters still ends in an ellipsis there.
  */
 const PLACE_NAME_WITH_DISTANCE = 22;
-const PLACE_NAME_WITH_DISTANCE_AND_HIDE = 14;
 /**
  * How far a long name may shrink to stay on one line: 27pt → 16pt, which
  * keeps "Sugarloaf Country Club" whole beside its disc and a pill on the
@@ -766,22 +768,36 @@ export function CommunityFace({
 						!!onHide && { right: PLACE_RIGHT_WITH_HIDE },
 					]}
 				>
-					<View style={styles.placePill}>
-						<PinIcon />
-						<Text style={styles.placeName} numberOfLines={1}>
-							{place.name}
-						</Text>
-						{!!place.distance &&
-							place.name.length <=
-								(onHide
-									? PLACE_NAME_WITH_DISTANCE_AND_HIDE
-									: PLACE_NAME_WITH_DISTANCE) && (
-								<>
-									<View style={styles.placeRule} />
-									<Text style={styles.placeDistance}>{place.distance}</Text>
-								</>
-							)}
-					</View>
+					{onHide && !!place.distance ? (
+						// Four discs beside it: the distance under the name.
+						<View style={[styles.placePill, styles.placePillStacked]}>
+							<View style={styles.placePinStacked}>
+								<PinIcon />
+							</View>
+							<View style={styles.placeLines}>
+								<Text style={styles.placeName} numberOfLines={1}>
+									{place.name}
+								</Text>
+								<Text style={styles.placeDistance} numberOfLines={1}>
+									{place.distance}
+								</Text>
+							</View>
+						</View>
+					) : (
+						<View style={styles.placePill}>
+							<PinIcon />
+							<Text style={styles.placeName} numberOfLines={1}>
+								{place.name}
+							</Text>
+							{!!place.distance &&
+								place.name.length <= PLACE_NAME_WITH_DISTANCE && (
+									<>
+										<View style={styles.placeRule} />
+										<Text style={styles.placeDistance}>{place.distance}</Text>
+									</>
+								)}
+						</View>
+					)}
 				</View>
 			)}
 
@@ -1192,6 +1208,15 @@ const styles = StyleSheet.create({
 		flexShrink: 1,
 		minWidth: 0,
 	},
+	/** The two-line pill: the pin stays with the name, and the corners are a
+	 *  rounded box's rather than a capsule's. */
+	placePillStacked: {
+		alignItems: "flex-start",
+		paddingVertical: 6,
+		borderRadius: 12,
+	},
+	placePinStacked: { paddingTop: 1 },
+	placeLines: { flexShrink: 1, minWidth: 0, gap: 1 },
 	/** Hairline between the place and its distance — the burned pill's rule. */
 	placeRule: {
 		width: 1,
