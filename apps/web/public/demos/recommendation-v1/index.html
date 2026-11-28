@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — 推荐系统完整设计（v1）</title>
+<style>
+:root{
+  --green:#086B5B;
+  --ink:#181B18;
+  --ink2:#5A4E40;
+  --paper:#F6F3EC;
+  --sage:#E0E9E3;
+  --amber:#F0A94B;
+  --clay:#C86B3C;
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, "Songti SC", serif;
+  --ui: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:24px 14px 90px}
+section,header{max-width:1000px;margin:0 auto}
+h1{font:600 27px/1.25 var(--serif);color:var(--green);margin-bottom:10px}
+h2{font:600 21px/1.3 var(--ui);margin:0 0 8px}
+h2 i{font-style:normal;color:var(--green);margin-right:8px}
+h3{font:600 16px/1.35 var(--ui);margin:16px 0 4px}
+p,li{font:400 15px/1.7 var(--ui);color:var(--ink2)}
+p{margin:6px 0;max-width:800px}
+b{color:#2B2116}
+section{margin-top:56px}
+ul,ol{margin:4px 0 4px 22px;max-width:800px}
+.box{background:rgba(255,255,255,.55);border-radius:14px;padding:12px 18px;margin-top:14px;max-width:820px}
+.box p{margin:3px 0}
+.warn{background:rgba(200,107,60,.12);border-left:3px solid var(--clay)}
+table{border-collapse:collapse;margin-top:12px;max-width:860px;width:100%;background:rgba(255,255,255,.55);border-radius:12px;overflow:hidden}
+th,td{font:400 14px/1.55 var(--ui);color:var(--ink2);text-align:left;padding:8px 12px;border-bottom:1px solid rgba(0,0,0,.06);vertical-align:top}
+th{font-weight:600;color:#2B2116;background:rgba(255,255,255,.5);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.n{font-weight:600;color:var(--green);white-space:nowrap}
+td.neg{font-weight:600;color:var(--clay);white-space:nowrap}
+.en{font:500 14px/1.5 var(--ui);color:var(--ink)}
+.toc{columns:2;max-width:640px;margin-top:10px}
+.toc a{display:block;font:400 14px/1.9 var(--ui);color:var(--green)}
+
+/* ── the simulator ─────────────────────────────────── */
+.sim{display:flex;flex-wrap:wrap;gap:22px 26px;margin-top:18px;align-items:flex-start}
+.left{width:300px;flex:none}
+.right{flex:1;min-width:300px;max-width:640px}
+.modes{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.modes button{font:500 13px var(--ui);padding:7px 13px;border-radius:16px;border:1px solid rgba(0,0,0,.15);background:rgba(255,255,255,.6);color:var(--ink2);cursor:pointer}
+.modes button.on{background:var(--green);border-color:var(--green);color:#fff}
+.phone{width:300px;height:560px;border-radius:34px;background:var(--paper);overflow:hidden;position:relative;box-shadow:0 3px 10px rgba(32,28,22,.06),0 16px 38px rgba(32,28,22,.16);display:flex;flex-direction:column}
+.row{height:36px;flex:none;padding:14px 16px 0;font:400 13.5px var(--ui);color:var(--ink2);white-space:nowrap;overflow:hidden}
+.row b{font-weight:600;color:var(--ink)}
+.figs{height:42px;flex:none;display:flex;padding:0 16px;margin-top:8px}
+.figs div{flex:1;font:400 8.5px/1.3 var(--ui);color:var(--ink2);padding-left:8px;border-left:1px solid rgba(0,0,0,.1)}
+.figs div:first-child{padding-left:0;border-left:0}
+.figs b{display:block;font:600 17px/1.2 var(--ui);color:var(--ink)}
+.stage{flex:1;margin:10px 9px 12px;position:relative;border-radius:22px;overflow:hidden;background:#2A3236 center/cover}
+.scrim{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 45%,rgba(0,0,0,.5) 72%,rgba(0,0,0,.9) 100%)}
+.info{position:absolute;left:16px;right:14px;bottom:16px;color:#fff}
+.tag{font:700 8.5px var(--ui);letter-spacing:1px;color:rgba(255,255,255,.88);margin-bottom:4px}
+.name{font:600 22px/26px var(--serif)}
+.fake{position:absolute;left:0;right:0;top:34%;text-align:center;color:rgba(255,255,255,.75);font:500 12px/1.6 var(--ui)}
+.fake svg{width:54px;height:54px;stroke:rgba(255,255,255,.7);fill:none;stroke-width:1.4;stroke-linejoin:round;display:block;margin:0 auto 6px}
+.doors{position:absolute;inset:0;display:flex;flex-direction:column}
+.doors .q{flex:none;padding:18px 16px 12px;color:#fff;font:600 19px/1.3 var(--serif);text-align:center}
+.doors .q small{display:block;font:400 11px/1.4 var(--ui);color:rgba(255,255,255,.75);margin-top:4px}
+.doors .two{flex:1;display:flex;gap:3px;padding:0 3px 3px}
+.doors button{flex:1;border:0;border-radius:16px;background:rgba(255,255,255,.12);color:#fff;font:600 15px/1.35 var(--ui);padding:10px;cursor:pointer}
+.doors button:hover{background:rgba(255,255,255,.22)}
+.doors button small{display:block;font:400 10.5px/1.4 var(--ui);color:rgba(255,255,255,.72);margin-top:6px}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}
+.acts button{font:500 13px/1.25 var(--ui);padding:9px 6px;border-radius:12px;border:1px solid rgba(0,0,0,.14);background:#fff;color:var(--ink);cursor:pointer}
+.acts button small{display:block;font:400 10.5px var(--ui);color:#8A8478;margin-top:2px}
+.acts button.like{background:var(--green);border-color:var(--green);color:#fff}
+.acts button.like small{color:rgba(255,255,255,.8)}
+.acts button.hide{background:#3A342C;border-color:#3A342C;color:#fff}
+.acts button.hide small{color:rgba(255,255,255,.75)}
+.acts button:disabled{opacity:.4;cursor:default}
+.reset{font:500 13px var(--ui);color:var(--green);background:none;border:0;text-decoration:underline;cursor:pointer;padding:8px 0}
+.panel{background:rgba(255,255,255,.6);border-radius:14px;padding:12px 14px;margin-bottom:14px}
+.panel h4{font:600 13px var(--ui);color:#2B2116;margin-bottom:6px}
+.panel h4 span{font-weight:400;color:#8A8478;margin-left:6px}
+.log{font:400 13.5px/1.6 var(--ui);color:var(--ink2);min-height:44px}
+.log b{color:var(--green)}
+.q-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid rgba(0,0,0,.06);font:400 12.5px/1.35 var(--ui);color:var(--ink2)}
+.q-row:first-of-type{border-top:0}
+.q-row .i{width:16px;flex:none;color:#8A8478;font-size:11px;text-align:right}
+.q-row .s{flex:none;width:40px;font:600 10.5px/18px var(--ui);text-align:center;border-radius:9px;color:#fff}
+.s.fit{background:var(--green)}.s.near{background:#5E8F86}.s.exp{background:var(--clay)}.s.ask{background:#6B5FA8}.s.lock{background:#8A8478}
+.q-row .t{flex:1;min-width:0}
+.q-row .t b{display:block;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q-row .t span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px}
+.q-row .bar{flex:none;width:64px;height:6px;border-radius:3px;background:rgba(0,0,0,.08);overflow:hidden}
+.q-row .bar u{display:block;height:100%;background:var(--green)}
+.q-row .pos{flex:none;width:58px;text-align:right;font-size:11px;color:#8A8478}
+.q-row.up{background:rgba(240,169,75,.2)}
+.q-row .mv{flex:none;width:22px;font:700 11px var(--ui);color:var(--clay)}
+.kv{display:flex;gap:8px;font:400 13px/1.7 var(--ui);color:var(--ink2)}
+.kv i{font-style:normal;flex:none;width:64px;color:#8A8478}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.chips button{font:500 12px var(--ui);padding:5px 11px;border-radius:13px;border:1px solid rgba(0,0,0,.15);background:#fff;color:var(--ink2);cursor:pointer}
+.chips button.on{background:var(--sage);border-color:var(--green);color:var(--green);font-weight:600}
+.legend{font:400 12px/1.7 var(--ui);color:#8A8478;margin-top:6px}
+.legend .s{display:inline-block;width:40px;font:600 10.5px/18px var(--ui);text-align:center;border-radius:9px;color:#fff;margin:0 4px 0 8px}
+@media (max-width:700px){.left{margin:0 auto}.toc{columns:1}}
+</style>
+</head>
+<body>
+
+<header>
+<h1>Percho 推荐系统 — 完整设计（v1）</h1>
+<p><b>一句话：</b>推荐不是把片子排成一条长队让人从头刷，而是<b>每一批都从全部片子里重新挑 12 张</b>。买家做的每件事——点喜欢、点不喜欢、看了多久、点进去看、回答问题卡——都会改变下一批。排在目录第 10,000 位的片子，只要合适，下一批就出现。</p>
+<p>这页只是设计，App 里什么都没改。最下面第十二节是需要你回复的 5 件事。</p>
+<div class="toc">
+<a href="#s1">一　先试一试</a>
+<a href="#s2">二　目标：不是刷得久</a>
+<a href="#s3">三　三层内容</a>
+<a href="#s4">四　Percho 怎么了解一个片子</a>
+<a href="#s5">五　Percho 怎么了解一个买家</a>
+<a href="#s6">六　怎么打分</a>
+<a href="#s7">七　一批 12 张怎么配</a>
+<a href="#s8">八　新用户，和之前的问题卡片</a>
+<a href="#s9">九　第 10,000 个为什么刷得到</a>
+<a href="#s10">十　不做的事</a>
+<a href="#s11">十一　分三步建</a>
+<a href="#s12">十二　需要你定的 5 件事</a>
+</div>
+</header>
+
+<section id="s1">
+<h2><i>一</i>先试一试</h2>
+<p>左边是手机上的卡片，下面的按钮代表买家会做的事。右边是 Percho 排好的<b>接下来 12 张</b>。按一下左边，看右边怎么变——变黄的那几行是因为你刚才的动作挤上来的。</p>
+<p>片子是现在线上真实的 20 个社区和 8 个城市。点「加上 10,000 个示例房源」可以看片子多了以后的样子（房源是<b>虚构的示例数据</b>，只为演示）。右边每行最右的数字是这张片子在目录里排第几位。</p>
+
+<div class="modes">
+  <button id="m0" class="on">现在的 28 个片子</button>
+  <button id="m1">加上 10,000 个示例房源</button>
+</div>
+
+<div class="sim">
+  <div class="left">
+    <div class="phone">
+      <div class="row" id="pRow"></div>
+      <div class="figs" id="pFigs"></div>
+      <div class="stage" id="pStage"></div>
+    </div>
+    <div class="acts" id="acts"></div>
+    <button class="reset" id="reset">从头再来</button>
+  </div>
+  <div class="right">
+    <div class="panel">
+      <h4>刚才发生了什么</h4>
+      <div class="log" id="log"></div>
+    </div>
+    <div class="panel">
+      <h4>接下来的 12 张<span id="qNote"></span></h4>
+      <div id="queue"></div>
+      <div class="legend"><span class="s lock">定好</span>已预加载，不再变<span class="s fit">匹配</span>分数最高<span class="s near">相近</span>换个城市试试<span class="s exp">探索</span>你没看过的类型<span class="s ask">问题</span>问题卡</div>
+    </div>
+    <div class="panel">
+      <h4>Percho 现在知道的<span>（买家在 You 页能看到、能改）</span></h4>
+      <div id="prof"></div>
+      <div class="kv" style="margin-top:8px"><i>买家自己说的</i><div class="chips" id="stated"></div></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section id="s2">
+<h2><i>二</i>目标：不是刷得久</h2>
+<p>抖音的推荐要人刷得久。Percho 的买家是来办一件事的：<b>找到想住的地方</b>。所以这套推荐只看一个结果——一个买家要划多少张，才能看到三四个真正合适的地方。用喜欢、保存、对比来量，不用停留时长来量。</p>
+<p>三条原则，都是你之前定过的，这次照旧：</p>
+<ul>
+<li><b>只调顺序，不替买家排除。</b>Percho 猜出来的偏好只能让一张卡靠前或靠后，不能让它消失。会消失的只有买家自己点了不喜欢的。</li>
+<li><b>不让人觉得在训练机器。</b>没有表格、没有进度条、没有“再滑 5 张解锁”。</li>
+<li><b>每张卡都说得出为什么。</b>分数是几项相加，每一项都是人话（“你喜欢过 Suwanee”“价位接近”），不是黑箱。</li>
+</ul>
+</section>
+
+<section id="s3">
+<h2><i>三</i>三层内容</h2>
+<p>城市 → 社区 → 房子。现在有 8 个城市片、20 个社区片，房子等 FMLS 上线。你担心的 10,000 个，绝大多数会是房子。</p>
+<p>这三层是解决“太多刷不完”的第一把钥匙：<b>喜欢会顺着往下传</b>。喜欢一个城市，它里面的社区全部加分；喜欢一个社区，它里面的房子全部加分。买家喜欢 3 个地方，Percho 就已经给一万个房子里的每一个都打出了分，不需要他一个一个刷。</p>
+<p>喜欢一个城市之后，<b>不会</b>整个切到这个城市（这是你上次叫停的做法）。变化是：下一批 12 张里，这个城市的社区从一两张变成四五张，最多连着两张，其余的照常放别处。在上面的模拟里点喜欢一个城市就能看到。</p>
+</section>
+
+<section id="s4">
+<h2><i>四</i>Percho 怎么了解一个片子</h2>
+<p>每个片子一份“档案”，全部是数据库里已经有的事实，不用 AI 去看片子猜：</p>
+<table>
+<tr><th>项目</th><th>来源</th><th>现在有吗</th></tr>
+<tr><td>在哪：城市、县、坐标</td><td>社区和城市表</td><td>有</td></tr>
+<tr><td>价位</td><td>卡片上印的那个数（县评估价 / 新房起价）</td><td>有</td></tr>
+<tr><td>学校等级、到高速的分钟数</td><td>卡片上印的那两个数</td><td>有</td></tr>
+<tr><td>安全、升值潜力的事实</td><td>Explore 页的五格</td><td>有</td></tr>
+<tr><td>地方的特点：能走路、安静、有步道和水、餐馆多、新建、带俱乐部</td><td>社区档案里算出来的标签</td><td>20 个里 14 个有，6 个是空的，要补</td></tr>
+<tr><td>房子：价格、卧室数、面积、年份、地块</td><td>FMLS 字段</td><td>等房源</td></tr>
+<tr><td>片子本身：多少人看完、多少人喜欢</td><td>已经在记的行为日志</td><td>有日志，用户太少，暂时不用</td></tr>
+</table>
+<p>档案里<b>没有</b>任何关于“住在那里的是什么人”的内容，见第十节。</p>
+</section>
+
+<section id="s5">
+<h2><i>五</i>Percho 怎么了解一个买家</h2>
+<p>三种信号，可信度从高到低。一个动作的分量就是它的分数。</p>
+<table>
+<tr><th>买家做了什么</th><th>分量</th><th>改变什么</th><th>现在</th></tr>
+<tr><td colspan="4"><b>说出来的</b>——最可信，Percho 不能悄悄推翻</td></tr>
+<tr><td>You 页“What matters to you”的五项</td><td class="n">直接生效</td><td>学校、花费、方便、安全、潜力各自在分数里占多少</td><td>只影响对比页</td></tr>
+<tr><td>回答一张问题卡</td><td class="n">+2 / −1</td><td>选的那一边加分，另一边减一半</td><td>社区版里关着</td></tr>
+<tr><td colspan="4"><b>做出来的</b></td></tr>
+<tr><td>点喜欢</td><td class="n">+3</td><td>它的城市、价位、特点，以及下一层的内容</td><td>只算城市</td></tr>
+<tr><td>分享、加进对比</td><td class="n">+2</td><td>同上</td><td>不算</td></tr>
+<tr><td>点进 Explore、点 Communities ›、点 Map、点卡片上的数字</td><td class="n">+1.5</td><td>同上；点的是哪个数字还说明他在意哪一项</td><td>不算</td></tr>
+<tr><td>点不喜欢</td><td class="neg">−3</td><td>这一张永远不再出现；城市和特点减分，但<b>只算一半</b></td><td>只隐藏这一张</td></tr>
+<tr><td colspan="4"><b>看出来的</b>——最弱，单独一次几乎不算数</td></tr>
+<tr><td>看完片子的四分之三以上，或者重看</td><td class="n">+1</td><td>城市、价位、特点</td><td>不算</td></tr>
+<tr><td>城市片里跳到某一章（比如 Schools）</td><td class="n">+0.5</td><td>他在意的是哪一项</td><td>不算</td></tr>
+<tr><td>2 秒内划走</td><td class="neg">−0.5</td><td>城市、特点</td><td>不算</td></tr>
+<tr><td>正常划过</td><td class="n">0</td><td>什么都不改——你说过“滑走不一定不喜欢”</td><td>一样</td></tr>
+</table>
+<p>四条规矩：</p>
+<ul>
+<li><b>负的只算一半。</b>点一次不喜欢不能毙掉一个城市，要两次不喜欢才抵得过一次喜欢。误点一次不会让一个城市从此消失。</li>
+<li><b>时长按片子长度的比例算，不按秒数。</b>城市片两分钟，社区片四十秒，按秒算对短片不公平。</li>
+<li><b>旧的会淡。</b>买房是几个月的事，想法会变。两个月前的喜欢分量减半；当天的动作分量加倍。</li>
+<li><b>每一项都有上限。</b>喜欢十个 Suwanee 的社区，Suwanee 也只能加到满分，不会把别的城市全挤出去。</li>
+</ul>
+<div class="box"><p><b>更正上一条回复：</b>我说“浏览时长在排序里没有用”，不准确。现在的代码会用时长放大或缩小一次喜欢／不喜欢对所在城市的分量（0.5 到 2 倍）。但“看了很久却什么都没点”确实不算数，这是这次要补的。</p></div>
+</section>
+
+<section id="s6">
+<h2><i>六</i>怎么打分</h2>
+<p>每个片子对每个买家一个分数，满分 100，是下面几项相加。起步用这组数，上线后看日志再调。</p>
+<table>
+<tr><th>项</th><th>满分</th><th>怎么算</th></tr>
+<tr><td>地方</td><td class="n">28</td><td>喜欢过这个城市；紧挨着喜欢过的城市（9 英里内）算四成</td></tr>
+<tr><td>价位</td><td class="n">22</td><td>和喜欢过的地方价位差 15% 以内满分，差得越远越低。城市片不算这一项</td></tr>
+<tr><td>买家自己说的五项</td><td class="n">13</td><td>他把 Schools 调高，学校等级高的就加分；别的四项同理</td></tr>
+<tr><td>特点</td><td class="n">12</td><td>和喜欢过的地方有同样的特点</td></tr>
+<tr><td>问题卡的回答</td><td class="n">10</td><td>符合他选的那一边</td></tr>
+<tr><td>下一层</td><td class="n">10</td><td>喜欢过的城市里的社区；喜欢过的社区里的房子</td></tr>
+<tr><td>片子本身</td><td class="n">5</td><td>新上的、看完率高的略微靠前</td></tr>
+<tr><td>以后加：喜欢这个的人还喜欢</td><td class="n">最多 15</td><td>用户够多才开，见第十一节</td></tr>
+</table>
+<p>是一张写得明明白白的加分表，不是训练出来的模型。两个原因：现在用户太少，训练不出东西；而且 FMLS 合同禁止把房源数据交给 AI，手写的加分表不涉及这一条。</p>
+</section>
+
+<section id="s7">
+<h2><i>七</i>一批 12 张怎么配</h2>
+<p>买家感觉不到“组”，他看到的是一条不断的流。背后是这样：</p>
+<ul>
+<li><b>一次取 12 张</b>，看到还剩 5 张时取下一批。和现在一样。</li>
+<li><b>眼前这张后面的 2 张定死</b>，因为视频已经在预加载。</li>
+<li><b>第 3 张开始，每有一个信号就重排一次。</b>所以点了喜欢，再划两三张就能看到变化。这是让人觉得“它懂我”的关键，等一整批刷完才变就太慢了。</li>
+<li><b>12 张的配比是 7 + 3 + 2：</b>7 张分数最高的；3 张“相近”——价位和特点合适，但在他还没表过态的城市；2 张“探索”——他完全没看过的城市或价位。</li>
+<li><b>刚来的时候探索多一张</b>（6 + 3 + 3），了解够了再降到 2 张。</li>
+<li><b>同一个城市最多连着 2 张</b>，一批里最多 5 张；而且同一个城市每多放一张，下一张的分数打八五折——所以喜欢了两个城市，两个都会出现，不会被分高的那个占满。</li>
+<li><b>问题卡一批最多 1 张。</b>规则见下一节。</li>
+<li><b>看过的不重复。</b>没表态的片子两周后可以再出现一次；喜欢过的在 Saved 里，不回到流里；不喜欢的永不出现。</li>
+<li><b>刷完了就说刷完了。</b>现在是从头循环；设计后是一句“这一带你都看过了”，加一个去 Search 的入口。</li>
+</ul>
+</section>
+
+<section id="s8">
+<h2><i>八</i>新用户，和之前的问题卡片</h2>
+<p><b>问题卡片可以用，而且正好用在这里。</b>它本来就是为“还不了解这个人”设计的。</p>
+<h3>能直接用的</h3>
+<ul>
+<li><b>卡片本身</b>：两扇门，点一边。样子、手势、动画都不用改。</li>
+<li><b>记录方式</b>：记的是“问了什么、选了哪边”，不是一个分数。所以以后数据补上了，以前的回答会自动开始起作用。</li>
+<li><b>规矩</b>：两边都是好的、不能两个都要、看得见、只问房子和地方不问人。这六条照旧。</li>
+<li><b>32 个问题里的 7 个</b>，问的是地段和社区，现在就能用：</li>
+</ul>
+<table>
+<tr><th>问题（App 里的英文原文）</th><th>两边</th></tr>
+<tr><td class="en">Quiet, or in the middle of it?</td><td class="en">A quiet street · Walk to everything</td></tr>
+<tr><td class="en">Closer in, or more house?</td><td class="en">Closer in · More house for it</td></tr>
+<tr><td class="en">Grown in, or brand new?</td><td class="en">Mature trees · Brand-new streets</td></tr>
+<tr><td class="en">A dead end, or a way through?</td><td class="en">A cul-de-sac · Sidewalks and a way through</td></tr>
+<tr><td class="en">Shared amenities, or no dues?</td><td class="en">HOA with a pool and tennis · No HOA, no rules, no dues</td></tr>
+<tr><td class="en">Spend it all, or keep some back?</td><td class="en">Top of your budget · Room left to make it yours</td></tr>
+<tr><td class="en">Near the train, or away from it?</td><td class="en">Near the train · Away from the noise</td></tr>
+</table>
+<h3>不能直接用的</h3>
+<ul>
+<li><b>另外 25 个问题</b>问的是房子里面（书房还是客房、洗衣房在哪层、要不要地下室）。没有房源的时候问了也排不动任何东西，等房源上线再放出来。</li>
+<li><b>门上的照片</b>原来用的是房源照片。社区的问题要换成我们自己片子里的画面。</li>
+<li><b>社区版的流里现在没有它的位置</b>，要加回来。</li>
+</ul>
+<h3>要新写的 5 个</h3>
+<p>都是现有数据能判断的。英文是我起的草稿，<b>要你过目才能进 App</b>：</p>
+<table>
+<tr><th>问题（草稿）</th><th>两边（草稿）</th><th>靠什么判断</th></tr>
+<tr><td class="en">Where does your budget sit?</td><td class="en">Around $600K · Around $1.1M<br><span style="font-weight:400;color:#8A8478">数字随买家变：先把剩下的片子对半分，答完再分一次</span></td><td>卡片上的价位</td></tr>
+<tr><td class="en">On the highway, or tucked away?</td><td class="en">Minutes from the highway · Tucked further back</td><td>到高速的分钟数</td></tr>
+<tr><td class="en">Brand new, or established?</td><td class="en">Brand-new homes · Established streets</td><td>是不是在售新盘</td></tr>
+<tr><td class="en">A club, or no club?</td><td class="en">Golf, pool and tennis · No club, lower dues</td><td>有没有俱乐部</td></tr>
+<tr><td class="en">What's outside the gate?</td><td class="en">Trails and water · Restaurants nearby</td><td>周边的步道、湖、餐馆数量</td></tr>
+</table>
+<p><b>没有学校的问题，以后也不加。</b>问题库的第六条规矩写得很清楚：按学校好坏排推荐流在美国有公平住房的风险。学校只走买家自己在 You 页调的那一项。</p>
+<h3>什么时候问</h3>
+<ul>
+<li><b>不做开屏问卷。</b>新用户打开就是片子。</li>
+<li><b>头 12 张故意挑得彼此差别最大</b>——不同城市、不同价位——这样每一次喜欢或不喜欢都能排除一大片。模拟里一开始看到的就是这个。</li>
+<li><b>第 4 张是第一张问题卡</b>，之后大约每 9 张一张。</li>
+<li><b>问哪个，看哪个最有用：</b>挑“两边能把剩下的片子分得最均匀”的那个。已经从喜欢里看出来的事不再问——喜欢过三个 $800K 左右的地方，就不再问预算。</li>
+<li><b>了解够了就停。</b>答过 3 张，或者喜欢过 5 个地方之后，一天最多一张。没有哪个问题还能改变顺序，就一张也不问。</li>
+</ul>
+<div class="box"><p><b>老实说：</b>现在只有 28 个片子，问题卡能排动的很有限，买家会感觉“答了也没怎么变”。它真正起作用是房源上线以后。现在做的意义是把卡片、回答的记录和排序接通，房源一来就能用。</p></div>
+</section>
+
+<section id="s9">
+<h2><i>九</i>第 10,000 个为什么刷得到</h2>
+<p>你问的这件事其实已经发生过一次。8 月的时候社区按名字排序、一次取 12 个，当时唯一有视频的 Ashley Crossing 按字母排在第 280 位左右，你在手机的测试页上一条带视频的社区都刷不到。当时的修法是把有视频的提到前面——这只对 20 个片子管用。</p>
+<p>设计后有四条路让它出现，任何一条都够：</p>
+<ol>
+<li><b>分数。</b>每一批都是从全部片子里按分数挑的，目录里排第几位不参与。它合适，分数就高，下一批就在。</li>
+<li><b>往下传。</b>买家喜欢过它所在的城市或社区，它直接加分（第三节）。</li>
+<li><b>探索位。</b>买家自己都不知道会喜欢它的时候，每批 2 张探索专门放他没看过的城市和价位，轮着来，保证每个角落都会被放到。</li>
+<li><b>不靠推荐的入口。</b>Search、地图、城市和社区自己的那一页。推荐流不是唯一的门。</li>
+</ol>
+<p>在第一节的模拟里切到“加上 10,000 个示例房源”，喜欢两三个地方，看右边最右一列：一批里会同时出现目录第几十位和第九千多位的片子。</p>
+<p><b>这要求排序搬到服务器上。</b>现在是服务器按固定顺序发，手机只排自己手里那几十张。设计后分两层：<b>服务器从全部片子里挑这 12 张</b>；<b>手机在这 12 张里即时重排</b>（这部分现在的代码已经有了）。手机每次要片子时带上一份简短的偏好摘要，服务器不存任何新的个人数据。</p>
+</section>
+
+<section id="s10">
+<h2><i>十</i>不做的事</h2>
+<div class="box warn">
+<p><b>1. 不用、也不猜“住在那里的是什么人”或“买家是什么人”。</b>美国《公平住房法》禁止按种族、宗教、国籍、家庭状况等引导买家去某些地方。具体到这套系统：</p>
+<p>· 片子档案里没有任何关于居民的内容。现有标签里的“family”不进推荐。</p>
+<p>· <b>App 的语言、手机的地区设置不参与排序。</b>Percho 面向多语言买家，这一条尤其要守住——不能因为买家用中文就多推某个城市。</p>
+<p>· 学校等级只在买家自己调了那一项时才起作用，不从他的喜欢里推断。</p>
+<p>· “喜欢这个的人还喜欢”会把人群的习惯带进来，所以它的上限压在 15 分，而且探索位保证每个人都能看到全部范围。</p>
+<p>这是我按现有规矩做的判断，不是法律意见。房源正式上线前，建议让懂公平住房的律师看一眼这一节。</p>
+</div>
+<div class="box warn">
+<p><b>2. 不把 FMLS 的房源数据交给任何 AI。</b>合同第 3.7 条。所以打分是手写的加分表；将来想换成训练出来的模型，要先书面问 FMLS。我们自己的行为日志（谁喜欢了什么）不是 FMLS 的数据，不受这条限制。</p>
+</div>
+<div class="box warn">
+<p><b>3. 付费不加分。</b>你的买家调研里 10 个人有 8 个说，怕平台有商业倾向是他们不信任这类工具的原因。所以我的建议是：经纪人的片子和付费合作的社区，分数和别人一样算；如果以后要给付费内容位置，就单开一个带标记的位置，不混进这 12 张的排序里。这一条需要你定，见下面。</p>
+</div>
+<div class="box">
+<p><b>4. 不奖励刷。</b>没有连续天数、没有徽章。<b>5. 不加新的付费服务。</b>全部用现有的数据库和服务器，没有新开销。<b>6. 不在卡片上加字。</b>“为什么推荐这张”放在 You 页，不占推荐流的地方。</p>
+</div>
+</section>
+
+<section id="s11">
+<h2><i>十一</i>分三步建</h2>
+<table>
+<tr><th>步</th><th>做什么</th><th>你在手机上看到什么</th><th>什么时候</th></tr>
+<tr><td><b>第一步</b></td><td>补上不算数的信号（时长、点进去、分享）；新的打分表；7 + 3 + 2 的配比；社区问题卡回到流里；测试版里长按卡片能看到这张的分数和每一项</td><td>点喜欢之后两三张内出现同城市、同价位的；偶尔一张问题卡；片子少，变化不会很大</td><td>现在就能做，不依赖房源</td></tr>
+<tr><td><b>第二步</b></td><td>排序搬到服务器，每批从全部片子里挑；刷完了有结束的一句话</td><td>看不出区别——这一步是为一万个片子铺路</td><td>房源上线之前</td></tr>
+<tr><td><b>第三步</b></td><td>“喜欢这个的人还喜欢”；片子的看完率进分数；按日志调那张加分表</td><td>推荐里出现你没表过态、但和你口味相近的人喜欢的地方</td><td>大约有一千个各自喜欢过 5 个以上地方的买家之后。现在开了只会是噪音</td></tr>
+</table>
+<p><b>怎么知道它管不管用。</b>用户少，做不了对照实验，所以看三样：每 20 张卡里喜欢了几张、2 秒划走的占多少、从打开到第一次喜欢划了几张。另外，打分是纯计算，可以拿真实的行为日志回放：被喜欢的片子当时是不是排在被划走的前面。你自己的判断用第一步里那个长按看分数的功能。</p>
+</section>
+
+<section id="s12">
+<h2><i>十二</i>需要你定的 5 件事</h2>
+<ol>
+<li><b>问题卡：</b>用旧卡片的样子，先放那 7 个旧问题加 5 个新问题，行吗？新问题的英文（第八节的表）有要改的直接说。</li>
+<li><b>喜欢一个城市之后：</b>下一批里它的社区从一两张升到四五张，不整个切过去，行吗？</li>
+<li><b>学校：</b>只有买家自己调高了 Schools 才影响排序，不从喜欢里推断，同意吗？</li>
+<li><b>付费内容：</b>不加分；以后要放就单开带标记的位置，同意吗？</li>
+<li><b>从第一步开始做吗？</b></li>
+</ol>
+<p>都同意就回“<b>都同意，做第一步</b>”。有不同意的，说第几条、想怎么改。</p>
+</section>
+
+<script>
+const RAW = [{"n":"White Columns","k":"community","city":"Alpharetta","lat":34.1495,"lng":-84.3285,"price":1400000,"pl":"$1.4M","grade":"A+","min":20,"tags":["quiet","outdoors"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/white-columns.jpg"},{"n":"Ward's Crossing","k":"community","city":"Johns Creek","lat":34.0254,"lng":-84.1986,"price":675000,"pl":"$675K","grade":"A+","min":11,"tags":["newbuild"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/4583437f-c06d-42e7-8f40-e36d48dfba2f/5c66a991-bbfd-40aa-b52c-5691b6c8ab9c.jpg"},{"n":"Towne Village","k":"community","city":"Sugar Hill","lat":34.1175,"lng":-84.0791,"price":450000,"pl":"$450K","grade":"A+","min":11,"tags":["newbuild"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/5d804909-6571-4c56-9ad7-15e21037f41a/a43b190e-c578-46dc-bf83-9b63ae85c03a.jpg"},{"n":"Apremont - Highcroft","k":"community","city":"Peachtree Corners","lat":33.9729,"lng":-84.2017,"price":730000,"pl":"$730K","grade":"B+","min":11,"tags":["dining"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/apremont-highcroft.jpg"},{"n":"Sugarloaf Country Club","k":"community","city":"Duluth","lat":33.9995,"lng":-84.1091,"price":1700000,"pl":"$1.7M","grade":"A","min":11,"tags":["walkable","quiet","club"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/sugarloaf-country-club.jpg"},{"n":"Edinburgh","k":"community","city":"Suwanee","lat":34.0856,"lng":-84.1038,"price":1200000,"pl":"$1.2M","grade":"A+","min":16,"tags":["quiet"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/edinburgh.jpg"},{"n":"Hedgerows","k":"community","city":"Buford","lat":34.0782,"lng":-83.9554,"price":800000,"pl":"$800K","grade":"A","min":6,"tags":["quiet"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/hedgerows.jpg"},{"n":"Harvest Park","k":"community","city":"Suwanee","lat":34.0446,"lng":-84.0791,"price":720000,"pl":"$720K","grade":"A+","min":6,"tags":[],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/7a649128-15d6-4231-bb26-ef78b9730c8a/d3a47cbe-20e6-48c0-b804-30090ae81673.jpg"},{"n":"Wild Timber","k":"community","city":"Sugar Hill","lat":34.1129,"lng":-84.0936,"price":850000,"pl":"$850K","grade":"A+","min":15,"tags":["quiet","outdoors"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/wild-timber.jpg"},{"n":"Arbors at Richland Creek","k":"community","city":"Buford","lat":34.1353,"lng":-84.0517,"price":525000,"pl":"$525K","grade":"A−","min":12,"tags":["newbuild"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/8827a428-2a12-454e-a569-ea497ed01503/7949b680-2e57-49ac-a66e-5119b98966db.jpg"},{"n":"Northbrooke","k":"community","city":"Cumming","lat":34.3087,"lng":-84.1428,"price":800000,"pl":"$800K","grade":"A−","min":12,"tags":[],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/c7e84b7c-d8ab-445d-9832-abc6be6e7f79/9efb59ac-1efe-46cb-87f8-b897c77e740d.jpg"},{"n":"Sawnee Village","k":"community","city":"Cumming","lat":34.2171,"lng":-84.1293,"price":670000,"pl":"$670K","grade":"B+","min":4,"tags":[],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/cbcdb3ac-696f-48c2-8806-12c52415bf3e/cd59756a-ec8e-4cf6-8169-e19d5c79d9a8.jpg"},{"n":"Aberdeen","k":"community","city":"Suwanee","lat":34.0907,"lng":-84.1419,"price":640000,"pl":"$640K","grade":"A+","min":11,"tags":[],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/aberdeen-2.jpg"},{"n":"Ashley Crossing","k":"community","city":"Alpharetta","lat":33.9963,"lng":-84.2755,"price":620000,"pl":"$620K","grade":"B+","min":9,"tags":["walkable","outdoors","dining"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/ashley-crossing.jpg"},{"n":"Windermere","k":"community","city":"Cumming","lat":34.1387,"lng":-84.1179,"price":810000,"pl":"$810K","grade":"A+","min":13,"tags":["walkable","quiet"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/windermere.jpg"},{"n":"St Marlo Country Club","k":"community","city":"Duluth","lat":34.0684,"lng":-84.1402,"price":1300000,"pl":"$1.3M","grade":"A+","min":14,"tags":["walkable","quiet","club"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/st-marlo.jpg"},{"n":"Windward","k":"community","city":"Alpharetta","lat":34.0976,"lng":-84.2386,"price":910000,"pl":"$910K","grade":"A+","min":3,"tags":["walkable","quiet"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/windward.jpg"},{"n":"Bellmoore Park","k":"community","city":"Johns Creek","lat":34.0537,"lng":-84.1549,"price":1700000,"pl":"$1.7M","grade":"A+","min":17,"tags":["quiet"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/bellmoore-park.jpg"},{"n":"Medlock Bridge","k":"community","city":"Johns Creek","lat":34.031,"lng":-84.1937,"price":890000,"pl":"$890K","grade":"A+","min":15,"tags":[],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/medlock-bridge.jpg"},{"n":"Cardinal Lake Estates","k":"community","city":"Duluth","lat":33.9799,"lng":-84.1289,"price":430000,"pl":"$430K","grade":"B","min":8,"tags":["outdoors"],"hero":"https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/community-covers/nextdoor/cardinal-lake.jpg"},{"n":"Alpharetta","k":"city","city":"Alpharetta","lat":34.0854,"lng":-84.2691,"price":649000,"pl":"$649K","grade":"A+","min":55,"tags":[],"hero":"https://videodelivery.net/e4cf6820839a7e550f2a7f80b4de649e/thumbnails/thumbnail.jpg?time=1s"},{"n":"Cumming","k":"city","city":"Cumming","lat":34.2121,"lng":-84.148,"price":550000,"pl":"$550K","grade":"A","min":68,"tags":[],"hero":"https://videodelivery.net/6f0a91c3ac197285efde591d72fced02/thumbnails/thumbnail.jpg?time=1s"},{"n":"Buford","k":"city","city":"Buford","lat":34.0978,"lng":-83.9687,"price":369000,"pl":"$369K","grade":"A−","min":69,"tags":[],"hero":"https://videodelivery.net/fcb80782c1174ec5992f2bf81a68ebd8/thumbnails/thumbnail.jpg?time=1s"},{"n":"Duluth","k":"city","city":"Duluth","lat":33.9978,"lng":-84.1478,"price":401000,"pl":"$401K","grade":"A","min":60,"tags":[],"hero":"https://videodelivery.net/471f8675de36b29b7eb3ae172d213668/thumbnails/thumbnail.jpg?time=1s"},{"n":"Suwanee","k":"city","city":"Suwanee","lat":34.0569,"lng":-84.0839,"price":481000,"pl":"$481K","grade":"A","min":62,"tags":[],"hero":"https://videodelivery.net/324ac35659ec5a6e0a5218620575a57a/thumbnails/thumbnail.jpg?time=1s"},{"n":"Sugar Hill","k":"city","city":"Sugar Hill","lat":34.1069,"lng":-84.0523,"price":413000,"pl":"$413K","grade":"A","min":69,"tags":[],"hero":"https://videodelivery.net/9aec0781c325fce9a615361680e93c7d/thumbnails/thumbnail.jpg?time=1s"},{"n":"Peachtree Corners","k":"city","city":"Peachtree Corners","lat":33.9727,"lng":-84.2255,"price":485000,"pl":"$485K","grade":"B","min":46,"tags":[],"hero":"https://videodelivery.net/2e52699507fe215ade65ea7a5f3f07a4/thumbnails/thumbnail.jpg?time=1s"},{"n":"Johns Creek","k":"city","city":"Johns Creek","lat":34.0389,"lng":-84.196,"price":629000,"pl":"$629K","grade":"A+","min":62,"tags":[],"hero":"https://videodelivery.net/7b4661a5af1d96e939d2d310d6a075bf/thumbnails/thumbnail.jpg?time=1s"}];
+const TAG_ZH = {walkable:'能走路', quiet:'安静', outdoors:'步道和水', dining:'餐馆多', newbuild:'新建', club:'带俱乐部'};
+const GRADES = ['A+','A','A−','B+','B','B−'];
+const W = {place:28, price:22, stated:13, tag:12, ans:10, level:10, prior:5};
+const PATTERN=['fit','fit','near','fit','exp','fit','near','fit','fit','exp','near','fit'];
+
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function money(n){return n>=1e6?'$'+(n/1e6).toFixed(2).replace(/\.?0+$/,'')+'M':'$'+Math.round(n/1e3)+'K'}
+function miles(a,b){const x=(a.lng-b.lng)*57.2,y=(a.lat-b.lat)*69;return Math.sqrt(x*x+y*y)}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const r1=v=>Math.round(Math.abs(v)*10)/10;
+
+let CAT=[], S=null, homesOn=false;
+const CITY = {}; RAW.filter(p=>p.k==='city').forEach(c=>CITY[c.city]=c);
+
+function buildCatalog(){
+  const r=rng(7);
+  CAT=RAW.map((p,i)=>({...p,id:'p'+i,prior:.6}));
+  if(homesOn){
+    const comms=RAW.filter(p=>p.k==='community'), cities=RAW.filter(p=>p.k==='city');
+    const gauss=()=>{let s=0;for(let i=0;i<6;i++)s+=r();return (s-3)/1.0};
+    const homes=[];
+    for(let i=0;i<10000;i++){
+      const inComm=r()<.55, par=inComm?comms[Math.floor(r()*comms.length)]:cities[Math.floor(r()*cities.length)];
+      const base=inComm?par.price:par.price*1.25;
+      const price=Math.round(base*Math.exp(gauss()*(inComm?.18:.38))/5000)*5000;
+      const tags=inComm?par.tags.slice():[];
+      if(!inComm){for(const t of ['walkable','quiet','outdoors','dining','newbuild'])if(r()<.22)tags.push(t)}
+      homes.push({k:'home',n:'示例房源 #'+(i+1),city:par.city,parent:inComm?par.n:null,
+        lat:par.lat+(r()-.5)*.03,lng:par.lng+(r()-.5)*.03,price,pl:money(price),grade:par.grade,
+        min:inComm?clamp(par.min+Math.round((r()-.5)*4),2,30):Math.round(4+r()*18),tags,hero:null,prior:.3+r()*.5});
+    }
+    for(let i=homes.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[homes[i],homes[j]]=[homes[j],homes[i]]}
+    homes.forEach((h,i)=>{h.id='h'+i;CAT.push(h)});
+  }
+  CAT.forEach((p,i)=>{p.pos=i+1;p.lp=Math.log(p.price)});
+  // percentile ranks within the priced kinds, for the stated "cost" and "convenience"
+  const priced=CAT.filter(p=>p.k!=='city');
+  const byP=priced.slice().sort((a,b)=>a.price-b.price), byM=priced.slice().sort((a,b)=>a.min-b.min);
+  byP.forEach((p,i)=>p.cheap=1-i/(byP.length-1)); byM.forEach((p,i)=>p.close=1-i/(byM.length-1));
+  const cs=CAT.filter(p=>p.k==='city'), cp=cs.slice().sort((a,b)=>a.price-b.price), cm=cs.slice().sort((a,b)=>a.min-b.min);
+  cp.forEach((p,i)=>p.cheap=1-i/(cp.length-1)); cm.forEach((p,i)=>p.close=1-i/(cm.length-1));
+}
+
+const QUESTIONS=[
+ {id:'budget',q:'Where does your budget sit?',dyn:true},
+ {id:'hwy',q:'On the highway, or tucked away?',l:'Minutes from the highway',r:'Tucked further back',
+  L:p=>p.k!=='city'&&p.min<=9,R:p=>p.k!=='city'&&p.min>=13},
+ {id:'walk',q:'Quiet, or in the middle of it?',l:'Walk to everything',r:'A quiet street',
+  L:p=>p.tags.includes('walkable')||p.tags.includes('dining'),R:p=>p.tags.includes('quiet')&&!p.tags.includes('walkable')&&!p.tags.includes('dining')},
+ {id:'new',q:'Brand new, or established?',l:'Brand-new homes',r:'Established streets',
+  L:p=>p.tags.includes('newbuild'),R:p=>p.k!=='city'&&!p.tags.includes('newbuild')},
+ {id:'club',q:'A club, or no club?',l:'Golf, pool and tennis',r:'No club, lower dues',
+  L:p=>p.tags.includes('club'),R:p=>p.k!=='city'&&!p.tags.includes('club')},
+ {id:'out',q:"What's outside the gate?",l:'Trails and water',r:'Restaurants nearby',
+  L:p=>p.tags.includes('outdoors')&&!p.tags.includes('dining'),R:p=>p.tags.includes('dining')&&!p.tags.includes('outdoors')},
+];
+
+function fresh(){
+  return {city:{},tag:{},priceEv:[],stated:{schools:0,cost:0,conv:0},ans:[],likedCity:{},likedComm:{},
+    hidden:new Set(),seen:new Set(),shown:{},said:[],asks:{},cycle:0,n:0,likes:0,sinceQ:0,asked:0,queue:[],moved:new Set(),log:'还没有任何信号。这 12 张是故意挑得彼此差别最大的：不同城市、不同价位。',exploreUsed:false};
+}
+function priceCentre(){
+  let w=0,s=0;for(const [lp,x] of S.priceEv){w+=x;s+=lp*x}
+  return w>0?{c:s/w,w}:null;
+}
+function parts(p){
+  const o={place:0,price:0,stated:0,tag:0,ans:0,level:0,prior:p.prior};
+  const own=S.city[p.city];
+  if(own!==undefined&&own!==0)o.place=clamp(own,-3,3)/3;
+  else{let best=0,from=null;for(const c in S.city){if(S.city[c]>0&&CITY[c]&&CITY[p.city]&&miles(CITY[c],CITY[p.city])<9){const v=.4*clamp(S.city[c],0,3)/3;if(v>best){best=v;from=c}}}o.place=best;o.near=from}
+  const pc=priceCentre();
+  if(pc&&p.k!=='city'){const d=Math.abs(p.lp-pc.c);const f=d<.15?1:d>.75?-.6:1-(d-.15)/.6*1.6;o.price=f*Math.min(1,pc.w/3)}
+  let sw=0,sf=0;
+  if(S.stated.schools){sw++;sf+=1-GRADES.indexOf(p.grade)/5}
+  if(S.stated.cost){sw++;sf+=p.cheap}
+  if(S.stated.conv){sw++;sf+=p.close}
+  if(sw)o.stated=(sf/sw-.5)*2;
+  if(p.tags.length){let t=0;for(const g of p.tags)t+=clamp(S.tag[g]||0,-3,3)/3;o.tag=clamp(t/Math.sqrt(p.tags.length),-1,1)}
+  if(S.ans.length){let a=0;for(const x of S.ans){if(x.hit(p))a+=1;else if(x.miss(p))a-=.5}o.ans=clamp(a/S.ans.length,-1,1)}
+  if(p.k==='community'&&S.likedCity[p.city])o.level=1;
+  if(p.k==='home'){if(p.parent&&S.likedComm[p.parent])o.level=S.likedComm[p.parent];else if(S.likedCity[p.city])o.level=.5}
+  if(p.k==='city'&&own>0)o.level=.3;
+  return o;
+}
+function score(p){const o=parts(p);let s=0;for(const k in W)s+=W[k]*o[k];p._o=o;p._s=s;return s}
+function why(p,slot){
+  const o=p._o||parts(p),r=[];
+  if(slot==='exp')return '探索：你还没对'+(S.city[p.city]===undefined?' '+p.city+' ':'这个价位')+'表过态';
+  if(o.level>=1)r.push(p.k==='home'?'你喜欢的 '+p.parent+' 里的房子':'你喜欢的 '+p.city+' 里的社区');
+  else if(p.k==='home'&&o.level>0&&p.parent&&S.likedComm[p.parent])r.push('和你喜欢的房子同一个社区');
+  else if(o.near)r.push('紧挨着你中意的 '+o.near);
+  else if(o.place>.3)r.push(S.likedCity[p.city]||o.place>.9?'你喜欢过 '+p.city:'你对 '+p.city+' 有兴趣');
+  if(o.price>.5)r.push('价位接近');
+  if(o.tag>.25)r.push('也是'+p.tags.filter(t=>(S.tag[t]||0)>0).map(t=>TAG_ZH[t]).join('、'));
+  if(o.ans>.4)r.push('符合你的回答');
+  if(o.stated>.4)r.push('符合你说的');
+  if(slot==='near'&&!r.length)r.push('换个城市试试');
+  return r.length?r.join(' · '):(S.n?'还没有相关信号':'先摸底');
+}
+function cell(p){const pc=priceCentre();const t=p.k==='city'?'c':(pc?(p.lp<pc.c-.2?'lo':p.lp>pc.c+.2?'hi':'mid'):(p.price<650000?'lo':p.price>950000?'hi':'mid'));return p.city+'|'+t}
+
+/** The spread-out opening hand: each pick is the one furthest from those already picked. */
+function spread(pool,count,have){
+  const out=[],dist=(a,b)=>Math.abs(a.lat-b.lat)/.25+Math.abs(a.lng-b.lng)/.25+Math.abs(a.lp-b.lp)/1.0+(a.city===b.city?0:.6)+(a.k===b.k?0:.3);
+  const caps=kindCaps(count),used={};
+  const all=have.slice();
+  while(out.length<count){
+    let best=null,bd=-1;
+    for(const p of pool){
+      if(p._t)continue;if((used[p.k]||0)>=caps[p.k])continue;
+      let d=1e9;for(const q of all){const x=dist(p,q);if(x<d)d=x}
+      if(!all.length)d=p.k==='city'?2:1;
+      d+=p.prior*.2;
+      if(d>bd){bd=d;best=p}
+    }
+    if(!best)break;best._t=1;used[best.k]=(used[best.k]||0)+1;all.push(best);out.push({p:best,slot:'exp'});
+  }
+  for(const p of pool)p._t=0;
+  return out;
+}
+function kindCaps(count){return homesOn?{city:Math.ceil(count/8),community:Math.ceil(count/3),home:count}:{city:Math.ceil(count/4),community:count,home:0}}
+
+/** Picks `count` cards from the WHOLE catalogue: fit, near and explore slots. */
+function compose(count,have){
+  const taken=new Set(have.map(x=>x.p&&x.p.id));
+  const pool=CAT.filter(p=>!S.hidden.has(p.id)&&!S.seen.has(p.id)&&!taken.has(p.id));
+  if(S.n===0)return spread(pool,count,have.filter(x=>x.p).map(x=>x.p));
+  for(const p of pool)score(p);
+  pool.sort((a,b)=>b._s-a._s||a.pos-b.pos);
+  let nExp=S.n<6?3:2, nNear=3;
+  if(count<6){const s=PATTERN[S.cycle++%PATTERN.length];nExp=s==='exp'?count:0;nNear=s==='near'?count:0}
+  const nFit=count-nExp-nNear;
+  const caps=kindCaps(count),usedK={},usedC={},pick=[];
+  const ok=p=>(usedK[p.k]||0)<caps[p.k]&&(usedC[p.city]||0)<5;
+  const take=(p,slot)=>{p._t=1;usedK[p.k]=(usedK[p.k]||0)+1;usedC[p.city]=(usedC[p.city]||0)+1;pick.push({p,slot})};
+  const fit=[],near=[],exp=[];
+  // each further card from one city counts for 15% less, so two liked cities both show
+  const head=pool.slice(0,400);
+  while(fit.length<nFit){
+    let best=null,bs=-1e9;
+    for(const p of head){if(p._t||!ok(p))continue;const v=p._s>0?p._s*Math.pow(.85,usedC[p.city]||0):p._s;if(v>bs){bs=v;best=p}}
+    if(!best)break;take(best,'fit');fit.push(pick.pop());
+  }
+  const seenCity={};
+  for(const p of pool){if(near.length>=nNear)break;if(p._t||p.k==='city')continue;if(S.city[p.city]!==undefined||seenCity[p.city])continue;if(ok(p)){take(p,'near');near.push(pick.pop());seenCity[p.city]=1}}
+  // explore: the least-shown corners, in turn — nothing in the catalogue is out of reach
+  const cells={};for(const p of pool){if(p._t)continue;const c=cell(p);(cells[c]=cells[c]||[]).push(p)}
+  const order=Object.keys(cells).sort((a,b)=>(S.shown[a]||0)-(S.shown[b]||0)||(a<b?-1:1));
+  const r=rng(11);
+  for(const c of order){if(exp.length>=nExp)break;const list=cells[c].filter(ok);if(!list.length)continue;const p=list[Math.floor(r()*list.length)];take(p,'exp');exp.push(pick.pop())}
+  const out=[],bag={fit,near,exp};
+  for(const s of PATTERN){if(out.length>=count)break;const x=bag[s].shift();if(x)out.push(x)}
+  for(const s of ['fit','near','exp'])while(bag[s].length&&out.length<count)out.push(bag[s].shift());
+  // a slot nothing could fill goes to the next best card
+  for(const p of pool){if(out.length>=count)break;if(!p._t&&ok(p)){take(p,'fit');out.push(pick.pop())}}
+  for(const p of pool)p._t=0;
+  // never three in a row from one city
+  for(let i=2;i<out.length;i++){
+    if(out[i].p.city===out[i-1].p.city&&out[i].p.city===out[i-2].p.city){
+      for(let j=i+1;j<out.length;j++){if(out[j].p.city!==out[i].p.city){[out[i],out[j]]=[out[j],out[i]];break}}
+    }
+  }
+  return out;
+}
+
+function nextQuestion(){
+  if(S.asked>=3||S.likes>=5)return null;
+  const pool=CAT.filter(p=>!S.hidden.has(p.id)&&!S.seen.has(p.id)&&p.k!=='city');
+  if(pool.length<4)return null;
+  let best=null,bg=.12;
+  for(const q of QUESTIONS){
+    if((S.asks[q.id]||0)>=(q.dyn?2:1))continue;
+    let L,R,card;
+    if(q.dyn){
+      const pc=priceCentre();if(pc&&pc.w>=6)continue;
+      let list=pool;if(pc){list=pool.filter(p=>Math.abs(p.lp-pc.c)<.45);if(list.length<4)continue}
+      const sorted=list.slice().sort((a,b)=>a.price-b.price),m=sorted[Math.floor(sorted.length/2)].price;
+      const lo=sorted[Math.floor(sorted.length/4)].price,hi=sorted[Math.floor(sorted.length*3/4)].price;
+      if(hi/lo<1.25)continue;
+      L=sorted.filter(p=>p.price<m).length;R=sorted.length-L;
+      card={...q,l:'Around '+money(Math.round(lo/25000)*25000),r:'Around '+money(Math.round(hi/25000)*25000),lo,hi};
+    }else{
+      if(q.id==='walk'&&(Math.abs(S.tag.walkable||0)>=2||Math.abs(S.tag.quiet||0)>=2))continue;
+      L=pool.filter(q.L).length;R=pool.filter(q.R).length;card=q;
+    }
+    const gain=Math.min(L,R)/Math.max(1,L+R)*Math.min(1,(L+R)/pool.length*1.5)*(q.dyn?1.1:1);
+    if(gain>bg){bg=gain;best=card}
+  }
+  return best;
+}
+
+function refill(reorder){
+  const before=new Map(S.queue.map((x,i)=>[x.p?x.p.id:'q'+x.q.id,i]));
+  const keep=reorder?S.queue.slice(0,3):S.queue.slice();
+  const need=13-keep.length;
+  let add=need>0?compose(need,keep):[];
+  S.queue=keep.concat(add);
+  // one question card at most, three cards ahead, when one would still move the order
+  if(!S.queue.some(x=>x.q)&&S.sinceQ>=(S.asked?8:3)){
+    const q=nextQuestion();
+    if(q){S.queue.splice(Math.min(3,S.queue.length),0,{q,slot:'ask'});S.queue=S.queue.slice(0,13)}
+  }
+  S.moved=new Set();
+  if(reorder)S.queue.forEach((x,i)=>{const id=x.p?x.p.id:'q'+x.q.id;const was=before.get(id);if(i>=3&&(was===undefined||was-i>=2))S.moved.add(id)});
+}
+
+function learn(p,w){
+  const neg=w<0, k=neg?.5:1;
+  S.city[p.city]=clamp((S.city[p.city]||0)+w*k,-3,3);
+  for(const t of p.tags)S.tag[t]=clamp((S.tag[t]||0)+w*k/2,-3,3);
+  if(!neg&&p.k!=='city')S.priceEv.push([p.lp,w]);
+  S.n+=Math.abs(w);
+}
+function act(kind){
+  const cur=S.queue[0];if(!cur||cur.q)return;const p=cur.p;
+  const A={like:[3,'喜欢了'],hide:[-3,'不喜欢'],explore:[1.5,'点进了 Explore'],watch:[1,'看完了'],skip:[-.5,'2 秒内划走了'],pass:[0,'正常划过']}[kind];
+  const w=A[0];
+  if(w)learn(p,w);
+  if(kind==='like'){S.likes++;if(p.k==='city')S.likedCity[p.city]=1;if(p.k==='community')S.likedComm[p.n]=1;if(p.k==='home'&&p.parent&&!S.likedComm[p.parent])S.likedComm[p.parent]=.5}
+  if(kind==='hide')S.hidden.add(p.id);
+  let msg='你'+A[1]+' <b>'+p.n+'</b>。';
+  if(w){
+    const bits=[p.city+' '+(w>0?'+':'−')+r1(w*(w<0?.5:1))];
+    if(w>0&&p.k!=='city')bits.push('价位记下 '+p.pl);
+    if(p.tags.length)bits.push(p.tags.map(t=>TAG_ZH[t]).join('、')+(w>0?' 加分':' 减分'));
+    if(kind==='like'&&p.k==='city')bits.push(p.city+' 里的社区全部加分');
+    if(kind==='like'&&p.k==='community'&&homesOn)bits.push(p.n+' 里的房子全部加分');
+    if(kind==='hide')bits.push('这一张不再出现；负的只算一半');
+    msg+=bits.join('；')+'。';
+  }else msg+='什么都不改——滑走不一定是不喜欢。';
+  if(kind==='explore'){S.exploreUsed=true;refill(true);S.log=msg+(S.moved.size?' 第 4 张起重排，'+S.moved.size+' 张挤了上来。':'');render();return}
+  advance(msg,!!w);
+}
+function advance(msg,reorder){
+  const cur=S.queue.shift();
+  if(cur.p){S.seen.add(cur.p.id);const c=cell(cur.p);S.shown[c]=(S.shown[c]||0)+1}
+  S.sinceQ++;S.exploreUsed=false;
+  refill(reorder);
+  S.log=msg+(reorder&&S.moved.size?' 第 3 张起重排，'+S.moved.size+' 张挤了上来（黄色）。':'');
+  render();
+}
+function answer(side){
+  const q=S.queue[0].q;let msg;
+  if(side==='skip'){S.asks[q.id]=9;msg='你跳过了这个问题。不会再问。'}
+  else{
+    const text=side==='l'?q.l:q.r;
+    S.asks[q.id]=(S.asks[q.id]||0)+1;S.said.push(text);
+    if(q.dyn){const v=side==='l'?q.lo:q.hi;S.priceEv.push([Math.log(v),3])}
+    else{
+      S.ans.push({id:q.id,text,hit:side==='l'?q.L:q.R,miss:side==='l'?q.R:q.L});
+      if(q.id==='walk'){S.tag[side==='l'?'walkable':'quiet']=clamp((S.tag[side==='l'?'walkable':'quiet']||0)+2,-3,3)}
+      if(q.id==='out'){S.tag[side==='l'?'outdoors':'dining']=clamp((S.tag[side==='l'?'outdoors':'dining']||0)+2,-3,3)}
+    }
+    S.n+=2;msg='你选了 <b>'+text+'</b>。符合的 +2，另一边 −1。';
+  }
+  S.asked++;S.sinceQ=-1;advance(msg,true);
+}
+
+const $=id=>document.getElementById(id);
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function render(){
+  const cur=S.queue[0];
+  const acts=$('acts');
+  if(!cur){
+    $('pRow').innerHTML='';$('pFigs').innerHTML='';
+    $('pStage').style.backgroundImage='';$('pStage').innerHTML='<div class="fake" style="top:40%">这一带你都看过了。<br>去 Search 看看别处</div>';
+    acts.innerHTML='';
+  }else if(cur.q){
+    const q=cur.q;
+    $('pRow').innerHTML='<b>One quick question</b>';$('pFigs').innerHTML='';
+    $('pStage').style.backgroundImage='';
+    $('pStage').innerHTML='<div class="doors"><div class="q">'+esc(q.q)+'<small>点一边。两边都是好的。</small></div><div class="two"><button data-a="l">'+esc(q.l)+'</button><button data-a="r">'+esc(q.r)+'</button></div></div>';
+    acts.innerHTML='<button data-a="skip" style="grid-column:1/3">跳过<small>不会再问这一个</small></button>';
+    document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>answer(b.dataset.a));
+  }else{
+    const p=cur.p,kind={city:'CITY',community:'COMMUNITY',home:'HOME · 示例数据'}[p.k];
+    $('pRow').innerHTML='<b>'+esc(p.city)+'</b>, GA';
+    $('pFigs').innerHTML='<div><b>'+p.pl+'</b>'+(p.k==='city'?'median home value':p.k==='home'?'asking (示例)':'home value')+'</div><div><b>'+p.grade+'</b>school grade</div><div><b>'+p.min+' min</b>'+(p.k==='city'?'drive to downtown':'to the highway')+'</div>';
+    const st=$('pStage');st.style.backgroundImage=p.hero?'url("'+p.hero+'")':'';
+    st.innerHTML=(p.hero?'':'<div class="fake"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9h-6v-6H9v6H3z"/></svg>虚构的示例房源<br>'+(p.parent?esc(p.parent):esc(p.city))+'</div>')+'<div class="scrim"></div><div class="info"><div class="tag">'+kind+'</div><div class="name">'+esc(p.n)+'</div></div>';
+    acts.innerHTML=
+      '<button class="like" data-k="like">喜欢<small>+3</small></button>'+
+      '<button class="hide" data-k="hide">不喜欢<small>−3，隐藏</small></button>'+
+      '<button data-k="explore"'+(S.exploreUsed?' disabled':'')+'>点进 Explore<small>+1.5，不翻页</small></button>'+
+      '<button data-k="watch">看完整个片子<small>+1</small></button>'+
+      '<button data-k="skip">2 秒内划走<small>−0.5</small></button>'+
+      '<button data-k="pass">正常划过<small>0</small></button>';
+    acts.querySelectorAll('button').forEach(b=>b.onclick=()=>act(b.dataset.k));
+  }
+  $('log').innerHTML=S.log;
+  // the queue
+  const rows=S.queue.slice(1,13).map((x,i)=>{
+    const lock=i<2,id=x.p?x.p.id:'q'+x.q.id,up=S.moved.has(id);
+    if(x.q)return '<div class="q-row'+(up?' up':'')+'"><span class="i">'+(i+1)+'</span><span class="s ask">问题</span><span class="t"><b>'+esc(x.q.q)+'</b><span>'+esc(x.q.l)+' · '+esc(x.q.r)+'</span></span><span class="mv">'+(up?'↑':'')+'</span><span class="bar"></span><span class="pos"></span></div>';
+    const p=x.p;const s=S.n?score(p):0;const slot=lock?'lock':x.slot;
+    const label={lock:'定好',fit:'匹配',near:'相近',exp:'探索'}[slot];
+    return '<div class="q-row'+(up?' up':'')+'"><span class="i">'+(i+1)+'</span><span class="s '+slot+'">'+label+'</span><span class="t"><b>'+esc(p.n)+'</b><span>'+esc(p.city)+' · '+p.pl+' · '+why(p,x.slot)+'</span></span><span class="mv">'+(up?'↑':'')+'</span><span class="bar"><u style="width:'+clamp(s,0,100)+'%"></u></span><span class="pos">#'+p.pos.toLocaleString()+'</span></div>';
+  });
+  $('queue').innerHTML=rows.join('')||'<p style="font-size:13px">没有了。</p>';
+  const ps=S.queue.slice(1,13).filter(x=>x.p).map(x=>x.p.pos);
+  $('qNote').textContent=ps.length?'　目录共 '+CAT.length.toLocaleString()+' 个片子；这 12 张来自第 '+Math.min(...ps).toLocaleString()+' 到第 '+Math.max(...ps).toLocaleString()+' 位':'';
+  // what Percho knows
+  const out=[];
+  const cities=Object.entries(S.city).filter(e=>e[1]).sort((a,b)=>b[1]-a[1]);
+  out.push('<div class="kv"><i>城市</i><span>'+(cities.length?cities.map(e=>esc(e[0])+' '+(e[1]>0?'+':'−')+r1(e[1])).join('　'):'还不知道')+'</span></div>');
+  const pc=priceCentre();
+  out.push('<div class="kv"><i>价位</i><span>'+(pc?money(Math.round(Math.exp(pc.c-.15)/10000)*10000)+' – '+money(Math.round(Math.exp(pc.c+.15)/10000)*10000)+' 左右（'+S.priceEv.length+' 条依据）':'还不知道')+'</span></div>');
+  const tags=Object.entries(S.tag).filter(e=>e[1]).sort((a,b)=>b[1]-a[1]);
+  out.push('<div class="kv"><i>特点</i><span>'+(tags.length?tags.map(e=>TAG_ZH[e[0]]+' '+(e[1]>0?'+':'−')+r1(e[1])).join('　'):'还不知道')+'</span></div>');
+  if(S.said.length)out.push('<div class="kv"><i>回答过</i><span>'+S.said.map(esc).join('　')+'</span></div>');
+  if(S.hidden.size)out.push('<div class="kv"><i>隐藏</i><span>'+S.hidden.size+' 张</span></div>');
+  $('prof').innerHTML=out.join('');
+  $('stated').innerHTML=[['schools','Schools 学校'],['cost','Cost 花费'],['conv','Convenience 方便']].map(([k,l])=>'<button data-s="'+k+'" class="'+(S.stated[k]?'on':'')+'">'+l+'</button>').join('');
+  $('stated').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.s;S.stated[k]=S.stated[k]?0:1;S.n+=S.stated[k]?1:0;
+    refill(true);S.log='买家在 You 页'+(S.stated[k]?'调高':'关掉')+'了 <b>'+b.textContent+'</b>。'+(S.moved.size?S.moved.size+' 张挤了上来。':'');render();
+  });
+}
+function start(){buildCatalog();S=fresh();S.queue=compose(13,[]);S.sinceQ=3;refill(false);S.sinceQ=0;render()}
+$('m0').onclick=()=>{homesOn=false;$('m0').className='on';$('m1').className='';start()};
+$('m1').onclick=()=>{homesOn=true;$('m1').className='on';$('m0').className='';start()};
+$('reset').onclick=start;
+start();
+</script>
+</body>
+</html>
