@@ -23,6 +23,16 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-28 09:46 UTC — phase422: agent films — the way in, the management page, and defining a community by uploading (demo only)
+
+**Objective**: owner on `/demos/agent-film-v2` (2026-11-28): 「是 / 是 不仅名片 而且照片甚至动态头像视频 还可以选择用agent自己的声音 这些应该是付费功能 / 要 / 好」 — the four points of phase420 are decided, with three paid extras added. Then: 「我还是不明白入口在哪里 管理界面长什么样子 如何快速定义并且上传一个社区 而不是找现有的社区」. Both earlier demos drew what happens after an upload and assumed the community was already a row.
+**Actions**: `apps/web/public/demos/agent-film-v3/index.html` (Chinese, noindex, drawn as phone-browser pages); `docs/design/agent-films.md` gains "Decided, and the way in". Nothing built.
+**Proposed**: one address `percho.co/film`, phone browser first, existing agent sign-in, reached by the address, a row at the foot of the app's You tab and a line under each agent film's shared page; management is one list (My films) and one button; a new film starts with the material and reads the place from where it was shot (`match_community`), falling back to a typed name with suggestions or a new community from a name and a pin, `inactive` until its film is approved; a film's page carries the agent's card, with photo / moving portrait / own voice marked Partner.
+**Read in the code**: agents sign up at `/signup` with a role and land on `/dashboard`; "New neighborhood" (`createStubCommunity`) makes a blank `untitled-xxxxxx` row the agent then fills in — the "find or hand-build a community first" step the owner is objecting to. `AnalyticsPanel` already shows views, video completes and leads on the web.
+**Assumptions put to the owner, not confirmed**: the moving portrait is a clip the agent records, not a generated avatar; the voice is the agent reading the script, not a clone. Either AI version is a new paid service (CLAUDE.md §8) and gets a price first.
+**Not verified**: that iOS Safari passes a picked photo's location to a web page. If it does not, the place comes from the phone's current position.
+**Next steps**: owner answers the four points at the foot of v3. First build step is still photos end to end on ONE unfilmed community with the nearby-research cost measured.
+
 ## 2026-11-28 09:42 UTC — phase421: the recommendation system, designed — nothing built
 
 **Objective**: Owner (2026-11-28): 「推荐到底怎么做 … 如果有10000个视频 用户最感兴趣的是第10000个怎么办 永远刷不到 浏览时长 点击按键 选择喜欢 或者不喜欢 如何影响下一组推荐 多少个一组？」, then, to a first outline: 「这个方向可以 先设计一个完整的Percho推荐系统给我 我们之前的问题卡片可以用吗」.

@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Percho — Agent 影片：入口、管理界面、怎么新建一个小区（设计方案）</title>
+<style>
+:root{
+  --green:#086B5B;
+  --ink:#181B18;
+  --ink2:#5A4E40;
+  --paper:#F6F3EC;
+  --sage:#E0E9E3;
+  --rust:#C86B3C;
+  --gold:#A9781C;
+  --line:rgba(0,0,0,.09);
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, "Songti SC", serif;
+  --ui: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#DCD7CE;font-family:var(--ui);color:#2B2116;padding:24px 14px 80px}
+section,.nav{max-width:960px;margin:0 auto}
+h1{font:600 26px/1.25 var(--serif);color:var(--green);margin-bottom:8px}
+h2{font:600 21px/1.3 var(--ui);margin:0 0 6px}
+h2 em{font-style:normal;font-weight:600;font-size:13px;color:#fff;background:var(--green);border-radius:11px;padding:2px 10px;margin-right:8px;vertical-align:3px}
+p,li{font:400 15px/1.65 var(--ui);color:var(--ink2)}
+p{margin:6px 0;max-width:820px}
+b{color:#2B2116}
+code{font:500 13px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.6);border-radius:5px;padding:1px 6px;color:var(--green);word-break:break-all}
+section{margin-top:48px}
+ol,ul{margin:4px 0 4px 22px;max-width:820px}
+.note{background:rgba(255,255,255,.55);border-radius:14px;padding:12px 18px;margin-top:14px;max-width:860px}
+.note p{margin:3px 0}
+.new{outline:2px dashed var(--rust);outline-offset:3px}
+.phones{display:flex;flex-wrap:wrap;gap:26px 24px;justify-content:center;margin-top:18px}
+.cap{width:280px;font:400 13px/1.5 var(--ui);color:var(--ink2);margin-top:9px}
+.cap b{color:#2B2116}
+
+/* ── a phone showing a web page ───────────────────── */
+.phone{width:280px;height:590px;border-radius:32px;background:var(--paper);overflow:hidden;position:relative;box-shadow:0 3px 10px rgba(32,28,22,.06),0 16px 38px rgba(32,28,22,.16);display:flex;flex-direction:column;flex:none}
+.status{height:30px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font:600 11px var(--ui);color:var(--ink)}
+.url{flex:none;margin:0 12px 8px;height:28px;border-radius:9px;background:rgba(0,0,0,.06);font:500 11.5px/28px var(--ui);color:var(--ink2);text-align:center}
+.pg{flex:1;padding:6px 16px 14px;overflow:hidden;display:flex;flex-direction:column}
+.pg h5{font:600 22px/1.2 var(--serif);color:var(--ink)}
+.pg .lead{font:400 12.5px/1.5 var(--ui);color:var(--ink2);margin-top:5px}
+.btn{display:block;height:42px;border-radius:21px;background:var(--green);color:#fff;font:600 14px/42px var(--ui);text-align:center;margin-top:12px}
+.btn.ghost{background:var(--sage);color:var(--green)}
+.btn.sm{display:inline-block;height:30px;line-height:30px;padding:0 13px;font-size:12px;margin-top:0}
+.sp{flex:1}
+.step{font:600 10.5px var(--ui);letter-spacing:.6px;color:#8A8478;margin-bottom:4px}
+
+/* the app's You tab */
+.yrow{display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;padding:12px 13px;margin-top:9px;font:500 13px var(--ui);color:var(--ink)}
+.yrow span{flex:1}
+.yrow i{font-style:normal;color:#8A8478}
+.yrow small{display:block;font:400 11px var(--ui);color:var(--ink2)}
+.tabs{height:54px;flex:none;border-top:1px solid rgba(0,0,0,.07);display:flex;justify-content:space-around;padding-top:8px;font:500 9px/1.5 var(--ui);color:#8A8478;text-align:center}
+.tabs b{color:var(--green);font-weight:600}
+
+/* film list */
+.film{display:flex;gap:10px;background:#fff;border-radius:14px;padding:9px;margin-top:9px}
+.film .th{flex:none;width:54px;height:76px;border-radius:9px;background:#20262A center/cover}
+.film .tx{flex:1;min-width:0}
+.film b{display:block;font:600 14px var(--serif);color:var(--ink)}
+.film .st{display:inline-block;height:18px;padding:0 7px;border-radius:9px;font:600 9.5px/18px var(--ui);color:#fff;background:var(--green);margin-top:4px}
+.film .st.wait{background:#8A8478}
+.film .st.work{background:var(--gold)}
+.film small{display:block;font:400 11px/1.4 var(--ui);color:var(--ink2);margin-top:4px}
+
+/* material */
+.drop{border:1.5px dashed rgba(8,107,91,.4);border-radius:14px;padding:16px 12px;text-align:center;background:rgba(224,233,227,.45);margin-top:10px}
+.drop b{display:block;font:600 14px var(--ui);color:var(--green)}
+.drop span{font:400 11.5px var(--ui);color:var(--ink2)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.it{border-radius:8px;background:#20262A center/cover;aspect-ratio:3/4;position:relative}
+.it u{position:absolute;right:4px;top:4px;text-decoration:none;font:600 9px/16px var(--ui);height:16px;padding:0 5px;border-radius:8px;background:rgba(14,13,11,.62);color:#fff}
+.check{display:flex;gap:8px;margin-top:10px;font:400 11.5px/1.4 var(--ui);color:var(--ink)}
+.check i{flex:none;width:16px;height:16px;border-radius:5px;background:var(--green);color:#fff;font:700 10px/16px var(--ui);text-align:center;font-style:normal}
+
+/* where */
+.found{background:#fff;border-radius:14px;padding:12px 13px;margin-top:12px}
+.found b{display:block;font:600 17px var(--serif);color:var(--ink)}
+.found small{font:400 11.5px var(--ui);color:var(--ink2)}
+.found .two{display:flex;gap:8px;margin-top:10px}
+.found .two .btn{flex:1;margin-top:0;height:36px;line-height:36px;font-size:13px}
+.field{height:40px;border-radius:11px;background:#fff;border:1px solid var(--line);padding:0 12px;font:500 13.5px/40px var(--ui);color:var(--ink);margin-top:10px}
+.sug{font:400 12.5px var(--ui);color:var(--ink2);padding:9px 2px;border-bottom:1px solid var(--line)}
+.sug b{font-weight:600}
+.sug.add{color:var(--green);font-weight:600;border-bottom:0}
+.map{height:150px;border-radius:14px;margin-top:10px;position:relative;overflow:hidden;background:
+  linear-gradient(115deg,transparent 46%,#fff 46% 49%,transparent 49%),
+  linear-gradient(20deg,transparent 58%,#fff 58% 60.5%,transparent 60.5%),
+  radial-gradient(circle at 78% 30%,#BFD8C2 0 16%,transparent 17%),
+  radial-gradient(circle at 22% 78%,#B9D3E0 0 13%,transparent 14%),#E6E2D6}
+.map::after{content:"";position:absolute;left:50%;top:44%;width:18px;height:18px;margin:-9px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--rust);box-shadow:0 2px 5px rgba(0,0,0,.3)}
+.map span{position:absolute;left:8px;bottom:7px;font:500 10px var(--ui);color:var(--ink2);background:rgba(255,255,255,.8);border-radius:6px;padding:2px 6px}
+
+/* one film's page */
+.hero{height:92px;border-radius:14px;background:#20262A center/cover;position:relative;margin-top:8px;flex:none}
+.hero::after{content:"▶";position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px;border-radius:17px;background:rgba(14,13,11,.55);color:#fff;font:400 13px/34px var(--ui);text-align:center;padding-left:2px}
+.nums{display:flex;gap:6px;margin-top:8px}
+.nums div{flex:1;background:#fff;border-radius:10px;padding:7px 4px;text-align:center;font:400 9.5px var(--ui);color:var(--ink2)}
+.nums b{display:block;font:600 16px var(--ui);color:var(--ink)}
+.sec{font:600 11px var(--ui);letter-spacing:.5px;color:#8A8478;margin:12px 0 2px}
+.opt{display:flex;align-items:center;gap:9px;background:#fff;border-radius:12px;padding:9px 11px;margin-top:6px;font:500 12.5px var(--ui);color:var(--ink)}
+.opt span{flex:1}
+.opt small{display:block;font:400 10.5px var(--ui);color:var(--ink2)}
+.opt .on{flex:none;font:600 11px var(--ui);color:var(--green)}
+.opt .pro{flex:none;height:19px;padding:0 8px;border-radius:10px;background:var(--gold);color:#fff;font:600 10px/19px var(--ui)}
+.face{flex:none;width:30px;height:30px;border-radius:15px;background:var(--sage);color:var(--green);font:600 11px/30px var(--ui);text-align:center}
+
+.ask{background:rgba(255,255,255,.62);border-radius:14px;padding:14px 20px;margin-top:12px;max-width:860px}
+.ask li{margin:8px 0}
+.ask li span{display:block;font-size:13.5px;color:var(--ink2)}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>入口在哪、管理界面什么样、怎么新建一个小区</h1>
+  <p>前两版只画了"上传之后"，没画 agent 从哪进来、管理自己影片的页面，也默认小区已经在我们库里。这一版只回答这三件事。</p>
+  <p>全部画成<b>手机浏览器里的网页</b>，因为素材都在 agent 的手机上；电脑上是同一套页面。界面文字是英文。图取自 Edinburgh 的影片，小区名、人名、数字都是示意。<b>橙色虚线框</b>是新增的东西。</p>
+  <div class="note">
+    <p><b>你已经定的</b>：没片的小区用 agent 的片；他的链接在 app 里放他的版本；首页卡上署名；素材进素材库、每人每小区一部、头一批人工看。</p>
+    <p><b>你新加的</b>：照片、动态头像视频、用 agent 自己的声音配旁白，这三样是<b>付费功能</b>。画在第四节。</p>
+  </div>
+</div>
+
+<section>
+  <h2><em>1</em>入口：一个网址，三条路通到它</h2>
+  <p>入口就是一个网址 <code>percho.co/film</code>（名字是我提的，可以改）。Agent 登录后看到的就是第二节的管理页。三条路通到这里：</p>
+  <ol>
+    <li><b>直接发网址</b>。我们找 agent 谈的时候给的就是这个。</li>
+    <li><b>App 的 You 页多一行</b> "Are you an agent?"，点了在 app 里打开这个网页。</li>
+    <li><b>每一部 agent 影片的分享页底下</b>有一行 "Make a film of your neighbourhood"，别的 agent 看到同行的片就能点进来。</li>
+  </ol>
+  <div class="phones">
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="pg">
+          <h5>You</h5>
+          <div class="yrow"><span>Your preferences</span><i>›</i></div>
+          <div class="yrow"><span>Recent</span><i>›</i></div>
+          <div class="yrow"><span>Account</span><i>›</i></div>
+          <div class="yrow new"><span>Are you an agent?<small>Film a neighbourhood you know</small></span><i>›</i></div>
+        </div>
+        <div class="tabs"><span>▶<br>Feed</span><span>⌕<br>Search</span><span>♡<br>Saved</span><b>☰<br>You</b></div>
+      </div>
+      <div class="cap"><b>App 里的入口</b>。You 页最下面一行，买家不会被打扰。</div>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="url">percho.co/film</div>
+        <div class="pg">
+          <div class="hero" data-t="9" style="height:210px"></div>
+          <h5 style="margin-top:14px">A film of your neighbourhood, with your name on it.</h5>
+          <div class="lead">Add the photos and videos on your phone. Percho cuts the film, narrates it, and shows it to buyers looking at your area.</div>
+          <div class="sp"></div>
+          <div class="btn">Start a film</div>
+          <div class="btn ghost">Sign in</div>
+        </div>
+      </div>
+      <div class="cap"><b>入口页</b>。没登录时看到的。登录用现在后台的 agent 账号，不另建一套。</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><em>2</em>管理界面：一个列表，一个按钮</h2>
+  <p>登录后就是 <code>My films</code>：他做过的每部片一行，写着现在到哪一步了，上线的写着多少人看过。最上面一个 <code>New film</code>。没有别的菜单。</p>
+  <div class="phones">
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="url">percho.co/film</div>
+        <div class="pg">
+          <h5>My films</h5>
+          <div class="btn new">＋ New film</div>
+          <div class="film"><div class="th" data-t="9"></div><div class="tx"><b>Laurel Springs</b><span class="st">Live in the app</span><small>214 watched · 31 hearts · 4 contacts</small></div></div>
+          <div class="film"><div class="th" data-t="13"></div><div class="tx"><b>Vinings Glen</b><span class="st work">Percho is checking it</span><small>Usually within a day</small></div></div>
+          <div class="film"><div class="th" data-t="25"></div><div class="tx"><b>Brookstone</b><span class="st wait">Needs 2 more photos</span><small>3 ready · add the pool or the entrance</small></div></div>
+        </div>
+      </div>
+      <div class="cap"><b>管理页</b>。三种状态：上线了、我们在看、素材还不够。点一行进这部片自己的页面（第四节）。</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><em>3</em>新建：先传素材，小区由我们认出来</h2>
+  <p>Agent 不用先在两万多个小区里找。点 <code>New film</code> 直接选照片和视频，<b>我们从照片自带的拍摄位置认出这是哪个小区</b>，他只要点一下确认。认不出来或者库里没有，他打个名字、在地图上点个位置，小区就建好了。</p>
+  <div class="phones">
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="url">percho.co/film/new</div>
+        <div class="pg">
+          <div class="step">STEP 1 OF 2</div>
+          <h5>Add your photos and videos</h5>
+          <div class="drop"><b>Choose from your phone</b><span>The pool, the clubhouse, the entrance, the streets</span></div>
+          <div class="grid"><div class="it" data-t="1"></div><div class="it" data-t="5"></div><div class="it" data-t="9"><u>▶ 0:38</u></div><div class="it" data-t="13"></div><div class="it" data-t="25"><u>▶ 0:21</u></div></div>
+          <div class="check"><i>✓</i><span>I took these or have the right to use them. They are not MLS listing photos.</span></div>
+          <div class="sp"></div>
+          <div class="btn">Next</div>
+        </div>
+      </div>
+      <div class="cap"><b>第一步</b>：选素材，勾一次授权。</div>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="url">percho.co/film/new</div>
+        <div class="pg">
+          <div class="step">STEP 2 OF 2</div>
+          <h5>Where is this?</h5>
+          <div class="found new"><small>4 of your 5 items were taken here</small><b>Laurel Springs</b><small>Marietta, GA · no film yet — yours will be the one buyers see</small>
+            <div class="two"><div class="btn">Yes, that’s it</div><div class="btn ghost">Somewhere else</div></div></div>
+          <div class="map"><span>from your photos’ location</span></div>
+          <div class="sp"></div>
+        </div>
+      </div>
+      <div class="cap"><b>第二步，大多数情况</b>：我们认出来了，点 Yes 就开始做片。</div>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="url">percho.co/film/new</div>
+        <div class="pg">
+          <div class="step">STEP 2 OF 2</div>
+          <h5>Where is this?</h5>
+          <div class="field">Brooksto|</div>
+          <div class="sug"><b>Brookstone</b> · Acworth, GA</div>
+          <div class="sug"><b>Brookstone Manor</b> · Kennesaw, GA</div>
+          <div class="sug add new">＋ Add “Brookstone” as a new neighbourhood</div>
+          <div class="map"><span>move the pin to the entrance</span></div>
+          <div class="sp"></div>
+          <div class="btn">Use this place</div>
+        </div>
+      </div>
+      <div class="cap"><b>第二步，认不出来时</b>：打名字，从建议里选；库里没有就新建，只要名字和地图上一个点。</div>
+    </div>
+  </div>
+  <div class="note">
+    <p><b>为什么能认出来</b>：手机拍的照片和视频里带着拍摄地点，我们库里的小区已经有边界或位置（给房源配小区用的就是这个）。</p>
+    <p><b>还没验证的一点</b>：iPhone 的浏览器在选照片时会不会把拍摄地点一起交给网页，我要在真机上试过才能确定。交不出来的话，这一步就改成用手机当前位置。</p>
+    <p><b>认不出来的情况</b>：从微信之类转存过的照片会丢掉地点。这时用手机当前位置，再不行就是右边那屏。</p>
+    <p><b>新建的小区</b>不会马上出现在 app 里，要等片子我们看过才一起上线，重名的会提示他是不是同一个。</p>
+    <p><b>顺带的好处</b>：拍摄地点也能用来确认"至少有一张是在小区里面拍的"。</p>
+  </div>
+</section>
+
+<section>
+  <h2><em>4</em>一部片自己的页面，和付费的三样</h2>
+  <p>点进一部片：能看片、拿链接、看数字、补素材重剪。下面是 <code>Your card</code>，就是买家看到的他的名片。名字和公司免费；你说的三样带 <code>Partner</code> 标记，付费后才能开。</p>
+  <div class="phones">
+    <div>
+      <div class="phone" style="height:660px">
+        <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="url">percho.co/film/laurel-springs</div>
+        <div class="pg">
+          <h5>Laurel Springs</h5>
+          <div class="hero" data-t="9"></div>
+          <div class="nums"><div><b>214</b>watched</div><div><b>96</b>to the end</div><div><b>31</b>hearts</div><div><b>4</b>contacts</div></div>
+          <div style="display:flex;gap:8px;margin-top:9px"><span class="btn sm">Copy link</span><span class="btn sm ghost">Add material</span></div>
+          <div class="sec">YOUR CARD</div>
+          <div class="opt"><div class="face">DC</div><span>Dana Cole<small>Keller Williams</small></span><div class="on">Free</div></div>
+          <div class="opt new"><span>Your photo<small>On the card and the film’s last frame</small></span><div class="pro">Partner</div></div>
+          <div class="opt new"><span>A moving portrait<small>A few seconds of you, on the card</small></span><div class="pro">Partner</div></div>
+          <div class="opt new"><span>Your own voice<small>You read the film’s lines on your phone</small></span><div class="pro">Partner</div></div>
+        </div>
+      </div>
+      <div class="cap"><b>一部片的页面</b>。上半部分管片子，下半部分管名片。</div>
+    </div>
+  </div>
+  <div class="note">
+    <p><b>我对这三样的理解，你看对不对</b>：</p>
+    <p><b>照片</b>：他的头像，出现在名片上和片尾。</p>
+    <p><b>动态头像视频</b>：他自己录的几秒钟真人小视频，在名片上循环播放。不是 AI 生成的数字人。</p>
+    <p><b>自己的声音</b>：我们把这部片的旁白稿给他，他在手机上一句一句念，录下来替换掉合成的旁白。不是用 AI 克隆他的声音。这样不用接新的付费服务，也不占我们每天 100 句的旁白额度。</p>
+    <p><b>收费</b>：后台的付费功能（按月的 Partner）之前已经做好但没打开，还差你的 Stripe 账号。</p>
+  </div>
+</section>
+
+<section>
+  <h2>需要你定</h2>
+  <div class="ask">
+    <ol>
+      <li><b>入口是一个单独的网址，手机浏览器优先</b><span>建议：是。不用等 app 审核，agent 也不用装东西。App 的 You 页加一行通到它。</span></li>
+      <li><b>新建的方式：先传素材，由拍摄地点认小区，认不出再打名字</b><span>建议：是。</span></li>
+      <li><b>付费三样按上面的理解做</b>（真人小视频，自己念稿）<span>如果你要的是 AI 数字人或者 AI 克隆声音，告诉我，那是要另外接付费服务的，我先报价。</span></li>
+      <li><b>网址叫 percho.co/film</b><span>或者你给个名字。</span></li>
+    </ol>
+    <p style="margin-top:8px">回 <b>「都按建议」</b>，或者告诉我哪一条要改。</p>
+  </div>
+</section>
+
+<script>
+const UID = 'bbcc652c5781ea1227d705a6661fbe68';
+for (const el of document.querySelectorAll('[data-t]'))
+  el.style.backgroundImage = `url(https://videodelivery.net/${UID}/thumbnails/thumbnail.jpg?time=${el.dataset.t}s&height=${el.classList.contains('hero') ? 700 : 300})`;
+</script>
+</body>
+</html>
