@@ -25,15 +25,30 @@
  * React an ambiguous identity, so no amount of correct geometry or gesture
  * gating could hold.
  *
- * The absolute index is the disambiguator, and it is the RIGHT one because it is
- * fixed for a mounted card's whole lifetime — which is what `SwipeStack` relies
- * on to keep a promoted card's subtree (and its `CardVideo` buffer) alive across
- * a swipe. A key that changed on promotion would remount every card and defeat
- * that; this one does not change, because a card's position in the deck never
- * does.
+ * ## Which copy, not which position
+ *
+ * The key is the card's id and WHICH COPY of it this is, counted from the top
+ * of the deck: `cm-3#0`, and `cm-3#1` when the composer deals it again.
+ *
+ * Until phase415 the disambiguator was the card's absolute index, which was
+ * right while a card's position in the deck never changed. Hiding a card takes
+ * it OUT of the deck (owner, 2026-11-28: after the cross he could not swipe
+ * back — the hidden card had been left in its slot as a wall), and every card
+ * after it moves up one. Keyed by index, each of those would remount: the film
+ * in front would restart.
+ *
+ * Counting copies is stable under that: taking every copy of one id out
+ * changes no other card's count. `SwipeStack` keeps a kept card's subtree —
+ * and its `CardVideo` buffer — across the change.
  */
 import type { FeedCardV3 } from "./card-types";
 
-export function deckKey(card: FeedCardV3, absIndex: number): string {
-	return `${absIndex}:${card.id}`;
+/** One key per card of `deck`, in order. */
+export function deckKeys(deck: readonly FeedCardV3[]): string[] {
+	const copies = new Map<string, number>();
+	return deck.map((card) => {
+		const n = copies.get(card.id) ?? 0;
+		copies.set(card.id, n + 1);
+		return `${card.id}#${n}`;
+	});
 }

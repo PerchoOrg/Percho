@@ -70,7 +70,7 @@ export const SOUND_TAP_TARGET = "sound";
 export const SHARE_TAP_TARGET = "share";
 
 /**
- * The card-corner cross (phase414): this card is not for the buyer. Here for
+ * The card-corner thumbs-down (phase414): this card is not for the buyer. Here for
  * the same reason as the other corner controls.
  */
 export const HIDE_TAP_TARGET = "hide";

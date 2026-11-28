@@ -23,6 +23,28 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-28 07:40 UTC — phase415: a strip on both sides; a hidden card leaves the deck; thumbs-down, heart last
+
+**Objective**: Owner on the phone, after phase414 (2026-11-28): 「左边也露出一点这样知道可以回看？」 · 「点击x之后就不能向回看了」 · 「点击x的动画效果和滑动应该区分开」 · 「爱心放到最右边 x有没有别的替代让人一看就知道是不喜欢 而不是关闭」.
+**Actions** (`apps/mobile`):
+- **Both strips.** `theme/feed-page.ts`: `CARD_GAP` 5, `CARD_PEEK` 6, `GUTTER` = 11 = the two (it was 8 on the left and gap 8 + strip 6 on the right). The card is centred and exactly as wide as in phase414, so no measurement pin moves; `PlaceBlock` follows `GUTTER` and sits 3 pt further in. On the first card of a visit the left is paper.
+- **A hidden card leaves the deck.** phase414 left it in its slot and refused a swipe back at the card after it — that wall is what he hit. Now the stack drops the card out and the feed removes every copy of it (`onDismissed`), so a swipe back reaches the card before it. Undo puts it back in front (`putOnTop`).
+  - `lib/feed/deck-key.ts`: `deckKeys(deck)` — id plus WHICH COPY (`cm-3#0`), replacing index-based `deckKey`. A removal moves every later card up one index; keyed by index each would remount and the film in front would restart. Tested: taking a card out changes no other card's key.
+  - `components/SwipeStack.tsx`: a card's style is built on its **UI index** = index in `items` + `shift`, where `shift` is read off a card the stack already drew (the one in front first). After a removal the cards on screen keep their UI index and the cursor is already right, so nothing moves and nothing depends on which frame React lands in.
+  - The card BEFORE a dismissed one is the exception — the handoff steps the cursor past a card that is gone. While `hole` names the gap those cards are drawn relative to it; when React catches up their UI index rises to `hole` itself and the ordinary formula gives the same x. `hole` is cleared two frames later (clearing it first would draw that card one place left for a frame) and by any page turn.
+  - Back-swipe guard on the UI thread is `topAbs > firstIndex` (the UI index of item 0) — `topAbs > 0` stopped meaning "not the first card" once indices shift.
+- **Its own exit.** `useSwipeCard.dismiss`: the card stays where it is and drops 44 pt, shrinks 12% and fades over 220 ms (`gone`); 110 ms in, the cards after it slide up one place on the page spring. The leaving card is told by a `leaving` prop, not by index — an index can pass to another card before this one unmounts.
+- **Thumbs-down, heart last.** `scripts/icon-fonts/build-icon-font.py` + both `.ttf`s: `thumbsDown` = Phosphor `thumbs-down` U+E48C (23 glyphs; the script reproduced the 22-glyph fonts byte for byte before the change). `CardCorner`: mute, share, thumbs-down, heart — the cross and its two-bar drawing are gone. The explore page's hero uses the same component, so its row is now mute, share, heart.
+**Decisions**:
+- Thumbs-down over a broken heart: at 19 pt in a disc a cracked heart beside a heart is two hearts. Checked by rendering the row from the built fonts (scratch PNG, not committed).
+- Gap 5 / strip 6 rather than widening the margins: 12 a side would make the card another 2 pt narrower and push the 14 Plus past the 42 pt pin above the block.
+**Not changed**: the place label is still 44 pt narrower in the feed (four discs); trade-off cards still cannot be answered.
+**Verified**: mobile tsc; 965 tests (the icon table against the `.ttf`, `deckKeys`); biome (the one pre-existing warning in `feed.tsx`); `expo export --platform ios`.
+**Not verified**: on a device — no simulator here. The dismissal (drop, close-up, the card before staying put), the swipe back after it, Undo and the two strips are unseen. The new glyph needs a full reload of the app, not a fast refresh: fonts load at launch.
+**Next steps**: owner on the dev client. If the right strip appears a beat late after a dismissal, mount one more card ahead (`AROUND`).
+
+---
+
 ## 2026-11-28 06:58 UTC — phase414: a swipe turns the page; the heart is the like; a cross hides a card
 
 **Objective**: Owner's answers to phase413's three questions (2026-11-27): 「左右 / 一次一部 / 要x 但是爱心按键有点突兀 为啥」. So: the deck pages left/right (his direction, not the vertical one I recommended), the home page stays one film at a time, and "not for me" is a button.

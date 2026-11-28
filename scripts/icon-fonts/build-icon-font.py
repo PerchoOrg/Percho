@@ -120,6 +120,10 @@ GLYPHS = {
     # as "send this" without a label.
     # phase395: a tilted paper plane — "send" — in place of export-fill.
     "share": "paper-plane-tilt-fill",
+    # Added 2026-11-28 (phase415) for the card corner's "not for me". It was a
+    # cross for one day (phase414) and read as CLOSE, not as dislike (owner:
+    # 「让人一看就知道是不喜欢 而不是关闭」).
+    "thumbsDown": "thumbs-down-fill",
 }
 
 

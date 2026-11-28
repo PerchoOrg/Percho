@@ -76,7 +76,10 @@ export type RedlineIconName =
 	| "soundOff"
 	// phase335: the card corner's share. A tilted paper plane — "send" — since
 	// phase395; it was the box-and-arrow iOS draws for its share sheet.
-	| "share";
+	| "share"
+	// phase415: the card corner's "not for me". A cross for one day (phase414),
+	// which read as CLOSE rather than as dislike.
+	| "thumbsDown";
 
 /** The family name registered with `expo-font`. */
 export const ICON_FONT = "PerchoIcons";
@@ -130,6 +133,7 @@ export const ICON_GLYPH: Record<RedlineIconName, string> = {
 	soundOn: "\ue450", // speaker-simple-high-fill  — tour audio playing
 	soundOff: "\ue456", // speaker-simple-slash-fill — muted
 	share: "\ue398", // paper-plane-tilt-fill — send this card (phase395; was export-fill)
+	thumbsDown: "\ue48c", // thumbs-down-fill — not for me (phase415)
 };
 
 /**
@@ -182,6 +186,7 @@ export const ICON_ART_WIDTH: Record<RedlineIconName, number> = {
 	soundOn: 0.8438,
 	soundOff: 0.8438,
 	share: 0.875,
+	thumbsDown: 0.875,
 };
 
 /**
@@ -217,6 +222,7 @@ export const OUTLINE_ART_WIDTH: Record<RedlineIconName, number> = {
 	soundOn: 0.8438,
 	soundOff: 0.8438,
 	share: 0.875,
+	thumbsDown: 0.875,
 };
 
 /**

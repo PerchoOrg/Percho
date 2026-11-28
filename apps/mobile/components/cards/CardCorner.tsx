@@ -76,17 +76,18 @@
  * The cost is the place pill in the other corner, which loses ~75pt — the
  * community face drops the pill's distance first when the name is long.
  *
- * ── A fourth disc: the cross (phase414) ─────────────────────────────────────
+ * ── A fourth disc, and the heart last (phase414 → phase415) ─────────────────
  *
  * A swipe stopped being a verdict (owner, 2026-11-27: 「滑走不一定不喜欢」), so
- * "not for me" needs a control of its own, and he asked for one (「要x」). It
- * is the last disc in the row — the corner a dismiss sits in everywhere, and
- * the far side of the card from the thumb, which a control that takes a card
- * away should be. The heart stays where it is and is the like now as well as
- * the save. Only the feed's cards pass `hide`; the explore page's hero has
- * nothing to dismiss.
+ * "not for me" needs a control of its own, and he asked for one. phase414 drew
+ * it as a cross at the end of the row. Owner, 2026-11-28: 「爱心放到最右边 x有没有
+ * 别的替代让人一看就知道是不喜欢 而不是关闭」 — a cross in a top corner reads as
+ * CLOSE. It is a thumbs-down now, and the heart is the last disc: the two
+ * verdicts sit together at the row's end, the like in the corner.
  *
- * The cross is two bars: neither weight of the icon font carries one.
+ * The heart is the like as well as the save. Only the feed's cards pass
+ * `hide`; the explore page's hero has nothing to dismiss, and its row is
+ * mute, share, heart.
  */
 import { Pressable, StyleSheet, View } from "react-native";
 import { redline } from "../../theme/tokens";
@@ -103,9 +104,6 @@ export const CORNER_INSET = 12;
 export const CORNER_GAP = 8;
 /** Glyph size — a little over half the disc. */
 const GLYPH = 19;
-/** The cross's box, and its bars' weight — the outline glyphs' own stroke. */
-const CROSS = 13;
-const CROSS_STROKE = 1.75;
 const SLOP = {
 	top: 8,
 	bottom: 8,
@@ -133,7 +131,7 @@ interface CardCornerProps {
 	save?: CornerControl & { saved: boolean };
 	/** Present when the card has a page to send someone to (phase335). */
 	share?: CornerControl;
-	/** Present when the card can be hidden from the deck (phase414). */
+	/** Present when the card can be hidden from the deck — "not for me" (phase414). */
 	hide?: CornerControl;
 	/**
 	 * Lay the row out in place instead of pinning it to the card's top-right.
@@ -152,8 +150,7 @@ function Disc({
 }: {
 	control: CornerControl;
 	label: string;
-	/** The glyph, or absent for the one control the font has no glyph for. */
-	name?: RedlineIconName;
+	name: RedlineIconName;
 	weight?: "outline" | "fill";
 	color?: string;
 }) {
@@ -166,26 +163,19 @@ function Disc({
 			hitSlop={SLOP}
 			style={({ pressed }) => [styles.disc, pressed && styles.pressed]}
 		>
-			{name ? (
-				<RedlineIcon
-					name={name}
-					size={GLYPH}
-					color={color}
-					weight={weight}
-					// Every glyph here sits beside, or swaps with, an outline one.
-					matchOutline
-				/>
-			) : (
-				<View style={styles.cross}>
-					<View style={[styles.crossBar, styles.crossDown]} />
-					<View style={[styles.crossBar, styles.crossUp]} />
-				</View>
-			)}
+			<RedlineIcon
+				name={name}
+				size={GLYPH}
+				color={color}
+				weight={weight}
+				// Every glyph here sits beside, or swaps with, an outline one.
+				matchOutline
+			/>
 		</Pressable>
 	);
 }
 
-/** The top-right corner: mute, save, share and hide, each its own disc, in a row. */
+/** The top-right corner: mute, share, hide and save, each its own disc, in a row. */
 export function CardCorner({
 	sound,
 	save,
@@ -203,11 +193,13 @@ export function CardCorner({
 					name={sound.on ? "soundOn" : "soundOff"}
 				/>
 			)}
+			{share && <Disc control={share} label="Share" name="share" />}
+			{hide && <Disc control={hide} label="Not for me" name="thumbsDown" />}
 			{/* Saved fills the heart — outline → fill is the bit `SaveGlyph`
 			    signals with everywhere else — and turns it red (gold until the
 			    owner's 「爱心是红色」). Heart and the
 			    paper-plane share since phase395 (owner pick off
-			    `/demos/card-icons-v2`). */}
+			    `/demos/card-icons-v2`). Last in the row since phase415. */}
 			{save && (
 				<Disc
 					control={save}
@@ -217,8 +209,6 @@ export function CardCorner({
 					{...(save.saved ? { color: redline.saved } : {})}
 				/>
 			)}
-			{share && <Disc control={share} label="Share" name="share" />}
-			{hide && <Disc control={hide} label="Not for me" />}
 		</View>
 	);
 }
@@ -251,20 +241,4 @@ const styles = StyleSheet.create({
 	 */
 	disc: CORNER_DISC_STYLE,
 	pressed: { opacity: 0.7 },
-	/** The cross: two bars across a box a little smaller than the glyphs. */
-	cross: {
-		width: CROSS,
-		height: CROSS,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	crossBar: {
-		position: "absolute",
-		width: CROSS * Math.SQRT2 - 2,
-		height: CROSS_STROKE,
-		borderRadius: CROSS_STROKE / 2,
-		backgroundColor: INK,
-	},
-	crossDown: { transform: [{ rotate: "45deg" }] },
-	crossUp: { transform: [{ rotate: "-45deg" }] },
 });

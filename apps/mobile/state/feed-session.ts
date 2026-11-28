@@ -67,7 +67,7 @@ interface FeedSessionState {
 	 */
 	swipedThisRun: readonly string[];
 	/**
-	 * Cards the buyer hid with the card's cross (phase414). A deck is never
+	 * Cards the buyer hid with the card's thumbs-down (phase414). A deck is never
 	 * dealt one again (`lib/feed/hidden.ts`) until its verdict is taken back.
 	 */
 	hiddenIds: readonly string[];
@@ -81,7 +81,7 @@ interface FeedSessionState {
 	 * Record a verdict on a card. Returns the resulting signals.
 	 *
 	 * Until phase414 every swipe was one. A swipe only turns the page now
-	 * (`recordView`), and the verdicts are the heart ("right") and the cross
+	 * (`recordView`), and the verdicts are the heart ("right") and the thumbs-down
 	 * ("left", through `hide`) — the name stayed with what it records.
 	 */
 	recordSwipe: (
@@ -92,7 +92,7 @@ interface FeedSessionState {
 	) => SignalState;
 	/** The buyer turned the page past a card: seen, and nothing said about it. */
 	recordView: (card: FeedCardV3) => void;
-	/** The card's cross: a "left" verdict, and the card leaves every deck. */
+	/** The card's thumbs-down: a "left" verdict, and the card leaves every deck. */
 	hide: (
 		card: FeedCardV3,
 		at: number,
