@@ -23,6 +23,23 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-28 08:29 UTC — phase417: the place label's distance back; the Search map's taps logged; a demo for the rail's side, the dislike exit and Your preferences
+
+**Objective**: Owner after phase416 (2026-11-28): 「我说的map是search里的 放大一个区 点击社区 没反应」 · 「进度条在左边你给我一个ui demo我看看 现在滑动到是顺了 但是左右哪边更好」 · 「左上角的地址为啥没有距离了？加上」 · 「大拇指不喜欢的效果不够明显 重新设计 给我一个demo看先」 · 「your preference重新设计一下纬度」.
+**Actions**:
+- **The place label's distance** (`CommunityFace`). phase414's fourth corner disc took 44 pt from the pill, and I had lowered the "name short enough to show the distance" rule from 22 characters to 14 — so four labels in five lost it. On a feed card the distance now sits on a second line under the name, always; the name keeps the whole first line. A card without the fourth disc keeps the one-line rule.
+- **Search map taps** (`search.tsx`): `tapLog`, development bundles only — which of the five tap wires fired, what the resolver measured (marks in view, distance to the nearest in points, the region's span, the map's size) and where it stopped; `coordinateForPoint`'s rejection is logged instead of swallowed. No behaviour change. I read the tap path again and cannot find the fault: nothing in it has changed since phase377, the map endpoint returns the marks with their points, Metro's log shows no error. This is the seventh report of a community that will not open and the first six were fixed by guessing at the wire; the log is so the next fix is not a guess.
+- **Saved's map restored** to what it was before phase416. That change was my wrong reading of "map"; a mark there brings its card up again, as designed in phase386.
+- **`/demos/card-round4-v1`** (Chinese, noindex), three parts: (1) the city card with the rail on the right and on the left, the same film figure drawn on both, with my recommendation to stay right; (2) three exits for a disliked card, playable — A stamp + grey + drop (recommended), B thrown down-left, C today's; (3) Your preferences now and proposed: "What matters to you" as the Explore pages' own five (Safety, Schools, Convenience, Potential, Cost) and "From the places you liked" as four facts read off the hearted places.
+**Findings behind the demo**:
+- The stated priorities (`@percho/shared/priorities`: schools, cost, commute, community) drive only the three Compare pages. The city page is laid out as Safety / Schools / Convenience / Potential / Cost — two of which cannot be chosen today, and "community" has no box.
+- "From your swipes" (ten lifestyle dims) is fed only by trade-off answers and is hidden while `LISTINGS_IN_APP` is false.
+**Verified**: mobile tsc; 983 tests; biome (the one pre-existing warning). Demo: headless Chrome — the three exits play and reset, no console errors, no sideways overflow at 390 pt.
+**Not verified**: the two-line label on a device.
+**Next steps**: owner taps a community on the Search map once and says so — then read `[map-tap]` in `/tmp/metro-test-homes.log`. His three answers from the demo (rail side; exit A/B/C; preferences).
+
+---
+
 ## 2026-11-28 07:47 UTC — phase416: a tutorial; the thumbs-down wins over the heart and is on Explore; Recent re-chooses; Saved's map opens; the rail lets swipes through
 
 **Objective**: Owner on the phone after phase415 (2026-11-28), six points: 「第一次使用应该给一套教程」 · 「有爱心的情况选择大拇指应该尊重大拇指 自动清除爱心」 · 「explore 里也应该有大拇指」 · 「city卡的进度条应该放到左侧 在右侧经常影响滑动 可能要改一些视频里的字幕避免重复 改就是了 做对的事情」 · 「map里看到有视频的社区点击没有反应」 · 「you里recent里可以用统一的手势来重新选择 并且在照片下要显示完整的名字」.

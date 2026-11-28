@@ -16,11 +16,13 @@ picture in the preview. If they have the Percho app, the link opens straight
 into that neighbourhood or city in the app; if they don't, it plays the film
 on its own, with a button to see more in the app.
 
+### 2026-11-28
+- **The label on a film says how far the place is again.** The small label in a card's top corner names the place the film is showing; its distance had dropped off most of them when the card gained a fourth button. It is back, on a second line under the name. Arrives with the next app update.
+
 ### 2026-11-27
 - **A short tutorial the first time you open the app.** Five steps over the first card, each lighting the control it is about: swipe to look around, the heart to like a place, the thumbs-down for one that is not for you, the name to see what living there is like, and Communities to go inside a city. It can be skipped, and is shown once. Arrives with the next app update.
 - **The thumbs-down is on every place's page too**, beside the heart. Tapping it hides the place from your feed; tapping it again brings it back. If you had liked the place, the thumbs-down takes the heart away — it is one or the other. Arrives with the next app update.
 - **Change your mind under You.** Each place in Recent now carries the same two buttons as its card, with the one you chose lit: tap the other to choose again, or the lit one to take it back. Long names are shown in full. Arrives with the next app update.
-- **Tapping a place on Saved's map opens it.** Before, a tap only moved the row of cards under the map — and with a single saved place did nothing. Arrives with the next app update.
 - **Swiping across a city's film no longer gets caught on the list of its parts.** The list down the right of a city's card (Overview, Schools, Homes…) used to take every touch that landed on it, so a swipe starting there went nowhere. It now answers only to a tap or an up-and-down drag. Arrives with the next app update.
 - **Swiping a card no longer judges it.** Swiping left now simply shows the next place, and swiping right goes back to the one before. It used to mean "pass" and "like", and a card swiped away was gone. To like a place, tap the heart in the card's top corner: it turns red and the place is in Saved. A thumbs-down beside it hides a place you don't want to see again — the card drops away, with an Undo for a few seconds (and "Change my mind" under You, as before). The edges of the cards before and after now show at the sides of the screen. Arrives with the next app update.
 - **A county's page is easier to read.** Tapping a county on the map now opens a page that starts with the cities and neighbourhoods Percho has filmed there, then shows the monthly cost as a ring chart, the schools' test results, and where the county sits among the metro's on cost and on schools. The full figures and the county-by-county ranking are one tap away instead of filling the page. Arrives with the next app update.
