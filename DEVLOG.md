@@ -23,7 +23,7 @@ rotation, not on the way in.
 
 ---
 
-## 2026-11-28 08:44 UTC — phase416: a tutorial; the thumbs-down wins over the heart and is on Explore; Recent re-chooses; Saved's map opens; the rail lets swipes through
+## 2026-11-28 07:47 UTC — phase416: a tutorial; the thumbs-down wins over the heart and is on Explore; Recent re-chooses; Saved's map opens; the rail lets swipes through
 
 **Objective**: Owner on the phone after phase415 (2026-11-28), six points: 「第一次使用应该给一套教程」 · 「有爱心的情况选择大拇指应该尊重大拇指 自动清除爱心」 · 「explore 里也应该有大拇指」 · 「city卡的进度条应该放到左侧 在右侧经常影响滑动 可能要改一些视频里的字幕避免重复 改就是了 做对的事情」 · 「map里看到有视频的社区点击没有反应」 · 「you里recent里可以用统一的手势来重新选择 并且在照片下要显示完整的名字」.
 **Actions** (`apps/mobile`):
