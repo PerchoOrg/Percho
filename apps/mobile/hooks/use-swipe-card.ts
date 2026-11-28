@@ -14,8 +14,9 @@
  *     whole card on or back, or spring to rest for a non-commit,
  *   - turn the page for a caller (`page`), and take the card in front out of
  *     the row for one (`dismiss`) — the card's "not for me" button. That is
- *     NOT a page turn and does not look like one: the card drops away where
- *     it stands, and the cards after it close the space it leaves.
+ *     NOT a page turn and does not look like one: the card is marked where
+ *     it stands, greys, and falls off the bottom, and the cards after it
+ *     close the space it leaves.
  *
  * The hook owns none of the feed semantics — it reports the step to `onPage`
  * and lets the caller decide what moving on from a card records. What a given
@@ -77,10 +78,13 @@ const ACTIVE_OFFSET_X = 10;
 const FAIL_OFFSET_Y = 20;
 /**
  * A dismissed card's own exit, and how long after it starts the cards behind
- * it begin to close up — so the eye sees the card go before anything slides.
+ * it begin to close up. `gone` runs 0 → 1 evenly over the whole of it, and
+ * `lib/gesture/dismiss-exit.ts` cuts that second into its three acts — the
+ * mark lands, it is read, the card falls. The row closes up as the fall
+ * begins, on the page spring, and lands as it ends.
  */
-const DISMISS_MS = 220;
-const CLOSE_DELAY_MS = 110;
+const DISMISS_MS = 1040;
+const CLOSE_DELAY_MS = 720;
 
 interface UseSwipeCardArgs {
 	cardWidth: number;
@@ -348,7 +352,7 @@ export function useSwipeCard({
 			gone.value = 0;
 			gone.value = withTiming(1, {
 				duration: DISMISS_MS,
-				easing: Easing.in(Easing.quad),
+				easing: Easing.linear,
 			});
 			tx.value = withDelay(
 				CLOSE_DELAY_MS,

@@ -80,6 +80,7 @@ import {
 	type CardCapability,
 	INERT_CAPABILITY,
 } from "../lib/gesture/capability";
+import { dismissExit } from "../lib/gesture/dismiss-exit";
 import { type PageStep, cardPageX } from "../lib/gesture/page-layer";
 import type { TapSlot, TapStatus } from "../lib/gesture/tap-slot";
 import { cardFrameHeight } from "../theme/card-frame";
@@ -93,18 +94,15 @@ const AROUND = 1;
 
 type CardRole = "top" | "next" | "after";
 
-/** How far a dismissed card drops, and how much it shrinks, as it fades. */
-const DISMISS_DROP_PT = 44;
-const DISMISS_SHRINK = 0.12;
-
 /** The imperative handle passed to `onPagerReady`. */
 export interface PagerHandle {
 	/** Turn the page without a drag — on (1) or back (-1) — with the same slide. */
 	page: (step: PageStep) => void;
 	/**
-	 * Take the card in front out of the row. It drops and fades where it
-	 * stands, the cards after it close up, and `onDismissed` then names it —
-	 * the caller must remove it from `items` there.
+	 * Take the card in front out of the row. `leavingMark` lands on it, it
+	 * greys and falls off the bottom (`lib/gesture/dismiss-exit.ts`), the
+	 * cards after it close up, and `onDismissed` then names it — the caller
+	 * must remove it from `items` there.
 	 */
 	dismiss: () => void;
 }
@@ -163,6 +161,11 @@ export interface SwipeStackProps<T> {
 	canGoBack: boolean;
 	/** A `dismiss` has run: take `item` out of `items` now. */
 	onDismissed?: (item: T) => void;
+	/**
+	 * What lands on the middle of a card as it is dismissed — the caller's
+	 * way of saying WHY it is leaving. The stack only places and times it.
+	 */
+	leavingMark?: React.ReactNode;
 
 	/**
 	 * Called when a release was a TAP on an interactive card target (the save
@@ -218,6 +221,8 @@ interface StackCardProps {
 	dragX: SharedValue<number>;
 	/** This is the card a `dismiss` is taking out. */
 	leaving: boolean;
+	/** Drawn over a leaving card's middle (`SwipeStackProps.leavingMark`). */
+	leavingMark: React.ReactNode;
 	gone: SharedValue<number>;
 	hole: SharedValue<number>;
 	cardWidth: number;
@@ -240,9 +245,10 @@ interface StackCardProps {
  *
  * ── A dismissal, in three kinds of card ─────────────────────────────────────
  *
- * The card LEAVING stays where it stands and drops, shrinks and fades with
- * `gone`. It is told by a prop rather than by its index: an index can be
- * handed to another card before this one unmounts.
+ * The card LEAVING stays where it stands while the mark lands on it and the
+ * picture greys, then falls off the bottom — all from `gone`, through
+ * `dismissExit`. It is told by a prop rather than by its index: an index can
+ * be handed to another card before this one unmounts.
  *
  * The cards AFTER it follow the drag as on any page turn — it carries them up
  * one place, and the handoff moves the cursor in the frame it is zeroed.
@@ -259,6 +265,7 @@ function StackCard({
 	topAbs,
 	dragX,
 	leaving,
+	leavingMark,
 	gone,
 	hole,
 	cardWidth,
@@ -272,13 +279,13 @@ function StackCard({
 	const box = { width: cardWidth, height: frameHeight, top: restTop };
 	const style = useAnimatedStyle(() => {
 		if (leaving) {
-			const g = gone.value;
+			const exit = dismissExit(gone.value, frameHeight);
 			return {
-				opacity: 1 - g,
+				opacity: exit.opacity,
 				transform: [
 					{ translateX: 0 },
-					{ translateY: DISMISS_DROP_PT * g },
-					{ scale: 1 - DISMISS_SHRINK * g },
+					{ translateY: exit.dropY },
+					{ rotate: `${exit.turnDeg}deg` },
 				],
 			};
 		}
@@ -288,7 +295,19 @@ function StackCard({
 				: cardPageX(uiIndex - topAbs.value, dragX.value, pitch);
 		return {
 			opacity: 1,
-			transform: [{ translateX: x }, { translateY: 0 }, { scale: 1 }],
+			transform: [{ translateX: x }, { translateY: 0 }, { rotate: "0deg" }],
+		};
+	});
+	// Only a leaving card mounts the two views these drive, and it mounts
+	// them animated from the start.
+	const washStyle = useAnimatedStyle(() => ({
+		opacity: leaving ? dismissExit(gone.value, frameHeight).wash : 0,
+	}));
+	const markStyle = useAnimatedStyle(() => {
+		const exit = dismissExit(leaving ? gone.value : 0, frameHeight);
+		return {
+			opacity: exit.markOpacity,
+			transform: [{ scale: exit.markScale }],
 		};
 	});
 
@@ -300,10 +319,25 @@ function StackCard({
 			    same animated x as the card, no touch handling. */}
 			<Animated.View
 				pointerEvents="none"
-				style={[styles.cardGlow, box, style]}
+				style={[styles.cardGlow, box, leaving && styles.over, style]}
 			/>
-			<Animated.View style={[styles.card, box, style]}>
+			{/* A leaving card falls OVER the one sliding into its place. */}
+			<Animated.View style={[styles.card, box, leaving && styles.over, style]}>
 				<View style={StyleSheet.absoluteFill}>{front}</View>
+				{leaving && (
+					<>
+						<Animated.View
+							pointerEvents="none"
+							style={[StyleSheet.absoluteFill, styles.wash, washStyle]}
+						/>
+						<Animated.View
+							pointerEvents="none"
+							style={[StyleSheet.absoluteFill, styles.mark, markStyle]}
+						>
+							{leavingMark}
+						</Animated.View>
+					</>
+				)}
 			</Animated.View>
 		</>
 	);
@@ -315,6 +349,7 @@ export function SwipeStack<T>({
 	onPage,
 	canGoBack,
 	onDismissed,
+	leavingMark,
 	onTapTarget,
 	onPagerReady,
 
@@ -523,6 +558,7 @@ export function SwipeStack<T>({
 							topAbs={topAbs}
 							dragX={tx}
 							leaving={key === leavingKey}
+							leavingMark={leavingMark}
 							gone={gone}
 							hole={hole}
 							cardWidth={cardWidth}
@@ -566,6 +602,14 @@ const styles = StyleSheet.create({
 	 * card it backs, `pointerEvents: none`, no background — because RN
 	 * supports exactly ONE shadow per view.
 	 */
+	over: { zIndex: 2 },
+	/**
+	 * The grey over a dismissed card's picture. iOS has no greyscale filter
+	 * for a view, so the picture is covered rather than drained: a neutral
+	 * grey at `WASH_OPACITY` leaves its shapes and takes its colour.
+	 */
+	wash: { backgroundColor: "#4A4A48" },
+	mark: { alignItems: "center", justifyContent: "center" },
 	cardGlow: {
 		position: "absolute",
 		left: 0,

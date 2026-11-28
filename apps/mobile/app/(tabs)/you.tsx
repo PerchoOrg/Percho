@@ -17,15 +17,21 @@
  *     familiar-first sort reads (§5.3 hard rule: the two faces cannot
  *     disagree). Horizontal chips so a buyer who has seen twenty areas gets one
  *     row, not a wall. Chip tap → Search tab focused on the unit.
- *   · YOUR PREFERENCES — one card, two labelled groups. "You set" is what the
- *     buyer TOLD us (`lib/priorities.ts`); "From your swipes" is what we
- *     inferred (`signals.dims`, as share-of-total bars — a pie was the ask,
- *     but eleven dims slice too thin and the weights are not parts of a
- *     whole). Kept as separate groups on purpose: they are different kinds of
- *     claim, and merging them would let the app quietly overrule a stated
- *     answer. The × on an inferred row is §5.3's correction — it removes the
- *     dim's weight. "Reset preferences" is the
- *     card's last row — it lives with what it clears (owner, 2026-09-11).
+ *   · YOUR PREFERENCES — one card, two labelled groups (redrawn phase418;
+ *     owner, 2026-11-28: 「your preference重新设计一下纬度」).
+ *     "What matters to you" is what the buyer TOLD us: the five every
+ *     place's page is laid out by — Safety, Schools, Convenience, Potential,
+ *     Cost (`@percho/shared/priorities`) — each on four steps. Until then it
+ *     was four of its own (schools, cost, getting around, the community
+ *     itself), which matched no page.
+ *     "From the places you liked" is what their hearts have in common, as
+ *     plain facts read off those places' own cards (`lib/you/liked-facts.ts`).
+ *     It replaced "From your swipes" — ten lifestyle words as share bars, fed
+ *     only by trade-off answers, which the build without homes never asks.
+ *     Kept as separate groups on purpose: one is a statement and one an
+ *     observation, and merging them would let the app quietly overrule a
+ *     stated answer. "Reset preferences" is the card's last row — it lives
+ *     with what it clears (owner, 2026-09-11).
  *   · Settings — the one switch that exists (sound autoplay).
  *   · Account — the iOS grouped-list shape (identity row, "Change password ›",
  *     Sign out) and nothing that is not the account. Session state from
@@ -54,14 +60,16 @@ import { CardCorner } from "../../components/cards/CardCorner";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { familiarityFor } from "../../lib/area-familiarity";
 import { deleteAccount, signOut } from "../../lib/auth";
-import { DIM_LABELS, personaName, rankedDims } from "../../lib/feed/persona";
+import { personaName, rankedDims } from "../../lib/feed/persona";
 import type { RecentEntry, RecentPlace } from "../../lib/feed/recent";
 import { LISTINGS_IN_APP } from "../../lib/listings-in-app";
 import { openLink } from "../../lib/open-link";
+import { type LikedPlace, likedFacts } from "../../lib/you/liked-facts";
 import { useAuthStore } from "../../state/auth";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
 import { usePriorityStore } from "../../state/priorities";
+import { useSavedStore } from "../../state/saved";
 import { useSoundStore } from "../../state/sound";
 import { clearLike, toggleDislike, toggleLike } from "../../state/verdict";
 import { colors, radii } from "../../theme/tokens";
@@ -133,7 +141,6 @@ export default function YouTab() {
 	const insets = useSafeAreaInsets();
 	const signals = useFeedSession((s) => s.signals);
 	const clearSignals = useFeedSession((s) => s.clearSignals);
-	const removeDim = useFeedSession((s) => s.removeDim);
 	const allRecent = useFeedSession((s) => s.recent);
 	// Snapshots persist on the device, so an earlier build's listing swipes are
 	// still in the store; the communities-only build does not show them.
@@ -173,12 +180,32 @@ export default function YouTab() {
 			.sort((a, b) => b.fam.score - a.fam.score);
 	}, [pool.geoUnits, signals]);
 
-	/** Positive dims with each one's share of the positive total. */
-	const dims = useMemo(() => {
-		const ranked = rankedDims(signals.dims);
-		const sum = ranked.reduce((n, d) => n + d.weight, 0) || 1;
-		return ranked.map((d) => ({ ...d, share: d.weight / sum }));
-	}, [signals.dims]);
+	/**
+	 * What the hearted places have in common. The hearts are Saved's; the
+	 * figures are the ones each place's card prints, from the pool the feed
+	 * reads — every filmed community and city is in its first page.
+	 */
+	const savedItems = useSavedStore((s) => s.items);
+	const liked = useMemo(() => {
+		const places: LikedPlace[] = [
+			...pool.communities.map((c) => ({
+				id: c.id,
+				kind: "community" as const,
+				city: c.city,
+				...(c.glance ? { glance: c.glance } : {}),
+			})),
+			...pool.geoUnits.map((u) => ({
+				id: `area-${u.id}`,
+				kind: "area" as const,
+				city: u.name,
+				...(u.glance ? { glance: u.glance } : {}),
+			})),
+		];
+		return likedFacts(
+			savedItems.map((x) => x.id),
+			places,
+		);
+	}, [savedItems, pool.communities, pool.geoUnits]);
 
 	const confirmReset = () => {
 		// §5.3: no bare reset without a recap of what it erases.
@@ -234,9 +261,10 @@ export default function YouTab() {
 			<View style={styles.personaCard}>
 				<Text style={styles.eyebrow}>YOUR PERCHO TYPE</Text>
 				<Text style={styles.personaName}>{name}</Text>
-				{dims.length === 0 && (
+				{rankedDims(signals.dims).length === 0 && (
 					<Text style={styles.line}>
-						Swipe the feed and Percho starts learning.
+						{/* A swipe says nothing since phase414; a heart does. */}
+						Like a few places and Percho starts learning.
 					</Text>
 				)}
 			</View>
@@ -309,7 +337,7 @@ export default function YouTab() {
 			{/* Declared, then inferred — two groups, one card (see header). */}
 			<Text style={styles.sectionHead}>YOUR PREFERENCES</Text>
 			<View style={styles.card}>
-				<Text style={styles.groupHead}>You set</Text>
+				<Text style={styles.groupHead}>What matters to you</Text>
 				{PRIORITIES.map((p) => (
 					<View key={p.key} style={styles.prioRow}>
 						<Text style={styles.prioLabel}>{p.label}</Text>
@@ -334,45 +362,30 @@ export default function YouTab() {
 					</View>
 				))}
 
-				{/* Learned dims come only from trade-off answers, and the
-				    communities-only build has no trade-off card
-				    (`COMMUNITY_ONLY_MIX`), so this group could only ever say
-				    "answer a trade-off card". It returns with listings. */}
-				{LISTINGS_IN_APP && (
+				{/* What Percho can SEE, beside what the buyer said: the four figures
+				    their hearted places share. Facts off those places' own cards —
+				    never a score, and never a guess at who the buyer is. */}
+				<Text style={[styles.groupHead, styles.groupHeadSplit]}>
+					From the places you liked
+				</Text>
+				{liked.rows.length === 0 ? (
+					<Text style={styles.emptyLine}>
+						Like a few places and what they have in common shows up here.
+					</Text>
+				) : (
 					<>
-						<Text style={[styles.groupHead, styles.groupHeadSplit]}>
-							From your swipes
+						{liked.rows.map((row) => (
+							<View key={row.label} style={styles.factRow}>
+								<Text style={styles.factLabel}>{row.label}</Text>
+								<Text style={styles.factValue} numberOfLines={1}>
+									{row.value}
+								</Text>
+							</View>
+						))}
+						<Text style={styles.factNote}>
+							From {liked.count} {liked.count === 1 ? "place" : "places"} you
+							liked.
 						</Text>
-						{dims.length === 0 ? (
-							<Text style={styles.emptyLine}>
-								Answer a trade-off card and what Percho learns shows up here.
-							</Text>
-						) : (
-							dims.map((d) => (
-								<View key={d.dim} style={styles.dimRow}>
-									<View style={styles.dimText}>
-										<Text style={styles.dimLabel}>
-											{DIM_LABELS[d.dim]}{" "}
-											<Text style={styles.dimShare}>
-												{Math.round(d.share * 100)}%
-											</Text>
-										</Text>
-										<View style={styles.meter}>
-											<View style={[styles.meterFill, { flex: d.share }]} />
-											<View style={{ flex: Math.max(1 - d.share, 0.001) }} />
-										</View>
-									</View>
-									<Pressable
-										onPress={() => removeDim(d.dim)}
-										hitSlop={10}
-										accessibilityRole="button"
-										accessibilityLabel={`${DIM_LABELS[d.dim]}. Remove.`}
-									>
-										<Text style={styles.dimX}>×</Text>
-									</Pressable>
-								</View>
-							))
-						)}
 					</>
 				)}
 				{/* The reset lives with what it resets. The confirm carries the
@@ -627,16 +640,28 @@ const styles = StyleSheet.create({
 	},
 	prioStepOn: { backgroundColor: colors.accent, borderColor: colors.accent },
 	prioStepHere: { borderColor: colors.ink },
-	dimRow: {
+	/** One fact off the liked places: what it is about, then the figure. */
+	factRow: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 14,
-		paddingVertical: 8,
+		justifyContent: "space-between",
+		gap: 12,
+		paddingVertical: 10,
 	},
-	dimText: { flex: 1, gap: 5 },
-	dimLabel: { ...textStyles.footnote, fontWeight: "500", color: colors.ink },
-	dimShare: { color: colors.ink2, fontWeight: "400" },
-	dimX: { fontSize: 18, lineHeight: 20, color: colors.ink3 },
+	factLabel: { ...textStyles.headline, color: colors.ink },
+	factValue: {
+		...textStyles.headline,
+		flexShrink: 1,
+		textAlign: "right",
+		color: colors.ink,
+	},
+	factNote: {
+		...textStyles.footnote,
+		fontSize: 12,
+		color: colors.ink2,
+		paddingTop: 2,
+		paddingBottom: 8,
+	},
 	/** A grouped-list row: label left, control or chevron right. */
 	row: {
 		flexDirection: "row",

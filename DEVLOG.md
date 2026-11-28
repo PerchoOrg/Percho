@@ -23,6 +23,28 @@ rotation, not on the way in.
 
 ---
 
+## 2026-11-28 08:55 UTC — phase418: the dislike exit "A"; preferences as the pages' five + facts from liked places; the map's tap reach, from the log
+
+**Objective**: Owner's answers to phase417 (2026-11-28): 「点了 非常不敏感 需要放到最大 点很多下」 · 「留在右边」 · 「a」 · 「按这个做」. The rail stays on the right — nothing to build, no film is re-cut.
+**The map — what the log said** (`/tmp/metro-test-homes.log`, `[map-tap]`, ~10 taps on his 428 pt phone):
+- Every tap ARRIVED. `wire: map press` fired on all of them and `wire: hit square` on some. `wire: gesture tap` and `wire: marker press` never fired once — the gesture-handler Tap that phase290-odd made "the one that works" is dead on this build, and so is `Marker.onPress`.
+- Every tap was then TURNED AWAY: `no mark in reach`, nearest 42–48 pt on six taps and 56–60 on two, against a 36 pt radius; the two that opened were under 36. The same at city zoom (span 0.19°) and at the closest the map goes (0.00046°), so it is a fixed distance on the glass, not a matter of scale — which checks: 0.00046° is exactly MapKit's deepest zoom for an 830 pt map at this latitude, so the region and the map size the arithmetic uses are right.
+- So a tap aimed at a mark lands about 46 pt from the community's point as this file measures it. Which way is not known yet. `anchor` — which `CommunityMark` relies on to put the dot on the point — is not read by Apple Maps at all in react-native-maps 1.27.2 (`AIRMapMarker.m` handles `centerOffset` only), which would put the dot 14.5 pt above the point, not 46; so that is part of it at most.
+- The seven reports since September were never a delivery problem. Each fix added another wire.
+**Actions**:
+- `search.tsx`: `MARK_TAP_RADIUS_PX` 36 → 64 (the hit squares are sized by it too), and the log now records where each tap fell from the nearest point — right of it and below it, in points. That vector is what the drawing has to be corrected by; the radius is cover until it is known.
+- **The exit** (pick "A"): `lib/gesture/dismiss-exit.ts` (+ tests) — `gone` 0 → 1 over 1040 ms in three acts: the mark lands by 0.19, is read until 0.60, the card falls 1.12 heights and turns 7° to 1. `SwipeStack` draws it on the leaving card (a grey wash to 0.6 — iOS has no greyscale filter for a view, so the picture is covered rather than drained — and the caller's `leavingMark`), keeps it above the card sliding in, and the row closes up from 720 ms. `components/feed/DislikeStamp.tsx`: the corner's thumbs-down, 58 pt in a 112 pt ringed disc, "NOT FOR ME". The Undo bar comes up when the card has gone, not at the tap.
+- **Preferences**: `@percho/shared/priorities` — a buyer can state five: `safety`, `schools`, `commute` (worded Convenience), `potential`, `cost`, in `GLANCE_TOPICS`' order and words. `community` stays a key comparison rows carry but leaves the list; stored weights for it read back neutral. `PRIORITY_PROSE` gains the two. `you.tsx`: "What matters to you"; "From the places you liked" from `lib/you/liked-facts.ts` (+ tests) — Where / Home value / Schools / To the highway, each the lowest and highest of what the liked places' own cards print; a city's drive-to-downtown is kept out of the highway row. The dims group ("From your swipes") is gone from the screen; `signals.dims`, `removeDim` and `persona.ts` are untouched. The persona card's "Swipe the feed and Percho starts learning" now says "Like a few places…".
+**Decisions**:
+- Widening the reach rather than moving the dot: the direction of the 46 pt is unmeasured, and a guessed `centerOffset` would be the eighth guess.
+- `commute` keeps its key under the word Convenience: every comparison row is tagged with it, and renaming the key is a migration for a label.
+- Nothing is tagged `safety` or `potential` in the three Compare tables yet, so raising either reorders nothing today. Said to the owner.
+**Verified**: mobile tsc; 997 tests; biome (the one pre-existing warning); `expo export --platform ios`; shared tsc; web tsc (outside this worktree's stale `.next/types`).
+**Not verified**: on a device. The exit's timing is the demo's, but the grey is a wash, not the demo's true greyscale.
+**Next steps**: owner taps a few marks again → read `tap from the nearest point` and put the dot on its point (`centerOffset`), then bring the radius back down. Decide whether Safety and Potential should order Compare rows.
+
+---
+
 ## 2026-11-28 08:29 UTC — phase417: the place label's distance back; the Search map's taps logged; a demo for the rail's side, the dislike exit and Your preferences
 
 **Objective**: Owner after phase416 (2026-11-28): 「我说的map是search里的 放大一个区 点击社区 没反应」 · 「进度条在左边你给我一个ui demo我看看 现在滑动到是顺了 但是左右哪边更好」 · 「左上角的地址为啥没有距离了？加上」 · 「大拇指不喜欢的效果不够明显 重新设计 给我一个demo看先」 · 「your preference重新设计一下纬度」.

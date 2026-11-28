@@ -55,6 +55,7 @@ import {
 } from "../../components/cards/ListingFace";
 import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
+import { DislikeStamp } from "../../components/feed/DislikeStamp";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { FeedTutorial } from "../../components/feed/FeedTutorial";
 import { HiddenToast } from "../../components/feed/HiddenToast";
@@ -211,6 +212,9 @@ import { textStyles } from "../../theme/typography";
  * and area/community at `width × 1.2` — which meant an alternating deck
  * cross-faded the frame height on every commit and the page visibly jumped.
  */
+
+/** What lands on a card as it is disliked. One element: it never changes. */
+const DISLIKE_STAMP = <DislikeStamp />;
 
 /** How many of a deck's first stills are fetched before it is opened. */
 const DECK_STILLS_AHEAD = 2;
@@ -798,9 +802,11 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 
 	/**
 	 * The card's thumbs-down. The card is hidden for good and leaves the deck —
-	 * it drops away rather than sliding off, so it does not look like a page
-	 * turn (owner, 2026-11-28: 「点击x的动画效果和滑动应该区分开」) — and a bar
-	 * offers the way back for a few seconds (`HiddenToast`).
+	 * a thumbs-down lands on it, it greys and falls off the bottom, so it
+	 * neither looks like a page turn (owner, 2026-11-28: 「点击x的动画效果和滑动
+	 * 应该区分开」) nor passes unnoticed (「效果不够明显」, his pick "A") — and
+	 * once it has gone a bar offers the way back for a few seconds
+	 * (`HiddenToast`).
 	 *
 	 * phase414 left the hidden card in its slot and stopped a swipe back at
 	 * the card after it. Owner, same day: 「点击x之后就不能向回看了」. It is taken
@@ -818,6 +824,8 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		return () => clearTimeout(t);
 	}, [hiddenNote]);
 
+	/** The card on its way out, until the stack reports it gone. */
+	const leaving = useRef<{ card: FeedCardV3; wasLiked: boolean } | null>(null);
 	const hideCard = useCallback(
 		(card: FeedCardV3) => {
 			// The thumbs-down wins over a heart the card already has (owner,
@@ -825,7 +833,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 			const wasLiked =
 				card.kind !== "tradeoff" && clearLike(card.id, card.kind);
 			recordVerdict(card, "left");
-			setHiddenNote({ card, wasLiked });
+			leaving.current = { card, wasLiked };
 			pager.current?.dismiss();
 		},
 		[recordVerdict],
@@ -844,6 +852,9 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 			.filter((c) => c.id === card.id).length;
 		setDeck((d) => d.filter((c) => c.id !== card.id));
 		setActiveIndex(at + 1 - gone);
+		// The bar comes up once the card is out of the way of it.
+		if (leaving.current?.card.id === card.id) setHiddenNote(leaving.current);
+		leaving.current = null;
 	}, []);
 
 	const undoHide = useCallback(() => {
@@ -1350,6 +1361,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 							onPage={onPage}
 							canGoBack={canGoBack}
 							onDismissed={onDismissed}
+							leavingMark={DISLIKE_STAMP}
 							onTapTarget={onTapTarget}
 							onPagerReady={onPagerReady}
 							renderCard={renderCard}

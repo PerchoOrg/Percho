@@ -181,6 +181,7 @@ describe("declared priorities reorder the rows", () => {
 			.rows.map((r) => r.label)
 			.sort();
 		const sorted = buildAreaCompareTable(areas, {
+			...defaultWeights(),
 			schools: 3,
 			cost: 0,
 			commute: 0,

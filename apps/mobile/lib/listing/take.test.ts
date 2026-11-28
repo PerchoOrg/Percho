@@ -1,3 +1,4 @@
+import { defaultWeights } from "@percho/shared/priorities";
 import { describe, expect, it } from "vitest";
 import type { ListingDetailDTO, SchoolDTO } from "./detail-dto";
 import { buildHomeTake } from "./take";
@@ -233,6 +234,7 @@ describe("buildHomeTake — personalised by declared priorities", () => {
 
 	it("breaks a split decision with the buyer's top priority, and quotes it", () => {
 		const take = buildHomeTake(SPLIT, RATE, {
+			...defaultWeights(),
 			schools: 3,
 			cost: 1,
 			commute: 1,
@@ -249,6 +251,7 @@ describe("buildHomeTake — personalised by declared priorities", () => {
 
 	it("leans the other way when the same homes meet a cost-first buyer", () => {
 		const take = buildHomeTake(SPLIT, RATE, {
+			...defaultWeights(),
 			schools: 1,
 			cost: 3,
 			commute: 1,
@@ -261,6 +264,7 @@ describe("buildHomeTake — personalised by declared priorities", () => {
 
 	it("refuses to break the tie when the buyer has stated nothing", () => {
 		const take = buildHomeTake(SPLIT, RATE, {
+			...defaultWeights(),
 			schools: 1,
 			cost: 1,
 			commute: 1,
@@ -271,6 +275,7 @@ describe("buildHomeTake — personalised by declared priorities", () => {
 
 	it("refuses to break the tie when two priorities are tied at the top", () => {
 		const take = buildHomeTake(SPLIT, RATE, {
+			...defaultWeights(),
 			schools: 3,
 			cost: 3,
 			commute: 1,
@@ -300,7 +305,7 @@ describe("buildHomeTake — personalised by declared priorities", () => {
 				}),
 			],
 			RATE,
-			{ schools: 3, cost: 0, commute: 1, community: 1 },
+			{ ...defaultWeights(), schools: 3, cost: 0, commute: 1, community: 1 },
 		);
 		expect(take.lead).toContain("12 Oak St");
 	});
