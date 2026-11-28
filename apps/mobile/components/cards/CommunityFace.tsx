@@ -239,7 +239,7 @@ const RAIL_BOTTOM = 92;
 const placeRight = (discs: number) =>
 	12 + discs * CORNER_DISC + (discs - 1) * CORNER_GAP + 8;
 const PLACE_RIGHT = placeRight(3);
-/** With the feed's fourth disc, the cross (phase414). */
+/** With the feed's fourth disc, the thumbs-down (phase414). */
 const PLACE_RIGHT_WITH_HIDE = placeRight(4);
 /**
  * Longest place name that still shows its distance. The pill has ~205pt on a
@@ -247,7 +247,7 @@ const PLACE_RIGHT_WITH_HIDE = placeRight(4);
  * do not both fit, and the name is the one a buyer needs (owner pick "C",
  * phase394: drop the distance before cutting the name).
  *
- * The cross takes 44pt of that — about eight characters — so a feed card's
+ * The fourth disc takes 44pt of that — about eight characters — so a feed card's
  * pill gives up the distance sooner, and a name past ~24 characters ends in
  * an ellipsis there.
  */
@@ -316,8 +316,8 @@ interface CommunityFaceProps {
 	 */
 	onShare?: () => void;
 	/**
-	 * The corner's cross (phase414): this card is not for the buyer. Only the
-	 * feed's decks pass it.
+	 * The corner's thumbs-down (phase414): this card is not for the buyer. Only
+	 * the feed's decks pass it.
 	 */
 	onHide?: () => void;
 	/** The film passed `CardVideo`'s 82% mark — the buyer watched it through. */
@@ -723,8 +723,9 @@ export function CommunityFace({
 
 			{/* Top-RIGHT: mute, save and share, three discs in one row
 			    (phase394, owner pick "C" off `/demos/card-actions-v1`), and in
-			    the feed a fourth, the cross (phase414). A community with no
-			    film passes no `sound`. */}
+			    the feed a fourth, the thumbs-down (phase414). The heart is the
+			    last of them since phase415. A community with no film passes no
+			    `sound`. */}
 			<CardCorner
 				{...(card.videoUrl
 					? {

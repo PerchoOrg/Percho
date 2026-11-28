@@ -330,7 +330,7 @@ export const INTEREST_WEIGHT = 0.5;
  * Interest short of a like (phase414): the buyer watched a film to its end,
  * opened the card's Explore page, or went into the place's own deck.
  *
- * Since phase414 a swipe only turns the page, so the heart and the cross are
+ * Since phase414 a swipe only turns the page, so the heart and the thumbs-down are
  * the only verdicts — and a buyer taps those far less often than they used to
  * swipe. Without this the ranking would hear almost nothing. It credits the
  * card's PLACE only: the liked lists stay what the buyer said with the heart,

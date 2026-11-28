@@ -13,7 +13,7 @@
  */
 import { describe, expect, it } from "vitest";
 import type { FeedCardV3 } from "./card-types";
-import { deckKey } from "./deck-key";
+import { deckKeys } from "./deck-key";
 import { EMPTY_POOL, type FeedPool, generateFeed } from "./generate-feed";
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "./ratios";
 import { EMPTY_SIGNALS } from "./signals";
@@ -59,18 +59,28 @@ const dupes = (keys: readonly string[]): string[] => [
 	...new Set(keys.filter((k, i) => keys.indexOf(k) !== i)),
 ];
 
-describe("deckKey", () => {
+describe("deckKeys", () => {
+	const card = (id: string) => ({ kind: "tradeoff", id }) as FeedCardV3;
+
 	it("disambiguates a card the composer legitimately re-emits", () => {
-		const card = { kind: "tradeoff", id: "to-quiet-vs-scene" } as FeedCardV3;
-		expect(deckKey(card, 3)).not.toBe(deckKey(card, 17));
+		const keys = deckKeys([card("a"), card("b"), card("a")]);
+		expect(keys[0]).not.toBe(keys[2]);
+		expect(new Set(keys).size).toBe(3);
 	});
 
-	it("is stable for a card's whole mounted lifetime", () => {
-		// SwipeStack keeps a promoted card's subtree (and its CardVideo buffer)
-		// alive across a swipe, which only works if the key does not change when
-		// the card is promoted. The absolute index never changes, so it doesn't.
-		const card = { kind: "tradeoff", id: "to-quiet-vs-scene" } as FeedCardV3;
-		expect(deckKey(card, 5)).toBe(deckKey(card, 5));
+	it("keeps every other card's key when a card is taken out of the deck", () => {
+		// SwipeStack keeps a card's subtree (and its CardVideo buffer) alive
+		// while it stays mounted, which only works if hiding the card in front
+		// of it does not change its key.
+		const deck = [card("a"), card("b"), card("c"), card("b"), card("d")];
+		const before = deckKeys(deck);
+		const kept = deck.filter((c) => c.id !== "b");
+		expect(deckKeys(kept)).toEqual([before[0], before[2], before[4]]);
+	});
+
+	it("keeps the keys already dealt when a page is appended", () => {
+		const deck = [card("a"), card("b")];
+		expect(deckKeys([...deck, card("a")]).slice(0, 2)).toEqual(deckKeys(deck));
 	});
 });
 
@@ -120,7 +130,7 @@ describe("a real session's deck keys", () => {
 				// key, `ask-purpose-primary`" warning on device was reporting.
 				for (const swipes of [7, 12, 25, 40]) {
 					const deck = session(pool, swipes);
-					const keys = deck.map((c, i) => deckKey(c, i));
+					const keys = deckKeys(deck);
 					expect(dupes(keys), `at ${swipes} swipes`).toEqual([]);
 					expect(new Set(keys).size).toBe(deck.length);
 				}

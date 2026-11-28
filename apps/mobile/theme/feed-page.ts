@@ -49,25 +49,24 @@ import { CANVAS_ASPECT } from "./card-frame";
 import { headerScale } from "./header-scale";
 
 /**
- * Paper each side of the card. 8 makes the card 16pt wider than the 16 it
- * had through phase379 — on a 3x screen up to 1.18x the 1080px source;
- * `theme/card-aspect.test.ts` holds the ceiling.
- */
-export const GUTTER = 8;
-/**
- * The paper between two cards, and how much of the NEXT card shows past it at
- * the screen's right edge (phase414). The deck pages sideways now, and with
- * the card a gutter from both edges nothing on the page said there was a
- * second one. The card gives up 6pt of width for that strip — 9pt of height,
- * which the room above the block and the foot take 3 : 1. A wider strip costs
- * the film more than it tells the buyer.
+ * The paper between two cards, and how much of a NEIGHBOUR shows past it at
+ * the screen's edge. The deck pages sideways (phase414), and with the card a
+ * gutter from both edges nothing on the page said there was a second one.
  *
- * The gap equals `GUTTER` on purpose: the card BEFORE then ends exactly at the
- * screen's left edge, so the strip is only ever the next card — a 2pt sliver
- * of the last one on the left would read as a fault.
+ * phase414 showed the next card only, on the right. Owner, 2026-11-28: 「左边
+ * 也露出一点这样知道可以回看？」 — so the card is centred and the card before
+ * shows on the left as well. On the first card of a visit the left is paper,
+ * which says the same thing the other way round.
  */
-export const CARD_GAP = 8;
-export const NEXT_PEEK = 6;
+export const CARD_GAP = 5;
+export const CARD_PEEK = 6;
+/**
+ * Paper each side of the card: the gap, then a neighbour's strip. It was a
+ * plain 8 until phase414; the card is 6pt narrower than it was then — 9pt of
+ * height, which the room above the block and the foot take 3 : 1.
+ * `theme/card-aspect.test.ts` holds the ceiling on its width.
+ */
+export const GUTTER = CARD_GAP + CARD_PEEK;
 /** Card → tab bar, at least; a share of the leftover is added to it. */
 export const CARD_FOOT = 12;
 /** How the leftover is shared: above the block : under the card. */
@@ -107,9 +106,9 @@ export function blockHeight(width: number, rows: BlockRows): number {
  *                       the offline bar, when shown) and the tab bar; 0
  *                       before it is measured
  */
-/** The card: a gutter on its left, the gap and the next card's strip on its right. */
+/** The card, a gutter in from each edge. */
 export function cardWidthFor(width: number): number {
-	return Math.max(0, width - GUTTER - CARD_GAP - NEXT_PEEK);
+	return Math.max(0, width - GUTTER * 2);
 }
 
 export function feedPage(width: number, contentHeight: number): FeedPage {

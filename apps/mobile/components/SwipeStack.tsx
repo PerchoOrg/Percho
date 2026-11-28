@@ -47,8 +47,25 @@
  *
  * `tx` — the live drag offset — is handed to the render callbacks because the
  * trade-off card's halves brighten with the finger.
+ *
+ * ## A card can be taken out of the row (phase415)
+ *
+ * `dismiss` removes the card in front — it drops away where it stands and the
+ * cards after it close up — and the caller then takes it out of `items`. Every
+ * card after it moves up one index, so a card's index in `items` is no longer
+ * fixed for its lifetime. What IS fixed is its **UI index**: the number its
+ * style was created with. `shift` is the difference between the two, read off
+ * a card the stack already knows (keys must therefore survive a removal —
+ * `lib/feed/deck-key.ts`). After a removal the cards on screen keep their UI
+ * index, the cursor is already where it should be, and nothing moves.
  */
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
+} from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import {
 	GestureDetector,
@@ -76,10 +93,20 @@ const AROUND = 1;
 
 type CardRole = "top" | "next" | "after";
 
+/** How far a dismissed card drops, and how much it shrinks, as it fades. */
+const DISMISS_DROP_PT = 44;
+const DISMISS_SHRINK = 0.12;
+
 /** The imperative handle passed to `onPagerReady`. */
 export interface PagerHandle {
 	/** Turn the page without a drag — on (1) or back (-1) — with the same slide. */
 	page: (step: PageStep) => void;
+	/**
+	 * Take the card in front out of the row. It drops and fades where it
+	 * stands, the cards after it close up, and `onDismissed` then names it —
+	 * the caller must remove it from `items` there.
+	 */
+	dismiss: () => void;
 }
 
 /** What a face needs to animate with the drag. `tx` is live on the UI thread. */
@@ -132,11 +159,10 @@ export interface SwipeStackProps<T> {
 	activeIndex: number;
 	/** The page turned: `item` is the card that was in front when it did. */
 	onPage: (step: PageStep, item: T) => void;
-	/**
-	 * Whether a swipe may turn back. False on the first card of a visit, and
-	 * wherever the caller will not have the card before shown again.
-	 */
+	/** Whether a swipe may turn back. False on the first card of a visit. */
 	canGoBack: boolean;
+	/** A `dismiss` has run: take `item` out of `items` now. */
+	onDismissed?: (item: T) => void;
 
 	/**
 	 * Called when a release was a TAP on an interactive card target (the save
@@ -148,15 +174,16 @@ export interface SwipeStackProps<T> {
 	onTapTarget?: (target: string) => void;
 
 	/**
-	 * Called ONCE on mount with a stable handle that turns the page for the
-	 * caller — the card's hide button moves on without a drag.
+	 * Called with a stable handle that turns the page, or takes the card in
+	 * front out, for the caller.
 	 */
 	onPagerReady?: (pager: PagerHandle) => void;
 
 	renderCard: (item: T, args: CardRenderArgs) => React.ReactNode;
 	/**
 	 * React key per mounted card. MUST be unique across the whole `items` array,
-	 * which is why the absolute index is passed in.
+	 * and must not change for a card that stays in it when another is taken
+	 * out — the stack finds its place again by this key.
 	 *
 	 * A content id alone is NOT unique here: §1.9 has the composer deliberately
 	 * re-emit a card the buyer has already seen once fresh inventory runs out
@@ -180,11 +207,19 @@ export interface SwipeStackProps<T> {
 }
 
 interface StackCardProps {
-	/** This card's index in `items`. Fixed for the card's whole lifetime. */
-	absIndex: number;
-	/** UI-thread absolute index of the card in front. */
+	/**
+	 * This card's UI index: its index in `items` plus the stack's `shift`.
+	 * Fixed for as long as the card is on screen — the one exception is the
+	 * card BEFORE a dismissed one, which `hole` covers.
+	 */
+	uiIndex: number;
+	/** UI index of the card in front, on the UI thread. */
 	topAbs: SharedValue<number>;
 	dragX: SharedValue<number>;
+	/** This is the card a `dismiss` is taking out. */
+	leaving: boolean;
+	gone: SharedValue<number>;
+	hole: SharedValue<number>;
 	cardWidth: number;
 	/** Card to card: a card's width plus the gap. */
 	pitch: number;
@@ -197,15 +232,35 @@ interface StackCardProps {
 }
 
 /**
- * One card's frame. Its animated style is created once, with `absIndex`
+ * One card's frame. Its animated style is created once, with `uiIndex`
  * captured as a constant, and is never swapped for another — which is what
  * makes the stale-prop ghosting and the handoff jump structurally impossible
- * rather than merely fixed.
+ * rather than merely fixed. Every branch writes the SAME props, for the first
+ * of those reasons.
+ *
+ * ── A dismissal, in three kinds of card ─────────────────────────────────────
+ *
+ * The card LEAVING stays where it stands and drops, shrinks and fades with
+ * `gone`. It is told by a prop rather than by its index: an index can be
+ * handed to another card before this one unmounts.
+ *
+ * The cards AFTER it follow the drag as on any page turn — it carries them up
+ * one place, and the handoff moves the cursor in the frame it is zeroed.
+ *
+ * The cards BEFORE it must not move at all, and that handoff would move them:
+ * the cursor steps past a card that is no longer there. So while `hole` names
+ * the gap they are drawn relative to IT. When the caller's list catches up,
+ * such a card's UI index rises by one — to `hole` itself, which is no longer
+ * "before" it — and the ordinary formula puts it in exactly the same place.
+ * Both descriptions agree, so it does not matter which frame the list lands on.
  */
 function StackCard({
-	absIndex,
+	uiIndex,
 	topAbs,
 	dragX,
+	leaving,
+	gone,
+	hole,
 	cardWidth,
 	pitch,
 	restTop,
@@ -215,11 +270,27 @@ function StackCard({
 	// Every card is the same box (`cardFrameHeight`) at the same height on the
 	// page; the only thing that moves one is the page turning.
 	const box = { width: cardWidth, height: frameHeight, top: restTop };
-	const style = useAnimatedStyle(() => ({
-		transform: [
-			{ translateX: cardPageX(absIndex - topAbs.value, dragX.value, pitch) },
-		],
-	}));
+	const style = useAnimatedStyle(() => {
+		if (leaving) {
+			const g = gone.value;
+			return {
+				opacity: 1 - g,
+				transform: [
+					{ translateX: 0 },
+					{ translateY: DISMISS_DROP_PT * g },
+					{ scale: 1 - DISMISS_SHRINK * g },
+				],
+			};
+		}
+		const x =
+			hole.value >= 0 && uiIndex < hole.value
+				? (uiIndex - hole.value) * pitch
+				: cardPageX(uiIndex - topAbs.value, dragX.value, pitch);
+		return {
+			opacity: 1,
+			transform: [{ translateX: x }, { translateY: 0 }, { scale: 1 }],
+		};
+	});
 
 	return (
 		<>
@@ -243,6 +314,7 @@ export function SwipeStack<T>({
 	activeIndex,
 	onPage,
 	canGoBack,
+	onDismissed,
 	onTapTarget,
 	onPagerReady,
 
@@ -259,40 +331,144 @@ export function SwipeStack<T>({
 	const topCapability: CardCapability =
 		top === undefined ? INERT_CAPABILITY : capability(top);
 
-	const { gesture, panGesture, tx, topAbs, tapSlot, tapStatus, page } =
-		useSwipeCard({
-			cardWidth,
-			pitch,
-			capability: topCapability,
-			canGoBack,
-			onPage: (step) => {
-				if (top) onPage(step, top);
-			},
-			onTapTarget: (target) => {
-				if (target === "__touchdown__") return;
-				if (top) onTapTarget?.(target);
-			},
-		});
+	// Geometry does not depend on this range — only on each card's UI index —
+	// so widening or narrowing it cannot move anything the buyer sees.
+	const from = Math.max(0, activeIndex - AROUND);
+	const to = Math.min(items.length, activeIndex + AROUND + 1);
+	const mounted: { item: T; absIndex: number; key: string }[] = [];
+	for (let i = from; i < to; i++) {
+		const item = items[i];
+		if (item !== undefined) {
+			mounted.push({ item, absIndex: i, key: keyExtractor(item, i) });
+		}
+	}
+
+	/**
+	 * `shift`: a card's UI index minus its index in `items`. Read off a card
+	 * the stack already drew — the one in front if it can be, since after a
+	 * removal that card and the one after it are the two that kept their UI
+	 * index. With no card known (a new deck) the last shift is as good as any.
+	 *
+	 * Written during render, and safe to: the result is a function of the keys
+	 * and the map, and running it twice gives the same map.
+	 */
+	const uiIndexOf = useRef(new Map<string, number>());
+	const lastShift = useRef(0);
+	const anchor =
+		mounted.find(
+			(m) => m.absIndex === activeIndex && uiIndexOf.current.has(m.key),
+		) ??
+		mounted.find(
+			(m) => m.absIndex > activeIndex && uiIndexOf.current.has(m.key),
+		) ??
+		mounted.find((m) => uiIndexOf.current.has(m.key));
+	const shift = anchor
+		? (uiIndexOf.current.get(anchor.key) ?? 0) - anchor.absIndex
+		: lastShift.current;
+	lastShift.current = shift;
+	uiIndexOf.current = new Map(mounted.map((m) => [m.key, m.absIndex + shift]));
+
+	/** The card a `dismiss` is taking out, from the tap until it is removed. */
+	const [leavingKey, setLeavingKey] = useState<string | null>(null);
+	const leavingItem = useRef<T | null>(null);
+
+	const {
+		gesture,
+		panGesture,
+		tx,
+		topAbs,
+		tapSlot,
+		tapStatus,
+		page,
+		dismiss,
+		gone,
+		hole,
+	} = useSwipeCard({
+		cardWidth,
+		pitch,
+		capability: topCapability,
+		canGoBack,
+		// Index 0 of `items`, as a UI index.
+		firstIndex: shift,
+		onPage: (step) => {
+			if (top) onPage(step, top);
+		},
+		onDismissed: (done) => {
+			const item = leavingItem.current;
+			leavingItem.current = null;
+			// In the same commit as the caller's removal, so the card is never
+			// drawn again without its `leaving`.
+			setLeavingKey(null);
+			if (done && item !== null) onDismissed?.(item);
+		},
+		onTapTarget: (target) => {
+			if (target === "__touchdown__") return;
+			if (top) onTapTarget?.(target);
+		},
+	});
 
 	/**
 	 * Keep the UI-thread cursor in step with React.
 	 *
-	 * For a page turn this is idempotent: the handoff worklet already moved
-	 * `topAbs` to exactly this value one or two frames ago, so the write changes
-	 * nothing and the late re-render cannot move a card. For an index the
-	 * caller set itself (a recomposed deck starts again at 0) no worklet ran,
-	 * so this is what moves the cards — a layout effect rather than a passive
-	 * one so it lands in the same commit.
+	 * For a page turn or a dismissal this is idempotent: the handoff worklet
+	 * already moved `topAbs` to exactly this value one or two frames ago, so
+	 * the write changes nothing and the late re-render cannot move a card. For
+	 * an index the caller set itself (a recomposed deck starts again at 0) no
+	 * worklet ran, so this is what moves the cards — a layout effect rather
+	 * than a passive one so it lands in the same commit.
 	 */
 	useLayoutEffect(() => {
-		topAbs.value = activeIndex;
-	}, [activeIndex, topAbs]);
+		topAbs.value = activeIndex + shift;
+	}, [activeIndex, shift, topAbs]);
 
-	// Handed over ONCE: `page` is stable until the card's width changes, and
-	// the caller keeps it in a ref.
+	/**
+	 * The caller's list has caught up with a dismissal: every card left has
+	 * its own UI index again and nothing hangs off the gap.
+	 *
+	 * Two frames late on purpose. The card before the gap is right under
+	 * either description only while `hole` is still set or its new UI index
+	 * has reached the UI thread; clearing `hole` first would draw it a card
+	 * too far left for a frame. Nothing needs the gap cleared sooner — a page
+	 * turn clears it for itself.
+	 */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `shift` is the trigger — it changes when a card before the cursor leaves `items`
 	useEffect(() => {
-		onPagerReady?.({ page });
-	}, [onPagerReady, page]);
+		let second = 0;
+		const first = requestAnimationFrame(() => {
+			second = requestAnimationFrame(() => {
+				hole.value = -1;
+			});
+		});
+		return () => {
+			cancelAnimationFrame(first);
+			cancelAnimationFrame(second);
+		};
+	}, [shift, hole]);
+	useLayoutEffect(() => {
+		if (leavingKey === null) gone.value = 0;
+	}, [leavingKey, gone]);
+
+	const topKey = mounted.find((m) => m.absIndex === activeIndex)?.key;
+	const inFront = useRef<{ item: T; key: string } | null>(null);
+	inFront.current =
+		top !== undefined && topKey !== undefined
+			? { item: top, key: topKey }
+			: null;
+
+	// `page` and `dismiss` are stable until the card's width changes, and the
+	// caller keeps the handle in a ref.
+	useEffect(() => {
+		onPagerReady?.({
+			page,
+			dismiss: () => {
+				const front = inFront.current;
+				if (front === null || leavingItem.current !== null) return;
+				leavingItem.current = front.item;
+				setLeavingKey(front.key);
+				dismiss();
+			},
+		});
+	}, [onPagerReady, page, dismiss]);
 
 	/**
 	 * The FIXED stage (owner spec 2026-08-15: 「页面骨架固定, card 可以不同
@@ -336,26 +512,19 @@ export function SwipeStack<T>({
 		deckGesture: panGesture,
 	});
 
-	// Geometry does not depend on this range — only on each card's absolute
-	// index — so widening or narrowing it cannot move anything the buyer sees.
-	const from = Math.max(0, activeIndex - AROUND);
-	const to = Math.min(items.length, activeIndex + AROUND + 1);
-	const mounted: { item: T; absIndex: number }[] = [];
-	for (let i = from; i < to; i++) {
-		const item = items[i];
-		if (item !== undefined) mounted.push({ item, absIndex: i });
-	}
-
 	return (
 		<View style={styles.stack} onLayout={onStageLayout}>
 			<GestureDetector gesture={gesture}>
 				<View style={[styles.frame, { width: cardWidth }]}>
-					{mounted.map(({ item, absIndex }) => (
+					{mounted.map(({ item, absIndex, key }) => (
 						<StackCard
-							key={keyExtractor(item, absIndex)}
-							absIndex={absIndex}
+							key={key}
+							uiIndex={absIndex + shift}
 							topAbs={topAbs}
 							dragX={tx}
+							leaving={key === leavingKey}
+							gone={gone}
+							hole={hole}
 							cardWidth={cardWidth}
 							pitch={pitch}
 							restTop={restTop}

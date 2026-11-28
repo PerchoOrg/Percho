@@ -12,8 +12,10 @@
  *   - resist a pull back when there is no card to go back to,
  *   - on release, delegate the decision to the pure `decideSwipe`, slide a
  *     whole card on or back, or spring to rest for a non-commit,
- *   - turn the page for a caller (`page`) — the card's hide button moves on
- *     without a drag.
+ *   - turn the page for a caller (`page`), and take the card in front out of
+ *     the row for one (`dismiss`) — the card's "not for me" button. That is
+ *     NOT a page turn and does not look like one: the card drops away where
+ *     it stands, and the cards after it close the space it leaves.
  *
  * The hook owns none of the feed semantics — it reports the step to `onPage`
  * and lets the caller decide what moving on from a card records. What a given
@@ -29,11 +31,14 @@ import {
 } from "react";
 import { Gesture } from "react-native-gesture-handler";
 import {
+	Easing,
 	type SharedValue,
 	runOnJS,
 	runOnUI,
 	useSharedValue,
+	withDelay,
 	withSpring,
+	withTiming,
 } from "react-native-reanimated";
 import {
 	type CardCapability,
@@ -70,6 +75,12 @@ const PAGE_SPRING = {
 } as const;
 const ACTIVE_OFFSET_X = 10;
 const FAIL_OFFSET_Y = 20;
+/**
+ * A dismissed card's own exit, and how long after it starts the cards behind
+ * it begin to close up — so the eye sees the card go before anything slides.
+ */
+const DISMISS_MS = 220;
+const CLOSE_DELAY_MS = 110;
 
 interface UseSwipeCardArgs {
 	cardWidth: number;
@@ -83,8 +94,20 @@ interface UseSwipeCardArgs {
 	capability: CardCapability;
 	/** Whether there is a card to go back to. */
 	canGoBack: boolean;
+	/**
+	 * The UI index of the caller's first card. `canGoBack` comes from React and
+	 * is a frame or two behind a page turn; this is what stops a second quick
+	 * swipe back from turning past the first card in that time.
+	 */
+	firstIndex: number;
 	/** Called on the JS thread once the page has turned and settled. */
 	onPage: (step: PageStep) => void;
+	/**
+	 * Called on the JS thread once a `dismiss` has run and the row has closed —
+	 * `done` — or at once with `false` when it could not start because a page
+	 * was turning.
+	 */
+	onDismissed: (done: boolean) => void;
 	/**
 	 * Called when a release is a TAP on an interactive card target (the save
 	 * heart / the explore link). `target` is the tap target's id; the card
@@ -144,6 +167,21 @@ interface UseSwipeCardResult {
 	 * the caller knows where it is going. A no-op while a turn is under way.
 	 */
 	page: (step: PageStep) => void;
+	/**
+	 * Take the card in front out of the row: `gone` runs 0 → 1 for its own
+	 * exit, the cards after it slide up one place, and `onDismissed` fires. The
+	 * caller then removes the card from its list. A no-op while a turn is
+	 * under way.
+	 */
+	dismiss: () => void;
+	/** 0 → 1 over a dismissed card's exit. Only that card reads it. */
+	gone: SharedValue<number>;
+	/**
+	 * The UI index a dismissal is taking out, or -1. The cards BEFORE it are
+	 * drawn relative to it rather than to the cursor until the caller's list
+	 * catches up — see `StackCard`.
+	 */
+	hole: SharedValue<number>;
 }
 
 /**
@@ -164,11 +202,15 @@ export function useSwipeCard({
 	pitch,
 	capability,
 	canGoBack,
+	firstIndex,
 	onPage,
+	onDismissed,
 	onTapTarget,
 }: UseSwipeCardArgs): UseSwipeCardResult {
 	const tx = useSharedValue(0);
 	const topAbs = useSharedValue(0);
+	const gone = useSharedValue(0);
+	const hole = useSharedValue(-1);
 	/**
 	 * `canGoBack`, mirrored for the worklets rather than captured by the
 	 * gesture: it flips when the page turns, and a value the gesture memo
@@ -176,9 +218,11 @@ export function useSwipeCard({
 	 * costs mid-touch.
 	 */
 	const backOpen = useSharedValue(canGoBack);
+	const floor = useSharedValue(firstIndex);
 	useLayoutEffect(() => {
 		backOpen.value = canGoBack;
-	}, [canGoBack, backOpen]);
+		floor.value = firstIndex;
+	}, [canGoBack, firstIndex, backOpen, floor]);
 	/**
 	 * The tap gesture's two slots. `tapSlot.target` is written by the card
 	 * faces (on their own touch start) and read by the pan's `onEnd`; the
@@ -204,8 +248,8 @@ export function useSwipeCard({
 	 * A ref keeps the latest callback reachable without making its identity a
 	 * reason to rebuild.
 	 */
-	const handlers = useRef({ onPage, onTapTarget });
-	handlers.current = { onPage, onTapTarget };
+	const handlers = useRef({ onPage, onDismissed, onTapTarget });
+	handlers.current = { onPage, onDismissed, onTapTarget };
 	// Mirror into the module-level slot so `dispatchTapTarget` (which runs on
 	// the JS thread via runOnJS) can reach it without a ref deref in a worklet.
 	lastTapTarget = onTapTarget ?? null;
@@ -264,12 +308,56 @@ export function useSwipeCard({
 			// cancels the spring below, and a cancelled animation never calls its
 			// callback — which is the handoff, so the deck would never move.
 			committed.value = true;
+			// A dismissal's hole is long closed by the time a page can turn.
+			hole.value = -1;
 			tx.value = withSpring(-step * pitch, PAGE_SPRING, (finished) => {
 				if (finished) handoff(step);
 			});
 		},
-		[pitch, tx, committed, handoff],
+		[pitch, tx, hole, committed, handoff],
 	);
+
+	const settleDismiss = useCallback((done: boolean) => {
+		handlers.current.onDismissed(done);
+	}, []);
+
+	/**
+	 * A dismissal's handoff. For every card AFTER the one that left this is a
+	 * page turn's — the cursor moves on by one in the frame the drag is zeroed.
+	 * The cards before it do not see it at all: they hang off `hole`.
+	 */
+	const handoffDismiss = useCallback(() => {
+		"worklet";
+		topAbs.value = topAbs.value + 1;
+		tx.value = 0;
+		committed.value = false;
+		runOnJS(settleDismiss)(true);
+	}, [topAbs, tx, committed, settleDismiss]);
+
+	// `runOnUI` serializes its closure: shared values and worklets are safe to
+	// capture, a plain object holding them is not.
+	const dismiss = useCallback(() => {
+		runOnUI(() => {
+			"worklet";
+			if (committed.value) {
+				runOnJS(settleDismiss)(false);
+				return;
+			}
+			committed.value = true;
+			hole.value = topAbs.value;
+			gone.value = 0;
+			gone.value = withTiming(1, {
+				duration: DISMISS_MS,
+				easing: Easing.in(Easing.quad),
+			});
+			tx.value = withDelay(
+				CLOSE_DELAY_MS,
+				withSpring(-pitch, PAGE_SPRING, (finished) => {
+					if (finished) handoffDismiss();
+				}),
+			);
+		})();
+	}, [pitch, tx, topAbs, gone, hole, committed, handoffDismiss, settleDismiss]);
 
 	// Destructured out of the capability object so the memo depends on the three
 	// VALUES, not on object identity. The caller resolves a capability per render
@@ -292,7 +380,10 @@ export function useSwipeCard({
 					cardWidth,
 					maxDisplacementRatio,
 				);
-				tx.value = pageDrag(clamped, backOpen.value && topAbs.value > 0);
+				tx.value = pageDrag(
+					clamped,
+					backOpen.value && topAbs.value > floor.value,
+				);
 			})
 			.onEnd((e) => {
 				if (!panLive({ pannable, committed: committed.value })) return;
@@ -338,7 +429,7 @@ export function useSwipeCard({
 						}),
 						commits,
 					),
-					backOpen.value && topAbs.value > 0,
+					backOpen.value && topAbs.value > floor.value,
 				);
 				if (step === 0) {
 					tx.value = withSpring(0);
@@ -355,6 +446,7 @@ export function useSwipeCard({
 		tx,
 		topAbs,
 		backOpen,
+		floor,
 		committed,
 		tapSlot,
 		tapStatus,
@@ -408,8 +500,6 @@ export function useSwipeCard({
 		);
 	}, [pannable, tapStatus, tapSlot, committed]);
 
-	// `runOnUI` serializes its closure: the shared value and the `turn` worklet
-	// are safe to capture, a plain object holding them is not.
 	const page = useCallback(
 		(step: PageStep) => {
 			runOnUI(() => {
@@ -431,5 +521,8 @@ export function useSwipeCard({
 		tapSlot,
 		tapStatus,
 		page,
+		dismiss,
+		gone,
+		hole,
 	};
 }

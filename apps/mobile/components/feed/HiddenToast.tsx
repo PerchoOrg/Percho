@@ -1,9 +1,9 @@
 /**
- * What the card's cross says back (phase414): the card is hidden, and the one
+ * What the card's thumbs-down says back (phase414): the card is hidden, and the one
  * chance to take that back without leaving the feed.
  *
  * The You tab's RECENT list is still where a verdict is reviewed and undone
- * (phase140, chosen then over an Undo toast for a swipe). The cross is not a
+ * (phase140, chosen then over an Undo toast for a swipe). The thumbs-down is not a
  * swipe: it is one tap, on a control the thumb can land on by accident, and
  * it removes the card for good — so its undo is where the tap was.
  */

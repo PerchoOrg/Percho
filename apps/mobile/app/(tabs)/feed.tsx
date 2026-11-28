@@ -11,8 +11,8 @@
  *
  * A swipe turns the page and decides nothing (phase414; owner, 2026-11-27:
  * 「滑走不一定不喜欢」). The verdicts are two controls in the card's corner: the
- * heart — a like, and the save it always was — and the cross, which hides the
- * card. Both land in `recordVerdict`.
+ * heart — a like, and the save it always was — and the thumbs-down, which
+ * hides the card. Both land in `recordVerdict`.
  *
  * The §1.1 red line is satisfied structurally, not by null checks: the gesture
  * layer never sees a card kind at all (capability is data resolved before the
@@ -66,7 +66,7 @@ import { useTestHomes } from "../../hooks/use-test-homes";
 import { cardBehavior } from "../../lib/feed/behavior";
 import type { FeedCardV3 } from "../../lib/feed/card-types";
 import { cityFilmCard } from "../../lib/feed/city-film-card";
-import { deckKey } from "../../lib/feed/deck-key";
+import { deckKeys } from "../../lib/feed/deck-key";
 import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
 import { cardPoster } from "../../lib/feed/first-poster";
@@ -125,7 +125,6 @@ import {
 	CARD_FOOT,
 	CARD_GAP,
 	GUTTER,
-	NEXT_PEEK,
 	ROOM_ABOVE,
 	ROOM_BELOW,
 	feedPage,
@@ -272,7 +271,6 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	const hideForGood = useFeedSession((s) => s.hide);
 	const recordInterest = useFeedSession((s) => s.recordInterest);
 	const bringBack = useFeedSession((s) => s.bringBack);
-	const hiddenIds = useFeedSession((s) => s.hiddenIds);
 	const beginSession = useFeedSession((s) => s.beginSession);
 
 	/**
@@ -704,7 +702,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	);
 
 	/**
-	 * A VERDICT on a card: the heart ("right") or the cross ("left").
+	 * A VERDICT on a card: the heart ("right") or the thumbs-down ("left").
 	 *
 	 * Until phase414 this ran on every swipe. What it does is unchanged — the
 	 * telemetry event, the signals, the re-ranked tail — only what calls it.
@@ -743,21 +741,13 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 			 * card in front, its neighbours and some slack) and reorders each kind
 			 * only among its own slots, so the deck-key invariant and the mix
 			 * rhythm both hold by construction.
-			 *
-			 * A hidden card's later copies go too — the composer repeats a card
-			 * once fresh ones run out. Its place IN FRONT is kept: taking a card
-			 * out from under the window would re-key every card after it.
 			 */
-			setDeck((d) => {
-				const kept =
-					verdict === "left"
-						? d.filter((c, i) => i <= index + 1 || c.id !== card.id)
-						: d;
-				// Not on a place's own page: its order is the place's.
-				return inPlace
-					? kept
-					: rerankTail(kept, index + 1 + RERANK_HOLD, fresh, poolRef.current);
-			});
+			// Not on a place's own page: its order is the place's.
+			if (!inPlace) {
+				setDeck((d) =>
+					rerankTail(d, index + 1 + RERANK_HOLD, fresh, poolRef.current),
+				);
+			}
 		},
 		[enqueue, takeSeq, stage, sessionN, recordSwipe, hideForGood, inPlace],
 	);
@@ -799,21 +789,24 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 		[activeIndex, recordView, recordSwipeHint],
 	);
 
-	/** Turns the page for a control rather than a drag (`SwipeStack`). */
+	/** Turns the page, or takes the card in front out, for a control (`SwipeStack`). */
 	const pager = useRef<PagerHandle | null>(null);
 	const onPagerReady = useCallback((handle: PagerHandle) => {
 		pager.current = handle;
 	}, []);
 
 	/**
-	 * The card's cross. The card is hidden for good, the deck moves on, and a
-	 * bar offers the way back for a few seconds (`HiddenToast`).
+	 * The card's thumbs-down. The card is hidden for good and leaves the deck —
+	 * it drops away rather than sliding off, so it does not look like a page
+	 * turn (owner, 2026-11-28: 「点击x的动画效果和滑动应该区分开」) — and a bar
+	 * offers the way back for a few seconds (`HiddenToast`).
 	 *
-	 * The hidden card keeps its slot in this deck, so a swipe back stops at the
-	 * card after it (`canGoBack`): what the buyer just dismissed is not one
-	 * swipe away from being in front again.
+	 * phase414 left the hidden card in its slot and stopped a swipe back at
+	 * the card after it. Owner, same day: 「点击x之后就不能向回看了」. It is taken
+	 * out of the deck now (`onDismissed`), so a swipe back goes to the card
+	 * before it.
 	 */
-	const [hiddenNote, setHiddenNote] = useState<string | null>(null);
+	const [hiddenNote, setHiddenNote] = useState<FeedCardV3 | null>(null);
 	useEffect(() => {
 		if (hiddenNote === null) return;
 		const t = setTimeout(() => setHiddenNote(null), 5000);
@@ -823,27 +816,43 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	const hideCard = useCallback(
 		(card: FeedCardV3) => {
 			recordVerdict(card, "left");
-			setHiddenNote(card.id);
-			pager.current?.page(1);
+			setHiddenNote(card);
+			pager.current?.dismiss();
 		},
 		[recordVerdict],
 	);
 
+	/**
+	 * The stack has finished taking `card` out: take it out of the deck, every
+	 * copy of it (the composer repeats a card once fresh ones run out). The
+	 * cursor comes back by the copies that sat at or before it, which leaves it
+	 * on the card that came after.
+	 */
+	const onDismissed = useCallback((card: FeedCardV3) => {
+		const at = activeIndexRef.current;
+		const gone = deckRef.current
+			.slice(0, at + 1)
+			.filter((c) => c.id === card.id).length;
+		setDeck((d) => d.filter((c) => c.id !== card.id));
+		setActiveIndex(at + 1 - gone);
+	}, []);
+
 	const undoHide = useCallback(() => {
 		if (hiddenNote === null) return;
 		setHiddenNote(null);
-		bringBack(hiddenNote);
-		// Turn back to it — unless the buyer has gone further on since, and
-		// then it simply comes round again.
-		const at = activeIndexRef.current;
-		if (deckRef.current[at - 1]?.id !== hiddenNote) return;
-		// Hidden off the end of a deck, there is no stack mounted to turn.
-		if (at >= deckRef.current.length) setActiveIndex(at - 1);
-		else pager.current?.page(-1);
+		bringBack(hiddenNote.id);
+		// Back in front, wherever the buyer has got to since.
+		setDeck((d) => putOnTop(d, activeIndexRef.current, hiddenNote));
 	}, [hiddenNote, bringBack]);
 
-	const before = deck[activeIndex - 1];
-	const canGoBack = before !== undefined && !hiddenIds.includes(before.id);
+	const canGoBack = activeIndex > 0;
+
+	/** One React key per card of the deck (`lib/feed/deck-key.ts`). */
+	const keys = useMemo(() => deckKeys(deck), [deck]);
+	const keyOf = useCallback(
+		(_card: FeedCardV3, index: number) => keys[index] ?? `#${index}`,
+		[keys],
+	);
 
 	/**
 	 * The pill at a card's bottom right: the way into its own deck — a city's
@@ -1326,10 +1335,11 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 								activeIndex={activeIndex}
 								onPage={onPage}
 								canGoBack={canGoBack}
+								onDismissed={onDismissed}
 								onTapTarget={onTapTarget}
 								onPagerReady={onPagerReady}
 								renderCard={renderCard}
-								keyExtractor={deckKey}
+								keyExtractor={keyOf}
 								cardWidth={cardWidth}
 								cardGap={CARD_GAP}
 								capability={capability}
@@ -1401,10 +1411,8 @@ const styles = StyleSheet.create({
 	stackWrap: {
 		alignItems: "center",
 		justifyContent: "center",
-		// The card a gutter from the left edge; on its right the gap, then the
-		// strip of the next card (`theme/feed-page.ts`).
-		paddingLeft: GUTTER,
-		paddingRight: CARD_GAP + NEXT_PEEK,
+		// The gap, then a strip of the card before or after (`theme/feed-page.ts`).
+		paddingHorizontal: GUTTER,
 	},
 	/**
 	 * Placeholder frame for skeleton / exhausted states — fills the same box
@@ -1413,9 +1421,9 @@ const styles = StyleSheet.create({
 	cardContainer: { flex: 1, alignSelf: "stretch" },
 	pausedWrap: {
 		...StyleSheet.absoluteFill,
-		// The card's own box, not the stage's: the strip beside it is not it.
+		// The card's own box, not the stage's: the strips beside it are not it.
 		left: GUTTER,
-		right: CARD_GAP + NEXT_PEEK,
+		right: GUTTER,
 		alignItems: "center",
 		justifyContent: "center",
 	},
@@ -1423,7 +1431,7 @@ const styles = StyleSheet.create({
 	hintWrap: {
 		position: "absolute",
 		left: GUTTER,
-		right: CARD_GAP + NEXT_PEEK,
+		right: GUTTER,
 		bottom: 132,
 		alignItems: "center",
 	},
@@ -1431,7 +1439,7 @@ const styles = StyleSheet.create({
 	toastWrap: {
 		position: "absolute",
 		left: GUTTER + 12,
-		right: CARD_GAP + NEXT_PEEK + 12,
+		right: GUTTER + 12,
 		bottom: 104,
 	},
 	pausedDisc: {
