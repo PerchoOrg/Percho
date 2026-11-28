@@ -148,8 +148,16 @@ import { textStyles } from "../../theme/typography";
  *  open it. Generous on purpose: it has to cover the whole 26pt photo dot
  *  AND the name under it, because a buyer aims at the name as readily as
  *  at the picture. Two marks this close to each other are separated by
- *  nearest-wins, not by the radius. */
-const MARK_TAP_RADIUS_PX = 36;
+ *  nearest-wins, not by the radius.
+ *
+ *  64 since phase418; it was 36. The owner's taps, logged on his phone
+ *  (2026-11-28, `tapLog`): of ten aimed at a mark, six measured 42–48pt from
+ *  the community's point and two 56–60 — every one arrived, and every one
+ *  was turned away by the radius. So the mark is being drawn, or the tap
+ *  measured, about 46pt from where this file thinks the mark is, and which
+ *  way is not yet known (the log now says). Until the drawing is put right
+ *  the reach covers the gap; the hit squares below are sized by this too. */
+const MARK_TAP_RADIUS_PX = 64;
 
 /** The zoom bands (see the header). Each is a `latitudeDelta` ceiling:
  *  CITY turns the viewport feed and the community dots on, HOME adds the
@@ -488,6 +496,23 @@ export default function SearchTab() {
 				(Math.abs(lat - tap.latitude) / region.latitudeDelta) * mapSize.h;
 			return Math.hypot(dx, dy);
 		};
+		// Where the tap fell from the nearest community's point, in screen
+		// points: right of it and below it. Logged for every tap — it is the
+		// measurement of how far the mark is drawn from its point.
+		let off: { slug: string; right: number; below: number } | undefined;
+		for (const c of shown.communities) {
+			if (c.lat === undefined || c.lng === undefined) continue;
+			const right = Math.round(
+				((tap.longitude - c.lng) / region.longitudeDelta) * mapSize.w,
+			);
+			const below = Math.round(
+				((c.lat - tap.latitude) / region.latitudeDelta) * mapSize.h,
+			);
+			if (!off || Math.hypot(right, below) < Math.hypot(off.right, off.below)) {
+				off = { slug: c.slug, right, below };
+			}
+		}
+		tapLog("tap from the nearest point", off);
 		let best: { path: string; d: number } | undefined;
 		const consider = (path: string, d: number, within: number) => {
 			if (d <= within && (!best || d < best.d)) best = { path, d };

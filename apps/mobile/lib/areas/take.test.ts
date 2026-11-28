@@ -1,4 +1,5 @@
 import type { Area, AreaMetric, MetricKey } from "@percho/shared/lenses";
+import { defaultWeights } from "@percho/shared/priorities";
 import { describe, expect, it } from "vitest";
 import { buildAreaTake } from "./take";
 
@@ -96,6 +97,7 @@ describe("buildAreaTake — personalised by declared priorities", () => {
 
 	it("breaks the classic trade toward schools when that is what they said", () => {
 		const take = buildAreaTake(TRADE, {
+			...defaultWeights(),
 			schools: 3,
 			cost: 1,
 			commute: 1,
@@ -111,6 +113,7 @@ describe("buildAreaTake — personalised by declared priorities", () => {
 
 	it("breaks the same trade the other way for a cost-first buyer", () => {
 		const take = buildAreaTake(TRADE, {
+			...defaultWeights(),
 			schools: 1,
 			cost: 3,
 			commute: 1,
@@ -123,6 +126,7 @@ describe("buildAreaTake — personalised by declared priorities", () => {
 
 	it("still refuses to choose when they have said nothing", () => {
 		const take = buildAreaTake(TRADE, {
+			...defaultWeights(),
 			schools: 1,
 			cost: 1,
 			commute: 1,
@@ -135,6 +139,7 @@ describe("buildAreaTake — personalised by declared priorities", () => {
 		// There is no commute figure for a county, so a commute-first buyer
 		// gets the honest shrug rather than an invented lean.
 		const take = buildAreaTake(TRADE, {
+			...defaultWeights(),
 			schools: 1,
 			cost: 1,
 			commute: 3,

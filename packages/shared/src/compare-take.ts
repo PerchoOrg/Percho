@@ -36,9 +36,11 @@ export interface CompareTake {
  * a form. These are the same four things said the way a person says them.
  */
 export const PRIORITY_PROSE = {
+	safety: "safety",
 	schools: "schools",
 	cost: "what it really costs",
 	commute: "getting around",
+	potential: "where the place is heading",
 	community: "the community itself",
 } as const;
 

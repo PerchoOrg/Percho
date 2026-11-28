@@ -37,36 +37,69 @@ import { DEFAULT_LENS, type LensId } from "./lenses";
  * priorities change what they see FIRST, never what exists.
  */
 
-/** The four the study's answers actually cluster into. */
-export type PriorityKey = "schools" | "cost" | "commute" | "community";
+/**
+ * What a row, a summary or a setting can be ABOUT.
+ *
+ * ── The five a buyer can state (phase418) ──────────────────────────────────
+ *
+ * Until phase418 the You tab offered four — schools, cost, commute, and "the
+ * community itself" — clustered from the study's answers. They did not match
+ * the app they sat in: every city's and community's page is laid out as
+ * Safety · Schools · Convenience · Potential · Cost (`GLANCE_TOPICS`), so a
+ * buyer who said what mattered could not find a box of that name, and two of
+ * the five could not be chosen at all (owner, 2026-11-28: 「your preference
+ * 重新设计一下纬度」; his "按这个做" to `/demos/card-round4-v1`). The list is
+ * those five now, in the pages' order and in their words.
+ *
+ * `commute` keeps its key — it is what the comparison rows are tagged with —
+ * and wears the pages' word for it, Convenience: how far the daily errands
+ * and the drive actually are.
+ *
+ * `community` is no longer something a buyer states. It stays a key because
+ * comparison rows about a place's character (quiet, friendly, its amenities)
+ * are still tagged with it; with no way to raise it, those rows simply keep
+ * their natural order.
+ */
+export type PriorityKey =
+	| "safety"
+	| "schools"
+	| "commute"
+	| "potential"
+	| "cost"
+	| "community";
 
 export interface Priority {
 	key: PriorityKey;
 	label: string;
-	/** One line: what picking this changes. */
 	blurb: string;
 }
 
+/** The ones a buyer can state, in the order the pages give them. */
 export const PRIORITIES: readonly Priority[] = [
+	{
+		key: "safety",
+		label: "Safety",
+		blurb: "Crime against the state's rate, flood zones, the nearest hospital",
+	},
 	{
 		key: "schools",
 		label: "Schools",
 		blurb: "District test scores and the zones a home is assigned to",
 	},
 	{
-		key: "cost",
-		label: "What it really costs",
-		blurb: "Tax, utilities, trash and HOA — the monthly total, not the price",
-	},
-	{
 		key: "commute",
-		label: "Getting around",
+		label: "Convenience",
 		blurb: "How far the daily errands and the drive to work actually are",
 	},
 	{
-		key: "community",
-		label: "The community itself",
-		blurb: "Amenities, who your neighbours are, what residents say",
+		key: "potential",
+		label: "Potential",
+		blurb: "What homes are worth, how the place has grown, what is being built",
+	},
+	{
+		key: "cost",
+		label: "Cost",
+		blurb: "Tax, utilities, trash and HOA — the monthly total, not the price",
 	},
 ] as const;
 
@@ -90,7 +123,14 @@ export type PriorityWeights = Record<PriorityKey, number>;
  * than as their first statement.
  */
 export function defaultWeights(): PriorityWeights {
-	return { schools: 1, cost: 1, commute: 1, community: 1 };
+	return {
+		safety: 1,
+		schools: 1,
+		commute: 1,
+		potential: 1,
+		cost: 1,
+		community: 1,
+	};
 }
 
 /** Clamps to 0…MAX_WEIGHT, and drops keys we no longer recognise. */

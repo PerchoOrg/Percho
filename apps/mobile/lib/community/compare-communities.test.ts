@@ -3,6 +3,7 @@ import {
 	NEARBY_ROW_LIMIT,
 	buildCommunityCompareTable,
 } from "@percho/shared/community-compare";
+import { defaultWeights } from "@percho/shared/priorities";
 import { describe, expect, it } from "vitest";
 import type { CommunityDetailDTO } from "./detail-dto";
 
@@ -247,6 +248,7 @@ describe("buildCommunityCompareTable", () => {
 		];
 		const neutral = buildCommunityCompareTable(HOMES);
 		const commuteFirst = buildCommunityCompareTable(HOMES, {
+			...defaultWeights(),
 			schools: 1,
 			cost: 1,
 			commute: 3,

@@ -1,3 +1,4 @@
+import { defaultWeights } from "@percho/shared/priorities";
 import { describe, expect, it } from "vitest";
 import type { NeighborhoodScores } from "../feed/card-types";
 import { buildCompareTable } from "./compare";
@@ -201,6 +202,7 @@ describe("buildCompareTable — basics order follows declared priorities", () =>
 
 	it("floats the community rows up for a community-first buyer", () => {
 		const t = buildCompareTable(HOMES, 0.065, {
+			...defaultWeights(),
 			schools: 1,
 			cost: 1,
 			commute: 1,
@@ -214,6 +216,7 @@ describe("buildCompareTable — basics order follows declared priorities", () =>
 	it("keeps every figure regardless of weighting", () => {
 		const neutral = buildCompareTable(HOMES, 0.065);
 		const weighted = buildCompareTable(HOMES, 0.065, {
+			...defaultWeights(),
 			schools: 3,
 			cost: 0,
 			commute: 1,

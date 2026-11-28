@@ -1,4 +1,5 @@
 import { buildCommunityTake } from "@percho/shared/community-take";
+import { defaultWeights } from "@percho/shared/priorities";
 import { describe, expect, it } from "vitest";
 import type { CommunityDetailDTO, CommunityReviewsDTO } from "./detail-dto";
 
@@ -117,15 +118,26 @@ describe("buildCommunityTake — personalised by declared priorities", () => {
 	];
 
 	it("speaks the dimension serving the buyer's priority, not the widest gap", () => {
-		// quiet splits by 1.4, walkable by 1.9 — the widest is walkable, but a
-		// community-first buyer is told about quiet.
-		const take = buildCommunityTake(RATED, {
-			schools: 1,
-			cost: 1,
-			commute: 1,
-			community: 3,
-		});
-		expect(take.points.some((p) => p.includes("quiet"))).toBe(true);
+		// Here quiet splits by 1.9 and walkable by 1.4 — the widest is quiet,
+		// but a buyer who put Convenience first is told about walkable. (Until
+		// phase418 this case was "community first → quiet"; `community` can no
+		// longer be stated.)
+		const take = buildCommunityTake(
+			[
+				community({
+					id: "a",
+					name: "Alpha",
+					reviews: reviews(4.2, 5, { quiet: 4.9, walkable: 2.9 }),
+				}),
+				community({
+					id: "b",
+					name: "Beta",
+					reviews: reviews(4.1, 6, { quiet: 3.0, walkable: 4.3 }),
+				}),
+			],
+			{ ...defaultWeights(), commute: 3 },
+		);
+		expect(take.points.some((p) => p.includes("walkab"))).toBe(true);
 		expect(take.points.some((p) => p.includes("you said matters most"))).toBe(
 			true,
 		);
@@ -133,6 +145,7 @@ describe("buildCommunityTake — personalised by declared priorities", () => {
 
 	it("maps getting-around to walkable", () => {
 		const take = buildCommunityTake(RATED, {
+			...defaultWeights(),
 			schools: 1,
 			cost: 1,
 			commute: 3,
@@ -143,6 +156,7 @@ describe("buildCommunityTake — personalised by declared priorities", () => {
 
 	it("falls back to the widest gap when nothing was stated", () => {
 		const take = buildCommunityTake(RATED, {
+			...defaultWeights(),
 			schools: 1,
 			cost: 1,
 			commute: 1,
@@ -168,6 +182,7 @@ describe("buildCommunityTake — personalised by declared priorities", () => {
 			}),
 		];
 		const take = buildCommunityTake(flat, {
+			...defaultWeights(),
 			schools: 1,
 			cost: 1,
 			commute: 3,

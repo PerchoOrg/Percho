@@ -1,3 +1,4 @@
+import { GLANCE_TOPICS } from "@percho/shared/glance";
 import { DEFAULT_LENS, LENSES } from "@percho/shared/lenses";
 import {
 	MAX_WEIGHT,
@@ -19,17 +20,24 @@ describe("the catalogue", () => {
 		expect(WEIGHT_LABELS).toHaveLength(MAX_WEIGHT + 1);
 	});
 
-	it("covers the dimensions the study's answers clustered into", () => {
+	it("offers the five every place's page is laid out by, in the pages' order", () => {
+		// `commute` is the pages' Convenience: the key is the comparison rows',
+		// the word is the page's (phase418).
 		expect(PRIORITIES.map((p) => p.key)).toEqual([
+			"safety",
 			"schools",
-			"cost",
 			"commute",
-			"community",
+			"potential",
+			"cost",
+		]);
+		expect(PRIORITIES.map((p) => p.label.toLowerCase())).toEqual([
+			...GLANCE_TOPICS,
 		]);
 	});
 
-	it("leads with schools — what buyers said they look up first", () => {
-		expect(PRIORITIES[0]?.key).toBe("schools");
+	it("does not offer `community` — a row can carry it, a buyer cannot raise it", () => {
+		expect(PRIORITIES.some((p) => p.key === "community")).toBe(false);
+		expect(normalizeWeights({ community: 3 }).community).toBe(1);
 	});
 });
 
@@ -50,7 +58,13 @@ describe("defaultWeights", () => {
 
 describe("normalizeWeights", () => {
 	it("keeps a valid set", () => {
-		const w = { schools: 3, cost: 2, commute: 0, community: 1 };
+		const w = {
+			...defaultWeights(),
+			schools: 3,
+			cost: 2,
+			commute: 0,
+			community: 1,
+		};
 		expect(normalizeWeights(w)).toEqual(w);
 	});
 
@@ -69,7 +83,7 @@ describe("normalizeWeights", () => {
 
 	it("drops a key we no longer recognise and fills a missing one", () => {
 		const w = normalizeWeights({ schools: 3, pets: 3 });
-		expect(w).toEqual({ schools: 3, cost: 1, commute: 1, community: 1 });
+		expect(w).toEqual({ ...defaultWeights(), schools: 3 });
 		expect(w).not.toHaveProperty("pets");
 	});
 
@@ -89,11 +103,20 @@ describe("hasStated", () => {
 
 describe("rankedPriorities", () => {
 	it("puts the heaviest first", () => {
-		const w = { schools: 1, cost: 3, commute: 0, community: 2 };
+		const w = {
+			...defaultWeights(),
+			schools: 1,
+			cost: 3,
+			commute: 0,
+			community: 2,
+		};
+		// The five a buyer can state; `community` is carried but not ranked
+		// (phase418). Ties keep the pages' order.
 		expect(rankedPriorities(w).map((p) => p.key)).toEqual([
 			"cost",
-			"community",
+			"safety",
 			"schools",
+			"potential",
 			"commute",
 		]);
 	});
@@ -194,7 +217,13 @@ describe("topStatedPriority", () => {
 
 	it("names the one thing they raised", () => {
 		expect(
-			topStatedPriority({ schools: 3, cost: 1, commute: 1, community: 1 }),
+			topStatedPriority({
+				...defaultWeights(),
+				schools: 3,
+				cost: 1,
+				commute: 1,
+				community: 1,
+			}),
 		).toBe("schools");
 	});
 
@@ -203,7 +232,13 @@ describe("topStatedPriority", () => {
 		// `rankedPriorities` is OUR order — quoting it back as theirs would be
 		// putting words in their mouth.
 		expect(
-			topStatedPriority({ schools: 3, cost: 3, commute: 1, community: 1 }),
+			topStatedPriority({
+				...defaultWeights(),
+				schools: 3,
+				cost: 3,
+				commute: 1,
+				community: 1,
+			}),
 		).toBeUndefined();
 	});
 
@@ -211,7 +246,13 @@ describe("topStatedPriority", () => {
 		// Everything at or below neutral: they have said what they do NOT care
 		// about, which is not the same as naming a favourite.
 		expect(
-			topStatedPriority({ schools: 1, cost: 0, commute: 0, community: 0 }),
+			topStatedPriority({
+				...defaultWeights(),
+				schools: 1,
+				cost: 0,
+				commute: 0,
+				community: 0,
+			}),
 		).toBeUndefined();
 	});
 });
