@@ -58,7 +58,6 @@ import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { DislikeStamp } from "../../components/feed/DislikeStamp";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { FeedTutorial } from "../../components/feed/FeedTutorial";
-import { HiddenToast } from "../../components/feed/HiddenToast";
 import { OfflineBar } from "../../components/feed/OfflineBar";
 import { PlaceBlock } from "../../components/feed/PlaceBlock";
 import { useCfScores } from "../../hooks/use-cf-scores";
@@ -804,36 +803,26 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 	 * The card's thumbs-down. The card is hidden for good and leaves the deck —
 	 * a thumbs-down lands on it, it greys and falls off the bottom, so it
 	 * neither looks like a page turn (owner, 2026-11-28: 「点击x的动画效果和滑动
-	 * 应该区分开」) nor passes unnoticed (「效果不够明显」, his pick "A") — and
-	 * once it has gone a bar offers the way back for a few seconds
-	 * (`HiddenToast`).
+	 * 应该区分开」) nor passes unnoticed (「效果不够明显」, his pick "A").
+	 *
+	 * Nothing follows it on this screen. phase414–418 put a bar under the
+	 * card — "Hidden. You'll see less like this. Undo" — and after the mark
+	 * had already said NOT FOR ME it was a second announcement of the same
+	 * thing, in another voice (owner, 2026-11-28: 「感觉很跳脱」). The way back
+	 * is where phase140 put it when he turned down an Undo toast the first
+	 * time: You → Recent, where the place sits with its thumbs-down lit.
 	 *
 	 * phase414 left the hidden card in its slot and stopped a swipe back at
 	 * the card after it. Owner, same day: 「点击x之后就不能向回看了」. It is taken
 	 * out of the deck now (`onDismissed`), so a swipe back goes to the card
 	 * before it.
 	 */
-	const [hiddenNote, setHiddenNote] = useState<{
-		card: FeedCardV3;
-		/** It had a heart, which the thumbs-down took (`clearLike`). */
-		wasLiked: boolean;
-	} | null>(null);
-	useEffect(() => {
-		if (hiddenNote === null) return;
-		const t = setTimeout(() => setHiddenNote(null), 5000);
-		return () => clearTimeout(t);
-	}, [hiddenNote]);
-
-	/** The card on its way out, until the stack reports it gone. */
-	const leaving = useRef<{ card: FeedCardV3; wasLiked: boolean } | null>(null);
 	const hideCard = useCallback(
 		(card: FeedCardV3) => {
 			// The thumbs-down wins over a heart the card already has (owner,
 			// 2026-11-28): the heart, the save and the like all go.
-			const wasLiked =
-				card.kind !== "tradeoff" && clearLike(card.id, card.kind);
+			if (card.kind !== "tradeoff") clearLike(card.id, card.kind);
 			recordVerdict(card, "left");
-			leaving.current = { card, wasLiked };
 			pager.current?.dismiss();
 		},
 		[recordVerdict],
@@ -852,27 +841,7 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 			.filter((c) => c.id === card.id).length;
 		setDeck((d) => d.filter((c) => c.id !== card.id));
 		setActiveIndex(at + 1 - gone);
-		// The bar comes up once the card is out of the way of it.
-		if (leaving.current?.card.id === card.id) setHiddenNote(leaving.current);
-		leaving.current = null;
 	}, []);
-
-	const undoHide = useCallback(() => {
-		if (hiddenNote === null) return;
-		const { card, wasLiked } = hiddenNote;
-		setHiddenNote(null);
-		bringBack(card.id);
-		// Back in front, wherever the buyer has got to since — and with the
-		// heart it had, if the thumbs-down took one.
-		setDeck((d) => putOnTop(d, activeIndexRef.current, card));
-		if (
-			wasLiked &&
-			card.kind !== "tradeoff" &&
-			toggleSaved(card.id, card.kind)
-		) {
-			recordVerdict(card, "right");
-		}
-	}, [hiddenNote, bringBack, toggleSaved, recordVerdict]);
 
 	const canGoBack = activeIndex > 0;
 
@@ -1371,13 +1340,6 @@ export default function FeedScreen({ focus }: { focus?: PlaceFocus } = {}) {
 							capability={capability}
 						/>
 					)}
-					{/* Over whatever the stage holds: hiding a deck's last card leaves
-					    its end card up, and the way back has to be there too. */}
-					{hiddenNote !== null && (
-						<View style={styles.toastWrap} pointerEvents="box-none">
-							<HiddenToast onUndo={undoHide} />
-						</View>
-					)}
 					{/*
 					 * Paused glyph, centred on the card. Drawn here rather than in the
 					 * faces: `suspended` also covers "an explore page is over us",
@@ -1458,13 +1420,6 @@ const styles = StyleSheet.create({
 		right: GUTTER,
 		alignItems: "center",
 		justifyContent: "center",
-	},
-	/** The hidden card's bar: inside the card's sides, above its name row. */
-	toastWrap: {
-		position: "absolute",
-		left: GUTTER + 12,
-		right: GUTTER + 12,
-		bottom: 104,
 	},
 	pausedDisc: {
 		width: 64,

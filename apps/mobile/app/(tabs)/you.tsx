@@ -11,12 +11,19 @@
  *     the buyer chose lit: tap the other to choose again, tap the lit one to
  *     take the verdict back (phase416; owner, 2026-11-28: 「可以用统一的手势来
  *     重新选择」). Until then the verdict was a word on the picture and the way
- *     back a "Change my mind" link under it (phase140's undo). The name under
- *     the picture is printed whole.
- *   · YOUR AREAS — `familiarityFor`, the SAME source the Search tab's
- *     familiar-first sort reads (§5.3 hard rule: the two faces cannot
- *     disagree). Horizontal chips so a buyer who has seen twenty areas gets one
- *     row, not a wall. Chip tap → Search tab focused on the unit.
+ *     back a "Change my mind" link under it (phase140's undo). Under the
+ *     picture is the place's name and nothing else, whole, on ONE line — it
+ *     gives up size before letters (phase419; owner: 「图下面的地方有些乱 能不能
+ *     一行」 — a name on two lines beside one on one, each over a city line,
+ *     made the row ragged).
+ *     This is also the feed's undo: a disliked card says so as it leaves and
+ *     nothing on the feed offers to take it back.
+ *   · YOUR AREAS is gone (phase419; owner: 「your area是啥 为啥要这个」). It
+ *     was a chip per city with "% explored" — how many of its cards the buyer
+ *     had swiped a verdict on — and since a swipe stopped being a verdict
+ *     (phase414) the figure measured nothing. Which cities they like is the
+ *     "Where" line under preferences. The Search tab still sorts its own
+ *     list by the same familiarity; that is untouched.
  *   · YOUR PREFERENCES — one card, two labelled groups (redrawn phase418;
  *     owner, 2026-11-28: 「your preference重新设计一下纬度」).
  *     "What matters to you" is what the buyer TOLD us: the five every
@@ -58,7 +65,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CardCorner } from "../../components/cards/CardCorner";
 import { useFeedPool } from "../../hooks/use-feed-pool";
-import { familiarityFor } from "../../lib/area-familiarity";
 import { deleteAccount, signOut } from "../../lib/auth";
 import { personaName, rankedDims } from "../../lib/feed/persona";
 import type { RecentEntry, RecentPlace } from "../../lib/feed/recent";
@@ -127,12 +133,14 @@ function RecentTile({ entry }: { entry: RecentEntry }) {
 					/>
 				</View>
 			</View>
-			<Text style={styles.recentTitle}>{entry.title}</Text>
-			{entry.subtitle ? (
-				<Text style={styles.recentSub} numberOfLines={1}>
-					{entry.subtitle}
-				</Text>
-			) : null}
+			<Text
+				style={styles.recentTitle}
+				numberOfLines={1}
+				adjustsFontSizeToFit
+				minimumFontScale={0.75}
+			>
+				{entry.title}
+			</Text>
 		</View>
 	);
 }
@@ -172,13 +180,6 @@ export default function YouTab() {
 		signals.likedListingIds.length + signals.likedCommunityIds.length;
 	const tradeoffs = signals.tradeoffCount ?? 0;
 	const name = personaName(signals.dims);
-
-	const areas = useMemo(() => {
-		return pool.geoUnits
-			.map((u) => ({ unit: u, fam: familiarityFor(signals, u.id) }))
-			.filter((a) => a.fam.cardsSeen > 0)
-			.sort((a, b) => b.fam.score - a.fam.score);
-	}, [pool.geoUnits, signals]);
 
 	/**
 	 * What the hearted places have in common. The hearts are Saved's; the
@@ -222,9 +223,6 @@ export default function YouTab() {
 			],
 		);
 	};
-
-	const focusArea = (unitId: string) =>
-		router.navigate({ pathname: "/(tabs)/search", params: { focus: unitId } });
 
 	const confirmDeleteAccount = () => {
 		Alert.alert(
@@ -290,48 +288,6 @@ export default function YouTab() {
 						))}
 					</ScrollView>
 				</>
-			)}
-
-			{/* Area familiarity — same data the Search tab sorts by. */}
-			<Text style={styles.sectionHead}>YOUR AREAS</Text>
-			{areas.length === 0 ? (
-				<View style={styles.card}>
-					<Text style={styles.emptyLine}>
-						Swipe a few cards and your map starts filling in.
-					</Text>
-				</View>
-			) : (
-				<ScrollView
-					horizontal
-					showsHorizontalScrollIndicator={false}
-					style={styles.strip}
-					contentContainerStyle={styles.stripContent}
-				>
-					{areas.map(({ unit, fam }) => (
-						<Pressable
-							key={unit.id}
-							style={styles.areaChip}
-							onPress={() => focusArea(unit.id)}
-							accessibilityRole="button"
-							accessibilityLabel={`${unit.name}, ${fam.score} percent explored`}
-						>
-							<Text style={styles.areaName}>
-								{unit.name} <Text style={styles.areaScore}>{fam.score}%</Text>
-							</Text>
-							<View style={styles.meter}>
-								<View style={[styles.meterFill, { flex: fam.score }]} />
-								<View style={{ flex: Math.max(100 - fam.score, 0) }} />
-							</View>
-						</Pressable>
-					))}
-					<Pressable
-						style={styles.areaMore}
-						onPress={() => router.navigate("/(tabs)/search")}
-						accessibilityRole="button"
-					>
-						<Text style={styles.areaMoreTxt}>See all on map →</Text>
-					</Pressable>
-				</ScrollView>
 			)}
 
 			{/* Declared, then inferred — two groups, one card (see header). */}
@@ -580,34 +536,6 @@ const styles = StyleSheet.create({
 	/** The card's row of controls, where the card has it: the picture's top right. */
 	recentControls: { position: "absolute", top: 6, right: 6 },
 	recentTitle: { ...textStyles.footnote, fontWeight: "600", color: colors.ink },
-	recentSub: { ...textStyles.footnote, fontSize: 12, color: colors.ink2 },
-	areaChip: {
-		backgroundColor: colors.surface,
-		borderRadius: radii.btn,
-		borderWidth: StyleSheet.hairlineWidth,
-		borderColor: colors.border,
-		paddingHorizontal: 14,
-		paddingVertical: 10,
-		gap: 6,
-		minWidth: 120,
-	},
-	areaName: { ...textStyles.headline, color: colors.ink },
-	/** A figure, so not the accent: on this tab the accent is what can be tapped. */
-	areaScore: { ...textStyles.footnote, color: colors.ink2 },
-	areaMore: { justifyContent: "center", paddingHorizontal: 4 },
-	areaMoreTxt: {
-		...textStyles.footnote,
-		fontWeight: "600",
-		color: colors.accent,
-	},
-	meter: {
-		flexDirection: "row",
-		height: 4,
-		borderRadius: 2,
-		backgroundColor: colors.surface2,
-		overflow: "hidden",
-	},
-	meterFill: { backgroundColor: colors.pos },
 	groupHead: {
 		...textStyles.footnote,
 		fontWeight: "600",
